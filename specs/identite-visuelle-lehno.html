@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lehno — planche d'identité</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Karla:ital,wght@0,300..700;1,400..500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FFFFFF;
+  --shell:#FAF9FC;
+  --ink:#221F2B;
+  --ink-soft:#6B6579;
+  --ink-faint:#9C97A8;
+  --violet:#7B6BB7;
+  --violet-deep:#5A4B93;
+  --lilac:#EDEAF7;
+  --lilac-line:#E2DDF0;
+  --apricot:#F0CFB4;
+  --apricot-ink:#9A6238;
+  --rule:#EDEBF2;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--shell);
+  color:var(--ink);
+  font-family:'Karla',system-ui,sans-serif;
+  font-size:16px;
+  line-height:1.6;
+  padding:48px 24px 80px;
+}
+.wrap{max-width:940px;margin:0 auto}
+
+.eyebrow{
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-faint);font-weight:600;
+}
+h2.section{
+  font-family:'Fraunces',Georgia,serif;
+  font-optical-sizing:auto;
+  font-weight:500;
+  font-size:26px;
+  letter-spacing:-.01em;
+  margin:0 0 4px;
+}
+.section-note{color:var(--ink-soft);font-size:14px;max-width:56ch}
+section{margin-bottom:56px}
+.rule{height:1px;background:var(--rule);margin:0 0 28px}
+
+/* --- Logotype --- */
+.mark{
+  background:var(--paper);
+  border:1px solid var(--lilac-line);
+  border-radius:18px;
+  padding:56px 40px;
+  text-align:center;
+}
+.logo{
+  font-family:'Fraunces',Georgia,serif;
+  font-variation-settings:'SOFT' 40,'WONK' 1;
+  font-weight:500;
+  font-size:clamp(52px,11vw,84px);
+  letter-spacing:-.025em;
+  line-height:1;
+  color:var(--ink);
+}
+.logo .h{color:var(--violet)}
+.pron{
+  font-size:12px;letter-spacing:.1em;color:var(--ink-faint);
+  margin-top:14px;
+}
+.tag{
+  font-family:'Fraunces',Georgia,serif;
+  font-style:italic;font-weight:400;font-size:17px;
+  color:var(--ink-soft);margin-top:20px;
+}
+
+/* --- Palette --- */
+.palette{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:12px}
+.sw{background:var(--paper);border:1px solid var(--lilac-line);border-radius:12px;overflow:hidden}
+.sw .chip{height:76px}
+.sw .meta{padding:10px 12px 12px}
+.sw .name{font-size:13px;font-weight:600}
+.sw .hex{font-size:12px;color:var(--ink-faint);letter-spacing:.03em}
+.sw .use{font-size:11px;color:var(--ink-soft);margin-top:4px;line-height:1.4}
+
+/* --- Type --- */
+.typeblock{background:var(--paper);border:1px solid var(--lilac-line);border-radius:14px;padding:26px 24px;margin-bottom:12px}
+.tl{display:flex;justify-content:space-between;align-items:baseline;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+.tname{font-family:'Fraunces',serif;font-size:20px;font-weight:500}
+.tspec{font-size:12px;color:var(--ink-faint)}
+.spec-h1{font-family:'Fraunces',serif;font-weight:500;font-size:34px;letter-spacing:-.02em;line-height:1.15}
+.spec-h2{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:-.01em}
+.spec-it{font-family:'Fraunces',serif;font-style:italic;font-weight:400;font-size:18px;color:var(--ink-soft)}
+.spec-body{font-size:16px;max-width:60ch;color:var(--ink)}
+.spec-small{font-size:13px;color:var(--ink-soft)}
+.spec-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+
+/* --- Composants --- */
+.comps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.comp{background:var(--paper);border:1px solid var(--lilac-line);border-radius:14px;padding:20px}
+.comp .lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:14px;font-weight:600}
+.btn{
+  display:inline-block;background:var(--violet);color:#fff;
+  padding:12px 22px;border-radius:10px;font-weight:600;font-size:15px;
+  border:none;cursor:pointer;font-family:inherit;
+}
+.btn.ghost{background:transparent;color:var(--violet-deep);border:1px solid var(--violet);}
+.btn.quiet{background:var(--lilac);color:var(--violet-deep)}
+.pill{display:inline-block;background:var(--lilac);color:var(--violet-deep);padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600}
+.pill.warm{background:var(--apricot);color:var(--apricot-ink)}
+.field{border:1px solid var(--lilac-line);border-radius:10px;padding:11px 13px;color:var(--ink-faint);font-size:14px}
+
+/* --- Signature : le décompte --- */
+.sig{
+  background:var(--paper);border:1px solid var(--lilac-line);border-radius:18px;
+  padding:34px 28px;display:flex;gap:30px;align-items:center;flex-wrap:wrap;
+}
+.countdown{
+  font-family:'Fraunces',serif;
+  font-variation-settings:'SOFT' 40,'WONK' 1;
+  font-weight:400;font-size:76px;line-height:.9;letter-spacing:-.04em;
+  color:var(--violet-deep);
+}
+.countdown .j{color:var(--ink)}
+.sig-txt{flex:1;min-width:200px}
+.sig-txt .who{font-family:'Fraunces',serif;font-size:22px;font-weight:500}
+.sig-txt .when{color:var(--ink-soft);font-size:14px;margin-top:2px}
+.sig-txt p{font-size:13px;color:var(--ink-soft);margin-top:12px;max-width:44ch}
+
+/* --- Écran --- */
+.screens{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.phone{
+  background:var(--paper);border:1px solid var(--lilac-line);border-radius:22px;
+  overflow:hidden;display:flex;flex-direction:column;min-height:520px;
+}
+.ph-top{padding:16px 18px 12px;display:flex;justify-content:space-between;align-items:center}
+.ph-brand{font-family:'Fraunces',serif;font-weight:500;font-size:19px;letter-spacing:-.01em}
+.ph-brand .h{color:var(--violet)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--apricot);display:inline-block}
+.ph-body{padding:4px 18px 20px;flex:1}
+.ph-h{font-family:'Fraunces',serif;font-size:23px;font-weight:500;letter-spacing:-.015em;margin:10px 0 16px;line-height:1.25}
+.card{border:1px solid var(--lilac-line);border-radius:13px;padding:14px;margin-bottom:10px}
+.card.hi{background:var(--lilac);border-color:transparent}
+.card .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card .nm{font-family:'Fraunces',serif;font-size:17px;font-weight:500}
+.card .sub{font-size:13px;color:var(--ink-soft);margin-top:1px}
+.jd{font-family:'Fraunces',serif;font-size:20px;font-weight:500;color:var(--violet-deep);letter-spacing:-.02em}
+.note{font-size:13.5px;color:var(--ink-soft);line-height:1.55;margin-top:10px;padding-top:10px;border-top:1px solid var(--lilac-line)}
+.ph-tabs{display:flex;justify-content:space-around;border-top:1px solid var(--rule);padding:11px 6px 14px}
+.tab{font-size:11px;color:var(--ink-faint);text-align:center;letter-spacing:.01em}
+.tab.on{color:var(--violet-deep);font-weight:700}
+.tab .ic{display:block;font-size:17px;margin-bottom:3px}
+
+/* --- Mur --- */
+.wall-hero{background:var(--lilac);padding:30px 22px;text-align:center}
+.avatar{width:60px;height:60px;border-radius:50%;background:var(--paper);color:var(--violet-deep);
+  font-family:'Fraunces',serif;font-size:24px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.wall-hero .hi{font-family:'Fraunces',serif;font-size:21px;font-weight:500;letter-spacing:-.01em;line-height:1.3}
+.wall-hero .sub{font-family:'Fraunces',serif;font-style:italic;font-size:14px;color:var(--ink-soft);margin-top:8px}
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.tg{border:1px solid var(--lilac-line);border-radius:999px;padding:5px 12px;font-size:13px}
+
+.footnote{font-size:13px;color:var(--ink-soft);margin-top:14px;max-width:64ch}
+.footnote strong{color:var(--ink);font-weight:600}
+@media (prefers-reduced-motion:no-preference){
+  section{animation:rise .5s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section>
+    <div class="eyebrow">Lehno — planche d'identité</div>
+    <h2 class="section" style="font-size:34px;margin-top:8px">Intime, chaleureux, élégant, sobre</h2>
+    <p class="section-note">Le corps de l'application reste blanc. Le violet habille les actions. La chaleur vient du caractère typographique, pas de la couleur.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Logotype</div>
+    <div class="rule" style="margin-top:10px"></div>
+    <div class="mark">
+      <div class="logo">Le<span class="h">h</span>no</div>
+      <div class="pron">LÈH·NOH</div>
+      <div class="tag">Chaque date qui compte, bien célébrée.</div>
+    </div>
+    <p class="footnote"><strong>Le h porte la couleur.</strong> Il est muet en français, et c'est justement lui qui distingue Lehno de « Leno ». Le teinter en fait la lettre qu'on remarque — et la marque enseigne sa propre prononciation. La mention <em>lèh·noh</em> l'accompagne partout où le nom se découvre : magasins d'applications, landing, pied des portraits.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Palette</div>
+    <div class="rule" style="margin-top:10px"></div>
+    <div class="palette">
+      <div class="sw"><div class="chip" style="background:#FFFFFF;border-bottom:1px solid var(--lilac-line)"></div><div class="meta"><div class="name">Papier</div><div class="hex">#FFFFFF</div><div class="use">Le fond de toute l'application</div></div></div>
+      <div class="sw"><div class="chip" style="background:#221F2B"></div><div class="meta"><div class="name">Encre</div><div class="hex">#221F2B</div><div class="use">Texte, à peine teinté de violet</div></div></div>
+      <div class="sw"><div class="chip" style="background:#7B6BB7"></div><div class="meta"><div class="name">Violet</div><div class="hex">#7B6BB7</div><div class="use">Boutons, liens, ce qui agit</div></div></div>
+      <div class="sw"><div class="chip" style="background:#EDEAF7"></div><div class="meta"><div class="name">Lilas</div><div class="hex">#EDEAF7</div><div class="use">Fonds d'habillage, mise en avant</div></div></div>
+      <div class="sw"><div class="chip" style="background:#F0CFB4"></div><div class="meta"><div class="name">Abricot</div><div class="hex">#F0CFB4</div><div class="use">L'accent chaud, rare : aujourd'hui, une bonne nouvelle</div></div></div>
+    </div>
+    <p class="footnote"><strong>Une couleur qui agit, une couleur qui réchauffe.</strong> Le violet ne teinte jamais le texte courant : une fiche de proche se lit longuement, elle reste noire sur blanc. L'abricot n'apparaît qu'aux moments heureux — le jour même, un crédit reçu — ce qui l'empêche de devenir décoratif.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Typographie</div>
+    <div class="rule" style="margin-top:10px"></div>
+
+    <div class="typeblock">
+      <div class="tl"><div class="tname">Fraunces</div><div class="tspec">titres, noms, décomptes · 400 et 500</div></div>
+      <div class="spec-h1">Anniversaire de Karim</div>
+      <div class="spec-h2" style="margin-top:12px">Ce qu'on sait de lui</div>
+      <div class="spec-it" style="margin-top:10px">« l'année où tu as tout osé »</div>
+    </div>
+
+    <div class="typeblock">
+      <div class="tl"><div class="tname">Karla</div><div class="tspec">texte courant, libellés · 300 à 700</div></div>
+      <div class="spec-body">Elle a parlé d'un cours de céramique près de chez elle, ça lui plairait beaucoup. Noté en mars, retrouvé en septembre.</div>
+      <div class="spec-small" style="margin-top:10px">Souhait de Karim · ajouté le 12 août</div>
+      <div class="spec-label" style="margin-top:12px">Prochaines échéances</div>
+    </div>
+
+    <p class="footnote"><strong>Pourquoi ces deux-là.</strong> Fraunces a des empattements souples et une légère irrégularité : elle écrit à la main sans imiter l'écriture manuscrite — c'est de là que vient l'intimité. Karla est humaniste, donc chaleureuse dans ses formes, mais assez neutre pour porter une fiche dense sans fatiguer. L'élégance tient à l'écart entre les deux : un titre qui a du caractère, un texte qui s'efface.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Signature</div>
+    <div class="rule" style="margin-top:10px"></div>
+    <div class="sig">
+      <div class="countdown"><span class="j">J</span>−3</div>
+      <div class="sig-txt">
+        <div class="who">Karim Bah</div>
+        <div class="when">Anniversaire · 24 août</div>
+        <p>Le décompte est l'élément que l'on reconnaît d'un écran à l'autre. Composé dans le caractère de titre, il devient un objet plutôt qu'une donnée — et il porte le nom du produit dans sa forme même.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Composants</div>
+    <div class="rule" style="margin-top:10px"></div>
+    <div class="comps">
+      <div class="comp">
+        <div class="lbl">Actions</div>
+        <button class="btn">Préparer</button>
+        <div style="height:10px"></div>
+        <button class="btn ghost">Voir sa fiche</button>
+        <div style="height:10px"></div>
+        <button class="btn quiet">Régénérer</button>
+      </div>
+      <div class="comp">
+        <div class="lbl">Étiquettes</div>
+        <span class="pill">anniversaire</span>
+        <div style="height:10px"></div>
+        <span class="pill warm">aujourd'hui</span>
+        <div style="height:10px"></div>
+        <span class="pill">déjà réservé</span>
+      </div>
+      <div class="comp">
+        <div class="lbl">Saisie</div>
+        <div class="field">Pour qui&nbsp;?</div>
+        <div style="height:10px"></div>
+        <div class="field" style="min-height:64px">Une idée qui vous vient…</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Application</div>
+    <div class="rule" style="margin-top:10px"></div>
+    <div class="screens">
+
+      <div class="phone">
+        <div class="ph-top">
+          <div class="ph-brand">Le<span class="h">h</span>no</div>
+          <span class="dot"></span>
+        </div>
+        <div class="ph-body">
+          <div class="ph-h">Ce qui approche</div>
+
+          <div class="card hi">
+            <div class="row">
+              <div>
+                <div class="nm">Awa Diop</div>
+                <div class="sub">Anniversaire · aujourd'hui</div>
+              </div>
+              <span class="pill warm">aujourd'hui</span>
+            </div>
+            <div class="note">Vous aviez noté : elle a parlé d'un cours de céramique près de chez elle.</div>
+          </div>
+
+          <div class="card">
+            <div class="row">
+              <div>
+                <div class="nm">Karim Bah</div>
+                <div class="sub">Anniversaire · 24 août</div>
+              </div>
+              <div class="jd">J−3</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="row">
+              <div>
+                <div class="nm">Sarah &amp; Yann</div>
+                <div class="sub">Mariage · 30 août</div>
+              </div>
+              <div class="jd">J−9</div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px"><button class="btn" style="width:100%">Laisser une note</button></div>
+        </div>
+        <div class="ph-tabs">
+          <div class="tab on"><span class="ic">◈</span>Accueil</div>
+          <div class="tab"><span class="ic">◇</span>Dates</div>
+          <div class="tab"><span class="ic">◇</span>Fiches</div>
+          <div class="tab"><span class="ic">◇</span>Mon espace</div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="wall-hero">
+          <div class="avatar">V</div>
+          <div class="hi">Salut, bienvenue chez Valentine</div>
+          <div class="sub">Ravie de te voir passer.</div>
+        </div>
+        <div class="ph-body" style="padding-top:20px">
+          <div class="spec-label">Ce que j'aime</div>
+          <div class="tags">
+            <span class="tg">jazz</span><span class="tg">céramique</span>
+            <span class="tg">randonnée</span><span class="tg">cinéma d'auteur</span>
+          </div>
+
+          <div style="margin-top:20px" class="spec-small">Mon anniversaire, c'est le 14 mars</div>
+
+          <div class="card" style="margin-top:18px;text-align:center;border-color:var(--violet)">
+            <div class="spec-body" style="font-size:14px">Une idée derrière la tête&nbsp;? J'ai noté ce qui me ferait plaisir.</div>
+            <div style="margin-top:12px"><button class="btn ghost">Voir ma liste</button></div>
+          </div>
+
+          <div style="margin-top:14px"><button class="btn" style="width:100%">Laisse-moi un mot</button></div>
+
+          <div style="text-align:center;margin-top:22px;padding-top:14px;border-top:1px solid var(--rule)">
+            <span class="spec-small" style="font-size:12px">Avoir mon Mur sur <strong style="font-family:'Fraunces',serif;font-weight:500">Le<span style="color:var(--violet)">h</span>no</strong></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <p class="footnote"><strong>Le blanc domine, le violet guide.</strong> Sur l'accueil, la couleur ne sert qu'à deux choses : marquer l'échéance du jour et porter l'action. Sur le Mur, le lilas accueille le visiteur puis s'efface — la page appartient à celle qui reçoit, pas à la marque.</p>
+  </section>
+
+</div>
+</body>
+</html>
