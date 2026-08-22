@@ -8,7 +8,7 @@ export const en = {
     unauthorized: "You need to be signed in.",
     forbidden: "You don't have access to that.",
     session_expired: "Your session has expired. Sign in again.",
-    refresh_reused: "Your session was closed for safety. Sign in again.",
+    refresh_reused: "Your session was closed as a security precaution. Sign in again.",
     otp_invalid: "That code doesn't match.",
     otp_expired: "That code has expired. Ask for a new one.",
     otp_too_many_attempts: "Too many wrong tries. That code's done — ask for a new one.",
