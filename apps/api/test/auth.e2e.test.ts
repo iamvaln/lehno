@@ -136,6 +136,17 @@ describe("authentification", () => {
       .rejects.toMatchObject({ code: "rate_limited" });
   });
 
+  // Revue tour 2, point 1 : rate_limit_hit.key n'est pas une colonne citext
+  // (contrairement à user.email) — sans normalisation explicite de la casse
+  // avant de composer la clé, "awa@x.com", "Awa@x.com" et "AWA@X.COM"
+  // ouvriraient trois compteurs distincts pour la même boîte réelle,
+  // c'est-à-dire aucun plafond du tout.
+  it("le plafond par adresse résiste à un changement de casse", async () => {
+    for (let i = 0; i < 5; i++) await auth.requestOtp({ email: "casse@example.com" });
+    await expect(auth.requestOtp({ email: "CASSE@EXAMPLE.COM" }))
+      .rejects.toMatchObject({ code: "rate_limited" });
+  });
+
   it("borne les demandes par origine, tous destinataires confondus", async () => {
     for (let i = 0; i < 20; i++) await auth.requestOtp({ email: `cible-${i}@example.com`, ip: "203.0.113.9" });
     await expect(auth.requestOtp({ email: "cible-encore@example.com", ip: "203.0.113.9" }))

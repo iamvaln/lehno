@@ -50,16 +50,21 @@ export class AuthController {
     return this.auth.requestOtp({ ...body, ip });
   }
 
+  // Voir le commentaire sur POST /otp plus haut : même capture, mêmes
+  // précautions (adresse de connexion, jamais un en-tête ; jamais journalisée
+  // ni renvoyée). Voir AuthService.verifyOtp pour le plafond qu'elle sert ici.
   @Post("otp/verify")
   @HttpCode(200)
   verifyOtp(
     @Body(new ZodValidationPipe(verifyOtpSchema)) body: VerifyOtpBody,
+    @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
   ): Promise<Session> {
     // referralCode : accepté par le contrat, câblé au crédit d'invitation dans une tâche à venir.
     return this.auth.verifyOtp({
       email: body.email,
       code: body.code,
+      ip,
       ...(body.deviceId !== undefined ? { deviceId: body.deviceId } : {}),
       ...(userAgent !== undefined ? { userAgent } : {}),
     });

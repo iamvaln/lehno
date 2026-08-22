@@ -32,10 +32,11 @@ export class MailgunAdapter implements MailPort {
     });
 
     if (!res.ok) {
-      // Jamais le contenu du courrier dans le journal (code à usage unique
-      // compris) : seuls le statut et le destinataire sortent d'ici, jamais
-      // le sujet ni le texte.
-      this.logger.error(`mailgun send failed: status=${res.status} to=${mail.to}`);
+      // Revue tour 2, point 2 : jamais le destinataire (ni aucun contenu du
+      // courrier) dans le journal — masqué à l'écriture, pas retiré après
+      // coup. Seuls la nature de l'échec et le code rendu par le
+      // prestataire (le statut HTTP) comptent pour diagnostiquer.
+      this.logger.error(`mailgun send failed: status=${res.status}`);
       throw new Error(`mailgun send failed with status ${res.status}`);
     }
   }

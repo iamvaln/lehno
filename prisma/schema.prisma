@@ -539,9 +539,16 @@ model Feedback {
   @@map("feedback")
 }
 
+// Revue tour 2, point 3 : varchar(160) était trop court — "otp:email:" (10)
+// plus une adresse conforme au contrat (jusqu'à 254, cf. requestOtpSchema)
+// atteint 264. Plutôt que remplacer un plafond arbitraire par un autre
+// (que phase 1 referait échouer dès qu'un nouveau type de clé, plus long,
+// s'ajoute — rappels, SMS...), la colonne n'a plus de longueur déclarée :
+// String sans @db.VarChar correspond à `text` côté Postgres, sans plafond.
+// La table reste bornée dans le temps par RateLimitService.purgeOlderThan.
 model RateLimitHit {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  key       String   @db.VarChar(160)
+  key       String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([key, createdAt])

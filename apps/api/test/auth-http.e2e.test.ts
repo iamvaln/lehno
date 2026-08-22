@@ -119,6 +119,21 @@ describe("authentification — HTTP de bout en bout", () => {
     expect(JSON.stringify(body)).not.toContain("127.0.0.1");
   });
 
+  // Revue tour 2, point 5 : /otp/verify n'avait aucun plafond par origine —
+  // OtpService.verify borne les essais SUR UN CODE DONNÉ, mais rien
+  // n'empêchait de balayer beaucoup d'adresses depuis une seule origine.
+  // Comme pour /otp, seul un vrai appel HTTP peut le montrer.
+  it("le plafond par origine finit par arrêter les tentatives de vérification, même en changeant d'adresse à chaque fois", async () => {
+    for (let i = 0; i < 30; i++) {
+      const res = await post("/v1/auth/otp/verify", { email: `verif-${i}@example.com`, code: "000000" });
+      expect(res.status).toBe(422); // otp_invalid : aucun code en attente pour cette adresse
+    }
+    const res = await post("/v1/auth/otp/verify", { email: "verif-encore@example.com", code: "000000" });
+    expect(res.status).toBe(429);
+    const body = await json(res);
+    expect(body.code).toBe("rate_limited");
+  });
+
   it("POST /otp/verify échange un code valide contre une session et crée le compte", async () => {
     const { code } = await otp.issue("awa@example.com", "login");
     const res = await post("/v1/auth/otp/verify", { email: "awa@example.com", code, deviceId: "dev-http-1" });

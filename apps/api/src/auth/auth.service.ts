@@ -10,7 +10,7 @@ import { TokenService, type Pair } from "./token.service.js";
 import type { MailPort } from "../mail/mail.port.js";
 import { otpEmail } from "../mail/templates.js";
 
-type VerifyInput = { email: string; code: string; deviceId?: string; userAgent?: string };
+type VerifyInput = { email: string; code: string; deviceId?: string; userAgent?: string; ip?: string };
 
 const MAX_ACCOUNT_CREATION_ATTEMPTS = 5;
 
@@ -35,7 +35,17 @@ export class AuthService {
   async requestOtp(input: { email: string; ip?: string }): Promise<{ sent: true }> {
     // Par destinataire ET par origine : l'un arrête celui qui vise une personne,
     // l'autre celui qui balaie un annuaire.
-    await this.limiter.hit(`otp:email:${input.email}`, 5, 3_600_000);
+    //
+    // Revue tour 2, point 1 : la casse normalisée AVANT de composer la clé —
+    // rate_limit_hit.key est un varchar ordinaire, pas citext comme
+    // user.email. Sans ça, "awa@x.com" et "AWA@X.COM" ouvriraient deux
+    // compteurs distincts pour la même boîte réelle, alors que le produit,
+    // lui, les traite comme une seule adresse (la personne recevrait bien
+    // les deux courriers). Seule la clé est normalisée : l'adresse envoyée
+    // au fournisseur de courrier plus bas garde la casse fournie par
+    // l'appelant.
+    const normalizedEmail = input.email.toLowerCase();
+    await this.limiter.hit(`otp:email:${normalizedEmail}`, 5, 3_600_000);
     if (input.ip) await this.limiter.hit(`otp:ip:${input.ip}`, 20, 3_600_000);
 
     const { code } = await this.otp.issue(input.email, "login");
@@ -117,6 +127,16 @@ export class AuthService {
   }
 
   async verifyOtp(input: VerifyInput): Promise<Pair & { isNewAccount: boolean }> {
+    // Revue tour 2, point 5 : par origine seulement, pas par destinataire —
+    // OtpService.verify borne déjà les essais SUR UN CODE DONNÉ (cinq, puis
+    // il brûle), mais rien n'empêchait jusqu'ici de balayer des milliers
+    // d'adresses à cinq essais chacune depuis une seule origine. Trente par
+    // heure laisse largement la place à un usage normal — même partagé
+    // (plusieurs personnes derrière la même IP de bureau ou de borne Wi-Fi,
+    // chacune avec une faute de frappe ou deux) — tout en rendant un
+    // balayage à grande échelle bien trop lent pour valoir le coût.
+    if (input.ip) await this.limiter.hit(`otp-verify:ip:${input.ip}`, 30, 3_600_000);
+
     try {
       await this.otp.verify(input.email, "login", input.code);
     } catch (e) {
