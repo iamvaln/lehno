@@ -5,6 +5,11 @@ export type ColorRole =
 
 export type Theme = Record<ColorRole, string>;
 
+// WCAG contrast limits:
+// `faint` (#726E82) passes 4.5:1 on light `bg` (4.92) and `surface` (4.69),
+// but fails on light `panel` (#EDEAF7) with only 4.15:1.
+// Use `faint` only on `bg` or `surface` in light theme.
+// In dark theme, `faint` meets the threshold on all backgrounds (4.72+ on `panel`).
 export const themes: { light: Theme; dark: Theme } = {
   light: {
     bg: "#FFFFFF", surface: "#FAF9FC", panel: "#EDEAF7", card: "#FFFFFF",
