@@ -115,11 +115,11 @@ Le reste est identique (date, souhait(s), mot, mêmes champs séparés, même pa
 **Réserver un souhait.** Un visiteur peut se réserver un cadeau, pour que deux proches n'offrent pas la même chose. Le parcours tient en trois temps :
 1. **Il choisit le souhait** et donne son **adresse e-mail** — aucun compte n'est demandé.
 2. **Il décide de se nommer ou non** : une case indique s'il souhaite que le propriétaire voie son nom. Par défaut, la réservation reste anonyme à ses yeux.
-3. **Il saisit le code reçu par e-mail**, sans quitter la page. La réservation ne tient qu'une fois ce code vérifié : tant qu'elle est en attente, le souhait demeure disponible pour un autre — sans quoi une adresse inventée suffirait à bloquer un cadeau.
+3. **Il saisit le code reçu par e-mail**, sans quitter la page. La réservation ne tient qu'une fois ce code vérifié : tant qu'elle est en attente, le souhait demeure disponible pour un autre — sans quoi une adresse inventée suffirait à bloquer un cadeau. Si quelqu'un d'autre confirme entre-temps, la demande en attente est signalée comme caduque.
 
 **Revenir sur le Mur.** Une fois confirmé, le visiteur est reconnu à ses prochaines visites depuis le même navigateur : **ses propres réservations lui sont signalées**, et celles-là seulement.
 
-**Protections.** Le nombre de demandes est limité par adresse et par origine ; les adresses jetables sont refusées ; et l'énumération d'une même boîte par suffixes est détectée.
+**Protections.** Le nombre de demandes est limité par adresse destinataire autant que par origine ; les adresses jetables sont refusées ; et l'énumération d'une même boîte par suffixes est détectée.
 
 **Ce que chacun voit.**
 - *Un visiteur quelconque* : les souhaits, et lesquels sont réservés. Jamais par qui.

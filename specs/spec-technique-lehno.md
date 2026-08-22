@@ -329,7 +329,7 @@ Un rôle insuffisant rend **`403`** — ici, l'existence du chemin est déjà co
 
 - Conservé **haché**, jamais en clair, avec une durée de vie courte. Le hachage est un **HMAC-SHA-256 sous clé tenue dans l'environnement** : un code à six chiffres ne compte qu'un million de valeurs, qu'une lecture de la base suffirait à énumérer si le condensé se calculait sans secret. La comparaison se fait en temps constant. Aucun mot de passe n'existe dans le produit — l'entrée repose sur le code et les fournisseurs d'identité —, donc aucune fonction de hachage lente (bcrypt, argon2, scrypt) n'a d'emploi ici : elle n'ajouterait rien à la défense et offrirait un levier de saturation sur un point d'entrée ouvert sans compte.
 - **Nombre de tentatives borné** par code ; au-delà, il est brûlé.
-- **Fréquence de demande limitée** par adresse et par origine.
+- **Fréquence de demande limitée par adresse destinataire** autant que par origine : un point d'entrée qui envoie un courrier à une adresse fournie par l'appelant sert autrement à arroser un tiers.
 - **Réponse uniforme** : demander un code pour une adresse inconnue rend la même réponse que pour une adresse connue. La liste des comptes reste ainsi hors de portée.
 
 ### 9.3 Cloisonnement
@@ -379,7 +379,7 @@ Un souhait porte une adresse, et cette adresse peut venir d'un proche via un lie
 
 ### 9.9 Abus
 
-- **Débit limité** là où l'on peut appeler sans compte : envoi d'une contribution via un lien de collecte, dépôt d'un vœu, **réservation d'un souhait**, et **demande d'un code de connexion** (`/auth/otp`) — cette dernière bornée par adresse et par origine, comme le détaille 9.2.
+- **Débit limité** là où l'on peut appeler sans compte : envoi d'une contribution via un lien de collecte, dépôt d'un vœu, **réservation d'un souhait**, et **demande d'un code de connexion** (`/auth/otp`) — cette dernière bornée **par adresse destinataire** autant que par origine, comme le détaille 9.2. Borner la seule origine laisserait ces points d'entrée servir à arroser la boîte d'un tiers.
 - **Plafond de comptes par appareil** vérifié avant toute création, l'adresse étant conservée pour les investigations.
 - **Taille des contenus bornée** en entrée ; les images sont vérifiées et recompressées avant stockage.
 - **Coût de la génération protégé.** Chaque appel d'IA se paie en argent réel : le crédit est **débité avant** l'appel, une même demande relancée rejoint celle en cours, et un plafond d'appels par compte et par heure contient l'emballement, qu'il vienne d'un défaut du client ou d'une intention.

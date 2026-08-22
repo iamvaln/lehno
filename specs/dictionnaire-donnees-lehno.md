@@ -475,7 +475,7 @@ Réservation d'un souhait public par un visiteur, **sans compte**. Elle évite q
 | display_name | varchar(80) | oui | — | — | Nom donné par le visiteur, si `show_identity` |
 | show_identity | boolean | non | — | false | Le visiteur choisit si le propriétaire voit son nom |
 | status | reservation_status (enum) | non | — | 'pending' | `pending` \| `confirmed` \| `cancelled` \| `expired` |
-| code_hash | varchar(64) | oui | — | — | **HMAC-SHA-256 sous clé** du code à usage unique saisi dans la page — même règle que l'OTP de connexion (9.2). Nul lorsque le réservant est connecté : son adresse est déjà vérifiée |
+| code_hash | text | oui | — | — | **HMAC-SHA-256 sous clé** du code à usage unique saisi dans la page — même type et même règle que `OTPCode.code_hash`, la longueur libre laissant place au préfixe de version qui rend la rotation de clé indolore. Nul lorsque le réservant est connecté : son adresse est déjà vérifiée |
 | attempts | smallint | non | — | 0 | Tentatives de saisie ; au-delà du seuil, le code est brûlé |
 | session_token_hash | varchar(64) | oui | oui | — | SHA-256 du jeton remis après confirmation ; permet au visiteur de retrouver **ses** réservations en revenant |
 | confirmed_at | timestamptz | oui | — | — | |
@@ -484,10 +484,10 @@ Réservation d'un souhait public par un visiteur, **sans compte**. Elle évite q
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `reservation_status` : `pending`, `confirmed`, `cancelled`, `expired`.
-- **Une seule réservation active par souhait** : index unique partiel sur `wishlist_item_id` là où `status` vaut `pending` ou `confirmed`.
+- **Une seule réservation confirmée par souhait** : index unique partiel sur `wishlist_item_id` là où `status` vaut **`confirmed`** — et là seulement. Inclure `pending` reviendrait à laisser la première demande occuper le souhait, donc à permettre qu'une adresse inventée le bloque : plusieurs réservations en attente coexistent, la première confirmée l'emporte, les autres passent à `expired`.
 - **Deux chemins selon qui réserve.** Un **utilisateur connecté** réserve en un geste : son adresse est déjà vérifiée par son compte, la réservation naît `confirmed` et se rattache à lui. Un **visiteur sans compte** donne son adresse, reçoit un **code à usage unique** qu'il saisit dans la page, et la réservation ne tient qu'une fois ce code vérifié. Tant qu'elle est `pending`, le souhait reste disponible pour un autre — sans quoi une adresse inventée bloquerait un cadeau.
 - **Retrouver ses réservations.** Un utilisateur connecté les voit dans son espace, sur tous ses appareils. Un visiteur sans compte est reconnu par son jeton de session dans le même navigateur ; ailleurs, il redonne son adresse et un nouveau code — c'est **l'adresse qui fait l'identité**, le jeton n'étant qu'un raccourci.
-- **Protections contre l'abus.** Le débit est limité par adresse et par origine ; les **adresses jetables** sont refusées ; et l'**énumération d'une même boîte** par suffixes (`a+1@`, `a+2@`) est détectée et bornée, la partie qui suit le `+` étant ignorée pour le décompte.
+- **Protections contre l'abus.** Le débit est limité **par adresse destinataire** autant que par origine — borner la seule origine laisserait le point d'entrée servir à arroser la boîte d'un tiers. Les **adresses jetables** sont refusées, et l'**énumération d'une même boîte** par suffixes (`a+1@`, `a+2@`) est détectée et bornée, la partie qui suit le `+` étant ignorée pour le décompte.
 - **Ce que voit le public.** Un souhait réservé apparaît comme tel, **jamais par qui**. Le visiteur qui revient avec son jeton de session retrouve ses propres réservations, et celles-là seulement.
 - **Ce que voit le propriétaire.** L'état `reserved`, et le nom du réservant **si** ce dernier l'a autorisé (`show_identity`). Le reste demeure anonyme.
 
