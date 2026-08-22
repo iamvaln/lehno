@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, HttpCode, Headers, Inject, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, HttpCode, Headers, Inject, Ip, Post, UseGuards } from "@nestjs/common";
 import {
   federatedSchema,
   refreshSchema,
@@ -28,12 +28,26 @@ export class AuthController {
   ) {}
 
   // Rend toujours { sent: true }, adresse connue ou non : voir AuthService.requestOtp.
+  //
+  // @Ip() lit req.ip d'Express, qui — tant que rien n'active "trust proxy" —
+  // rend l'adresse de la connexion TCP elle-même, jamais un en-tête transmis
+  // (X-Forwarded-For). C'est voulu : derrière un proxy inverse, se fier à un
+  // tel en-tête sans l'avoir configuré laisserait n'importe qui forger son
+  // origine et contourner le plafond par IP. Une fois en production derrière
+  // Caddy, cette adresse deviendra celle du proxy plutôt que celle du client
+  // réel — la tâche 21 configurera "trust proxy" (et Caddy) pour que req.ip
+  // redevienne l'adresse d'origine.
+  //
+  // Cette IP ne sert qu'à composer la clé du limiteur (voir RateLimitService,
+  // qui ne la laisse fuiter ni dans un journal ni dans une réponse) : elle
+  // n'est ni journalisée ni renvoyée ici.
   @Post("otp")
   @HttpCode(200)
   requestOtp(
     @Body(new ZodValidationPipe(requestOtpSchema)) body: RequestOtpBody,
+    @Ip() ip: string,
   ): Promise<{ sent: true }> {
-    return this.auth.requestOtp(body);
+    return this.auth.requestOtp({ ...body, ip });
   }
 
   @Post("otp/verify")

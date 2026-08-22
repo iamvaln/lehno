@@ -19,7 +19,16 @@ export class RateLimitService {
   async hit(key: string, limit: number, windowMs: number): Promise<void> {
     const depuis = new Date(Date.now() - windowMs);
     const récents = await this.prisma.rateLimitHit.count({ where: { key, createdAt: { gte: depuis } } });
-    if (récents >= limit) throw new AppError("rate_limited", `rate limit reached for ${key}`);
+    if (récents >= limit) {
+      // Le message d'une AppError atteint le journal (AppExceptionFilter)
+      // ET l'enveloppe de réponse HTTP (toEnvelope) : jamais la clé telle
+      // quelle, donc — un appelant compose des clés comme "otp:ip:<ip>" ou
+      // "otp:email:<adresse>", et ni l'IP ni l'adresse ne doivent atteindre
+      // un journal ou une réponse. Seul le "périmètre" (tout sauf le dernier
+      // segment ':'-séparé, qui porte la valeur sensible) est journalisé.
+      const scope = key.includes(":") ? key.slice(0, key.lastIndexOf(":")) : key;
+      throw new AppError("rate_limited", `rate limit reached for scope ${scope}`);
+    }
     await this.prisma.rateLimitHit.create({ data: { key } });
   }
 

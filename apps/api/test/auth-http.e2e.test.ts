@@ -97,6 +97,28 @@ describe("authentification — HTTP de bout en bout", () => {
     expect(known.headers.get("content-length")).toBe(unknown.headers.get("content-length"));
   });
 
+  // Un test direct sur AuthService ne peut pas montrer ce trou : il appelle
+  // le service avec l'IP qu'on lui fournit, alors que c'est justement le
+  // contrôleur (via @Ip()) qui doit la capturer et la transmettre. Seul un
+  // vrai appel HTTP l'exerce. Vingt requêtes vers vingt adresses distinctes
+  // ne heurtent jamais le plafond par destinataire (5 par adresse) — seul
+  // celui par origine (20 par IP) peut les arrêter, ce qui distingue les deux
+  // plafonds l'un de l'autre.
+  it("le plafond par origine finit par arrêter un même appelant, même en changeant d'adresse à chaque fois", async () => {
+    for (let i = 0; i < 20; i++) {
+      const res = await post("/v1/auth/otp", { email: `cible-${i}@example.com` });
+      expect(res.status).toBe(200);
+    }
+    const res = await post("/v1/auth/otp", { email: "cible-encore@example.com" });
+    expect(res.status).toBe(429);
+    const body = await json(res);
+    expect(body.code).toBe("rate_limited");
+    // L'adresse IP de l'appelant ne doit apparaître nulle part dans la réponse.
+    expect(JSON.stringify(body)).not.toMatch(/\d+\.\d+\.\d+\.\d+/);
+    expect(JSON.stringify(body)).not.toContain("::1");
+    expect(JSON.stringify(body)).not.toContain("127.0.0.1");
+  });
+
   it("POST /otp/verify échange un code valide contre une session et crée le compte", async () => {
     const { code } = await otp.issue("awa@example.com", "login");
     const res = await post("/v1/auth/otp/verify", { email: "awa@example.com", code, deviceId: "dev-http-1" });
