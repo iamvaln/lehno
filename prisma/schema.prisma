@@ -69,6 +69,11 @@ model User {
   refreshTokens   RefreshToken[]
   deviceSignups   DeviceSignup[]
   loginActivities LoginActivity[]
+  people           Person[]
+  authoredEvents   Event[]
+  authoredNotes    Note[]
+  authoredWishes   WishlistItem[]
+  eventOccurrences EventOccurrence[]
 
   @@map("user")
 }
@@ -240,6 +245,7 @@ model Person {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   events Event[]
   notes  Note[]
 
@@ -260,8 +266,10 @@ model Event {
   updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz
 
   person      Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+  author      User?             @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
   schedules   Schedule[]
   occurrences EventOccurrence[]
+  notes       Note[]
 
   @@index([personId])
   @@map("event")
@@ -294,6 +302,7 @@ model EventOccurrence {
   createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz
 
   event Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   notes Note[]
   wishes WishlistItem[]
 
@@ -313,7 +322,9 @@ model Note {
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
   person     Person           @relation(fields: [personId], references: [id], onDelete: Cascade)
+  event      Event?           @relation(fields: [eventId], references: [id], onDelete: SetNull)
   occurrence EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  author     User?            @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
   categories NoteCategory[]
 
   @@index([personId, createdAt])
@@ -360,6 +371,7 @@ model WishlistItem {
   updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
 
   occurrence EventOccurrence @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  author     User?           @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
 
   @@index([eventOccurrenceId])
   @@map("wishlist_item")

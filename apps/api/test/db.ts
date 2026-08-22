@@ -28,19 +28,28 @@ export async function withDatabase(): Promise<TestDb> {
   }
 }
 
-// Tables amorcées par une migration et jamais éditées par l'utilisateur :
-// ce sont des données de référence, pas de l'état de test à vider entre
-// deux cas. `category` (tâche 7) porte les sept catégories fixes du
-// système ; les vider les rendrait indisponibles à tout test qui s'exécute
-// après le premier `resetDatabase()` d'un fichier.
-const SEED_TABLES = new Set(["category"]);
+// Décision d'architecture (tâche 7, ratifiée) : `resetDatabase` vide
+// l'ÉTAT DE TEST entre deux cas, mais préserve les DONNÉES DE RÉFÉRENCE —
+// celles qu'une migration amorce une fois pour toutes et que l'utilisateur
+// n'édite jamais. `category` (les sept catégories fixes du système) en est
+// la première : elle n'est semée qu'à `withDatabase()`, jamais rejouée
+// ensuite, donc la vider la rendrait indisponible dès le premier
+// `resetDatabase()` d'un fichier — pas seulement dans ce fichier-ci, mais
+// dans tous les tests à venir des onze tâches qui partagent ce harnais.
+//
+// Toute future table amorcée par une migration (un autre référentiel fixe,
+// une table de configuration système) doit rejoindre cet ensemble au
+// moment où elle est introduite. Sans quoi le premier test qui en dépend
+// échouera de façon incompréhensible — comme celui-ci avant que la table
+// n'y soit ajoutée.
+const REFERENCE_TABLES = new Set(["category"]);
 
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
     select tablename from pg_tables
     where schemaname = 'public' and tablename not like '_prisma%'
   `;
-  const toTruncate = tables.filter((t) => !SEED_TABLES.has(t.tablename));
+  const toTruncate = tables.filter((t) => !REFERENCE_TABLES.has(t.tablename));
   if (toTruncate.length === 0) return;
   const list = toTruncate.map((t) => `"public"."${t.tablename}"`).join(", ");
   await prisma.$executeRawUnsafe(`truncate table ${list} restart identity cascade`);
