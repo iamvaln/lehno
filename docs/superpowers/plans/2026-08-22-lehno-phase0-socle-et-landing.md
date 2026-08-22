@@ -1718,7 +1718,7 @@ git commit -m "serveur: amorçage NestJS, enveloppe d'erreur, validation Zod, co
 
 `apps/api/test/otp.test.ts` :
 ```ts
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { OtpService } from "../src/auth/otp.service.js";
 import { AppError } from "../src/common/errors.js";
@@ -1761,9 +1761,14 @@ describe("code à usage unique", () => {
 
   it("refuse un code expiré", async () => {
     const { code } = await otp.issue("awa@example.com", "login");
-    vi.setSystemTime(new Date(Date.now() + 11 * 60_000));
+    // On antidate la ligne plutôt que de déplacer l'horloge : de faux
+    // horodateurs perturberaient les minuteries du pilote PostgreSQL,
+    // que ce test utilise réellement.
+    await db.prisma.otpCode.updateMany({
+      where: { targetEmail: "awa@example.com" },
+      data: { expiresAt: new Date(Date.now() - 1_000) },
+    });
     await expect(otp.verify("awa@example.com", "login", code)).rejects.toMatchObject({ code: "otp_expired" });
-    vi.useRealTimers();
   });
 
   it("brûle le code au cinquième essai raté", async () => {
@@ -2953,7 +2958,7 @@ git commit -m "public: configuration lue en base, pages légales, liste d'attent
 
 `apps/api/test/rate-limit.test.ts` :
 ```ts
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { RateLimitService } from "../src/common/rate-limit.service.js";
 
@@ -2981,11 +2986,15 @@ describe("limitation de débit", () => {
     await expect(limiter.hit("otp:karim@example.com", 3, 60_000)).resolves.toBeUndefined();
   });
 
-  it("la fenêtre glisse : le plafond se relâche avec le temps", async () => {
+  it("la fenêtre glisse : les frappes anciennes ne comptent plus", async () => {
     for (let i = 0; i < 3; i++) await limiter.hit("otp:awa@example.com", 3, 60_000);
-    vi.setSystemTime(new Date(Date.now() + 61_000));
+    // Antidater les frappes revient au même que d'avancer l'horloge,
+    // sans toucher aux minuteries du pilote.
+    await db.prisma.rateLimitHit.updateMany({
+      where: { key: "otp:awa@example.com" },
+      data: { createdAt: new Date(Date.now() - 61_000) },
+    });
     await expect(limiter.hit("otp:awa@example.com", 3, 60_000)).resolves.toBeUndefined();
-    vi.useRealTimers();
   });
 });
 ```
@@ -3159,7 +3168,7 @@ git commit -m "envoi: adaptateur d'e-mail derrière une interface, et débit bor
 
 **Fichiers :**
 - Créer : `apps/web/package.json`, `apps/web/next.config.mjs`, `apps/web/app/layout.tsx`, `apps/web/app/[locale]/layout.tsx`
-- Créer : `apps/web/lib/theme-script.ts`, `apps/web/lib/fonts.ts`, `apps/web/app/globals.css`
+- Créer : `apps/web/lib/theme-script.ts`, `apps/web/lib/theme-css.ts`, `apps/web/lib/fonts.ts`, `apps/web/app/globals.css`
 - Créer : `apps/web/middleware.ts`
 - Test : `apps/web/test/theme-script.test.ts`
 
@@ -3254,22 +3263,23 @@ export const karla = Karla({
 });
 ```
 
-`apps/web/app/globals.css` — les deux thèmes, écrits depuis `@lehno/tokens` :
+`apps/web/app/globals.css` ne contient **aucune couleur** : les variables des deux thèmes
+sont émises depuis `@lehno/tokens`, seule source de ces valeurs. Les répéter ici en donnerait
+deux copies que rien n'obligerait à concorder, et leur dérive casserait le mode sombre sans
+qu'aucun test ne le voie.
+
+```ts
+// apps/web/lib/theme-css.ts
+import { themes, cssVariables } from "@lehno/tokens";
+
+export const themeCss = `
+:root[data-theme="light"] { ${cssVariables(themes.light)} }
+:root[data-theme="dark"]  { ${cssVariables(themes.dark)} }
+`.trim();
+```
+
 ```css
-:root[data-theme="light"] {
-  --bg:#FFFFFF; --surface:#FAF9FC; --panel:#EDEAF7; --card:#FFFFFF;
-  --text:#221F2B; --muted:#4A4556; --faint:#726E82;
-  --line:#EDEBF2; --line2:#E2DDF0; --edge:#88839A;
-  --violet:#7B6BB7; --violet-deep:#5A4B93; --on-violet:#FFFFFF;
-  --apricot:#F0CFB4; --on-apricot:#7A4A22; --band:#221F2B; --on-band:#FFFFFF;
-}
-:root[data-theme="dark"] {
-  --bg:#17161F; --surface:#1E1C29; --panel:#2E2945; --card:#1B1928;
-  --text:#F2F0F7; --muted:#B9B4C6; --faint:#9A94A8;
-  --line:#2A2836; --line2:#3D3757; --edge:#726C96;
-  --violet:#9C8BD8; --violet-deep:#C3B4EE; --on-violet:#15131D;
-  --apricot:#F0CFB4; --on-apricot:#3A2413; --band:#41357E; --on-band:#F2F0F7;
-}
+/* apps/web/app/globals.css — structure seulement */
 * { margin: 0; box-sizing: border-box; }
 body {
   background: var(--bg); color: var(--text);
@@ -3283,7 +3293,7 @@ body {
 }
 ```
 
-`apps/web/app/layout.tsx` injecte `themeScript` via `dangerouslySetInnerHTML` dans `<head>`, applique les variables de police au `<html>`, et importe `globals.css`.
+`apps/web/app/layout.tsx` injecte dans `<head>` une balise `<style>` portant `themeCss`, puis `themeScript` via `dangerouslySetInnerHTML`, applique les variables de police au `<html>`, et importe `globals.css`.
 
 `apps/web/middleware.ts` redirige `/` vers `/fr` ou `/en` selon l'en-tête `Accept-Language`, en n'acceptant que ces deux valeurs.
 
