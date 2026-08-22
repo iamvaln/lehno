@@ -28,12 +28,20 @@ export async function withDatabase(): Promise<TestDb> {
   }
 }
 
+// Tables amorcées par une migration et jamais éditées par l'utilisateur :
+// ce sont des données de référence, pas de l'état de test à vider entre
+// deux cas. `category` (tâche 7) porte les sept catégories fixes du
+// système ; les vider les rendrait indisponibles à tout test qui s'exécute
+// après le premier `resetDatabase()` d'un fichier.
+const SEED_TABLES = new Set(["category"]);
+
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
     select tablename from pg_tables
     where schemaname = 'public' and tablename not like '_prisma%'
   `;
-  if (tables.length === 0) return;
-  const list = tables.map((t) => `"public"."${t.tablename}"`).join(", ");
+  const toTruncate = tables.filter((t) => !SEED_TABLES.has(t.tablename));
+  if (toTruncate.length === 0) return;
+  const list = toTruncate.map((t) => `"public"."${t.tablename}"`).join(", ");
   await prisma.$executeRawUnsafe(`truncate table ${list} restart identity cascade`);
 }
