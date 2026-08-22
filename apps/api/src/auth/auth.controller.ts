@@ -55,8 +55,12 @@ export class AuthController {
   @HttpCode(200)
   federated(
     @Body(new ZodValidationPipe(federatedSchema)) body: FederatedBody,
+    @Headers("user-agent") userAgent?: string,
   ): Promise<Session> {
-    return this.federatedAuth.signIn(body);
+    return this.federatedAuth.signIn({
+      ...body,
+      ...(userAgent !== undefined ? { userAgent } : {}),
+    });
   }
 
   @Post("refresh")
