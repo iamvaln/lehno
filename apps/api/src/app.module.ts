@@ -9,9 +9,11 @@ import { FederatedService } from "./auth/federated.service.js";
 import { OtpService } from "./auth/otp.service.js";
 import { TokenService } from "./auth/token.service.js";
 import { AppleIdentityVerifier, GoogleIdentityVerifier } from "./auth/providers.js";
+import { ProfileController } from "./me/profile.controller.js";
+import { ProfileService } from "./me/profile.service.js";
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, ProfileController],
   providers: [
     PrismaService,
     // useFactory : la valeur se lit à l'INSTANCIATION du provider, pas à
@@ -37,6 +39,7 @@ import { AppleIdentityVerifier, GoogleIdentityVerifier } from "./auth/providers.
     AuthService,
     FederatedService,
     AuthGuard,
+    ProfileService,
   ],
 })
 export class AppModule implements NestModule {
