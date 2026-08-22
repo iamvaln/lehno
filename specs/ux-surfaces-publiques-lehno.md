@@ -57,9 +57,7 @@ Principes directeurs :
 > **Faites de chaque jour J un moment qui leur ressemble.**
 > *[Commencer]*
 
-**Autres éléments.** Un aperçu des écrans ; des exemples de portrait et d'idées de cadeaux, fictifs.
-
-**Pas de tarif sur la landing** *(décidé le 2026-08-22)*. La page ne mentionne ni le prix du crédit, ni le partage entre gratuit et payant. Deux raisons : au pré-lancement elle ne demande qu'une adresse, et annoncer un prix avant que le produit n'existe engage sur une valeur qui n'est pas calée ; et le moment juste pour parler de crédits est le pic d'intention, dans l'application, quand une échéance approche et que le solde manque (doc fonctionnelle, §16). Le prix reste porté par `SystemParameter` et lisible via `/public/config` le jour où une surface aura à l'afficher.
+**Autres éléments.** Un aperçu des écrans ; des exemples de portrait et d'idées de cadeaux, fictifs ; la mention du modèle — le carnet et les rappels sont gratuits, les contenus générés se paient en crédits.
 
 **Phrase de marque.** *« Chaque date qui compte, bien célébrée. »* — elle sert de signature courte : pied de page, aperçu de partage, fiches des magasins d'applications, pied de marque des portraits.
 
@@ -112,7 +110,21 @@ Le reste est identique (date, souhait(s), mot, mêmes champs séparés, même pa
 - **Un accueil en deux couches.** La page ouvre toujours sur un **message produit**, composé à partir du prénom du propriétaire (« Salut, bienvenue chez [prénom] ») : rien à remplir, tout Mur publié en dispose. S'y ajoute, lorsque le propriétaire l'a écrit, son **mot d'accueil personnel** — une phrase à lui, qui donne sa couleur à la page (« Ravie de te voir passer. Voilà quelques petites choses sur moi. »). Facultatif, il se rédige depuis la gestion du Mur. C'est un lieu où l'on reçoit, avant d'être une page d'anniversaire.
 - **Intérêts / goûts** marqués publics — ce qu'il y a à savoir sur la personne.
 - **Date d'anniversaire** (si le propriétaire l'expose) — présente, mais en simple mention : elle ne fait pas la une.
-- **Une invitation à découvrir la liste de souhaits** — les `WishlistItem` publics s'ouvrent **d'un geste** plutôt que de s'étaler d'emblée : un visiteur venu dire bonjour n'a pas à tomber sur une liste de cadeaux. Chaque souhait porte son statut (un cadeau déjà réservé apparaît comme tel, pour éviter les doublons).
+- **Une invitation à découvrir la liste de souhaits** — les `WishlistItem` publics s'ouvrent **d'un geste** plutôt que de s'étaler d'emblée : un visiteur venu dire bonjour n'a pas à tomber sur une liste de cadeaux. Chaque souhait montre son intitulé, sa photo si elle existe, ses précisions (taille, couleur, où le trouver), un lien et un prix indicatif éventuels, et son statut — un cadeau déjà réservé apparaît comme tel, **sans jamais dire par qui**.
+
+**Réserver un souhait.** Un visiteur peut se réserver un cadeau, pour que deux proches n'offrent pas la même chose. Le parcours tient en trois temps :
+1. **Il choisit le souhait** et donne son **adresse e-mail** — aucun compte n'est demandé.
+2. **Il décide de se nommer ou non** : une case indique s'il souhaite que le propriétaire voie son nom. Par défaut, la réservation reste anonyme à ses yeux.
+3. **Il saisit le code reçu par e-mail**, sans quitter la page. La réservation ne tient qu'une fois ce code vérifié : tant qu'elle est en attente, le souhait demeure disponible pour un autre — sans quoi une adresse inventée suffirait à bloquer un cadeau.
+
+**Revenir sur le Mur.** Une fois confirmé, le visiteur est reconnu à ses prochaines visites depuis le même navigateur : **ses propres réservations lui sont signalées**, et celles-là seulement.
+
+**Protections.** Le nombre de demandes est limité par adresse et par origine ; les adresses jetables sont refusées ; et l'énumération d'une même boîte par suffixes est détectée.
+
+**Ce que chacun voit.**
+- *Un visiteur quelconque* : les souhaits, et lesquels sont réservés. Jamais par qui.
+- *Le visiteur déjà confirmé* : les mêmes, plus le repérage de ce qu'il a lui-même réservé.
+- *Le propriétaire, dans l'application* : l'état de chaque souhait, et le nom du réservant lorsque celui-ci l'a autorisé.
 
 **Actions.**
 - **Laisser un message d'anniversaire** → mène au dépôt de vœux (3.5), si la fenêtre de l'occurrence courante est ouverte.
@@ -198,6 +210,12 @@ Aucune de ces pages ne révèle d'information sur le propriétaire au-delà du s
 - **Découverte par le portrait.** Quelqu'un voit un portrait partagé sur un réseau → ouvre → séduit → « obtenir son propre espace » → store/waitlist.
 
 ## 5. Composants transverses
+
+**Mise en page adaptative.** Les pages se lisent d'abord sur un téléphone — c'est par là qu'arrivent les liens partagés — puis s'ajustent à l'écran plus large : le contenu garde une largeur de lecture confortable, les images se redimensionnent, et les actions restent atteignables au pouce. Les réglages du système (taille de texte, réduction des animations) sont respectés.
+
+**Deux thèmes.** Les pages suivent le thème du navigateur, clair ou sombre. Les rôles de couleur restent les mêmes dans les deux : fond, texte, action, mise en avant, accent. Un portrait partagé garde son rendu propre, quel que soit le thème de la page qui l'entoure.
+
+**Langue.** Chaque page existe en français et en anglais. Elle choisit sa langue ainsi : le paramètre porté par l'adresse s'il existe, puis la langue du navigateur, puis celle du propriétaire de la page — car elle s'adresse d'abord à ses proches. Un moyen de changer de langue reste accessible.
 
 - **CTA « obtenir son propre espace ».** Présent sur **toutes** les pages publiques. Discret mais constant. C'est le moteur d'acquisition.
 - **CTA « visiter le mur ».** Discret, **uniquement** sur les surfaces de collecte, et seulement si le propriétaire a un Mur publié.
