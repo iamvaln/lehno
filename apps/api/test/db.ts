@@ -42,7 +42,11 @@ export async function withDatabase(): Promise<TestDb> {
 // moment où elle est introduite. Sans quoi le premier test qui en dépend
 // échouera de façon incompréhensible — comme celui-ci avant que la table
 // n'y soit ajoutée.
-const REFERENCE_TABLES = new Set(["category"]);
+//
+// `system_parameter` (tâche 8) suit la même règle : amorcée une fois pour
+// toutes par la migration `notifications`, jamais rejouée ensuite — la
+// vider la rendrait indisponible dès le premier `resetDatabase()`.
+const REFERENCE_TABLES = new Set(["category", "system_parameter"]);
 
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
