@@ -58,4 +58,15 @@ describe("schéma — identité", () => {
       db.prisma.waitlistSignup.create({ data: { email: "X@EXAMPLE.COM", locale: "en" } }),
     ).rejects.toThrow();
   });
+
+  it("supprimer un compte laisse survivre sa trace d'inscription par appareil, sans identité", async () => {
+    const u = await db.prisma.user.create({ data: user() });
+    await db.prisma.deviceSignup.create({ data: { deviceId: "device-1", userId: u.id } });
+
+    await db.prisma.user.delete({ where: { id: u.id } });
+
+    const signups = await db.prisma.deviceSignup.findMany({ where: { deviceId: "device-1" } });
+    expect(signups).toHaveLength(1);
+    expect(signups[0]?.userId).toBeNull();
+  });
 });

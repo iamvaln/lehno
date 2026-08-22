@@ -62,10 +62,13 @@ model User {
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  otpCodes      OtpCode[]
-  identities    FederatedIdentity[]
-  refreshTokens RefreshToken[]
-  deviceSignups DeviceSignup[]
+  referrer        User?  @relation("parrainage", fields: [referredBy], references: [id], onDelete: SetNull)
+  referrals       User[] @relation("parrainage")
+  otpCodes        OtpCode[]
+  identities      FederatedIdentity[]
+  refreshTokens   RefreshToken[]
+  deviceSignups   DeviceSignup[]
+  loginActivities LoginActivity[]
 
   @@map("user")
 }
@@ -125,10 +128,10 @@ model RefreshToken {
 model DeviceSignup {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   deviceId  String   @map("device_id") @db.VarChar(128)
-  userId    String   @map("user_id") @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([deviceId])
   @@map("device_signup")
@@ -142,6 +145,8 @@ model LoginActivity {
   userAgent      String?     @map("user_agent")
   geoApprox      String?     @map("geo_approx")
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@map("login_activity")
