@@ -18,8 +18,11 @@ type RotateOutcome = { ok: true; pair: Pair } | { ok: false; reason: "session_ex
 
 @Injectable()
 export class TokenService {
+  // @Inject(PrismaService) explicite : voir OtpService — sous vitest/esbuild,
+  // design:paramtypes n'est pas émis, un paramètre typé sans jeton explicite
+  // se résoudrait à `undefined` chez Nest.
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject("JWT_SECRET") private readonly secret: string,
   ) {
     if (!secret) throw new Error("JWT_SECRET manquant");

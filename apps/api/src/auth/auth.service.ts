@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { OtpService } from "./otp.service.js";
@@ -9,18 +9,26 @@ type VerifyInput = { email: string; code: string; deviceId?: string; userAgent?:
 
 @Injectable()
 export class AuthService {
+  // @Inject explicite sur chaque paramètre typé par une classe : ce projet
+  // exécute les tests via esbuild (vitest), qui n'émet pas
+  // `design:paramtypes` (pas de support d'`emitDecoratorMetadata`). Sans ce
+  // jeton explicite, Nest résout le paramètre à `undefined` au lieu du type
+  // — l'injection implicite par type ne survivrait pas au câblage réel.
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly otp: OtpService,
-    private readonly tokens: TokenService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(OtpService) private readonly otp: OtpService,
+    @Inject(TokenService) private readonly tokens: TokenService,
   ) {}
 
   // Rend toujours la même chose : une adresse inconnue ne doit pas se distinguer
   // d'une connue, sinon le point d'entrée énumère les comptes.
   async requestOtp(input: { email: string }): Promise<{ sent: true }> {
     const { code } = await this.otp.issue(input.email, "login");
-    // L'envoi passera par l'adaptateur d'envoi (tâche 17) ; en attendant on journalise.
-    if (process.env.NODE_ENV !== "production") console.log(`[otp] ${input.email} → ${code}`);
+    // Béquille de développement, à SUPPRIMER par la tâche 17 quand elle branche
+    // l'envoi réel. Adhésion explicite plutôt que défaut par omission : une
+    // variable absente ne doit jamais faire fuiter un code à usage unique dans
+    // un journal (contrainte globale sur le contenu sensible des journaux).
+    if (process.env.LEHNO_LOG_OTP === "1") console.log(`[otp] ${input.email} → ${code}`);
     return { sent: true };
   }
 

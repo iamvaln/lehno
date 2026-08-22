@@ -1,11 +1,12 @@
 import type { CanActivate, ExecutionContext } from "@nestjs/common";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { TokenService } from "./token.service.js";
 import { AppError } from "../common/errors.js";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly tokens: TokenService) {}
+  // Voir AuthService : jeton explicite requis, esbuild n'émet pas design:paramtypes.
+  constructor(@Inject(TokenService) private readonly tokens: TokenService) {}
 
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest();

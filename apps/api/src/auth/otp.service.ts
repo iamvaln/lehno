@@ -10,8 +10,11 @@ const KEY_VERSION = "v1";
 
 @Injectable()
 export class OtpService {
+  // @Inject(PrismaService) explicite : sous vitest/esbuild, design:paramtypes
+  // n'est pas émis (pas de support d'emitDecoratorMetadata), donc un
+  // paramètre typé sans jeton explicite se résout à `undefined` chez Nest.
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject("OTP_PEPPER") private readonly pepper: string,
   ) {
     if (!pepper) throw new Error("OTP_PEPPER manquant : refuser de démarrer plutôt que de hacher sans clé");

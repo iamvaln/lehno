@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, HttpCode, Headers, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, HttpCode, Headers, Inject, Post, UseGuards } from "@nestjs/common";
 import {
   refreshSchema,
   requestOtpSchema,
@@ -16,9 +16,10 @@ type RefreshBody = { refreshToken: string };
 
 @Controller("auth")
 export class AuthController {
+  // Voir AuthService : jeton explicite requis, esbuild n'émet pas design:paramtypes.
   constructor(
-    private readonly auth: AuthService,
-    private readonly tokens: TokenService,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(TokenService) private readonly tokens: TokenService,
   ) {}
 
   // Rend toujours { sent: true }, adresse connue ou non : voir AuthService.requestOtp.
