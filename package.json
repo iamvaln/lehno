@@ -1,12 +1,13 @@
 {
   "name": "lehno",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@9.12.0",
   "engines": { "node": ">=20.18 <21" },
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
-    "lint": "turbo run lint",
+    "lint": "eslint .",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
