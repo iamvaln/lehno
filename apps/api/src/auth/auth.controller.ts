@@ -1,18 +1,22 @@
 import { Body, Controller, Delete, HttpCode, Headers, Inject, Post, UseGuards } from "@nestjs/common";
 import {
+  federatedSchema,
   refreshSchema,
   requestOtpSchema,
   verifyOtpSchema,
   type Session,
 } from "@lehno/contracts";
+import type { IdentityProvider } from "@prisma/client";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthService } from "./auth.service.js";
 import { TokenService } from "./token.service.js";
+import { FederatedService } from "./federated.service.js";
 import { AuthGuard } from "./auth.guard.js";
 
 type RequestOtpBody = { email: string };
 type VerifyOtpBody = { email: string; code: string; deviceId?: string; referralCode?: string };
 type RefreshBody = { refreshToken: string };
+type FederatedBody = { provider: IdentityProvider; idToken: string; deviceId?: string };
 
 @Controller("auth")
 export class AuthController {
@@ -20,6 +24,7 @@ export class AuthController {
   constructor(
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(TokenService) private readonly tokens: TokenService,
+    @Inject(FederatedService) private readonly federatedAuth: FederatedService,
   ) {}
 
   // Rend toujours { sent: true }, adresse connue ou non : voir AuthService.requestOtp.
@@ -44,6 +49,14 @@ export class AuthController {
       ...(body.deviceId !== undefined ? { deviceId: body.deviceId } : {}),
       ...(userAgent !== undefined ? { userAgent } : {}),
     });
+  }
+
+  @Post("federated")
+  @HttpCode(200)
+  federated(
+    @Body(new ZodValidationPipe(federatedSchema)) body: FederatedBody,
+  ): Promise<Session> {
+    return this.federatedAuth.signIn(body);
   }
 
   @Post("refresh")

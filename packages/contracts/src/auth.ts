@@ -18,4 +18,10 @@ export const sessionSchema = z.object({
 
 export const refreshSchema = z.object({ refreshToken: z.string().min(1) }).strict();
 
+export const federatedSchema = z.object({
+  provider: z.enum(["google", "apple"]),
+  idToken: z.string().min(1),
+  deviceId: z.string().min(1).max(128).optional(),
+}).strict();
+
 export type Session = z.infer<typeof sessionSchema>;
