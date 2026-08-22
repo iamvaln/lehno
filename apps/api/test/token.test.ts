@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { PrismaClient } from "@prisma/client";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { TokenService } from "../src/auth/token.service.js";
 
@@ -51,6 +52,39 @@ describe("sessions", () => {
     await expect(tokens.rotate(second.refreshToken)).rejects.toThrow();
     const vivants = await db.prisma.refreshToken.count({ where: { revokedAt: null } });
     expect(vivants).toBe(0);
+  });
+
+  it("plusieurs rotations concurrentes sur le même jeton : une seule gagne, la lignée tombe", async () => {
+    const first = await tokens.issuePair(userId);
+    // Comme pour l'OTP : une seule connexion Prisma partagée ne fait pas
+    // apparaître la course de façon fiable (la latence de la première requête
+    // sur une connexion neuve biaise la course). On instancie N connexions
+    // indépendantes, on les chauffe, puis on les lance en même temps sur le
+    // même jeton de rafraîchissement.
+    const N = 4;
+    const clients = Array.from({ length: N }, () => new PrismaClient({ datasources: { db: { url: db.url } } }));
+    const services = clients.map((c) => new TokenService(c as never, SECRET));
+    try {
+      await Promise.all(clients.map((c) => c.$queryRaw`select 1`));
+      const results = await Promise.allSettled(services.map((s) => s.rotate(first.refreshToken)));
+      const fulfilled = results.filter((r) => r.status === "fulfilled");
+      const rejected = results.filter((r) => r.status === "rejected") as PromiseRejectedResult[];
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(N - 1);
+      // Le premier perdant à relire l'état détecte le rejeu (refresh_reused) et
+      // révoque la lignée ; les perdants suivants peuvent la trouver déjà
+      // révoquée (session_expired) selon l'ordre d'arrivée — les deux sont des
+      // refus légitimes. Ce qui compte : au moins un rejet nomme explicitement
+      // le rejeu, et tous sont des échecs d'authentification reconnus.
+      const codes = rejected.map((r) => (r.reason as { code?: string }).code);
+      expect(codes).toContain("refresh_reused");
+      for (const code of codes) expect(["refresh_reused", "session_expired"]).toContain(code);
+      // le rejeu détecté abat toute la lignée, y compris le jeton que le gagnant vient d'obtenir
+      const vivants = await db.prisma.refreshToken.count({ where: { revokedAt: null } });
+      expect(vivants).toBe(0);
+    } finally {
+      await Promise.all(clients.map((c) => c.$disconnect()));
+    }
   });
 
   it("un jeton inconnu est refusé sans rien révéler", async () => {

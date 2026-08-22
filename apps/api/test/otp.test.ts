@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { PrismaClient } from "@prisma/client";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { OtpService } from "../src/auth/otp.service.js";
 import { AppError } from "../src/common/errors.js";
@@ -37,6 +38,32 @@ describe("code à usage unique", () => {
     const { code } = await otp.issue("awa@example.com", "login");
     await expect(otp.verify("awa@example.com", "login", code)).resolves.toEqual({ userId: null });
     await expect(otp.verify("awa@example.com", "login", code)).rejects.toThrow(AppError);
+  });
+
+  it("plusieurs vérifications concurrentes avec le bon code : une seule réussit", async () => {
+    const { code } = await otp.issue("awa@example.com", "login");
+    // Une seule connexion Prisma ne suffit pas à faire apparaître la course de
+    // façon fiable : la première requête sur une connexion neuve absorbe un
+    // aller-retour TCP/authentification qui, à lui seul, laisse le temps à une
+    // connexion déjà chaude de finir sa lecture-décision-écriture avant que la
+    // suivante n'ait seulement lu l'état. On instancie donc N connexions
+    // indépendantes, on les chauffe toutes (`select 1`), puis on les lance en
+    // même temps sur le même code — constaté : 0 échec sur 6 essais avec deux
+    // appels sur la même connexion, contre une majorité de succès multiples
+    // dès qu'on chauffe des connexions séparées.
+    const N = 4;
+    const clients = Array.from({ length: N }, () => new PrismaClient({ datasources: { db: { url: db.url } } }));
+    const services = clients.map((c) => new OtpService(c as never, PEPPER));
+    try {
+      await Promise.all(clients.map((c) => c.$queryRaw`select 1`));
+      const results = await Promise.allSettled(services.map((s) => s.verify("awa@example.com", "login", code)));
+      const fulfilled = results.filter((r) => r.status === "fulfilled");
+      const rejected = results.filter((r) => r.status === "rejected");
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(N - 1);
+    } finally {
+      await Promise.all(clients.map((c) => c.$disconnect()));
+    }
   });
 
   it("refuse un code expiré", async () => {

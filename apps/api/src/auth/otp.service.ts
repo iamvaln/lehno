@@ -55,12 +55,36 @@ export class OtpService {
       throw new AppError("otp_expired", "code expired");
 
     if (!this.matches(row.codeHash, code)) {
-      await this.prisma.otpCode.update({
-        where: { id: row.id }, data: { attempts: { increment: 1 } },
+      // Incrément conditionnel et atomique : le plafond est revérifié au
+      // moment de l'écriture (attempts < MAX_ATTEMPTS dans le WHERE), pas
+      // seulement à la lecture d'avant. Sans ça, une rafale de tentatives
+      // concurrentes pourrait toutes lire un compteur encore sous le
+      // plafond et le dépasser de plusieurs essais avant qu'aucune d'elles
+      // n'écrive. Avec la condition, Postgres sérialise les écritures sur
+      // la ligne ; une fois le plafond atteint, tout appelant restant se
+      // heurte à count === 0 et reçoit otp_too_many_attempts, jamais un
+      // dépassement.
+      const { count } = await this.prisma.otpCode.updateMany({
+        where: { id: row.id, attempts: { lt: MAX_ATTEMPTS } },
+        data: { attempts: { increment: 1 } },
       });
+      if (count === 0) throw new AppError("otp_too_many_attempts", "code burnt after too many attempts");
       throw new AppError("otp_invalid", "code does not match");
     }
-    await this.prisma.otpCode.update({ where: { id: row.id }, data: { consumedAt: new Date() } });
+
+    // Consommation conditionnelle et atomique : deux verify() concurrents
+    // avec le même bon code liraient tous deux consumedAt: null avant que
+    // l'un n'écrive, et tous deux réussiraient. Le WHERE ... consumedAt:
+    // null de cet updateMany est réévalué par Postgres sous verrou de
+    // ligne ; un seul appelant peut gagner. Le perdant le sait par
+    // count === 0 — pas par une relecture déjà périmée — et est traité
+    // comme s'il n'avait jamais trouvé de code en attente.
+    const { count } = await this.prisma.otpCode.updateMany({
+      where: { id: row.id, consumedAt: null },
+      data: { consumedAt: new Date() },
+    });
+    if (count === 0) throw new AppError("otp_invalid", "code already consumed");
+
     return { userId: row.userId };
   }
 }
