@@ -11,9 +11,13 @@ import { TokenService } from "./auth/token.service.js";
 import { AppleIdentityVerifier, GoogleIdentityVerifier } from "./auth/providers.js";
 import { ProfileController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
+import { ConfigController, ConfigService } from "./public/config.controller.js";
+import { LegalController, LegalService } from "./public/legal.controller.js";
+import { WaitlistController } from "./public/waitlist.controller.js";
+import { WaitlistService } from "./public/waitlist.service.js";
 
 @Module({
-  controllers: [AuthController, ProfileController],
+  controllers: [AuthController, ProfileController, ConfigController, LegalController, WaitlistController],
   providers: [
     PrismaService,
     // useFactory : la valeur se lit à l'INSTANCIATION du provider, pas à
@@ -40,6 +44,9 @@ import { ProfileService } from "./me/profile.service.js";
     FederatedService,
     AuthGuard,
     ProfileService,
+    ConfigService,
+    LegalService,
+    WaitlistService,
   ],
 })
 export class AppModule implements NestModule {
