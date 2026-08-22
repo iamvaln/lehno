@@ -79,11 +79,27 @@ export class OtpService {
     // ligne ; un seul appelant peut gagner. Le perdant le sait par
     // count === 0 — pas par une relecture déjà périmée — et est traité
     // comme s'il n'avait jamais trouvé de code en attente.
+    //
+    // attempts: { lt: MAX_ATTEMPTS } revérifie aussi le plafond au moment
+    // d'écrire, pas seulement à la lecture d'avant : sans ça, un bon code lu
+    // pendant que le compteur était encore sous le plafond pourrait quand
+    // même consommer la ligne si une rafale de mauvais essais concurrents a
+    // fait grimper le compteur au plafond entre-temps — un code brûlé ne
+    // resterait pas brûlé.
     const { count } = await this.prisma.otpCode.updateMany({
-      where: { id: row.id, consumedAt: null },
+      where: { id: row.id, consumedAt: null, attempts: { lt: MAX_ATTEMPTS } },
       data: { consumedAt: new Date() },
     });
-    if (count === 0) throw new AppError("otp_invalid", "code already consumed");
+    if (count === 0) {
+      // On ne sait pas, sans relire, laquelle des deux conditions a fait
+      // échouer l'écriture : la ligne était déjà consommée, ou le plafond a
+      // été franchi entre-temps. Cette relecture n'explique qu'un fait déjà
+      // acté par l'écriture ci-dessus ; elle ne décide de rien elle-même.
+      const fresh = await this.prisma.otpCode.findUnique({ where: { id: row.id } });
+      if (fresh && fresh.attempts >= MAX_ATTEMPTS)
+        throw new AppError("otp_too_many_attempts", "code burnt after too many attempts");
+      throw new AppError("otp_invalid", "code already consumed");
+    }
 
     return { userId: row.userId };
   }

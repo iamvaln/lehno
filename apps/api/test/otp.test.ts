@@ -66,6 +66,73 @@ describe("code à usage unique", () => {
     }
   });
 
+  it("un bon code face à une rafale de mauvais qui atteint le plafond avant lui : la consommation échoue", async () => {
+    // Reproduit précisément le scénario décrit en revue : le bon code lit un
+    // compteur encore sous le plafond (attempts = 0) et passe la garde, mais
+    // son écriture de consommation n'arrive qu'après qu'une rafale de mauvais
+    // essais concurrents a fait grimper le compteur au plafond.
+    //
+    // Un tir groupé nu ne suffit pas ici, et un verrou de ligne tenu puis
+    // relâché non plus : ni l'un ni l'autre ne garantit dans quel ordre
+    // Postgres traite des écritures concurrentes venues de connexions
+    // différentes sur la même ligne — constaté empiriquement : une file
+    // construite via un verrou tenu ne respecte pas un ordre d'arrivée
+    // fiable entre appelants (plusieurs échecs sur plusieurs relances). On
+    // force donc l'ordre au niveau applicatif plutôt qu'au niveau du verrou :
+    // le client du bon code retarde délibérément SA SEULE écriture de
+    // consommation, via une extension Prisma qui n'intercepte que ses
+    // propres updateMany sur otpCode. Sa lecture, elle, n'est pas retardée :
+    // elle voit toujours attempts = 0 et passe la garde normalement. La
+    // rafale de mauvais essais, sur des connexions non retardées, a tout le
+    // temps de s'écrire et de faire grimper le compteur au plafond avant que
+    // l'écriture (retardée) du bon code ne s'exécute à son tour.
+    const MAX_ATTEMPTS = 5; // miroir de la constante privée du service
+    const { code } = await otp.issue("awa@example.com", "login");
+
+    const rawGoodClient = new PrismaClient({ datasources: { db: { url: db.url } } });
+    const goodClient = rawGoodClient.$extends({
+      query: {
+        otpCode: {
+          async updateMany({ args, query }) {
+            await new Promise((r) => setTimeout(r, 300));
+            return query(args);
+          },
+        },
+      },
+    });
+    const badClients = Array.from(
+      { length: MAX_ATTEMPTS },
+      () => new PrismaClient({ datasources: { db: { url: db.url } } }),
+    );
+    const goodService = new OtpService(goodClient as never, PEPPER);
+    const badServices = badClients.map((c) => new OtpService(c as never, PEPPER));
+    const allRawClients = [rawGoodClient, ...badClients];
+
+    try {
+      await Promise.all(allRawClients.map((c) => c.$queryRaw`select 1`));
+
+      const goodPromise = goodService.verify("awa@example.com", "login", code);
+      // Laisse la lecture (non retardée) du bon code se faire avant que la
+      // rafale de mauvais essais ne démarre — elle voit attempts = 0.
+      await new Promise((r) => setTimeout(r, 20));
+      const badPromises = badServices.map((s) => s.verify("awa@example.com", "login", "000000"));
+
+      const [goodResult] = await Promise.allSettled([goodPromise, ...badPromises]);
+
+      const row = await db.prisma.otpCode.findFirstOrThrow();
+      expect(row.attempts).toBeGreaterThanOrEqual(MAX_ATTEMPTS);
+      // Le plafond a été franchi avant que la consommation (retardée) du bon
+      // code ne s'exécute : elle doit échouer, pas laisser passer un code
+      // déjà brûlé.
+      expect(goodResult.status).toBe("rejected");
+      if (goodResult.status === "rejected") {
+        expect(goodResult.reason).toMatchObject({ code: "otp_too_many_attempts" });
+      }
+    } finally {
+      await Promise.all(allRawClients.map((c) => c.$disconnect()));
+    }
+  });
+
   it("refuse un code expiré", async () => {
     const { code } = await otp.issue("awa@example.com", "login");
     // On antidate la ligne plutôt que de déplacer l'horloge : de faux
