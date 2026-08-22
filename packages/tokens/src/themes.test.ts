@@ -21,25 +21,11 @@ describe("thèmes", () => {
 
   // Le contraste est une propriété du produit, pas une intention : on le mesure.
   it.each([
-    ["text", "bg"], ["muted", "bg"], ["faint", "bg"],
+    ["text", "bg"], ["muted", "bg"], ["faint", "bg"], ["faint", "panel"],
     ["onViolet", "violet"], ["violetDeep", "bg"], ["onApricot", "apricot"], ["onBand", "band"],
   ] as const)("%s sur %s atteint 4,5:1 dans les deux thèmes", (fg, bg) => {
     expect(contrastRatio(themes.light[fg], themes.light[bg])).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(themes.dark[fg], themes.dark[bg])).toBeGreaterThanOrEqual(4.5);
-  });
-
-  it("faint sur panel reste sous 4,5:1 en clair (limite acceptée de la maquette)", () => {
-    // NOTE: This is a known limitation from the design system.
-    // faint (#726E82) on light panel (#EDEAF7) gives ~4.15:1 — below WCAG AA (4.5:1).
-    // The design reserves `faint` for `bg` and `surface` only in light theme.
-    // If this test fails after a palette update, verify with design whether to:
-    // - Keep `faint` off `panel` (update the palette values), or
-    // - Revise contrast requirements for this combination.
-    const lightRatio = contrastRatio(themes.light.faint, themes.light.panel);
-    expect(lightRatio).toBeLessThan(4.5);
-    expect(lightRatio).toBeGreaterThanOrEqual(4.1);
-    // Dark theme does pass the threshold, confirming asymmetry.
-    expect(contrastRatio(themes.dark.faint, themes.dark.panel)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("cssVariables rend une déclaration par rôle", () => {

@@ -24,7 +24,7 @@ Ces règles valent pour **toutes** les tâches. Aucune n'est négociable au cas 
 - **Aucun secret dans le dépôt.** Clés et accès viennent de l'environnement ; `.env` est ignoré par git, `.env.example` est commité.
 - **Rien de sensible dans un journal** : contenu des notes, codes à usage unique, jetons, numéros de téléphone. Masqués à l'écriture, pas après coup.
 - **Aucune ombre dans l'interface**, dans aucun thème. La profondeur vient des filets d'un pixel. Deux thèmes, couleurs déclarées **par rôle** — jamais d'hexadécimal dans un composant.
-- **Palette** — clair : fond `#FFFFFF`, surface `#FAF9FC`, panneau `#EDEAF7`, texte `#221F2B`, secondaire `#4A4556`, mention `#726E82`, filet `#EDEBF2`, filet2 `#E2DDF0`, bordure `#88839A`, violet `#7B6BB7`, violet profond `#5A4B93`, sur-violet `#FFFFFF`, abricot `#F0CFB4`, sur-abricot `#7A4A22`, bandeau `#221F2B`, sur-bandeau `#FFFFFF`. Sombre : fond `#17161F`, surface `#1E1C29`, panneau `#2E2945`, texte `#F2F0F7`, secondaire `#B9B4C6`, mention `#9A94A8`, filet `#2A2836`, filet2 `#3D3757`, bordure `#726C96`, violet `#9C8BD8`, violet profond `#C3B4EE`, sur-violet `#15131D`, abricot `#F0CFB4`, sur-abricot `#3A2413`, bandeau `#41357E`, sur-bandeau `#F2F0F7`, carte `#1B1928`.
+- **Palette** — clair : fond `#FFFFFF`, surface `#FAF9FC`, panneau `#EDEAF7`, texte `#221F2B`, secondaire `#4A4556`, mention `#6B6579`, filet `#EDEBF2`, filet2 `#E2DDF0`, bordure `#88839A`, violet `#7B6BB7`, violet profond `#5A4B93`, sur-violet `#FFFFFF`, abricot `#F0CFB4`, sur-abricot `#7A4A22`, bandeau `#221F2B`, sur-bandeau `#FFFFFF`. Sombre : fond `#17161F`, surface `#1E1C29`, panneau `#2E2945`, texte `#F2F0F7`, secondaire `#B9B4C6`, mention `#9A94A8`, filet `#2A2836`, filet2 `#3D3757`, bordure `#726C96`, violet `#9C8BD8`, violet profond `#C3B4EE`, sur-violet `#15131D`, abricot `#F0CFB4`, sur-abricot `#3A2413`, bandeau `#41357E`, sur-bandeau `#F2F0F7`, carte `#1B1928`.
 - **Typographie** — Fraunces (titres, noms, décomptes ; graisses 400 et 500 ; `font-variation-settings: 'SOFT' 40, 'WONK' 1`) et Karla (texte courant, 300 à 700). **Auto-hébergées**, jamais servies depuis un CDN : la politique de sécurité de contenu interdit les sources externes.
 - **Bilingue fr/en** partout, dès la première ligne. Le français est la langue de référence ; l'anglais s'écrit, il ne se traduit pas.
 - **TDD** : le test s'écrit avant le code, on le voit échouer, puis on le fait passer. Commit à chaque tâche.
@@ -265,7 +265,7 @@ export type Theme = Record<ColorRole, string>;
 export const themes: { light: Theme; dark: Theme } = {
   light: {
     bg: "#FFFFFF", surface: "#FAF9FC", panel: "#EDEAF7", card: "#FFFFFF",
-    text: "#221F2B", muted: "#4A4556", faint: "#726E82",
+    text: "#221F2B", muted: "#4A4556", faint: "#6B6579",
     line: "#EDEBF2", line2: "#E2DDF0", edge: "#88839A",
     violet: "#7B6BB7", violetDeep: "#5A4B93", onViolet: "#FFFFFF",
     apricot: "#F0CFB4", onApricot: "#7A4A22",
