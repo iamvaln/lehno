@@ -9,7 +9,14 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@prisma/client": "6.19.3"
+    "@lehno/contracts": "workspace:*",
+    "@nestjs/common": "^11.2.1",
+    "@nestjs/core": "^11.2.1",
+    "@nestjs/platform-express": "^11.2.1",
+    "@prisma/client": "6.19.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@lehno/tsconfig": "workspace:*",
