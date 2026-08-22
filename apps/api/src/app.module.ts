@@ -1,6 +1,7 @@
 import type { MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { Module } from "@nestjs/common";
 import { CorrelationMiddleware } from "./common/correlation.middleware.js";
+import { RateLimitService } from "./common/rate-limit.service.js";
 import { PrismaService } from "./prisma/prisma.service.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthGuard } from "./auth/auth.guard.js";
@@ -9,6 +10,7 @@ import { FederatedService } from "./auth/federated.service.js";
 import { OtpService } from "./auth/otp.service.js";
 import { TokenService } from "./auth/token.service.js";
 import { AppleIdentityVerifier, GoogleIdentityVerifier } from "./auth/providers.js";
+import { ConsoleMailAdapter, MailgunAdapter } from "./mail/mailgun.adapter.js";
 import { ProfileController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
 import { ConfigController, ConfigService } from "./public/config.controller.js";
@@ -38,8 +40,22 @@ import { WaitlistService } from "./public/waitlist.service.js";
         apple: new AppleIdentityVerifier(process.env.APPLE_CLIENT_ID ?? ""),
       }),
     },
+    // Même logique : construit à l'instanciation, pas au chargement du
+    // module. MailgunAdapter refuse de démarrer sans ses deux réglages ; sans
+    // eux (poste de développement, sans compte Mailgun), on retombe sur la
+    // console — personne n'a besoin d'un compte Mailgun pour travailler sur
+    // le reste du produit.
+    {
+      provide: "MAIL_PORT",
+      useFactory: () => {
+        const apiKey = process.env.MAILGUN_API_KEY;
+        const domain = process.env.MAILGUN_DOMAIN;
+        return apiKey && domain ? new MailgunAdapter(apiKey, domain) : new ConsoleMailAdapter();
+      },
+    },
     OtpService,
     TokenService,
+    RateLimitService,
     AuthService,
     FederatedService,
     AuthGuard,

@@ -1,10 +1,14 @@
 import { randomBytes } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import type { Locale } from "@lehno/i18n";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
+import { RateLimitService } from "../common/rate-limit.service.js";
 import { OtpService } from "./otp.service.js";
 import { TokenService, type Pair } from "./token.service.js";
+import type { MailPort } from "../mail/mail.port.js";
+import { otpEmail } from "../mail/templates.js";
 
 type VerifyInput = { email: string; code: string; deviceId?: string; userAgent?: string };
 
@@ -21,20 +25,26 @@ export class AuthService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(OtpService) private readonly otp: OtpService,
     @Inject(TokenService) private readonly tokens: TokenService,
+    @Inject(RateLimitService) private readonly limiter: RateLimitService,
+    @Inject("MAIL_PORT") private readonly mail: MailPort,
   ) {}
 
-  // Rend toujours la même chose : une adresse inconnue ne doit pas se distinguer
-  // d'une connue, sinon le point d'entrée énumère les comptes. Chemin unique
-  // — aucune requête sur `user` — donc pas seulement la même forme de
-  // réponse : le même travail est fait, dans le même ordre, quel que soit
-  // le cas ; rien ne permet de les distinguer par le temps de réponse non plus.
-  async requestOtp(input: { email: string }): Promise<{ sent: true }> {
+  // La réponse reste la même pour une adresse inconnue : on émet un code et
+  // on envoie, que le compte existe ou non — sinon le point d'entrée énumère
+  // les comptes.
+  async requestOtp(input: { email: string; ip?: string }): Promise<{ sent: true }> {
+    // Par destinataire ET par origine : l'un arrête celui qui vise une personne,
+    // l'autre celui qui balaie un annuaire.
+    await this.limiter.hit(`otp:email:${input.email}`, 5, 3_600_000);
+    if (input.ip) await this.limiter.hit(`otp:ip:${input.ip}`, 20, 3_600_000);
+
     const { code } = await this.otp.issue(input.email, "login");
-    // Béquille de développement, à SUPPRIMER par la tâche 17 quand elle branche
-    // l'envoi réel. Adhésion explicite plutôt que défaut par omission : une
-    // variable absente ne doit jamais faire fuiter un code à usage unique dans
-    // un journal (contrainte globale sur le contenu sensible des journaux).
-    if (process.env.LEHNO_LOG_OTP === "1") console.log(`[otp] ${input.email} → ${code}`);
+    const user = await this.prisma.user.findUnique({
+      where: { email: input.email }, select: { uiLanguage: true },
+    });
+    const locale = (user?.uiLanguage === "en" ? "en" : "fr") as Locale;
+    const { subject, text } = otpEmail({ code, locale });
+    await this.mail.send({ to: input.email, subject, text, locale });
     return { sent: true };
   }
 

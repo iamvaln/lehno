@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@lehno/contracts": "workspace:*",
+    "@lehno/i18n": "workspace:*",
     "@nestjs/common": "^11.2.1",
     "@nestjs/core": "^11.2.1",
     "@nestjs/platform-express": "^11.2.1",

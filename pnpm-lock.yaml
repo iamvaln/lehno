@@ -32,6 +32,9 @@ importers:
       '@lehno/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@lehno/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@nestjs/common':
         specifier: ^11.2.1
         version: 11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2)

@@ -3,6 +3,8 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AuthService } from "../src/auth/auth.service.js";
 import { OtpService } from "../src/auth/otp.service.js";
 import { TokenService } from "../src/auth/token.service.js";
+import { RateLimitService } from "../src/common/rate-limit.service.js";
+import type { Mail, MailPort } from "../src/mail/mail.port.js";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -32,13 +34,19 @@ describe("authentification", () => {
   let db: TestDb;
   let auth: AuthService;
   let otp: OtpService;
+  let envoyés: Mail[];
 
   beforeAll(async () => { db = await withDatabase(); }, 120_000);
   afterAll(async () => { await db.close(); });
   beforeEach(async () => {
     await resetDatabase(db.prisma);
     otp = new OtpService(db.prisma as never, PEPPER);
-    auth = new AuthService(db.prisma as never, otp, new TokenService(db.prisma as never, SECRET));
+    envoyés = [];
+    const mailDeTest: MailPort = { send: async (m) => { envoyés.push(m); } };
+    auth = new AuthService(
+      db.prisma as never, otp, new TokenService(db.prisma as never, SECRET),
+      new RateLimitService(db.prisma as never), mailDeTest,
+    );
   });
 
   it("la première vérification crée le compte", async () => {
@@ -91,6 +99,47 @@ describe("authentification", () => {
     const connue = await auth.requestOtp({ email: "awa@example.com" });
     const inconnue = await auth.requestOtp({ email: "personne@example.com" });
     expect(connue).toEqual(inconnue); // même forme, aucun indice
+  });
+
+  // Le limiteur et l'envoi sont désormais dans le chemin de requestOtp :
+  // cette propriété (identique, adresse connue ou non) est la plus facile
+  // à casser sans s'en apercevoir en la modifiant.
+  it("la réponse reste identique après le branchement du limiteur et de l'envoi, adresse connue ou non", async () => {
+    await db.prisma.user.create({
+      data: { email: "awa@example.com", username: "awa", referralCode: "AWA12345" },
+    });
+    const connue = await auth.requestOtp({ email: "awa@example.com" });
+    const inconnue = await auth.requestOtp({ email: "personne-inconnue@example.com" });
+    expect(connue).toEqual({ sent: true });
+    expect(inconnue).toEqual({ sent: true });
+    expect(connue).toEqual(inconnue);
+  });
+
+  it("demander un code envoie effectivement un courrier, dans la langue du compte", async () => {
+    await db.prisma.user.create({
+      data: { email: "en-anglais@example.com", username: "enanglais", referralCode: "ENGL1234", uiLanguage: "en" },
+    });
+    await auth.requestOtp({ email: "en-anglais@example.com" });
+    expect(envoyés).toHaveLength(1);
+    expect(envoyés[0]).toMatchObject({ to: "en-anglais@example.com", locale: "en", subject: "Your Lehno code" });
+  });
+
+  it("une adresse inconnue reçoit tout de même un courrier, en français par défaut", async () => {
+    await auth.requestOtp({ email: "personne@example.com" });
+    expect(envoyés).toHaveLength(1);
+    expect(envoyés[0]).toMatchObject({ to: "personne@example.com", locale: "fr", subject: "Votre code Lehno" });
+  });
+
+  it("borne les demandes par adresse destinataire", async () => {
+    for (let i = 0; i < 5; i++) await auth.requestOtp({ email: "bombardée@example.com" });
+    await expect(auth.requestOtp({ email: "bombardée@example.com" }))
+      .rejects.toMatchObject({ code: "rate_limited" });
+  });
+
+  it("borne les demandes par origine, tous destinataires confondus", async () => {
+    for (let i = 0; i < 20; i++) await auth.requestOtp({ email: `cible-${i}@example.com`, ip: "203.0.113.9" });
+    await expect(auth.requestOtp({ email: "cible-encore@example.com", ip: "203.0.113.9" }))
+      .rejects.toMatchObject({ code: "rate_limited" });
   });
 
   // Revue tour 1 : deviceId facultatif dans le schéma de contrat, mais le

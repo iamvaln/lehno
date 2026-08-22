@@ -539,6 +539,15 @@ model Feedback {
   @@map("feedback")
 }
 
+model RateLimitHit {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key       String   @db.VarChar(160)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([key, createdAt])
+  @@map("rate_limit_hit")
+}
+
 model DataExportRequest {
   id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String           @map("user_id") @db.Uuid
