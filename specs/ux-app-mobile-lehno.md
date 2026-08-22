@@ -59,7 +59,21 @@ L'application vise le **minimalisme élégant** : peu d'éléments, chacun à sa
 
 **Ce qui est rare vit ailleurs.** Un geste qu'on fait quelques fois par an ne prend pas la place d'un geste quotidien. Ajouter un proche, demander un complément, régler ses préférences : autant d'actions qui vivent dans leur écran plutôt qu'à l'accueil.
 
-**La couleur guide, elle n'habille pas.** Le fond reste blanc, le texte sombre. Le violet marque ce qui agit ; le lilas met en avant l'élément qui compte à l'instant. L'abricot se réserve aux moments heureux — le jour même, un crédit reçu —, ce qui le maintient rare.
+**La couleur guide, elle n'habille pas.** En thème clair, le fond reste blanc et le texte sombre. Le violet marque ce qui agit ; le lilas met en avant l'élément qui compte à l'instant. L'abricot se réserve aux moments heureux — le jour même, un crédit reçu —, ce qui le maintient rare.
+
+**Deux thèmes, une même identité.** L'application suit le **thème du système** — clair ou sombre — et laisse aussi choisir explicitement l'un des deux dans les réglages (3.11). En thème sombre, les rôles restent identiques : le fond profond remplace le blanc, le texte s'éclaircit, le violet s'ajuste pour garder son contraste sur fond foncé, et l'abricot conserve sa fonction d'accent rare. Les couleurs se définissent donc par **rôle** — fond, texte, action, mise en avant, accent — plutôt que par valeur fixe, chaque rôle portant sa déclinaison dans les deux thèmes. Les images et les portraits générés gardent leur rendu propre dans les deux cas.
+
+**Une mise en page qui s'adapte.** L'application se dessine d'abord pour un téléphone tenu à une main, puis s'ajuste sans se réinventer :
+- **Petits écrans** — les libellés restent lisibles, les zones tactiles atteignent la taille minimale recommandée, et les textes longs passent à la ligne plutôt que de se tronquer.
+- **Grands téléphones et tablettes** — le contenu garde une largeur de lecture confortable plutôt que de s'étirer ; les listes gagnent en respiration, pas en colonnes.
+- **Orientation paysage** — les écrans restent utilisables, la barre d'onglets et les actions demeurant atteignables.
+- **Réglages du système** — l'application respecte la taille de texte choisie par la personne, jusqu'aux plus grandes valeurs, ainsi que la réduction des animations. Les mises en page tiennent quand le texte grandit.
+- **Zones sûres** — encoches, barres système et indicateurs d'accueil sont pris en compte ; aucune action ne se loge dessous.
+
+**Une interface bilingue par construction.** Chaque écran existe en français et en anglais (voir le principe bilingue ci-dessus), ce qui impose trois choses au dessin :
+- **Les libellés respirent.** Une même phrase peut s'allonger d'un tiers d'une langue à l'autre : les boutons et les onglets prévoient cette marge plutôt que de tronquer.
+- **Les textes se composent, ils ne s'assemblent pas.** Une phrase comme « Une date aujourd'hui, deux cette semaine » s'écrit **entièrement** dans chaque langue, avec ses variantes de singulier et de pluriel, plutôt que d'être recollée à partir de morceaux — l'ordre des mots et les accords diffèrent d'une langue à l'autre.
+- **Dates, nombres et décomptes suivent la langue.** Le format d'une date, la place du nombre et la notation du décompte (J−3 en français, 3 days en anglais) appartiennent à chaque version.
 
 **La chaleur vient de la typographie.** Les noms, les titres et les décomptes se composent dans un caractère à empattements souples ; le texte courant reste net et discret. C'est l'écart entre les deux qui donne le ton, plutôt qu'un aplat de couleur.
 
@@ -362,6 +376,8 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 
 **Heure d'envoi.** L'utilisateur choisit à quel moment de la journée les rappels lui parviennent, dans son fuseau horaire.
 
+**Apparence.** Le thème suit celui du système par défaut ; l'utilisateur peut imposer le clair ou le sombre.
+
 **Mes données.** Export de ses données personnelles ; suppression du compte (3.24).
 
 **Où mènent les éléments.**
@@ -465,6 +481,7 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 **Contenu, en sections.**
 - **En-tête de profil** : pseudo et e-mail, avec accès à leur modification.
 - **Ma vitrine** : le Mur (activer, choisir ce qui s'expose, prévisualiser, partager — voir 3.10).
+- **Mes réservations** : les cadeaux qu'on s'est réservés sur le Mur de proches (3.27).
 - **Crédits** : le solde, l'historique des crédits (offerts, achetés, dépensés) et l'**historique des paiements** (les achats réglés, avec leur reçu), la recharge (3.9), et le parrainage (partager son code, voir les crédits gagnés).
 - **Compte** : préférences de notification et données personnelles (3.11), sécurité et connexions (3.24).
 - **Aide** : aide et support, à propos (version, pages légales), donner un avis (3.26).
@@ -472,6 +489,7 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 **Où mènent les éléments.**
 - En-tête de profil → mon profil (3.23).
 - Ma vitrine → gestion du Mur (3.10).
+- Mes réservations → 3.27.
 - Crédits → crédits et recharge (3.9).
 - Compte → réglages (3.11) ; *sécurité et connexions* → 3.24.
 - Aide → 3.26.
@@ -490,9 +508,11 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 
 **Rôle.** Consulter et tenir à jour un souhait de l'occasion.
 
-**Contenu.** Intitulé · lien éventuel · prix indicatif · état (disponible, réservé, déjà offert) · provenance (exprimé par le proche, idée retenue, ajout personnel — en lecture) · exposition sur le Mur.
+**Contenu.** Intitulé · **photo** de l'objet, facultative · précisions libres (taille, couleur, où le trouver) · lien éventuel · prix indicatif · état (disponible, réservé, déjà offert) · provenance (exprimé par le proche, idée retenue, ajout personnel — en lecture) · exposition sur le Mur.
 
-**Actions.** Ajouter un souhait · modifier · changer l'état · exposer sur le Mur ou en retirer · retirer.
+**Actions.** Ajouter un souhait · modifier · ajouter ou remplacer la photo · changer l'état · exposer sur le Mur ou en retirer · retirer.
+
+**Réservations.** Lorsqu'un souhait exposé sur le Mur a été réservé par un proche, l'état le montre. Le **nom du réservant** apparaît s'il a choisi de se faire connaître ; sinon la réservation reste anonyme. Le propriétaire garde la main sur l'état — il peut marquer un souhait déjà offert quoi qu'il arrive.
 
 **États particuliers.** Souhait venu d'une collecte : il apparaît une fois retenu à la validation (3.8).
 
@@ -629,6 +649,18 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 - *Écrire à l'équipe* → rédaction d'un message, envoyé depuis l'application.
 - *Pages légales* → leur version publique sur le web.
 - *Noter l'application* → la fiche de l'application sur son magasin.
+
+### 3.27 Mes réservations
+
+**Rôle.** Retrouver les cadeaux qu'on s'est réservés sur le Mur de proches, pour savoir ce qu'on doit offrir et à qui.
+
+**Contenu.** Une ligne par réservation : le souhait, la personne dont c'est le Mur, la date de son occasion et le décompte, et la mention de savoir si l'on s'est fait connaître d'elle. Les occasions les plus proches en tête.
+
+**Comment elles arrivent ici.** Réserver un souhait depuis le Mur d'un proche, alors qu'on est connecté à Lehno, rattache la réservation au compte — sans code à saisir, l'adresse étant déjà vérifiée. Les réservations faites sans compte, avant de s'inscrire, rejoignent cet écran dès que l'adresse coïncide.
+
+**Où mènent les éléments.** Une réservation → le Mur public du proche concerné (3.12).
+
+**États particuliers.** Aucune réservation (message sobre, sans injonction) ; souhait retiré par son propriétaire depuis la réservation (la ligne le signale) ; occasion passée (la réservation reste visible un temps, puis s'archive).
 
 ## 4. Parcours clés
 

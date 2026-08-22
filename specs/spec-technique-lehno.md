@@ -88,7 +88,7 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | `/auth/federated` | POST | Ouvrir une session depuis Google ou Apple |
 | `/auth/session` | DELETE | Se déconnecter |
 | `/auth/refresh` | POST | Renouveler la session |
-| `/me/profile` | GET, PATCH | Pseudo, nom d'affichage, photo, langue |
+| `/me/profile` | GET, PATCH | Pseudo, nom d'affichage, photo, langue, thème |
 | `/me/profile/username-available` | GET | Vérifier la disponibilité d'un pseudo |
 | `/me/account` | DELETE | Demander la suppression (entre dans le délai de grâce) |
 | `/me/sessions` | GET | Connexions récentes |
@@ -167,6 +167,7 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | `/me/payments/{id}` | GET | Suivre une opération, puis son issue |
 | `/me/payment-methods` | GET, POST | Les méthodes enregistrées, la plus récemment utilisée en tête ; en ajouter une |
 | `/me/payment-methods/{id}` | DELETE | En retirer une |
+| `/me/reservations` | GET | Les souhaits qu'on s'est réservés sur le Mur de proches |
 | `/me/referral` | GET | Son code, ses filleuls, les crédits gagnés |
 | `/me/promo-codes` | POST | Saisir un code promotionnel |
 
@@ -217,6 +218,9 @@ Ces appels se font **sans compte**. L'autorisation tient au **jeton porté par l
 | Chemin | Méthode | Rôle |
 |---|---|---|
 | `/public/walls/{username}` | GET | Un Mur publié |
+| `/public/walls/{username}/wishes` | GET | Les souhaits publics et leur état ; les réservations du visiteur sont signalées s'il présente son jeton |
+| `/public/wishes/{id}/reserve` | POST | Réserver un souhait : nom facultatif et choix de se faire connaître ; un visiteur sans compte y ajoute son adresse, un utilisateur connecté réserve en un geste |
+| `/public/wishes/{id}/reserve/verify` | POST | Saisir le code reçu ; la réservation devient effective et un jeton de session est remis |
 | `/public/collect/{token}` | GET, POST | Le formulaire de collecte ; envoyer une contribution |
 | `/public/collect/{token}/submissions` | GET | Ce que ce répondant a déjà envoyé, avec le sort de ses souhaits |
 | `/public/wishes/{token}` | GET, POST | Le dépôt de vœux d'une occasion |
@@ -224,6 +228,7 @@ Ces appels se font **sans compte**. L'autorisation tient au **jeton porté par l
 | `/public/invitations/{code}` | GET | Une invitation au parrainage : qui invite, ce que l'invité y gagne |
 | `/public/config` | GET | Les valeurs publiques d'affichage : crédits offerts à l'inscription, bonus d'invitation, prix du crédit |
 | `/public/legal/{document}` | GET | Conditions d'utilisation, politique de confidentialité, mentions légales |
+| `/public/waitlist` | POST | Déposer son adresse sur la liste d'attente, tant que la landing est en pré-lancement |
 
 **Configuration publique.** La page d'invitation et la landing annoncent des montants qui se règlent côté administration. Elles les lisent ici plutôt que de les figer dans le code du site.
 
@@ -322,7 +327,7 @@ Un rôle insuffisant rend **`403`** — ici, l'existence du chemin est déjà co
 
 ### 9.2 Code à usage unique
 
-- Conservé **haché**, jamais en clair, avec une durée de vie courte.
+- Conservé **haché**, jamais en clair, avec une durée de vie courte. Le hachage est un **HMAC-SHA-256 sous clé tenue dans l'environnement** : un code à six chiffres ne compte qu'un million de valeurs, qu'une lecture de la base suffirait à énumérer si le condensé se calculait sans secret. La comparaison se fait en temps constant. Aucun mot de passe n'existe dans le produit — l'entrée repose sur le code et les fournisseurs d'identité —, donc aucune fonction de hachage lente (bcrypt, argon2, scrypt) n'a d'emploi ici : elle n'ajouterait rien à la défense et offrirait un levier de saturation sur un point d'entrée ouvert sans compte.
 - **Nombre de tentatives borné** par code ; au-delà, il est brûlé.
 - **Fréquence de demande limitée** par adresse et par origine.
 - **Réponse uniforme** : demander un code pour une adresse inconnue rend la même réponse que pour une adresse connue. La liste des comptes reste ainsi hors de portée.
@@ -374,10 +379,11 @@ Un souhait porte une adresse, et cette adresse peut venir d'un proche via un lie
 
 ### 9.9 Abus
 
-- **Débit limité** là où l'on peut appeler sans compte : envoi d'une contribution via un lien de collecte, dépôt d'un vœu, et **demande d'un code de connexion** (`/auth/otp`) — cette dernière bornée par adresse et par origine, comme le détaille 9.2.
+- **Débit limité** là où l'on peut appeler sans compte : envoi d'une contribution via un lien de collecte, dépôt d'un vœu, **réservation d'un souhait**, et **demande d'un code de connexion** (`/auth/otp`) — cette dernière bornée par adresse et par origine, comme le détaille 9.2.
 - **Plafond de comptes par appareil** vérifié avant toute création, l'adresse étant conservée pour les investigations.
 - **Taille des contenus bornée** en entrée ; les images sont vérifiées et recompressées avant stockage.
 - **Coût de la génération protégé.** Chaque appel d'IA se paie en argent réel : le crédit est **débité avant** l'appel, une même demande relancée rejoint celle en cours, et un plafond d'appels par compte et par heure contient l'emballement, qu'il vienne d'un défaut du client ou d'une intention.
+- **Réservations protégées.** Les adresses jetables sont refusées, et l'énumération d'une même boîte par suffixes (`a+1@`, `a+2@`) est détectée : la partie qui suit le `+` est ignorée pour le décompte des demandes.
 - **Codes promotionnels et parrainage bornés** : usage unique par compte, plafond global par code, et octroi du bonus d'invitation à la seule création de compte.
 
 ### 9.10 Données
@@ -692,9 +698,9 @@ La section Métriques s'appuie sur ces événements pour rendre les vues promise
 
 Chaque écran des trois spécifications trouve ici ses points d'entrée. Cette table sert de contrôle : un écran sans ligne signale un manque.
 
-**Application mobile.** Inscription et connexion → `/auth/*`, `/public/invitations/{code}` · Accueil → `/me/home` · Proches → `/me/persons` · Fiche d'un proche → `/me/persons/{id}`, `/notes`, `/portraits` · Saisie d'une note → `/me/notes`, `/me/persons/{id}/notes`, `/me/occurrences/{id}/notes` · Ajout d'un événement → `/me/events` · Génération → `/me/generations` · À valider → `/me/submissions`, `/me/received-wishes` · Crédits et recharge → `/me/credits`, `/me/payments` · Mon Mur → `/me/wall` · Réglages → `/me/notification-preferences`, `/me/data-export` · Surfaces publiques dans l'application → `/v1/public/*` · Centre de notifications → `/me/notifications` · Dates → `/me/occurrences` · Recherche → `/me/search` · Reprises → `/me/resumables` · Moi → agrégat des précédents · Modifier l'identité → `/me/persons/{id}` · Détail d'un souhait → `/me/wishes/{id}` · Partage d'un lien de collecte → `/me/collection-links` · Détail d'une occasion → `/me/occurrences/{id}` · Aperçu d'un portrait → `/me/portraits/{id}` · Mon profil → `/me/profile` · Sécurité et connexions → `/me/sessions`, `/me/identities`, `/me/account` · Méthode de paiement → `/me/payment-methods` · Aide → `/me/support-requests`, `/me/feedback`, `/public/legal/*`.
+**Application mobile.** Inscription et connexion → `/auth/*`, `/public/invitations/{code}` · Accueil → `/me/home` · Proches → `/me/persons` · Fiche d'un proche → `/me/persons/{id}`, `/notes`, `/portraits` · Saisie d'une note → `/me/notes`, `/me/persons/{id}/notes`, `/me/occurrences/{id}/notes` · Ajout d'un événement → `/me/events` · Génération → `/me/generations` · À valider → `/me/submissions`, `/me/received-wishes` · Crédits et recharge → `/me/credits`, `/me/payments` · Mon Mur → `/me/wall` · Réglages → `/me/notification-preferences`, `/me/data-export` · Surfaces publiques dans l'application → `/v1/public/*` · Centre de notifications → `/me/notifications` · Dates → `/me/occurrences` · Recherche → `/me/search` · Reprises → `/me/resumables` · Moi → agrégat des précédents · Modifier l'identité → `/me/persons/{id}` · Détail d'un souhait → `/me/wishes/{id}` · Partage d'un lien de collecte → `/me/collection-links` · Détail d'une occasion → `/me/occurrences/{id}` · Aperçu d'un portrait → `/me/portraits/{id}` · Mon profil → `/me/profile` · Mes réservations → `/me/reservations` · Sécurité et connexions → `/me/sessions`, `/me/identities`, `/me/account` · Méthode de paiement → `/me/payment-methods` · Aide → `/me/support-requests`, `/me/feedback`, `/public/legal/*`.
 
-**Surfaces publiques.** Landing → `/public/config` · Collecte nominatif et public → `/public/collect/{token}` · Mur public → `/public/walls/{username}` · Dépôt de vœux → `/public/wishes/{token}` · Portrait partagé → `/public/portraits/{token}` · Invitation au parrainage → `/public/invitations/{code}` · Pages légales → `/public/legal/{document}` · Pages d'état → rendues par les réponses d'état des chemins ci-dessus.
+**Surfaces publiques.** Landing → `/public/config`, `/public/waitlist` (pré-lancement) · Collecte nominatif et public → `/public/collect/{token}` · Mur public → `/public/walls/{username}` · Dépôt de vœux → `/public/wishes/{token}` · Portrait partagé → `/public/portraits/{token}` · Invitation au parrainage → `/public/invitations/{code}` · Pages légales → `/public/legal/{document}` · Pages d'état → rendues par les réponses d'état des chemins ci-dessus.
 
 **Back-office.** Connexion → `/admin/auth/*` · Tableau de bord → `/admin/dashboard` · Comptes → `/admin/users` · Crédits et paiements → `/admin/payments`, `/admin/users/{id}/credits` · Modération → `/admin/moderation` · Paramètres → `/admin/parameters` · Modèles d'IA → `/admin/ai-models` · Offres et croissance → `/admin/promo-codes`, `/admin/referrals` · Métriques → `/admin/metrics` · Journal d'audit → `/admin/audit-log` · Connexions → `/admin/login-activity` · Liens externes → `/admin/external-links`.
 

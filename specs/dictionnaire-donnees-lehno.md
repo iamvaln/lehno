@@ -14,21 +14,6 @@ Il **complète** la documentation fonctionnelle (`doc-fonctionnelle-assistant-an
 - **Nommage** : `snake_case` pour les colonnes ; les noms d'entités sont donnés dans leur forme logique (le nom de table réelle est laissé à l'implémentation).
 - **Enums** : définis comme types PostgreSQL `enum` ou tables de référence selon préférence d'implémentation ; les valeurs sont fixées ici.
 
-## Révisions
-
-**2026-08-21 — compléments de cadrage d'implémentation.** La relecture croisée avec la spécification technique et les specs UX a fait apparaître des entités appelées par un point d'entrée ou une règle, mais absentes de ce dictionnaire. Elles y sont ajoutées :
-
-| # | Manque | Correctif |
-|---|---|---|
-| 1 | Préférences de notification (spec technique 13.1, `/me/notification-preferences`) sans entité | `NotificationPreference` (§7), plus `timezone`, `send_hour`, `digest_frequency` et `reminder_lead_days` sur `User` |
-| 2 | Jetons d'appareil (`/me/devices`) sans entité | `Device` (§7) |
-| 3 | `notification_type` à quatre valeurs, alors que le catalogue 13.2 en demande quatorze | Enum étendu (§7) |
-| 4 | `Notification` ne portait pas de quoi s'afficher dans la langue du client | `title_key`, `body_params`, `read_at`, `target_route` (§7) |
-| 5 | `ai_usage.action_run_id` non nul, alors que le classement des notes et la détection du sensible sont gratuits et ne produisent pas d'`ActionRun` | Colonne rendue nullable, plus `purpose` et `user_id` (§6) |
-| 6 | Rotation du jeton de rafraîchissement (spec technique 9.1) sans table où vivre | `RefreshToken` (§1) |
-
-S'y ajoutent `WaitlistSignup` (§3, la landing de pré-lancement), et `SupportRequest`, `Feedback`, `DataExportRequest` (§8), appelés par les écrans Aide et Réglages. Deux règles de calendrier laissées ouvertes sont également fixées (§2, `Schedule`).
-
 ---
 
 # 1. Identité & compte
@@ -51,16 +36,15 @@ Titulaire et compte fusionnés. Racine du cloisonnement multi-tenant.
 | deletion_requested_at | timestamptz | oui | — | — | Début du délai de grâce ; l'effacement définitif intervient après `account_grace_period_days` |
 | deletion_reason | text | oui | — | — | Raison du départ, facultative (motif choisi ou texte libre) |
 | ui_language | varchar(10) | non | — | 'fr' | Langue de l'interface (code BCP 47, ex. `fr`, `en`) ; distincte de `person.language`, la langue de communication propre à chaque proche |
-| timezone | varchar(64) | non | — | 'UTC' | Fuseau de l'utilisateur (IANA, ex. `Africa/Douala`). Les décomptes de jours et l'heure d'envoi s'y calculent (spec technique 11.5 et 14.1) |
-| send_hour | smallint | non | — | 9 | Heure locale à laquelle partent rappels et récapitulatifs (0–23) ; un rappel ne réveille personne |
-| digest_frequency | digest_frequency (enum) | non | — | 'monthly' | Cadence du récapitulatif : `monthly` \| `weekly` \| `never` |
-| reminder_lead_days | integer | oui | — | — | Délai d'anticipation par défaut choisi par l'utilisateur ; nul ⇒ `SystemParameter` `reminder_lead_days_default`. Un `Schedule` peut le surcharger à son tour |
+| theme | ui_theme (enum) | non | — | 'system' | Apparence choisie : `system` (suit l'appareil) \| `light` \| `dark` |
+| timezone | varchar(64) | non | — | 'Africa/Douala' | Fuseau IANA ; décide de « aujourd'hui » et de l'heure des envois |
+| send_hour | smallint | non | — | 9 | Heure locale des rappels et récapitulatifs (0–23) |
+| digest_frequency | digest_frequency (enum) | non | — | 'monthly' | `monthly` \| `weekly` \| `never` |
+| reminder_lead_days | smallint | oui | — | — | Délai d'anticipation par défaut des rappels ; nul = valeur du `SystemParameter`. Un `Schedule` peut le surcharger |
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
 - Enum `user_status` : `active`, `suspended`, `pending_deletion`, `deleted`.
-- Enum `digest_frequency` : `monthly`, `weekly`, `never`.
-- **Trois délais d'anticipation, du plus général au plus précis** : le `SystemParameter` `reminder_lead_days_default`, puis `user.reminder_lead_days`, puis `schedule.lead_time_days`. Le plus précis renseigné l'emporte.
 - **Suppression avec délai de grâce** : la demande passe le compte en `pending_deletion` et renseigne `deletion_requested_at`. Le compte est alors inaccessible et ses surfaces publiques cessent de répondre, mais les données sont conservées jusqu'à l'expiration du délai (`SystemParameter` `account_grace_period_days`, trente jours par défaut), puis effacées. Un retour en arrière pendant le délai passe par l'assistance.
 - Le **solde de crédits** n'est pas une colonne : il se calcule comme somme de `credit_transaction.amount` pour ce `user_id` (voir CreditTransaction).
 - La self-Person (fiche de l'utilisateur sur lui-même) est une `person` rattachée à ce `user_id` et repérée par `person.is_self = true`.
@@ -83,9 +67,6 @@ Code à usage unique pour vérification d'e-mail et connexion. Éphémère.
 
 - Enum `otp_reason` : `email_verification`, `login`.
 - Purge recommandée des codes expirés/consommés (rétention courte).
-- **Hachage** : `code_hash` porte un **HMAC-SHA-256** du code, calculé avec une clé (*pepper*) tenue dans l'environnement et jamais en base, stocké sous la forme `v1$<digest base64>`. Le préfixe désigne la clé et rend sa rotation indolore (spec technique 9.11) — d'autant que tout code en circulation expire en quelques minutes. La vérification compare en **temps constant**.
-- **Pourquoi une clé et non un simple hachage** : un code à six chiffres ne compte qu'un million de valeurs, qu'une lecture de la base suffirait à énumérer. La clé, absente de la base, prive cette énumération de tout point d'appui. Ce sont ensuite la durée de vie courte, le plafond de tentatives et la limitation de fréquence qui font le gros de la défense.
-- **Génération** : tirage par générateur cryptographique sur `[0, 10^6[`, complété à six chiffres — sans reste de division, qui biaiserait la distribution.
 
 ## FederatedIdentity
 
@@ -195,6 +176,116 @@ Historique des états d'un `Payment`. Chaque état occupe une ligne, ouverte à 
 - La **durée d'un état** se lit directement — combien de temps un paiement est resté en attente, quand la notification est arrivée, quelle voie l'a résolu.
 - Un changement d'origine `admin` rejoint également le **journal d'audit** (`AuditLog`), qui porte la vue transverse des actions d'administration.
 
+## NotificationPreference
+
+Réglage d'une nature de message pour un utilisateur. **L'absence de ligne vaut valeurs par défaut** : on n'écrit que ce qui s'écarte de l'ordinaire.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
+| type | notification_type (enum) | non | — | — | La nature réglée |
+| push_enabled | boolean | non | — | true | |
+| email_enabled | boolean | non | — | true | |
+| updated_at | timestamptz | non | — | now() | |
+
+- Unicité sur (`user_id`, `type`).
+- Les natures `login_code`, `security` et `account` ignorent ces réglages : elles partent toujours.
+- L'heure d'envoi, la fréquence du récapitulatif et le délai d'anticipation vivent sur le `User`, car ils valent pour toutes les natures.
+
+## Device
+
+Appareil enregistré pour recevoir les notifications poussées. À distinguer de `DeviceSignup`, qui compte les créations de compte.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
+| push_token | text | non | — | — | Jeton fourni par le service de notification |
+| platform | notification_platform (enum) | non | — | — | `ios` \| `android` |
+| app_version | varchar(20) | oui | — | — | Utile au support et au diagnostic |
+| is_active | boolean | non | — | true | Passe à faux lorsque le service déclare le jeton invalide |
+| last_seen_at | timestamptz | oui | — | — | Dernière ouverture depuis cet appareil |
+| created_at | timestamptz | non | — | now() | |
+
+- Unicité sur (`user_id`, `push_token`).
+- Un jeton durablement rejeté cesse d'être sollicité ; le taux de jetons invalides est surveillé.
+
+## RefreshToken
+
+Jeton de rafraîchissement d'une session. Sa rotation permet de détecter le vol d'un jeton.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
+| family_id | uuid | non | — | — | Lignée issue d'une même connexion |
+| token_hash | varchar(64) | non | oui | — | **SHA-256 sans clé** : 256 bits tirés au hasard ne s'énumèrent pas, contrairement à un code à six chiffres |
+| parent_id | uuid | oui | — | — | FK → refresh_token(id) ; jeton dont celui-ci est issu |
+| expires_at | timestamptz | non | — | — | |
+| consumed_at | timestamptz | oui | — | — | Renseigné à l'échange |
+| revoked_at | timestamptz | oui | — | — | Renseigné à la déconnexion ou à la révocation d'une lignée |
+| user_agent | text | oui | — | — | Pour l'affichage des connexions récentes |
+| ip | inet | oui | — | — | Investigation |
+| created_at | timestamptz | non | — | now() | |
+
+- **Rejouer un jeton déjà consommé révoque toute la lignée** (`family_id`) : c'est le signe qu'une copie circule.
+
+## WaitlistSignup
+
+Adresse déposée sur la liste d'attente pendant le pré-lancement. **Rattachée à aucun `User`** : déposer son adresse ne crée pas de compte.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| email | citext | non | oui | — | |
+| locale | varchar(10) | oui | — | — | Langue de la page au dépôt |
+| source | varchar(40) | oui | — | — | Provenance, si connue |
+| ip | inet | oui | — | — | Limitation d'abus |
+| created_at | timestamptz | non | — | now() | |
+
+## SupportRequest
+
+Message adressé à l'équipe depuis l'écran d'aide.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
+| subject | varchar(140) | oui | — | — | |
+| body | text | non | — | — | |
+| app_version | varchar(20) | oui | — | — | Joint automatiquement |
+| platform | notification_platform (enum) | oui | — | — | Joint automatiquement |
+| status | support_request_status (enum) | non | — | 'open' | `open` \| `answered` \| `closed` |
+| created_at | timestamptz | non | — | now() | |
+
+## Feedback
+
+Avis laissé depuis l'application.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| user_id | uuid | oui | — | — | FK → user(id) on delete set null |
+| rating | smallint | oui | — | — | 1 à 5, si donné |
+| body | text | oui | — | — | |
+| app_version | varchar(20) | oui | — | — | |
+| created_at | timestamptz | non | — | now() | |
+
+## DataExportRequest
+
+Demande d'export de ses données personnelles.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
+| status | export_status (enum) | non | — | 'pending' | `pending` \| `ready` \| `failed` \| `expired` |
+| file_url | text | oui | — | — | Adresse temporaire du fichier produit |
+| expires_at | timestamptz | oui | — | — | Au-delà, le fichier est retiré |
+| completed_at | timestamptz | oui | — | — | |
+| created_at | timestamptz | non | — | now() | |
+
 ## LoginActivity
 
 Trace de toutes les tentatives de connexion, consultable par l'`Admin`.
@@ -211,29 +302,6 @@ Trace de toutes les tentatives de connexion, consultable par l'`Admin`.
 | created_at | timestamptz | non | — | now() | Horodatage de la tentative |
 
 - Enum `login_result` : `success`, `failure`.
-
-## RefreshToken
-
-Jeton de rafraîchissement d'une session. Le jeton d'accès étant de courte durée, c'est celui-ci qui tient la session dans le temps ; il est conservé dans le coffre sécurisé de l'appareil et **tourne à chaque usage**.
-
-| Champ | Type | Null | Unique | Défaut | Notes |
-|---|---|---|---|---|---|
-| id | uuid | non | oui (PK) | gen_random_uuid() | |
-| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
-| family_id | uuid | non | — | — | Lignée : tous les jetons issus d'une même ouverture de session la partagent |
-| token_hash | text | non | oui | — | **SHA-256** du jeton (32 octets tirés au hasard). Pas de *pepper* : 256 bits ne s'énumèrent pas |
-| parent_id | uuid | oui | — | — | FK → refresh_token(id) on delete set null ; le jeton dont celui-ci est issu |
-| expires_at | timestamptz | non | — | — | Durée de vie longue (à caler ; ordre de grandeur : quelques semaines) |
-| consumed_at | timestamptz | oui | — | — | Renseigné à la rotation |
-| revoked_at | timestamptz | oui | — | — | Renseigné à la déconnexion ou à la révocation d'une lignée |
-| user_agent | text | oui | — | — | Appareil d'origine, pour l'écran « connexions récentes » |
-| ip | inet | oui | — | — | Adresse à l'ouverture |
-| created_at | timestamptz | non | — | now() | |
-
-- **Rotation** : un rafraîchissement consomme le jeton présenté et en émet un nouveau dans la même `family_id`.
-- **Détection de rejeu** : présenter un jeton déjà consommé signale un vol — **toute la lignée est révoquée**, et les sessions qui en dépendent tombent (spec technique 9.1).
-- La **déconnexion** révoque la lignée côté serveur, et non le seul client.
-- Index sur (`user_id`, `revoked_at`) pour lister les sessions ouvertes, et sur (`family_id`).
 
 ---
 
@@ -297,13 +365,12 @@ Règle transformant `reference_date` en échéances. Un `Event` en porte une ou 
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `schedule_type` : `recurrent`, `offset`.
+- **Jours absents du calendrier.** Un anniversaire du **29 février** se marque le **28 février** les années communes. Plus généralement, une échéance qui tomberait sur un jour absent du mois d'arrivée est **ramenée au dernier jour** de ce mois (un offset d'un mois depuis le 31 janvier échoit le 28 ou le 29 février).
+- **Pas de dérive.** Les offsets successifs se calculent toujours depuis la `reference_date`, jamais depuis une échéance déjà ramenée : le décalage ne s'accumule pas.
+- **Dates civiles.** Le calcul se fait en dates civiles, dans le fuseau de l'utilisateur — « aujourd'hui » désigne autre chose selon l'endroit.
 - Enum `schedule_unit` : `day`, `week`, `month`, `quarter`, `year`.
 - Enum `offset_unit` : `day`, `month`.
 - Contrainte : si `type = recurrent` → `unit` et `interval` non nuls ; si `type = offset` → `offset_unit` et `offset_amount` non nuls (contrainte `check`).
-- **Jours qui n'existent pas.** Deux cas se présentent, tranchés ici pour que le calcul soit reproductible :
-  - **29 février** — un anniversaire tombé un 29 février est marqué le **28 février** les années communes, et le 29 les années bissextiles. Marquer la veille plutôt que le lendemain reste dans le mois de naissance.
-  - **Fin de mois** — un offset qui tomberait sur un jour absent du mois d'arrivée est **ramené au dernier jour de ce mois** (31 janvier + 1 mois → 28 ou 29 février). Les offsets suivants se calculent toujours depuis la `reference_date`, jamais depuis une échéance déjà ramenée : le décalage ne s'accumule pas.
-- Le calcul s'effectue en **dates civiles**, dans le fuseau de l'utilisateur (`user.timezone`) ; aucune échéance ne se déplace parce qu'un serveur vit ailleurs.
 
 ## EventOccurrence
 
@@ -381,9 +448,11 @@ Souhait structuré, rattaché à une `EventOccurrence` (l'anniversaire d'une ann
 | author_user_id | uuid | oui | — | — | FK → user(id) on delete set null ; **auteur** (null si contribution anonyme). Cloisonnement via l'occurrence → event → person |
 | label | text | non | — | — | Intitulé du souhait |
 | link | text | oui | — | — | URL éventuelle |
+| image_url | text | oui | — | — | Photo de l'objet, facultative ; recomposée et servie depuis le stockage (voir 9.6 de la spécification technique) |
+| details | text | oui | — | — | Précisions libres : taille, couleur, référence, où le trouver |
 | price | numeric(12,2) | oui | — | — | Prix indicatif |
 | currency | varchar(3) | oui | — | — | Code ISO 4217 si `price` renseigné |
-| status | wishlist_status (enum) | non | — | 'available' | `available` \| `reserved` \| `fulfilled` |
+| status | wishlist_status (enum) | non | — | 'available' | `available` \| `reserved` \| `fulfilled` ; **`reserved` est dérivé** d'une `WishReservation` confirmée |
 | origin | wishlist_origin (enum) | non | — | — | `collected` \| `accepted_idea` \| `owner` |
 | is_public | boolean | non | — | false | Exposé sur le `Wall` si true |
 | created_at | timestamptz | non | — | now() | |
@@ -391,6 +460,36 @@ Souhait structuré, rattaché à une `EventOccurrence` (l'anniversaire d'une ann
 
 - Enum `wishlist_status` : `available`, `reserved`, `fulfilled`.
 - Enum `wishlist_origin` : `collected`, `accepted_idea`, `owner`.
+- `fulfilled` reste une décision du propriétaire ; `reserved` découle d'une réservation confirmée (voir `WishReservation`).
+
+## WishReservation
+
+Réservation d'un souhait public par un visiteur, **sans compte**. Elle évite que deux proches offrent la même chose.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| wishlist_item_id | uuid | non | — | — | FK → wishlist_item(id) on delete cascade |
+| user_id | uuid | oui | — | — | FK → user(id) on delete set null ; renseigné lorsque le réservant a un compte Lehno |
+| email | citext | non | — | — | Adresse du réservant ; celle du compte s'il en a un, sinon celle qu'il a donnée |
+| display_name | varchar(80) | oui | — | — | Nom donné par le visiteur, si `show_identity` |
+| show_identity | boolean | non | — | false | Le visiteur choisit si le propriétaire voit son nom |
+| status | reservation_status (enum) | non | — | 'pending' | `pending` \| `confirmed` \| `cancelled` \| `expired` |
+| code_hash | varchar(64) | oui | — | — | **HMAC-SHA-256 sous clé** du code à usage unique saisi dans la page — même règle que l'OTP de connexion (9.2). Nul lorsque le réservant est connecté : son adresse est déjà vérifiée |
+| attempts | smallint | non | — | 0 | Tentatives de saisie ; au-delà du seuil, le code est brûlé |
+| session_token_hash | varchar(64) | oui | oui | — | SHA-256 du jeton remis après confirmation ; permet au visiteur de retrouver **ses** réservations en revenant |
+| confirmed_at | timestamptz | oui | — | — | |
+| cancelled_at | timestamptz | oui | — | — | |
+| expires_at | timestamptz | non | — | — | Une réservation non confirmée se libère au terme du délai |
+| created_at | timestamptz | non | — | now() | |
+
+- Enum `reservation_status` : `pending`, `confirmed`, `cancelled`, `expired`.
+- **Une seule réservation active par souhait** : index unique partiel sur `wishlist_item_id` là où `status` vaut `pending` ou `confirmed`.
+- **Deux chemins selon qui réserve.** Un **utilisateur connecté** réserve en un geste : son adresse est déjà vérifiée par son compte, la réservation naît `confirmed` et se rattache à lui. Un **visiteur sans compte** donne son adresse, reçoit un **code à usage unique** qu'il saisit dans la page, et la réservation ne tient qu'une fois ce code vérifié. Tant qu'elle est `pending`, le souhait reste disponible pour un autre — sans quoi une adresse inventée bloquerait un cadeau.
+- **Retrouver ses réservations.** Un utilisateur connecté les voit dans son espace, sur tous ses appareils. Un visiteur sans compte est reconnu par son jeton de session dans le même navigateur ; ailleurs, il redonne son adresse et un nouveau code — c'est **l'adresse qui fait l'identité**, le jeton n'étant qu'un raccourci.
+- **Protections contre l'abus.** Le débit est limité par adresse et par origine ; les **adresses jetables** sont refusées ; et l'**énumération d'une même boîte** par suffixes (`a+1@`, `a+2@`) est détectée et bornée, la partie qui suit le `+` étant ignorée pour le décompte.
+- **Ce que voit le public.** Un souhait réservé apparaît comme tel, **jamais par qui**. Le visiteur qui revient avec son jeton de session retrouve ses propres réservations, et celles-là seulement.
+- **Ce que voit le propriétaire.** L'état `reserved`, et le nom du réservant **si** ce dernier l'a autorisé (`show_identity`). Le reste demeure anonyme.
 
 ---
 
@@ -489,22 +588,6 @@ Souhait individuel d'une `Submission`, porté en ligne (plutôt qu'en blob) pour
 
 - Enum `submitted_wish_review` : `pending`, `retained`, `discarded`.
 - `retained` produit un `WishlistItem` (origin `collected`) ; `discarded` conserve la trace pour l'afficher au répondant. Le répondant lit ce `review_status` à la réouverture de son lien (via le `token` du `CollectionLink` nominatif).
-
-## WaitlistSignup
-
-Inscription à la liste d'attente depuis la landing, avant l'ouverture publique. Entité de pré-lancement : elle n'est **rattachée à aucun `User`** et ne le devient jamais — une adresse déposée ici ne crée pas de compte et ne s'y rattache pas rétroactivement, conformément à la règle selon laquelle un compte naît vierge.
-
-| Champ | Type | Null | Unique | Défaut | Notes |
-|---|---|---|---|---|---|
-| id | uuid | non | oui (PK) | gen_random_uuid() | |
-| email | citext | non | oui | — | Adresse déposée ; unicité insensible à la casse, un second dépôt de la même adresse ne crée rien |
-| locale | varchar(10) | oui | — | — | Langue de la page au moment du dépôt (`fr`, `en`) |
-| source | varchar(64) | oui | — | — | Provenance éventuelle (campagne, lien) |
-| ip | inet | oui | — | — | Adresse au dépôt ; anti-abus du formulaire public |
-| created_at | timestamptz | non | — | now() | |
-
-- Le formulaire est public : débit limité et épreuve légère à la suspicion, comme les autres surfaces sans compte (spec technique 9.9).
-- Un seul drapeau bascule la landing entre pré-lancement (ce formulaire) et lancé (liens vers les magasins) ; l'entité demeure ensuite comme archive.
 
 ---
 
@@ -734,14 +817,14 @@ Catalogue des modèles d'IA et configuration de routage.
 
 ## AIUsage
 
-Trace d'un appel modèle, rattachée à une `ActionRun`.
+Trace d'un appel modèle. Elle couvre **tous** les appels, y compris ceux qui ne produisent rien de visible.
 
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
-| action_run_id | uuid | oui | — | — | FK → action_run(id) on delete cascade ; **nul pour un appel gratuit**, qui ne consomme aucun crédit et ne produit donc pas d'`ActionRun` |
-| user_id | uuid | oui | — | — | FK → user(id) on delete set null ; porteur de l'appel, seule attribution disponible quand `action_run_id` est nul |
-| purpose | ai_usage_purpose (enum) | non | — | — | Ce que l'appel servait : `note_classification` \| `sensitive_detection` \| `portrait` \| `gift_ideas` \| `wish_message` |
+| action_run_id | uuid | oui | — | — | FK → action_run(id) on delete cascade ; **nul** pour un appel sans production visible |
+| purpose | ai_purpose (enum) | non | — | — | Ce à quoi l'appel a servi |
+| user_id | uuid | oui | — | — | FK → user(id) on delete set null ; rapporte le coût à un compte |
 | ai_model_id | uuid | oui | — | — | FK → ai_model(id) on delete set null ; modèle effectivement utilisé |
 | provider | varchar(40) | non | — | — | Copié (traçabilité même si `ai_model` évolue) |
 | model_key | varchar(80) | non | — | — | Copié |
@@ -753,9 +836,9 @@ Trace d'un appel modèle, rattachée à une `ActionRun`.
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `ai_usage_status` : `success`, `error`, `timeout`.
-- Enum `ai_usage_purpose` : `note_classification`, `sensitive_detection`, `portrait`, `gift_ideas`, `wish_message`.
-- L'`internal_cost` de l'`action_run` = somme des `cost` de ses `ai_usage` **rattachées** (celles dont `action_run_id` est renseigné).
-- **Les appels gratuits sont tracés eux aussi.** Le classement d'une note et la détection d'un événement sensible ne sont pas facturés à l'utilisateur, mais ils se paient en argent réel. Les laisser hors de cette table fausserait le suivi de marge que promet la spec technique (12.3) : le coût d'IA rapporté aux revenus des crédits ignorerait une dépense qui croît avec l'usage gratuit. Ils portent donc `action_run_id` nul, `user_id` renseigné, et leur `purpose` les distingue à l'agrégation.
+- Enum `ai_purpose` : `note_classification`, `sensitive_detection`, `portrait`, `gift_ideas`, `wish_message`.
+- L'`internal_cost` de l'`action_run` = somme des `cost` de ses `ai_usage` rattachés.
+- **Les appels gratuits comptent aussi.** Le classement d'une note et la détection d'un événement sensible ne coûtent aucun crédit à l'utilisateur, mais se paient en argent réel : les omettre fausserait le suivi de marge du tableau de bord.
 
 ## AuditLog
 
@@ -791,11 +874,11 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | event_occurrence_id | uuid | oui | — | — | FK → event_occurrence(id) on delete set null ; cible d'un rappel d'échéance |
 | person_id | uuid | oui | — | — | FK → person(id) on delete set null ; cible d'une relance par personne |
 | channel | notification_channel (enum) | non | — | — | `email` \| `push` \| `in_app` |
-| title_key | varchar(64) | non | — | — | **Clé de traduction** du titre ; le serveur n'envoie pas de phrase |
-| body_params | jsonb | oui | — | — | Valeurs à injecter dans le gabarit traduit (prénom, décompte, date) — des faits, jamais du texte rédigé |
-| target_route | text | oui | — | — | Où mène la notification : l'écran qui permet d'agir, jamais l'accueil |
-| dedupe_key | text | oui | — | oui | Clé d'unicité de l'envoi (voir ci-dessous) |
-| scheduled_for | timestamptz | oui | — | — | Moment d'envoi visé, dans le fuseau du destinataire |
+| title_key | varchar(60) | non | — | — | **Clé de traduction** du titre ; le serveur transporte des clés, jamais des phrases — la langue d'interface peut changer après l'envoi |
+| body_params | jsonb | oui | — | — | Valeurs à insérer dans le gabarit traduit (prénom, date, nombre) |
+| target_route | text | oui | — | — | Écran à ouvrir : une notification mène là où l'on agit |
+| dedupe_key | varchar(120) | oui | oui | — | Empêche qu'un même fait produise deux envois ; porte le type et sa cible |
+| scheduled_for | timestamptz | oui | — | — | Envoi prévu, dans le fuseau du destinataire |
 | sent_at | timestamptz | oui | — | — | Horodatage d'envoi |
 | read_at | timestamptz | oui | — | — | Lecture dans le centre de notifications |
 | status | notification_status (enum) | non | — | 'pending' | `pending` \| `sent` \| `read` \| `failed` |
@@ -804,105 +887,8 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 - Enum `notification_type` : `event_reminder`, `event_day_of`, `digest`, `contribution_received`, `wish_received`, `enrichment_nudge_global`, `enrichment_nudge_person`, `generation_ready`, `payment_succeeded`, `payment_failed`, `credits_received`, `login_code`, `security`, `account`.
 - Enum `notification_channel` : `email`, `push`, `in_app`.
 - Enum `notification_status` : `pending`, `sent`, `read`, `failed`.
-- **Le serveur transporte des clés, pas des phrases.** Le centre de notifications s'affiche dans la langue de l'interface, qui peut changer après l'envoi : stocker un titre rédigé le figerait dans la langue du jour où il est parti. `title_key` et `body_params` laissent le client composer au moment de l'affichage, selon la règle « des codes, pas des phrases » (spec technique 11.2). Les e-mails et les notifications poussées, eux, sont rendus à l'envoi dans la langue du destinataire (11.3).
-- **Anti-doublon.** `dedupe_key` porte une clé stable — par exemple `event_reminder:<occurrence_id>:<lead_days>` — dont l'unicité empêche qu'un traitement rejoué renvoie le même rappel. C'est ce qui rend les traitements programmés rejouables sans dommage (spec technique 14.1).
-- **Le centre reçoit tout.** Une notification poussée s'y retrouve toujours ; l'inverse est vrai aussi — le canal `in_app` couvre ce qui n'existe que dans le centre.
-- Sert l'anti-doublon, le centre de notifications et les métriques.
-- Index sur (`user_id`, `read_at`) pour la pastille, et sur (`status`, `scheduled_for`) pour la file d'envoi.
-
-## NotificationPreference
-
-Réglage par nature de message et par canal. Une ligne par couple (`user`, `type`) : chaque famille se règle indépendamment, comme le veut la spec technique (13.1).
-
-| Champ | Type | Null | Unique | Défaut | Notes |
-|---|---|---|---|---|---|
-| id | uuid | non | oui (PK) | gen_random_uuid() | |
-| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
-| type | notification_type (enum) | non | — | — | La nature réglée |
-| push_enabled | boolean | non | — | true | Notification sur le téléphone |
-| email_enabled | boolean | non | — | true | Courrier électronique |
-| created_at | timestamptz | non | — | now() | |
-| updated_at | timestamptz | non | — | now() | |
-
-- Unicité sur (`user_id`, `type`).
-- **Absence de ligne = valeurs par défaut** : inutile d'en écrire une par nature à la création d'un compte. La ligne naît au premier réglage.
-- **Les deux canaux à false** sont un choix valide : l'écran signale alors que ces messages ne parviendront plus (spec UX mobile 3.11).
-- **La sécurité passe outre.** Les types `login_code`, `security` et `account` s'envoient quel que soit le réglage ; une ligne les concernant est ignorée à l'envoi.
-- La cadence du récapitulatif (`digest_frequency`), l'heure d'envoi (`send_hour`) et le fuseau (`timezone`) vivent sur `User` : ils valent pour toutes les natures à la fois.
-
-## Device
-
-Appareil enregistré pour recevoir les notifications poussées (`/me/devices`).
-
-| Champ | Type | Null | Unique | Défaut | Notes |
-|---|---|---|---|---|---|
-| id | uuid | non | oui (PK) | gen_random_uuid() | |
-| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
-| push_token | text | non | — | — | Jeton fourni par le service d'acheminement |
-| platform | device_platform (enum) | non | — | — | `ios` \| `android` |
-| app_version | varchar(20) | oui | — | — | Version installée ; accompagne aussi les demandes d'assistance |
-| is_active | boolean | non | — | true | Passe à false sur jeton devenu invalide |
-| last_seen_at | timestamptz | oui | — | — | Dernière présence de cet appareil |
-| created_at | timestamptz | non | — | now() | |
-
-- Enum `device_platform` : `ios`, `android`.
-- Unicité sur (`user_id`, `push_token`) : réenregistrer un jeton connu le met à jour au lieu d'en créer un second.
-- **Un jeton durablement injoignable cesse d'être servi** : l'échec d'acheminement bascule `is_active` à false, conformément à la spec technique 13.4. La ligne demeure, pour la mesure.
-- Le `device_id` qui plafonne les créations de compte est une autre notion, portée par `DeviceSignup` (§1) : celui-ci compte les inscriptions, celui-là achemine les messages.
-
----
-
-# 8. Assistance & données personnelles
-
-Trois entités appelées par les écrans Aide (spec UX mobile 3.26) et Réglages (3.11), sans lesquelles `/me/support-requests`, `/me/feedback` et `/me/data-export` n'ont rien où écrire.
-
-## SupportRequest
-
-Message adressé à l'équipe depuis l'application.
-
-| Champ | Type | Null | Unique | Défaut | Notes |
-|---|---|---|---|---|---|
-| id | uuid | non | oui (PK) | gen_random_uuid() | |
-| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
-| subject | text | oui | — | — | Objet éventuel |
-| body | text | non | — | — | Le message |
-| app_version | varchar(20) | oui | — | — | Joint automatiquement, pour ne pas avoir à le demander |
-| platform | device_platform (enum) | oui | — | — | Idem |
-| status | support_request_status (enum) | non | — | 'open' | `open` \| `answered` \| `closed` |
-| created_at | timestamptz | non | — | now() | |
-
-- Enum `support_request_status` : `open`, `answered`, `closed`.
-- C'est aussi le canal par lequel se demande un **retour en arrière** pendant le délai de grâce d'une suppression — l'adresse de l'assistance étant communiquée à la confirmation et par e-mail.
-
-## Feedback
-
-Avis spontané envoyé depuis l'application. Distinct d'une demande d'assistance : il n'appelle pas de réponse.
-
-| Champ | Type | Null | Unique | Défaut | Notes |
-|---|---|---|---|---|---|
-| id | uuid | non | oui (PK) | gen_random_uuid() | |
-| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
-| rating | smallint | oui | — | — | Note éventuelle (1–5) |
-| body | text | oui | — | — | Commentaire libre |
-| app_version | varchar(20) | oui | — | — | |
-| created_at | timestamptz | non | — | now() | |
-
-## DataExportRequest
-
-Demande d'export de ses données personnelles. Le fichier se compose en différé, et l'utilisateur est prévenu quand il est prêt (spec technique 14.3).
-
-| Champ | Type | Null | Unique | Défaut | Notes |
-|---|---|---|---|---|---|
-| id | uuid | non | oui (PK) | gen_random_uuid() | |
-| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
-| status | data_export_status (enum) | non | — | 'pending' | `pending` \| `ready` \| `failed` \| `expired` |
-| file_url | text | oui | — | — | Adresse du fichier produit ; servie depuis un domaine distinct, sous un nom tiré au hasard |
-| expires_at | timestamptz | oui | — | — | Au-delà, le fichier est retiré et l'état passe à `expired` |
-| completed_at | timestamptz | oui | — | — | Fin de composition |
-| created_at | timestamptz | non | — | now() | |
-
-- Enum `data_export_status` : `pending`, `ready`, `failed`, `expired`.
-- Le fichier ne demeure pas indéfiniment : une archive de données personnelles qui traîne est une fuite en attente.
+- Sert l'anti-doublon, le centre de notifications in-app et les métriques.
+- Les types `login_code`, `security` et `account` partent quelles que soient les préférences.
 
 ---
 
@@ -911,7 +897,11 @@ Demande d'export de ses données personnelles. Le fichier se compose en différ�
 | Enum | Valeurs |
 |---|---|
 | user_status | active, suspended, pending_deletion, deleted |
+| ui_theme | system, light, dark |
 | digest_frequency | monthly, weekly, never |
+| notification_platform | ios, android |
+| support_request_status | open, answered, closed |
+| export_status | pending, ready, failed, expired |
 | otp_reason | email_verification, login |
 | login_result | success, failure |
 | identity_provider | google, apple |
@@ -931,6 +921,7 @@ Demande d'export de ses données personnelles. Le fichier se compose en différ�
 | assignment_source | auto, user |
 | wishlist_status | available, reserved, fulfilled |
 | wishlist_origin | collected, accepted_idea, owner |
+| reservation_status | pending, confirmed, cancelled, expired |
 | collection_link_type | nominatif, public |
 | submission_status | pending, validated, rejected |
 | submitted_wish_review | pending, retained, discarded |
@@ -943,11 +934,8 @@ Demande d'export de ses données personnelles. Le fichier se compose en différ�
 | param_value_type | number, money, duration, boolean, string |
 | admin_role | support, admin |
 | ai_usage_status | success, error, timeout |
-| ai_usage_purpose | note_classification, sensitive_detection, portrait, gift_ideas, wish_message |
+| ai_purpose | note_classification, sensitive_detection, portrait, gift_ideas, wish_message |
 | audit_actor | admin, user |
 | notification_type | event_reminder, event_day_of, digest, contribution_received, wish_received, enrichment_nudge_global, enrichment_nudge_person, generation_ready, payment_succeeded, payment_failed, credits_received, login_code, security, account |
 | notification_channel | email, push, in_app |
 | notification_status | pending, sent, read, failed |
-| device_platform | ios, android |
-| support_request_status | open, answered, closed |
-| data_export_status | pending, ready, failed, expired |
