@@ -198,11 +198,13 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 
 | Chemin | Méthode | Rôle |
 |---|---|---|
-| `/me/home` | GET | Ce que l'accueil affiche en un appel : prochaines échéances, contributions en attente, reprises, compteurs |
+| `/me/home` | GET | Ce que l'accueil affiche en un appel : les prochaines échéances, et les décomptes qui composent la phrase d'accueil |
 | `/me/search` | GET | Recherche par nom de proche, au fil de la frappe |
 | `/me/resumables` | GET | Les reprises : brouillons de message et portraits à finir, classés par urgence |
 
-**Un appel pour l'accueil.** L'écran d'ouverture affiche cinq blocs venus de quatre ressources. Les réclamer séparément multiplierait les allers-retours au moment où l'application démarre : `/me/home` les rend ensemble, plafonnés comme l'écran les montre.
+**Un appel pour l'accueil.** L'accueil tient en deux éléments — une phrase qui donne l'état des lieux, et les trois échéances les plus proches (voir 3.2 de la spécification mobile). Les échéances viennent de `/me/occurrences`, mais la phrase demande des **décomptes** que cette liste plafonnée ne donne pas : combien de dates aujourd'hui, combien dans la semaine. `/me/home` rend les deux ensemble, ce qui évite un aller-retour au démarrage et laisse le serveur composer la phrase à partir de ses propres chiffres.
+
+**Ce qu'il ne porte plus.** Les contributions en attente et les reprises ont quitté l'accueil : les premières se comptent dans la cloche, les secondes se retrouvent depuis l'occasion concernée. Le décompte de la cloche accompagne néanmoins la réponse, puisque l'en-tête l'affiche dès l'ouverture.
 
 ### 5.9 Aide et retours
 
