@@ -57,7 +57,9 @@ Principes directeurs :
 > **Faites de chaque jour J un moment qui leur ressemble.**
 > *[Commencer]*
 
-**Autres éléments.** Un aperçu des écrans ; des exemples de portrait et d'idées de cadeaux, fictifs ; la mention du modèle — le carnet et les rappels sont gratuits, les contenus générés se paient en crédits.
+**Autres éléments.** Un aperçu des écrans ; des exemples de portrait et d'idées de cadeaux, fictifs.
+
+**Pas de tarif sur la landing** *(décidé le 2026-08-22)*. La page ne mentionne ni le prix du crédit, ni le partage entre gratuit et payant. Deux raisons : au pré-lancement elle ne demande qu'une adresse, et annoncer un prix avant que le produit n'existe engage sur une valeur qui n'est pas calée ; et le moment juste pour parler de crédits est le pic d'intention, dans l'application, quand une échéance approche et que le solde manque (doc fonctionnelle, §16). Le prix reste porté par `SystemParameter` et lisible via `/public/config` le jour où une surface aura à l'afficher.
 
 **Phrase de marque.** *« Chaque date qui compte, bien célébrée. »* — elle sert de signature courte : pied de page, aperçu de partage, fiches des magasins d'applications, pied de marque des portraits.
 
