@@ -21,7 +21,9 @@ Après review, il manque ceci. À ajouter dans la source, pas dans les fichiers 
 12. Entités **`SupportRequest`**, **`Feedback`**, **`DataExportRequest`**.
 13. Sur **`Schedule`** — fixer deux règles : le 29 février se marque le 28 les années communes ; un offset tombant sur un jour absent est ramené au dernier jour du mois, les offsets suivants se calculant toujours depuis la `reference_date`.
 
-## À trancher
+## Mode sombre
 
-14. Le tarif sur la landing : retiré le 2026-08-22, mais présent dans la maquette v3 (100 F le crédit, 5 crédits offerts). S'il reste, ces montants doivent venir de `/public/config`, pas être écrits en dur.
-15. Le mode sombre : présent dans la maquette v3, absent de toutes les specs. S'applique-t-il au mobile ?
+14. Le mode sombre s'applique **aussi au mobile** — il n'est aujourd'hui décrit nulle part. À porter dans `ux-app-mobile-lehno.md` :
+    - le parti pris de conception dit « le fond reste blanc, le texte sombre » : à réécrire en termes de rôles (fond, texte, panneau) plutôt que de couleurs, les deux thèmes devant s'y reconnaître ;
+    - dire ce qui choisit le thème — réglage système par défaut, et bascule manuelle dans Moi (3.17) ou Mon profil (3.23), persistée ;
+    - la planche d'identité ne décrit que le clair : y ajouter le jeu sombre, celui de la maquette v3 faisant foi.
