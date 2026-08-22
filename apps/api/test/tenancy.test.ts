@@ -62,4 +62,66 @@ describe("cloisonnement", () => {
     await expect(repo.occurrences(awa).findOrThrow(o.id)).rejects.toMatchObject({ code: "not_found" });
     await expect(repo.occurrences(karim).findOrThrow(o.id)).resolves.toMatchObject({ id: o.id });
   });
+
+  // Revue tour 1, point 1 : avant la correction, `{ ...this.scope, ...where }`
+  // laissait une clé `userId` du `where` de l'appelant supplanter le
+  // périmètre (écrite en second, elle gagnait). Avec cette clé précisément
+  // choisie pour coïncider avec le nom de la clé de périmètre, l'ancien code
+  // aurait rendu la fiche de Karim à une requête scopée sur awa. La
+  // combinaison par `AND` rend cette clé sans effet : elle ne peut que
+  // restreindre, jamais remplacer.
+  it("une clé fournie par l'appelant ne peut pas lever le périmètre", async () => {
+    const résultat = await repo.persons(awa).findMany({ userId: karim });
+    expect(résultat).toEqual([]);
+  });
+
+  // Revue tour 1, point 2 : `where` reste bien filtré par le périmètre, mais
+  // rien ne regardait ce qu'on écrivait — `updateOrThrow(id, { userId: autre
+  // })` réassignait la ressource à un autre tenant. Ici Karim modifie SA
+  // PROPRE fiche (le `where` la trouve donc), mais tente d'en changer le
+  // propriétaire : ça doit être refusé quand même, la colonne d'appartenance
+  // étant hors de portée par construction. `as never` contourne le typage
+  // (qui, lui, refuse déjà `{ userId }` à la compilation — voir
+  // `Omit<T, F | "id">` dans Scope.updateOrThrow) pour éprouver la garde
+  // d'exécution qui reste en dessous.
+  it("réassigner la colonne d'appartenance est refusé, même en contournant le typage", async () => {
+    await expect(repo.persons(karim).updateOrThrow(fichesDeKarim, { userId: awa } as never))
+      .rejects.toMatchObject({ code: "validation_failed" });
+    const intacte = await db.prisma.person.findUniqueOrThrow({ where: { id: fichesDeKarim } });
+    expect(intacte.userId).toBe(karim);
+  });
+
+  // Revue tour 1, point 5 : events(), notes() et wishes() filtrent par un
+  // PARENT (Event et Note via Person, un souhait via son occurrence) plutôt
+  // que par une colonne userId directe — précisément là que les erreurs de
+  // cloisonnement se cachent. Aucun test ne les exerçait.
+  it("les événements passent par le même filtre que les fiches", async () => {
+    const e = await db.prisma.event.create({
+      data: { personId: fichesDeKarim, referenceDate: new Date("1990-01-01") },
+    });
+    await expect(repo.events(awa).findOrThrow(e.id)).rejects.toMatchObject({ code: "not_found" });
+    await expect(repo.events(karim).findOrThrow(e.id)).resolves.toMatchObject({ id: e.id });
+  });
+
+  it("les notes passent par le même filtre que les fiches", async () => {
+    const n = await db.prisma.note.create({
+      data: { personId: fichesDeKarim, content: "note privée" },
+    });
+    await expect(repo.notes(awa).findOrThrow(n.id)).rejects.toMatchObject({ code: "not_found" });
+    await expect(repo.notes(karim).findOrThrow(n.id)).resolves.toMatchObject({ id: n.id });
+  });
+
+  it("les souhaits passent par le même filtre que l'échéance qui les porte", async () => {
+    const e = await db.prisma.event.create({
+      data: { personId: fichesDeKarim, referenceDate: new Date("1990-01-01") },
+    });
+    const o = await db.prisma.eventOccurrence.create({
+      data: { eventId: e.id, userId: karim, occurrenceDate: new Date("2026-01-01"), occurrenceYear: 2026 },
+    });
+    const w = await db.prisma.wishlistItem.create({
+      data: { eventOccurrenceId: o.id, label: "un cadeau", origin: "owner" },
+    });
+    await expect(repo.wishes(awa).findOrThrow(w.id)).rejects.toMatchObject({ code: "not_found" });
+    await expect(repo.wishes(karim).findOrThrow(w.id)).resolves.toMatchObject({ id: w.id });
+  });
 });
