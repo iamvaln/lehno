@@ -3096,6 +3096,31 @@ export function otpEmail(input: { code: string; locale: Locale }): { subject: st
 
 `apps/api/src/mail/mailgun.adapter.ts` implémente `MailPort` par un appel à l'API Mailgun, et journalise l'échec sans jamais écrire le contenu du courrier. En développement, un `ConsoleMailAdapter` affiche le message : personne n'a besoin d'un compte Mailgun pour travailler sur le reste.
 
+**Le constructeur d'`AuthService` gagne deux dépendances**, et le test de la tâche 12 doit suivre :
+
+```ts
+// apps/api/src/auth/auth.service.ts — signature élargie
+constructor(
+  private readonly prisma: PrismaService,
+  private readonly otp: OtpService,
+  private readonly tokens: TokenService,
+  private readonly limiter: RateLimitService,
+  private readonly mail: MailPort,
+) {}
+```
+
+```ts
+// apps/api/test/auth.e2e.test.ts — le montage du test, mis à jour
+const envoyés: Mail[] = [];
+const mailDeTest: MailPort = { send: async (m) => { envoyés.push(m); } };
+auth = new AuthService(
+  db.prisma as never, otp, new TokenService(db.prisma as never, SECRET),
+  new RateLimitService(db.prisma as never), mailDeTest,
+);
+```
+
+Garder `envoyés` sous la main permet d'ajouter un test qui vérifie qu'un courrier est bien parti, et dans la bonne langue.
+
 Enfin, `AuthService.requestOtp` borne puis envoie :
 ```ts
 async requestOtp(input: { email: string; ip?: string }): Promise<{ sent: true }> {
