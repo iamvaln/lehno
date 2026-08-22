@@ -6,19 +6,26 @@ export type TestDb = { prisma: PrismaClient; url: string; close: () => Promise<v
 
 export async function withDatabase(): Promise<TestDb> {
   const container: StartedPostgreSqlContainer = await new PostgreSqlContainer("postgres:16-alpine").start();
-  const url = container.getConnectionUri();
-  // migrate deploy plutôt que db push : on veut tester les migrations réelles,
-  // y compris le SQL écrit à la main que Prisma n'exprime pas.
-  execFileSync("pnpm", ["prisma", "migrate", "deploy"], {
-    env: { ...process.env, DATABASE_URL: url },
-    stdio: "inherit",
-  });
-  const prisma = new PrismaClient({ datasources: { db: { url } } });
-  return {
-    prisma,
-    url,
-    close: async () => { await prisma.$disconnect(); await container.stop(); },
-  };
+  try {
+    const url = container.getConnectionUri();
+    // migrate deploy plutôt que db push : on veut tester les migrations réelles,
+    // y compris le SQL écrit à la main que Prisma n'exprime pas.
+    execFileSync("pnpm", ["prisma", "migrate", "deploy"], {
+      env: { ...process.env, DATABASE_URL: url },
+      stdio: "inherit",
+    });
+    const prisma = new PrismaClient({ datasources: { db: { url } } });
+    return {
+      prisma,
+      url,
+      close: async () => { await prisma.$disconnect(); await container.stop(); },
+    };
+  } catch (error) {
+    // Le conteneur ne doit pas survivre à un échec de migration : sans ça,
+    // chaque erreur de SQL écrit à la main en laisse un derrière elle.
+    await container.stop();
+    throw error;
+  }
 }
 
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
