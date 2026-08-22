@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AuthService } from "../src/auth/auth.service.js";
 import { OtpService } from "../src/auth/otp.service.js";
@@ -6,6 +6,27 @@ import { TokenService } from "../src/auth/token.service.js";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
+
+// node:crypto s'expose en ESM via un objet d'espace de noms figé : vi.spyOn
+// ne peut pas le redéfinir ("Cannot redefine property"). vi.mock intercepte
+// la résolution du module avant que cet objet gelé n'existe ; par défaut il
+// délègue entièrement au module réel, et un seul test (la collision de
+// pseudo) programme un tirage truqué pour son tout premier appel.
+const cryptoOverride = vi.hoisted(() => ({ nextRandomBytes: null as ((size: number) => Buffer) | null }));
+vi.mock("node:crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:crypto")>();
+  return {
+    ...actual,
+    randomBytes: (size: number) => {
+      const override = cryptoOverride.nextRandomBytes;
+      if (override) {
+        cryptoOverride.nextRandomBytes = null;
+        return override(size);
+      }
+      return actual.randomBytes(size);
+    },
+  };
+});
 
 describe("authentification", () => {
   let db: TestDb;
@@ -70,5 +91,78 @@ describe("authentification", () => {
     const connue = await auth.requestOtp({ email: "awa@example.com" });
     const inconnue = await auth.requestOtp({ email: "personne@example.com" });
     expect(connue).toEqual(inconnue); // même forme, aucun indice
+  });
+
+  // Revue tour 1 : deviceId facultatif dans le schéma de contrat, mais le
+  // plafond par appareil se contournerait en l'omettant si le service ne
+  // l'exigeait pas lui-même pour CRÉER un compte.
+  it("créer un compte sans identifiant d'appareil est refusé", async () => {
+    const { code } = await otp.issue("sans-appareil@example.com", "login");
+    await expect(auth.verifyOtp({ email: "sans-appareil@example.com", code }))
+      .rejects.toMatchObject({ code: "validation_failed" });
+    expect(await db.prisma.user.count()).toBe(0); // rien n'a été créé
+  });
+
+  it("se connecter à un compte existant ne demande pas d'identifiant d'appareil", async () => {
+    const a = await otp.issue("awa@example.com", "login");
+    await auth.verifyOtp({ email: "awa@example.com", code: a.code, deviceId: "dev-1" });
+    const b = await otp.issue("awa@example.com", "login");
+    await expect(auth.verifyOtp({ email: "awa@example.com", code: b.code })).resolves.toMatchObject({
+      isNewAccount: false,
+    });
+  });
+
+  // Revue tour 1 : ces trois refus surviennent après une vérification de
+  // code réussie — sans trace, un porteur de code valide pourrait buter
+  // dessus indéfiniment sans que rien n'en garde le souvenir.
+  it("le refus par plafond d'appareil laisse une trace", async () => {
+    for (const n of [1, 2, 3]) {
+      const { code } = await otp.issue(`u${n}@example.com`, "login");
+      await auth.verifyOtp({ email: `u${n}@example.com`, code, deviceId: "partagé" });
+    }
+    const { code } = await otp.issue("u4@example.com", "login");
+    await auth.verifyOtp({ email: "u4@example.com", code, deviceId: "partagé" }).catch(() => {});
+    const rows = await db.prisma.loginActivity.findMany({ where: { attemptedEmail: "u4@example.com" } });
+    expect(rows.map((r) => r.result)).toEqual(["failure"]);
+  });
+
+  it("le refus d'un compte suspendu laisse une trace", async () => {
+    const { code } = await otp.issue("awa@example.com", "login");
+    await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
+    await db.prisma.user.update({ where: { email: "awa@example.com" }, data: { status: "suspended" } });
+    const next = await otp.issue("awa@example.com", "login");
+    await auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" }).catch(() => {});
+    const rows = await db.prisma.loginActivity.findMany({ where: { attemptedEmail: "awa@example.com" } });
+    expect(rows.map((r) => r.result).sort()).toEqual(["failure", "success"]);
+  });
+
+  it("un compte en attente de suppression ne peut pas ouvrir de session, et le refus laisse une trace", async () => {
+    const { code } = await otp.issue("awa@example.com", "login");
+    await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
+    await db.prisma.user.update({ where: { email: "awa@example.com" }, data: { status: "pending_deletion" } });
+    const next = await otp.issue("awa@example.com", "login");
+    await expect(auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" }))
+      .rejects.toMatchObject({ code: "account_pending_deletion" });
+    const rows = await db.prisma.loginActivity.findMany({ where: { attemptedEmail: "awa@example.com" } });
+    expect(rows.map((r) => r.result).sort()).toEqual(["failure", "success"]);
+  });
+
+  // Revue tour 1 : une collision du pseudo tiré au hasard (32 bits) ne doit
+  // pas faire échouer tout le parcours après que le code a déjà été
+  // consommé — on retire avec un nouveau tirage plutôt que d'abandonner.
+  it("une collision de pseudo se rattrape par un nouveau tirage", async () => {
+    await db.prisma.user.create({
+      data: { email: "deja-la@example.com", username: "udeadbeef", referralCode: "AAAAAAAA" },
+    });
+    // Truque le tout premier tirage à venir (celui du pseudo de la
+    // prochaine création) pour qu'il reproduise "udeadbeef", déjà pris.
+    cryptoOverride.nextRandomBytes = () => Buffer.from("deadbeef", "hex");
+
+    const { code } = await otp.issue("nouveau-pseudo@example.com", "login");
+    const s = await auth.verifyOtp({ email: "nouveau-pseudo@example.com", code, deviceId: "dev-collision" });
+    expect(s.isNewAccount).toBe(true);
+    const u = await db.prisma.user.findUniqueOrThrow({ where: { email: "nouveau-pseudo@example.com" } });
+    expect(u.username).not.toBe("udeadbeef");
+    expect(u.username).toMatch(/^u[0-9a-f]{8}$/);
   });
 });
