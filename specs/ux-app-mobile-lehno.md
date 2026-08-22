@@ -4,7 +4,7 @@
 
 Lehno est un assistant personnel des dates qui comptent : les anniversaires et les événements importants de nos proches. Il poursuit trois objectifs d'égale importance — ne pas oublier le jour J, ne pas oublier d'envoyer un mot, et aider à bien célébrer.
 
-Ce document décrit l'expérience de l'**application mobile**, qui est l'outil privé de la personne qui tient ses dates (désignée ici par « l'utilisateur »). Il couvre, écran par écran, le rôle de chaque vue, son contenu, les actions possibles et les états particuliers, ainsi que les grands parcours. Il ne traite ni du design visuel, ni de l'implémentation technique.
+Ce document décrit l'expérience de l'**application mobile**, qui est l'outil privé de la personne qui tient ses dates (désignée ici par « l'utilisateur »). Il couvre le parti pris de conception, puis, écran par écran, le rôle de chaque vue, son contenu, les actions possibles et les états particuliers, ainsi que les grands parcours. Le détail du dessin (palette, caractères, tracés) relève de la planche d'identité visuelle ; l'implémentation, de la spécification technique.
 
 Les surfaces web (page d'accueil publique, formulaires de collecte, mur public, portrait partageable) font l'objet d'un document distinct. Le modèle de données et les règles métier sont détaillés dans la documentation fonctionnelle et le dictionnaire de données.
 
@@ -49,16 +49,34 @@ Principes directeurs :
 - **Un pont vers le compte.** La consultation des surfaces publiques reste ouverte à tous ; l'application saisit les bons moments pour inviter la personne à créer son propre espace.
 - **Bilingue par conception.** L'interface existe en français et en anglais ; la personne choisit sa langue, et chaque libellé est pensé pour tenir dans les deux. Cette langue d'interface est distincte de la langue de communication propre à chaque proche, qui oriente les messages générés.
 
+### Parti pris de conception
+
+L'application vise le **minimalisme élégant** : peu d'éléments, chacun à sa place, beaucoup de blanc. Le produit promet de libérer l'esprit — l'interface doit le montrer, pas seulement le dire. Un écran chargé donnerait l'impression qu'il reste du travail à faire.
+
+**Un écran, une intention.** Chaque écran répond à une question et lui consacre sa place. L'accueil dit ce qui approche ; la fiche dit qui est ce proche ; l'occasion prépare une célébration. Les gestes qui relèvent d'une autre intention rejoignent l'écran qui leur correspond, même si cela demande un pas de plus.
+
+**Une seule action mise en avant.** Un écran comporte au plus un bouton plein. Le reste attend en retrait — bordure simple, ou lien. Là où plusieurs actions se valent, aucune ne s'impose visuellement.
+
+**Ce qui est rare vit ailleurs.** Un geste qu'on fait quelques fois par an ne prend pas la place d'un geste quotidien. Ajouter un proche, demander un complément, régler ses préférences : autant d'actions qui vivent dans leur écran plutôt qu'à l'accueil.
+
+**La couleur guide, elle n'habille pas.** Le fond reste blanc, le texte sombre. Le violet marque ce qui agit ; le lilas met en avant l'élément qui compte à l'instant. L'abricot se réserve aux moments heureux — le jour même, un crédit reçu —, ce qui le maintient rare.
+
+**La chaleur vient de la typographie.** Les noms, les titres et les décomptes se composent dans un caractère à empattements souples ; le texte courant reste net et discret. C'est l'écart entre les deux qui donne le ton, plutôt qu'un aplat de couleur.
+
+**Le texte parle, l'ornement se tait.** Une phrase juste vaut mieux qu'un compteur : « Une date aujourd'hui, deux cette semaine » remplace trois cartes de chiffres. Les illustrations et les icônes décoratives restent l'exception.
+
+**Le calme est une réponse.** Un écran sans rien à traiter le dit sereinement, plutôt que de se remplir. L'absence d'échéance est une bonne nouvelle, pas un vide à combler.
+
 ## 2. Architecture de navigation
 
 La navigation principale se fait par onglets, en bas de l'écran, pensés pour l'usage quotidien :
 
-1. **Accueil** — ce qui approche et les actions rapides.
+1. **Accueil** — ce qui approche, et de quoi noter une idée.
 2. **Dates** — les dates à venir, organisées par le temps (voir 3.14).
-3. **Fiches** — l'annuaire des proches, organisé par personne.
-4. **Mon espace** — le hub personnel : le Mur, les crédits, le compte, l'aide (voir 3.17).
+3. **Proches** — l'annuaire, organisé par personne.
+4. **Moi** — le hub personnel : le Mur, les crédits, le compte, l'aide (voir 3.17).
 
-Une **cloche de notifications** (le centre de notifications, voir 3.13) reste présente dans l'en-tête et affiche une pastille dès qu'un élément demande l'attention. La validation des contributions reçues se fait depuis ce centre, qui en indique le nombre et ouvre l'écran de validation (3.8). Les gestes de capture (ajouter un anniversaire et son proche, laisser une note, faire compléter une fiche) sont réunis dans les actions rapides de l'accueil ; ils s'effectuent aussi depuis une fiche pour ce qui la concerne. La création d'un **autre type d'événement** part de l'onglet Dates (3.14) ou d'une fiche (3.4).
+Une **cloche de notifications** (le centre de notifications, voir 3.13) reste présente dans l'en-tête et affiche une pastille dès qu'un élément demande l'attention. La validation des contributions reçues se fait depuis ce centre, qui en indique le nombre et ouvre l'écran de validation (3.8). Chaque geste vit dans l'écran qui lui correspond : **laisser une note** depuis l'accueil (3.2), **créer une date** depuis l'onglet Dates (3.14) ou une fiche (3.4), **faire compléter une fiche** depuis celle du proche concerné (3.20).
 
 ## 3. Écran par écran
 
@@ -76,7 +94,7 @@ Une **cloche de notifications** (le centre de notifications, voir 3.13) reste pr
 3. **Écran du code** — la saisie du code à usage unique reçu par e-mail, avec la possibilité d'en redemander un. Cet écran ne concerne que la voie e-mail.
 4. **Choix du pseudo** — **à la première connexion seulement**, quelle que soit la voie empruntée. L'écran explique à quoi sert ce pseudo (il forme l'adresse de son Mur) et vérifie sa disponibilité. Il porte aussi un **champ facultatif de code de parrainage** (« si quelqu'un vous a invité, renseignez son code »), **prérempli** lorsque l'arrivée s'est faite par un lien d'invitation. Le code est vérifié à la saisie et l'écran dit s'il est valide. L'acceptation des conditions d'utilisation et de la politique de confidentialité s'y rattache.
 5. **Bienvenue** — un écran qui accueille le nouvel utilisateur et annonce les **crédits offerts pour démarrer**. Lorsqu'un code de parrainage valide a été renseigné, il indique en plus le **bonus obtenu grâce à l'invitation**, et par qui l'invitation est venue. Un geste mène à l'accueil.
-6. **Accueil** — l'application est ouverte. L'accueil se charge lui-même d'orienter : ses actions rapides désignent les premiers gestes, et son état vide invite à ajouter un premier proche.
+6. **Accueil** — l'application est ouverte. Son état vide oriente de lui-même : il invite à ajouter un premier proche (3.2).
 
 **Retour d'un utilisateur connu.** La session persiste : on retrouve l'accueil directement. Après une déconnexion, seule l'étape 2 (et 3 si la voie e-mail est choisie) se rejoue — le pseudo, le code de parrainage et la bienvenue appartiennent à la première connexion.
 
@@ -86,30 +104,33 @@ Une **cloche de notifications** (le centre de notifications, voir 3.13) reste pr
 
 ### 3.2 Accueil
 
-**Rôle.** Répondre d'un coup d'œil à « qu'est-ce qui arrive, et que puis-je faire tout de suite ? ». L'accueil rassemble ce qui approche et les gestes les plus fréquents ; les signalements (contributions à valider, relances, récapitulatif, rappels) arrivent par la cloche de notifications, décrite en 3.13.
+**Rôle.** Répondre en un coup d'œil à « qu'est-ce qui arrive, et que puis-je faire tout de suite ? ». L'accueil montre ce qui approche et le seul geste vraiment fréquent — noter une idée. Tout le reste vit ailleurs : la création d'une date dans l'onglet Dates, la demande de complément dans une fiche, les signalements dans la cloche (3.13).
 
 **Contenu, de haut en bas.**
-- **Actions rapides** — trois raccourcis vers les gestes les plus courants : *ajouter un anniversaire* (avec la création de la fiche du proche), *laisser une note*, *faire compléter une fiche* (partager un lien de collecte pour que le proche la renseigne lui-même). Le mot « inviter » reste réservé au parrainage (3.9), pour éviter toute confusion.
-- **Contributions à valider** — lorsqu'il y en a : un bloc qui indique le nombre de contributions en attente et ouvre l'écran de validation (3.8). Il apparaît quand des contributions attendent, en écho à la cloche, pour garder la validation bien en vue ; il s'efface quand la file est traitée.
-- **Prochaines échéances** — le cœur de l'accueil : les trois échéances les plus proches, avec le décompte des jours et le proche concerné. L'anniversaire du jour est mis en avant. Chaque échéance ouvre le détail de l'occasion, et un lien **voir tout** ouvre l'onglet Dates (3.14) pour la vue complète des dates.
-- **Reprises en cours** — lorsqu'il y en a : jusqu'à trois éléments à reprendre (un brouillon de message commencé, un portrait généré à approuver ou à partager), avec un lien **voir tout** vers la liste complète. Ce bloc apparaît quand du travail attend d'être repris, et s'efface sinon.
-- **Bandeau de repères** — trois compteurs, chacun ouvrant sa destination : proches suivis (vers les Fiches), anniversaires du mois (vers l'onglet Dates du mois), solde de crédits (vers l'écran des crédits).
+- **Une phrase d'accueil** — le prénom, puis l'état des lieux en une ligne : « Une date aujourd'hui, deux cette semaine. » Elle répond avant même qu'on lise les cartes, et remplace tout compteur.
+- **Les prochaines échéances** — les trois plus proches. La plus imminente porte un fond teinté et ses **deux actions visibles** (*préparer*, *marquer envoyé*) ; les suivantes restent des lignes calmes, avec leur décompte à droite. Chaque carte ouvre le détail de l'occasion (3.21).
+- **Laisser une note** — un bouton unique, à portée de pouce, en bas de l'écran.
 
-**Actions sur une carte d'échéance.** La carte entière ouvre le détail de l'occasion (3.21). Sur les échéances les plus proches, deux actions sont visibles directement : *préparer* (générer, 3.7) et *marquer le message comme envoyé* — utile lorsque l'utilisateur a écrit son mot hors de l'application. Les cartes plus lointaines restent des lignes simples.
+**Ce que l'accueil ne porte pas.** Les gestes rares — ajouter un anniversaire, faire compléter une fiche — occupaient auparavant le haut de l'écran pour un usage de quelques fois par an. Ils rejoignent les endroits où ils ont du sens : l'onglet Dates pour créer une date, la fiche d'un proche pour lui demander de la compléter. Les contributions à valider passent par la cloche, qui en porte le compteur : elles attendent sans se périmer dans la journée.
 
-**Où mènent les éléments de l'accueil.**
-- **Cloche** (en-tête) → centre de notifications (3.13).
-- **Ajouter un anniversaire** → formulaire d'événement (3.6), qui crée la fiche du proche (3.4).
-- **Laisser une note** → l'écran de saisie (3.5) : on écrit, puis on désigne le ou les proches et, si on le souhaite, l'occasion.
-- **Faire compléter une fiche** → choix du proche (fiche existante, ou nouvelle créée au passage), puis partage de son lien de collecte (3.20). Un **lien public**, ouvert à tous, y est proposé en second choix pour une diffusion large.
-- **Contributions à valider** → écran de validation (3.8).
-- **Prochaines échéances** : « voir tout » → Dates (3.14) ; une carte → détail de l'occasion (3.21) ; « préparer » → préparation et génération (3.7) ; « marquer envoyé » met à jour l'état sur place.
-- **Reprises en cours** : « voir tout » → reprises en cours (3.16) ; un brouillon de message → l'écran du message (3.7) ; un portrait → son aperçu (3.22).
-- **Bandeau de repères** → Fiches (3.3), Dates du mois (3.14), crédits (3.9).
+**La phrase d'accueil.** Elle se compose selon la situation et reste juste dans tous les cas : aucune date à l'horizon, une seule aujourd'hui, plusieurs dans la semaine, rien avant plusieurs semaines. Les variantes s'écrivent une à une, dans les deux langues — le singulier et le pluriel diffèrent d'une langue à l'autre.
 
-**États particuliers.** Tout premier lancement (écran d'accueil épuré qui invite à ajouter un proche) ; aucune échéance proche (message positif et rassurant, l'accueil reste utile grâce aux actions rapides).
+**Le décompte.** Il s'écrit dans le caractère de titre, en violet : **J−3** en français, **3 days** en anglais. La notation française porte le nom du produit dans sa forme ; l'anglaise, faute d'équivalent au « jour J », dit simplement les jours.
 
-### 3.3 Liste des fiches
+**Où mènent les éléments.**
+- **Cloche** (en-tête) → centre de notifications (3.13), d'où part la validation des contributions (3.8).
+- **Une carte d'échéance** → détail de l'occasion (3.21).
+- ***Préparer*** → préparation et génération (3.7) ; ***marquer envoyé*** met à jour l'état sur place.
+- ***Laisser une note*** → écran de saisie (3.5).
+
+**États vides.** Deux situations, deux traitements.
+
+- **Premier lancement** — le carnet est neuf. L'écran ne poursuit qu'un but : conduire au premier ajout. Un mot d'accueil (« Votre carnet est prêt · Ajoutez un premier proche et sa date. Lehno s'occupe de vous le rappeler. ») et un bouton principal *Ajouter un anniversaire*, qui prend ici la place de *Laisser une note* — il n'y a personne à propos de qui écrire.
+- **Aucune échéance proche** — le carnet est rempli, mais rien n'arrive dans les semaines qui viennent. La phrase d'accueil le dit sereinement, les cartes cèdent la place à un bloc calme (« Rien dans les semaines qui viennent · Le bon moment pour noter une idée pendant qu'elle est fraîche. »), et le bouton *Laisser une note* demeure.
+
+Les textes annoncent **ce qui est possible** plutôt que ce qui manque : ils évitent « aucun proche », « vide » ou « rien à faire ».
+
+### 3.3 Proches — l'annuaire
 
 **Rôle.** Retrouver un proche et voir d'un coup d'œil qui a une date qui approche.
 
@@ -278,7 +299,7 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 - **Le solde**, mis en avant : c'est ce qu'on vient voir.
 - **Recharger**, l'action principale, juste sous le solde.
 - **Les mouvements** — les entrées et les sorties du solde, la plus récente en tête. Chaque ligne nomme **ce à quoi le crédit a servi** (« message pour Karim », « portrait de Karim ») plutôt qu'une dépense abstraite, et les entrées disent leur origine (recharge, crédits de bienvenue, parrainage). Un lien ouvre l'historique complet.
-- **Mes paiements** — les achats réglés, chacun avec son reçu ; également accessible depuis Mon espace (3.17).
+- **Mes paiements** — les achats réglés, chacun avec son reçu ; également accessible depuis Moi (3.17).
 - **Méthodes de paiement** — celles qui sont enregistrées, la plus récemment utilisée en tête (3.25).
 - **Inviter un ami** — le parrainage, avec ce que chacun y gagne.
 
@@ -306,7 +327,7 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 **Où mènent les éléments.**
 - *Recharger* → parcours d'achat ci-dessus.
 - *Méthodes de paiement* → gestion des méthodes enregistrées (3.25).
-- *Historique des paiements* → également accessible depuis Mon espace (3.17). Un paiement s'ouvre pour afficher son reçu.
+- *Historique des paiements* → également accessible depuis Moi (3.17). Un paiement s'ouvre pour afficher son reçu.
 - Parrainage → feuille de partage du téléphone ; code promotionnel → saisie sur place.
 
 ### 3.10 Mon Mur
@@ -381,14 +402,14 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 
 ### 3.14 Dates
 
-**Rôle.** Offrir la vue des dates **par le temps**, là où les Fiches donnent la vue **par personne**. On y répond à « qu'est-ce qui m'attend dans les semaines et les mois à venir ? », tous proches confondus.
+**Rôle.** Offrir la vue des dates **par le temps**, là où l'onglet Proches donne la vue **par personne**. On y répond à « qu'est-ce qui m'attend dans les semaines et les mois à venir ? », tous proches confondus.
 
 **Contenu.**
 - Un **calendrier mensuel** : les jours porteurs d'une échéance sont marqués (un point, coloré selon le type), on navigue de mois en mois, et le jour courant est mis en avant.
 - Sélectionner un jour affiche ses échéances sous la grille ; sinon, la liste montre les échéances à venir **du mois**, plafonnée à **cinq** avec un lien **voir plus**. Chaque échéance indique le proche, le type et le décompte, et **ouvre le détail de l'occasion** (3.21).
 - Le calendrier donne une vue d'ensemble : il laisse repérer d'un coup d'œil les périodes chargées et les dates proches les unes des autres (utile pour préparer plusieurs célébrations ensemble).
 - L'écran se concentre sur ce qui vient ; les occasions passées se consultent depuis l'historique de chaque fiche (3.4).
-- Cette vue **par le temps** complète l'annuaire **par personne** des Fiches — deux angles sur les mêmes dates.
+- Cette vue **par le temps** complète l'annuaire **par personne** de l'onglet Proches — deux angles sur les mêmes dates.
 
 **Lien avec l'accueil.** L'accueil montre les trois échéances les plus proches ; l'onglet Dates en est la vue complète, atteinte aussi par le lien « voir tout » de l'accueil.
 
@@ -437,7 +458,7 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 
 **États particuliers.** Liste vide (message serein : tout est traité) ; élément dont l'occasion est passée (il reste accessible, avec la mention que la date est dépassée).
 
-### 3.17 Mon espace
+### 3.17 Moi
 
 **Rôle.** Le hub personnel : tout ce qui touche au compte et à la présence publique de l'utilisateur, regroupé en sections claires (à la manière d'un écran de réglages). On y consulte peu souvent, mais on y trouve tout.
 
@@ -623,10 +644,9 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 
 Ces éléments reviennent sur plusieurs écrans et gagnent à être conçus une fois pour toutes :
 
-- **Actions rapides de l'accueil** — les trois gestes de capture (ajouter un anniversaire et son proche, laisser une note, faire compléter une fiche), réunis en tuiles sur l'accueil.
 - **Cloche de notifications** — toujours accessible ; ouvre le centre de notifications (3.13) et signale par une pastille les éléments non lus.
 - **Indicateur de crédits** — présent à chaque action payante ; le coût est toujours affiché avant de lancer.
-- **Carte d'échéance** — la brique réutilisée à l'accueil et sur les fiches : proche, date, décompte, actions rapides.
+- **Carte d'échéance** — la brique réutilisée à l'accueil et sur les fiches : proche, date, décompte. La plus imminente porte ses actions ; les autres restent des lignes calmes.
 - **Étiquette de catégorie** — sur chaque note ; un appui permet de la reclasser.
 - **Bandeau « sensible »** — sur les événements sensibles : ton adapté, pas de cadeau.
 - **Fenêtre de confirmation d'action payante** — rappelle le coût, le solde et le résultat attendu avant toute génération.
@@ -635,7 +655,7 @@ Ces éléments reviennent sur plusieurs écrans et gagnent à être conçus une 
 
 **États vides.** Chaque écran prévoit un état vide, sobre et tourné vers l'action :
 - Accueil au premier lancement, et accueil sans échéance proche.
-- Annuaire des fiches vide ; onglet Dates sans échéance à l'horizon.
+- Annuaire des proches vide ; onglet Dates sans échéance à l'horizon.
 - Centre de notifications vide ; liste des reprises vide.
 - Résultats de recherche sans correspondance.
 - Historique d'une année sans contenu.
@@ -643,7 +663,7 @@ Ces éléments reviennent sur plusieurs écrans et gagnent à être conçus une 
 
 **Chargement et progression.** Un indicateur accompagne les attentes :
 - Génération en cours (portrait, idées, message) : attente soignée, résultat affiché dès qu'il est prêt.
-- Chargement des listes (fiches, Dates, notifications) et d'une fiche.
+- Chargement des listes (proches, Dates, notifications) et d'une fiche.
 - Envoi ou partage en cours (message, portrait, lien).
 
 **Avis hors connexion.** Un bandeau signale l'absence de réseau :
@@ -670,7 +690,7 @@ Ces éléments reviennent sur plusieurs écrans et gagnent à être conçus une 
 
 Le découpage suit le phasage général du projet :
 
-- **Phase 1 — Le carnet.** Inscription et connexion, accueil, fiches, Dates, saisie de notes, événements, liste de souhaits personnelle, rappels (par e-mail puis par notification). C'est le socle, utilisable seul.
+- **Phase 1 — Le carnet.** Inscription et connexion, accueil, proches, Dates, saisie de notes, événements, liste de souhaits personnelle, rappels (par e-mail puis par notification). C'est le socle, utilisable seul.
 - **Phase 2 — Nourrir les fiches.** L'écran de validation (accessible depuis la cloche) pour les soumissions de collecte, le partage des liens de collecte, et les relances.
 - **Phase 3 — La génération.** L'écran de génération (portrait, idées, message) et les crédits (solde, historique, dépense).
 - **Phase 4 — Ouverture et monétisation.** La gestion du Mur, la validation des vœux reçus, et la recharge de crédits.
