@@ -394,7 +394,7 @@ Un souhait porte une adresse, et cette adresse peut venir d'un proche via un lie
 - **Le numéro conservé est protégé en conséquence** : chiffré au repos, sorti en clair pour la seule communication avec le prestataire, et **masqué à l'affichage** dans l'application comme dans le back-office (opérateur et derniers chiffres). Il ne paraît dans aucun journal.
 - **Chiffrement en transit** partout ; sauvegardes chiffrées.
 - **Suppression réellement effective** au terme du délai de grâce, jusqu'aux fichiers stockés.
-- **Les traces de sécurité** (connexions, audit) survivent à la suppression sous une forme anonymisée, car elles font foi.
+- **Les traces de sécurité** (connexions, audit, créations de compte par appareil) survivent à la suppression sous une forme anonymisée : leur lien vers le compte est rompu, la ligne demeure. Elles font foi, et certaines fondent une protection — un plafond dont les traces s'effacent avec les comptes se contourne en créant puis supprimant.
 
 ### 9.11 Secrets et accès à l'infrastructure
 

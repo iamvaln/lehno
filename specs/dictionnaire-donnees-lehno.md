@@ -144,12 +144,13 @@ Trace des créations de compte par appareil, pour limiter l'abus du parrainage (
 |---|---|---|---|---|---|
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
 | device_id | varchar(128) | non | — | — | Identifiant d'appareil fourni par l'application mobile |
-| user_id | uuid | non | — | — | FK → user(id) on delete cascade ; compte créé depuis cet appareil |
+| user_id | uuid | oui | — | — | FK → user(id) **on delete set null** ; compte créé depuis cet appareil. Nul lorsque ce compte a été supprimé — la trace, elle, demeure |
 | ip | inet | oui | — | — | Adresse au moment de la création ; conservée pour d'éventuelles investigations, sans entrer dans le calcul du plafond |
 | created_at | timestamptz | non | — | now() | |
 
 - Index sur (`device_id`), pour compter les comptes d'un même appareil.
-- **Plafond de comptes par appareil** : le décompte porte sur le seul `device_id`. Au-delà du seuil (`SystemParameter` `max_accounts_per_device`, trois par défaut), la création est refusée.
+- **Plafond de comptes par appareil** : le décompte porte sur le seul `device_id`, et compte **toutes** les lignes de cet appareil, que le compte associé existe encore ou non. Au-delà du seuil (`SystemParameter` `max_accounts_per_device`, trois par défaut), la création est refusée.
+- **La trace survit au compte.** Une suppression met `user_id` à nul sans effacer la ligne : effacer en cascade rendrait le plafond contournable en créant puis supprimant des comptes à la chaîne. C'est aussi ce que veut la règle générale des traces de sécurité (9.10 de la spécification technique), qui les fait survivre sous une forme anonymisée.
 - Un appareil peut légitimement servir à plusieurs personnes (téléphone familial, appareil revendu) : le seuil laisse cette marge, et un administrateur peut lever le blocage au cas par cas.
 
 ## PaymentStatusHistory
