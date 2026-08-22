@@ -1,0 +1,20 @@
+/* Structure seulement. Aucune couleur ici : les variables des deux thèmes sont
+   émises depuis @lehno/tokens et injectées par la coquille (lib/theme-css.ts). */
+* { margin: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-texte), system-ui, sans-serif;
+  font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.titre { font-family: var(--font-titre), Georgia, serif; font-variation-settings: "SOFT" 40, "WONK" 1; }
+
+/* Aucune ombre nulle part : la profondeur vient des filets. */
+
+:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
