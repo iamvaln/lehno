@@ -21,6 +21,10 @@ Après review, il manque ceci. À ajouter dans la source, pas dans les fichiers 
 12. Entités **`SupportRequest`**, **`Feedback`**, **`DataExportRequest`**.
 13. Sur **`Schedule`** — fixer deux règles : le 29 février se marque le 28 les années communes ; un offset tombant sur un jour absent est ramené au dernier jour du mois, les offsets suivants se calculant toujours depuis la `reference_date`.
 
+## Accueil
+
+15. §5.8 — `/me/home` est décrit comme rendant « prochaines échéances, contributions en attente, reprises, compteurs », et le texte qui suit parle de « cinq blocs venus de quatre ressources ». L'accueil réécrit n'en porte plus que deux : une **phrase d'accueil** composée selon la situation, et les **trois échéances les plus proches**. Plus de contributions, plus de reprises, plus de compteurs — ils ont quitté l'écran. À reprendre, sinon on construit trois blocs que rien n'affiche.
+
 ## Mode sombre
 
 14. Le mode sombre s'applique **aussi au mobile** — il n'est aujourd'hui décrit nulle part. À porter dans `ux-app-mobile-lehno.md` :

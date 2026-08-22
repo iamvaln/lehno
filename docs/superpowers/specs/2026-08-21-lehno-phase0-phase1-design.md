@@ -164,9 +164,11 @@ Le déploiement vise un VPS : images Docker, terminaison TLS, sauvegardes chiffr
 
 **Phase 0** — monorepo et intégration continue · paquets `contracts`, `i18n`, `tokens` · schéma Prisma, migrations, harnais Testcontainers · authentification et cloisonnement · configuration publique, pages légales, liste d'attente · landing · déploiement et observabilité.
 
-**Phase 1** — fiches · événements et moteur d'échéances · notes, catégories, classement et détection du sensible · liste de souhaits · accueil et centre de notifications · préférences, appareils, traitements programmés, rappels · puis le mobile en quatre tranches — coquille, authentification et accueil · Proches · Dates et occasion · Moi et réglages · enfin une passe de vérification de bout en bout.
+**Phase 1** — fiches · événements et moteur d'échéances · notes, catégories, classement et détection du sensible · liste de souhaits, photo comprise · accueil et centre de notifications · préférences, appareils, traitements programmés, rappels · puis le mobile en quatre tranches — coquille, authentification et accueil · Proches · Dates et occasion · Moi et réglages · enfin une passe de vérification de bout en bout.
 
 Chaque tranche de la phase 1 va du contrat à l'écran en passant par l'API et ses tests : la règle « l'API d'abord, les clients ensuite » tient **à l'intérieur** de chaque tranche, ce qui la préserve sans imposer d'attendre la fin de l'API pour voir quoi que ce soit.
+
+**Ce que la phase 1 ne porte pas, malgré les apparences.** `/me/resumables` liste des brouillons de message et des portraits — de la génération, donc phase 3. Et `/me/home` ne rend en phase 1 que la **phrase d'accueil** et trois échéances : les contributions relèvent de la phase 2, les reprises et les compteurs de la phase 3. Construire les cinq blocs maintenant reviendrait à écrire du code que rien n'affiche avant longtemps.
 
 **Deux rendez-vous de conception visuelle**, l'un avant la landing, l'autre avant les tranches mobiles.
 
