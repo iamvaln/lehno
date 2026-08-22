@@ -19,7 +19,10 @@ describe("authentification — HTTP de bout en bout", () => {
   let app: INestApplication;
   let baseUrl: string;
   let otp: OtpService;
-  let previousEnv: { DATABASE_URL: string | undefined; OTP_PEPPER: string | undefined; JWT_SECRET: string | undefined };
+  let previousEnv: {
+    DATABASE_URL: string | undefined; OTP_PEPPER: string | undefined; JWT_SECRET: string | undefined;
+    LEHNO_MAIL_CONSOLE: string | undefined;
+  };
 
   beforeAll(async () => {
     db = await withDatabase();
@@ -27,10 +30,15 @@ describe("authentification — HTTP de bout en bout", () => {
       DATABASE_URL: process.env.DATABASE_URL,
       OTP_PEPPER: process.env.OTP_PEPPER,
       JWT_SECRET: process.env.JWT_SECRET,
+      LEHNO_MAIL_CONSOLE: process.env.LEHNO_MAIL_CONSOLE,
     };
     process.env.DATABASE_URL = db.url;
     process.env.OTP_PEPPER = PEPPER;
     process.env.JWT_SECRET = SECRET;
+    // Aucun identifiant Mailgun ici : adhésion explicite à la console de
+    // développement requise depuis la revue tour 2 (voir app.module.ts) —
+    // sans elle, le module refuserait de démarrer.
+    process.env.LEHNO_MAIL_CONSOLE = "1";
 
     app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
     app.setGlobalPrefix("v1");
@@ -49,6 +57,8 @@ describe("authentification — HTTP de bout en bout", () => {
     else process.env.OTP_PEPPER = previousEnv.OTP_PEPPER;
     if (previousEnv.JWT_SECRET === undefined) delete process.env.JWT_SECRET;
     else process.env.JWT_SECRET = previousEnv.JWT_SECRET;
+    if (previousEnv.LEHNO_MAIL_CONSOLE === undefined) delete process.env.LEHNO_MAIL_CONSOLE;
+    else process.env.LEHNO_MAIL_CONSOLE = previousEnv.LEHNO_MAIL_CONSOLE;
   });
 
   beforeEach(async () => { await resetDatabase(db.prisma); });

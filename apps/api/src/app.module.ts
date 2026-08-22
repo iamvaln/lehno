@@ -40,17 +40,27 @@ import { WaitlistService } from "./public/waitlist.service.js";
         apple: new AppleIdentityVerifier(process.env.APPLE_CLIENT_ID ?? ""),
       }),
     },
-    // Même logique : construit à l'instanciation, pas au chargement du
-    // module. MailgunAdapter refuse de démarrer sans ses deux réglages ; sans
-    // eux (poste de développement, sans compte Mailgun), on retombe sur la
-    // console — personne n'a besoin d'un compte Mailgun pour travailler sur
-    // le reste du produit.
+    // Revue tour 2 (le repli "silencieux" sur la console) : même logique que
+    // OTP_PEPPER/JWT_SECRET, construit à l'instanciation. Mais le repli sur
+    // ConsoleMailAdapter n'est plus la valeur par défaut d'une configuration
+    // absente — il faut l'adhésion EXPLICITE de LEHNO_MAIL_CONSOLE=1, sur le
+    // modèle de l'ancienne LEHNO_LOG_OTP (tâche 12, retirée par la tâche 17)
+    // : une variable absente ne doit jamais faire fuiter un code à usage
+    // unique dans un journal, condition ou pas. Sans identifiants Mailgun NI
+    // cette adhésion, le démarrage échoue avec un message qui dit quoi poser
+    // — mieux vaut ne pas démarrer que d'envoyer (ou de journaliser) des
+    // secrets par accident.
     {
       provide: "MAIL_PORT",
       useFactory: () => {
         const apiKey = process.env.MAILGUN_API_KEY;
         const domain = process.env.MAILGUN_DOMAIN;
-        return apiKey && domain ? new MailgunAdapter(apiKey, domain) : new ConsoleMailAdapter();
+        if (apiKey && domain) return new MailgunAdapter(apiKey, domain);
+        if (process.env.LEHNO_MAIL_CONSOLE === "1") return new ConsoleMailAdapter();
+        throw new Error(
+          "Aucun envoi de courrier configuré : posez MAILGUN_API_KEY et MAILGUN_DOMAIN, " +
+          "ou LEHNO_MAIL_CONSOLE=1 pour accepter explicitement la console de développement.",
+        );
       },
     },
     OtpService,
