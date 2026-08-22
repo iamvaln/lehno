@@ -224,6 +224,7 @@ Ces appels se font **sans compte**. L'autorisation tient au **jeton porté par l
 | `/public/invitations/{code}` | GET | Une invitation au parrainage : qui invite, ce que l'invité y gagne |
 | `/public/config` | GET | Les valeurs publiques d'affichage : crédits offerts à l'inscription, bonus d'invitation, prix du crédit |
 | `/public/legal/{document}` | GET | Conditions d'utilisation, politique de confidentialité, mentions légales |
+| `/public/waitlist` | POST | Déposer son adresse sur la liste d'attente, tant que la landing est en pré-lancement |
 
 **Configuration publique.** La page d'invitation et la landing annoncent des montants qui se règlent côté administration. Elles les lisent ici plutôt que de les figer dans le code du site.
 
@@ -322,7 +323,7 @@ Un rôle insuffisant rend **`403`** — ici, l'existence du chemin est déjà co
 
 ### 9.2 Code à usage unique
 
-- Conservé **haché**, jamais en clair, avec une durée de vie courte.
+- Conservé **haché**, jamais en clair, avec une durée de vie courte. Le hachage est un **HMAC-SHA-256 sous clé tenue dans l'environnement** : un code à six chiffres ne compte qu'un million de valeurs, qu'une lecture de la base suffirait à énumérer si le condensé se calculait sans secret. La comparaison se fait en temps constant. Aucun mot de passe n'existe dans le produit — l'entrée repose sur le code et les fournisseurs d'identité —, donc aucune fonction de hachage lente (bcrypt, argon2, scrypt) n'a d'emploi ici : elle n'ajouterait rien à la défense et offrirait un levier de saturation sur un point d'entrée ouvert sans compte.
 - **Nombre de tentatives borné** par code ; au-delà, il est brûlé.
 - **Fréquence de demande limitée** par adresse et par origine.
 - **Réponse uniforme** : demander un code pour une adresse inconnue rend la même réponse que pour une adresse connue. La liste des comptes reste ainsi hors de portée.
@@ -694,7 +695,7 @@ Chaque écran des trois spécifications trouve ici ses points d'entrée. Cette t
 
 **Application mobile.** Inscription et connexion → `/auth/*`, `/public/invitations/{code}` · Accueil → `/me/home` · Liste des fiches → `/me/persons` · Fiche d'un proche → `/me/persons/{id}`, `/notes`, `/portraits` · Saisie d'une note → `/me/notes`, `/me/persons/{id}/notes`, `/me/occurrences/{id}/notes` · Ajout d'un événement → `/me/events` · Génération → `/me/generations` · À valider → `/me/submissions`, `/me/received-wishes` · Crédits et recharge → `/me/credits`, `/me/payments` · Mon Mur → `/me/wall` · Réglages → `/me/notification-preferences`, `/me/data-export` · Surfaces publiques dans l'application → `/v1/public/*` · Centre de notifications → `/me/notifications` · Dates → `/me/occurrences` · Recherche → `/me/search` · Reprises → `/me/resumables` · Mon espace → agrégat des précédents · Modifier l'identité → `/me/persons/{id}` · Détail d'un souhait → `/me/wishes/{id}` · Partage d'un lien de collecte → `/me/collection-links` · Détail d'une occasion → `/me/occurrences/{id}` · Aperçu d'un portrait → `/me/portraits/{id}` · Mon profil → `/me/profile` · Sécurité et connexions → `/me/sessions`, `/me/identities`, `/me/account` · Méthode de paiement → `/me/payment-methods` · Aide → `/me/support-requests`, `/me/feedback`, `/public/legal/*`.
 
-**Surfaces publiques.** Landing → `/public/config` · Collecte nominatif et public → `/public/collect/{token}` · Mur public → `/public/walls/{username}` · Dépôt de vœux → `/public/wishes/{token}` · Portrait partagé → `/public/portraits/{token}` · Invitation au parrainage → `/public/invitations/{code}` · Pages légales → `/public/legal/{document}` · Pages d'état → rendues par les réponses d'état des chemins ci-dessus.
+**Surfaces publiques.** Landing → `/public/config`, `/public/waitlist` (pré-lancement) · Collecte nominatif et public → `/public/collect/{token}` · Mur public → `/public/walls/{username}` · Dépôt de vœux → `/public/wishes/{token}` · Portrait partagé → `/public/portraits/{token}` · Invitation au parrainage → `/public/invitations/{code}` · Pages légales → `/public/legal/{document}` · Pages d'état → rendues par les réponses d'état des chemins ci-dessus.
 
 **Back-office.** Connexion → `/admin/auth/*` · Tableau de bord → `/admin/dashboard` · Comptes → `/admin/users` · Crédits et paiements → `/admin/payments`, `/admin/users/{id}/credits` · Modération → `/admin/moderation` · Paramètres → `/admin/parameters` · Modèles d'IA → `/admin/ai-models` · Offres et croissance → `/admin/promo-codes`, `/admin/referrals` · Métriques → `/admin/metrics` · Journal d'audit → `/admin/audit-log` · Connexions → `/admin/login-activity` · Liens externes → `/admin/external-links`.
 
