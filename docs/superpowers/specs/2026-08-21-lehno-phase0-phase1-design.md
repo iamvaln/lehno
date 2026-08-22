@@ -10,6 +10,8 @@ Ce document dit **comment** se construisent les phases 0 et 1. Il ne redit pas l
 
 **Phase 1 — Le carnet qui n'oublie pas.** Fiches, événements et échéances, notes classées, liste de souhaits, accueil, vue Dates, centre de notifications, et les rappels par e-mail et notification poussée. À l'issue de cette phase, l'application résout le besoin premier en solo : ne plus oublier une date, ni l'envoi du mot.
 
+**Une nouveauté entrée depuis.** `WishlistItem` porte désormais `image_url` et `details`. La photo tire la phase 1 vers le **téléversement de fichiers** — type réel vérifié au contenu, poids et dimensions bornés, image recomposée, métadonnées retirées, servie depuis un domaine distinct sous un nom tiré au hasard (§9.6 de la spécification technique). C'est un travail que la phase 1 ne portait pas jusqu'ici et qu'il faut compter.
+
 Hors périmètre : la collecte externe (phase 2), la génération payante et les crédits (phase 3), le Mur et le paiement (phase 4), parrainage et codes promotionnels (phase 5), le back-office (phase 4). Le schéma n'anticipe ces phases que là où l'anticipation coûte moins que la reprise — les types énumérés, essentiellement.
 
 ## 2. Décisions arrêtées
@@ -34,7 +36,7 @@ apps/
 packages/
   contracts/  Schémas Zod, types inférés, codes d'erreur, valeurs d'énumération
   i18n/        Catalogues fr/en, partagés par le mobile et le web
-  tokens/      Jetons de design issus du brief de marque
+  tokens/      Jetons de design : deux thèmes, couleurs par rôle
   tsconfig/ eslint-config/
 infra/
   docker/     Images, composition locale
@@ -55,13 +57,13 @@ Le schéma Prisma reprend le dictionnaire, entité par entité. Les énumératio
 |---|---|
 | `citext` | Extension créée, puis `ALTER TABLE … ALTER COLUMN … TYPE citext` dans une migration dédiée. Prisma manipule la colonne comme du texte |
 | `inet` | `Unsupported("inet")`. Colonne en écriture seule côté client Prisma ; les lectures d'investigation passeront en SQL, en phase 4 |
-| Index unique partiel | `create unique index … where is_self` — la contrainte « une seule fiche de soi par compte » |
+| Index uniques partiels | Deux, et le second porte une règle métier que la migration ne dira pas : « une seule fiche de soi par compte » (`where is_self`), et **une seule réservation confirmée par souhait** (`where status = 'confirmed'` — et là seulement). Inclure `pending` dans le second laisserait une adresse inventée bloquer un cadeau : plusieurs demandes en attente coexistent, la première confirmée l'emporte, les autres expirent. À couvrir par un test, la contrainte seule ne l'exprimant pas |
 | Contraintes `check` | Cohérence d'un `Schedule` (récurrent ⇒ unité et intervalle ; offset ⇒ unité et quantité) |
 | `numeric(12,6)` | `@db.Decimal(12, 6)` |
 
 **Vérification de la dérive.** Un test compare les valeurs d'énumération du paquet `contracts` à celles du schéma Prisma et échoue si elles divergent. C'est le seul point où deux déclarations décrivent la même chose ; le test tient le raccord.
 
-**Amendements portés au dictionnaire.** La relecture croisée a montré six entités ou colonnes appelées par une règle ou un point d'entrée, mais absentes du dictionnaire. Elles y ont été ajoutées (voir sa section « Révisions ») :
+**Amendements portés au dictionnaire.** La relecture croisée a montré six entités ou colonnes appelées par une règle ou un point d'entrée, mais absentes du dictionnaire. Elles ont depuis été **intégrées à la source** et vivent dans le corps du dictionnaire, à leur place — il n'y a pas de section de révisions où les retrouver groupées :
 
 1. `NotificationPreference`, plus `timezone`, `send_hour`, `digest_frequency` et `reminder_lead_days` sur `User` — sans quoi `/me/notification-preferences` n'a rien à lire.
 2. `Device` — sans quoi `/me/devices` n'a nulle part où écrire un jeton d'acheminement.
@@ -82,9 +84,19 @@ S'y ajoutent `WaitlistSignup` (phase 0) et `SupportRequest`, `Feedback`, `DataEx
 
 Trois langues restent distinctes, comme le veut la spécification : celle de l'interface (`user.ui_language`), celle de communication propre à chaque proche (`person.language`, qui n'a d'effet qu'en phase 3), et celle du visiteur d'une page publique, lue dans la requête.
 
+## 5 bis. Thèmes et jetons de design
+
+L'application existe en **clair et en sombre**, sur le web comme sur le mobile (`user.theme` : `system` par défaut, ou `light`, ou `dark`). Cela décide la forme du paquet `tokens`.
+
+Les couleurs s'y déclarent **par rôle** — fond, surface, panneau, texte, texte secondaire, mention, action, mise en avant, accent, filet, bordure — chaque rôle portant sa valeur dans les deux thèmes. Jamais d'hexadécimal dans un composant : un écran écrit en valeurs fixes est un écran qui ne bascule pas. Le jeu de référence est celui de la maquette de landing v3, dont les deux palettes ont été mesurées et passent le seuil AA.
+
+Deux conséquences pratiques. Sur le **web**, le thème doit être résolu **avant la première peinture**, sinon la page s'affiche en clair puis bascule ; le choix persiste et retombe sur `prefers-color-scheme` à défaut. Sur le **mobile**, le thème suit le système par défaut, et le réglage explicite vit dans les réglages (3.11).
+
+**Aucune ombre, dans aucun thème** — la profondeur vient des filets d'un pixel. La règle est celle de la charte de marque, et elle vaut ici parce qu'une ombre traverse mal le passage au sombre.
+
 ## 6. Authentification, sessions, cloisonnement
 
-**Code à usage unique.** Six chiffres tirés par générateur cryptographique sur `[0, 10^6[`, sans reste de division qui biaiserait la distribution. Conservé en **HMAC-SHA-256 sous une clé tenue dans l'environnement**, au format `v1$<condensé>`, comparé en temps constant. Durée de vie de dix minutes, cinq tentatives puis le code est brûlé, fréquence limitée par adresse et par origine, réponse identique pour une adresse inconnue.
+**Code à usage unique.** Six chiffres tirés par générateur cryptographique sur `[0, 10^6[`, sans reste de division qui biaiserait la distribution. Conservé en **HMAC-SHA-256 sous une clé tenue dans l'environnement**, au format `v1$<condensé>`, comparé en temps constant. Durée de vie de dix minutes, cinq tentatives puis le code est brûlé, fréquence limitée **par adresse destinataire autant que par origine** — borner la seule origine laisserait le point d'entrée servir à arroser la boîte d'un tiers —, réponse identique pour une adresse inconnue.
 
 *Pourquoi une clé plutôt qu'un condensé simple, et pourquoi pas une fonction lente.* Un code à six chiffres ne compte qu'un million de valeurs : une lecture de la base suffirait à toutes les énumérer si le condensé se calculait sans secret. La clé, absente de la base, prive cette énumération de point d'appui. Une fonction lente — bcrypt, argon2, scrypt — ne conviendrait pas : elle est faite pour résister au cassage hors ligne de secrets à faible entropie qui vivent des années, quand celui-ci meurt en dix minutes et après cinq essais ; elle offrirait surtout un levier de saturation sur un point d'entrée ouvert sans compte. **Le produit ne comporte aucun mot de passe** — l'entrée repose sur le code et sur Google ou Apple —, donc aucune fonction de hachage lente n'a d'emploi dans ce dépôt.
 
@@ -130,9 +142,9 @@ La phase 3 étendra ce module par le catalogue de modèles, le routage par prior
 
 ## 10. Application mobile
 
-Expo Router, quatre onglets — Accueil, Dates, Fiches, Mon espace — et la cloche en en-tête. TanStack Query tient l'état serveur et son cache, ce qui sert directement l'exigence hors connexion : consulter ce qui a déjà été chargé reste possible, les écritures attendent le réseau et l'écran le dit. Le jeton de rafraîchissement vit dans le coffre sécurisé. Les liens profonds sont câblés dès maintenant, même si les surfaces qu'ils ouvrent arrivent en phase 2.
+Expo Router, quatre onglets — **Accueil · Dates · Proches · Moi** — et la cloche en en-tête. TanStack Query tient l'état serveur et son cache, ce qui sert directement l'exigence hors connexion : consulter ce qui a déjà été chargé reste possible, les écritures attendent le réseau et l'écran le dit. Le jeton de rafraîchissement vit dans le coffre sécurisé. Les liens profonds sont câblés dès maintenant, même si les surfaces qu'ils ouvrent arrivent en phase 2.
 
-Les écrans de la phase 1 sont ceux du rattachement de la spec UX mobile, plus le hub Mon espace et ses sous-écrans, sans lesquels les réglages de notification n'ont pas de porte.
+Les écrans de la phase 1 sont ceux du rattachement de la spec UX mobile, plus le hub **Moi** et ses sous-écrans, sans lesquels les réglages de notification n'ont pas de porte.
 
 ## 11. Surfaces publiques
 
@@ -142,7 +154,7 @@ Un drapeau bascule la landing entre pré-lancement — capture d'adresse — et 
 
 ## 12. Tests, intégration continue, déploiement
 
-Vitest partout. Les règles qui portent le produit — développement des échéances, fenêtres de vœux, cloisonnement, unicité des envois — se testent contre un **PostgreSQL réel** via Testcontainers : les contraintes, index partiels et cascades sont précisément ce qu'une base simulée ne vérifie pas. Les tests s'écrivent avant le code.
+Vitest partout. Les règles qui portent le produit — développement des échéances, fenêtres de vœux, cloisonnement, unicité des envois — se testent contre un **PostgreSQL réel** via Testcontainers : les contraintes, index partiels et cascades sont précisément ce qu'une base simulée ne vérifie pas. Les tests s'écrivent avant le code. Chaque écran se vérifie **dans les deux thèmes** : c'est le genre de régression qu'aucun test unitaire n'attrape et qu'une capture par thème arrête.
 
 L'intégration continue enchaîne typage, style, tests unitaires, tests d'intégration et construction, avec le cache Turborepo.
 
@@ -152,7 +164,7 @@ Le déploiement vise un VPS : images Docker, terminaison TLS, sauvegardes chiffr
 
 **Phase 0** — monorepo et intégration continue · paquets `contracts`, `i18n`, `tokens` · schéma Prisma, migrations, harnais Testcontainers · authentification et cloisonnement · configuration publique, pages légales, liste d'attente · landing · déploiement et observabilité.
 
-**Phase 1** — fiches · événements et moteur d'échéances · notes, catégories, classement et détection du sensible · liste de souhaits · accueil et centre de notifications · préférences, appareils, traitements programmés, rappels · puis le mobile en quatre tranches — coquille et authentification et accueil, fiches, Dates et occasion, Mon espace et réglages · enfin une passe de vérification de bout en bout.
+**Phase 1** — fiches · événements et moteur d'échéances · notes, catégories, classement et détection du sensible · liste de souhaits · accueil et centre de notifications · préférences, appareils, traitements programmés, rappels · puis le mobile en quatre tranches — coquille, authentification et accueil · Proches · Dates et occasion · Moi et réglages · enfin une passe de vérification de bout en bout.
 
 Chaque tranche de la phase 1 va du contrat à l'écran en passant par l'API et ses tests : la règle « l'API d'abord, les clients ensuite » tient **à l'intérieur** de chaque tranche, ce qui la préserve sans imposer d'attendre la fin de l'API pour voir quoi que ce soit.
 
