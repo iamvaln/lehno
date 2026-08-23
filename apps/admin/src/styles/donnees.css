@@ -1,0 +1,360 @@
+/* --------------------------------------------------------------------------
+   Les composants de données du back-office. Tout ce qui est état (survol,
+   focus, ligne cochée) et tout ce qui relève de la mise en page vit ici : un
+   style en ligne ne porte ni :hover, ni :focus-visible, ni requête de média,
+   et une couleur posée en ligne ne se laisse pas relire par le lint.
+
+   Les composants ne posent en ligne que ce qui varie par instance : la
+   largeur et l'alignement d'une colonne, la position d'un menu ouvert.
+   -------------------------------------------------------------------------- */
+
+/* Anneau de focus commun. Les cellules et les lignes cliquables du tableau,
+   les cases, les commandes de pagination et les champs de filtre le partagent :
+   c'est le même geste, ce doit être la même marque. */
+.admin-focus:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* ---------------------------------------------------------------- DataTable */
+
+.admin-tableau-cadre {
+  border: var(--border-width) solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+
+/* Sous 900 px le tableau ne s'écrase pas : il défile. Une colonne de montants
+   pliée sur deux lignes se compare moins bien qu'une colonne qu'on atteint en
+   faisant glisser. */
+.admin-tableau-defilement {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+}
+
+.admin-tableau {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: var(--text-body-s);
+  color: var(--text-body);
+}
+
+.admin-tableau-entete {
+  background: var(--surface-chrome);
+}
+
+.admin-tableau th {
+  padding: var(--space-8) var(--space-14);
+  font-weight: var(--font-body-semibold);
+  font-size: var(--text-body-xs);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--text-mention);
+  white-space: nowrap;
+  text-align: left;
+  border-bottom: var(--border-width) solid var(--border-hairline);
+}
+
+/* L'en-tête triable est un bouton : il se clique, il s'atteint au clavier, et
+   il n'emprunte rien à l'apparence d'un bouton — il reste un titre de colonne. */
+.admin-tri {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: color var(--duration-state) var(--ease-state);
+}
+.admin-tri:hover,
+.admin-tri[data-actif="true"] {
+  color: var(--text-body);
+}
+
+.admin-ligne {
+  height: var(--row-height);
+  transition: background var(--duration-state) var(--ease-state);
+}
+.admin-ligne + .admin-ligne {
+  border-top: var(--border-width) solid var(--border-hairline);
+}
+.admin-ligne[data-ouvrable="true"] {
+  cursor: pointer;
+}
+.admin-ligne[data-ouvrable="true"]:hover {
+  background: var(--surface-panel);
+}
+
+/* Le système de design n'a pas de rôle « surface sélectionnée » : la teinte se
+   compose donc à partir de la couleur d'action, à deux dosages — un lavis en
+   clair, un voile plus franc en sombre, où la carte est déjà foncée. */
+.admin-ligne[data-cochee="true"] { background: color-mix(in oklab, var(--action) 7%, var(--surface-card)); }
+.lehno-nuit .admin-ligne[data-cochee="true"] { background: color-mix(in oklab, var(--action) 18%, var(--surface-card)); }
+
+.admin-cellule {
+  padding: var(--space-8) var(--space-14);
+  color: var(--text-body);
+}
+.admin-cellule[data-discret="true"] {
+  color: var(--text-secondary);
+}
+/* Les chiffres se comparent alignés à droite, et en chasse fixe. */
+.admin-cellule[data-aligne="right"] {
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-colonne-case {
+  width: var(--space-40);
+  padding-right: 0;
+}
+.admin-case {
+  accent-color: var(--action);
+  cursor: pointer;
+}
+
+.admin-colonne-actions {
+  width: var(--space-44);
+}
+.admin-cellule-actions {
+  padding: var(--space-8) 0;
+  text-align: right;
+}
+
+.admin-colonne-chevron {
+  width: var(--space-32);
+}
+.admin-cellule-chevron {
+  padding: var(--space-8) var(--space-12) var(--space-8) 0;
+  text-align: right;
+  color: var(--text-mention);
+}
+
+/* Menu d'actions d'une ligne. Il est en position fixe et non absolue : son
+   ancêtre défile horizontalement, et tout ce qui est absolu s'y trouverait
+   rogné dès que le menu dépasse du cadre. */
+.admin-menu-ancre {
+  display: inline-block;
+}
+.admin-menu-bouton {
+  display: grid;
+  place-items: center;
+  width: var(--space-28);
+  height: var(--space-28);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-mention);
+  cursor: pointer;
+  transition: color var(--duration-state) var(--ease-state);
+}
+.admin-menu-bouton:hover {
+  color: var(--text-body);
+}
+.admin-menu {
+  position: fixed;
+  z-index: 25;
+  min-width: 190px;
+  padding: var(--space-4) 0;
+  border: var(--border-width) solid var(--border-object);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  text-align: left;
+}
+.admin-menu-item {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-8) var(--space-12);
+  border: 0;
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--text-body-s);
+  text-align: left;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: background var(--duration-state) var(--ease-state);
+}
+.admin-menu-item[data-danger="true"] {
+  color: var(--feedback-error);
+}
+.admin-menu-item:hover {
+  background: var(--action-quiet-bg);
+}
+
+/* -------------------------------------------------------------- Pagination */
+
+/* Parcours au curseur : deux sens, pas de total. Le serveur rend une tranche
+   et le curseur suivant ; il ne compte pas les éléments restants, et l'écran
+   n'invente pas ce chiffre. */
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  flex-wrap: wrap;
+  margin-top: var(--space-12);
+  font-size: var(--text-body-xs);
+  color: var(--text-mention);
+}
+.admin-pagination-taille {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+.admin-pagination-sens {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+.admin-pagination-bouton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  height: var(--control-height);
+  padding: 0 var(--space-10);
+  border: var(--border-width) solid var(--border-object);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  font-family: var(--font-body);
+  font-size: var(--text-body-s);
+  color: var(--text-body);
+  cursor: pointer;
+  transition: background var(--duration-state) var(--ease-state);
+}
+.admin-pagination-bouton:hover:not(:disabled) {
+  background: var(--action-quiet-bg);
+}
+.admin-pagination-bouton:disabled {
+  color: var(--text-mention);
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* --------------------------------------------------------------- FilterBar */
+
+.admin-filtres {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-14);
+}
+.admin-champ {
+  box-sizing: border-box;
+  height: var(--control-height);
+  padding: 0 var(--space-8);
+  border: var(--border-width) solid var(--border-object);
+  border-radius: var(--radius-sm);
+  background: var(--surface-page);
+  font-family: var(--font-body);
+  font-size: var(--text-body-s);
+  color: var(--text-body);
+}
+.admin-recherche {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex: 0 1 260px;
+  color: var(--text-mention);
+}
+.admin-recherche input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--text-body);
+  outline: none;
+}
+/* Le champ entier prend l'anneau, pas seulement l'input qu'il enveloppe. */
+.admin-recherche:focus-within {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+.admin-reinit {
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 0;
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--text-body-s);
+  color: var(--text-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.admin-resultats {
+  margin-left: auto;
+  font-size: var(--text-body-xs);
+  color: var(--text-mention);
+}
+
+/* -------------------------------------------------------------- EmptyState */
+
+.admin-vide {
+  border: var(--border-width) dashed var(--border-object);
+  border-radius: var(--radius-lg);
+  padding: var(--space-32) var(--space-24);
+  text-align: center;
+  color: var(--text-secondary);
+}
+.admin-vide-titre {
+  font-size: var(--text-display-xs);
+  font-weight: var(--font-body-semibold);
+  color: var(--text-body);
+}
+.admin-vide-texte {
+  margin: var(--space-6) auto 0;
+  font-size: var(--text-body-s);
+  max-width: var(--measure-tight);
+}
+.admin-vide-action {
+  margin-top: var(--space-16);
+}
+
+/* -------------------------------------------------------------- StatusPill */
+
+.admin-pastille {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-body-xs);
+  font-weight: var(--font-body-semibold);
+  white-space: nowrap;
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+}
+.admin-pastille[data-ton="actif"] {
+  background: var(--feedback-success-bg);
+  color: var(--feedback-success);
+}
+.admin-pastille[data-ton="attente"] {
+  background: var(--feedback-warning-bg);
+  color: var(--feedback-warning);
+}
+.admin-pastille[data-ton="arrete"] {
+  background: var(--feedback-error-bg);
+  color: var(--feedback-error);
+}
+.admin-pastille[data-ton="info"] {
+  background: var(--feedback-info-bg);
+  color: var(--feedback-info);
+}
+/* Le point reprend la couleur du texte : une seule décision de teinte par ton. */
+.admin-pastille-point {
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
