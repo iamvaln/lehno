@@ -20,6 +20,8 @@ export const en = {
     account_pending_deletion: "This account is being deleted.",
     federated_token_invalid: "That sign-in didn't go through.",
     federated_already_linked: "That account is already linked elsewhere.",
+    email_disposable: "That address is temporary. Use one you actually read.",
     waitlist_email_invalid: "That email doesn't look right.",
+    waitlist_rejected: "That didn't go through. Try again in a moment.",
   },
 } as const;

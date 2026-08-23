@@ -168,8 +168,9 @@ RGPD :
   **chacun n'est activé qu'une fois les garanties de transfert exigées par la loi
   n° 2024/017 réunies avec lui**, et la présente liste est mise à jour à ce
   moment-là.
-- **Mailgun** — envoi des courriels du Service : codes à usage unique, rappels,
-  confirmations.
+- **Resend (États-Unis)** — envoi des courriels du Service : codes à usage unique,
+  rappels, confirmations. L'adresse du destinataire et le contenu du message lui
+  sont transmis, le temps de l'acheminement.
 - **OneSignal (États-Unis)** — notifications poussées.
 - **Sentry** — suivi des erreurs techniques. Les incidents portent l'identifiant
   de corrélation et, le cas échéant, l'identifiant du compte, jamais le contenu

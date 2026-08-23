@@ -164,11 +164,19 @@ model LoginActivity {
 }
 
 model WaitlistSignup {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email     String   @unique
-  locale    String?  @db.VarChar(10)
-  source    String?  @db.VarChar(64)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// L'adresse telle qu'elle a été saisie : c'est à elle qu'on écrit, et
+  /// c'est elle que la personne reconnaîtra.
+  email String @unique
+  /// La forme sous laquelle deux adresses désignent la même boîte — casse
+  /// abaissée, étiquette après le « + » retirée, points ignorés chez Gmail
+  /// (voir src/common/email.ts). C'est cette colonne qui porte l'unicité
+  /// réelle : sans elle, « a+1@ » et « a+2@ » peuplent la liste de la même
+  /// personne et lui envoient deux confirmations.
+  emailCanonical String  @unique @map("email_canonical") @db.Citext
+  locale         String? @db.VarChar(10)
+  source         String? @db.VarChar(64)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("waitlist_signup")
 }

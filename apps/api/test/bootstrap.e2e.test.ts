@@ -4,7 +4,8 @@ import { NestFactory } from "@nestjs/core";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
-import { ConsoleMailAdapter, MailgunAdapter } from "../src/mail/mailgun.adapter.js";
+import { ConsoleMailAdapter } from "../src/mail/console.adapter.js";
+import { ResendAdapter } from "../src/mail/resend.adapter.js";
 import type { MailPort } from "../src/mail/mail.port.js";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
@@ -59,36 +60,36 @@ describe("démarrage de l'application", () => {
   });
 
   // Revue tour 2 (le repli "silencieux" sur la console) : un opérateur qui
-  // oublie MAILGUN_API_KEY/MAILGUN_DOMAIN — deux variables absentes suffisent
+  // oublie RESEND_API_KEY/RESEND_FROM — deux variables absentes suffisent
   // — ne doit JAMAIS obtenir une API qui démarre quand même et journalise des
   // codes à usage unique en clair. Les trois issues du câblage MAIL_PORT
   // (voir app.module.ts) sont éprouvées explicitement.
-  it("choisit MailgunAdapter quand les identifiants sont présents", async () => {
+  it("choisit ResendAdapter quand les identifiants sont présents", async () => {
     await resetDatabase(db.prisma);
     restoreEnv = withEnv({
       DATABASE_URL: db.url, OTP_PEPPER: PEPPER, JWT_SECRET: SECRET,
-      MAILGUN_API_KEY: "clé-de-test", MAILGUN_DOMAIN: "mail.example.com",
+      RESEND_API_KEY: "re_cle-de-test", RESEND_FROM: "Lehno <no-reply@lehno.app>",
       LEHNO_MAIL_CONSOLE: undefined,
     });
     app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
-    expect(app.get<MailPort>("MAIL_PORT")).toBeInstanceOf(MailgunAdapter);
+    expect(app.get<MailPort>("MAIL_PORT")).toBeInstanceOf(ResendAdapter);
   });
 
-  it("choisit ConsoleMailAdapter uniquement avec l'adhésion explicite, sans identifiants Mailgun", async () => {
+  it("choisit ConsoleMailAdapter uniquement avec l'adhésion explicite, sans identifiants Resend", async () => {
     await resetDatabase(db.prisma);
     restoreEnv = withEnv({
       DATABASE_URL: db.url, OTP_PEPPER: PEPPER, JWT_SECRET: SECRET,
-      MAILGUN_API_KEY: undefined, MAILGUN_DOMAIN: undefined,
+      RESEND_API_KEY: undefined, RESEND_FROM: undefined,
       LEHNO_MAIL_CONSOLE: "1",
     });
     app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
     expect(app.get<MailPort>("MAIL_PORT")).toBeInstanceOf(ConsoleMailAdapter);
   });
 
-  it("refuse de démarrer sans identifiants Mailgun NI adhésion explicite à la console", async () => {
+  it("refuse de démarrer sans identifiants Resend NI adhésion explicite à la console", async () => {
     restoreEnv = withEnv({
       DATABASE_URL: db.url, OTP_PEPPER: PEPPER, JWT_SECRET: SECRET,
-      MAILGUN_API_KEY: undefined, MAILGUN_DOMAIN: undefined,
+      RESEND_API_KEY: undefined, RESEND_FROM: undefined,
       LEHNO_MAIL_CONSOLE: undefined,
     });
     await expect(NestFactory.create(AppModule, { logger: false, abortOnError: false }))
@@ -98,7 +99,7 @@ describe("démarrage de l'application", () => {
   it("expose POST /v1/auth/otp une fois le module câblé", async () => {
     await resetDatabase(db.prisma);
     // LEHNO_MAIL_CONSOLE=1 : adhésion explicite requise pour ce test, comme
-    // pour tout démarrage sans identifiants Mailgun (voir les trois tests
+    // pour tout démarrage sans identifiants Resend (voir les trois tests
     // ci-dessus).
     restoreEnv = withEnv({
       DATABASE_URL: db.url, OTP_PEPPER: PEPPER, JWT_SECRET: SECRET, LEHNO_MAIL_CONSOLE: "1",

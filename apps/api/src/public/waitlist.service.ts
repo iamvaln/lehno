@@ -2,16 +2,24 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { RateLimitService } from "../common/rate-limit.service.js";
+import { assertUsableEmail, canonicalEmail } from "../common/email.js";
+import { AppError } from "../common/errors.js";
 import type { MailPort } from "../mail/mail.port.js";
 import { waitlistEmail } from "../mail/templates.js";
 import type { WaitlistJoinInput } from "@lehno/contracts";
 
-// Plafonds. Trois tentatives par heure sur une même adresse : au-delà, c'est
-// un rejeu, pas une hésitation. Dix par heure et par origine : assez pour un
+// Plafonds. Trois tentatives par heure sur une même boîte : au-delà, c'est un
+// rejeu, pas une hésitation. Dix par heure et par origine : assez pour un
 // foyer ou un bureau partagé, trop peu pour peupler une liste de diffusion.
 const PLAFOND_ADRESSE = 3;
 const PLAFOND_ORIGINE = 10;
 const FENETRE_MS = 3_600_000;
+
+// Bornes de la soumission. En deçà d'une seconde, personne n'a lu la page ni
+// tapé son adresse. Au-delà d'un jour, la page traînait ouverte — ou l'instant
+// a été inventé.
+const DELAI_MINIMAL_MS = 1_000;
+const DELAI_MAXIMAL_MS = 24 * 3_600_000;
 
 @Injectable()
 export class WaitlistService {
@@ -32,13 +40,15 @@ export class WaitlistService {
   // la connexion, jamais du corps. Un client qui l'annoncerait lui-même
   // choisirait son propre plafond.
   async join(input: WaitlistJoinInput & { ip?: string }): Promise<{ joined: true }> {
-    // `email` est en citext côté base (voir waitlist_signup) : deux casses
-    // désignent la même ligne. La clé du limiteur, elle, est une chaîne
-    // ordinaire — sans cette normalisation, « AWA@ » et « awa@ » compteraient
-    // séparément et le plafond par adresse se contournerait par la touche
-    // majuscule. Même défaut déjà corrigé sur le code à usage unique.
-    const adresse = input.email.toLowerCase();
-    await this.limiter.hit(`waitlist:email:${adresse}`, PLAFOND_ADRESSE, FENETRE_MS);
+    this.refuserLesRobots(input);
+    assertUsableEmail(input.email);
+
+    // La forme canonique porte à la fois la clé du limiteur et l'unicité en
+    // base : « AWA@ », « awa+1@ » et « a.w.a@gmail.com » désignent une seule
+    // boîte, donc un seul compteur et une seule ligne. Sans elle, le plafond
+    // se contourne d'une majuscule et la liste se gonfle d'un suffixe.
+    const canonique = canonicalEmail(input.email);
+    await this.limiter.hit(`waitlist:email:${canonique}`, PLAFOND_ADRESSE, FENETRE_MS);
     if (input.ip) await this.limiter.hit(`waitlist:ip:${input.ip}`, PLAFOND_ORIGINE, FENETRE_MS);
 
     const locale = input.locale ?? "fr";
@@ -50,7 +60,12 @@ export class WaitlistService {
     // envoyer deux courriels.
     try {
       await this.prisma.waitlistSignup.create({
-        data: { email: input.email, locale: input.locale ?? null, source: input.source ?? null },
+        data: {
+          email: input.email,
+          emailCanonical: canonique,
+          locale: input.locale ?? null,
+          source: input.source ?? null,
+        },
       });
     } catch (erreur) {
       if (erreur instanceof Prisma.PrismaClientKnownRequestError && erreur.code === "P2002") {
@@ -73,5 +88,24 @@ export class WaitlistService {
     }
 
     return { joined: true };
+  }
+
+  // Deux filtres à robots ordinaires, l'un et l'autre franchissables par qui
+  // s'en donne la peine — ce sont des économies de bruit, pas des remparts.
+  // Le rempart, ce sont les plafonds ci-dessus, qui ne dépendent d'aucune
+  // coopération du client.
+  //
+  // Le refus emprunte un seul code, `waitlist_rejected`, pour ne pas dire
+  // lequel des deux filtres a mordu : un robot qui l'apprend s'ajuste.
+  private refuserLesRobots(input: WaitlistJoinInput): void {
+    if (input.website !== undefined && input.website !== "") {
+      throw new AppError("waitlist_rejected", "honeypot field filled");
+    }
+    if (input.renderedAt !== undefined) {
+      const ecoule = Date.now() - input.renderedAt;
+      if (ecoule < DELAI_MINIMAL_MS || ecoule > DELAI_MAXIMAL_MS) {
+        throw new AppError("waitlist_rejected", "implausible submission delay");
+      }
+    }
   }
 }

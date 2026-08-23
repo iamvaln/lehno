@@ -5,6 +5,7 @@ import type { Locale } from "@lehno/i18n";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { RateLimitService } from "../common/rate-limit.service.js";
+import { assertUsableEmail, canonicalEmail } from "../common/email.js";
 import { OtpService } from "./otp.service.js";
 import { TokenService, type Pair } from "./token.service.js";
 import type { MailPort } from "../mail/mail.port.js";
@@ -36,15 +37,22 @@ export class AuthService {
     // Par destinataire ET par origine : l'un arrête celui qui vise une personne,
     // l'autre celui qui balaie un annuaire.
     //
-    // Revue tour 2, point 1 : la casse normalisée AVANT de composer la clé —
-    // rate_limit_hit.key est un varchar ordinaire, pas citext comme
-    // user.email. Sans ça, "awa@x.com" et "AWA@X.COM" ouvriraient deux
-    // compteurs distincts pour la même boîte réelle, alors que le produit,
-    // lui, les traite comme une seule adresse (la personne recevrait bien
-    // les deux courriers). Seule la clé est normalisée : l'adresse envoyée
-    // au fournisseur de courrier plus bas garde la casse fournie par
-    // l'appelant.
-    const normalizedEmail = input.email.toLowerCase();
+    // La clé se compose sur la forme canonique de l'adresse, pas sur la
+    // saisie. `rate_limit_hit.key` est un varchar ordinaire, pas citext comme
+    // `user.email` : sans canonisation, « awa@x.com » et « AWA@X.COM »
+    // ouvriraient deux compteurs pour une seule boîte réelle.
+    //
+    // La casse abaissée seule ne suffisait pas — c'était le défaut trouvé à
+    // la revue des surfaces publiques. Une même boîte se laissait arroser en
+    // variant l'étiquette après le « + » : cinq courriers par heure et par
+    // variante, toutes livrées au même endroit. canonicalEmail ramène
+    // « AWA@ », « awa+1@ » et « a.w.a@gmail.com » à un seul compteur (voir
+    // common/email.ts et la spécification technique 9.9).
+    //
+    // Seule la clé est canonisée : la recherche du compte et l'envoi plus bas
+    // gardent l'adresse telle qu'elle a été fournie.
+    assertUsableEmail(input.email);
+    const normalizedEmail = canonicalEmail(input.email);
     await this.limiter.hit(`otp:email:${normalizedEmail}`, 5, 3_600_000);
     if (input.ip) await this.limiter.hit(`otp:ip:${input.ip}`, 20, 3_600_000);
 

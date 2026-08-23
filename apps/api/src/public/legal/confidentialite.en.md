@@ -154,7 +154,9 @@ described, under a contract compliant with article 28 GDPR:
   States) and DeepSeek (China), with routing and fallback between them; **each is
   enabled only once the transfer safeguards required by law no. 2024/017 are in
   place with them**, and this list is updated at that point.
-- **Mailgun** — the Service's emails: one-time codes, reminders, confirmations.
+- **Resend (United States)** — the Service's emails: one-time codes, reminders,
+  confirmations. The recipient's address and the message body are passed to it
+  for the time it takes to deliver.
 - **OneSignal (United States)** — push notifications.
 - **Sentry** — technical error tracking. Incidents carry the correlation
   identifier and, where applicable, the account identifier — never the content of

@@ -18,6 +18,18 @@ export const waitlistJoinSchema = z.object({
   email: z.string().email().max(254),
   locale: z.enum(["fr", "en"]).optional(),
   source: z.string().max(64).optional(),
+  // Champ leurre. Il est présent dans le formulaire, hors de portée du regard
+  // et du clavier ; une personne ne le voit pas et ne peut pas l'atteindre.
+  // Un robot qui remplit tous les champs le remplit aussi, et se désigne.
+  // Il figure au contrat — sinon le .strict() ci-dessous refuserait la
+  // soumission avec une erreur de validation, ce qui apprendrait au robot
+  // qu'il existe.
+  website: z.string().max(254).optional(),
+  // Instant du rendu de la page, tel que le client le rapporte. Une
+  // soumission plus rapide qu'un humain ne peut taper, ou plus vieille qu'une
+  // page laissée ouverte, est écartée. Client-fourni, donc forgeable : c'est
+  // un filtre à robots ordinaires, pas une preuve.
+  renderedAt: z.number().int().positive().optional(),
 }).strict();
 
 export type WaitlistJoinInput = z.infer<typeof waitlistJoinSchema>;

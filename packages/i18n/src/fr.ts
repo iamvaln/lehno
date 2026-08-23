@@ -20,6 +20,8 @@ export const fr = {
     account_pending_deletion: "Ce compte est en cours de suppression.",
     federated_token_invalid: "La connexion avec ce service n'a pas abouti.",
     federated_already_linked: "Ce compte est déjà rattaché ailleurs.",
+    email_disposable: "Cette adresse est temporaire. Indiquez-en une que vous consultez.",
     waitlist_email_invalid: "Cette adresse ne semble pas valide.",
+    waitlist_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
   },
 } as const;

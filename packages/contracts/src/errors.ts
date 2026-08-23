@@ -12,8 +12,19 @@ export const ERROR_CODES = [
   "account_suspended", "account_pending_deletion",
   // identité externe
   "federated_token_invalid", "federated_already_linked",
+  // adresse électronique, sur toute surface qui en accepte une
+  //
+  // `email_disposable` dit à l'interface pourquoi l'adresse est refusée, pour
+  // qu'elle puisse en proposer une autre plutôt que d'afficher une erreur
+  // muette. La règle vit dans apps/api/src/common/email.ts et s'applique
+  // partout : liste d'attente, code de connexion, réservation, dépôt d'un vœu.
+  "email_disposable",
   // liste d'attente
   "waitlist_email_invalid",
+  // Un seul code pour les deux filtres à robots — champ leurre rempli, délai
+  // de soumission invraisemblable. Dire lequel a mordu apprendrait au robot
+  // comment s'ajuster.
+  "waitlist_rejected",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

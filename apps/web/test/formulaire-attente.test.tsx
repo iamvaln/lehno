@@ -37,7 +37,7 @@ describe("formulaire de liste d'attente", () => {
 
     await waitFor(() => expect(appels).toHaveLength(1));
     expect(appels[0]!.url).toBe("https://api.lehno.app/v1/public/waitlist");
-    expect(appels[0]!.corps).toEqual({ email: "awa@example.com", locale: "fr" });
+    expect(appels[0]!.corps).toMatchObject({ email: "awa@example.com", locale: "fr" });
   });
 
   it("remercie une fois l'adresse acceptée, et retire le formulaire", async () => {
@@ -73,6 +73,32 @@ describe("formulaire de liste d'attente", () => {
     await userEvent.click(screen.getByRole("button", { name: t.cta }));
 
     expect(await screen.findByText(t.waitlistErreur)).toBeInTheDocument();
+  });
+
+  // Le champ leurre doit exister — sans lui, la détection côté serveur ne
+  // reçoit jamais rien à examiner — mais rester hors de portée : ni au
+  // clavier, ni aux lecteurs d'écran.
+  it("porte un champ leurre inatteignable", () => {
+    const { container } = render(<FormulaireAttente t={t} />);
+    const leurre = container.querySelector<HTMLInputElement>('input[name="website"]');
+
+    expect(leurre, "le leurre doit exister").not.toBeNull();
+    expect(leurre!.tabIndex, "hors du parcours clavier").toBe(-1);
+    expect(leurre!.closest('[aria-hidden="true"]'), "hors des lecteurs d'écran").not.toBeNull();
+    expect(leurre!.autocomplete, "hors du remplissage automatique").toBe("off");
+  });
+
+  it("envoie le leurre vide et l'instant de rendu", async () => {
+    brancherFetch({ ok: true });
+    render(<FormulaireAttente t={t} />);
+
+    await userEvent.type(screen.getByLabelText(t.emailLabel), "awa@example.com");
+    await userEvent.click(screen.getByRole("button", { name: t.cta }));
+
+    await waitFor(() => expect(appels).toHaveLength(1));
+    const corps = appels[0]!.corps as { website: string; renderedAt: number };
+    expect(corps.website, "le leurre part vide quand personne n'y touche").toBe("");
+    expect(corps.renderedAt, "l'instant de rendu accompagne la soumission").toBeTypeOf("number");
   });
 
   // La langue voyage jusqu'au serveur : c'est elle qui décide de la langue du

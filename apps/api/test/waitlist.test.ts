@@ -96,6 +96,48 @@ describe("liste d'attente", () => {
     await expect(service.join({ email: "awa@example.com", locale: "fr" })).rejects.toBeInstanceOf(AppError);
   });
 
+  // §9.9 : « l'énumération d'une même boîte par suffixes (a+1@, a+2@) est
+  // détectée ». Le plafond seul n'y suffit pas — il laisserait passer trois
+  // variantes par heure. C'est l'unicité sur la forme canonique qui tranche.
+  it("ne laisse pas une même boîte se démultiplier par sous-adressage", async () => {
+    await service.join({ email: "awa+1@example.com", locale: "fr" });
+    await service.join({ email: "awa+2@example.com", locale: "fr" });
+
+    expect(await db.prisma.waitlistSignup.count(), "une seule boîte, une seule ligne").toBe(1);
+    expect(mail.envoyes, "une seule confirmation").toHaveLength(1);
+  });
+
+  // Gmail ignore aussi les points de la partie locale.
+  it("traite les points comme inexistants chez Gmail, et seulement là", async () => {
+    await service.join({ email: "a.w.a@gmail.com", locale: "fr" });
+    await service.join({ email: "awa@gmail.com", locale: "fr" });
+    expect(await db.prisma.waitlistSignup.count()).toBe(1);
+
+    await service.join({ email: "a.w.a@example.com", locale: "fr" });
+    await service.join({ email: "awa@example.com", locale: "fr" });
+    expect(await db.prisma.waitlistSignup.count(), "ailleurs, ce sont deux boîtes").toBe(3);
+  });
+
+  // Aucune surface de l'application n'accepte une adresse jetable.
+  it("refuse une adresse jetable, sans rien enregistrer", async () => {
+    await expect(
+      service.join({ email: "awa@mailinator.com", locale: "fr" }),
+    ).rejects.toBeInstanceOf(AppError);
+
+    expect(await db.prisma.waitlistSignup.count()).toBe(0);
+    expect(mail.envoyes).toHaveLength(0);
+  });
+
+  // Un robot remplit tous les champs, y compris celui que personne ne voit.
+  it("refuse une soumission qui a rempli le champ leurre", async () => {
+    await expect(
+      service.join({ email: "awa@example.com", locale: "fr", website: "http://spam.example" }),
+    ).rejects.toBeInstanceOf(AppError);
+
+    expect(await db.prisma.waitlistSignup.count()).toBe(0);
+    expect(mail.envoyes).toHaveLength(0);
+  });
+
   // La base est en citext, mais la clé du limiteur est une chaîne ordinaire :
   // sans normalisation, « AWA@ » et « awa@ » ouvrent deux compteurs et le
   // plafond se contourne par la touche majuscule. Le test précédent ne le

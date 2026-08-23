@@ -10,7 +10,8 @@ import { FederatedService } from "./auth/federated.service.js";
 import { OtpService } from "./auth/otp.service.js";
 import { TokenService } from "./auth/token.service.js";
 import { AppleIdentityVerifier, GoogleIdentityVerifier } from "./auth/providers.js";
-import { ConsoleMailAdapter, MailgunAdapter } from "./mail/mailgun.adapter.js";
+import { ConsoleMailAdapter } from "./mail/console.adapter.js";
+import { ResendAdapter } from "./mail/resend.adapter.js";
 import { ProfileController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
 import { ConfigController, ConfigService } from "./public/config.controller.js";
@@ -46,19 +47,19 @@ import { WaitlistService } from "./public/waitlist.service.js";
     // absente — il faut l'adhésion EXPLICITE de LEHNO_MAIL_CONSOLE=1, sur le
     // modèle de l'ancienne LEHNO_LOG_OTP (tâche 12, retirée par la tâche 17)
     // : une variable absente ne doit jamais faire fuiter un code à usage
-    // unique dans un journal, condition ou pas. Sans identifiants Mailgun NI
+    // unique dans un journal, condition ou pas. Sans identifiants Resend NI
     // cette adhésion, le démarrage échoue avec un message qui dit quoi poser
     // — mieux vaut ne pas démarrer que d'envoyer (ou de journaliser) des
     // secrets par accident.
     {
       provide: "MAIL_PORT",
       useFactory: () => {
-        const apiKey = process.env.MAILGUN_API_KEY;
-        const domain = process.env.MAILGUN_DOMAIN;
-        if (apiKey && domain) return new MailgunAdapter(apiKey, domain);
+        const apiKey = process.env.RESEND_API_KEY;
+        const from = process.env.RESEND_FROM;
+        if (apiKey && from) return new ResendAdapter(apiKey, from);
         if (process.env.LEHNO_MAIL_CONSOLE === "1") return new ConsoleMailAdapter();
         throw new Error(
-          "Aucun envoi de courrier configuré : posez MAILGUN_API_KEY et MAILGUN_DOMAIN, " +
+          "Aucun envoi de courrier configuré : posez RESEND_API_KEY et RESEND_FROM, " +
           "ou LEHNO_MAIL_CONSOLE=1 pour accepter explicitement la console de développement.",
         );
       },
