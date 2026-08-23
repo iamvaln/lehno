@@ -116,6 +116,13 @@ d'effacement est exécutée sans qu'il soit demandé de justification.
 
 ## 4. Finalités et bases légales
 
+> [À CONFIRMER — hiérarchie des textes. Les bases ci-dessous sont numérotées
+> selon le RGPD parce que sa numérotation est publique et stable, non parce
+> qu'elle prime. Pour une entreprise établie au Cameroun servant d'abord des
+> résidents camerounais, c'est la loi n° 2024/017 qui s'applique en premier, le
+> RGPD ne valant que pour les résidents de l'Union. La numérotation doit être
+> reprise sur les articles de 2024/017, avec le conseil de l'entreprise.]
+
 - **Exécution du contrat** (art. 6.1.b) : création et tenue du compte,
   fourniture du Service, rappels, liens de collecte, Mur, achat de crédits.
 - **Intérêt légitime** (art. 6.1.f) : les fiches de proches (section 3), la

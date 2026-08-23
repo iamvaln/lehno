@@ -108,6 +108,13 @@ request is carried out without asking for a reason.
 
 ## 4. Purposes and legal bases
 
+> [TO BE CONFIRMED — order of precedence. The bases below carry GDPR article
+> numbers because that numbering is public and stable, not because it takes
+> precedence. For a company established in Cameroon serving mainly Cameroonian
+> residents, law no. 2024/017 applies first, with the GDPR covering only
+> residents of the Union. The numbering should be restated against the articles
+> of 2024/017, with the company's counsel.]
+
 - **Performance of the contract** (art. 6.1.b): creating and running the account,
   providing the Service, reminders, collection links, the Wall, buying credits.
 - **Legitimate interest** (art. 6.1.f): the pages about people close to you
