@@ -9,9 +9,7 @@ Akwa, Douala, Cameroun
 Téléphone : +237 691 980 190
 Courriel : hello@lehno.app
 
-Forme juridique : société à responsabilité limitée (SARL).
-Numéro d'immatriculation (RCCM) : [À CONFIRMER — à reporter du registre avant
-mise en production].
+Société à responsabilité limitée (SARL) de droit camerounais.
 
 ## Directeur de la publication
 
@@ -19,8 +17,10 @@ Valentine Nguemne, à la direction de Proxia Digital.
 
 ## Hébergement
 
-[À CONFIRMER — raison sociale, adresse et région d'hébergement du prestataire].
-Les données sont hébergées dans l'Union européenne.
+**Contabo GmbH** — Aschauer Straße 32a, 81549 Munich, Allemagne.
+Les serveurs et la base de données sont hébergés en Allemagne. Cet hébergement
+constitue un transfert hors du Cameroun, traité comme tel à la section 6 de la
+[politique de confidentialité](/v1/public/legal/confidentialite).
 
 ## Protection des données
 

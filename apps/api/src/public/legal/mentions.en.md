@@ -9,9 +9,7 @@ Akwa, Douala, Cameroon
 Phone: +237 691 980 190
 Email: hello@lehno.app
 
-Legal form: limited liability company (SARL).
-Company registration number (RCCM): [TO BE CONFIRMED — to be copied from the
-register before production launch].
+A limited liability company (SARL) under Cameroonian law.
 
 ## Publication director
 
@@ -19,8 +17,10 @@ Valentine Nguemne, leading Proxia Digital.
 
 ## Hosting
 
-[TO BE CONFIRMED — name, address and hosting region of the provider].
-Data is hosted in the European Union.
+**Contabo GmbH** — Aschauer Straße 32a, 81549 Munich, Germany.
+The servers and the database are hosted in Germany. This hosting is a transfer out
+of Cameroon, and is treated as such in section 6 of the
+[privacy policy](/v1/public/legal/confidentialite?lang=en).
 
 ## Data protection
 

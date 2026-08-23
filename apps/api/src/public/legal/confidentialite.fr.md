@@ -11,8 +11,11 @@ utilise et protège les données personnelles dans le cadre du service Lehno
 - **Loi n° 2024/017 du 23 décembre 2024** relative à la protection des données à
   caractère personnel — **texte principal**. Elle s'applique à tout traitement
   réalisé sur le territoire camerounais ou concernant des résidents du Cameroun.
-  Échéance de conformité : 23 juin 2026. Sanctions (art. 54 et suivants) jusqu'à
-  100 millions de francs CFA, outre les responsabilités civiles et pénales.
+  Elle soumet **tout traitement à l'autorisation préalable de l'autorité de
+  protection des données** (art. 19) et **tout transfert hors du Cameroun à une
+  autorisation préalable** assortie d'un niveau de protection équivalent
+  (art. 32). Le délai de mise en conformité qu'elle ouvrait (art. 73) a expiré le
+  **23 juin 2026**.
 - **Loi n° 2010/012 du 21 décembre 2010** relative à la cybersécurité et à la
   cybercriminalité — cadre sous-jacent.
 - **Loi n° 2023/007 du 25 juillet 2023** — Charte de protection des enfants en
@@ -132,22 +135,25 @@ d'effacement est exécutée sans qu'il soit demandé de justification.
 
 ## 4. Finalités et bases légales
 
-> [À CONFIRMER — numérotation. La loi n° 2024/017 traite le consentement à son
-> article 6 et suivants ; la correspondance exacte de ses articles avec les six
-> bases ci-dessous reste à établir sur le texte, avec le conseil de l'entreprise.
-> Les numéros du RGPD sont donnés en repère, non par préséance : c'est 2024/017
-> qui s'applique en premier.]
+La loi n° 2024/017 fait du **consentement** — libre, éclairé, spécifique,
+univoque et exprès — le principe du traitement (art. 9), et admet qu'il ne soit
+pas requis lorsque le traitement est nécessaire à l'exécution d'un contrat, au
+respect d'une obligation légale, ou à un intérêt légitime qui ne méconnaît pas
+les droits de la personne. Les traitements du Service se répartissent ainsi :
 
-- **Exécution du contrat** (art. 6.1.b) : création et tenue du compte,
-  fourniture du Service, rappels, liens de collecte, Mur, achat de crédits.
-- **Intérêt légitime** (art. 6.1.f) : les fiches de proches (section 3), la
-  prévention des abus (plafonds, détection de rejeu de jeton, journaux d'audit),
-  le maintien en bon fonctionnement du Service.
-- **Consentement** (art. 6.1.a) : la mesure d'usage, et toute communication qui
-  ne serait pas nécessaire au Service. Aucun traceur publicitaire n'existe dans
-  le produit.
-- **Obligation légale** (art. 6.1.c) : conservation des traces d'authentification
-  et des pièces comptables.
+- **Exécution du contrat** : création et tenue du compte, fourniture du Service,
+  rappels, liens de collecte, Mur, achat de crédits.
+- **Intérêt légitime** : les fiches de proches (section 3), la prévention des
+  abus (plafonds, détection de rejeu de jeton, journaux d'audit), le maintien en
+  bon fonctionnement du Service.
+- **Consentement** (art. 9) : la mesure d'usage, et toute communication qui ne
+  serait pas nécessaire au Service. Aucun traceur publicitaire n'existe dans le
+  produit.
+- **Obligation légale** : conservation des traces d'authentification et des
+  pièces comptables.
+
+Pour les personnes résidant dans l'Union européenne, ces quatre bases
+correspondent respectivement aux articles 6.1.b, 6.1.f, 6.1.a et 6.1.c du RGPD.
 
 ## 5. Destinataires et sous-traitants
 
@@ -168,17 +174,23 @@ RGPD :
 - **Sentry** — suivi des erreurs techniques. Les incidents portent l'identifiant
   de corrélation et, le cas échéant, l'identifiant du compte, jamais le contenu
   des notes ni une adresse électronique.
-- **Prestataire d'hébergement** — [À CONFIRMER], Union européenne.
+- **Contabo GmbH** (Aschauer Straße 32a, 81549 Munich, Allemagne) — hébergement
+  des serveurs et de la base de données, en Allemagne.
 - **MTN Mobile Money et Orange Money** — encaissement des achats de crédits.
 
 ## 6. Transferts internationaux
 
-Certains sous-traitants sont établis hors du Cameroun — aux États-Unis et en
-Chine. **La loi n° 2024/017 subordonne tout transfert hors du Cameroun à des
-garanties adéquates** ; celles-ci sont documentées par contrat avec chaque
-sous-traitant. Pour les personnes résidant dans l'Union européenne, ces
-transferts relèvent en outre des clauses contractuelles types approuvées par la
-Commission européenne (art. 46 RGPD). Une copie peut être obtenue auprès du DPO.
+**L'hébergement lui-même est un transfert.** Les données du Service sont hébergées
+en Allemagne, et certains sous-traitants sont établis aux États-Unis. La loi
+n° 2024/017 (art. 32) soumet tout transfert hors du Cameroun à l'**autorisation
+préalable de l'autorité de protection des données** et à la vérification d'un
+niveau de protection équivalent. L'Éditeur conduit cette formalité pour chacun de
+ses transferts, et n'active aucun nouveau destinataire hors du Cameroun avant
+qu'elle n'aboutisse.
+
+Pour les personnes résidant dans l'Union européenne, ces transferts relèvent en
+outre des clauses contractuelles types approuvées par la Commission européenne
+(art. 46 RGPD). Une copie peut être obtenue auprès du DPO.
 
 ## 7. Durées de conservation
 
@@ -229,8 +241,8 @@ possible depuis l'application, sans passer par nous.
 - Journaux d'audit conservés 12 mois ; sauvegardes chiffrées.
 
 En cas de violation de données à caractère personnel, l'Éditeur applique son plan
-de réponse aux incidents et procède aux notifications prévues par la loi
-n° 2024/017.
+de réponse aux incidents et notifie l'autorité de protection des données **sans
+délai**, comme l'exige la loi n° 2024/017 (art. 22).
 
 ## 11. Cookies et traceurs
 
@@ -257,6 +269,10 @@ vigueur, et exige une nouvelle acceptation à la connexion suivante. Chaque
 acceptation est horodatée et conservée (version, date, adresse IP), et figure
 dans l'export de vos données. Les versions antérieures sont conservées et
 communiquées sur demande.
+
+_Les renvois aux articles de la loi n° 2024/017 sont établis d'après des sources
+publiques concordantes ; ils seront confirmés sur le texte publié au Journal
+officiel._
 
 ## 14. Contact
 

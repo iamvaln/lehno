@@ -9,9 +9,11 @@ protects personal data in the Lehno service (the "Service").
 
 - **Law no. 2024/017 of 23 December 2024** on the protection of personal data —
   **the governing text**. It applies to any processing carried out on Cameroonian
-  territory or concerning residents of Cameroon. Compliance deadline: 23 June
-  2026. Penalties (art. 54 onwards) of up to 100 million CFA francs, alongside
-  civil and criminal liability.
+  territory or concerning residents of Cameroon. It makes **all processing
+  subject to prior authorisation by the data protection authority** (art. 19) and
+  **any transfer out of Cameroon subject to prior authorisation** together with an
+  equivalent level of protection (art. 32). The compliance period it opened
+  (art. 73) expired on **23 June 2026**.
 - **Law no. 2010/012 of 21 December 2010** on cybersecurity and cybercrime — the
   underlying framework.
 - **Law no. 2023/007 of 25 July 2023** — Charter for the protection of children
@@ -123,20 +125,23 @@ request is carried out without asking for a reason.
 
 ## 4. Purposes and legal bases
 
-> [TO BE CONFIRMED — numbering. Law no. 2024/017 deals with consent at its
-> article 6 onwards; how its articles map onto the six bases below remains to be
-> established against the text, with the company's counsel. The GDPR numbers are
-> given as a landmark, not out of precedence: 2024/017 applies first.]
+Law no. 2024/017 makes **consent** — free, informed, specific, unambiguous and
+express — the principle of processing (art. 9), and accepts that it is not
+required where processing is necessary to perform a contract, to comply with a
+legal obligation, or for a legitimate interest that does not override the rights
+of the person. The Service's processing breaks down as follows:
 
-- **Performance of the contract** (art. 6.1.b): creating and running the account,
-  providing the Service, reminders, collection links, the Wall, buying credits.
-- **Legitimate interest** (art. 6.1.f): the pages about people close to you
-  (section 3), preventing abuse (limits, token replay detection, audit logs), and
-  keeping the Service sound.
-- **Consent** (art. 6.1.a): usage measurement, and any communication not needed to
-  run the Service. No advertising tracker exists in the product.
-- **Legal obligation** (art. 6.1.c): keeping authentication records and
-  accounting documents.
+- **Performance of the contract**: creating and running the account, providing the
+  Service, reminders, collection links, the Wall, buying credits.
+- **Legitimate interest**: the pages about people close to you (section 3),
+  preventing abuse (limits, token replay detection, audit logs), and keeping the
+  Service sound.
+- **Consent** (art. 9): usage measurement, and any communication not needed to run
+  the Service. No advertising tracker exists in the product.
+- **Legal obligation**: keeping authentication records and accounting documents.
+
+For people residing in the European Union, these four bases correspond to
+articles 6.1.b, 6.1.f, 6.1.a and 6.1.c of the GDPR respectively.
 
 ## 5. Recipients and processors
 
@@ -154,16 +159,21 @@ described, under a contract compliant with article 28 GDPR:
 - **Sentry** — technical error tracking. Incidents carry the correlation
   identifier and, where applicable, the account identifier — never the content of
   notes, never an email address.
-- **Hosting provider** — [TO BE CONFIRMED], European Union.
+- **Contabo GmbH** (Aschauer Straße 32a, 81549 Munich, Germany) — hosting of the
+  servers and the database, in Germany.
 - **MTN Mobile Money and Orange Money** — collecting payment for credits.
 
 ## 6. International transfers
 
-Some processors are established outside Cameroon — in the United States and in
-China. **Law no. 2024/017 makes any transfer out of Cameroon conditional on
-adequate safeguards**; these are documented by contract with each processor. For
-people residing in the European Union, such transfers are additionally covered by
-the standard contractual clauses approved by the European Commission
+**Hosting is itself a transfer.** The Service's data is hosted in Germany, and some
+processors are established in the United States. Law no. 2024/017 (art. 32) makes
+any transfer out of Cameroon subject to **prior authorisation by the data
+protection authority** and to a verified equivalent level of protection. The
+Provider carries out that formality for each of its transfers, and enables no new
+recipient outside Cameroon before it completes.
+
+For people residing in the European Union, such transfers are additionally covered
+by the standard contractual clauses approved by the European Commission
 (art. 46 GDPR). A copy can be obtained from the DPO.
 
 ## 7. Retention
@@ -211,8 +221,9 @@ through us.
   at any moment.
 - Audit logs kept 12 months; encrypted backups.
 
-In the event of a personal data breach, the Provider follows its incident
-response plan and makes the notifications required by law no. 2024/017.
+In the event of a personal data breach, the Provider follows its incident response
+plan and notifies the data protection authority **without delay**, as law
+no. 2024/017 requires (art. 22).
 
 ## 11. Cookies and trackers
 
@@ -236,6 +247,10 @@ Service at least fifteen (15) days before it takes effect, and requires fresh
 acceptance at the next sign-in. Each acceptance is timestamped and kept (version,
 date, IP address), and appears in the export of your data. Earlier versions are
 kept and provided on request.
+
+_References to articles of law no. 2024/017 are drawn from concordant public
+sources; they will be confirmed against the text as published in the Official
+Gazette._
 
 ## 14. Contact
 
