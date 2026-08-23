@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
+import { primitives } from "@lehno/tokens";
 import { fraunces, karla } from "../../lib/fonts";
 import { themeCss } from "../../lib/theme-css";
 import { themeScript } from "../../lib/theme-script";
@@ -13,11 +15,35 @@ export function generateStaticParams(): { locale: Langue }[] {
   return LANGUES.map((locale) => ({ locale }));
 }
 
-export const metadata = {
+// Les icônes du favicon et le manifeste vivent à la racine de public/ (voir
+// site.webmanifest, qui les y déclare) — jamais sous /brand, réservé aux
+// fichiers de marque servis par BrandMark et Wordmark. Chaque chemin ci-dessous
+// a été vérifié contre un fichier réellement présent dans apps/web/public/
+// (task-8-brief.md : « le piège de cette tâche est le placement, pas le code »).
+export const metadata: Metadata = {
   title: "Lehno",
   description: "Chaque date qui compte, bien célébrée.",
-  icons: { icon: "/brand/lehno-favicon-28.svg" },
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-touch-icon-180.png" }],
+    other: [
+      // Onglet épinglé Safari, une seule encre. La couleur vient de la
+      // primitive de jetons (valeur JS, pas une variable CSS) : c'est un
+      // attribut HTML statique, résolu au rendu serveur, pas un style —
+      // aucune var(--…) n'y a de prise.
+      { rel: "mask-icon", url: "/safari-pinned-tab.svg", color: primitives.light.ink },
+    ],
+  },
 };
+
+// Le manifeste ne porte qu'une seule couleur de thème : #7B6BB7, le violet
+// clair. En sombre le produit passe à #9C8BD8, mais un manifeste ne connaît
+// qu'un thème — et le violet clair reste lisible sur une barre système sombre.
+// Valeur laissée telle quelle (task-8-brief.md, étape 3).
 
 export default async function CoquilleRacine(
   { children, params }: { children: ReactNode; params: Promise<{ locale: string }> },
