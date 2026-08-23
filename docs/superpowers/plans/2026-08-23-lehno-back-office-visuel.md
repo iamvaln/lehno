@@ -259,11 +259,11 @@ que les types de la tâche 3 en dépendent.
 - L'étiquette de rôle affiche le rôle connecté.
 - Le menu de compte n'expose « accès des administrateurs » qu'au rôle `admin`.
 
-- [ ] **Étape 1 : le test qui échoue** — les six points ci-dessus.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: la coquille, sa navigation en familles et son repli sous 900 px`
+- [x] **Étape 1 : le test qui échoue** — les six points ci-dessus.
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: la coquille, sa navigation en familles et son repli sous 900 px`
 
 ---
 
@@ -278,14 +278,14 @@ pagine : il affiche l'état du tri et remonte le clic ; la page trie, découpe, 
 `<Pagination>` dessous ». Sélection multiple facultative, actions par ligne dans un menu,
 défilement horizontal sous 900 px avec largeur minimale de 520 px.
 
-- [ ] **Étape 1 : le test qui échoue** — le tableau **ne réordonne pas** ses lignes quand on
+- [x] **Étape 1 : le test qui échoue** — le tableau **ne réordonne pas** ses lignes quand on
       clique un en-tête, il appelle `onTri` ; la colonne de cases n'apparaît que si
       `onSelection` est passé ; le chevron n'apparaît que si `onOuvrir` est passé ; `vide`
       rend l'état vide quand `lignes` est vide.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter**, pagination selon la décision de la tâche 4.
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: tableau, filtres et pagination, sans opinion sur les données`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter**, pagination selon la décision de la tâche 4.
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: tableau, filtres et pagination, sans opinion sur les données`
 
 ---
 
