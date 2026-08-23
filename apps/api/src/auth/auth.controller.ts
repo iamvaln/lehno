@@ -29,14 +29,14 @@ export class AuthController {
 
   // Rend toujours { sent: true }, adresse connue ou non : voir AuthService.requestOtp.
   //
-  // @Ip() lit req.ip d'Express, qui — tant que rien n'active "trust proxy" —
-  // rend l'adresse de la connexion TCP elle-même, jamais un en-tête transmis
-  // (X-Forwarded-For). C'est voulu : derrière un proxy inverse, se fier à un
-  // tel en-tête sans l'avoir configuré laisserait n'importe qui forger son
-  // origine et contourner le plafond par IP. Une fois en production derrière
-  // Caddy, cette adresse deviendra celle du proxy plutôt que celle du client
-  // réel — la tâche 21 configurera "trust proxy" (et Caddy) pour que req.ip
-  // redevienne l'adresse d'origine.
+  // @Ip() lit req.ip d'Express, dont la valeur dépend du réglage « trust
+  // proxy » posé au démarrage (voir main.ts et common/trust-proxy.ts). Sans
+  // relais déclaré, c'est l'adresse de la connexion TCP elle-même, jamais un
+  // en-tête transmis : se fier à X-Forwarded-For sans l'avoir borné
+  // laisserait n'importe qui forger son origine et se donner autant de
+  // compteurs qu'il veut. En production, TRUST_PROXY_HOPS=1 déclare le seul
+  // relais qu'on exploite, le Traefik du VPS — et cette valeur n'est sûre que
+  // parce que l'API n'est joignable que par lui.
   //
   // Cette IP ne sert qu'à composer la clé du limiteur (voir RateLimitService,
   // qui ne la laisse fuiter ni dans un journal ni dans une réponse) : elle

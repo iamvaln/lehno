@@ -56,6 +56,18 @@ services:
     image: ${REGISTRY:-ghcr.io/iamvaln}/lehno-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: ${ENV_FILE:-.env.production}
+    environment:
+      # Un seul relais devant l'API : le Traefik partagé du VPS. Sans ce
+      # réglage, req.ip vaudrait l'adresse de Traefik pour tout le monde et le
+      # plafond « par origine » deviendrait un compteur unique partagé — le
+      # onzième visiteur de l'heure refusé à cause des dix précédents.
+      #
+      # La valeur 1 n'est sûre que parce que ce service ne publie aucun port :
+      # il n'est joignable QUE par Traefik, qui réécrit X-Forwarded-For. Si on
+      # exposait un jour son port en direct, un client pourrait forger cet
+      # en-tête et s'accorder autant d'origines qu'il veut. Voir
+      # apps/api/src/common/trust-proxy.ts.
+      TRUST_PROXY_HOPS: '1'
     depends_on:
       db:
         condition: service_healthy
