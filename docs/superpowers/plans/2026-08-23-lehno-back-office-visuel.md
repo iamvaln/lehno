@@ -414,25 +414,25 @@ d'indicateurs, puis la file « à traiter ».
 **La connexion est hors de la coquille**, sans navigation : une adresse, puis un code. Pas
 de mot de passe (§5.1).
 
-- [ ] **Étape 1 : le test qui échoue** — l'écran **répond la même chose** à une adresse
+- [x] **Étape 1 : le test qui échoue** — l'écran **répond la même chose** à une adresse
       connue et à une adresse inconnue ; le renvoi d'un code attend trente secondes ; trois
       codes refusés ferment la saisie.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: l'entrée par code, qui ne dit jamais si un compte existe`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: l'entrée par code, qui ne dit jamais si un compte existe`
 
 ---
 
 ### Tâche 11 : Vérification à l'œil, et clôture
 
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm --filter @lehno/admin build`.
-- [ ] Ouvrir l'outil en clair et en sombre, dans les deux langues, aux deux rôles.
-- [ ] Réduire sous 900 px : la barre latérale glisse, les tableaux défilent, la densité ne
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm --filter @lehno/admin build`.
+- [x] Ouvrir l'outil en clair et en sombre, dans les deux langues, aux deux rôles.
+- [x] Réduire sous 900 px : la barre latérale glisse, les tableaux défilent, la densité ne
       change pas. Sous 620 px, le compte connecté disparaît.
-- [ ] Vérifier qu'**aucune ombre** n'apparaît dans le CSS produit.
-- [ ] Comparer chaque écran au prototype du paquet, servi en parallèle.
-- [ ] **Commit** — `admin: vérification des deux thèmes, des deux langues et des deux rôles`
+- [x] Vérifier qu'**aucune ombre** n'apparaît dans le CSS produit.
+- [x] Comparer chaque écran au prototype du paquet, servi en parallèle.
+- [x] **Commit** — `admin: vérification des deux thèmes, des deux langues et des deux rôles`
 
 ---
 

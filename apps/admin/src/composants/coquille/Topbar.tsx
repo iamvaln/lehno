@@ -210,7 +210,6 @@ export function Topbar({
         className="coquille-burger coquille-outil"
         onClick={onMenu}
         aria-label={t.menu}
-        style={{ ...OUTIL, marginLeft: "calc(var(--space-4) * -1)" }}
       >
         <Icon name="menu" size={17} />
       </button>

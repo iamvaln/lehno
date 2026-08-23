@@ -5,3 +5,7 @@ export { Liste } from "./Liste.js";
 export { Detail } from "./Detail.js";
 export { Edition } from "./Edition.js";
 export { Suppressions } from "./Suppressions.js";
+
+// La connexion vit hors de la coquille : ni barre latérale, ni barre haute.
+export { Connexion } from "./Connexion.js";
+export { Profil } from "./Profil.js";

@@ -1,0 +1,137 @@
+/* --------------------------------------------------------------------------
+   L'entrée du back-office. La page ne pose aucun style en ligne : tout ce qui
+   est mise en page vit ici, comme pour les gabarits — un style en ligne ne
+   porte ni :focus-visible, ni requête de média, et une couleur écrite en ligne
+   échappe à la bascule du thème.
+
+   L'écran est hors de la coquille : pas de grille de barre latérale, pas de
+   barre haute. Une carte au milieu d'une page vide, et rien d'autre — on n'est
+   pas encore dans l'outil, et rien ne doit laisser croire le contraire.
+
+   Le champ lui-même n'est pas redéfini ici : c'est `.admin-champ` de
+   donnees.css, la seule saisie du back-office, et `.admin-focus` pour l'anneau.
+   Deux champs qui se ressemblent doivent être le même.
+   -------------------------------------------------------------------------- */
+
+.connexion {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-20);
+  padding: var(--space-40) var(--page-gutter);
+  background: var(--surface-page);
+}
+
+/* La pastille et le mot « Back-office » : de quel outil il s'agit. Le nom du
+   produit est porté par le signe, pas répété en toutes lettres. */
+.connexion-marque {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+.connexion-badge {
+  padding: var(--space-2) var(--space-6);
+  border: var(--border-width) solid var(--border-object);
+  border-radius: var(--radius-xs);
+  font-size: var(--text-mention-s);
+  font-weight: var(--font-body-bold);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--text-mention);
+}
+
+/* Une carte étroite : un formulaire de deux champs ne s'étale pas. Le maximum
+   tient à la mesure de lecture d'une phrase courte, pas à la largeur du poste. */
+.connexion-carte {
+  width: 100%;
+  max-width: 372px;
+  padding: var(--space-24);
+  border: var(--border-width) solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+
+.connexion-titre {
+  font-size: var(--text-display-m);
+  font-weight: var(--font-body-bold);
+  line-height: var(--leading-title);
+  letter-spacing: var(--tracking-title);
+  color: var(--text-body);
+}
+
+.connexion-sous {
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-20);
+  font-size: var(--text-body-s);
+  line-height: var(--leading-body);
+  color: var(--text-secondary);
+}
+
+.connexion-label {
+  display: block;
+  margin-bottom: var(--space-6);
+  font-size: var(--text-body-xs);
+  font-weight: var(--font-body-semibold);
+  color: var(--text-body);
+}
+
+.connexion-saisie {
+  width: 100%;
+}
+
+.connexion-saisie:disabled {
+  cursor: not-allowed;
+  color: var(--text-mention);
+}
+
+/* Six chiffres se relisent un à un : l'espacement les sépare, la taille les
+   rend lisibles à la dictée. */
+.connexion-code {
+  font-size: var(--text-body-l);
+  letter-spacing: 0.38em;
+}
+
+.connexion-geste {
+  margin-top: var(--space-16);
+}
+
+/* Ce qui a échoué reste sous les yeux, au-dessus du champ concerné : un code
+   refusé n'est pas un accusé qui s'efface. */
+.connexion-erreur {
+  margin-bottom: var(--space-16);
+  padding: var(--space-8) var(--space-10);
+  border-radius: var(--radius-sm);
+  background: var(--feedback-error-bg);
+  font-size: var(--text-body-s);
+  line-height: var(--leading-body);
+  color: var(--feedback-error);
+}
+
+/* Les deux sorties de l'étape du code : renvoyer, changer d'adresse. Elles se
+   posent sous un filet — ce sont des actions de service, pas l'action de la
+   page. « Changer d'adresse » file à droite : c'est la sortie, pas la reprise. */
+.connexion-pied {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-top: var(--space-14);
+  padding-top: var(--space-14);
+  border-top: var(--border-width) solid var(--border-hairline);
+}
+
+.connexion-pied > :last-child {
+  margin-left: auto;
+}
+
+/* Sur un téléphone, la carte prend la largeur et la page cesse de centrer
+   verticalement : un clavier ouvert mange la moitié de l'écran. */
+@media (max-width: 480px) {
+  .connexion {
+    justify-content: flex-start;
+    padding-top: var(--space-32);
+  }
+}

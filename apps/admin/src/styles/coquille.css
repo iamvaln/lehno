@@ -48,7 +48,22 @@
    barre latérale est déjà là, et un bouton pour l'ouvrir ne voudrait rien dire.
    Son affichage vit ici, et pas en ligne, pour que la requête média puisse le
    reprendre sans « !important ». */
+/* Le bouton porte sa remise à zéro ici, et non en style en ligne : « all: unset »
+   ramène « display » à « inline », et un style en ligne bat la feuille. Posé en
+   ligne, ce bouton restait donc visible à toute largeur — un défaut qu'aucun test
+   ne pouvait voir, jsdom n'appliquant pas les feuilles. Dans un même bloc, le
+   « display » qui suit l'emporte sur « all ». */
 .coquille-burger {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  place-items: center;
+  width: var(--space-32);
+  height: var(--space-32);
+  flex: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  margin-left: calc(var(--space-4) * -1);
   display: none;
 }
 
