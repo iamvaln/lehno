@@ -12,5 +12,13 @@ dist/
 .DS_Store
 
 # ressources locales, hors dépôt
-specs/
-images/
+# Les specs et la marque sont versionnées, mais pas leurs dérivés :
+# rendus empaquetés, PDF, captures et archives se régénèrent depuis la source
+# et pèsent 27 des 29 Mo. Les garder ferait grossir l'historique à chaque
+# itération, sans rien apporter qu'on ne puisse reproduire.
+specs/*.pdf
+specs/*.zip
+specs/*.png
+specs/Lehno Landing*.html
+specs/Lehno Identite visuelle*.html
+images/exports/.fraunces-subset.b64.txt

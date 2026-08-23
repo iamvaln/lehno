@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Karla:ital,wght@0,300..700;1,400..500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_ds/modernist-582357ec-df44-44f9-b2b3-17e45edfd67d/styles.css">
+<script src="_ds/modernist-582357ec-df44-44f9-b2b3-17e45edfd67d/_ds_bundle.js"></script>
+<style>
+  body { margin: 0; background: #FFFFFF; }
+  .fr { font-family: Fraunces, Georgia, serif; font-variation-settings: 'SOFT' 40, 'WONK' 1; }
+  .clair {
+    --bg:#FFFFFF; --surface:#FAF9FC; --panel:#EDEAF7; --text:#221F2B; --muted:#4A4556;
+    --faint:#726E82; --line:#EDEBF2; --line2:#E2DDF0; --edge:#88839A; --violet:#7B6BB7; --violet-deep:#5A4B93;
+    --on-violet:#FFFFFF; --apricot:#F0CFB4; --on-apricot:#7A4A22; --band:#221F2B; --on-band:#FFFFFF;
+    --band-accent:#F0CFB4; --on-band-accent:#221F2B; --card:#FFFFFF; --shadow:rgba(34,31,43,.10);
+  }
+  .nuit {
+    --bg:#17161F; --surface:#1E1C29; --panel:#2E2945; --text:#F2F0F7; --muted:#B9B4C6;
+    --faint:#9A94A8; --line:#2A2836; --line2:#3D3757; --edge:#726C96; --violet:#9C8BD8; --violet-deep:#C3B4EE;
+    --on-violet:#15131D; --apricot:#F0CFB4; --on-apricot:#3A2413; --band:#41357E; --on-band:#F2F0F7;
+    --band-accent:#F0CFB4; --on-band-accent:#221F2B; --card:#1B1928; --shadow:rgba(0,0,0,.45);
+  }
+  a { color: var(--violet-deep); text-decoration: none; }
+  a:hover { color: var(--text); }
+  .ent-burger { display: none; }
+  .ent-nav { display: flex; gap: 18px; font-size: 15px; flex-wrap: wrap; }
+  @container page (max-width: 760px) {
+    .ent-burger { display: flex; }
+    .ent-mot { display: none; }
+    .ent-cta { padding: 9px 14px !important; font-size: 14px !important; }
+    .ent-nav { order: 3; flex-basis: 100%; flex-direction: column; gap: 0; margin-top: 6px; padding-top: 2px; border-top: 1px solid var(--line); }
+    .ent-nav[data-ferme="1"] { display: none; }
+    .ent-nav a { padding: 13px 2px; border-bottom: 1px solid var(--line); }
+    .pied > * { flex-basis: 100%; margin-left: 0 !important; }
+  }
+</style>
+</helmet>
+
+<div class="{{ theme }}" style="background:var(--bg);color:var(--text);font-family:Karla,system-ui,sans-serif;font-size:16px;line-height:1.6;min-height:100vh;container-type:inline-size;container-name:page">
+
+  <header style="max-width:1160px;margin:0 auto;padding:18px 20px;display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;border-bottom:1px solid var(--line)">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:32px;height:32px;border-radius:24%;background:var(--violet);overflow:hidden;flex:none"><svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block"><text x="50" y="79" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="82" font-weight="600" fill="var(--on-violet)" style="font-variation-settings:'SOFT' 30,'WONK' 1">h</text></svg></div>
+      <div class="fr ent-mot" style="font-weight:500;font-size:24px;letter-spacing:-.02em">Le<span style="color:var(--violet)">h</span>no</div>
+    </div>
+    <nav class="ent-nav" data-ferme="{{ navFerme }}">
+      <a href="#comment" onClick="{{ fermerMenu }}" style="color:var(--muted)">{{ t.navComment }}</a>
+      <a href="#contenu" onClick="{{ fermerMenu }}" style="color:var(--muted)">{{ t.navContenu }}</a>
+      <a href="#mur" onClick="{{ fermerMenu }}" style="color:var(--muted)">{{ t.navMur }}</a>
+    </nav>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap">
+      <button type="button" onClick="{{ toggleLang }}" aria-label="{{ t.langLabel }}" title="{{ t.langLabel }}" style="display:flex;align-items:center;gap:7px;font-family:Karla,sans-serif;font-size:13px;font-weight:600;color:var(--muted);background:transparent;border:1px solid var(--edge);border-radius:9px;padding:6px 11px;height:34px;cursor:pointer">
+        <sc-if value="{{ estFr }}" hint-placeholder-val="{{ true }}">
+          <span style="display:block;width:20px;height:14px;border-radius:2px;overflow:hidden;flex:none">
+            <svg viewBox="0 0 60 40" width="20" height="14" style="display:block" aria-hidden="true">
+              <rect width="60" height="40" fill="#012169"></rect>
+              <path d="M0 0 60 40 M60 0 0 40" stroke="#FFFFFF" stroke-width="9"></path>
+              <path d="M0 0 60 40 M60 0 0 40" stroke="#C8102E" stroke-width="4"></path>
+              <path d="M30 0 V40 M0 20 H60" stroke="#FFFFFF" stroke-width="14"></path>
+              <path d="M30 0 V40 M0 20 H60" stroke="#C8102E" stroke-width="8"></path>
+            </svg>
+          </span>
+        </sc-if>
+        <sc-if value="{{ estEn }}" hint-placeholder-val="{{ false }}">
+          <span style="display:block;width:20px;height:14px;border-radius:2px;overflow:hidden;flex:none">
+            <svg viewBox="0 0 60 40" width="20" height="14" style="display:block" aria-hidden="true">
+              <rect width="20" height="40" fill="#002654"></rect>
+              <rect x="20" width="20" height="40" fill="#FFFFFF"></rect>
+              <rect x="40" width="20" height="40" fill="#ED2939"></rect>
+            </svg>
+          </span>
+        </sc-if>
+        {{ t.langBtn }}
+      </button>
+      <button type="button" onClick="{{ toggleTheme }}" aria-label="{{ t.themeLabel }}" title="{{ t.themeLabel }}" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;color:var(--muted);background:transparent;border:1px solid var(--edge);border-radius:9px;padding:0;cursor:pointer">
+        <sc-if value="{{ nuit }}" hint-placeholder-val="{{ false }}">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
+        </sc-if>
+        <sc-if value="{{ clair }}" hint-placeholder-val="{{ true }}">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+        </sc-if>
+      </button>
+      <a href="#commencer" class="ent-cta" style="background:var(--violet);color:var(--on-violet);padding:10px 18px;border-radius:10px;font-weight:600;font-size:15px">{{ t.cta }}</a>
+      <button type="button" class="ent-burger" onClick="{{ toggleMenu }}" aria-expanded="{{ ariaMenu }}" aria-label="{{ t.menuLabel }}" style="align-items:center;justify-content:center;width:34px;height:34px;color:var(--muted);background:transparent;border:1px solid var(--edge);border-radius:9px;padding:0;cursor:pointer">
+        <sc-if value="{{ menuFerme }}" hint-placeholder-val="{{ true }}">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M3 12h18"></path><path d="M3 18h18"></path></svg>
+        </sc-if>
+        <sc-if value="{{ menuOuvert }}" hint-placeholder-val="{{ false }}">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </sc-if>
+      </button>
+    </div>
+  </header>
+
+  <section style="max-width:1160px;margin:0 auto;padding:clamp(36px,6vw,76px) 20px clamp(44px,7vw,84px);display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(32px,5vw,64px);align-items:center">
+    <div style="min-width:0">
+      <h1 class="fr" style="font-weight:500;font-size:clamp(40px,7.5vw,76px);line-height:1.02;letter-spacing:-.035em;margin:0;text-wrap:balance">{{ t.heroTitre }}</h1>
+      <p style="font-size:clamp(17px,2.2vw,21px);line-height:1.5;color:var(--muted);max-width:34ch;margin:22px 0 0;text-wrap:pretty">{{ t.heroSous }}</p>
+      <div id="commencer" style="margin-top:32px">
+        <sc-if value="{{ preLaunch }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <sc-if value="{{ notSubmitted }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;max-width:440px">
+                  <input type="email" value="{{ email }}" onChange="{{ onEmail }}" placeholder="{{ t.emailPlaceholder }}" style="flex:1 1 200px;min-width:0;font-family:Karla,sans-serif;font-size:16px;color:var(--text);background:var(--card);border:1px solid var(--edge);border-radius:10px;padding:14px 15px" />
+                  <button type="button" onClick="{{ onSubmit }}" style="font-family:Karla,sans-serif;font-size:15px;font-weight:600;color:var(--on-violet);background:var(--violet);border:none;border-radius:10px;padding:12px 20px;cursor:pointer;flex:0 0 auto">{{ t.cta }}</button>
+                </div>
+                <div style="font-size:13px;color:var(--faint);margin-top:12px">{{ t.waitlist }}</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ submitted }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--panel);border-radius:12px;padding:18px 20px;max-width:440px">
+                <div class="fr" style="font-size:19px;font-weight:500;color:var(--violet-deep)">{{ t.merciTitre }}</div>
+                <div style="font-size:14px;color:var(--muted);margin-top:4px">{{ t.merciSous }}</div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ launched }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+            <a href="#" style="display:block;line-height:0">
+              <sc-if value="{{ appleFrNoir }}" hint-placeholder-val="{{ true }}"><img src="assets/badges/appstore-fr-noir.svg" alt="{{ t.altApple }}" style="display:block;height:45px;width:auto" /></sc-if>
+              <sc-if value="{{ appleFrBlanc }}" hint-placeholder-val="{{ false }}"><img src="assets/badges/appstore-fr-blanc.svg" alt="{{ t.altApple }}" style="display:block;height:45px;width:auto" /></sc-if>
+              <sc-if value="{{ appleEnNoir }}" hint-placeholder-val="{{ false }}"><img src="assets/badges/appstore-en-noir.svg" alt="{{ t.altApple }}" style="display:block;height:45px;width:auto" /></sc-if>
+              <sc-if value="{{ appleEnBlanc }}" hint-placeholder-val="{{ false }}"><img src="assets/badges/appstore-en-blanc.svg" alt="{{ t.altApple }}" style="display:block;height:45px;width:auto" /></sc-if>
+            </a>
+            <a href="#" style="display:block;line-height:0">
+              <sc-if value="{{ estFr }}" hint-placeholder-val="{{ true }}"><img src="assets/badges/googleplay-fr.png" alt="{{ t.altGoogle }}" style="display:block;height:45px;width:auto" /></sc-if>
+              <sc-if value="{{ estEn }}" hint-placeholder-val="{{ false }}"><img src="assets/badges/googleplay-en.png" alt="{{ t.altGoogle }}" style="display:block;height:45px;width:auto" /></sc-if>
+            </a>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div style="background:var(--panel);border-radius:28px;padding:clamp(24px,4vw,44px) 20px 0;display:flex;justify-content:center;min-width:0">
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ 330 }}" height="{{ 660 }}" dark="{{ nuit }}" time="8:30" hint-size="330px,660px">
+      <div style="background:var(--bg);height:100%;padding-top:52px;box-sizing:border-box;font-family:Karla,system-ui,sans-serif;color:var(--text);display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:6px 16px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line2);flex:none">
+          <div class="fr" style="font-weight:500;font-size:19px;letter-spacing:-.01em">Le<span style="color:var(--violet)">h</span>no</div>
+          <div style="position:relative;color:var(--text);line-height:0">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+            <span style="position:absolute;top:-5px;right:-6px;min-width:15px;height:15px;box-sizing:border-box;padding:0 3px;border-radius:999px;background:var(--apricot);color:var(--on-apricot);border:1.5px solid var(--bg);font-family:Karla,sans-serif;font-size:10px;font-weight:700;line-height:12px;text-align:center">3</span>
+          </div>
+        </div>
+        <div style="padding:16px 18px 14px;flex:1;min-height:0;overflow:hidden">
+          <div class="fr" style="font-size:25px;font-weight:500;letter-spacing:-.022em;line-height:1.15">{{ t.salut }}</div>
+          <div style="font-size:14px;color:var(--muted);margin-top:4px">{{ t.salutSous }}</div>
+
+          <div style="background:var(--panel);border-radius:14px;padding:15px;margin-top:20px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+              <div style="min-width:0">
+                <div class="fr" style="font-size:19px;font-weight:500;letter-spacing:-.01em">Celarine</div>
+                <div style="font-size:14px;color:var(--muted);margin-top:2px">{{ t.anniv }} · {{ t.aujourdhui }}</div>
+              </div>
+              <span style="background:var(--apricot);color:var(--on-apricot);padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:600;flex:none">{{ t.aujourdhui }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:13px">
+              <div style="background:var(--violet);color:var(--on-violet);border-radius:9px;padding:9px;text-align:center;font-size:14px;font-weight:600">{{ t.preparer }}</div>
+              <div style="border:1px solid var(--edge);color:var(--muted);border-radius:9px;padding:9px 14px;text-align:center;font-size:14px;font-weight:600">{{ t.marquer }}</div>
+            </div>
+          </div>
+
+          <div style="border:1px solid var(--line2);border-radius:14px;padding:14px 15px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+            <div style="min-width:0">
+              <div class="fr" style="font-size:19px;font-weight:500;letter-spacing:-.01em">Valery</div>
+              <div style="font-size:14px;color:var(--muted);margin-top:2px">{{ t.anniv }} · {{ t.date24 }}</div>
+            </div>
+            <div class="fr" style="font-size:24px;font-weight:500;color:var(--violet-deep);letter-spacing:-.03em;flex:none">{{ t.j3 }}</div>
+          </div>
+
+          <div style="border:1px solid var(--line2);border-radius:14px;padding:14px 15px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+            <div style="min-width:0">
+              <div class="fr" style="font-size:19px;font-weight:500;letter-spacing:-.01em;white-space:nowrap">Mathias &amp; Rose</div>
+              <div style="font-size:14px;color:var(--muted);margin-top:2px">{{ t.mariage }} · {{ t.date30 }}</div>
+            </div>
+            <div class="fr" style="font-size:24px;font-weight:500;color:var(--violet-deep);letter-spacing:-.03em;flex:none">{{ t.j9 }}</div>
+          </div>
+
+          <div style="margin-top:18px;background:var(--violet);color:var(--on-violet);text-align:center;border-radius:12px;padding:14px;font-weight:600;font-size:16px">{{ t.appBouton }}</div>
+        </div>
+        <div style="border-top:1px solid var(--line2);background:var(--bg);padding:9px 14px 4px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex:none">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--violet-deep)">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
+            <span style="font-size:10.5px;font-weight:600">{{ t.tabAccueil }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--faint)">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+            <span style="font-size:10.5px;font-weight:600">{{ t.tabDates }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--faint)">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+            <span style="font-size:10.5px;font-weight:600">{{ t.tabProches }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--faint)">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"></path></svg>
+            <span style="font-size:10.5px;font-weight:600">{{ t.tabMoi }}</span>
+          </div>
+        </div>
+      </div>
+      </x-import>
+    </div>
+  </section>
+
+  <section id="comment" style="background:var(--panel)">
+    <div style="max-width:1160px;margin:0 auto;padding:clamp(52px,8vw,96px) 20px clamp(56px,8vw,100px)">
+      <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--violet-deep);font-weight:600">{{ t.navComment }}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));grid-template-rows:auto auto auto;gap:clamp(28px,4vw,44px);margin-top:clamp(32px,4vw,44px)">
+        <div style="display:grid;grid-template-rows:subgrid;grid-row:span 3;gap:0;align-content:start">
+          <div class="fr" style="font-size:clamp(44px,6vw,60px);font-weight:400;color:var(--violet-deep);line-height:1">01</div>
+          <h3 class="fr" style="font-weight:500;font-size:clamp(22px,3vw,26px);letter-spacing:-.02em;margin:14px 0 10px">{{ t.etape1Titre }}</h3>
+          <p style="margin:0;color:var(--muted);max-width:34ch">{{ t.etape1 }}</p>
+        </div>
+        <div style="display:grid;grid-template-rows:subgrid;grid-row:span 3;gap:0;align-content:start">
+          <div class="fr" style="font-size:clamp(44px,6vw,60px);font-weight:400;color:var(--violet-deep);line-height:1">02</div>
+          <h3 class="fr" style="font-weight:500;font-size:clamp(22px,3vw,26px);letter-spacing:-.02em;margin:14px 0 10px">{{ t.etape2Titre }}</h3>
+          <p style="margin:0;color:var(--muted);max-width:34ch">{{ t.etape2 }}</p>
+        </div>
+        <div style="display:grid;grid-template-rows:subgrid;grid-row:span 3;gap:0;align-content:start">
+          <div class="fr" style="font-size:clamp(44px,6vw,60px);font-weight:400;color:var(--violet-deep);line-height:1">03</div>
+          <h3 class="fr" style="font-weight:500;font-size:clamp(22px,3vw,26px);letter-spacing:-.02em;margin:14px 0 10px">{{ t.etape3Titre }}</h3>
+          <p style="margin:0;color:var(--muted);max-width:34ch">{{ t.etape3 }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contenu" style="background:var(--bg)">
+   <div style="max-width:1160px;margin:0 auto;padding:clamp(52px,7vw,92px) 20px">
+    <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600">{{ t.contenuKicker }}</div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(28px,4vw,56px);margin-top:34px;align-items:center">
+      <div style="min-width:0">
+        <h2 class="fr" style="font-weight:500;font-size:clamp(28px,4vw,38px);letter-spacing:-.028em;line-height:1.12;margin:0 0 14px;text-wrap:balance">{{ t.blocFicheTitre }}</h2>
+        <p style="margin:0;color:var(--muted);font-size:clamp(16px,2vw,18px);max-width:42ch">{{ t.blocFiche }}</p>
+      </div>
+      <div style="border:1px solid var(--line2);border-radius:18px;padding:24px 22px;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+          <div class="fr" style="font-size:24px;font-weight:500">Valery Bah</div>
+          <div class="fr" style="font-size:20px;font-weight:500;color:var(--violet-deep)">{{ t.j3 }}</div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px">{{ t.anniv }} · {{ t.date24 }} · {{ t.registre }}</div>
+        <div style="margin-top:20px;display:grid;gap:14px">
+          <div>
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600">{{ t.gouts }}</div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
+              <span style="border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-size:13px">{{ t.tag1 }}</span>
+              <span style="border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-size:13px">{{ t.tag2 }}</span>
+              <span style="border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-size:13px">{{ t.tag3 }}</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600">{{ t.idees }}</div>
+            <p style="margin:8px 0 0;font-size:14.5px;color:var(--muted)">{{ t.ideeTexte }} <span style="color:var(--faint)">{{ t.ideeDate }}</span></p>
+          </div>
+          <div>
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600">{{ t.nogo }}</div>
+            <p style="margin:8px 0 0;font-size:14.5px;color:var(--muted)">{{ t.nogoTexte }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+   </div>
+  </section>
+
+  <section style="background:var(--panel)">
+   <div style="max-width:1160px;margin:0 auto;padding:clamp(52px,7vw,92px) 20px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(28px,4vw,56px);align-items:center">
+      <div style="min-width:0">
+        <h2 class="fr" style="font-weight:500;font-size:clamp(28px,4vw,38px);letter-spacing:-.028em;line-height:1.12;margin:0 0 14px;text-wrap:balance">{{ t.blocDatesTitre }}</h2>
+        <p style="margin:0;color:var(--muted);font-size:clamp(16px,2vw,18px);max-width:42ch">{{ t.blocDates }}</p>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--line2);border-radius:18px;overflow:hidden;min-width:0">
+        <div style="display:grid">
+          <div style="display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--line)">
+            <div class="fr" style="font-size:18px;font-weight:500;color:var(--violet-deep);min-width:62px">{{ t.date24 }}</div>
+            <div style="flex:1;min-width:0"><div class="fr" style="font-size:17px;font-weight:500">Valery Bah</div><div style="font-size:13px;color:var(--muted)">{{ t.anniv }} · {{ t.age36 }}</div></div>
+            <span style="background:var(--panel);color:var(--violet-deep);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">{{ t.j3 }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--line)">
+            <div class="fr" style="font-size:18px;font-weight:500;color:var(--violet-deep);min-width:62px">{{ t.date30 }}</div>
+            <div style="flex:1;min-width:0"><div class="fr" style="font-size:17px;font-weight:500">Mathias &amp; Rose</div><div style="font-size:13px;color:var(--muted)">{{ t.mariage }} · {{ t.an5 }}</div></div>
+            <span style="background:var(--panel);color:var(--violet-deep);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">{{ t.j9 }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--line)">
+            <div class="fr" style="font-size:18px;font-weight:500;color:var(--violet-deep);min-width:62px">{{ t.date2 }}</div>
+            <div style="flex:1;min-width:0"><div class="fr" style="font-size:17px;font-weight:500">{{ t.maman }}</div><div style="font-size:13px;color:var(--muted)">{{ t.retraite }}</div></div>
+            <span style="background:var(--panel);color:var(--violet-deep);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">{{ t.j12 }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:15px 20px">
+            <div class="fr" style="font-size:18px;font-weight:500;color:var(--violet-deep);min-width:62px">{{ t.date14 }}</div>
+            <div style="flex:1;min-width:0"><div class="fr" style="font-size:17px;font-weight:500">{{ t.nourEtMoi }}</div><div style="font-size:13px;color:var(--muted)">{{ t.sixMois }}</div></div>
+            <span style="background:var(--panel);color:var(--violet-deep);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">{{ t.j24 }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+   </div>
+  </section>
+
+  <section style="background:var(--bg)">
+   <div style="max-width:1160px;margin:0 auto;padding:clamp(52px,7vw,92px) 20px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(28px,4vw,56px);align-items:center">
+      <div style="min-width:0">
+        <h2 class="fr" style="font-weight:500;font-size:clamp(28px,4vw,38px);letter-spacing:-.028em;line-height:1.12;margin:0 0 14px;text-wrap:balance">{{ t.blocMotTitre }}</h2>
+        <p style="margin:0;color:var(--muted);font-size:clamp(16px,2vw,18px);max-width:42ch">{{ t.blocMot }}</p>
+        <div style="margin-top:22px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600">{{ t.ideesKicker }}</div>
+        <div style="display:grid;gap:8px;margin-top:12px">
+          <div style="display:flex;gap:12px;align-items:baseline;font-size:15px;color:var(--muted)"><span class="fr" style="color:var(--violet);font-size:17px">·</span> {{ t.idee1 }}</div>
+          <div style="display:flex;gap:12px;align-items:baseline;font-size:15px;color:var(--muted)"><span class="fr" style="color:var(--violet);font-size:17px">·</span> {{ t.idee2 }}</div>
+          <div style="display:flex;gap:12px;align-items:baseline;font-size:15px;color:var(--muted)"><span class="fr" style="color:var(--violet);font-size:17px">·</span> {{ t.idee3 }}</div>
+        </div>
+      </div>
+      <div style="background:var(--panel);border-radius:18px;padding:26px 24px;min-width:0">
+        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--violet-deep);font-weight:600">{{ t.brouillon }}</div>
+        <p class="fr" style="font-size:clamp(18px,2.4vw,21px);line-height:1.45;font-weight:400;margin:14px 0 0;color:var(--text);text-wrap:pretty">{{ t.brouillonTexte }}</p>
+        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+          <span style="background:var(--violet);color:var(--on-violet);padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600">{{ t.modifier }}</span>
+          <span style="background:var(--card);color:var(--violet-deep);padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600">{{ t.regenerer }}</span>
+        </div>
+      </div>
+    </div>
+   </div>
+  </section>
+
+  <section id="mur" style="background:var(--panel)">
+   <div style="max-width:1160px;margin:0 auto;padding:clamp(52px,7vw,92px) 20px clamp(44px,6vw,80px)">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(28px,4vw,56px);align-items:center">
+      <div style="min-width:0">
+        <h2 class="fr" style="font-weight:500;font-size:clamp(28px,4vw,38px);letter-spacing:-.028em;line-height:1.12;margin:0 0 14px;text-wrap:balance">{{ t.murTitre }}</h2>
+        <p style="margin:0;color:var(--muted);font-size:clamp(16px,2vw,18px);max-width:42ch">{{ t.murTexte }}</p>
+        <div style="display:grid;gap:0;margin-top:clamp(22px,3vw,30px);max-width:42ch">
+          <div style="border-top:1px solid var(--line2);padding:14px 0">
+            <div class="fr" style="font-size:18px;font-weight:500;letter-spacing:-.01em">{{ t.murPoint1Titre }}</div>
+            <div style="font-size:14.5px;color:var(--muted);margin-top:3px">{{ t.murPoint1 }}</div>
+          </div>
+          <div style="border-top:1px solid var(--line2);padding:14px 0">
+            <div class="fr" style="font-size:18px;font-weight:500;letter-spacing:-.01em">{{ t.murPoint2Titre }}</div>
+            <div style="font-size:14.5px;color:var(--muted);margin-top:3px">{{ t.murPoint2 }}</div>
+          </div>
+          <div style="border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);padding:14px 0">
+            <div class="fr" style="font-size:18px;font-weight:500;letter-spacing:-.01em">{{ t.murPoint3Titre }}</div>
+            <div style="font-size:14.5px;color:var(--muted);margin-top:3px">{{ t.murPoint3 }}</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center;min-width:0">
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ 330 }}" height="{{ 660 }}" dark="{{ nuit }}" time="8:30" hint-size="330px,660px">
+        <div style="background:var(--bg);min-height:100%;font-family:Karla,system-ui,sans-serif;color:var(--text)">
+          <div style="background:var(--panel);padding:52px 22px 20px;text-align:center">
+            <img src="assets/valentine.png" alt="Valentine" style="display:block;width:58px;height:58px;border-radius:50%;object-fit:cover;object-position:50% 22%;background:var(--card);margin:0 auto 10px" />
+            <div class="fr" style="font-size:21px;font-weight:500;letter-spacing:-.01em;line-height:1.3">{{ t.murHello }}</div>
+            <div class="fr" style="font-style:italic;font-size:14px;color:var(--muted);margin-top:8px">{{ t.murSous }}</div>
+          </div>
+          <div style="padding:16px 18px 18px">
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600">{{ t.murAime }}</div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">
+              <span style="border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-size:13px">{{ t.murTag1 }}</span>
+              <span style="border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-size:13px">{{ t.murTag2 }}</span>
+              <span style="border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-size:13px">{{ t.murTag3 }}</span>
+            </div>
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-top:13px">{{ t.murEvite }}</div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
+              <span style="border:1px dashed var(--line2);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--muted)">{{ t.murNo1 }}</span>
+              <span style="border:1px dashed var(--line2);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--muted)">{{ t.murNo2 }}</span>
+            </div>
+            <div style="font-size:13.5px;color:var(--muted);margin-top:13px">{{ t.murDate }}</div>
+            <div style="border:1px solid var(--violet);border-radius:13px;padding:12px;text-align:center;margin-top:13px">
+              <div style="font-size:14px;color:var(--muted)">{{ t.murIdee }}</div>
+              <div style="margin-top:10px;color:var(--violet-deep);border:1px solid var(--violet);border-radius:10px;padding:8px;font-size:14px;font-weight:600">{{ t.murListe }}</div>
+            </div>
+            <div style="margin-top:10px;background:var(--violet);color:var(--on-violet);text-align:center;border-radius:10px;padding:11px;font-weight:600;font-size:15px">{{ t.murMot }}</div>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line2);display:flex;align-items:center;gap:10px">
+              <div style="width:24px;height:24px;border-radius:24%;background:var(--violet);overflow:hidden;flex:none"><svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block"><text x="50" y="80" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="86" font-weight="650" fill="var(--on-violet)">h</text></svg></div>
+              <div style="font-size:12.5px;color:var(--muted);line-height:1.35;flex:1">{{ t.murPied }}</div>
+              <div style="font-size:12.5px;font-weight:700;color:var(--violet-deep);white-space:nowrap">{{ t.murPiedLien }}</div>
+            </div>
+          </div>
+        </div>
+        </x-import>
+      </div>
+    </div>
+   </div>
+  </section>
+
+  <section style="background:var(--bg)">
+   <div style="max-width:1160px;margin:0 auto;padding:clamp(44px,6vw,76px) 20px clamp(48px,7vw,84px)">
+    <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600">{{ t.prixKicker }}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:clamp(24px,4vw,48px);margin-top:28px">
+      <div style="border-top:2px solid var(--violet);padding-top:18px">
+        <div class="fr" style="font-size:clamp(38px,5vw,52px);font-weight:400;line-height:1;letter-spacing:-.03em;color:var(--violet-deep)">{{ t.prixGratuitChiffre }}</div>
+        <h3 class="fr" style="font-weight:500;font-size:clamp(19px,2.4vw,22px);letter-spacing:-.02em;margin:14px 0 8px">{{ t.prixGratuitTitre }}</h3>
+        <p style="margin:0;color:var(--muted);max-width:40ch">{{ t.prixGratuit }}</p>
+      </div>
+      <div style="border-top:2px solid var(--line2);padding-top:18px">
+        <div class="fr" style="font-size:clamp(38px,5vw,52px);font-weight:400;line-height:1;letter-spacing:-.03em">{{ t.prixCreditsChiffre }}<span style="font-size:.42em;letter-spacing:0;color:var(--muted);margin-left:.5em">{{ t.prixCreditsUnite }}</span></div>
+        <h3 class="fr" style="font-weight:500;font-size:clamp(19px,2.4vw,22px);letter-spacing:-.02em;margin:14px 0 8px">{{ t.prixCreditsTitre }}</h3>
+        <p style="margin:0;color:var(--muted);max-width:40ch">{{ t.prixCredits }}</p>
+      </div>
+    </div>
+   </div>
+  </section>
+
+  <section style="background:var(--band);color:var(--on-band)">
+    <div style="max-width:1160px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(28px,4vw,56px);align-items:center">
+      <h2 class="fr" style="font-weight:500;font-size:clamp(32px,5vw,52px);line-height:1.06;letter-spacing:-.032em;margin:0;max-width:20ch;text-wrap:balance">{{ t.finTitre }}</h2>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <sc-if value="{{ preLaunch }}" hint-placeholder-val="{{ true }}">
+          <a href="#commencer" style="background:var(--band-accent);color:var(--on-band-accent);padding:12px 20px;border-radius:10px;font-weight:700;font-size:15px">{{ t.cta }}</a>
+        </sc-if>
+        <sc-if value="{{ launched }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+            <a href="#" style="display:block;line-height:0">
+              <sc-if value="{{ estFr }}" hint-placeholder-val="{{ true }}"><img src="assets/badges/appstore-fr-blanc.svg" alt="{{ t.altApple }}" style="display:block;height:45px;width:auto" /></sc-if>
+              <sc-if value="{{ estEn }}" hint-placeholder-val="{{ false }}"><img src="assets/badges/appstore-en-blanc.svg" alt="{{ t.altApple }}" style="display:block;height:45px;width:auto" /></sc-if>
+            </a>
+            <a href="#" style="display:block;line-height:0">
+              <sc-if value="{{ estFr }}" hint-placeholder-val="{{ true }}"><img src="assets/badges/googleplay-fr.png" alt="{{ t.altGoogle }}" style="display:block;height:45px;width:auto" /></sc-if>
+              <sc-if value="{{ estEn }}" hint-placeholder-val="{{ false }}"><img src="assets/badges/googleplay-en.png" alt="{{ t.altGoogle }}" style="display:block;height:45px;width:auto" /></sc-if>
+            </a>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </section>
+
+  <footer class="pied" style="max-width:1160px;margin:0 auto;padding:36px 20px 60px;display:flex;gap:16px 28px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line)">
+    <div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:26px;height:26px;border-radius:24%;background:var(--violet);overflow:hidden;flex:none"><svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block"><text x="50" y="80" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="86" font-weight="650" fill="var(--on-violet)">h</text></svg></div>
+        <div class="fr" style="font-weight:500;font-size:19px;letter-spacing:-.02em">Le<span style="color:var(--violet)">h</span>no</div>
+      </div>
+      <div class="fr" style="font-style:italic;font-size:15px;color:var(--muted);margin-top:6px">{{ t.signature }}</div>
+    </div>
+    <nav style="margin-left:auto;display:flex;gap:12px 18px;font-size:14px;color:var(--muted);flex-wrap:wrap">
+      <a href="#" style="color:var(--muted)">{{ t.cgu }}</a>
+      <a href="#" style="color:var(--muted)">{{ t.confidentialite }}</a>
+      <a href="#" style="color:var(--muted)">{{ t.contact }}</a>
+    </nav>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;preLaunch&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Landing&quot;}}">
+const STR = {
+  fr: {
+    navComment: "Comment ça marche", navContenu: "Ce qu'elle contient", navMur: "Le Mur",
+    cta: "Commencer", themeBtn: "Sombre", themeLabel: "Basculer en mode sombre",
+    heroTitre: "Soyez là le jour J",
+    heroSous: "Lehno retient les dates qui comptent et ce que vous savez de vos proches. Le moment venu, vous avez déjà tout pour bien faire.",
+    emailPlaceholder: "votre adresse e-mail",
+    waitlist: "Nous préparons le lancement. Vous serez prévenu le jour où l'application ouvre.",
+    merciTitre: "C'est noté. À très vite.", merciSous: "Vous recevrez un mot dès l'ouverture — rien d'autre.",
+    voirMur: "Voir un exemple de Mur",
+    appTitre: "Ce qui approche", anniv: "Anniversaire", mariage: "Mariage", aujourdhui: "aujourd'hui",
+    appNote: "Vous aviez noté : elle a parlé d'un cours de céramique près de chez elle.",
+    appBouton: "Laisser une note",
+    date24: "24 août", date30: "30 août", date2: "2 sept.", date14: "14 sept.",
+    j3: "J−3", j9: "J−9", j12: "J−12", j24: "J−24",
+    etape1Titre: "Notez quand ça vous vient.",
+    etape1: "Une idée de cadeau au détour d'une conversation, un détail qui vous marque. Vous ouvrez, vous écrivez, c'est rangé.",
+    etape2Titre: "Lehno vous rappelle.",
+    etape2: "Quelques jours avant la date, l'application vous prévient — et vous remet sous les yeux tout ce que vous aviez noté.",
+    etape3Titre: "Offrez quelque chose de juste.",
+    etape3: "Une idée de cadeau qui lui ressemble, un mot dans votre ton à vous. Vous choisissez, vous envoyez.",
+    contenuKicker: "Ce que l'application contient",
+    blocFicheTitre: "Vos proches, dans un carnet qui se souvient",
+    blocFiche: "Une fiche par personne : sa date, ses goûts, ce qu'elle a laissé entendre. Ça s'enrichit au fil de l'année, sans effort. Et ça ressert chaque année.",
+    registre: "registre amical", gouts: "Intérêts / goûts", idees: "Idées cadeaux", nogo: "Dislikes / no-go",
+    tag1: "vinyles", tag2: "rando", tag3: "café de spécialité",
+    ideeTexte: "« Il a parlé d'un moulin à café manuel, le sien rend l'âme. »", ideeDate: "noté en mars",
+    nogoTexte: "Ne boit pas d'alcool.",
+    blocDatesTitre: "Toutes vos dates, au même endroit",
+    blocDates: "Anniversaires, mariages, retraites, six mois d'une histoire : tout ce qui mérite d'être marqué tient dans le même calendrier.",
+    maman: "Maman", retraite: "Départ en retraite", nourEtMoi: "Nour & moi", sixMois: "Six mois",
+    age36: "36 ans", an5: "5 ans",
+    blocMotTitre: "Un mot qui vient de vous",
+    blocMot: "Lehno vous propose une base, écrite à partir de ce que vous savez d'elle. Vous ajustez, vous signez, vous envoyez depuis votre messagerie.",
+    ideesKicker: "Idées de célébration · du gratuit au plus cher",
+    idee1: "Une lettre sur ce que son amitié a changé cette année",
+    idee2: "Un après-midi au marché aux vinyles, puis un café",
+    idee3: "Le moulin à café manuel dont il a parlé en mars",
+    brouillon: "Brouillon · pour Valery",
+    brouillonTexte: "« Valery, 36 ans et toujours cette manie de refaire le monde à minuit. Merci pour l'été dernier — je te dois au moins un café correct. Bon anniversaire, mon vieux. »",
+    modifier: "Modifier et envoyer", regenerer: "Régénérer",
+    murTitre: "Votre page à vous",
+    murTexte: "Vos proches veulent bien faire aussi. Partagez votre Mur : ils y trouvent ce qui vous ferait plaisir, et peuvent vous laisser un mot.",
+    murPoint1Titre: "Une adresse à partager",
+    murPoint1: "Un lien s'envoie, s'ouvre dans le navigateur, et voilà.",
+    murPoint2Titre: "Vos envies, écrites par vous",
+    murPoint2: "Ce qui vous ferait plaisir, et ce qui ne vous ferait pas plaisir.",
+    murPoint3Titre: "Les mots qu'on vous laisse",
+    murPoint3: "Vos proches vous écrivent depuis votre Mur, vous les retrouvez dans l'application.",
+    tabAccueil: "Accueil", tabDates: "Dates", tabProches: "Proches", tabMoi: "Moi",
+    qaAnniv: "Ajouter un anniversaire", qaNote: "Laisser une note", qaFiche: "Faire compléter une fiche",
+    salut: "Bonjour Valentine", salutSous: "Une date aujourd'hui, deux cette semaine.",
+    contribs: "3 contributions à valider", echeances: "Prochaines échéances", voirTout: "voir tout",
+    preparer: "Préparer", marquer: "Marquer envoyé",
+    reprises: "Reprises en cours", brouillon: "Brouillon de message · Valery", reprendre: "Reprendre",
+    murEvite: "Ce que j'évite", murNo1: "les bougies parfumées", murNo2: "l'alcool",
+    murPied: "Fait avec Lehno", murPiedLien: "Faire le mien",
+    murHello: "Bienvenue chez Valentine", murSous: "Ravie de te voir passer.",
+    murAime: "Ce que j'aime", murTag1: "parfums", murTag2: "fleurs", murTag3: "cinéma",
+    murDate: "Mon anniversaire, c'est le 14 mars",
+    murIdee: "Une idée ? Voici ce qui me ferait plaisir.",
+    murListe: "Voir ma liste", murMot: "Laisse-moi un mot",
+    prixKicker: "Ce que ça coûte",
+    prixGratuitChiffre: "Gratuit",
+    prixCreditsChiffre: "100 F",
+    prixCreditsUnite: "le crédit",
+    prixGratuitTitre: "Sans limite de temps",
+    prixGratuit: "Vos notes, les fiches de vos proches, vos dates, les rappels et votre Mur.",
+    prixCreditsTitre: "À l'usage, en crédits",
+    prixCredits: "Un crédit par contenu créé pour vous : le portrait, les idées de cadeau, le message. 5 crédits offerts à l'inscription.",
+    finTitre: "Faites de chaque jour J un moment qui leur ressemble.",
+    signature: "Chaque date qui compte, bien célébrée.",
+    cgu: "Conditions d'utilisation", confidentialite: "Confidentialité", contact: "Contact"
+  },
+  en: {
+    navComment: "How it works", navContenu: "What's inside", navMur: "The Wall",
+    cta: "Get started", themeBtn: "Dark", themeLabel: "Switch to dark mode",
+    heroTitre: "Be there on the day",
+    heroSous: "Lehno keeps the dates that matter and what you know about the people you love. When the day comes, you already have what you need.",
+    emailPlaceholder: "your email address",
+    waitlist: "We're getting ready to launch. We'll let you know the day the app opens.",
+    merciTitre: "Noted. See you soon.", merciSous: "You'll get a note the day we open — nothing else.",
+    voirMur: "See an example Wall",
+    appTitre: "Coming up", anniv: "Birthday", mariage: "Anniversary", aujourdhui: "today",
+    appNote: "You wrote: she mentioned a ceramics class near her place.",
+    appBouton: "Jot something down",
+    date24: "24 Aug", date30: "30 Aug", date2: "2 Sep", date14: "14 Sep",
+    j3: "3 days", j9: "9 days", j12: "12 days", j24: "24 days",
+    etape1Titre: "Write it down when it comes to you.",
+    etape1: "A gift idea mid-conversation, a detail that sticks. You open the app, you type, it's filed away.",
+    etape2Titre: "Lehno reminds you.",
+    etape2: "A few days before the date, the app tells you — and puts everything you noted back in front of you.",
+    etape3Titre: "Give something that fits.",
+    etape3: "A gift that looks like them, a message in your own voice. You choose, you send.",
+    contenuKicker: "What the app holds",
+    blocFicheTitre: "The people you love, in a notebook that remembers",
+    blocFiche: "One page per person: their date, their tastes, what they let slip. It fills up over the year, effortlessly. And it serves again every year.",
+    registre: "friendly tone", gouts: "Interests / tastes", idees: "Gift ideas", nogo: "Dislikes / no-go",
+    tag1: "vinyl", tag2: "hiking", tag3: "specialty coffee",
+    ideeTexte: "\u201CHe mentioned a hand coffee grinder — his is on its last legs.\u201D", ideeDate: "noted in March",
+    nogoTexte: "Doesn't drink alcohol.",
+    blocDatesTitre: "Every date, in one place",
+    blocDates: "Birthdays, weddings, retirements, six months of a relationship: everything worth marking lives in the same calendar.",
+    maman: "Mum", retraite: "Retirement", nourEtMoi: "Nour & me", sixMois: "Six months",
+    age36: "turning 36", an5: "5 years",
+    blocMotTitre: "A message that sounds like you",
+    blocMot: "Lehno drafts a starting point from what you know about them. You adjust it, you sign it, you send it from your own inbox.",
+    ideesKicker: "Ways to celebrate · from free to lavish",
+    idee1: "A letter on what their friendship changed this year",
+    idee2: "An afternoon at the record market, then coffee",
+    idee3: "The hand grinder he mentioned back in March",
+    brouillon: "Draft · for Valery",
+    brouillonTexte: "\u201CValery, 36 and still fixing the world at midnight. Thank you for last summer — I owe you at least one decent coffee. Happy birthday, old friend.\u201D",
+    modifier: "Edit and send", regenerer: "Regenerate",
+    murTitre: "A page of your own",
+    murTexte: "The people around you want to get it right too. Share your Wall: they'll find what would make you happy, and can leave you a note.",
+    murPoint1Titre: "An address to share",
+    murPoint1: "Send the link, it opens in the browser, and that's it.",
+    murPoint2Titre: "Your wishes, in your words",
+    murPoint2: "What would make you happy — and what wouldn't.",
+    murPoint3Titre: "The notes people leave you",
+    murPoint3: "They write to you from your Wall, and you read them in the app.",
+    tabAccueil: "Home", tabDates: "Dates", tabProches: "People", tabMoi: "Me",
+    qaAnniv: "Add a birthday", qaNote: "Leave a note", qaFiche: "Ask someone to fill a page",
+    salut: "Hi Valentine", salutSous: "One date today, two this week.",
+    contribs: "3 contributions to review", echeances: "Coming up", voirTout: "see all",
+    preparer: "Prepare", marquer: "Mark as sent",
+    reprises: "In progress", brouillon: "Message draft · Valery", reprendre: "Resume",
+    murEvite: "What I'd rather skip", murNo1: "scented candles", murNo2: "alcohol",
+    murPied: "Made with Lehno", murPiedLien: "Make mine",
+    murHello: "Welcome — I'm Valentine", murSous: "Glad you stopped by.",
+    murAime: "What I love", murTag1: "perfume", murTag2: "flowers", murTag3: "cinema",
+    murDate: "My birthday is 14 March",
+    murIdee: "Looking for an idea? Here's what would make me happy.",
+    murListe: "See my list", murMot: "Leave me a note",
+    prixKicker: "What it costs",
+    prixGratuitChiffre: "Free",
+    prixCreditsChiffre: "100 F",
+    prixCreditsUnite: "per credit",
+    prixGratuitTitre: "With no time limit",
+    prixGratuit: "Your notes, the pages for the people you love, your dates, the reminders and your Wall.",
+    prixCreditsTitre: "Pay as you go, in credits",
+    prixCredits: "One credit per piece created for you: the portrait, the gift ideas, the message. 5 credits when you sign up.",
+    finTitre: "Make every big day feel like the person it's for.",
+    signature: "Every date that matters, properly celebrated.",
+    cgu: "Terms of Use", confidentialite: "Privacy", contact: "Contact"
+  }
+};
+
+class Component extends DCLogic {
+  state = { lang: "fr", nuit: false, email: "", sent: false, menu: false };
+
+  componentDidMount() {
+    try {
+      const l = localStorage.getItem("lehno.lang");
+      const n = localStorage.getItem("lehno.nuit");
+      const patch = {};
+      if (l === "fr" || l === "en") patch.lang = l;
+      if (n === "1" || n === "0") patch.nuit = n === "1";
+      else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) patch.nuit = true;
+      if (Object.keys(patch).length) this.setState(patch);
+    } catch (e) {}
+  }
+
+  setLang = (lang) => {
+    this.setState({ lang });
+    try { localStorage.setItem("lehno.lang", lang); } catch (e) {}
+  };
+
+  toggleTheme = () => {
+    const nuit = !this.state.nuit;
+    this.setState({ nuit });
+    try { localStorage.setItem("lehno.nuit", nuit ? "1" : "0"); } catch (e) {}
+  };
+
+  langBtn(actif) {
+    return "font-family:Karla,sans-serif;font-size:13px;font-weight:600;padding:7px 11px;border:none;cursor:pointer;"
+      + (actif ? "background:var(--violet);color:var(--on-violet);" : "background:transparent;color:var(--muted);");
+  }
+
+  renderVals() {
+    const pre = this.props.preLaunch ?? true;
+    const fr = this.state.lang === "fr";
+    const t = Object.assign({}, STR[this.state.lang]);
+    t.themeLabel = this.state.nuit
+      ? (fr ? "Passer en mode clair" : "Switch to light mode")
+      : (fr ? "Passer en mode sombre" : "Switch to dark mode");
+    t.altApple = fr ? "Télécharger dans l'App Store" : "Download on the App Store";
+    t.altGoogle = fr ? "Disponible sur Google Play" : "Get it on Google Play";
+    t.menuLabel = this.state.menu
+      ? (fr ? "Fermer le menu" : "Close menu")
+      : (fr ? "Ouvrir le menu" : "Open menu");
+    t.langBtn = fr ? "EN" : "FR";
+    t.langLabel = fr ? "Switch to English" : "Passer en français";
+    return {
+      t,
+      theme: this.state.nuit ? "nuit" : "clair",
+      nuit: this.state.nuit,
+      clair: !this.state.nuit,
+      estFr: this.state.lang === "fr",
+      estEn: this.state.lang === "en",
+      appleFrNoir: fr && !this.state.nuit,
+      appleFrBlanc: fr && this.state.nuit,
+      appleEnNoir: !fr && !this.state.nuit,
+      appleEnBlanc: !fr && this.state.nuit,
+      menuOuvert: this.state.menu,
+      menuFerme: !this.state.menu,
+      navFerme: this.state.menu ? "0" : "1",
+      ariaMenu: this.state.menu ? "true" : "false",
+      toggleMenu: () => this.setState({ menu: !this.state.menu }),
+      fermerMenu: () => this.setState({ menu: false }),
+      preLaunch: pre,
+      launched: !pre,
+      email: this.state.email,
+      submitted: this.state.sent,
+      notSubmitted: !this.state.sent,
+      toggleLang: () => this.setLang(this.state.lang === "fr" ? "en" : "fr"),
+      toggleTheme: this.toggleTheme,
+      onEmail: (e) => this.setState({ email: e.target.value }),
+      onSubmit: () => this.setState({ sent: true })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Karla:ital,wght@0,300..700;1,400..500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_ds/modernist-582357ec-df44-44f9-b2b3-17e45edfd67d/styles.css">
+<script src="_ds/modernist-582357ec-df44-44f9-b2b3-17e45edfd67d/_ds_bundle.js"></script>
+<style>
+  body { margin: 0; background: #FFFFFF; }
+  a { color: #5A4B93; text-decoration: none; }
+  a:hover { color: #221F2B; }
+  .fr { font-family: Fraunces, Georgia, serif; font-variation-settings: 'SOFT' 40, 'WONK' 1; }
+</style>
+</helmet>
+
+<div style="background:#FFFFFF;color:#221F2B;font-family:Karla,system-ui,sans-serif;font-size:16px;line-height:1.6">
+
+  <header style="max-width:1160px;margin:0 auto;padding:22px 40px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #EDEBF2">
+    <div style="width:32px;height:32px;border-radius:24%;background:#7B6BB7;overflow:hidden;flex:none"><svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block"><text x="50" y="79" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="82" font-weight="600" fill="#FFFFFF" style="font-variation-settings:'SOFT' 30,'WONK' 1">h</text></svg></div>
+    <div class="fr" style="font-weight:500;font-size:24px;letter-spacing:-.02em">Le<span style="color:#7B6BB7">h</span>no</div>
+    <nav style="margin-left:auto;display:flex;align-items:center;gap:26px;font-size:15px">
+      <a href="#comment">Comment ça marche</a>
+      <a href="#contenu">Ce qu'elle contient</a>
+      <a href="#mur">Le Mur</a>
+      <a href="#commencer" style="background:#7B6BB7;color:#FFFFFF;padding:11px 20px;border-radius:10px;font-weight:600">Commencer</a>
+    </nav>
+  </header>
+
+  <section style="max-width:1160px;margin:0 auto;padding:76px 40px 84px;display:grid;grid-template-columns:1.15fr .85fr;gap:64px;align-items:center">
+    <div>
+      <h1 class="fr" style="font-weight:500;font-size:76px;line-height:1.02;letter-spacing:-.035em;margin:0">Soyez là le jour J</h1>
+      <p style="font-size:21px;line-height:1.5;color:#4A4556;max-width:34ch;margin:24px 0 0;text-wrap:pretty">Lehno retient les dates qui comptent et ce que vous savez de vos proches. Le moment venu, vous avez déjà tout pour bien faire.</p>
+      <div id="commencer" style="margin-top:34px">
+        <sc-if value="{{ preLaunch }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <sc-if value="{{ notSubmitted }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:10px;flex-wrap:wrap;max-width:440px">
+                <input type="email" value="{{ email }}" onChange="{{ onEmail }}" placeholder="votre adresse e-mail" style="flex:1;min-width:220px;font-family:Karla,sans-serif;font-size:16px;color:#221F2B;background:#FFFFFF;border:1px solid #E2DDF0;border-radius:10px;padding:14px 15px" />
+                <button type="button" onClick="{{ onSubmit }}" style="font-family:Karla,sans-serif;font-size:16px;font-weight:600;color:#FFFFFF;background:#7B6BB7;border:none;border-radius:10px;padding:14px 24px;cursor:pointer" style-hover="background:#5A4B93">Commencer</button>
+              </div>
+              <div style="font-size:13px;color:#777086;margin-top:12px">Nous préparons le lancement. Vous serez prévenu le jour où l'application ouvre.</div>
+            </sc-if>
+            <sc-if value="{{ submitted }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#EDEAF7;border-radius:12px;padding:18px 20px;max-width:440px">
+                <div class="fr" style="font-size:19px;font-weight:500;color:#5A4B93">C'est noté. À très vite.</div>
+                <div style="font-size:14px;color:#4A4556;margin-top:4px">Vous recevrez un mot dès l'ouverture — rien d'autre.</div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ launched }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <a href="#" style="display:flex;align-items:center;gap:10px;background:#7B6BB7;color:#FFFFFF;border-radius:12px;padding:14px 22px;font-weight:600" style-hover="background:#5A4B93">App Store</a>
+            <a href="#" style="display:flex;align-items:center;gap:10px;border:1px solid #7B6BB7;color:#5A4B93;border-radius:12px;padding:13px 22px;font-weight:600" style-hover="background:#EDEAF7">Google Play</a>
+          </div>
+        </sc-if>
+        <div style="margin-top:18px;font-size:15px"><a href="#mur" style="border-bottom:1px solid #E2DDF0">Voir un exemple de Mur</a></div>
+      </div>
+    </div>
+
+    <div style="background:#EDEAF7;border-radius:28px;padding:44px 30px 0;display:flex;justify-content:center">
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ 330 }}" height="{{ 660 }}" hint-size="330px,660px">
+      <div style="background:#FFFFFF;min-height:100%;padding-top:52px;font-family:Karla,system-ui,sans-serif;color:#221F2B">
+        <div style="padding:8px 18px 10px;display:flex;justify-content:space-between;align-items:center">
+          <div class="fr" style="font-weight:500;font-size:19px;letter-spacing:-.01em">Le<span style="color:#7B6BB7">h</span>no</div>
+          <span style="width:8px;height:8px;border-radius:50%;background:#F0CFB4;display:inline-block"></span>
+        </div>
+        <div style="padding:4px 18px 20px">
+          <div class="fr" style="font-size:23px;font-weight:500;letter-spacing:-.015em;margin:8px 0 16px">Ce qui approche</div>
+          <div style="background:#EDEAF7;border-radius:13px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+              <div>
+                <div class="fr" style="font-size:17px;font-weight:500">Awa Diop</div>
+                <div style="font-size:13px;color:#6B6579;margin-top:1px">Anniversaire · aujourd'hui</div>
+              </div>
+              <span style="background:#F0CFB4;color:#835125;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">aujourd'hui</span>
+            </div>
+            <div style="font-size:13.5px;color:#4A4556;line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid #E2DDF0">Vous aviez noté : elle a parlé d'un cours de céramique près de chez elle.</div>
+          </div>
+          <div style="border:1px solid #E2DDF0;border-radius:13px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="fr" style="font-size:17px;font-weight:500">Karim Bah</div>
+              <div style="font-size:13px;color:#6B6579;margin-top:1px">Anniversaire · 24 août</div>
+            </div>
+            <div class="fr" style="font-size:20px;font-weight:500;color:#5A4B93;letter-spacing:-.02em">J−3</div>
+          </div>
+          <div style="border:1px solid #E2DDF0;border-radius:13px;padding:14px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="fr" style="font-size:17px;font-weight:500">Sarah &amp; Yann</div>
+              <div style="font-size:13px;color:#6B6579;margin-top:1px">Mariage · 30 août</div>
+            </div>
+            <div class="fr" style="font-size:20px;font-weight:500;color:#5A4B93;letter-spacing:-.02em">J−9</div>
+          </div>
+          <div style="margin-top:16px;background:#7B6BB7;color:#FFFFFF;text-align:center;border-radius:10px;padding:13px;font-weight:600;font-size:15px">Laisser une note</div>
+        </div>
+      </div>
+      </x-import>
+    </div>
+  </section>
+
+  <section id="comment" style="background:#FAF9FC">
+    <div style="max-width:1160px;margin:0 auto;padding:64px 40px 72px">
+      <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#777086;font-weight:600">Comment ça marche</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:34px">
+        <div style="padding:0">
+          <div class="fr" style="font-size:40px;font-weight:400;color:#7B6BB7;line-height:1">01</div>
+          <h3 class="fr" style="font-weight:500;font-size:26px;letter-spacing:-.02em;margin:14px 0 10px">Notez quand ça vous vient.</h3>
+          <p style="margin:0;color:#4A4556;max-width:34ch">Une idée de cadeau au détour d'une conversation, un détail qui vous marque. Vous ouvrez, vous écrivez, c'est rangé.</p>
+        </div>
+        <div style="padding:0">
+          <div class="fr" style="font-size:40px;font-weight:400;color:#7B6BB7;line-height:1">02</div>
+          <h3 class="fr" style="font-weight:500;font-size:26px;letter-spacing:-.02em;margin:14px 0 10px">Lehno vous rappelle.</h3>
+          <p style="margin:0;color:#4A4556;max-width:34ch">Quelques jours avant la date, l'application vous prévient — et vous remet sous les yeux tout ce que vous aviez noté.</p>
+        </div>
+        <div style="padding:0">
+          <div class="fr" style="font-size:40px;font-weight:400;color:#7B6BB7;line-height:1">03</div>
+          <h3 class="fr" style="font-weight:500;font-size:26px;letter-spacing:-.02em;margin:14px 0 10px">Offrez quelque chose de juste.</h3>
+          <p style="margin:0;color:#4A4556;max-width:34ch">Une idée de cadeau qui lui ressemble, un mot dans votre ton à vous. Vous choisissez, vous envoyez.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contenu" style="max-width:1160px;margin:0 auto;padding:76px 40px 40px">
+    <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#777086;font-weight:600">Ce que l'application contient</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:38px;align-items:center">
+      <div>
+        <h2 class="fr" style="font-weight:500;font-size:38px;letter-spacing:-.028em;line-height:1.12;margin:0 0 14px">Vos proches, dans un carnet qui se souvient</h2>
+        <p style="margin:0;color:#4A4556;font-size:18px;max-width:42ch">Une fiche par personne : sa date, ses goûts, ce qu'elle a laissé entendre. Ça s'enrichit au fil de l'année, sans effort. Et ça ressert chaque année.</p>
+      </div>
+      <div style="border:1px solid #E2DDF0;border-radius:18px;padding:26px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <div class="fr" style="font-size:24px;font-weight:500">Karim Bah</div>
+          <div class="fr" style="font-size:20px;font-weight:500;color:#5A4B93">J−3</div>
+        </div>
+        <div style="font-size:13px;color:#6B6579;margin-top:2px">Anniversaire · 24 août · registre amical</div>
+        <div style="margin-top:20px;display:grid;gap:14px">
+          <div>
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#777086;font-weight:600">Intérêts / goûts</div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
+              <span style="border:1px solid #E2DDF0;border-radius:999px;padding:5px 12px;font-size:13px">vinyles</span>
+              <span style="border:1px solid #E2DDF0;border-radius:999px;padding:5px 12px;font-size:13px">rando</span>
+              <span style="border:1px solid #E2DDF0;border-radius:999px;padding:5px 12px;font-size:13px">café de spécialité</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#777086;font-weight:600">Idées cadeaux</div>
+            <p style="margin:8px 0 0;font-size:14.5px;color:#4A4556">« Il a parlé d'un moulin à café manuel, le sien rend l'âme. » <span style="color:#777086">noté en mars</span></p>
+          </div>
+          <div>
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#777086;font-weight:600">Dislikes / no-go</div>
+            <p style="margin:8px 0 0;font-size:14.5px;color:#4A4556">Ne boit pas d'alcool.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:72px;align-items:center">
+      <div style="order:2">
+        <h2 class="fr" style="font-weight:500;font-size:38px;letter-spacing:-.028em;line-height:1.12;margin:0 0 14px">Toutes vos dates, au même endroit</h2>
+        <p style="margin:0;color:#4A4556;font-size:18px;max-width:42ch">Anniversaires, mariages, retraites, six mois d'une histoire : tout ce qui mérite d'être marqué tient dans le même calendrier.</p>
+      </div>
+      <div style="order:1;border:1px solid #E2DDF0;border-radius:18px;overflow:hidden">
+        <div style="display:grid">
+          <div style="display:flex;align-items:center;gap:16px;padding:16px 22px;border-bottom:1px solid #EDEBF2">
+            <div class="fr" style="font-size:19px;font-weight:500;color:#5A4B93;min-width:56px">24 août</div>
+            <div style="flex:1"><div class="fr" style="font-size:17px;font-weight:500">Karim Bah</div><div style="font-size:13px;color:#6B6579">Anniversaire · 36 ans</div></div>
+            <span style="background:#EDEAF7;color:#5A4B93;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">J−3</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;padding:16px 22px;border-bottom:1px solid #EDEBF2">
+            <div class="fr" style="font-size:19px;font-weight:500;color:#5A4B93;min-width:56px">30 août</div>
+            <div style="flex:1"><div class="fr" style="font-size:17px;font-weight:500">Sarah &amp; Yann</div><div style="font-size:13px;color:#6B6579">Mariage · 5 ans</div></div>
+            <span style="background:#EDEAF7;color:#5A4B93;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">J−9</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;padding:16px 22px;border-bottom:1px solid #EDEBF2">
+            <div class="fr" style="font-size:19px;font-weight:500;color:#5A4B93;min-width:56px">2 sept.</div>
+            <div style="flex:1"><div class="fr" style="font-size:17px;font-weight:500">Maman</div><div style="font-size:13px;color:#6B6579">Départ en retraite</div></div>
+            <span style="background:#EDEAF7;color:#5A4B93;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">J−12</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;padding:16px 22px">
+            <div class="fr" style="font-size:19px;font-weight:500;color:#5A4B93;min-width:56px">14 sept.</div>
+            <div style="flex:1"><div class="fr" style="font-size:17px;font-weight:500">Nour &amp; moi</div><div style="font-size:13px;color:#6B6579">Six mois</div></div>
+            <span style="background:#EDEAF7;color:#5A4B93;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">J−24</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:72px;align-items:center">
+      <div>
+        <h2 class="fr" style="font-weight:500;font-size:38px;letter-spacing:-.028em;line-height:1.12;margin:0 0 14px">Un mot qui vient de vous</h2>
+        <p style="margin:0;color:#4A4556;font-size:18px;max-width:42ch">Lehno vous propose une base, écrite à partir de ce que vous savez d'elle. Vous ajustez, vous signez, vous envoyez depuis votre messagerie.</p>
+        <div style="margin-top:22px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#777086;font-weight:600">Idées de célébration · du gratuit au plus cher</div>
+        <div style="display:grid;gap:8px;margin-top:12px">
+          <div style="display:flex;gap:12px;align-items:baseline;font-size:15px;color:#4A4556"><span class="fr" style="color:#7B6BB7;font-size:17px">·</span> Une lettre sur ce que son amitié a changé cette année</div>
+          <div style="display:flex;gap:12px;align-items:baseline;font-size:15px;color:#4A4556"><span class="fr" style="color:#7B6BB7;font-size:17px">·</span> Un après-midi au marché aux vinyles, puis un café</div>
+          <div style="display:flex;gap:12px;align-items:baseline;font-size:15px;color:#4A4556"><span class="fr" style="color:#7B6BB7;font-size:17px">·</span> Le moulin à café manuel dont il a parlé en mars</div>
+        </div>
+      </div>
+      <div style="background:#EDEAF7;border-radius:18px;padding:28px 26px">
+        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#5A4B93;font-weight:600">Brouillon · pour Karim</div>
+        <p class="fr" style="font-size:21px;line-height:1.45;font-weight:400;margin:14px 0 0;color:#221F2B;text-wrap:pretty">« Karim, 36 ans et toujours cette manie de refaire le monde à minuit. Merci pour l'été dernier — je te dois au moins un café correct. Bon anniversaire, mon vieux. »</p>
+        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+          <span style="background:#7B6BB7;color:#FFFFFF;padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600">Modifier et envoyer</span>
+          <span style="background:#FFFFFF;color:#5A4B93;padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600">Régénérer</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="mur" style="max-width:1160px;margin:0 auto;padding:56px 40px 76px">
+    <div style="border-top:1px solid #EDEBF2;padding-top:44px;display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
+      <div>
+        <h2 class="fr" style="font-weight:500;font-size:38px;letter-spacing:-.028em;line-height:1.12;margin:0 0 14px">Votre page à vous</h2>
+        <p style="margin:0;color:#4A4556;font-size:18px;max-width:42ch">Vos proches veulent bien faire aussi. Partagez votre Mur : ils y trouvent ce qui vous ferait plaisir, et peuvent vous laisser un mot.</p>
+        <div style="margin-top:24px"><a href="#" style="display:inline-block;border:1px solid #7B6BB7;color:#5A4B93;padding:13px 22px;border-radius:10px;font-weight:600">Voir un exemple de Mur</a></div>
+      </div>
+      <div style="display:flex;justify-content:center">
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ 330 }}" height="{{ 660 }}" hint-size="330px,660px">
+        <div style="background:#FFFFFF;min-height:100%;font-family:Karla,system-ui,sans-serif;color:#221F2B">
+          <div style="background:#EDEAF7;padding:70px 22px 28px;text-align:center">
+            <div class="fr" style="width:58px;height:58px;border-radius:50%;background:#FFFFFF;color:#5A4B93;font-size:23px;font-weight:500;display:flex;align-items:center;justify-content:center;margin:0 auto 12px">V</div>
+            <div class="fr" style="font-size:21px;font-weight:500;letter-spacing:-.01em;line-height:1.3">Salut, bienvenue chez Valentine</div>
+            <div class="fr" style="font-style:italic;font-size:14px;color:#6B6579;margin-top:8px">Ravie de te voir passer.</div>
+          </div>
+          <div style="padding:20px 18px 22px">
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#777086;font-weight:600">Ce que j'aime</div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">
+              <span style="border:1px solid #E2DDF0;border-radius:999px;padding:5px 12px;font-size:13px">jazz</span>
+              <span style="border:1px solid #E2DDF0;border-radius:999px;padding:5px 12px;font-size:13px">céramique</span>
+              <span style="border:1px solid #E2DDF0;border-radius:999px;padding:5px 12px;font-size:13px">randonnée</span>
+            </div>
+            <div style="font-size:13.5px;color:#6B6579;margin-top:16px">Mon anniversaire, c'est le 14 mars</div>
+            <div style="border:1px solid #7B6BB7;border-radius:13px;padding:14px;text-align:center;margin-top:16px">
+              <div style="font-size:14px;color:#4A4556">Une idée derrière la tête ? J'ai noté ce qui me ferait plaisir.</div>
+              <div style="margin-top:12px;color:#5A4B93;border:1px solid #7B6BB7;border-radius:10px;padding:9px;font-size:14px;font-weight:600">Voir ma liste</div>
+            </div>
+            <div style="margin-top:12px;background:#7B6BB7;color:#FFFFFF;text-align:center;border-radius:10px;padding:12px;font-weight:600;font-size:15px">Laisse-moi un mot</div>
+          </div>
+        </div>
+        </x-import>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:#221F2B;color:#FFFFFF">
+    <div style="max-width:1160px;margin:0 auto;padding:88px 40px">
+      <h2 class="fr" style="font-weight:500;font-size:58px;line-height:1.06;letter-spacing:-.032em;margin:0;max-width:26ch">Faites de chaque jour J un moment qui leur ressemble.</h2>
+      <div style="margin-top:34px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <sc-if value="{{ preLaunch }}" hint-placeholder-val="{{ true }}">
+          <a href="#commencer" style="background:#F0CFB4;color:#221F2B;padding:16px 28px;border-radius:12px;font-weight:700;font-size:17px">Commencer</a>
+        </sc-if>
+        <sc-if value="{{ launched }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <a href="#" style="background:#F0CFB4;color:#221F2B;padding:16px 28px;border-radius:12px;font-weight:700;font-size:17px">App Store</a>
+            <a href="#" style="border:1px solid #6B6579;color:#FFFFFF;padding:16px 28px;border-radius:12px;font-weight:700;font-size:17px">Google Play</a>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </section>
+
+  <footer style="max-width:1160px;margin:0 auto;padding:40px 40px 64px;display:flex;gap:28px;align-items:center;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:26px;height:26px;border-radius:24%;background:#7B6BB7;overflow:hidden"><svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block"><text x="50" y="80" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="86" font-weight="650" fill="#FFFFFF">h</text></svg></div>
+      <div class="fr" style="font-weight:500;font-size:19px;letter-spacing:-.02em">Le<span style="color:#7B6BB7">h</span>no</div>
+      <span class="fr" style="font-style:italic;font-size:16px;color:#6B6579">Chaque date qui compte, bien célébrée.</span>
+    </div>
+    <nav style="margin-left:auto;display:flex;gap:22px;font-size:14px;color:#6B6579;flex-wrap:wrap">
+      <a href="#">Conditions d'utilisation</a>
+      <a href="#">Confidentialité</a>
+      <a href="#">Mentions légales</a>
+      <a href="#">Contact</a>
+    </nav>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;preLaunch&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Landing&quot;}}">
+class Component extends DCLogic {
+  state = { email: "", sent: false };
+  renderVals() {
+    const pre = this.props.preLaunch ?? true;
+    return {
+      preLaunch: pre,
+      launched: !pre,
+      email: this.state.email,
+      submitted: this.state.sent,
+      notSubmitted: !this.state.sent,
+      onEmail: (e) => this.setState({ email: e.target.value }),
+      onSubmit: () => this.setState({ sent: true })
+    };
+  }
+}
+</script>
+</body>
+</html>
