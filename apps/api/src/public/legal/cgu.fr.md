@@ -15,16 +15,19 @@ compris et accepté les présentes CGU ainsi que la
 ## 2. Cadre juridique applicable
 
 - Loi n° 2024/017 du 23 décembre 2024 relative à la protection des données à
-  caractère personnel.
+  caractère personnel — **texte principal**.
 - Loi n° 2010/012 du 21 décembre 2010 relative à la cybersécurité et à la
   cybercriminalité.
-- Règlement (UE) 2016/679 (« RGPD ») pour les utilisateurs résidant dans l'Union
-  européenne.
+- Loi n° 2023/007 du 25 juillet 2023 — Charte de protection des enfants en ligne,
+  lorsqu'une fiche porte sur une personne mineure.
+- Règlement (UE) 2016/679 (« RGPD ») pour les seuls utilisateurs résidant dans
+  l'Union européenne, en complément du droit camerounais.
 
 ## 3. Définitions
 
-- **Utilisateur** : toute personne physique âgée d'au moins 16 ans — et, entre 16
-  et 18 ans, disposant d'une autorisation parentale — ayant créé un compte.
+- **Utilisateur** : toute personne physique âgée d'au moins 18 ans, âge auquel la
+  loi n° 2024/017 fixe la majorité en matière de protection des données, ayant
+  créé un compte. La majorité civile au Cameroun est de 21 ans.
 - **Compte** : l'espace personnel associé à une adresse électronique.
 - **Fiche** : les informations qu'un Utilisateur tient sur un proche.
 - **Mur** : la page publique d'un Utilisateur, à l'adresse qu'il a choisie.
@@ -97,6 +100,9 @@ pas de compte. En l'utilisant, vous vous engagez à :
 - vous en tenir à ce qui sert cette préparation, et ne pas y consigner ce qui
   n'y sert pas — en particulier aucune donnée de santé, d'opinion, de croyance,
   d'orientation, ni aucune pièce d'identité ;
+- lorsque la fiche porte sur un enfant, n'y consigner que ce qui sert à préparer
+  son occasion, et reconnaître que ses droits s'exercent par son parent ou son
+  représentant légal — la loi n° 2023/007 du 25 juillet 2023 s'y applique ;
 - relayer à l'Éditeur, ou traiter vous-même, toute demande d'accès, de
   correction ou d'effacement qu'un proche vous adresserait.
 
@@ -173,10 +179,10 @@ conservée.
 
 ## 15. Droit applicable et litiges
 
-Les présentes CGU sont régies par le droit camerounais. En cas de différend, une
-solution amiable est recherchée en écrivant à nguemnev@gmail.com avant toute
-action contentieuse. À défaut d'accord, le litige relève des juridictions
-compétentes de [À CONFIRMER — ressort à préciser avec le conseil de l'entreprise].
+Les présentes CGU sont régies par le **droit camerounais**. En cas de différend,
+une solution amiable est recherchée en écrivant à hello@lehno.app avant toute
+action contentieuse. À défaut d'accord, le litige relève des **juridictions
+compétentes du Cameroun**.
 
 Les dispositions impératives protégeant les consommateurs résidant dans l'Union
 européenne restent applicables.

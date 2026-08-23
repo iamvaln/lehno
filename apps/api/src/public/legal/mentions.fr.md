@@ -7,14 +7,15 @@ _Version 2026-08-23 · Dernière mise à jour : 23 août 2026_
 **Proxia Digital**
 Akwa, Douala, Cameroun
 Téléphone : +237 691 980 190
-Courriel : nguemnev@gmail.com
+Courriel : hello@lehno.app
 
 Forme juridique et numéro d'immatriculation (RCCM) : [À CONFIRMER — repris des
 registres de l'entreprise avant mise en production].
 
 ## Directeur de la publication
 
-[À CONFIRMER — nom et qualité du représentant légal de Proxia Digital].
+Valentine Nguemne, pour Proxia Digital. [À CONFIRMER — qualité exacte à porter,
+telle qu'elle figure au registre de l'entreprise.]
 
 ## Hébergement
 
@@ -23,14 +24,14 @@ Les données sont hébergées dans l'Union européenne.
 
 ## Protection des données
 
-Délégué à la protection des données : nguemnev@gmail.com
+Délégué à la protection des données : Valentine Nguemne — hello@lehno.app
 
 Les traitements réalisés dans le cadre de Lehno sont décrits dans la
 [politique de confidentialité](/v1/public/legal/confidentialite).
 
 ## Contact
 
-Toute question relative au service peut être adressée à nguemnev@gmail.com.
+Toute question relative au service peut être adressée à hello@lehno.app.
 Une réponse est apportée sous [À CONFIRMER — deux jours ouvrés est un
 engagement, pas une formule : à retenir seulement s'il est tenable].
 

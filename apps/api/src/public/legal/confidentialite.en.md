@@ -8,12 +8,17 @@ protects personal data in the Lehno service (the "Service").
 ## Applicable legal framework
 
 - **Law no. 2024/017 of 23 December 2024** on the protection of personal data —
-  applies to any processing carried out on Cameroonian territory or concerning
-  residents of Cameroon.
+  **the governing text**. It applies to any processing carried out on Cameroonian
+  territory or concerning residents of Cameroon. Compliance deadline: 23 June
+  2026. Penalties (art. 54 onwards) of up to 100 million CFA francs, alongside
+  civil and criminal liability.
 - **Law no. 2010/012 of 21 December 2010** on cybersecurity and cybercrime — the
   underlying framework.
-- **Regulation (EU) 2016/679 ("GDPR")** — applied to people residing in the
-  European Union.
+- **Law no. 2023/007 of 25 July 2023** — Charter for the protection of children
+  online. It concerns the Service because a user may keep a page about a child
+  they know (see section 3).
+- **Regulation (EU) 2016/679 ("GDPR")** — applicable only to people residing in
+  the European Union, alongside Cameroonian law.
 
 The supervisory authority ("Personal Data Protection Authority") is created by
 law 2024/017; its operating arrangements await an implementing decree.
@@ -23,9 +28,11 @@ law 2024/017; its operating arrangements await an implementing decree.
 Proxia Digital
 Akwa, Douala, Cameroon
 Phone: +237 691 980 190
-Email: nguemnev@gmail.com
+Email: hello@lehno.app
 
-Data Protection Officer (DPO): nguemnev@gmail.com
+Data Protection Officer (DPO): Valentine Nguemne — hello@lehno.app
+[TO BE CONFIRMED — address to be created before production launch; Gabee and
+MonJeton already use a product address rather than a personal one].
 
 ## 2. Data collected
 
@@ -95,12 +102,20 @@ text of the relevant notes and the person's name are sent to the generation
 processor (section 5). Nothing is sent unless you started the action, and its
 cost is shown to you first.
 
+**When the person is a child.** A child's birthday is exactly what the Service is
+for: a page may therefore concern a minor. Law no. 2023/007 of 25 July 2023
+applies, and law no. 2024/017 sets the data-protection age of majority at
+**18**. In that case: the Provider carries out no profiling of the child, sends
+them nothing, and exposes them on no public surface; the rights below are
+exercised by their parent or legal representative, who may request erasure of
+what concerns them on the same terms as an adult.
+
 **What becomes public.** Only your Wall is public, and only if you publish it: it
 shows nothing but what you put there about **yourself**. No one else's page
 appears on it. Birthday notes left for you are never displayed.
 
 **Rights of someone without an account.** A person who appears on a page without
-having an account can write to the DPO (nguemnev@gmail.com) to learn what
+having an account can write to the DPO (hello@lehno.app) to learn what
 concerns them, have it corrected, or have it erased. We handle the request
 directly when the person is identifiable in our data; otherwise we pass it to the
 owner of the page, who remains in charge of their own notebook. An erasure
@@ -108,12 +123,10 @@ request is carried out without asking for a reason.
 
 ## 4. Purposes and legal bases
 
-> [TO BE CONFIRMED — order of precedence. The bases below carry GDPR article
-> numbers because that numbering is public and stable, not because it takes
-> precedence. For a company established in Cameroon serving mainly Cameroonian
-> residents, law no. 2024/017 applies first, with the GDPR covering only
-> residents of the Union. The numbering should be restated against the articles
-> of 2024/017, with the company's counsel.]
+> [TO BE CONFIRMED — numbering. Law no. 2024/017 deals with consent at its
+> article 6 onwards; how its articles map onto the six bases below remains to be
+> established against the text, with the company's counsel. The GDPR numbers are
+> given as a landmark, not out of precedence: 2024/017 applies first.]
 
 - **Performance of the contract** (art. 6.1.b): creating and running the account,
   providing the Service, reminders, collection links, the Wall, buying credits.
@@ -144,10 +157,12 @@ described, under a contract compliant with article 28 GDPR:
 
 ## 6. International transfers
 
-Some processors are established outside the European Union and outside Cameroon —
-in the United States and in China. These transfers are governed by the standard
-contractual clauses approved by the European Commission (art. 46 GDPR) and by the
-equivalent provisions of Cameroonian law. A copy can be obtained from the DPO.
+Some processors are established outside Cameroon — in the United States and in
+China. **Law no. 2024/017 makes any transfer out of Cameroon conditional on
+adequate safeguards**; these are documented by contract with each processor. For
+people residing in the European Union, such transfers are additionally covered by
+the standard contractual clauses approved by the European Commission
+(art. 46 GDPR). A copy can be obtained from the DPO.
 
 Using a generation processor established in China calls for particular care:
 [TO BE CONFIRMED — contractual guarantees and the fate of transferred data, to be
@@ -173,7 +188,7 @@ and objection; the right to withdraw consent at any time without affecting
 processing already carried out; and the right to give directions about your data
 after your death.
 
-Exercise them with the DPO: nguemnev@gmail.com. A reply is provided within one
+Exercise them with the DPO: hello@lehno.app. A reply is provided within one
 month at most. You can also delete your account from the app, without going
 through us.
 
@@ -198,6 +213,9 @@ through us.
   at any moment.
 - Audit logs kept 12 months; encrypted backups.
 
+In the event of a personal data breach, the Provider follows its incident
+response plan and makes the notifications required by law no. 2024/017.
+
 ## 11. Cookies and trackers
 
 The Service uses the technical cookies it needs to work (session, language,
@@ -207,9 +225,11 @@ the same visual weight. **No advertising tracker exists in the product.**
 
 ## 12. Minors
 
-The Service is intended for people aged **16 or over**. Users between 16 and 18
-must have parental permission. No processing is intended for anyone under 16; an
-account found to belong to a child is deleted without delay.
+The Service is intended for people aged **18 or over**, the data-protection age
+of majority under law no. 2024/017. The civil age of majority in Cameroon is 21.
+No processing is intended for anyone under 18 acting for themselves; an account
+found to belong to a minor is deleted without delay. Data about a child
+**recorded by someone close to them** is covered by section 3.
 
 ## 13. Changes
 
@@ -221,7 +241,7 @@ kept and provided on request.
 
 ## 14. Contact
 
-Data Protection Officer
+Data Protection Officer: Valentine Nguemne
 Proxia Digital — Akwa, Douala, Cameroon
 Phone: +237 691 980 190
-Email: nguemnev@gmail.com
+Email: hello@lehno.app

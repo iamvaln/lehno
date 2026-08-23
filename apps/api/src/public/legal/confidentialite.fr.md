@@ -9,12 +9,17 @@ utilise et protège les données personnelles dans le cadre du service Lehno
 ## Cadre juridique applicable
 
 - **Loi n° 2024/017 du 23 décembre 2024** relative à la protection des données à
-  caractère personnel — s'applique à tout traitement réalisé sur le territoire
-  camerounais ou concernant des résidents du Cameroun.
+  caractère personnel — **texte principal**. Elle s'applique à tout traitement
+  réalisé sur le territoire camerounais ou concernant des résidents du Cameroun.
+  Échéance de conformité : 23 juin 2026. Sanctions (art. 54 et suivants) jusqu'à
+  100 millions de francs CFA, outre les responsabilités civiles et pénales.
 - **Loi n° 2010/012 du 21 décembre 2010** relative à la cybersécurité et à la
   cybercriminalité — cadre sous-jacent.
-- **Règlement (UE) 2016/679 (« RGPD »)** — appliqué aux personnes résidant dans
-  l'Union européenne.
+- **Loi n° 2023/007 du 25 juillet 2023** — Charte de protection des enfants en
+  ligne. Elle concerne le Service parce qu'un utilisateur peut tenir la fiche
+  d'un enfant de son entourage (voir section 3).
+- **Règlement (UE) 2016/679 (« RGPD »)** — applicable aux seules personnes
+  résidant dans l'Union européenne, en complément du droit camerounais.
 
 L'autorité de contrôle (« Autorité de protection des données personnelles ») est
 créée par la loi 2024/017 ; ses modalités opérationnelles restent fixées par
@@ -25,9 +30,12 @@ décret à venir.
 Proxia Digital
 Akwa, Douala, Cameroun
 Téléphone : +237 691 980 190
-Courriel : nguemnev@gmail.com
+Courriel : hello@lehno.app
 
-Délégué à la protection des données (DPO) : nguemnev@gmail.com
+Délégué à la protection des données (DPO) : Valentine Nguemne —
+hello@lehno.app [À CONFIRMER — adresse à créer avant mise en production ; Gabee
+et MonJeton emploient déjà une adresse de produit plutôt qu'une adresse
+personnelle].
 
 ## 2. Données collectées
 
@@ -103,12 +111,21 @@ cadeau ou un message, le texte des notes concernées et le nom d'usage du proche
 sont transmis au sous-traitant de génération (section 5). Rien n'est transmis
 sans que vous ayez lancé l'action, et son coût vous est annoncé avant.
 
+**Quand le proche est un enfant.** Un anniversaire d'enfant est précisément le
+cas d'usage du Service : une fiche peut donc porter sur une personne mineure. La
+loi n° 2023/007 du 25 juillet 2023 s'y applique, et la loi n° 2024/017 fixe à
+**18 ans** la majorité en matière de protection des données. Dans ce cas :
+l'Éditeur ne produit aucun profilage de l'enfant, ne lui adresse aucun message,
+et ne l'expose sur aucune surface publique ; les droits prévus ci-dessous
+s'exercent par son parent ou son représentant légal, qui peut demander
+l'effacement de ce qui le concerne dans les mêmes conditions qu'un adulte.
+
 **Ce qui devient public.** Seul votre Mur est public, et seulement si vous le
 publiez : il ne montre que ce que vous y avez mis sur **vous-même**. Aucune fiche
 de proche n'y paraît. Les vœux que l'on vous laisse ne s'affichent jamais.
 
 **Les droits d'un proche non-utilisateur.** Une personne qui figure dans une
-fiche sans avoir de compte peut écrire au DPO (nguemnev@gmail.com) pour savoir ce
+fiche sans avoir de compte peut écrire au DPO (hello@lehno.app) pour savoir ce
 qui la concerne, le faire corriger ou le faire effacer. Nous traitons la demande
 directement lorsque la personne est identifiable dans nos données ; sinon nous la
 relayons au propriétaire de la fiche, qui reste maître de son carnet. Une demande
@@ -116,12 +133,11 @@ d'effacement est exécutée sans qu'il soit demandé de justification.
 
 ## 4. Finalités et bases légales
 
-> [À CONFIRMER — hiérarchie des textes. Les bases ci-dessous sont numérotées
-> selon le RGPD parce que sa numérotation est publique et stable, non parce
-> qu'elle prime. Pour une entreprise établie au Cameroun servant d'abord des
-> résidents camerounais, c'est la loi n° 2024/017 qui s'applique en premier, le
-> RGPD ne valant que pour les résidents de l'Union. La numérotation doit être
-> reprise sur les articles de 2024/017, avec le conseil de l'entreprise.]
+> [À CONFIRMER — numérotation. La loi n° 2024/017 traite le consentement à son
+> article 6 et suivants ; la correspondance exacte de ses articles avec les six
+> bases ci-dessous reste à établir sur le texte, avec le conseil de l'entreprise.
+> Les numéros du RGPD sont donnés en repère, non par préséance : c'est 2024/017
+> qui s'applique en premier.]
 
 - **Exécution du contrat** (art. 6.1.b) : création et tenue du compte,
   fourniture du Service, rappels, liens de collecte, Mur, achat de crédits.
@@ -154,11 +170,12 @@ RGPD :
 
 ## 6. Transferts internationaux
 
-Certains sous-traitants sont établis hors de l'Union européenne et hors du
-Cameroun — aux États-Unis et en Chine. Ces transferts sont encadrés par les
-clauses contractuelles types approuvées par la Commission européenne
-(art. 46 RGPD) et par les dispositions équivalentes de la loi camerounaise. Une
-copie peut être obtenue auprès du DPO.
+Certains sous-traitants sont établis hors du Cameroun — aux États-Unis et en
+Chine. **La loi n° 2024/017 subordonne tout transfert hors du Cameroun à des
+garanties adéquates** ; celles-ci sont documentées par contrat avec chaque
+sous-traitant. Pour les personnes résidant dans l'Union européenne, ces
+transferts relèvent en outre des clauses contractuelles types approuvées par la
+Commission européenne (art. 46 RGPD). Une copie peut être obtenue auprès du DPO.
 
 Le recours à un sous-traitant de génération établi en Chine appelle une vigilance
 particulière : [À CONFIRMER — garanties contractuelles et sort des données
@@ -184,7 +201,7 @@ de portabilité, d'opposition, du droit de retirer votre consentement à tout
 moment sans effet sur les traitements antérieurs, et du droit de donner des
 directives sur le sort de vos données après votre décès.
 
-Ces droits s'exercent auprès du DPO : nguemnev@gmail.com. Une réponse est
+Ces droits s'exercent auprès du DPO : hello@lehno.app. Une réponse est
 apportée dans un délai d'un mois au plus. La suppression du compte est également
 possible depuis l'application, sans passer par nous.
 
@@ -212,6 +229,10 @@ possible depuis l'application, sans passer par nous.
   ensemble, et sont révocables à tout instant.
 - Journaux d'audit conservés 12 mois ; sauvegardes chiffrées.
 
+En cas de violation de données à caractère personnel, l'Éditeur applique son plan
+de réponse aux incidents et procède aux notifications prévues par la loi
+n° 2024/017.
+
 ## 11. Cookies et traceurs
 
 Le Service utilise les cookies techniques nécessaires à son fonctionnement
@@ -222,10 +243,12 @@ n'existe dans le produit.**
 
 ## 12. Mineurs
 
-Le Service est destiné aux personnes âgées d'au moins **16 ans**. Les
-utilisateurs entre 16 et 18 ans doivent disposer d'une autorisation parentale.
-Aucun traitement n'est destiné aux personnes de moins de 16 ans ; un compte de
-mineur détecté est supprimé sans délai.
+Le Service est destiné aux personnes âgées d'au moins **18 ans**, âge auquel la
+loi n° 2024/017 fixe la majorité en matière de protection des données. La
+majorité civile au Cameroun est de 21 ans. Aucun traitement n'est destiné aux
+personnes de moins de 18 ans agissant pour elles-mêmes ; un compte de mineur
+détecté est supprimé sans délai. Les données d'un enfant **renseignées par un
+proche** relèvent de la section 3.
 
 ## 13. Modifications
 
@@ -238,7 +261,7 @@ communiquées sur demande.
 
 ## 14. Contact
 
-Délégué à la protection des données
+Délégué à la protection des données : Valentine Nguemne
 Proxia Digital — Akwa, Douala, Cameroun
 Téléphone : +237 691 980 190
-Courriel : nguemnev@gmail.com
+Courriel : hello@lehno.app

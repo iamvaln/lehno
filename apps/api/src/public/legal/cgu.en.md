@@ -14,14 +14,19 @@ understood and accepted these Terms and the
 
 ## 2. Applicable legal framework
 
-- Law no. 2024/017 of 23 December 2024 on the protection of personal data.
+- Law no. 2024/017 of 23 December 2024 on the protection of personal data — **the
+  governing text**.
 - Law no. 2010/012 of 21 December 2010 on cybersecurity and cybercrime.
-- Regulation (EU) 2016/679 ("GDPR") for users residing in the European Union.
+- Law no. 2023/007 of 25 July 2023 — Charter for the protection of children
+  online, where a page concerns a minor.
+- Regulation (EU) 2016/679 ("GDPR") for users residing in the European Union
+  only, alongside Cameroonian law.
 
 ## 3. Definitions
 
-- **User**: anyone aged 16 or over — and, between 16 and 18, with parental
-  permission — who has created an account.
+- **User**: anyone aged 18 or over — the data-protection age of majority under
+  law no. 2024/017 — who has created an account. The civil age of majority in
+  Cameroon is 21.
 - **Account**: the personal space attached to an email address.
 - **Page**: what a User records about someone close to them.
 - **Wall**: a User's public page, at the address they chose.
@@ -94,6 +99,9 @@ account. In using it, you undertake to:
 - keep to what serves that preparation, and leave out what does not — in
   particular any health data, opinions, beliefs, orientation, or identity
   documents;
+- where the page concerns a child, record only what serves to prepare their
+  occasion, and accept that their rights are exercised by their parent or legal
+  representative — law no. 2023/007 of 25 July 2023 applies;
 - pass on to the Provider, or handle yourself, any request for access, correction
   or erasure that someone addresses to you.
 
@@ -167,10 +175,10 @@ Each acceptance is timestamped and kept.
 
 ## 15. Governing law and disputes
 
-These Terms are governed by Cameroonian law. In the event of a disagreement, an
-amicable solution is sought by writing to nguemnev@gmail.com before any legal
-action. Failing agreement, the dispute falls to the competent courts of
-[TO BE CONFIRMED — venue to be settled with the company's counsel].
+These Terms are governed by **Cameroonian law**. In the event of a disagreement,
+an amicable solution is sought by writing to hello@lehno.app before any legal
+action. Failing agreement, the dispute falls to the **competent courts of
+Cameroon**.
 
 Mandatory consumer-protection provisions applying to residents of the European
 Union remain in force.
