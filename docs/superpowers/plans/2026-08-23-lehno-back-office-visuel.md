@@ -315,6 +315,35 @@ défilement horizontal sous 900 px avec largeur minimale de 520 px.
 
 ### Tâche 7 : Les messages, en deux langues
 
+**Le ton, avant les mots** — `specs/ton-et-ecriture-lehno.md` §2.5 : le back-office
+vouvoie, mais **plus direct** que l'application ; on s'adresse à quelqu'un qui
+travaille. Les termes du métier sont admis (idempotence, réconciliation), les
+euphémismes non : **un compte suspendu est suspendu**.
+
+Ce qui en découle, et qui s'applique ligne à ligne :
+
+- **Pas de passif** — c'est le premier signe du formalisme (§2.1). « Motif
+  enregistré », pas « votre motif a bien été pris en compte ».
+- **Lehno s'efface quand tout va bien, se nomme quand il doit répondre** (§3). Un
+  échec dit « on » : « On n'a pas pu rejouer ce paiement. » Jamais « une erreur
+  est survenue » — une erreur sans sujet est une posture qui n'assume pas.
+- **Une excuse a trois temps, dans cet ordre** (§4.5) : ce qui s'est passé, ce
+  qu'on a fait, ce qu'on peut faire maintenant.
+- **Un état vide annonce ce qui est possible**, jamais ce qui manque (§4.7).
+  « Rien à modérer aujourd'hui. », pas « Aucun contenu signalé ».
+- **On alerte sur des faits, jamais sur l'urgence** (§4.4). « Bloqué depuis 26 h »,
+  pas « Attention ! ». Ça vaut pour les trois `AlertPill` du tableau de bord.
+- **Aucun émoji, aucun point d'exclamation** (§5, §6).
+- **Les nombres en chiffres dès deux** (§5).
+- **L'anglais s'écrit, il ne se traduit pas** (§6) : contractions admises,
+  *sentence case* partout — `Mark as sent`, jamais `Mark As Sent`, qui est une
+  convention de logiciel d'entreprise.
+
+Un mot sur le vocabulaire : §5 proscrit « utilisateurs » **dans l'interface du
+produit**. Le back-office est l'exception qui se justifie — la section s'appelle
+Utilisateurs dans le paquet comme dans la spec, et l'équipe parle de comptes et
+d'utilisateurs. La règle vise l'intimité du produit, pas l'outil d'exploitation.
+
 **Fichiers :** `apps/admin/src/i18n/{fr,en,index}.ts`
 **Test :** `apps/admin/test/i18n.test.ts`
 

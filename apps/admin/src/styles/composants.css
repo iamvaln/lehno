@@ -1,0 +1,69 @@
+/* --------------------------------------------------------------------------
+   États interactifs des composants de components/ui/. Un style en ligne ne
+   peut pas porter :hover, :active ni :disabled ; cette feuille recueille ce
+   que ces composants ne peuvent pas exprimer eux-mêmes. Le repos (fond,
+   texte, bordure de base) reste dans le composant, en style — c'est une
+   valeur propre à l'instance ou au rang. Ici, seule la réaction au geste.
+
+   La transition elle-même (var(--duration-state), var(--ease-state)) reste
+   posée en ligne dans Button.tsx : elle s'applique quelle que soit la cause
+   du changement, y compris ces règles. prefers-reduced-motion (base.css) la
+   remet à zéro sans qu'aucun composant n'ait à s'en soucier.
+   -------------------------------------------------------------------------- */
+
+/* Bouton — le rang se lit sur l'attribut data-rang, posé par Button.tsx ;
+   un seul nom de classe (lehno-bouton) porte les six déclinaisons. */
+
+.lehno-bouton:disabled {
+  cursor: default;
+}
+
+/* Rang plein (primary) : la surface elle-même change de teinte. */
+.lehno-bouton[data-rang="primary"]:not(:disabled):hover {
+  background: var(--action-hover);
+}
+.lehno-bouton[data-rang="primary"]:not(:disabled):active {
+  background: var(--action-press);
+}
+
+/* Rangs à fond transparent (outline, text) : un aplat discret apparaît sous
+   le texte ; l'appui épaissit le filet quand il y en a un. */
+.lehno-bouton[data-rang="outline"]:not(:disabled):hover,
+.lehno-bouton[data-rang="outline"]:not(:disabled):active,
+.lehno-bouton[data-rang="text"]:not(:disabled):hover,
+.lehno-bouton[data-rang="text"]:not(:disabled):active {
+  background: var(--action-quiet-bg);
+}
+.lehno-bouton[data-rang="outline"]:not(:disabled):active {
+  border-width: var(--border-width-firm);
+}
+
+/* Rang neutre : sans bordure au repos, un filet apparaît au survol et
+   s'épaissit à l'appui — la seule réaction qui ne recolore rien. */
+.lehno-bouton[data-rang="neutral"]:not(:disabled):hover,
+.lehno-bouton[data-rang="neutral"]:not(:disabled):active {
+  border-color: var(--action-edge);
+}
+.lehno-bouton[data-rang="neutral"]:not(:disabled):active {
+  border-width: var(--border-width-firm);
+}
+
+/* Rang destructeur plein : aucun jeton de survol n'existe pour le rouge —
+   il n'a que deux rôles (repos, fond léger) ; l'opacité, hors du système de
+   jetons, porte seule la réaction. */
+.lehno-bouton[data-rang="destructive"]:not(:disabled):hover {
+  opacity: 0.92;
+}
+.lehno-bouton[data-rang="destructive"]:not(:disabled):active {
+  opacity: 0.82;
+}
+
+/* Rang destructeur en filet : un lavis rouge clair au survol, qui s'épaissit
+   à l'appui comme les autres rangs bordés. */
+.lehno-bouton[data-rang="destructive-outline"]:not(:disabled):hover,
+.lehno-bouton[data-rang="destructive-outline"]:not(:disabled):active {
+  background: var(--feedback-error-bg);
+}
+.lehno-bouton[data-rang="destructive-outline"]:not(:disabled):active {
+  border-width: var(--border-width-firm);
+}

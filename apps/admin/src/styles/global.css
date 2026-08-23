@@ -1,3 +1,5 @@
+@import "./composants.css";
+
 /* Structure seulement. Les couleurs et la densité viennent de @lehno/tokens,
    posées par la feuille de variables (tâche 2). */
 * { margin: 0; box-sizing: border-box; }
