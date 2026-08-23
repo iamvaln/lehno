@@ -6,4 +6,5 @@ export * from "./spacing.js";
 export * from "./shape.js";
 export * from "./motion.js";
 export * from "./density.js";
+export * from "./admin.js";
 export * from "./css.js";
