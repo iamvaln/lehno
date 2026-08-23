@@ -91,3 +91,28 @@
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   align-items: center;
 }
+
+/* --------------------------------------------------------------------------
+   CSS structurel des pages légales (components/legal/). Même requête de
+   conteneur que SiteHeader ci-dessus : le sommaire, collant en colonne de
+   gauche, redevient une bande statique en tête du corps du texte sous le
+   seuil de repli.
+   -------------------------------------------------------------------------- */
+
+.legal-grid {
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 64px);
+  align-items: start;
+}
+
+.legal-somm { position: sticky; top: var(--space-92); }
+
+@container page (max-width: 880px) {
+  .legal-grid { grid-template-columns: 1fr; }
+  .legal-somm {
+    position: static;
+    padding-bottom: var(--space-8);
+    border-bottom: var(--border-width) solid var(--border-hairline);
+  }
+}

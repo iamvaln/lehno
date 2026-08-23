@@ -161,4 +161,8 @@ export const fr = {
       },
     ],
   },
+  mentions: "Mentions légales",
+
+  // Pages légales (components/legal/LegalPage.tsx) : le sommaire latéral.
+  sommaire: "Sommaire",
 };

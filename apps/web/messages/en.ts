@@ -153,4 +153,8 @@ export const en: typeof fr = {
       },
     ],
   },
+  mentions: "Legal Notice",
+
+  // Legal pages (components/legal/LegalPage.tsx): the side table of contents.
+  sommaire: "Contents",
 };
