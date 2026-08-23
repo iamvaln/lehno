@@ -7,9 +7,10 @@ export default defineConfig({
   esbuild: { jsx: "automatic" },
   test: {
     // Le script de thème se teste en Node — il reçoit ses globales en paramètres.
-    // La landing se rend dans un DOM : jsdom, choisi par fichier.
+    // Tout ce qui se rend en composant a besoin d'un DOM : jsdom, par motif de
+    // fichier plutôt qu'un par un.
     environment: "node",
-    environmentMatchGlobs: [["test/landing.test.tsx", "jsdom"]],
+    environmentMatchGlobs: [["test/*.test.tsx", "jsdom"]],
     setupFiles: ["test/setup.ts"],
   },
 });

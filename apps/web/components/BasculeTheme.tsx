@@ -3,16 +3,23 @@
 import type { ReactNode } from "react";
 import type { Messages } from "../messages";
 
-// Le thème vit sur <html data-theme>, posé avant la première peinture par le script
-// de lib/theme-script.ts. Ce bouton ne fait que le retourner et le retenir sous la
+// Le thème vit sur la classe lehno-nuit, posée avant la première peinture par
+// lib/theme-script.ts. Ce bouton ne fait que la retourner et la retenir sous la
 // même clé — aucun état React ne le double, sinon les deux divergeraient.
 export function BasculeTheme({ t }: { t: Messages }): ReactNode {
   const basculer = (): void => {
-    const racine = document.documentElement;
-    const suivant = racine.dataset["theme"] === "dark" ? "light" : "dark";
-    racine.dataset["theme"] = suivant;
+    // Le script de tête pose la classe sur <html> — <body> n'existe pas encore
+    // à ce moment. On la lit donc sur les deux, et on l'écrit sur les deux :
+    // un thème posé une seule fois sur <html> ne doit pas y rester coincé une
+    // fois qu'on l'a retiré du corps.
+    const etaitSombre =
+      document.documentElement.classList.contains("lehno-nuit") ||
+      document.body.classList.contains("lehno-nuit");
+    const sombre = !etaitSombre;
+    document.documentElement.classList.toggle("lehno-nuit", sombre);
+    document.body.classList.toggle("lehno-nuit", sombre);
     try {
-      localStorage.setItem("lehno.theme", suivant);
+      localStorage.setItem("lehno.theme", sombre ? "dark" : "light");
     } catch {
       // Stockage refusé : le thème tient pour la visite, et c'est tout ce qu'on promet.
     }
