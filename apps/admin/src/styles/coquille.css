@@ -1,0 +1,92 @@
+/* --------------------------------------------------------------------------
+   La coquille du back-office : ce que ses trois composants ne peuvent pas dire
+   eux-mêmes. Le repos (surfaces, filets, densité) reste en style dans
+   AdminShell.tsx, Sidebar.tsx et Topbar.tsx — c'est une valeur propre à
+   l'élément. Ici, trois choses qu'un style en ligne ne porte pas : la réaction
+   au geste, l'anneau de focus, et la largeur de la fenêtre.
+
+   Les transitions, elles, sont posées en ligne dans les composants : elles
+   valent quelle que soit la cause du changement, y compris ces règles, et
+   prefers-reduced-motion (global.css) les remet à zéro sans qu'aucune classe
+   d'ici n'ait à s'en soucier.
+   -------------------------------------------------------------------------- */
+
+/* L'anneau de focus, visible au clavier seulement. Les éléments de la coquille
+   posent « all: unset » pour repartir d'un bouton nu : ils perdent au passage
+   l'anneau du navigateur, et c'est ici qu'il revient. */
+.coquille-item:focus-visible,
+.coquille-outil:focus-visible,
+.coquille-entree:focus-visible,
+.coquille-langue:focus-visible,
+.coquille-recherche:focus-within {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* Le survol d'une section : l'aplat discret du système, jamais un fond plein —
+   la section courante garde ce fond pour elle, et le survol ne doit pas
+   ressembler à une sélection. */
+.coquille-item:hover {
+  background: var(--action-quiet-bg);
+  color: var(--text-body);
+}
+.coquille-item[aria-current="page"]:hover {
+  color: var(--text-accent);
+}
+
+/* Les boutons à icône de la barre haute, et les entrées du menu du compte. */
+.coquille-outil:hover {
+  background: var(--action-quiet-bg);
+  color: var(--text-accent);
+}
+.coquille-entree:hover,
+.coquille-langue:hover:not([aria-pressed="true"]) {
+  background: var(--action-quiet-bg);
+}
+
+/* Le bouton de menu n'existe qu'en fenêtre étroite : au-dessus de 900 px, la
+   barre latérale est déjà là, et un bouton pour l'ouvrir ne voudrait rien dire.
+   Son affichage vit ici, et pas en ligne, pour que la requête média puisse le
+   reprendre sans « !important ». */
+.coquille-burger {
+  display: none;
+}
+
+/* La coquille sous 900 px. Un outil d'exploitation se consulte parfois sur un
+   écran étroit — un incident ne choisit pas son moment. On ne baisse pas la
+   densité : on retire la barre latérale de la grille et on la fait glisser
+   par-dessus le contenu, avec un voile qui la referme.
+   « !important » parce que la coquille porte ces valeurs-là en ligne. */
+@media (max-width: 900px) {
+  .coquille {
+    grid-template-columns: 1fr !important;
+  }
+  .coquille-rail {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    z-index: 20;
+    transform: translateX(-100%);
+  }
+  .coquille-rail[data-ouvert] {
+    transform: none;
+  }
+  .coquille-burger {
+    display: grid;
+  }
+  .coquille-contenu {
+    padding: var(--space-16) var(--space-16) var(--space-32) !important;
+  }
+  .coquille-barre {
+    padding: 0 var(--space-16) !important;
+  }
+}
+
+/* Plus étroit encore, l'adresse du compte cède la place : la pastille et le
+   chevron suffisent à dire que c'est un menu, et la recherche a besoin de
+   toute la largeur qui reste. */
+@media (max-width: 620px) {
+  .coquille-compte {
+    display: none;
+  }
+}
