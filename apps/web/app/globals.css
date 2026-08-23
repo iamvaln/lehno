@@ -1,0 +1,10 @@
+@import "./base.css";
+@import "./composants.css";
+
+/* Le corps de page : fond et texte par défaut, posés sur les rôles sémantiques.
+   Les variables elles-mêmes viennent de la coquille (lib/theme-css.ts), jamais
+   d'ici — une feuille globale ne recopie pas les jetons, elle les consomme. */
+body {
+  background: var(--surface-page);
+  color: var(--text-body);
+}

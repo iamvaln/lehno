@@ -1133,7 +1133,7 @@ describe("contenu, message, saisie", () => {
 
   it("la citation met les guillemets au-delà du seuil, pas avant", () => {
     const court = "Merci pour l'été dernier.";
-    const long = "Karim, 36 ans et toujours cette manie de refaire le monde à minuit, merci pour tout.";
+    const long = "Karim, 36 ans et toujours cette manie de refaire le monde à minuit — merci pour tout, et pour le reste que je ne dis jamais.";
     const { rerender } = render(<Quote>{court}</Quote>);
     expect(screen.getByText(court)).not.toHaveTextContent("«");
     rerender(<Quote>{long}</Quote>);
