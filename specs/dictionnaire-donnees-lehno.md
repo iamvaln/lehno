@@ -316,15 +316,27 @@ Fiche d'un proche, ou fiche de l'utilisateur lui-même (self-Person).
 |---|---|---|---|---|---|
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
 | user_id | uuid | non | — | — | FK → user(id) on delete cascade ; propriétaire |
-| display_name | text | non | — | — | Nom lisible du proche |
+| display_name | text | non | — | — | Nom lisible du proche, tel qu'il apparaît dans les listes |
+| calling_name | text | oui | — | — | **Comment on l'appelle** — « Karim », « Maman », « mon vieux ». Employé dans les contenus générés ; à défaut, `display_name` |
+| avatar_url | text | oui | — | — | Photo du proche, facultative. À défaut, l'initiale du `display_name` |
 | is_self | boolean | non | — | false | true pour la self-Person (support du Wall) |
+| relation | person_relation (enum) | oui | — | — | Lien avec ce proche ; oriente le ton et les idées de cadeaux |
+| relation_hint | text | oui | — | — | « on se connaît d'où », en toutes lettres — souvent plus riche que l'enum. Renseigné par le proche via une collecte publique, ou par le propriétaire |
+| gender | person_gender (enum) | oui | — | 'unspecified' | Facultatif ; sert **uniquement** à orienter des idées de cadeaux faute d'autre matière |
+| city | text | oui | — | — | Ville, pour suggérer des adresses et des sorties |
+| country | varchar(2) | oui | — | — | Code ISO 3166-1 alpha-2 |
 | register | person_register (enum) | oui | — | — | Registre de communication |
 | language | varchar(10) | oui | — | — | Langue préférée (code BCP 47, ex. `fr`, `en`) |
-| relation_hint | text | oui | — | — | « on se connaît d'où » (issu de collecte publique) |
+| preferred_channel | contact_channel (enum) | oui | — | — | Par où on lui écrit d'ordinaire ; oriente la longueur du message produit |
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
 - Enum `person_register` : `familier`, `amical`, `formel`.
+- Enum `person_relation` : `famille_proche`, `famille_etendue`, `ami`, `partenaire`, `collegue`, `relation_pro`, `connaissance`.
+- Enum `person_gender` : `female`, `male`, `other`, `unspecified`.
+- Enum `contact_channel` : `whatsapp`, `sms`, `email`, `autre`.
+- **`relation` et `relation_hint` coexistent** : l'enum sert la génération, le texte libre garde la nuance que l'enum écrase (« on a fait la fac ensemble »). Une réponse de collecte publique peut proposer une `relation`, que le propriétaire confirme.
+- **Le genre est un signal de dernier recours.** Il oriente des idées de cadeaux lorsque rien d'autre n'est disponible ; une seule note bien prise vaut mieux que lui. Il reste facultatif, et `unspecified` est une valeur légitime, jamais un champ à remplir.
 - Contrainte : au plus une `person` avec `is_self = true` par `user_id` (index unique partiel).
 
 ## Event
@@ -462,6 +474,24 @@ Souhait structuré, rattaché à une `EventOccurrence` (l'anniversaire d'une ann
 - Enum `wishlist_status` : `available`, `reserved`, `fulfilled`.
 - Enum `wishlist_origin` : `collected`, `accepted_idea`, `owner`.
 - `fulfilled` reste une décision du propriétaire ; `reserved` découle d'une réservation confirmée (voir `WishReservation`).
+
+## GiftGiven
+
+Ce qui a été offert à un proche, une année donnée. **Sans cette trace, rien n'empêche de proposer en 2027 le cadeau de 2026** — or c'est la mémoire que le produit promet.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| person_id | uuid | non | — | — | FK → person(id) on delete cascade |
+| event_occurrence_id | uuid | oui | — | — | FK → event_occurrence(id) on delete set null ; l'occasion, si elle est connue |
+| label | text | non | — | — | Ce qui a été offert, en toutes lettres |
+| wishlist_item_id | uuid | oui | — | — | FK → wishlist_item(id) on delete set null ; renseigné si le cadeau venait de la liste |
+| given_on | date | oui | — | — | Date de l'offrande, si elle diffère de l'occasion |
+| created_at | timestamptz | non | — | now() | |
+
+- **Trois façons d'alimenter cette trace** : marquer un `WishlistItem` comme `fulfilled` (le libellé est repris), retenir une idée proposée par la génération, ou saisir librement un cadeau trouvé ailleurs.
+- La génération d'idées **lit cet historique** et écarte ce qui a déjà été offert.
+- La fiche d'un proche affiche cet historique par année.
 
 ## WishReservation
 
@@ -911,6 +941,9 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | payment_status | pending, succeeded, failed, expired, refunded |
 | status_change_origin | user, webhook, polling, admin, system |
 | person_register | familier, amical, formel |
+| person_relation | famille_proche, famille_etendue, ami, partenaire, collegue, relation_pro, connaissance |
+| person_gender | female, male, other, unspecified |
+| contact_channel | whatsapp, sms, email, autre |
 | event_kind | birthday, other |
 | event_nature | happy, sensitive |
 | schedule_type | recurrent, offset |

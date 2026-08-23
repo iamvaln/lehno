@@ -4,6 +4,10 @@ import path from "node:path";
 const nextConfig = {
   reactStrictMode: true,
 
+  // Sortie autonome : le conteneur Docker copie .next/standalone plutôt que
+  // tout node_modules — voir infra/docker/Dockerfile.web.
+  output: "standalone",
+
   // @lehno/tokens expose ses sources TypeScript (main: ./src/index.ts) plutôt qu'un
   // paquet compilé : sans transpilation explicite, la compilation ne sait pas les lire.
   transpilePackages: ["@lehno/tokens", "@lehno/i18n"],

@@ -1,0 +1,112 @@
+# Lehno — pile de production (un projet parmi d'autres sur un VPS partagé).
+# Le routage/TLS est géré par le Traefik partagé du VPS, sur le réseau
+# externe « web » (voir deploy/CICD.md). Démarre cette pile avec :
+#   docker compose --env-file .env.production up -d
+#
+# Le VPS ne construit jamais ces images : « docker compose pull » les tire
+# depuis GHCR (voir .github/workflows/release.yml). Les blocs « build: »
+# ci-dessous ne servent qu'au développement local d'image
+# (docker compose build) — en production, le tag d'image publié l'emporte.
+#
+# Ne pas confondre avec infra/docker/compose.yml : celui-ci sert le
+# développement local (base sur le port 5433, pas d'images publiées).
+name: lehno
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - lehno-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [internal]
+
+  # ── Ponctuel : applique les migrations Prisma, puis s'arrête. ───────────────
+  # Même image que « api », commande différente — pas de « prisma migrate
+  # deploy » au démarrage de l'api elle-même (voir apps/api/Dockerfile) : un
+  # service dédié qui s'arrête évite des migrations concurrentes si l'api
+  # tourne un jour à plus d'une réplique.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: ${REGISTRY:-ghcr.io/iamvaln}/lehno-api:${IMAGE_TAG:-latest}
+    env_file: ${ENV_FILE:-.env.production}
+    command: ['node_modules/.bin/prisma', 'migrate', 'deploy']
+    restart: 'no'
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+
+  # ── API (NestJS, préfixe /v1) ────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: ${REGISTRY:-ghcr.io/iamvaln}/lehno-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: ${ENV_FILE:-.env.production}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # « internal » pour parler à la base ; « web » pour le routage public
+    # Traefik — le formulaire de liste d'attente poste directement depuis le
+    # navigateur sur /v1/public/waitlist (voir apps/web/.env.example), l'api
+    # doit donc être joignable publiquement, pas seulement en interne.
+    networks: [internal, web]
+    # HEALTHCHECK déjà défini dans l'image (apps/api/Dockerfile) — repris tel
+    # quel par Compose, pas besoin de le redéclarer ici.
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.${STACK:-lehno}-api.rule=Host(`${API_DOMAIN}`)
+      - traefik.http.routers.${STACK:-lehno}-api.entrypoints=websecure
+      - traefik.http.routers.${STACK:-lehno}-api.tls.certresolver=le
+      - traefik.http.services.${STACK:-lehno}-api.loadbalancer.server.port=3000
+
+  # ── Site public (Next.js App Router) ─────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_LANCEMENT: ${NEXT_PUBLIC_LANCEMENT}
+    image: ${REGISTRY:-ghcr.io/iamvaln}/lehno-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: ${ENV_FILE:-.env.production}
+    depends_on:
+      api:
+        condition: service_healthy
+    # « internal » : le rendu serveur lit /v1/public/config via API_URL, en
+    # visant le nom de service Docker (http://api:3000) plutôt que le domaine
+    # public — plus court, ne dépend pas de Traefik pour un appel interne.
+    # « web » : routage public Traefik du site lui-même.
+    networks: [internal, web]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.${STACK:-lehno}-web.rule=Host(`${WEB_DOMAIN}`) || Host(`www.${WEB_DOMAIN}`)
+      - traefik.http.routers.${STACK:-lehno}-web.entrypoints=websecure
+      - traefik.http.routers.${STACK:-lehno}-web.tls.certresolver=le
+      - traefik.http.services.${STACK:-lehno}-web.loadbalancer.server.port=3000
+
+volumes:
+  lehno-db:
+
+networks:
+  internal: # privé : db ↔ migrate ↔ api ↔ web (appel serveur à serveur)
+  web: # réseau partagé du proxy (créé une fois : `docker network create web`)
+    external: true
