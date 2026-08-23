@@ -1,39 +1,237 @@
 # Politique de confidentialité
 
-_Dernière mise à jour : à préciser avant mise en production._
+_Version 2026-08-23 · Dernière mise à jour : 23 août 2026_
 
-## 1. Données collectées
+La présente politique décrit comment **Proxia Digital** (l'« Éditeur ») collecte,
+utilise et protège les données personnelles dans le cadre du service Lehno
+(le « Service »).
 
-Le service collecte l'adresse électronique et le pseudonyme nécessaires à la
-création d'un compte, ainsi que les informations que l'utilisateur choisit
-de renseigner sur les personnes qui comptent pour lui (dates, notes,
-souhaits).
+## Cadre juridique applicable
 
-## 2. Finalité du traitement
+- **Loi n° 2024/017 du 23 décembre 2024** relative à la protection des données à
+  caractère personnel — s'applique à tout traitement réalisé sur le territoire
+  camerounais ou concernant des résidents du Cameroun.
+- **Loi n° 2010/012 du 21 décembre 2010** relative à la cybersécurité et à la
+  cybercriminalité — cadre sous-jacent.
+- **Règlement (UE) 2016/679 (« RGPD »)** — appliqué aux personnes résidant dans
+  l'Union européenne.
 
-Ces données servent exclusivement à faire fonctionner le service : envoyer
-des rappels, afficher le Mur de l'utilisateur, et permettre les échanges
-qu'il autorise explicitement avec ses proches.
+L'autorité de contrôle (« Autorité de protection des données personnelles ») est
+créée par la loi 2024/017 ; ses modalités opérationnelles restent fixées par
+décret à venir.
 
-## 3. Conservation
+## 1. Responsable de traitement
 
-Les données sont conservées le temps où le compte reste actif. La
-suppression d'un compte entraîne l'effacement des données personnelles à
-l'issue d'un délai de grâce, sauf obligation légale de conservation.
+Proxia Digital
+Akwa, Douala, Cameroun
+Téléphone : +237 691 980 190
+Courriel : nguemnev@gmail.com
 
-## 4. Partage avec des tiers
+Délégué à la protection des données (DPO) : nguemnev@gmail.com
 
-Les données ne sont ni vendues ni partagées à des fins publicitaires. Un
-sous-traitant technique peut y accéder dans la stricte mesure nécessaire au
-fonctionnement du service (hébergement, envoi de notifications).
+## 2. Données collectées
 
-## 5. Droits de l'utilisateur
+### 2.1 Données que vous fournissez sur vous-même
 
-L'utilisateur peut à tout moment demander l'export ou la suppression de ses
-données depuis les paramètres de son compte.
+- **Compte** : adresse électronique, pseudonyme, langue, fuseau horaire, heure
+  d'envoi des rappels. Le Service n'utilise pas de mot de passe : la connexion se
+  fait par code à usage unique envoyé par courriel, ou par un compte Google ou
+  Apple que vous rattachez.
+- **Votre Mur** : si vous le publiez, l'adresse choisie, votre mot d'accueil, vos
+  intérêts publics, votre date d'anniversaire et votre liste de souhaits.
+- **Paiement** : pour un compte mobile money, le numéro de téléphone associé,
+  nécessaire pour engager une opération et pour verser un remboursement. Pour une
+  carte, seule une référence opaque rendue par le prestataire est conservée :
+  aucune donnée bancaire ne descend jusqu'à nous.
 
-## 6. Sécurité
+### 2.2 Données que vous fournissez sur vos proches
 
-Le service ne conserve aucun mot de passe : l'authentification repose sur
-des codes à usage unique. Les jetons de session sont stockés sous forme
-hachée.
+Voir la section 3, qui leur est entièrement consacrée.
+
+### 2.3 Données collectées automatiquement
+
+- **Techniques** : adresse IP, type d'appareil et de client, langue.
+- **Sécurité** : tentatives de connexion et leur résultat, identifiants
+  d'appareil, plafonds de création de compte par appareil.
+- **Journaux** : identifiant de corrélation, chemin appelé, statut rendu, durée,
+  et — s'il y a une session — l'identifiant du compte, **jamais son adresse**.
+
+### 2.4 Données que nous ne collectons pas
+
+- Aucune donnée bancaire ne transite ni n'est stockée sur nos serveurs.
+- Le contenu des notes, des souhaits et des messages **n'entre jamais dans un
+  journal technique**, non plus que les codes à usage unique, les jetons de
+  session ou de lien, les numéros de compte mobile money et les références de
+  carte. Ces champs sont masqués à l'écriture, pas après coup.
+
+## 3. Les données concernant vos proches
+
+C'est la particularité du Service, et elle mérite d'être dite clairement.
+
+**Ce qui est enregistré.** Lehno vous permet de tenir une fiche par proche : un
+nom d'usage, une date d'anniversaire ou d'occasion, un registre de ton, une
+langue, des notes libres sur ses goûts et ses envies, des idées de cadeau, une
+liste de souhaits. Un proche peut aussi renseigner lui-même une fiche par un lien
+de collecte que vous lui envoyez ; s'il s'agit d'un lien public, il peut y
+ajouter son nom et un indice de relation (« on se connaît d'où »).
+
+**Pourquoi c'est une donnée personnelle.** Prise isolément, la phrase « aime le
+café de spécialité » n'est rien. Rattachée à un nom et à une date, elle devient
+une information relative à une personne physique identifiable, et la loi la
+traite comme telle — quelle que soit sa banalité.
+
+**Sur quelle base.** Vous notez ce que vous savez de vos proches pour un usage
+personnel, ce qui relève pour vous de l'activité domestique. Cette exemption ne
+couvre pas l'Éditeur, qui fournit les moyens du traitement : notre base légale
+est l'**intérêt légitime** (art. 6.1.f RGPD et disposition camerounaise
+correspondante) — le vôtre, préparer une célébration ; le nôtre, rendre ce
+service possible. Nous ne demandons pas le consentement de chaque proche : ce
+serait impraticable, et la loi ne l'exige pas pour cette base.
+
+**Ce que nous nous interdisons.** Aucun enrichissement depuis une source
+extérieure : rien n'entre dans une fiche que vous ou un proche n'y ayez mis.
+Aucune revente, aucune cession à des fins publicitaires, aucun profilage
+commercial. Aucune fiche n'est visible d'un autre utilisateur que vous. Le
+Service ne collecte pas de numéro d'identité, d'adresse postale ni de donnée de
+santé sur un proche, et ne vous invite jamais à en saisir.
+
+**Événements sensibles.** Certaines occasions sont marquées comme sensibles. Le
+Service en adapte le ton et **ne produit aucune idée de cadeau** pour elles.
+
+**Génération de contenus.** Lorsque vous demandez un portrait, des idées de
+cadeau ou un message, le texte des notes concernées et le nom d'usage du proche
+sont transmis au sous-traitant de génération (section 5). Rien n'est transmis
+sans que vous ayez lancé l'action, et son coût vous est annoncé avant.
+
+**Ce qui devient public.** Seul votre Mur est public, et seulement si vous le
+publiez : il ne montre que ce que vous y avez mis sur **vous-même**. Aucune fiche
+de proche n'y paraît. Les vœux que l'on vous laisse ne s'affichent jamais.
+
+**Les droits d'un proche non-utilisateur.** Une personne qui figure dans une
+fiche sans avoir de compte peut écrire au DPO (nguemnev@gmail.com) pour savoir ce
+qui la concerne, le faire corriger ou le faire effacer. Nous traitons la demande
+directement lorsque la personne est identifiable dans nos données ; sinon nous la
+relayons au propriétaire de la fiche, qui reste maître de son carnet. Une demande
+d'effacement est exécutée sans qu'il soit demandé de justification.
+
+## 4. Finalités et bases légales
+
+- **Exécution du contrat** (art. 6.1.b) : création et tenue du compte,
+  fourniture du Service, rappels, liens de collecte, Mur, achat de crédits.
+- **Intérêt légitime** (art. 6.1.f) : les fiches de proches (section 3), la
+  prévention des abus (plafonds, détection de rejeu de jeton, journaux d'audit),
+  le maintien en bon fonctionnement du Service.
+- **Consentement** (art. 6.1.a) : la mesure d'usage, et toute communication qui
+  ne serait pas nécessaire au Service. Aucun traceur publicitaire n'existe dans
+  le produit.
+- **Obligation légale** (art. 6.1.c) : conservation des traces d'authentification
+  et des pièces comptables.
+
+## 5. Destinataires et sous-traitants
+
+Vos données peuvent être transmises aux sous-traitants suivants, strictement pour
+les finalités décrites, et dans le cadre d'un contrat conforme à l'article 28 du
+RGPD :
+
+- **Anthropic PBC (États-Unis), DeepSeek (Chine), xAI (États-Unis)** — génération
+  des portraits, idées de cadeau et messages, avec routage et repli entre eux.
+  Seuls le texte des notes concernées et le nom d'usage du proche sont transmis.
+- **Mailgun** — envoi des courriels du Service : codes à usage unique, rappels,
+  confirmations.
+- **OneSignal (États-Unis)** — notifications poussées.
+- **Sentry** — suivi des erreurs techniques. Les incidents portent l'identifiant
+  de corrélation et, le cas échéant, l'identifiant du compte, jamais le contenu
+  des notes ni une adresse électronique.
+- **Prestataire d'hébergement** — [À CONFIRMER], Union européenne.
+- **MTN Mobile Money et Orange Money** — encaissement des achats de crédits.
+
+## 6. Transferts internationaux
+
+Certains sous-traitants sont établis hors de l'Union européenne et hors du
+Cameroun — aux États-Unis et en Chine. Ces transferts sont encadrés par les
+clauses contractuelles types approuvées par la Commission européenne
+(art. 46 RGPD) et par les dispositions équivalentes de la loi camerounaise. Une
+copie peut être obtenue auprès du DPO.
+
+Le recours à un sous-traitant de génération établi en Chine appelle une vigilance
+particulière : [À CONFIRMER — garanties contractuelles et sort des données
+transmises, à établir avant d'activer ce routage en production].
+
+## 7. Durées de conservation
+
+- **Compte actif** : tant que le compte l'est, et trois (3) ans après la dernière
+  connexion.
+- **Fiches de proches, notes, souhaits** : effacés à la suppression du compte du
+  propriétaire, ou plus tôt à sa demande ou à celle du proche concerné.
+- **Contributions par lien de collecte** : la durée de vie du lien, que le
+  propriétaire peut révoquer à tout instant.
+- **Vœux reçus** : effacés à la suppression du compte.
+- **Journaux d'audit et de sécurité** : 12 mois.
+- **Codes à usage unique** : quelques minutes, puis purgés.
+- **Pièces comptables** : la durée imposée par la réglementation applicable.
+
+## 8. Vos droits
+
+Vous disposez des droits d'accès, de rectification, d'effacement, de limitation,
+de portabilité, d'opposition, du droit de retirer votre consentement à tout
+moment sans effet sur les traitements antérieurs, et du droit de donner des
+directives sur le sort de vos données après votre décès.
+
+Ces droits s'exercent auprès du DPO : nguemnev@gmail.com. Une réponse est
+apportée dans un délai d'un mois au plus. La suppression du compte est également
+possible depuis l'application, sans passer par nous.
+
+## 9. Réclamations
+
+- **Cameroun** : auprès de l'Autorité de protection des données personnelles
+  instituée par la loi n° 2024/017, dès que ses modalités opérationnelles auront
+  été fixées par décret. Dans l'intervalle, vos réclamations peuvent être
+  adressées à l'Éditeur, qui en tient registre, ou à l'ANTIC pour ce qui relève
+  de la cybersécurité.
+- **Union européenne** : auprès de l'autorité de contrôle de votre pays de
+  résidence.
+
+## 10. Sécurité
+
+- Connexions chiffrées de bout en bout (HTTPS/TLS).
+- Codes à usage unique hachés sous clé (HMAC-SHA-256), comparés en temps
+  constant, consommés de façon atomique.
+- Rotation des jetons de session et révocation de toute la lignée à la moindre
+  détection de rejeu.
+- Cloisonnement strict des données par compte, imposé au niveau du dépôt : une
+  requête hors périmètre ne renvoie pas une erreur d'autorisation, elle renvoie
+  une absence.
+- Les jetons de lien donnent accès à **une seule ressource**, jamais à un
+  ensemble, et sont révocables à tout instant.
+- Journaux d'audit conservés 12 mois ; sauvegardes chiffrées.
+
+## 11. Cookies et traceurs
+
+Le Service utilise les cookies techniques nécessaires à son fonctionnement
+(session, langue, thème). La mesure d'usage est le seul traceur non strictement
+nécessaire, et elle est soumise à votre choix : le bandeau de consentement donne
+le même poids visuel à l'acceptation et au refus. **Aucun traceur publicitaire
+n'existe dans le produit.**
+
+## 12. Mineurs
+
+Le Service est destiné aux personnes âgées d'au moins **16 ans**. Les
+utilisateurs entre 16 et 18 ans doivent disposer d'une autorisation parentale.
+Aucun traitement n'est destiné aux personnes de moins de 16 ans ; un compte de
+mineur détecté est supprimé sans délai.
+
+## 13. Modifications
+
+La présente politique peut évoluer. Toute modification substantielle est notifiée
+par courriel ou dans le Service au moins quinze (15) jours avant son entrée en
+vigueur, et exige une nouvelle acceptation à la connexion suivante. Chaque
+acceptation est horodatée et conservée (version, date, adresse IP), et figure
+dans l'export de vos données. Les versions antérieures sont conservées et
+communiquées sur demande.
+
+## 14. Contact
+
+Délégué à la protection des données
+Proxia Digital — Akwa, Douala, Cameroun
+Téléphone : +237 691 980 190
+Courriel : nguemnev@gmail.com
