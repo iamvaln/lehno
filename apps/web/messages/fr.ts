@@ -91,4 +91,16 @@ export const fr = {
   cgu: "Conditions d'utilisation",
   confidentialite: "Confidentialité",
   contact: "Contact",
+
+  // Page contact. La maquette montrait un formulaire (TextField, Button,
+  // Banner) mais aucun point d'entrée API ne le reçoit dans ce dépôt : cette
+  // page montre les moyens de contact réels, pas un formulaire inerte.
+  contactKicker: "Contact",
+  contactTitre: "Écrivez-nous",
+  contactChapeau: "Une question, un problème, un contenu à signaler : écrivez-nous, nous répondons sous deux jours ouvrés.",
+  contactEcrireTitre: "Par courriel",
+  contactEcrireTexte: "La voie la plus sûre pour une question sur votre compte, vos données ou un problème technique.",
+  contactEmail: "hello@lehno.app",
+  contactAilleursTitre: "Ailleurs",
+  contactAilleursTexte: "On répond aussi en message privé, un peu moins vite.",
 };
