@@ -89,4 +89,7 @@ export const en: typeof fr = {
   cgu: "Terms of Use",
   confidentialite: "Privacy",
   contact: "Contact",
+
+  // Legal pages (components/legal/LegalPage.tsx): the side table of contents.
+  sommaire: "Contents",
 };
