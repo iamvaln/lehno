@@ -305,11 +305,11 @@ défilement horizontal sous 900 px avec largeur minimale de 520 px.
 - `ExportButton` **dit sa portée** avant d'exporter, et rappelle que l'export est journalisé.
 - `Toast` s'efface seul ; `Banner` reste. **Une erreur bloquante n'est jamais un toast.**
 
-- [ ] **Étape 1 : le test qui échoue** — les cinq points ci-dessus.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: le rôle retire, le motif s'exige, l'export dit sa portée`
+- [x] **Étape 1 : le test qui échoue** — les cinq points ci-dessus.
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: le rôle retire, le motif s'exige, l'export dit sa portée`
 
 ---
 
@@ -351,13 +351,13 @@ Repris de `ui_kits/admin/dico.json`, dont les dix-huit clés de premier niveau s
 symétriques entre `fr` et `en` — vérifié. Le type de `en` reprend celui de `fr`, ce qui
 interdit à la compilation une clé oubliée ou en trop, comme dans `apps/web`.
 
-- [ ] **Étape 1 : le test qui échoue** — les deux tables ont les mêmes clés, à toute
+- [x] **Étape 1 : le test qui échoue** — les deux tables ont les mêmes clés, à toute
       profondeur ; aucune valeur n'est vide ; les gabarits à trou (`{a}`, `{total}`) portent
       les mêmes trous dans les deux langues.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: les messages, en deux langues et sous un même type`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: les messages, en deux langues et sous un même type`
 
 ---
 
