@@ -71,13 +71,21 @@ number of credits given at sign-up are shown in the Service and on its website;
 they may change, with no effect on credits already bought. **The cost of an
 action is shown to you before it starts.**
 
-Credits are bought by mobile money or by card. A credit that has been spent is
-not refundable, the action having been carried out. A credit bought and not
-spent: [TO BE CONFIRMED — validity period, what happens when the account is
-closed, and any refund arrangement. This is a commercial decision, not a drafting
-one].
+Credits are bought by mobile money or by card. **They do not expire**: they stay
+yours for as long as the account exists, and you spend them in the app at your own
+pace. A credit that has been spent is not refundable, the action having been
+carried out. If an action fails through our fault, the credit committed is returned
+to you.
 
-If an action fails through our fault, the credit committed is returned to you.
+**When you delete your account**, the balance of the credits you **bought** is
+refunded on request, to one of your registered payment methods; the amount and the
+destination are shown to you before you confirm. Two conditions protect the
+operation: the method must have been registered for **more than two weeks** and must
+**already have been used for a payment** on the Service. If no method meets them,
+support takes over; deletion can go ahead or wait, as you prefer.
+
+**Credits that were given are not refundable** — welcome credits, referral credits,
+promotional-code credits. They were never paid for.
 
 ## 7. Your content
 
@@ -160,9 +168,14 @@ of a date you entered incorrectly.
 
 ## 13. Suspension and deletion
 
-You can delete your account at any time from the app. Deletion erases your notes,
-your pages, your wishes and the notes you received, within the periods set out in
-section 7 of the privacy policy.
+You can delete your account at any time from the app. The flow first tells you what
+disappears, offers to refund the credits you bought (section 6), then asks you to
+confirm with a one-time code.
+
+Once confirmed, the account is **deactivated**: signing in is no longer possible,
+your public surfaces stop responding and reminders stop. Data is kept for **thirty
+days**, then permanently erased — stored files included. During that period, you can
+still turn back by writing to support.
 
 The Provider may suspend an account for breach of these Terms, after informing
 the User except where seriousness or urgency prevents it.

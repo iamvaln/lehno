@@ -71,13 +71,22 @@ nombre de crédits offerts à l'inscription sont affichés dans le Service et su
 son site ; ils peuvent changer, sans effet sur les crédits déjà acquis. **Le coût
 d'une action vous est annoncé avant qu'elle ne soit lancée.**
 
-Les crédits s'achètent par mobile money ou par carte. Un crédit dépensé n'est pas
-remboursable, l'action ayant été exécutée. Un crédit acheté et non dépensé :
-[À CONFIRMER — durée de validité, sort à la fermeture du compte, et modalité de
-remboursement le cas échéant. C'est une décision commerciale, pas une décision de
-rédaction].
+Les crédits s'achètent par mobile money ou par carte. **Ils ne périment pas** :
+ils restent acquis tant que le compte existe, et s'emploient dans l'application au
+rythme qui vous convient. Un crédit dépensé n'est pas remboursable, l'action ayant
+été exécutée. Si une action échoue de notre fait, le crédit engagé vous est
+restitué.
 
-Si une action échoue de notre fait, le crédit engagé vous est restitué.
+**À la suppression de votre compte**, le solde des crédits que vous avez **achetés**
+vous est remboursé sur demande, sur l'une de vos méthodes de paiement enregistrées ;
+le montant et la destination vous sont annoncés avant confirmation. Deux conditions
+protègent l'opération : la méthode retenue doit avoir été enregistrée **depuis plus
+de deux semaines** et avoir **déjà servi à un paiement** sur le Service. Si aucune
+méthode ne réunit ces conditions, l'assistance prend le relais ; la suppression peut
+se poursuivre ou attendre, à votre choix.
+
+**Les crédits offerts ne donnent pas lieu à remboursement** — crédits de bienvenue,
+crédits de parrainage, crédits d'un code promotionnel. Ils n'ont pas été payés.
 
 ## 7. Vos contenus
 
@@ -163,9 +172,15 @@ d'une date que vous auriez saisie de façon inexacte.
 
 ## 13. Suspension et suppression
 
-Vous pouvez supprimer votre compte à tout moment depuis l'application. La
-suppression efface vos notes, vos fiches, vos souhaits et les vœux reçus, dans
-les délais indiqués à la section 7 de la politique de confidentialité.
+Vous pouvez supprimer votre compte à tout moment depuis l'application. Le parcours
+vous dit d'abord ce qui disparaît, vous propose le remboursement de vos crédits
+achetés (section 6), puis demande une confirmation par code à usage unique.
+
+La suppression confirmée, le compte est **désactivé** : la connexion n'est plus
+possible, vos surfaces publiques cessent de répondre et les rappels s'arrêtent. Les
+données sont conservées **trente jours**, puis effacées définitivement — y compris
+les fichiers stockés. Pendant ce délai, un retour en arrière reste possible en
+écrivant à l'assistance.
 
 L'Éditeur peut suspendre un compte en cas de manquement aux présentes CGU, après
 information de l'Utilisateur sauf lorsque la gravité ou l'urgence l'en empêche.
