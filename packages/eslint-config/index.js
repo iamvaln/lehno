@@ -1,6 +1,8 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
+export { adherence } from "./adherence.js";
+
 export default tseslint.config(
   // Les motifs sont ancrés sur le dossier de la configuration : sans « **/ », un
   // « .next/** » n'ignore que celui de la racine, et le premier build d'apps/web
