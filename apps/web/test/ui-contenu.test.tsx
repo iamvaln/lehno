@@ -67,11 +67,19 @@ describe("contenu, message, saisie", () => {
 
   it("la citation met les guillemets au-delà du seuil, pas avant", () => {
     const court = "Merci pour l'été dernier.";
-    const long = "Karim, 36 ans et toujours cette manie de refaire le monde à minuit, merci pour tout.";
+    const long = "Karim, 36 ans et toujours cette manie de refaire le monde à minuit — merci pour tout, et pour le reste que je ne dis jamais.";
     const { rerender } = render(<Quote>{court}</Quote>);
     expect(screen.getByText(court)).not.toHaveTextContent("«");
     rerender(<Quote>{long}</Quote>);
     expect(screen.getByText(/«/)).toBeInTheDocument();
+  });
+
+  it("la citation respecte le seuil du paquet de passation, pas un seuil de convenance", () => {
+    // 84 caractères : au-dessous des 90 du système, donc sans guillemets.
+    const entreDeux = "Karim, 36 ans et toujours cette manie de refaire le monde à minuit, merci pour tout.";
+    expect(entreDeux.length).toBeLessThan(90);
+    render(<Quote>{entreDeux}</Quote>);
+    expect(screen.getByText(entreDeux)).not.toHaveTextContent("«");
   });
 
   it("la provenance rend son origine et sa date", () => {

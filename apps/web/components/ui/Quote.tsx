@@ -10,10 +10,10 @@ export interface QuoteProps extends Omit<HTMLAttributes<HTMLParagraphElement>, "
   tone?: "body" | "muted";
 }
 
-// Guillemets au-delà du seuil, pas avant. Choisi entre les deux exemples du
-// contrat de test (25 et 84 caractères) : une citation courte n'en porte
-// jamais, une citation longue toujours.
-const SEUIL_GUILLEMETS = 60;
+// Guillemets au-delà du seuil, pas avant : une citation courte se lit d'un
+// trait, une longue a besoin qu'on marque où la parole commence et finit.
+// Valeur fixée par le paquet de passation, qui fait foi sur ce point.
+const SEUIL_GUILLEMETS = 90;
 
 // Une parole rapportée — note, souhait, brouillon de message, phrase de
 // portrait. Fraunces italique (classe .citation, base.css) : c'est la coupe
