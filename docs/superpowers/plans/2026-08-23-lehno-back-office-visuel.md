@@ -370,14 +370,14 @@ interdit à la compilation une clé oubliée ou en trop, comme dans `apps/web`.
 trois `AlertPill` au plus, sur une ligne, chacune menant à sa liste. Puis les cartes
 d'indicateurs, puis la file « à traiter ».
 
-- [ ] **Étape 1 : le test qui échoue** — jamais plus de trois alertes rendues, même si la
+- [x] **Étape 1 : le test qui échoue** — jamais plus de trois alertes rendues, même si la
       source en porte cinq ; les alertes précèdent les cartes dans l'ordre du document ;
       chaque carte mène à sa section ; la file « à traiter » rend un état vide qui dit ce
       qui est possible.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: le tableau de bord ouvre sur ce qui ne va pas`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: le tableau de bord ouvre sur ce qui ne va pas`
 
 ---
 
@@ -395,14 +395,14 @@ d'indicateurs, puis la file « à traiter ».
 - **Suppressions** — le gabarit liste, avec les deux gestes du délai de grâce : effacer
   maintenant, annuler. Les deux passent par `ConfirmWithReason`.
 
-- [ ] **Étape 1 : le test qui échoue** — le détail rend son historique d'interventions ; le
+- [x] **Étape 1 : le test qui échoue** — le détail rend son historique d'interventions ; le
       formulaire rappelle la valeur précédente d'un champ modifié et **n'enregistre pas
       sans geste explicite** ; « effacer maintenant » n'est pas rendu pour le rôle
       `support` ; la liste remet ses filtres à zéro.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: les trois gabarits, et les deux gestes du délai de grâce`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: les trois gabarits, et les deux gestes du délai de grâce`
 
 ---
 

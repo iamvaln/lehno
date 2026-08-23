@@ -3,6 +3,7 @@
 @import "./donnees.css";
 @import "./signaux.css";
 @import "./tableau.css";
+@import "./gabarits.css";
 
 /* Structure seulement. Les couleurs et la densité viennent de @lehno/tokens,
    posées par la feuille de variables (tâche 2). */
