@@ -1,5 +1,7 @@
 # Plan — le back-office de Lehno, en visuel
 
+Branche : `feature/back-office-visuel`, partie de `develop`.
+
 Source de design : `specs/ADMIN identity for Lehno.zip` (`design_handoff_back_office/`).
 Source fonctionnelle : `specs/ux-admin-lehno.md`.
 Contrats d'API : `specs/spec-technique-lehno.md` §7 et §3.
@@ -44,8 +46,11 @@ Reprises du plan de phase 0, plus celles propres à l'admin.
 
 1. **Périmètre** — ce que le paquet montre, exactement. Les quinze sections réemploient les
    quatre gabarits ; les construire douze fois avec des données inventées n'apprend rien.
-2. **Jetons** — `@lehno/tokens` gagne une couche admin plutôt que de reprendre le
-   vocabulaire d'alias du paquet. Une seule source de couleur dans le dépôt (tâche 2).
+2. **Jetons** — tranché, **et déjà livré** par le plan « socle de design » : `admin.ts`
+   porte `adminOverride` (ce que le back-office change, et rien d'autre) et `cssAdmin(theme)`
+   émet le bloc `.lehno-admin` / `.lehno-admin.lehno-nuit`. Les six couleurs et toute la
+   densité y sont, aux valeurs du paquet. **Il n'y a plus de travail de jetons à faire** —
+   seulement une feuille globale qui les consomme (tâche 2).
 3. **Journal d'audit** — réservé au rôle `admin`, comme la spec §6, et **contre** le paquet
    qui le donne en lecture au support. Le journal sert à contrôler le travail de l'équipe ;
    le donner à ceux qu'il observe lui retire sa fonction. Même arbitrage pour la suspension
@@ -54,21 +59,41 @@ Reprises du plan de phase 0, plus celles propres à l'admin.
    le `dico.json` et le README principal. Le README du ui_kit, qui annonce « Utilisateurs ·
    Réglages · Suivi · Outils », est périmé.
 
-## Une décision qui reste ouverte — à trancher en tâche 4
+## La pagination — tranchée par défaut, réversible
 
-**La pagination.** La spec technique §3 impose le parcours **par curseur** : la requête
+**Le conflit.** La spec technique §3 impose le parcours **par curseur** : la requête
 porte `limit` et `cursor`, la réponse rend les éléments et le curseur suivant. Le composant
 `Pagination` du paquet demande `page`, `parPage` et **`total`** — qu'une API à curseur ne
 peut pas fournir, et il affiche « 1–20 sur 347 » et « page 2 / 18 ».
 
-Les deux ne se concilient pas. Trois issues, la première recommandée :
-
-- **Adapter le composant au curseur** : « Précédent · Suivant », sans total ni numéro de
-  page. Fidèle à la spec, moins riche à l'écran.
+Les deux ne se concilient pas. **Retenu : adapter le composant au curseur** — « Précédent ·
+Suivant », sans total ni numéro de page. C'est la spec qui gouverne, et un composant qui
+réclame un total qu'aucune API ne rend serait un composant mort-né. La décision se renverse
+en une tâche si vous préférez l'une des deux autres :
 - **Faire une exception pour `/v1/admin`** : décalage et total, réservés à l'admin, dont les
-  volumes sont connus et le public interne. Le composant reste tel quel.
+  volumes sont connus et le public interne. Le composant resterait tel quel.
 - **Rendre le total facultatif** : le composant tombe sur « Précédent · Suivant » quand
   `total` est absent, et affiche le compte quand il est là.
+
+## La décision qui reste ouverte — les composants partagés
+
+Le paquet emploie cinq composants du produit : `Button`, `Icon`, `Banner`, `TextField`,
+`BrandMark`. Ils existent, écrits et éprouvés — mais dans **`apps/web/components/ui/`**,
+c'est-à-dire à l'intérieur d'une autre application. Le plan « socle de design » les y place
+délibérément et ne prévoit pas de paquet partagé.
+
+Trois issues :
+
+- **Extraire vers `packages/ui`**, consommé par `apps/web` et `apps/admin`. Juste à terme,
+  mais la manœuvre touche `apps/web` pendant que la landing s'y reconstruit — c'est là que
+  se joue le risque de conflit.
+- **Recopier les cinq dans `apps/admin`.** Rapide, et exactement la dérive que le dépôt
+  combat depuis le début.
+- **Attendre** : écrire d'abord tout ce qui est propre à l'admin — dix-sept composants sur
+  vingt-deux — et trancher quand la landing sera stabilisée.
+
+**Retenu pour commencer : attendre.** Les tâches 1, 3, 5, 6 et 7 n'en dépendent pas ; la
+question se pose au plus tôt à la tâche 4, et d'ici là la landing aura fusionné.
 
 ---
 
@@ -84,7 +109,8 @@ apps/admin/
   src/
     main.tsx
     App.tsx                    Routage local (aucun serveur) et état de rôle, thème, langue
-    styles/global.css          Structure seulement — aucune couleur
+    styles/global.css          Structure ; les couleurs viennent de @lehno/tokens
+    styles/variables.ts        Assemble cssVariables + cssTokens + cssAdmin
     i18n/{fr,en}.ts            Repris de dico.json, sans clé morte
     i18n/index.ts              messages(langue)
     composants/
@@ -101,7 +127,7 @@ apps/admin/
   test/*.test.tsx
 
 packages/contracts/src/admin.ts   Les types de /v1/admin, d'après la spec §7
-packages/tokens/src/admin.ts      La couche admin : couleurs et densité
+packages/tokens/src/admin.ts      Déjà livré par le socle — non modifié ici
 ```
 
 ---
@@ -109,7 +135,7 @@ packages/tokens/src/admin.ts      La couche admin : couleurs et densité
 ### Tâche 1 : Squelette Vite, membre de l'espace de travail
 
 **Fichiers :** `apps/admin/{package.json,vite.config.ts,vitest.config.ts,tsconfig.json,index.html}`,
-`apps/admin/src/{main.tsx,App.tsx}`, `apps/admin/src/styles/global.css`
+`apps/admin/src/{main.tsx,App.tsx}`
 **Test :** `apps/admin/test/amorcage.test.tsx`
 
 **Interfaces :** produit l'application `@lehno/admin`, montée par Vite, testée par Vitest.
@@ -125,20 +151,36 @@ la racine : `dist/` est déjà ignoré, rien à ajouter.
       n'existe pas.
 - [ ] **Étape 3 : implémenter** le squelette. `global.css` ne porte **aucune couleur** :
       seulement la remise à zéro, la famille de texte et la règle de mouvement réduit.
+      La feuille des couleurs vient à la tâche 2.
 - [ ] **Étape 4 : le voir passer**, puis `pnpm --filter @lehno/admin build`.
 - [ ] **Étape 5 : commit** — `admin: squelette Vite, membre de l'espace de travail`
 
 ---
 
-### Tâche 2 : La couche admin de `@lehno/tokens`
+### Tâche 2 : La feuille globale du back-office
 
-**Fichiers :** `packages/tokens/src/admin.ts`, export depuis `packages/tokens/src/index.ts`
-**Test :** `packages/tokens/src/admin.test.ts`
+**Fichiers :** `apps/admin/src/styles/global.css`, `apps/admin/src/styles/variables.ts`
+**Test :** `apps/admin/test/feuille.test.ts`
 
-**Interfaces :** produit `adminThemes: { light, dark }` et `adminTokens` (densité, rayons,
-échelle de texte), plus `adminCssVariables(theme)` sur le modèle de `cssVariables`.
+**Interfaces :** consomme `cssVariables`, `cssTokens` et `cssAdmin` de `@lehno/tokens` ;
+produit la feuille servie à l'outil.
 
-**Ce que la couche porte.** Six couleurs qui diffèrent du produit, et elles seules :
+**Rien à décider ici : la couche admin existe.** `packages/tokens/src/admin.ts` porte déjà
+`adminOverride` et `cssAdmin(theme)`, aux valeurs du paquet. Cette tâche ne fait que les
+poser, dans le bon ordre et sous les bonnes classes :
+
+```
+:root                       cssVariables("light") + cssTokens()
+:root[data-theme="dark"]    cssVariables("dark")
+.lehno-admin                cssAdmin("light")   — couleurs + densité de l'outil
+.lehno-admin.lehno-nuit     cssAdmin("dark")    — couleurs seulement
+```
+
+**Le piège.** `cssAdmin("light")` porte les jetons hors thème (densité, rayons, échelle) et
+`cssAdmin("dark")` ne porte que les couleurs — l'outil n'a pas de bascule à part. Poser le
+bloc sombre sans le clair laisserait un back-office à la densité du produit.
+
+**Pour mémoire, ce que la couche porte déjà** — six couleurs qui diffèrent du produit :
 
 | Rôle | Clair | Sombre |
 |---|---|---|
@@ -158,13 +200,13 @@ en sombre — **pas un quatrième violet**.
 Le violet, le rouge, l'abricot, les courbes de mouvement et la règle du focus **ne sont pas
 redéfinis** : ils viennent des thèmes du produit.
 
-- [ ] **Étape 1 : le test qui échoue** — les six couleurs sont celles du tableau ; le
-      contraste du texte sur `chrome` et sur `surface` passe 4,5:1 dans les deux thèmes ;
-      la couche admin ne redéfinit ni `violet` ni `apricot`.
+- [ ] **Étape 1 : le test qui échoue** — la feuille contient les quatre blocs ci-dessus ;
+      `.lehno-admin` porte `--control-height: 32px` ; `.lehno-admin.lehno-nuit` porte
+      `--surface-chrome: #131219` ; **aucune couleur n'est écrite en dur** dans `global.css`.
 - [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter**, en réemployant `contrastRatio` déjà présent dans le paquet.
-- [ ] **Étape 4 : le voir passer** — `pnpm --filter @lehno/tokens test`.
-- [ ] **Étape 5 : commit** — `jetons: la couche admin, six couleurs et la densité d'un outil`
+- [ ] **Étape 3 : implémenter.**
+- [ ] **Étape 4 : le voir passer.**
+- [ ] **Étape 5 : commit** — `admin: la feuille globale, posée sur la surcharge du socle`
 
 ---
 
