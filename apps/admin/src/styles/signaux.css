@@ -1,0 +1,524 @@
+/* --------------------------------------------------------------------------
+   Les composants de signal, d'action et de page du back-office. Même partage
+   que pour donnees.css : le composant ne pose en ligne que ce qui varie par
+   instance — ici, rien — et tout ce qui est teinte, état (survol, focus) et
+   mise en page vit dans cette feuille. Une couleur écrite en ligne échappe au
+   thème sombre et au lint ; un style en ligne ne porte ni :hover, ni
+   :focus-visible, ni requête de média.
+
+   L'anneau de focus est celui de donnees.css (.admin-focus) : c'est le même
+   geste, ce doit être la même marque.
+   -------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------- StatCard */
+
+.admin-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-12) var(--space-14);
+  border: var(--border-width) solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  font-family: var(--font-body);
+  color: var(--text-body);
+  text-align: left;
+  transition: border-color var(--duration-state) var(--ease-state);
+}
+.admin-stat[data-cliquable="true"] {
+  cursor: pointer;
+}
+.admin-stat[data-cliquable="true"]:hover {
+  border-color: var(--action-edge);
+}
+.admin-stat-libelle {
+  font-size: var(--text-body-xs);
+  font-weight: var(--font-body-semibold);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--text-mention);
+}
+/* Le chiffre est ce qu'on vient lire : il est seul à cette taille, et en chasse
+   fixe pour que deux cartes côte à côte se comparent sans osciller. */
+.admin-stat-valeur {
+  font-size: var(--text-display-l);
+  font-weight: var(--font-body-bold);
+  line-height: var(--leading-title);
+  letter-spacing: var(--tracking-title);
+  font-variant-numeric: tabular-nums;
+}
+.admin-stat-variation {
+  font-size: var(--text-body-xs);
+  color: var(--text-secondary);
+}
+/* Le sens arrive en attribut, la teinte se décide ici — et seulement ici. */
+.admin-stat-variation[data-sens="hausse"] { color: var(--feedback-success); }
+.admin-stat-variation[data-sens="baisse"] { color: var(--feedback-error); }
+
+/* --------------------------------------------------------------- AlertPill */
+
+.admin-alerte {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  min-height: var(--control-height);
+  padding: var(--space-4) var(--space-12);
+  border: var(--border-width) solid currentcolor;
+  border-radius: var(--radius-pill);
+  background: var(--surface-card);
+  font-family: var(--font-body);
+  font-size: var(--text-body-xs);
+  font-weight: var(--font-body-semibold);
+  text-align: left;
+  transition: background var(--duration-state) var(--ease-state);
+}
+.admin-alerte[data-ton="alerte"] { color: var(--feedback-error); }
+.admin-alerte[data-ton="echeance"] { color: var(--feedback-warning); }
+.admin-alerte[data-ton="info"] { color: var(--feedback-info); }
+
+.admin-alerte[data-cliquable="true"] {
+  cursor: pointer;
+}
+.admin-alerte[data-cliquable="true"][data-ton="alerte"]:hover { background: var(--feedback-error-bg); }
+.admin-alerte[data-cliquable="true"][data-ton="echeance"]:hover { background: var(--feedback-warning-bg); }
+.admin-alerte[data-cliquable="true"][data-ton="info"]:hover { background: var(--feedback-info-bg); }
+
+/* « notifié à 14 h » se lit comme une mention, pas comme l'alerte : c'est un
+   rappel que le courriel est déjà parti, pas une deuxième anomalie. */
+.admin-alerte-notifie {
+  font-weight: var(--font-body-regular);
+  opacity: 0.75;
+}
+.admin-alerte-notifie::before {
+  content: "\00b7";
+  margin-right: var(--space-4);
+}
+
+/* -------------------------------------------------------------- AuditTrail */
+
+.admin-audit-titre {
+  margin-bottom: var(--space-10);
+  font-size: var(--text-body-xs);
+  font-weight: var(--font-body-bold);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--text-mention);
+}
+.admin-audit-liste {
+  padding: 0;
+  list-style: none;
+}
+.admin-audit-entree {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-10);
+  padding: var(--space-10) 0;
+}
+.admin-audit-entree + .admin-audit-entree {
+  border-top: var(--border-width) solid var(--border-hairline);
+}
+.admin-audit-puce {
+  flex: none;
+  margin-top: var(--space-2);
+  color: var(--text-mention);
+}
+.admin-audit-corps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+.admin-audit-action {
+  font-size: var(--text-body-s);
+  color: var(--text-body);
+}
+/* Le motif se lit sous l'action, dans la même colonne : séparé, il redeviendrait
+   facultatif à l'œil — or c'est lui qui fait du journal une preuve. */
+.admin-audit-motif {
+  font-size: var(--text-body-xs);
+  color: var(--text-secondary);
+}
+.admin-audit-motif-cle::after {
+  content: " \2014 ";
+}
+.admin-audit-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: none;
+  font-size: var(--text-mention-s);
+  color: var(--text-mention);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------- Toast */
+
+.admin-toast {
+  position: fixed;
+  left: var(--space-20);
+  bottom: var(--space-20);
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-10);
+  box-sizing: border-box;
+  max-width: 420px;
+  padding: var(--space-12) var(--space-14);
+  /* Aucune ombre dans ce produit : l'accusé se détache par son encre inversée,
+     la seule surface sombre du système, et par un filet. */
+  border: var(--border-width) solid var(--border-object);
+  border-radius: var(--radius-md);
+  background: var(--surface-band);
+  color: var(--on-band);
+  font-family: var(--font-body);
+  font-size: var(--text-body-xs);
+  line-height: var(--leading-body);
+  animation: admin-toast-entree var(--duration-enter) var(--ease-pose);
+}
+@keyframes admin-toast-entree {
+  from { opacity: 0; transform: translateY(var(--space-8)); }
+  to { opacity: 1; transform: none; }
+}
+.admin-toast-icone {
+  flex: none;
+  margin-top: var(--space-2);
+}
+.admin-toast[data-intent="success"] .admin-toast-icone { color: var(--feedback-success); }
+.admin-toast[data-intent="info"] .admin-toast-icone { color: var(--feedback-info); }
+.admin-toast[data-intent="error"] .admin-toast-icone { color: var(--feedback-error); }
+
+.admin-toast-texte {
+  flex: 1;
+  min-width: 0;
+}
+/* La sortie offerte par l'accusé : elle se souligne, parce qu'un bouton coloré
+   sur fond sombre passerait pour un rang d'action qu'il n'a pas. */
+.admin-toast-action {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--font-body-semibold);
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.admin-toast-fermer {
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity var(--duration-state) var(--ease-state);
+}
+.admin-toast-fermer:hover {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------- ConfirmWithReason */
+
+.admin-dialogue-couche {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--space-20);
+}
+/* Le voile n'a pas de jeton à lui : c'est la bande sombre du système, posée à
+   plat et rendue translucide — aucune quatrième encre n'est inventée. */
+.admin-dialogue-voile {
+  position: absolute;
+  inset: 0;
+  background: var(--surface-band);
+  opacity: 0.42;
+}
+.admin-dialogue {
+  position: relative;
+  box-sizing: border-box;
+  width: min(440px, 100%);
+  padding: var(--space-20);
+  border: var(--border-width) solid var(--border-object);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  font-family: var(--font-body);
+  color: var(--text-body);
+}
+.admin-dialogue-titre {
+  font-size: var(--text-display-s);
+  font-weight: var(--font-body-bold);
+  line-height: var(--leading-title);
+}
+.admin-dialogue-consequence {
+  margin-top: var(--space-8);
+  font-size: var(--text-body-s);
+  color: var(--text-secondary);
+}
+.admin-dialogue-motif {
+  margin-top: var(--space-16);
+}
+.admin-dialogue-etiquette {
+  display: block;
+  font-size: var(--text-body-s);
+  font-weight: var(--font-body-semibold);
+}
+/* L'astérisque du champ requis est décoratif : le mot « obligatoire » n'est pas
+   traduit deux fois, et l'attribut `required` porte l'information aux
+   technologies d'assistance. */
+.admin-dialogue-etiquette[data-requis="true"]::after {
+  content: " *";
+  color: var(--feedback-error);
+}
+.admin-dialogue-choix {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-6);
+}
+.admin-dialogue-libre {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: var(--space-8);
+  padding: var(--space-8);
+  border: var(--border-width) solid var(--border-object);
+  border-radius: var(--radius-sm);
+  background: var(--surface-page);
+  font-family: var(--font-body);
+  font-size: var(--text-body-s);
+  color: var(--text-body);
+  resize: vertical;
+}
+.admin-dialogue-note {
+  margin-top: var(--space-8);
+  font-size: var(--text-mention-s);
+  color: var(--text-mention);
+}
+.admin-dialogue-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  margin-top: var(--space-20);
+}
+
+/* ------------------------------------------------------------ ExportButton */
+
+.admin-export {
+  position: relative;
+  display: inline-flex;
+}
+.admin-export-encours {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  height: var(--control-height);
+  padding: 0 var(--control-pad-x);
+  font-size: var(--text-body-xs);
+  color: var(--text-mention);
+}
+.admin-export-menu {
+  position: absolute;
+  top: calc(100% + var(--space-6));
+  right: 0;
+  z-index: 40;
+  min-width: 190px;
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--border-object);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  text-align: left;
+}
+.admin-export-item {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-8) var(--space-10);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--text-body-s);
+  color: var(--text-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-state) var(--ease-state);
+}
+.admin-export-item:hover {
+  background: var(--action-quiet-bg);
+}
+/* Le rappel du journal ferme le menu : on sort des données, et cette sortie
+   laisse une trace nominative. */
+.admin-export-journal {
+  margin-top: var(--space-4);
+  padding: var(--space-6) var(--space-10) var(--space-4);
+  border-top: var(--border-width) solid var(--border-hairline);
+  font-size: var(--text-mention-s);
+  color: var(--text-mention);
+}
+
+/* -------------------------------------------------------------- PageHeader */
+
+.admin-entete {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-16);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-16);
+  margin-bottom: var(--space-16);
+  border-bottom: var(--border-width) solid var(--border-hairline);
+}
+.admin-entete-dire {
+  min-width: 0;
+}
+.admin-entete-titre {
+  font-size: var(--text-display-m);
+  font-weight: var(--font-body-bold);
+  line-height: var(--leading-title);
+  letter-spacing: var(--tracking-title);
+  color: var(--text-body);
+}
+.admin-entete-sous {
+  margin-top: var(--space-4);
+  max-width: var(--measure);
+  font-size: var(--text-body-s);
+  color: var(--text-secondary);
+}
+.admin-entete-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+/* ---------------------------------------------------------------- PageTabs */
+
+.admin-onglets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-20);
+  margin-bottom: var(--space-20);
+  border-bottom: var(--border-width) solid var(--border-hairline);
+}
+/* L'onglet actif se marque au filet et au poids, pas à une pastille : ce n'est
+   pas une destination, c'est le point de vue courant sur la même page. */
+.admin-onglet {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-8) 0;
+  border: 0;
+  border-bottom: var(--border-width-firm) solid transparent;
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--text-body-s);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--duration-state) var(--ease-state);
+}
+.admin-onglet:hover {
+  color: var(--text-body);
+}
+.admin-onglet[data-actif="true"] {
+  border-bottom-color: var(--action);
+  font-weight: var(--font-body-semibold);
+  color: var(--text-body);
+}
+.admin-onglet-compte {
+  font-size: var(--text-mention-s);
+  font-weight: var(--font-body-semibold);
+  color: var(--text-mention);
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------- Breadcrumb */
+
+.admin-fil {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-10);
+  font-size: var(--text-body-s);
+  color: var(--text-mention);
+}
+.admin-fil-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.admin-fil-separateur {
+  color: var(--text-mention);
+}
+.admin-fil-lien {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--text-accent);
+  cursor: pointer;
+}
+.admin-fil-lien:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.admin-fil-courant {
+  color: var(--text-body);
+}
+
+/* ----------------------------------------------------------------- FormRow */
+
+.admin-rang {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr;
+  align-items: start;
+  gap: var(--space-20);
+  padding: var(--space-14) 0;
+  border-top: var(--border-width) solid var(--border-hairline);
+}
+@media (max-width: 700px) {
+  .admin-rang {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+}
+.admin-rang-label {
+  display: block;
+  font-size: var(--text-body-s);
+  font-weight: var(--font-body-semibold);
+  color: var(--text-body);
+}
+.admin-rang-aide {
+  margin-top: var(--space-2);
+  max-width: var(--measure-tight);
+  font-size: var(--text-body-xs);
+  color: var(--text-secondary);
+}
+.admin-rang-champ {
+  min-width: 0;
+}
+/* Le rappel de la valeur précédente est ce qui distingue un réglage d'un champ :
+   il se lit sous le champ, à la hauteur de ce qu'on est en train de changer. */
+.admin-rang-precedente {
+  margin-top: var(--space-6);
+  font-size: var(--text-mention-s);
+  color: var(--text-mention);
+}
+.admin-rang-precedente-cle::after {
+  content: " \2014 ";
+}
+.admin-rang-erreur {
+  margin-top: var(--space-6);
+  font-size: var(--text-body-xs);
+  color: var(--feedback-error);
+}
