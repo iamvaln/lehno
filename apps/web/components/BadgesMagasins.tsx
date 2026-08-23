@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import type { Langue } from "../lib/langues";
-import type { Messages } from "../messages";
+import type { Langue } from "../lib/langues.js";
+import type { Messages } from "../messages/index.js";
 
 // Le badge Apple existe en noir et en blanc : le noir sur fond clair, le blanc sur
 // fond sombre. Le thème n'étant connu qu'au navigateur, les deux sont rendus et le

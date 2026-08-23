@@ -1,6 +1,21 @@
-import type { ReactNode } from "react";
-import type { Langue } from "../lib/langues";
-import type { Messages } from "../messages";
+import type { CSSProperties, ReactNode } from "react";
+import type { Langue } from "../lib/langues.js";
+import type { Messages } from "../messages/index.js";
+
+const LIEN: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "var(--space-6)",
+  fontFamily: "var(--font-body)",
+  fontSize: "var(--text-body-xs)",
+  fontWeight: "var(--font-body-semibold)",
+  color: "var(--text-secondary)",
+  background: "transparent",
+  border: "var(--border-width) solid var(--border-object)",
+  borderRadius: "var(--radius-xs)",
+  padding: "0 var(--space-10)",
+  height: "var(--space-32)",
+};
 
 // Une ancre ordinaire, pas next/link : changer de langue est une navigation entière,
 // et précharger l'autre langue coûterait un document que presque personne n'ouvre.
@@ -8,41 +23,17 @@ import type { Messages } from "../messages";
 // partage, se met en signet et s'indexe dans la langue qu'on voit.
 // Le drapeau est celui de la langue vers laquelle on va, jamais de celle qu'on lit.
 //
-// Les hexadécimaux ci-dessous sont les seuls du dossier, et c'est volontaire : ce
-// sont les couleurs de deux drapeaux nationaux, fixées hors de notre palette. Les
-// passer en variables les ferait suivre le thème, ce qu'un drapeau ne fait pas.
+// Le drapeau est un fichier statique (public/flags) plutôt qu'un tracé inline :
+// ses couleurs sont fixées par deux drapeaux nationaux, hors de notre palette,
+// et la règle d'adhérence refuse tout hexadécimal dans un composant — y compris
+// dans un attribut fill. Un fichier de marque suit la même logique.
 export function BasculeLangue({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
   const autre: Langue = langue === "fr" ? "en" : "fr";
+  const drapeau = autre === "en" ? "/flags/gb.svg" : "/flags/fr.svg";
 
   return (
-    <a
-      href={`/${autre}`}
-      hrefLang={autre}
-      aria-label={t.langueLabel}
-      title={t.langueLabel}
-      style={{
-        display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600,
-        color: "var(--muted)", background: "transparent", border: "1px solid var(--edge)",
-        borderRadius: 9, padding: "6px 11px", height: 34,
-      }}
-    >
-      <span style={{ display: "block", width: 20, height: 14, borderRadius: 2, overflow: "hidden", flex: "none" }}>
-        {autre === "en" ? (
-          <svg viewBox="0 0 60 40" width="20" height="14" style={{ display: "block" }} aria-hidden="true">
-            <rect width="60" height="40" fill="#012169" />
-            <path d="M0 0 60 40 M60 0 0 40" stroke="#FFFFFF" strokeWidth="9" />
-            <path d="M0 0 60 40 M60 0 0 40" stroke="#C8102E" strokeWidth="4" />
-            <path d="M30 0 V40 M0 20 H60" stroke="#FFFFFF" strokeWidth="14" />
-            <path d="M30 0 V40 M0 20 H60" stroke="#C8102E" strokeWidth="8" />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 60 40" width="20" height="14" style={{ display: "block" }} aria-hidden="true">
-            <rect width="20" height="40" fill="#002654" />
-            <rect x="20" width="20" height="40" fill="#FFFFFF" />
-            <rect x="40" width="20" height="40" fill="#ED2939" />
-          </svg>
-        )}
-      </span>
+    <a href={`/${autre}`} hrefLang={autre} aria-label={t.langueLabel} title={t.langueLabel} style={LIEN}>
+      <img src={drapeau} alt="" aria-hidden="true" width={20} height={14} style={{ display: "block", borderRadius: 0 }} />
       {t.langueBouton}
     </a>
   );
