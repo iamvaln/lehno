@@ -1,0 +1,140 @@
+name: Release
+
+# Déploiement déclenché par un tag. Pour livrer :
+#   git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags: ['v*']
+
+env:
+  REGISTRY: ghcr.io/iamvaln
+  # Voir le commentaire équivalent dans ci.yml — même échéance, mêmes actions
+  # concernées (checkout, docker/*) ici.
+  # Voir https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  # ── Construit et pousse l'image api (NestJS) ────────────────────────────────
+  build-api:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Connexion à GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construit et pousse api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/lehno-api:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/lehno-api:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+  # ── Construit et pousse l'image web (Next.js) ───────────────────────────────
+  build-web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Connexion à GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construit et pousse web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          # NEXT_PUBLIC_* sont gravées dans le bundle client au build — voir
+          # apps/web/Dockerfile. Variables publiques (Settings ▸ Secrets and
+          # variables ▸ Actions ▸ Variables), pas des secrets.
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_LANCEMENT=${{ vars.NEXT_PUBLIC_LANCEMENT }}
+          tags: |
+            ${{ env.REGISTRY }}/lehno-web:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/lehno-web:latest
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+
+  # ── Déploiement : SSH vers le VPS, tire le tag fraîchement poussé, redémarre ─
+  deploy:
+    needs: [build-api, build-web]
+    runs-on: ubuntu-latest
+    environment: production # garde-fou optionnel : approbation manuelle (à activer dans les réglages du dépôt)
+    steps:
+      - name: Déploie par SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          envs: IMAGE_TAG,GHCR_USER,GHCR_TOKEN,APP_DIR
+          script: |
+            set -euo pipefail
+            cd "${APP_DIR:-$HOME/lehno}"
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            export IMAGE_TAG
+            git fetch --tags origin
+            git checkout "$IMAGE_TAG"   # synchronise docker-compose.yml sur le tag publié
+            # Reprise sur l'extraction : le snapshotter overlayfs de containerd
+            # échoue par intermittence sur une extraction de couche à froid
+            # (« link »/« Lchown … no such file or directory ») — une course
+            # d'extraction en parallèle, pas une vraie erreur. Cette reprise
+            # absorbe le résidu éventuel pour que le déploiement se rétablisse
+            # de lui-même plutôt que d'exiger une relance manuelle.
+            n=0
+            until docker compose --env-file .env.production pull; do
+              n=$((n+1))
+              if [ "$n" -ge 3 ]; then echo "échec du pull après $n tentatives"; exit 1; fi
+              echo "tentative de pull $n interrompue par une erreur d'extraction transitoire — nouvel essai dans 10s…"
+              sleep 10
+            done
+            docker compose --env-file .env.production up -d
+            # Rafraîchit aussi les étiquettes :latest LOCALES. La chaîne
+            # publie chaque version en :vX.Y.Z ET :latest sur GHCR, mais le
+            # « compose pull » ci-dessus ne récupère que :$IMAGE_TAG. Sans ça,
+            # une commande ponctuelle sans IMAGE_TAG dans le shell retomberait
+            # sur un :latest local périmé d'une version antérieure. Ignore
+            # silencieusement une image pas encore publiée (premier
+            # déploiement d'un nouveau service).
+            for image in lehno-api lehno-web; do
+              docker pull "ghcr.io/iamvaln/${image}:latest" || true
+            done
+            docker logout ghcr.io
+            # Élague les anciennes images de version pour que les tags
+            # :vX.Y.Z ne s'accumulent pas sur le VPS — « docker image prune -f »
+            # ne retire que les images PENDANTES, jamais d'anciens tags :
+            # sans cette étape, chaque publication s'ajoute indéfiniment.
+            # Garde les 2 versions les plus récentes de chaque image
+            # (courante + précédente, pour le retour arrière) ; :latest et
+            # toute image en cours d'exécution ne sont pas touchées.
+            for image in lehno-api lehno-web; do
+              docker images "ghcr.io/iamvaln/${image}" --format '{{.Tag}}' \
+                | grep -E '^v[0-9]' | sort -V | head -n -2 \
+                | while read -r tag; do docker rmi "ghcr.io/iamvaln/${image}:${tag}" 2>/dev/null || true; done
+            done
+            docker image prune -f
+        env:
+          IMAGE_TAG: ${{ github.ref_name }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APP_DIR: ${{ secrets.VPS_APP_DIR }}

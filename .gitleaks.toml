@@ -1,0 +1,24 @@
+title = "Configuration gitleaks de Lehno"
+
+# Les règles par défaut restent actives : cette configuration n'en retire
+# aucune, elle ne fait qu'écarter une valeur de test précise.
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+Le jeu de tests de l'API signe ses jetons avec un secret de démonstration \
+unique, partagé par huit fichiers et cité dans le plan de la phase 0. \
+Décodé, il s'écrit « secret-de-test-32-octets-exactement » : sa longueur est \
+ce qui compte, la valeur n'ouvre rien. Sans cette exception, gitleaks \
+remontait onze fuites à chaque exécution — une barrière rouge en permanence \
+cesse d'être lue, puis finit débranchée.
+
+L'exception porte sur cette chaîne exacte, pas sur les fichiers de test : \
+un vrai secret déposé dans apps/api/test/ reste détecté. Un nouveau montage \
+de test qui aurait besoin d'une valeur de ce genre devra donc l'ajouter ici \
+explicitement — c'est la friction qu'on veut.
+"""
+regexes = [
+  '''c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=''',
+]
