@@ -89,4 +89,16 @@ export const en: typeof fr = {
   cgu: "Terms of Use",
   confidentialite: "Privacy",
   contact: "Contact",
+
+  // Contact page. The mockup showed a form (TextField, Button, Banner), but
+  // no API endpoint receives it in this repo: this page shows the real
+  // contact channels instead of an inert form.
+  contactKicker: "Contact",
+  contactTitre: "Write to us",
+  contactChapeau: "A question, a problem, something to report: write to us, we reply within two working days.",
+  contactEcrireTitre: "By email",
+  contactEcrireTexte: "The safest channel for a question about your account, your data, or a technical problem.",
+  contactEmail: "hello@lehno.app",
+  contactAilleursTitre: "Elsewhere",
+  contactAilleursTexte: "We answer direct messages too, a little more slowly.",
 };
