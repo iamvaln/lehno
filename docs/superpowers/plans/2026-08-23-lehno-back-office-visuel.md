@@ -230,12 +230,12 @@ de la spec §7, et les fixtures qui s'y conforment.
   seulement : le type ne porte jamais le numéro complet.
 - **Aucun contenu de fiche ni de note** n'apparaît dans un type d'administration.
 
-- [ ] **Étape 1 : le test qui échoue** — chaque fixture se valide contre son type ; un appel
+- [x] **Étape 1 : le test qui échoue** — chaque fixture se valide contre son type ; un appel
       de mutation sans `motif` ne compile pas ; aucun type ne porte de champ de contenu.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter** les types puis les fixtures.
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `contrats: les types de /v1/admin, et des fixtures qui s'y tiennent`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter** les types puis les fixtures.
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `contrats: les types de /v1/admin, et des fixtures qui s'y tiennent`
 
 ---
 
