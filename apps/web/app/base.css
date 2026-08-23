@@ -40,13 +40,12 @@
 }
 
 /* --------------------------------------------------------------------------
-   CSS structurel des composants d'avant le socle. Ces classes servent des
-   composants qui n'ont pas encore été réécrits sur le nouveau système ; la
-   tâche 9 les retire avec eux. Ce qui a un jeton exact le porte ; ce qui n'a
-   pas d'équivalent (affichage, flex-basis, container-type, les seuils de
-   requête, et les valeurs sans correspondance exacte dans l'échelle — 18px,
-   9px, 13px, le 14px de police) reste littéral : ce sont des règles de
-   structure, pas des valeurs de design.
+   CSS structurel de la landing (components/landing/). Un style en ligne ne
+   peut pas porter :hover, un attribut data-*, ni une requête de conteneur :
+   c'est ce que ces classes portent à sa place. Ce qui a un jeton exact le
+   porte ; ce qui n'a pas d'équivalent (affichage, flex-basis, container-type,
+   les seuils de requête) reste littéral — des règles de structure, pas des
+   valeurs de design.
    -------------------------------------------------------------------------- */
 
 /* Réservé aux lecteurs d'écran : sans cette règle, un texte qui ne leur est
@@ -65,33 +64,30 @@
 :root.lehno-nuit .si-sombre, body.lehno-nuit .si-sombre { display: block; }
 
 /* La landing se replie sur la largeur de sa propre colonne, pas sur celle de
-   la fenêtre : une requête de conteneur, comme dans la maquette. */
+   la fenêtre : une requête de conteneur. Sous le seuil, SiteHeader remplace sa
+   navigation par un bouton — la langue, le thème et l'appel à l'action restent
+   en place, ce sont eux qu'on vient chercher. */
 .page { container-type: inline-size; container-name: page; }
-.ent-burger { display: none; }
-.ent-nav { display: flex; gap: 18px; font-size: var(--text-body-s); flex-wrap: wrap; }
+.site-burger { display: none; }
+.site-nav { display: flex; gap: var(--space-20); font-size: var(--text-body-s); flex-wrap: wrap; }
 
 @container page (max-width: 760px) {
-  .ent-burger { display: flex; }
-  .ent-mot { display: none; }
-  .ent-cta { padding: 9px var(--space-14); font-size: 14px; }
-  .ent-nav {
+  .site-burger { display: flex; }
+  .site-wordmark { display: none; }
+  .site-nav {
     order: 3; flex-basis: 100%; flex-direction: column; gap: 0;
     margin-top: var(--space-6); padding-top: var(--space-2);
     border-top: var(--border-width) solid var(--border-hairline);
   }
-  .ent-nav[data-ferme="1"] { display: none; }
-  .ent-nav a { padding: 13px var(--space-2); border-bottom: var(--border-width) solid var(--border-hairline); }
-  .pied > * { flex-basis: 100%; margin-left: 0; }
+  .site-nav[data-ferme="1"] { display: none; }
+  .site-nav a { padding: 13px var(--space-2); border-bottom: var(--border-width) solid var(--border-hairline); }
 }
 
-/* Hero.tsx pose l'essentiel de sa grille en style inline ; cette règle ne fait
-   que nommer la structure pour que la classe ne soit plus orpheline (classe
-   trouvée par le test de classes-orphelines.test.ts, hors des huit signalées
-   à la revue — voir le rapport de la tâche 5). */
+/* landing/Hero.tsx pose l'essentiel de sa grille en style inline ; cette
+   classe ne fait que nommer la structure pour qu'elle ne soit pas orpheline
+   (classes-orphelines.test.ts). */
 .hero-grille {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   align-items: center;
-  max-width: var(--page-max);
-  margin: 0 auto;
 }
