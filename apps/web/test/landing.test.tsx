@@ -1,65 +1,57 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import Landing from "../app/[locale]/page.js";
+import { Landing } from "../components/landing/Landing.js";
+import { messages } from "../messages/index.js";
 import type { ConfigPublique } from "../lib/config-publique.js";
 
-const config: ConfigPublique = {
-  signupFreeCredits: 5, creditUnitPrice: 100, currency: "XAF", referralBonusInvited: 0,
-};
+const config: ConfigPublique = { signupFreeCredits: 5, creditUnitPrice: 100, currency: "XAF", referralBonusInvited: 0 };
 
-// La configuration n'entre pas par une prop : Next refuse toute propriété de page
-// hors « params ». On pose donc le serveur, ce qui a l'avantage d'éprouver le
-// chemin réel — celui qui tournera en production.
-const rendre = async (locale: string, servi: ConfigPublique | null = config): Promise<void> => {
-  vi.stubEnv("API_URL", "http://api.test");
-  vi.stubGlobal(
-    "fetch",
-    servi === null
-      ? vi.fn().mockRejectedValue(new Error("injoignable"))
-      : vi.fn().mockResolvedValue({ ok: true, json: async () => servi }),
-  );
-  render(await Landing({ params: Promise.resolve({ locale }) }));
-};
-
-afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
-
+// Landing ne connaît rien de Next : elle reçoit sa configuration toute faite,
+// donc les tests la lui posent directement plutôt que de simuler un serveur
+// (page.tsx, qui la résout, n'a plus besoin d'être testé ici).
 describe("landing", () => {
-  it("rend le titre dans la langue demandée", async () => {
-    await rendre("fr");
+  it("rend le titre dans la langue demandée", () => {
+    render(<Landing t={messages("fr")} langue="fr" configuration={config} avantLancement />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Soyez là le jour J");
   });
 
-  it("rend le titre anglais, écrit et non traduit mot à mot", async () => {
-    await rendre("en");
+  it("l'anglais est écrit, pas décalqué", () => {
+    render(<Landing t={messages("en")} langue="en" configuration={config} avantLancement />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Be there on the day");
   });
 
-  it("affiche le prix venu de la configuration, jamais une valeur écrite en dur", async () => {
-    await rendre("fr", { ...config, creditUnitPrice: 150 });
-    expect(screen.getByText(/150/)).toBeInTheDocument();
-    expect(screen.queryByText(/\b100 F\b/)).not.toBeInTheDocument();
-  });
-
-  it("affiche les crédits offerts venus de la configuration", async () => {
-    await rendre("fr", { ...config, signupFreeCredits: 12 });
-    expect(screen.getByText(/12 crédits offerts/)).toBeInTheDocument();
-  });
-
-  it("porte un seul h1", async () => {
-    await rendre("fr");
+  it("porte un seul titre de premier rang", () => {
+    render(<Landing t={messages("fr")} langue="fr" configuration={config} avantLancement />);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });
 
-  it("chaque image porte un texte de remplacement", async () => {
-    await rendre("fr");
+  // Un prix figé dans la page devient faux le jour où l'administration le change.
+  it("le prix vient de la configuration, jamais du code", () => {
+    render(<Landing t={messages("fr")} langue="fr" configuration={{ ...config, creditUnitPrice: 150 }} avantLancement />);
+    expect(screen.getByText(/150/)).toBeInTheDocument();
+    expect(screen.queryByText(/\b100\b/)).not.toBeInTheDocument();
+  });
+
+  it("les crédits offerts viennent aussi de la configuration", () => {
+    render(<Landing t={messages("fr")} langue="fr" configuration={{ ...config, signupFreeCredits: 3 }} avantLancement />);
+    expect(screen.getByText(/3 crédits/)).toBeInTheDocument();
+  });
+
+  it("chaque image porte un texte de remplacement", () => {
+    render(<Landing t={messages("fr")} langue="fr" configuration={config} avantLancement />);
     for (const img of screen.getAllByRole("img")) expect(img).toHaveAccessibleName();
   });
 
-  // Le repli du plan n'était couvert par aucun test : rien n'empêchait de le
-  // supprimer. Une page de pré-lancement doit survivre à une panne du serveur.
-  it("s'affiche même quand l'API ne répond pas", async () => {
-    await rendre("fr", null);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Soyez là le jour J");
-    expect(screen.getByText(/100 F/)).toBeInTheDocument();
+  // Le système l'impose : un seul bouton plein par vue.
+  it("une seule action est mise en avant", () => {
+    const { container } = render(<Landing t={messages("fr")} langue="fr" configuration={config} avantLancement />);
+    const pleins = [...container.querySelectorAll("button, a")].filter((e) =>
+      (e.getAttribute("style") ?? "").includes("var(--action)"));
+    expect(pleins.length).toBeLessThanOrEqual(1);
+  });
+
+  it("aucune section « Mur » — c'est une surface à part", () => {
+    render(<Landing t={messages("fr")} langue="fr" configuration={config} avantLancement />);
+    expect(screen.queryByRole("heading", { name: /votre page à vous/i })).not.toBeInTheDocument();
   });
 });

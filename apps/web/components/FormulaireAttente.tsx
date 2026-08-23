@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type FormEvent, type ReactNode } from "react";
-import type { Messages } from "../messages";
+import type { Messages } from "../messages/index.js";
+import { Banner, Button, Card, TextField } from "./ui/index.js";
 
 type Etat = "saisie" | "envoi" | "envoye" | "erreur";
 
@@ -29,46 +30,39 @@ export function FormulaireAttente({ t }: { t: Messages }): ReactNode {
 
   if (etat === "envoye") {
     return (
-      <div style={{ background: "var(--panel)", borderRadius: 12, padding: "18px 20px", maxWidth: 440 }}>
-        <div className="titre" style={{ fontSize: 19, fontWeight: 500, color: "var(--violet-deep)" }}>{t.merciTitre}</div>
-        <div style={{ fontSize: 14, color: "var(--muted)", marginTop: 4 }}>{t.merciSous}</div>
-      </div>
+      <Card surface="panel" radius="lg" style={{ maxWidth: 440 }}>
+        <div className="titre" style={{ fontSize: "var(--text-display-xs)", fontWeight: "var(--font-display-medium)", color: "var(--text-accent)" }}>
+          {t.merciTitre}
+        </div>
+        <div style={{ fontSize: "var(--text-body-s)", color: "var(--text-secondary)", marginTop: "var(--space-4)" }}>{t.merciSous}</div>
+      </Card>
     );
   }
 
   return (
     <form onSubmit={envoyer} noValidate={false}>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", maxWidth: 440 }}>
+      <div style={{ display: "flex", gap: "var(--space-10)", flexWrap: "wrap", maxWidth: 460, alignItems: "flex-start" }}>
         <label className="lecture-seule" htmlFor="courriel">{t.emailLabel}</label>
-        <input
-          id="courriel"
-          type="email"
-          required
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={t.emailPlaceholder}
-          style={{
-            flex: "1 1 200px", minWidth: 0, fontFamily: "inherit", fontSize: 16,
-            color: "var(--text)", background: "var(--card)", border: "1px solid var(--edge)",
-            borderRadius: 10, padding: "14px 15px",
-          }}
-        />
-        <button
-          type="submit"
-          disabled={etat === "envoi"}
-          style={{
-            fontFamily: "inherit", fontSize: 15, fontWeight: 600, color: "var(--on-violet)",
-            background: "var(--violet)", border: "none", borderRadius: 10,
-            padding: "12px 20px", cursor: "pointer", flex: "0 0 auto",
-          }}
-        >
+        <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+          <TextField
+            id="courriel"
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t.emailPlaceholder}
+          />
+        </div>
+        <Button type="submit" disabled={etat === "envoi"} style={{ minHeight: 50 }}>
           {t.cta}
-        </button>
+        </Button>
       </div>
-      <div style={{ fontSize: 13, color: "var(--faint)", marginTop: 12 }}>{t.waitlist}</div>
+      <div style={{ fontSize: "var(--text-mention-s)", color: "var(--text-mention)", marginTop: "var(--space-12)" }}>{t.waitlist}</div>
       {etat === "erreur" && (
-        <div role="alert" style={{ fontSize: 13, color: "var(--text)", marginTop: 8 }}>{t.waitlistErreur}</div>
+        <div style={{ marginTop: "var(--space-8)" }}>
+          <Banner intent="error">{t.waitlistErreur}</Banner>
+        </div>
       )}
     </form>
   );

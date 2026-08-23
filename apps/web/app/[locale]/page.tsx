@@ -1,26 +1,22 @@
 import type { ReactNode } from "react";
-import { estLangue, type Langue } from "../../lib/langues";
-import { messages } from "../../messages";
-import { chargerConfig } from "../../lib/config-publique";
-import { Entete } from "../../components/Entete";
-import { Hero } from "../../components/Hero";
-import { Etapes } from "../../components/Etapes";
-import { Contenu } from "../../components/Contenu";
-import { Mur } from "../../components/Mur";
-import { Prix } from "../../components/Prix";
-import { Cloture } from "../../components/Cloture";
-import { Pied } from "../../components/Pied";
+import { Landing } from "../../components/landing/Landing.js";
+import { chargerConfig } from "../../lib/config-publique.js";
+import { estLangue, type Langue } from "../../lib/langues.js";
+import { messages } from "../../messages/index.js";
 
 // La configuration bouge rarement : un cache court suffit, et il évite d'appeler
 // l'API à chaque visite d'une page qui, elle, ne change pas.
 export const revalidate = 300;
 
-// Next valide le type des props d'une page : « params » est une promesse, et toute
-// propriété supplémentaire est refusée à la compilation. La configuration ne peut
-// donc pas entrer par une prop — elle est lue ici, et les tests posent le serveur.
+// Rien que ce que Next lui donne : params, et rien d'autre — le vérificateur de
+// pages généré par Next (.next/types) refuse toute propriété en trop, même
+// optionnelle. La résolution de la langue, de la configuration et de
+// l'environnement se fait ici ; le rendu, lui, vit dans Landing
+// (components/landing/Landing.tsx), qui ne connaît rien de Next et se teste
+// donc directement, sans simuler de serveur.
 type Proprietes = { params: Promise<{ locale: string }> };
 
-export default async function Landing({ params }: Proprietes): Promise<ReactNode> {
+export default async function Page({ params }: Proprietes): Promise<ReactNode> {
   const { locale } = await params;
   const langue: Langue = estLangue(locale) ? locale : "fr";
   const t = messages(langue);
@@ -30,18 +26,5 @@ export default async function Landing({ params }: Proprietes): Promise<ReactNode
   // badges de magasins. Il vient de l'environnement, pas du code.
   const avantLancement = process.env["NEXT_PUBLIC_LANCEMENT"] !== "1";
 
-  return (
-    <div className="page">
-      <Entete t={t} langue={langue} />
-      <main>
-        <Hero t={t} langue={langue} avantLancement={avantLancement} />
-        <Etapes t={t} />
-        <Contenu t={t} />
-        <Mur t={t} />
-        <Prix t={t} langue={langue} config={configuration} />
-        <Cloture t={t} langue={langue} avantLancement={avantLancement} />
-      </main>
-      <Pied t={t} langue={langue} />
-    </div>
-  );
+  return <Landing t={t} langue={langue} configuration={configuration} avantLancement={avantLancement} />;
 }
