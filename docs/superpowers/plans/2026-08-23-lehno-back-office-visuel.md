@@ -145,15 +145,15 @@ Vite doit les résoudre, et il lui faut `resolve.extensionAlias` pour les import
 qui pointent des `.ts`, comme pour `apps/web`. Et `pnpm lint` traverse tout l'arbre depuis
 la racine : `dist/` est déjà ignoré, rien à ajouter.
 
-- [ ] **Étape 1 : le test qui échoue** — monter `<App />` et vérifier que la coquille rend
+- [x] **Étape 1 : le test qui échoue** — monter `<App />` et vérifier que la coquille rend
       la marque et le titre de la page d'accueil.
-- [ ] **Étape 2 : le voir échouer** — `pnpm --filter @lehno/admin test`, l'application
+- [x] **Étape 2 : le voir échouer** — `pnpm --filter @lehno/admin test`, l'application
       n'existe pas.
-- [ ] **Étape 3 : implémenter** le squelette. `global.css` ne porte **aucune couleur** :
+- [x] **Étape 3 : implémenter** le squelette. `global.css` ne porte **aucune couleur** :
       seulement la remise à zéro, la famille de texte et la règle de mouvement réduit.
       La feuille des couleurs vient à la tâche 2.
-- [ ] **Étape 4 : le voir passer**, puis `pnpm --filter @lehno/admin build`.
-- [ ] **Étape 5 : commit** — `admin: squelette Vite, membre de l'espace de travail`
+- [x] **Étape 4 : le voir passer**, puis `pnpm --filter @lehno/admin build`.
+- [x] **Étape 5 : commit** — `admin: squelette Vite, membre de l'espace de travail`
 
 ---
 
@@ -200,13 +200,13 @@ en sombre — **pas un quatrième violet**.
 Le violet, le rouge, l'abricot, les courbes de mouvement et la règle du focus **ne sont pas
 redéfinis** : ils viennent des thèmes du produit.
 
-- [ ] **Étape 1 : le test qui échoue** — la feuille contient les quatre blocs ci-dessus ;
+- [x] **Étape 1 : le test qui échoue** — la feuille contient les quatre blocs ci-dessus ;
       `.lehno-admin` porte `--control-height: 32px` ; `.lehno-admin.lehno-nuit` porte
       `--surface-chrome: #131219` ; **aucune couleur n'est écrite en dur** dans `global.css`.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: la feuille globale, posée sur la surcharge du socle`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: la feuille globale, posée sur la surcharge du socle`
 
 ---
 
