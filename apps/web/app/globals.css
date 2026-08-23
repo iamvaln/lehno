@@ -2,6 +2,9 @@
    émises depuis @lehno/tokens et injectées par la coquille (lib/theme-css.ts). */
 * { margin: 0; box-sizing: border-box; }
 
+a { color: var(--violet-deep); text-decoration: none; }
+a:hover { color: var(--text); }
+
 body {
   background: var(--bg); color: var(--text);
   font-family: var(--font-texte), system-ui, sans-serif;
@@ -17,4 +20,36 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* Le libellé et l'icône de la bascule dépendent du thème, que le serveur ne connaît
+   pas : les deux états sont rendus, et le thème posé sur <html> en cache un. Aucun
+   effet React, donc aucun scintillement. */
+.si-clair, .si-sombre { display: block; }
+:root[data-theme="light"] .si-sombre { display: none; }
+:root[data-theme="dark"] .si-clair { display: none; }
+
+/* Réservé aux lecteurs d'écran. */
+.lecture-seule {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* La landing se replie sur la largeur de sa propre colonne, pas sur celle de
+   la fenêtre : une requête de conteneur, comme dans la maquette. */
+.page { container-type: inline-size; container-name: page; }
+.ent-burger { display: none; }
+.ent-nav { display: flex; gap: 18px; font-size: 15px; flex-wrap: wrap; }
+
+@container page (max-width: 760px) {
+  .ent-burger { display: flex; }
+  .ent-mot { display: none; }
+  .ent-cta { padding: 9px 14px; font-size: 14px; }
+  .ent-nav {
+    order: 3; flex-basis: 100%; flex-direction: column; gap: 0;
+    margin-top: 6px; padding-top: 2px; border-top: 1px solid var(--line);
+  }
+  .ent-nav[data-ferme="1"] { display: none; }
+  .ent-nav a { padding: 13px 2px; border-bottom: 1px solid var(--line); }
+  .pied > * { flex-basis: 100%; margin-left: 0; }
 }
