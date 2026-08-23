@@ -42,33 +42,44 @@ enum LoginResult {
 }
 
 model User {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email               String    @unique
-  emailVerified       Boolean   @default(false) @map("email_verified")
-  username            String    @unique
-  displayName         String?   @map("display_name")
-  avatarUrl           String?   @map("avatar_url")
-  referralCode        String    @unique @map("referral_code") @db.VarChar(16)
-  referredBy          String?   @map("referred_by") @db.Uuid
-  status              UserStatus @default(active)
-  deletionRequestedAt DateTime? @map("deletion_requested_at") @db.Timestamptz
-  deletionReason      String?   @map("deletion_reason")
-  uiLanguage          String    @default("fr") @map("ui_language") @db.VarChar(10)
-  theme               UiTheme   @default(system)
-  timezone            String    @default("UTC") @db.VarChar(64)
-  sendHour            Int       @default(9) @map("send_hour") @db.SmallInt
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email               String          @unique
+  emailVerified       Boolean         @default(false) @map("email_verified")
+  username            String          @unique
+  displayName         String?         @map("display_name")
+  avatarUrl           String?         @map("avatar_url")
+  referralCode        String          @unique @map("referral_code") @db.VarChar(16)
+  referredBy          String?         @map("referred_by") @db.Uuid
+  status              UserStatus      @default(active)
+  deletionRequestedAt DateTime?       @map("deletion_requested_at") @db.Timestamptz
+  deletionReason      String?         @map("deletion_reason")
+  uiLanguage          String          @default("fr") @map("ui_language") @db.VarChar(10)
+  theme               UiTheme         @default(system)
+  timezone            String          @default("UTC") @db.VarChar(64)
+  sendHour            Int             @default(9) @map("send_hour") @db.SmallInt
   digestFrequency     DigestFrequency @default(monthly) @map("digest_frequency")
-  reminderLeadDays    Int?      @map("reminder_lead_days")
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  reminderLeadDays    Int?            @map("reminder_lead_days")
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamptz
 
-  referrer        User?  @relation("parrainage", fields: [referredBy], references: [id], onDelete: SetNull)
-  referrals       User[] @relation("parrainage")
-  otpCodes        OtpCode[]
-  identities      FederatedIdentity[]
-  refreshTokens   RefreshToken[]
-  deviceSignups   DeviceSignup[]
-  loginActivities LoginActivity[]
+  referrer                User?                    @relation("parrainage", fields: [referredBy], references: [id], onDelete: SetNull)
+  referrals               User[]                   @relation("parrainage")
+  otpCodes                OtpCode[]
+  identities              FederatedIdentity[]
+  refreshTokens           RefreshToken[]
+  deviceSignups           DeviceSignup[]
+  loginActivities         LoginActivity[]
+  people                  Person[]
+  authoredEvents          Event[]
+  authoredNotes           Note[]
+  authoredWishes          WishlistItem[]
+  eventOccurrences        EventOccurrence[]
+  notifications           Notification[]
+  notificationPreferences NotificationPreference[]
+  devices                 Device[]
+  supportRequests         SupportRequest[]
+  feedbacks               Feedback[]
+  dataExportRequests      DataExportRequest[]
 
   @@map("user")
 }
@@ -91,13 +102,13 @@ model OtpCode {
 }
 
 model FederatedIdentity {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String   @map("user_id") @db.Uuid
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String           @map("user_id") @db.Uuid
   provider       IdentityProvider
-  providerUserId String   @map("provider_user_id")
-  emailAtLink    String?  @map("email_at_link")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
-  lastUsedAt     DateTime? @map("last_used_at") @db.Timestamptz
+  providerUserId String           @map("provider_user_id")
+  emailAtLink    String?          @map("email_at_link")
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  lastUsedAt     DateTime?        @map("last_used_at") @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -160,4 +171,401 @@ model WaitlistSignup {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("waitlist_signup")
+}
+
+enum PersonRegister {
+  familier
+  amical
+  formel
+}
+
+enum EventKind {
+  birthday
+  other
+}
+
+enum EventNature {
+  happy
+  sensitive
+}
+
+enum ScheduleType {
+  recurrent
+  offset
+}
+
+enum ScheduleUnit {
+  day
+  week
+  month
+  quarter
+  year
+}
+
+enum OffsetUnit {
+  day
+  month
+}
+
+enum OccurrenceStatus {
+  upcoming
+  collecting
+  closed
+}
+
+enum ContentOrigin {
+  owner
+  collected
+}
+
+enum CategoryKind {
+  ponctuelle
+  durable
+}
+
+enum AssignmentSource {
+  auto
+  user
+}
+
+enum WishlistStatus {
+  available
+  reserved
+  fulfilled
+}
+
+enum WishlistOrigin {
+  collected
+  accepted_idea
+  owner
+}
+
+model Person {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String          @map("user_id") @db.Uuid
+  displayName  String          @map("display_name")
+  isSelf       Boolean         @default(false) @map("is_self")
+  register     PersonRegister?
+  language     String?         @db.VarChar(10)
+  relationHint String?         @map("relation_hint")
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events        Event[]
+  notes         Note[]
+  notifications Notification[]
+
+  @@index([userId])
+  @@map("person")
+}
+
+model Event {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  personId      String      @map("person_id") @db.Uuid
+  authorUserId  String?     @map("author_user_id") @db.Uuid
+  label         String?
+  kind          EventKind   @default(other)
+  eventNature   EventNature @default(happy) @map("event_nature")
+  referenceDate DateTime    @map("reference_date") @db.Date
+  yearKnown     Boolean     @default(true) @map("year_known")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  person      Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+  author      User?             @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  schedules   Schedule[]
+  occurrences EventOccurrence[]
+  notes       Note[]
+
+  @@index([personId])
+  @@map("event")
+}
+
+model Schedule {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId      String        @map("event_id") @db.Uuid
+  type         ScheduleType
+  unit         ScheduleUnit?
+  interval     Int?
+  offsetUnit   OffsetUnit?   @map("offset_unit")
+  offsetAmount Int?          @map("offset_amount")
+  leadTimeDays Int?          @map("lead_time_days")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("schedule")
+}
+
+model EventOccurrence {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId        String           @map("event_id") @db.Uuid
+  userId         String           @map("user_id") @db.Uuid
+  occurrenceDate DateTime         @map("occurrence_date") @db.Date
+  occurrenceYear Int?             @map("occurrence_year")
+  status         OccurrenceStatus @default(upcoming)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes         Note[]
+  wishes        WishlistItem[]
+  notifications Notification[]
+
+  @@unique([eventId, occurrenceDate])
+  @@index([userId, occurrenceDate])
+  @@map("event_occurrence")
+}
+
+model Note {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  personId          String        @map("person_id") @db.Uuid
+  authorUserId      String?       @map("author_user_id") @db.Uuid
+  eventId           String?       @map("event_id") @db.Uuid
+  eventOccurrenceId String?       @map("event_occurrence_id") @db.Uuid
+  content           String
+  origin            ContentOrigin @default(owner)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  person     Person           @relation(fields: [personId], references: [id], onDelete: Cascade)
+  event      Event?           @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  occurrence EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  author     User?            @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  categories NoteCategory[]
+
+  @@index([personId, createdAt])
+  @@map("note")
+}
+
+model Category {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String       @unique @db.VarChar(40)
+  kind         CategoryKind
+  isConstraint Boolean      @default(false) @map("is_constraint")
+
+  notes NoteCategory[]
+
+  @@map("category")
+}
+
+model NoteCategory {
+  noteId     String           @map("note_id") @db.Uuid
+  categoryId String           @map("category_id") @db.Uuid
+  assignedBy AssignmentSource @default(auto) @map("assigned_by")
+
+  note     Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@id([noteId, categoryId])
+  @@map("note_category")
+}
+
+model WishlistItem {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventOccurrenceId String         @map("event_occurrence_id") @db.Uuid
+  authorUserId      String?        @map("author_user_id") @db.Uuid
+  label             String
+  imageUrl          String?        @map("image_url")
+  details           String?
+  link              String?
+  price             Decimal?       @db.Decimal(12, 2)
+  currency          String?        @db.VarChar(3)
+  status            WishlistStatus @default(available)
+  origin            WishlistOrigin
+  isPublic          Boolean        @default(false) @map("is_public")
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  occurrence EventOccurrence @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  author     User?           @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([eventOccurrenceId])
+  @@map("wishlist_item")
+}
+
+enum NotificationType {
+  event_reminder
+  event_day_of
+  digest
+  contribution_received
+  wish_received
+  enrichment_nudge_global
+  enrichment_nudge_person
+  generation_ready
+  payment_succeeded
+  payment_failed
+  credits_received
+  login_code
+  security
+  account
+}
+
+enum NotificationChannel {
+  email
+  push
+  in_app
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  read
+  failed
+}
+
+enum DevicePlatform {
+  ios
+  android
+}
+
+enum ParamValueType {
+  number
+  money
+  duration
+  boolean
+  string
+}
+
+enum SupportRequestStatus {
+  open
+  answered
+  closed
+}
+
+enum DataExportStatus {
+  pending
+  ready
+  failed
+  expired
+}
+
+model Notification {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String              @map("user_id") @db.Uuid
+  type              NotificationType
+  eventOccurrenceId String?             @map("event_occurrence_id") @db.Uuid
+  personId          String?             @map("person_id") @db.Uuid
+  channel           NotificationChannel
+  titleKey          String              @map("title_key") @db.VarChar(64)
+  bodyParams        Json?               @map("body_params")
+  targetRoute       String?             @map("target_route")
+  dedupeKey         String?             @unique @map("dedupe_key")
+  scheduledFor      DateTime?           @map("scheduled_for") @db.Timestamptz
+  sentAt            DateTime?           @map("sent_at") @db.Timestamptz
+  readAt            DateTime?           @map("read_at") @db.Timestamptz
+  status            NotificationStatus  @default(pending)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  occurrence EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
+  person     Person?          @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt])
+  @@index([status, scheduledFor])
+  @@map("notification")
+}
+
+model NotificationPreference {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String           @map("user_id") @db.Uuid
+  type         NotificationType
+  pushEnabled  Boolean          @default(true) @map("push_enabled")
+  emailEnabled Boolean          @default(true) @map("email_enabled")
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@map("notification_preference")
+}
+
+model Device {
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String         @map("user_id") @db.Uuid
+  pushToken  String         @map("push_token")
+  platform   DevicePlatform
+  appVersion String?        @map("app_version") @db.VarChar(20)
+  isActive   Boolean        @default(true) @map("is_active")
+  lastSeenAt DateTime?      @map("last_seen_at") @db.Timestamptz
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pushToken])
+  @@map("device")
+}
+
+model SystemParameter {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String         @unique @db.VarChar(64)
+  value       String
+  valueType   ParamValueType @map("value_type")
+  description String?
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("system_parameter")
+}
+
+model SupportRequest {
+  id         String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String               @map("user_id") @db.Uuid
+  subject    String?
+  body       String
+  appVersion String?              @map("app_version") @db.VarChar(20)
+  platform   DevicePlatform?
+  status     SupportRequestStatus @default(open)
+  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("support_request")
+}
+
+model Feedback {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  rating     Int?     @db.SmallInt
+  body       String?
+  appVersion String?  @map("app_version") @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("feedback")
+}
+
+// Revue tour 2, point 3 : varchar(160) était trop court — "otp:email:" (10)
+// plus une adresse conforme au contrat (jusqu'à 254, cf. requestOtpSchema)
+// atteint 264. Plutôt que remplacer un plafond arbitraire par un autre
+// (que phase 1 referait échouer dès qu'un nouveau type de clé, plus long,
+// s'ajoute — rappels, SMS...), la colonne n'a plus de longueur déclarée :
+// String sans @db.VarChar correspond à `text` côté Postgres, sans plafond.
+// La table reste bornée dans le temps par RateLimitService.purgeOlderThan.
+model RateLimitHit {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key       String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([key, createdAt])
+  @@map("rate_limit_hit")
+}
+
+model DataExportRequest {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  status      DataExportStatus @default(pending)
+  fileUrl     String?          @map("file_url")
+  expiresAt   DateTime?        @map("expires_at") @db.Timestamptz
+  completedAt DateTime?        @map("completed_at") @db.Timestamptz
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("data_export_request")
 }
