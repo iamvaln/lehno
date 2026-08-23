@@ -95,16 +95,21 @@ export class WaitlistService {
   // Le rempart, ce sont les plafonds ci-dessus, qui ne dépendent d'aucune
   // coopération du client.
   //
-  // Le refus emprunte un seul code, `waitlist_rejected`, pour ne pas dire
-  // lequel des deux filtres a mordu : un robot qui l'apprend s'ajuste.
+  // Le refus emprunte un seul code ET un seul message : `AppError.toEnvelope`
+  // renvoie le message au client tel quel, donc deux libellés distincts
+  // diraient au robot lequel des deux filtres a mordu — et il s'ajusterait.
+  // La distinction n'existe que dans le journal, où elle sert au diagnostic.
   private refuserLesRobots(input: WaitlistJoinInput): void {
-    if (input.website !== undefined && input.website !== "") {
-      throw new AppError("waitlist_rejected", "honeypot field filled");
-    }
+    const refuser = (cause: string): never => {
+      this.journal.warn(`soumission écartée : ${cause}`);
+      throw new AppError("waitlist_rejected", "submission rejected");
+    };
+
+    if (input.website !== undefined && input.website !== "") refuser("champ leurre rempli");
     if (input.renderedAt !== undefined) {
       const ecoule = Date.now() - input.renderedAt;
       if (ecoule < DELAI_MINIMAL_MS || ecoule > DELAI_MAXIMAL_MS) {
-        throw new AppError("waitlist_rejected", "implausible submission delay");
+        refuser(`délai de soumission invraisemblable (${ecoule} ms)`);
       }
     }
   }

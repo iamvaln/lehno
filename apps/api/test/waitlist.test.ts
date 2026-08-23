@@ -138,6 +138,26 @@ describe("liste d'attente", () => {
     expect(mail.envoyes).toHaveLength(0);
   });
 
+  // Les deux filtres à robots doivent être indiscernables depuis le client :
+  // AppError.toEnvelope renvoie le message tel quel, donc deux libellés
+  // distincts diraient au robot lequel a mordu, et il s'ajusterait.
+  it("ne dit pas lequel des deux filtres a écarté la soumission", async () => {
+    const attraper = async (corps: Parameters<typeof service.join>[0]) => {
+      try {
+        await service.join(corps);
+        expect.unreachable("aurait dû être refusé");
+      } catch (erreur) {
+        const e = erreur as AppError;
+        return { code: e.code, message: e.message };
+      }
+    };
+
+    const parLeLeurre = await attraper({ email: "a@example.com", locale: "fr", website: "spam" });
+    const parLeDelai = await attraper({ email: "b@example.com", locale: "fr", renderedAt: Date.now() });
+
+    expect(parLeDelai).toEqual(parLeLeurre);
+  });
+
   // La base est en citext, mais la clé du limiteur est une chaîne ordinaire :
   // sans normalisation, « AWA@ » et « awa@ » ouvrent deux compteurs et le
   // plafond se contourne par la touche majuscule. Le test précédent ne le

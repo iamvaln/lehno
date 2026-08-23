@@ -1,3 +1,6 @@
+// Doit rester le premier import : il pose les variables d'environnement avant
+// que le moindre module ne les lise (voir env.ts).
+import "./env.js";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module.js";
 import { AppExceptionFilter } from "./common/errors.js";
