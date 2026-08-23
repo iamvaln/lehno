@@ -3,7 +3,11 @@
 # Image de l'API (@lehno/api — NestJS). Construction à exécuter depuis la
 # racine du dépôt, le contexte doit être le monorepo entier :
 #
-#   docker build -f infra/docker/Dockerfile.api -t lehno-api .
+#   docker build -f apps/api/Dockerfile -t lehno-api .
+#
+# Cette image sert aussi le service « migrate » de docker-compose.yml (même
+# image, commande différente : node_modules/.bin/prisma migrate deploy) —
+# elle garde donc le CLI Prisma et le schéma, pas seulement le client.
 #
 # Étapes :
 #   base    — image commune, pnpm activé
@@ -26,6 +30,23 @@ FROM node:20-alpine AS base
 RUN apk add --no-cache openssl
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /repo
+# Résilience réseau (repris de gabee) : plus de tentatives, délai plus long,
+# moins de sockets en parallèle — évite un ERR_SOCKET_TIMEOUT sur une liaison
+# lente ou bridée, au prix d'une installation un peu plus lente.
+#
+# package-import-method=copy : pnpm relie par défaut node_modules au store
+# local par des liens durs (hardlinks). Cette image copie ensuite un
+# node_modules déjà lié (COPY --from=deploy plus bas) dans une AUTRE couche
+# — au « docker pull » sur le VPS, l'extraction overlayfs de containerd peut
+# alors échouer par intermittence (« link … no such file or directory »),
+# une course d'extraction entre couches, pas une vraie erreur de disque.
+# « copy » fait de chaque fichier de node_modules une copie réelle : plus de
+# lien dur entre couches, donc plus de course possible à l'extraction.
+ENV npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_maxtimeout=120000 \
+    npm_config_fetch_timeout=600000 \
+    npm_config_network_concurrency=4 \
+    npm_config_package_import_method=copy
 
 FROM base AS install
 # Contexte = racine du monorepo. prisma/ doit être présent avant l'install :
@@ -88,6 +109,9 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/v1/public/config').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-# migrate deploy avant le démarrage : n'applique que les migrations en
-# attente, sûr à rejouer à chaque redémarrage du conteneur.
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node --import tsx/esm src/main.ts"]
+# Les migrations sont appliquées par le service « migrate » de
+# docker-compose.yml (même image, commande différente), avant que ce
+# service ne démarre — pas ici : un « prisma migrate deploy » par
+# instance, à chaque redémarrage, ferait courir plusieurs migrations
+# concurrentes si l'api tourne un jour à plus d'une réplique.
+CMD ["node", "--import", "tsx/esm", "src/main.ts"]

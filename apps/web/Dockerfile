@@ -3,7 +3,7 @@
 # Image du site public (@lehno/web — Next.js App Router). Construction à
 # exécuter depuis la racine du dépôt, contexte = monorepo entier :
 #
-#   docker build -f infra/docker/Dockerfile.web -t lehno-web .
+#   docker build -f apps/web/Dockerfile -t lehno-web .
 #
 # Étapes :
 #   base    — image commune, pnpm activé
@@ -17,6 +17,15 @@
 FROM node:20-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /repo
+# Résilience réseau + copies réelles plutôt que liens durs entre couches —
+# voir le commentaire équivalent dans apps/api/Dockerfile (« repris de
+# gabee ») : cette image copie elle aussi un node_modules déjà lié
+# (COPY --from=builder de .next/standalone plus bas) d'une couche à l'autre.
+ENV npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_maxtimeout=120000 \
+    npm_config_fetch_timeout=600000 \
+    npm_config_network_concurrency=4 \
+    npm_config_package_import_method=copy
 
 FROM base AS install
 COPY . .
