@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  adminOverride, resolveAdmin, cssAdmin, contrastRatio,
+  adminOverride, resolveAdmin, resolve, cssAdmin, contrastRatio,
   typography, shape, density,
 } from "./index.js";
 
@@ -11,6 +11,21 @@ describe("surcharge du back-office", () => {
     const produit: Record<string, string> = { ...typography, ...shape, ...density };
     for (const [clef, valeur] of Object.entries(adminOverride.tokens))
       expect(produit[clef], `${clef} est identique au produit : à retirer`).not.toBe(valeur);
+  });
+
+  // Même règle côté couleurs : une surface admin qui redit la valeur que le
+  // produit résout déjà n'est pas un écart, c'est une duplication qui finira
+  // par diverger d'un seul côté sans que personne ne l'ait décidé.
+  it("les couleurs de la surcharge ne contiennent, elles non plus, que des écarts", () => {
+    // On rassemble tous les doublons avant d'échouer, pour que le message
+    // d'erreur les liste tous d'un coup plutôt que de s'arrêter au premier.
+    const doublons: string[] = [];
+    for (const theme of ["light", "dark"] as const) {
+      const produit = resolve(theme);
+      for (const [clef, valeur] of Object.entries(adminOverride.colors[theme]))
+        if (produit[clef as keyof typeof produit] === valeur) doublons.push(`${theme}.${clef}`);
+    }
+    expect(doublons, "identiques au produit : à retirer").toEqual([]);
   });
 
   it("efface Fraunces : un outil n'a pas à être intime", () => {
@@ -40,6 +55,8 @@ describe("surcharge du back-office", () => {
     ["textBody", "surfaceChrome"], ["textSecondary", "surfaceChrome"],
     ["textBody", "surfacePanel"], ["textSecondary", "surfacePanel"],
     ["textAccent", "surfaceChrome"], ["textBody", "surfaceCard"],
+    ["textMention", "surfaceChrome"], ["textMention", "surfacePanel"],
+    ["textMention", "surfaceCard"], ["onBand", "surfaceBand"],
   ] as const)("%s sur %s atteint 4,5:1 dans les deux thèmes", (fg, bg) => {
     for (const theme of ["light", "dark"] as const) {
       const c = resolveAdmin(theme);

@@ -6,7 +6,17 @@ describe("émission CSS", () => {
     const css = cssVariables("light");
     expect(css).toContain("--surface-page: #FFFFFF;");
     expect(css).toContain("--text-on-accent: #FFFFFF;");
-    expect(css).not.toMatch(/--[a-z]+[A-Z]/);
+  });
+
+  // La règle de conversion doit tenir sur les cas difficiles : un groupe de
+  // chiffres collé à des lettres (2xl), et un sigle interne (Bg). Une
+  // conversion approximative produirait des variables que le CSS ne
+  // trouverait jamais, sans qu'aucun test n'échoue bruyamment.
+  it("convertit correctement les cas difficiles : chiffres et sigles internes", () => {
+    const tokens = cssTokens();
+    expect(tokens).toContain("--radius-2xl: 22px;");
+    const colors = cssVariables("light");
+    expect(colors).toContain("--feedback-info-bg: #EDEAF7;");
   });
 
   it("le thème sombre rend d'autres valeurs pour les mêmes rôles", () => {

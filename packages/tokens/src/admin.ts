@@ -23,13 +23,11 @@ export const adminOverride = {
   },
   colors: {
     light: {
-      surfaceChrome: "#F7F6FA", surfacePage: "#FFFFFF", surfacePanel: "#F2F0F7",
-      surfaceCard: "#FFFFFF", surfaceBand: "#221F2B",
+      surfaceChrome: "#F7F6FA", surfacePanel: "#F2F0F7",
       borderHairline: "#E8E5EF", borderObject: "#DCD8E6",
     },
     dark: {
-      surfaceChrome: "#131219", surfacePage: "#17161F", surfacePanel: "#1E1C29",
-      surfaceCard: "#1B1928", surfaceBand: "#2E2945",
+      surfaceChrome: "#131219", surfacePanel: "#1E1C29",
       borderHairline: "#262433", borderObject: "#34314A",
     },
   },
