@@ -34,13 +34,16 @@ function FicheProche({ t, langue }: { t: Messages; langue: Langue }): ReactNode 
         <div>
           <SectionLabel>{t.idees}</SectionLabel>
           <div style={{ marginTop: "var(--space-8)" }}>
-            <Quote size={14.5} tone="muted">{t.ideeTexte}</Quote>
-            <Provenance origin={t.ideeDate} />
+            <Quote size={14.5} tone="muted">{t.ideeParole}</Quote>
+            <Provenance origin={t.provIdee} />
           </div>
         </div>
         <div>
           <SectionLabel>{t.nogo}</SectionLabel>
-          <p style={{ margin: "var(--space-8) 0 0", fontSize: 14.5, color: "var(--text-secondary)" }}>{t.nogoTexte}</p>
+          <div style={{ marginTop: "var(--space-8)" }}>
+            <Quote size={14.5} tone="muted">{t.nogoParole}</Quote>
+            <Provenance origin={t.provNogo} />
+          </div>
         </div>
       </div>
     </div>
@@ -49,10 +52,10 @@ function FicheProche({ t, langue }: { t: Messages; langue: Langue }): ReactNode 
 
 function Calendrier({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
   const dates: { date: string; nom: string; detail: string; jours: number }[] = [
+    { date: t.date21, nom: "Celarine", detail: `${t.anniv} · ${t.age29}`, jours: 0 },
     { date: t.date24, nom: "Valery Bah", detail: `${t.anniv} · ${t.age36}`, jours: 3 },
     { date: t.date30, nom: "Mathias & Rose", detail: `${t.mariage} · ${t.an5}`, jours: 9 },
     { date: t.date2, nom: t.maman, detail: t.retraite, jours: 12 },
-    { date: t.date14, nom: t.nourEtMoi, detail: t.sixMois, jours: 24 },
   ];
 
   return (
@@ -85,6 +88,7 @@ function Brouillon({ t }: { t: Messages }): ReactNode {
       <SectionLabel style={{ color: "var(--text-accent)" }}>{t.brouillon}</SectionLabel>
       <div style={{ marginTop: "var(--space-14)" }}>
         <Quote size={19}>{t.brouillonTexte}</Quote>
+        <Provenance origin={t.provBrouillon} />
       </div>
       <div style={{ display: "flex", gap: "var(--space-10)", marginTop: "var(--space-20)", flexWrap: "wrap" }}>
         {/* Fragment d'écran, pas une action réelle de la page : comme dans
@@ -106,7 +110,7 @@ function Brouillon({ t }: { t: Messages }): ReactNode {
 export function Content({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
   return (
     <>
-      <FeatureRow id="contenu" titre={t.blocFicheTitre} texte={t.blocFiche}>
+      <FeatureRow id="contenu" kicker={t.contenuKicker} titre={t.blocFicheTitre} texte={t.blocFiche}>
         <FicheProche t={t} langue={langue} />
       </FeatureRow>
 

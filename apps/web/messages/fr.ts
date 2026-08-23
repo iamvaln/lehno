@@ -50,6 +50,7 @@ export const fr = {
   etape3Titre: "Offrez quelque chose de juste.",
   etape3: "Une idée de cadeau qui lui ressemble, un mot dans votre ton à vous. Vous choisissez, vous envoyez.",
 
+  contenuKicker: "Ce que l'application contient",
   blocFicheTitre: "Vos proches, dans un carnet qui se souvient",
   blocFiche: "Une fiche par personne : sa date, ses goûts, ce qu'elle a laissé entendre. Ça s'enrichit au fil de l'année, sans effort. Et ça ressert chaque année.",
   registre: "registre amical",
@@ -57,13 +58,15 @@ export const fr = {
   idees: "Idées cadeaux",
   nogo: "Dislikes / no-go",
   tag1: "vinyles", tag2: "rando", tag3: "café de spécialité",
-  ideeTexte: "« Il a parlé d'un moulin à café manuel, le sien rend l'âme. »",
-  ideeDate: "noté en mars",
-  nogoTexte: "Ne boit pas d'alcool.",
+  ideeParole: "Il a parlé d'un moulin à café manuel, le sien rend l'âme.",
+  provIdee: "noté en mars",
+  nogoParole: "Je ne bois pas d'alcool.",
+  provNogo: "dit par lui, en janvier",
 
   blocDatesTitre: "Toutes vos dates, au même endroit",
   blocDates: "Anniversaires, mariages, retraites, six mois d'une histoire : tout ce qui mérite d'être marqué tient dans le même calendrier.",
-  maman: "Maman", retraite: "Départ en retraite", nourEtMoi: "Nour & moi", sixMois: "Six mois",
+  date21: "21 août", age29: "29 ans",
+  maman: "Maman", retraite: "Départ en retraite",
   age36: "36 ans", an5: "5 ans",
 
   blocMotTitre: "Un mot qui vient de vous",
@@ -74,6 +77,7 @@ export const fr = {
   idee3: "Le moulin à café manuel dont il a parlé en mars",
   brouillon: "Brouillon · pour Valery",
   brouillonTexte: "« Valery, 36 ans et toujours cette manie de refaire le monde à minuit. Merci pour l'été dernier — je te dois au moins un café correct. Bon anniversaire, mon vieux. »",
+  provBrouillon: "écrit à partir de 9 notes sur Valery",
   modifier: "Modifier et envoyer",
   regenerer: "Régénérer",
 
