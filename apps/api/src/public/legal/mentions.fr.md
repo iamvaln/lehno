@@ -9,13 +9,13 @@ Akwa, Douala, Cameroun
 Téléphone : +237 691 980 190
 Courriel : hello@lehno.app
 
-Forme juridique et numéro d'immatriculation (RCCM) : [À CONFIRMER — repris des
-registres de l'entreprise avant mise en production].
+Forme juridique : société à responsabilité limitée (SARL).
+Numéro d'immatriculation (RCCM) : [À CONFIRMER — à reporter du registre avant
+mise en production].
 
 ## Directeur de la publication
 
-Valentine Nguemne, pour Proxia Digital. [À CONFIRMER — qualité exacte à porter,
-telle qu'elle figure au registre de l'entreprise.]
+Valentine Nguemne, à la direction de Proxia Digital.
 
 ## Hébergement
 
@@ -25,6 +25,7 @@ Les données sont hébergées dans l'Union européenne.
 ## Protection des données
 
 Délégué à la protection des données : Valentine Nguemne — hello@lehno.app
+La fonction est tenue par la direction de l'entreprise.
 
 Les traitements réalisés dans le cadre de Lehno sont décrits dans la
 [politique de confidentialité](/v1/public/legal/confidentialite).
@@ -32,8 +33,9 @@ Les traitements réalisés dans le cadre de Lehno sont décrits dans la
 ## Contact
 
 Toute question relative au service peut être adressée à hello@lehno.app.
-Une réponse est apportée sous [À CONFIRMER — deux jours ouvrés est un
-engagement, pas une formule : à retenir seulement s'il est tenable].
+Une réponse est apportée sous **cinq jours ouvrés**. Les demandes portant sur vos
+données personnelles relèvent du délai indiqué à la section 8 de la
+[politique de confidentialité](/v1/public/legal/confidentialite).
 
 ## Propriété
 

@@ -9,13 +9,13 @@ Akwa, Douala, Cameroon
 Phone: +237 691 980 190
 Email: hello@lehno.app
 
-Legal form and company registration number (RCCM): [TO BE CONFIRMED — taken
-from the company register before production launch].
+Legal form: limited liability company (SARL).
+Company registration number (RCCM): [TO BE CONFIRMED — to be copied from the
+register before production launch].
 
 ## Publication director
 
-Valentine Nguemne, for Proxia Digital. [TO BE CONFIRMED — exact title, as it
-appears on the company register.]
+Valentine Nguemne, leading Proxia Digital.
 
 ## Hosting
 
@@ -25,6 +25,7 @@ Data is hosted in the European Union.
 ## Data protection
 
 Data Protection Officer: Valentine Nguemne — hello@lehno.app
+The role is held by the company's leadership.
 
 The processing carried out as part of Lehno is described in the
 [privacy policy](/v1/public/legal/confidentialite?lang=en).
@@ -32,8 +33,9 @@ The processing carried out as part of Lehno is described in the
 ## Contact
 
 Any question about the service can be sent to hello@lehno.app.
-A reply is provided within [TO BE CONFIRMED — "two business days" is a
-commitment, not a turn of phrase: keep it only if it can be held].
+A reply is provided within **five business days**. Requests concerning your
+personal data fall under the period stated in section 8 of the
+[privacy policy](/v1/public/legal/confidentialite?lang=en).
 
 ## Ownership
 

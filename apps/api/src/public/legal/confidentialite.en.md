@@ -31,8 +31,8 @@ Phone: +237 691 980 190
 Email: hello@lehno.app
 
 Data Protection Officer (DPO): Valentine Nguemne — hello@lehno.app
-[TO BE CONFIRMED — address to be created before production launch; Gabee and
-MonJeton already use a product address rather than a personal one].
+The role is held by the company's leadership; it is not delegated to a third
+party.
 
 ## 2. Data collected
 
@@ -143,10 +143,12 @@ request is carried out without asking for a reason.
 Your data may be passed to the following processors, strictly for the purposes
 described, under a contract compliant with article 28 GDPR:
 
-- **Anthropic PBC (United States), DeepSeek (China), xAI (United States)** —
-  generation of portraits, gift ideas and messages, with routing and fallback
-  between them. Only the text of the relevant notes and the person's name are
-  sent.
+- **Generation processors** — producing portraits, gift ideas and messages. Only
+  the text of the relevant notes and the person's name are sent to them. The
+  providers under consideration are Anthropic PBC (United States), xAI (United
+  States) and DeepSeek (China), with routing and fallback between them; **each is
+  enabled only once the transfer safeguards required by law no. 2024/017 are in
+  place with them**, and this list is updated at that point.
 - **Mailgun** — the Service's emails: one-time codes, reminders, confirmations.
 - **OneSignal (United States)** — push notifications.
 - **Sentry** — technical error tracking. Incidents carry the correlation
@@ -163,10 +165,6 @@ adequate safeguards**; these are documented by contract with each processor. For
 people residing in the European Union, such transfers are additionally covered by
 the standard contractual clauses approved by the European Commission
 (art. 46 GDPR). A copy can be obtained from the DPO.
-
-Using a generation processor established in China calls for particular care:
-[TO BE CONFIRMED — contractual guarantees and the fate of transferred data, to be
-settled before that routing is enabled in production].
 
 ## 7. Retention
 

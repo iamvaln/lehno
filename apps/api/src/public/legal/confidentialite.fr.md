@@ -32,10 +32,9 @@ Akwa, Douala, Cameroun
 Téléphone : +237 691 980 190
 Courriel : hello@lehno.app
 
-Délégué à la protection des données (DPO) : Valentine Nguemne —
-hello@lehno.app [À CONFIRMER — adresse à créer avant mise en production ; Gabee
-et MonJeton emploient déjà une adresse de produit plutôt qu'une adresse
-personnelle].
+Délégué à la protection des données (DPO) : Valentine Nguemne — hello@lehno.app
+La fonction est tenue par la direction de l'entreprise ; elle n'est pas déléguée
+à un tiers.
 
 ## 2. Données collectées
 
@@ -156,9 +155,13 @@ Vos données peuvent être transmises aux sous-traitants suivants, strictement p
 les finalités décrites, et dans le cadre d'un contrat conforme à l'article 28 du
 RGPD :
 
-- **Anthropic PBC (États-Unis), DeepSeek (Chine), xAI (États-Unis)** — génération
-  des portraits, idées de cadeau et messages, avec routage et repli entre eux.
-  Seuls le texte des notes concernées et le nom d'usage du proche sont transmis.
+- **Sous-traitants de génération** — production des portraits, idées de cadeau et
+  messages. Seuls le texte des notes concernées et le nom d'usage du proche leur
+  sont transmis. Les prestataires envisagés sont Anthropic PBC (États-Unis),
+  xAI (États-Unis) et DeepSeek (Chine), avec routage et repli entre eux ;
+  **chacun n'est activé qu'une fois les garanties de transfert exigées par la loi
+  n° 2024/017 réunies avec lui**, et la présente liste est mise à jour à ce
+  moment-là.
 - **Mailgun** — envoi des courriels du Service : codes à usage unique, rappels,
   confirmations.
 - **OneSignal (États-Unis)** — notifications poussées.
@@ -176,10 +179,6 @@ garanties adéquates** ; celles-ci sont documentées par contrat avec chaque
 sous-traitant. Pour les personnes résidant dans l'Union européenne, ces
 transferts relèvent en outre des clauses contractuelles types approuvées par la
 Commission européenne (art. 46 RGPD). Une copie peut être obtenue auprès du DPO.
-
-Le recours à un sous-traitant de génération établi en Chine appelle une vigilance
-particulière : [À CONFIRMER — garanties contractuelles et sort des données
-transmises, à établir avant d'activer ce routage en production].
 
 ## 7. Durées de conservation
 
