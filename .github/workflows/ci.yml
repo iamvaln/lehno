@@ -60,10 +60,20 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # Ne couvre que @lehno/web : @lehno/api n'a pas d'étape de compilation,
+      # elle exécute son TypeScript par tsx au démarrage (voir son
+      # package.json et apps/api/Dockerfile). Ce sont donc « Vérifie les
+      # types » et « Test » qui font foi pour l'API, pas cette barrière-ci.
       - name: Build
         run: pnpm build
 
+      # GITLEAKS_CONFIG explicite plutôt que la découverte implicite du
+      # .gitleaks.toml à la racine : sans lui, l'action a déjà remonté onze
+      # fuites — toutes le même secret de démonstration du jeu de tests — et
+      # la barrière serait rouge à chaque exécution. Le fichier dit ce qu'il
+      # écarte et pourquoi.
       - name: Secrets dans l'historique
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
