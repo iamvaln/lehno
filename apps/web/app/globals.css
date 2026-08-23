@@ -1,4 +1,5 @@
 @import "./base.css";
+@import "./composants.css";
 
 /* Le corps de page : fond et texte par défaut, posés sur les rôles sémantiques.
    Les variables elles-mêmes viennent de la coquille (lib/theme-css.ts), jamais
