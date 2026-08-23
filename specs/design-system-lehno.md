@@ -46,11 +46,15 @@ Les couleurs se déclarent **par rôle**, jamais par valeur. Chaque rôle porte 
 | `band` | `#221F2B` | `#41357E` | Une bande pleine, sur le web |
 | `on-band` | `#FFFFFF` | `#F2F0F7` | Le texte sur cette bande |
 
-### 2.3 Deux paires mesurées
+### 2.3 Trois paires mesurées
 
 **Le gris de mention sur panneau lilas.** `#6B6579` sur `#EDEAF7` donne **4,708:1** — au-dessus du seuil. La valeur précédente (`#726E82`) donnait 4,15 et échouait : la provenance apparaissant sur panneau, sous le brouillon, la combinaison est courante. Le gris retenu est celui du texte, ce qui évite d'ajouter une couleur ; la hiérarchie entre mention et texte secondaire tient désormais par la **taille** (11,5 contre 14 px), signal plus sûr que trois pas de gris.
 
+**Le texte sur abricot.** `#7A4A22` sur `#F0CFB4` donne **5,049:1**. La valeur précédente (`#8A5527`) donnait 4,19 et échouait — or c'est le texte de l'étiquette « aujourd'hui », présente sur presque tous les accueils.
+
 **Le blanc sur violet.** `#FFFFFF` sur `#7B6BB7` donne **4,537:1** — au-dessus du seuil, de trois centièmes. On n'y touche pas : c'est le violet du logotype, et un logotype n'obéit pas à une contrainte de texte. Mais **toute retouche du violet, même d'un pas, se re-mesure avant adoption**. Si de la marge devenait nécessaire, `#7566B0` donne 4,902 pour un écart imperceptible.
+
+**Ce que ces trois cas ont en commun.** Les deux échecs portaient sur un **fond teinté** — lilas, abricot — là où la même couleur passait sur blanc. La règle vaut donc en clair autant qu'en sombre : **une paire posée sur autre chose que le fond se mesure pour elle-même**, jamais par déduction.
 
 ### 2.4 Ce que chaque couleur a le droit de faire
 

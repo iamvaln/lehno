@@ -109,6 +109,8 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | `/me/events/{id}` | GET, PATCH, DELETE | Un événement et sa récurrence |
 | `/me/occurrences` | GET | Les échéances à venir — la vue Dates et l'accueil |
 | `/me/occurrences/{id}` | GET | Le détail d'une occasion |
+| `/me/persons/{id}/gifts` | GET, POST | Ce qui lui a été offert, année par année ; en ajouter |
+| `/me/gifts/{id}` | PATCH, DELETE | Corriger ou retirer une entrée |
 | `/me/occurrences/{id}/notes` | GET, POST | Les notes de circonstance |
 | `/me/occurrences/{id}/wishes` | GET, POST | La liste de souhaits de l'occasion |
 | `/me/wishes/{id}` | PATCH, DELETE | Un souhait : état, exposition publique |
@@ -151,6 +153,8 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 **Sans doublon.** Une même demande relancée (même cible, même paramètres, même clé d'idempotence) rejoint la génération en cours plutôt que d'en créer une seconde — et ne débite qu'une fois.
 
 ### 5.5 Mur
+
+**Ce que le serveur ajoute.** Il complète la demande avec ce que la fiche sait du proche : nom d'usage, lien, ville, âge lorsque l'année de naissance est connue, canal habituel, et **la liste des cadeaux déjà offerts**, que les idées écartent. Le client n'a pas à les transmettre — ils appartiennent au serveur, qui les tient à jour.
 
 | Chemin | Méthode | Rôle |
 |---|---|---|
@@ -700,7 +704,7 @@ La section Métriques s'appuie sur ces événements pour rendre les vues promise
 
 Chaque écran des trois spécifications trouve ici ses points d'entrée. Cette table sert de contrôle : un écran sans ligne signale un manque.
 
-**Application mobile.** Inscription et connexion → `/auth/*`, `/public/invitations/{code}` · Accueil → `/me/home` · Proches → `/me/persons` · Fiche d'un proche → `/me/persons/{id}`, `/notes`, `/portraits` · Saisie d'une note → `/me/notes`, `/me/persons/{id}/notes`, `/me/occurrences/{id}/notes` · Ajout d'un événement → `/me/events` · Génération → `/me/generations` · À valider → `/me/submissions`, `/me/received-wishes` · Crédits et recharge → `/me/credits`, `/me/payments` · Mon Mur → `/me/wall` · Réglages → `/me/notification-preferences`, `/me/data-export` · Surfaces publiques dans l'application → `/v1/public/*` · Centre de notifications → `/me/notifications` · Dates → `/me/occurrences` · Recherche → `/me/search` · Reprises → `/me/resumables` · Moi → agrégat des précédents · Modifier l'identité → `/me/persons/{id}` · Détail d'un souhait → `/me/wishes/{id}` · Partage d'un lien de collecte → `/me/collection-links` · Détail d'une occasion → `/me/occurrences/{id}` · Aperçu d'un portrait → `/me/portraits/{id}` · Mon profil → `/me/profile` · Mes réservations → `/me/reservations` · Sécurité et connexions → `/me/sessions`, `/me/identities`, `/me/account` · Méthode de paiement → `/me/payment-methods` · Aide → `/me/support-requests`, `/me/feedback`, `/public/legal/*`.
+**Application mobile.** Inscription et connexion → `/auth/*`, `/public/invitations/{code}` · Accueil → `/me/home` · Proches → `/me/persons` · Fiche d'un proche → `/me/persons/{id}`, `/notes`, `/portraits`, `/gifts` · Saisie d'une note → `/me/notes`, `/me/persons/{id}/notes`, `/me/occurrences/{id}/notes` · Ajout d'un événement → `/me/events` · Génération → `/me/generations` · À valider → `/me/submissions`, `/me/received-wishes` · Crédits et recharge → `/me/credits`, `/me/payments` · Mon Mur → `/me/wall` · Réglages → `/me/notification-preferences`, `/me/data-export` · Surfaces publiques dans l'application → `/v1/public/*` · Centre de notifications → `/me/notifications` · Dates → `/me/occurrences` · Recherche → `/me/search` · Reprises → `/me/resumables` · Moi → agrégat des précédents · Modifier l'identité → `/me/persons/{id}` · Détail d'un souhait → `/me/wishes/{id}` · Partage d'un lien de collecte → `/me/collection-links` · Détail d'une occasion → `/me/occurrences/{id}` · Aperçu d'un portrait → `/me/portraits/{id}` · Mon profil → `/me/profile` · Mes réservations → `/me/reservations` · Sécurité et connexions → `/me/sessions`, `/me/identities`, `/me/account` · Méthode de paiement → `/me/payment-methods` · Aide → `/me/support-requests`, `/me/feedback`, `/public/legal/*`.
 
 **Surfaces publiques.** Landing → `/public/config`, `/public/waitlist` (pré-lancement) · Collecte nominatif et public → `/public/collect/{token}` · Mur public → `/public/walls/{username}` · Dépôt de vœux → `/public/wishes/{token}` · Portrait partagé → `/public/portraits/{token}` · Invitation au parrainage → `/public/invitations/{code}` · Pages légales → `/public/legal/{document}` · Pages d'état → rendues par les réponses d'état des chemins ci-dessus.
 
