@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@lehno/eslint-config':
+        specifier: workspace:*
+        version: link:packages/eslint-config
       '@prisma/client':
         specifier: 6.19.3
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
@@ -155,6 +158,12 @@ importers:
       '@eslint/js':
         specifier: ^9.12.0
         version: 9.39.5
+      '@lehno/tokens':
+        specifier: workspace:*
+        version: link:../tokens
+      jiti:
+        specifier: ^2.7.0
+        version: 2.7.0
       typescript-eslint:
         specifier: ^8.8.0
         version: 8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
