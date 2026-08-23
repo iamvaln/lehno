@@ -101,4 +101,56 @@ export const en: typeof fr = {
   contactEmail: "hello@lehno.app",
   contactAilleursTitre: "Elsewhere",
   contactAilleursTexte: "We answer direct messages too, a little more slowly.",
+  piedFaq: "FAQ",
+  mentionsLegales: "Legal notice",
+
+  faq: {
+    kicker: "Frequently asked",
+    titre: "What people ask us most",
+    chapeau: "If your answer isn't here, write to us — the contact page takes two minutes.",
+    aRediger: "To be written",
+    quiRedige: "Product copy — Lehno tone, two sentences per answer",
+    groupes: [
+      {
+        titre: "Getting started",
+        items: [
+          { q: "Do I have to pay to use Lehno?", reponse: "No. Holding dates, writing notes and getting reminders costs nothing. Only creations — a message, a portrait, a gift idea — cost a credit." },
+          { q: "Which phones does the app run on?", reponse: "iOS and Android. Minimum versions are listed on the App Store and on Google Play." },
+          { q: "How long does setting up take?", reponse: "One date and a first name is enough. Profiles fill up over the year, not on the day you sign up." },
+        ],
+      },
+      {
+        titre: "Credits",
+        items: [
+          { q: "How much is a credit?", reponse: "100 F per credit, and 5 credits when you sign up. One credit per piece written for you: the portrait, the gift ideas, the message." },
+          { q: "Do credits expire?", couvre: "Not settled yet. The answer must say the same thing here and in the terms of use, in the same words." },
+          { q: "Can I pay without a bank card?", reponse: "With mobile money, MTN or Orange. Confirmation sometimes takes a few minutes: the screen follows the payment through." },
+          { q: "What if a creation fails?", reponse: "The credit comes back to your balance, and the app tells you what happened." },
+        ],
+      },
+      {
+        titre: "People and notes",
+        items: [
+          { q: "Do the people I write about know?", reponse: "No. Your notes are visible only to you, and serve only what you ask for." },
+          { q: "What should I write down?", reponse: "Anything that helps you do well: tastes, wishes overheard, a detail that stayed with you. Nothing you wouldn't say to them." },
+          { q: "Does the app read my contacts or calendar?", couvre: "Not settled yet: say what is asked for, at what moment, and what happens if the permission is declined." },
+        ],
+      },
+      {
+        titre: "The Wall",
+        items: [
+          { q: "Who can see my Wall?", reponse: "Anyone with the link. It's a public page, and it can be unpublished at any time from the app." },
+          { q: "Can I choose what appears on it?", reponse: "Yes, item by item. Your notes about other people never appear there." },
+          { q: "How do I report a Wall?", reponse: "Every Wall carries a report link in its footer. What gets reported is reviewed, and taken down if it should be." },
+        ],
+      },
+      {
+        titre: "Your account",
+        items: [
+          { q: "How do I sign in without a password?", reponse: "A code arrives at your email address. You can also come in through Google or Apple — it's the same account." },
+          { q: "How do I delete my account?", reponse: "From Me, then Account and security. The \"Delete your account\" page says what disappears and what is kept." },
+        ],
+      },
+    ],
+  },
 };

@@ -103,4 +103,62 @@ export const fr = {
   contactEmail: "hello@lehno.app",
   contactAilleursTitre: "Ailleurs",
   contactAilleursTexte: "On répond aussi en message privé, un peu moins vite.",
+  piedFaq: "FAQ",
+  mentionsLegales: "Mentions légales",
+
+  // Contenu de la FAQ, recopié tel quel depuis le paquet de passation
+  // (design_handoff_surfaces_publiques/ui_kits/web/pages.html, clé "faq") :
+  // quinze questions groupées par thème. Deux réponses restent en attente
+  // d'une décision produit ou juridique (expiration des crédits, accès aux
+  // contacts/agenda) — elles portent "couvre" au lieu de "reponse", et le
+  // rendu leur garde un bloc « à rédiger » plutôt que d'inventer une réponse.
+  faq: {
+    kicker: "FAQ",
+    titre: "Ce qu'on nous demande le plus souvent",
+    chapeau: "Si vous ne trouvez pas votre réponse, écrivez-nous : la page Contact met deux minutes.",
+    aRediger: "À rédiger",
+    quiRedige: "Rédaction produit — ton Lehno, deux phrases par réponse",
+    groupes: [
+      {
+        titre: "Commencer",
+        items: [
+          { q: "Faut-il payer pour utiliser Lehno ?", reponse: "Non. Retenir les dates, écrire des notes et recevoir les rappels ne coûte rien. Seules les créations — un message, un portrait, une idée de cadeau — coûtent un crédit." },
+          { q: "Sur quels téléphones l'application fonctionne-t-elle ?", reponse: "iOS et Android. Les versions minimales sont indiquées sur l'App Store et sur Google Play." },
+          { q: "Combien de temps faut-il pour s'y mettre ?", reponse: "Une date et un prénom suffisent. Les fiches se remplissent au fil de l'année, pas le jour de l'inscription." },
+        ],
+      },
+      {
+        titre: "Les crédits",
+        items: [
+          { q: "Combien coûte un crédit ?", reponse: "100 F le crédit, et 5 crédits offerts à l'inscription. Un crédit par contenu créé pour vous : le portrait, les idées de cadeau, le message." },
+          { q: "Les crédits expirent-ils ?", couvre: "La réponse n'est pas tranchée. Elle doit dire la même chose ici et dans les conditions d'utilisation, dans les mêmes termes." },
+          { q: "Comment payer sans carte bancaire ?", reponse: "Par mobile money, MTN ou Orange. La validation prend parfois quelques minutes : l'écran suit l'opération jusqu'au bout." },
+          { q: "Que se passe-t-il si une création échoue ?", reponse: "Le crédit revient sur votre solde, et l'application vous dit ce qui s'est passé." },
+        ],
+      },
+      {
+        titre: "Les proches et les notes",
+        items: [
+          { q: "Mes proches savent-ils que j'écris sur eux ?", reponse: "Non. Vos notes ne sont visibles que de vous, et ne servent qu'à ce que vous demandez." },
+          { q: "Qu'est-ce que je peux noter ?", reponse: "Tout ce qui aide à bien faire : des goûts, des envies entendues, un détail qui vous a marqué. Rien que vous ne diriez pas à la personne." },
+          { q: "Est-ce que l'application lit mes contacts ou mon agenda ?", couvre: "La réponse n'est pas tranchée : dire ce qui est demandé, à quel moment, et ce qui se passe si l'autorisation est refusée." },
+        ],
+      },
+      {
+        titre: "Le Mur",
+        items: [
+          { q: "Qui peut voir mon Mur ?", reponse: "Toute personne qui a le lien. C'est une page publique, et elle se dépublie à tout moment depuis l'application." },
+          { q: "Puis-je choisir ce qui apparaît dessus ?", reponse: "Oui, élément par élément. Vos notes sur vos proches n'y figurent jamais." },
+          { q: "Comment signaler un Mur ?", reponse: "Chaque Mur porte un lien de signalement en pied de page. Ce qui est signalé est examiné, et retiré s'il doit l'être." },
+        ],
+      },
+      {
+        titre: "Le compte",
+        items: [
+          { q: "Comment me connecter sans mot de passe ?", reponse: "Un code arrive sur votre adresse e-mail. Vous pouvez aussi entrer par Google ou par Apple — c'est le même compte." },
+          { q: "Comment supprimer mon compte ?", reponse: "Depuis Moi, puis Compte et sécurité. La page « Supprimer votre compte » dit ce qui disparaît et ce qui est conservé." },
+        ],
+      },
+    ],
+  },
 };
