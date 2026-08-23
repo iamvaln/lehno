@@ -25,9 +25,18 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
 }
 
 // Pas de jeton "transition-state" tout fait : on recompose la durée et la
-// courbe d'état sur chaque propriété qui bascule au survol ou à l'appui.
+// courbe d'état sur chaque propriété qui bascule au survol ou à l'appui. Les
+// valeurs de ces propriétés au survol, à l'appui et à l'arrêt sont posées en
+// CSS (app/composants.css, classe .lehno-bouton) — un style en ligne ne peut
+// pas porter :hover ni :active ; seule la transition, elle, le peut.
 const ETAT = "var(--duration-state) var(--ease-state)";
-const TRANSITION_ETAT = `background ${ETAT}, color ${ETAT}, border-color ${ETAT}`;
+const TRANSITION_ETAT = [
+  `background ${ETAT}`,
+  `color ${ETAT}`,
+  `border-color ${ETAT}`,
+  `border-width ${ETAT}`,
+  `opacity ${ETAT}`,
+].join(", ");
 
 const RANGS: Record<BoutonRang, CSSProperties> = {
   primary: {
@@ -99,7 +108,11 @@ export function Button({
   };
 
   return (
-    <button type={type} disabled={disabled} style={base} {...rest}>
+    // data-rang porte le rang jusqu'au CSS (app/composants.css) : le survol
+    // et l'appui s'y déclinent par rang, ce qu'un style en ligne ne peut pas
+    // exprimer. className vient après {...rest} : un consommateur ne peut
+    // pas l'écraser et priver le bouton de sa réaction au geste.
+    <button type={type} disabled={disabled} data-rang={variant} style={base} {...rest} className="lehno-bouton">
       {icon ? <Icon name={icon} size={mobile ? 18 : 17} /> : null}
       <span>{children}</span>
       {iconAfter ? <Icon name={iconAfter} size={mobile ? 18 : 17} /> : null}

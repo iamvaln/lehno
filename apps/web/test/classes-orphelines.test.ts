@@ -53,7 +53,7 @@ function classesDefinies(fichiers: string[]): Set<string> {
 }
 
 describe("classes orphelines", () => {
-  it("chaque classe employée dans un composant a une définition dans base.css ou globals.css", () => {
+  it("chaque classe employée dans un composant a une définition dans base.css, composants.css ou globals.css", () => {
     const racine = join(import.meta.dirname, "..");
     const composants = listerFichiers(join(racine, "components"), [".tsx"]);
     const pages = listerFichiers(join(racine, "app"), [".tsx"]);
@@ -67,5 +67,26 @@ describe("classes orphelines", () => {
       .sort();
 
     expect(orphelines, `classes sans définition CSS : ${orphelines.join(", ")}`).toEqual([]);
+  });
+
+  // Le réciproque : une classe posée dans composants.css pour porter un état
+  // (:hover, :active, :disabled) mais jamais employée est une règle morte —
+  // aussi coûteuse à long terme qu'une classe sans définition (tour de
+  // correction 1 de la tâche 6). On cherche la classe comme sous-chaîne dans
+  // le texte des composants et des pages, pas seulement dans un className="…"
+  // littéral : Button.tsx la pose telle quelle, mais rien n'impose que ce
+  // reste le seul point d'attache.
+  it("chaque classe définie dans composants.css est employée quelque part", () => {
+    const racine = join(import.meta.dirname, "..");
+    const composants = listerFichiers(join(racine, "components"), [".tsx"]);
+    const pages = listerFichiers(join(racine, "app"), [".tsx"]);
+    const composantsCss = join(racine, "app", "composants.css");
+
+    const definies = classesDefinies([composantsCss]);
+    const source = [...composants, ...pages].map((f) => readFileSync(f, "utf-8")).join("\n");
+
+    const mortes = [...definies].filter((c) => !new RegExp(`\\b${c}\\b`).test(source)).sort();
+
+    expect(mortes, `classes définies dans composants.css mais jamais employées : ${mortes.join(", ")}`).toEqual([]);
   });
 });
