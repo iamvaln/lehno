@@ -28,10 +28,13 @@ export default async function CoquilleRacine(
   return (
     <html lang={locale} className={`${fraunces.variable} ${karla.variable}`} suppressHydrationWarning>
       <head>
-        {/* Les variables des deux thèmes, émises depuis @lehno/tokens. */}
+        {/* Les jetons hors thème et les variables des deux thèmes, émises depuis
+            @lehno/tokens. Le thème sombre s'obtient par la classe lehno-nuit,
+            portée par <body> — ou par <html> le temps que <body> existe. */}
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
         {/* Résolu avant la première peinture : sans lui, la page s'affiche en
-            clair puis bascule sous les yeux du visiteur. */}
+            clair puis bascule sous les yeux du visiteur. <body> n'existe pas
+            encore ici, la classe se pose donc sur <html>. */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>{children}</body>

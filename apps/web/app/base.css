@@ -1,0 +1,40 @@
+/* Classes de base, communes à tout le produit. Aucune couleur littérale ici :
+   tout passe par les variables émises depuis @lehno/tokens (lib/theme-css.ts). */
+
+/* L'instance de marque de Fraunces, approche resserrée — pour les titres,
+   les noms de personnes et les décomptes (voir specs/design-system-lehno.md §3.3). */
+.titre {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  letter-spacing: var(--tracking-title);
+}
+
+/* Les citations longues, en italique. */
+.citation {
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+/* Le surtitre : capitales, approche large. */
+.surtitre {
+  font-family: var(--font-body);
+  font-weight: var(--font-body-semibold);
+  font-size: var(--text-kicker);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-kicker);
+}
+
+/* prefers-reduced-motion remet les durées à zéro : un composant qui code sa
+   propre durée échappe à cette règle, c'est pourquoi elles sont tokenisées. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* L'anneau de focus, visible au clavier seulement. */
+:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
