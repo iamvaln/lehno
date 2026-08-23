@@ -10,3 +10,7 @@ dist/
 !.env.example
 *.tsbuildinfo
 .DS_Store
+
+# ressources locales, hors dépôt
+specs/
+images/
