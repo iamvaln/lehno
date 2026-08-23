@@ -46,6 +46,18 @@ describe("page légale — contenu réel", () => {
     expect(container.textContent).toContain("it is not delegated to a third party");
   });
 
+  it("affiche une phrase réelle des mentions légales françaises", () => {
+    const document = lireDocument("mentions.fr.md");
+    const { container } = render(<LegalPage t={messages("fr")} langue="fr" kicker="Mentions légales" document={document} />);
+    expect(container.textContent).toContain("constitue un transfert hors du Cameroun");
+  });
+
+  it("affiche une phrase réelle du Legal Notice anglais", () => {
+    const document = lireDocument("mentions.en.md");
+    const { container } = render(<LegalPage t={messages("en")} langue="en" kicker="Legal Notice" document={document} />);
+    expect(container.textContent).toContain("is a transfer out of Cameroon");
+  });
+
   it("porte le même en-tête et le même pied que la landing", () => {
     const document = lireDocument("cgu.fr.md");
     render(<LegalPage t={messages("fr")} langue="fr" kicker="Conditions d'utilisation" document={document} />);

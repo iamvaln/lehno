@@ -1,11 +1,9 @@
 import { analyserMarkdown, type DocumentLegal } from "./markdown-leger.js";
 import type { Langue } from "./langues.js";
 
-// Les deux seuls documents légaux que le pied de page relie à ce jour (voir
-// SiteFooter.tsx) : conditions et confidentialité. L'API sert aussi
-// « mentions », mais rien n'y renvoie encore — hors du périmètre de cette
-// page.
-export type Document = "cgu" | "confidentialite";
+// Les trois documents légaux que le pied de page relie (voir SiteFooter.tsx) :
+// conditions, confidentialité, mentions légales.
+export type Document = "cgu" | "confidentialite" | "mentions";
 
 // Même raisonnement que CONFIG_REPLI (lib/config-publique.ts) : une page
 // légale doit s'afficher même API éteinte. Un document vide serait un 404

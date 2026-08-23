@@ -91,6 +91,7 @@ export const fr = {
   cgu: "Conditions d'utilisation",
   confidentialite: "Confidentialité",
   contact: "Contact",
+  mentions: "Mentions légales",
 
   // Pages légales (components/legal/LegalPage.tsx) : le sommaire latéral.
   sommaire: "Sommaire",

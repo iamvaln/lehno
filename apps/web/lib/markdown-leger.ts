@@ -68,7 +68,7 @@ export function analyserMarkdown(source: string): DocumentLegal {
   // mentions.md n'en portent pas — c'est pourquoi il reste un tampon de
   // lignes brutes plutôt qu'un simple booléen « déjà vu », au cas où un futur
   // document en porterait plus d'un paragraphe.
-  let chapeauLignes: string[] = [];
+  const chapeauLignes: string[] = [];
   const sections: Section[] = [];
 
   // Section « hors sommaire » : ce qui précède le premier h2 (le h1 et sa
