@@ -1,3 +1,4 @@
+import { Icon } from "./Icon.js";
 import type { CSSProperties, HTMLAttributes, ReactElement, ReactNode } from "react";
 
 export type BannerIntent = "info" | "success" | "warning" | "error";
@@ -21,37 +22,13 @@ const INTENTIONS: Record<BannerIntent, { fg: string; bg: string }> = {
 };
 
 // Les glyphes du bandeau : un remplacement autonome en attendant le composant
-// Icon partagé, écrit par une tâche parallèle absente de ce chantier — voir
-// le rapport de tâche 7. Traits en currentColor : la couleur vient du texte
-// qu'ils accompagnent, jamais d'une propriété propre.
-const GLYPHES: Record<BannerIntent, ReactNode> = {
-  info: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 16v-4" />
-      <path d="M12 8h.01" />
-    </>
-  ),
-  success: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="m8.5 12.5 2.5 2.5 4.5-5" />
-    </>
-  ),
-  warning: (
-    <>
-      <path d="M12 4 3 20h18Z" />
-      <path d="M12 10v4" />
-      <path d="M12 17h.01" />
-    </>
-  ),
-  error: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="m9.5 9.5 5 5" />
-      <path d="m14.5 9.5-5 5" />
-    </>
-  ),
+// Chaque intention porte son glyphe Lucide, servi par Icon : les tracés ne se
+// recopient pas, sinon ils divergent de la bibliothèque à la première retouche.
+const GLYPHES: Record<BannerIntent, string> = {
+  info: "info",
+  success: "circle-check",
+  warning: "triangle-alert",
+  error: "circle-x",
 };
 
 // Le bandeau : une bande, pas une carte. Angles droits, sans bordure ni
@@ -81,13 +58,7 @@ export function Banner(
 
   return (
     <div role={intent === "error" ? "alert" : "status"} style={styleBandeau} {...rest}>
-      <svg
-        width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-        style={{ flex: "none", marginTop: "1px" }}
-      >
-        {GLYPHES[intent]}
-      </svg>
+      <Icon name={GLYPHES[intent]} size={17} style={{ flex: "none", marginTop: "1px" }} aria-hidden="true" />
       <span style={{ flex: 1 }}>{children}</span>
       {onDismiss ? (
         <button
@@ -99,13 +70,7 @@ export function Banner(
             color: "inherit", flex: "none",
           }}
         >
-          <svg
-            width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-          >
-            <path d="M18 6 6 18" />
-            <path d="m6 6 12 12" />
-          </svg>
+          <Icon name="x" size={15} aria-hidden="true" />
         </button>
       ) : null}
     </div>

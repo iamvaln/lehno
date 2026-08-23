@@ -1,3 +1,4 @@
+import { Icon } from "./Icon.js";
 import type { CSSProperties, HTMLAttributes, ReactElement } from "react";
 
 export interface ProvenanceProps extends HTMLAttributes<HTMLDivElement> {
@@ -5,23 +6,6 @@ export interface ProvenanceProps extends HTMLAttributes<HTMLDivElement> {
   origin?: string;
   /** Quand : « en mars », « le 12 août ». */
   date?: string;
-}
-
-// La flèche de retour du contrat (13 px). Inlinée en attendant le composant
-// Icon partagé, écrit par une tâche parallèle absente de ce chantier — voir
-// le rapport de tâche 7. Même façon de faire que BasculeTheme.tsx : un tracé
-// en currentColor, aucune couleur propre.
-function FlecheRetour(): ReactElement {
-  return (
-    <svg
-      width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-      style={{ flex: "none" }}
-    >
-      <path d="M9 14 4 9l5-5" />
-      <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
-    </svg>
-  );
 }
 
 // La ligne de provenance : d'où vient ce qu'on vous montre, toujours au même
@@ -49,7 +33,7 @@ export function Provenance(
 
   return (
     <div style={styleLigne} {...rest}>
-      <FlecheRetour />
+      <Icon name="corner-up-left" size={13} strokeWidth={2} aria-hidden="true" style={{ flex: "none" }} />
       <span>{parties.join(" · ")}</span>
     </div>
   );
