@@ -21,13 +21,14 @@ CREATE TABLE "admin" (
 
 CREATE UNIQUE INDEX "admin_email_key" ON "admin"("email");
 
--- admin_id est nullable : une demande de code pour une adresse inconnue laisse
--- une ligne sans admin. C'est ce qui permet de répondre la même chose, et dans
--- le même temps, qu'à une adresse connue — l'écran ne dit jamais si un compte
--- existe. L'index porte donc sur l'adresse visée, jamais sur l'admin.
+-- Un compte d'administration est créé à l'avance, jamais à la première
+-- connexion : il existe toujours. Une adresse inconnue n'écrit aucune ligne et
+-- ne déclenche aucun envoi — d'où admin_id NOT NULL. Répondre la même chose
+-- qu'à une adresse connue se joue au temps de réponse, côté service, et non en
+-- écrivant une ligne dont personne ne se servira.
 CREATE TABLE "admin_otp_code" (
     "id"           UUID NOT NULL DEFAULT gen_random_uuid(),
-    "admin_id"     UUID,
+    "admin_id"     UUID NOT NULL,
     "target_email" TEXT NOT NULL,
     "code_hash"    TEXT NOT NULL,
     "expires_at"   TIMESTAMPTZ NOT NULL,

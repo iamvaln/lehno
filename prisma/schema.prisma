@@ -630,7 +630,7 @@ model Admin {
 
 model AdminOtpCode {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  adminId     String?   @map("admin_id") @db.Uuid
+  adminId     String    @map("admin_id") @db.Uuid
   targetEmail String    @map("target_email")
   codeHash    String    @map("code_hash")
   expiresAt   DateTime  @map("expires_at") @db.Timestamptz
@@ -638,11 +638,13 @@ model AdminOtpCode {
   attempts    Int       @default(0)
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  admin Admin? @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
-  // Une demande pour une adresse inconnue laisse une ligne sans admin : c'est ce
-  // qui permet de répondre la même chose, et dans le même temps, qu'à une adresse
-  // connue. L'index porte donc sur l'adresse visée, jamais sur l'admin.
+  // Un compte d'administration est créé à l'avance, jamais à la première
+  // connexion : il existe toujours. Une adresse inconnue n'écrit donc aucune
+  // ligne et ne déclenche aucun envoi — d'où admin_id non nul. Répondre la même
+  // chose qu'à une adresse connue se joue au temps de réponse, côté service
+  // (tâche 2), pas en écrivant une ligne dont personne ne se servira.
   @@index([targetEmail])
   @@map("admin_otp_code")
 }
