@@ -124,4 +124,48 @@ describe("cloisonnement", () => {
     await expect(repo.wishes(awa).findOrThrow(w.id)).rejects.toMatchObject({ code: "not_found" });
     await expect(repo.wishes(karim).findOrThrow(w.id)).resolves.toMatchObject({ id: w.id });
   });
+
+  // `create` n'existait pas : aucune ressource n'avait encore été créée par un
+  // service cloisonné. Elle porte le même risque que `updateOrThrow` — laisser
+  // l'appelant choisir à qui la ressource appartient — et la même garde.
+  it("attache la ressource créée au demandeur, sans qu'il ait à le dire", async () => {
+    const cree = await repo.persons(awa).create({ displayName: "Valery" });
+
+    const relu = await db.prisma.person.findUniqueOrThrow({ where: { id: cree.id } });
+    expect(relu.userId, "le périmètre pose l'appartenance").toBe(awa);
+  });
+
+  // Le danger : un appelant qui glisse userId dans les données créerait une
+  // fiche au nom d'un autre compte. Le périmètre doit l'emporter.
+  it("ne laisse pas créer une ressource au nom d'un autre", async () => {
+    const cree = await repo.persons(awa).create({ displayName: "Valery", userId: karim } as never);
+
+    const relu = await db.prisma.person.findUniqueOrThrow({ where: { id: cree.id } });
+    expect(relu.userId, "le userId fourni ne doit jamais gagner").toBe(awa);
+  });
+
+  // Une ressource créée dans un périmètre doit s'y retrouver : sans quoi la
+  // création et la lecture emploieraient deux notions d'appartenance.
+  it("rend la ressource créée dans la liste du demandeur, et pas dans l'autre", async () => {
+    await repo.persons(awa).create({ displayName: "Valery" });
+
+    expect(await repo.persons(awa).findMany()).toHaveLength(1);
+    expect((await repo.persons(karim).findMany()).map((p) => p.displayName)).toEqual(["Maman de Karim"]);
+  });
+
+  // Les portées de `events`, `notes` et `wishes` ne filtrent pas par colonne
+  // mais par relation — `{ person: { userId } }`. Étalée dans les données,
+  // cette forme deviendrait une écriture imbriquée : Prisma tenterait de créer
+  // une personne, ou échouerait obscurément. Pire, elle pourrait réussir en
+  // écrivant n'importe quoi.
+  //
+  // `create` doit donc refuser ces portées, franchement, plutôt que d'écrire
+  // quelque chose que personne n'a voulu.
+  it("refuse de créer sur une portée qui filtre par relation", async () => {
+    await expect(
+      repo.notes(awa).create({ content: "essai" } as never),
+    ).rejects.toThrow(/portée/i);
+
+    expect(await db.prisma.note.count(), "rien ne doit s'écrire").toBe(0);
+  });
 });
