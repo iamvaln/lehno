@@ -27,7 +27,7 @@ describe("marque", () => {
     },
   );
 
-  it.each(["violet", "ronde", "claire", "encre", "uneEncre", "favicon"] as const)(
+  it.each(["violet", "ronde", "claire", "encre", "uneEncre"] as const)(
     "la variante %s de la pastille désigne un fichier réellement servi",
     (variant) => {
       const { container } = render(<BrandMark variant={variant} size={64} />);
@@ -36,10 +36,17 @@ describe("marque", () => {
     },
   );
 
-  // Les paliers se redessinent : réduire le grand donne un tracé trop fin.
-  it("sous 40 px, la pastille bascule sur le tracé épaissi", () => {
-    const { container } = render(<BrandMark size={28} />);
-    expect(container.querySelector("img")!.getAttribute("src")).toContain("favicon");
+  // Un seul tracé, à toutes les tailles. Sous 128 px, seul le trait s'épaissit —
+  // aux paliers matriciels, et jamais en retirant les empattements : « une icône
+  // qui perd les empattements devient un autre h »
+  // (images/exports/favicon/README.md). Le palier distinct de 28 px a été retiré
+  // de la charte, et la bascule qui le servait avec lui.
+  it("sert le même tracé à toutes les tailles", () => {
+    const { container, unmount } = render(<BrandMark size={28} />);
+    expect(container.querySelector("img")!.getAttribute("src")).toBe("/brand/lehno-icone-512.svg");
+    unmount();
+    const grand = render(<BrandMark size={120} />);
+    expect(grand.container.querySelector("img")!.getAttribute("src")).toBe("/brand/lehno-icone-512.svg");
   });
 
   it("la pastille refuse de descendre sous la taille minimale", () => {
