@@ -49,6 +49,7 @@ export const en: typeof fr = {
   etape3Titre: "Give something that fits.",
   etape3: "A gift that looks like them, a message in your own voice. You choose, you send.",
 
+  contenuKicker: "What the app holds",
   blocFicheTitre: "The people you love, in a notebook that remembers",
   blocFiche: "One page per person: their date, their tastes, what they let slip. It fills up over the year, effortlessly. And it serves again every year.",
   registre: "friendly tone",
@@ -56,13 +57,15 @@ export const en: typeof fr = {
   idees: "Gift ideas",
   nogo: "Dislikes / no-go",
   tag1: "vinyl", tag2: "hiking", tag3: "specialty coffee",
-  ideeTexte: "“He mentioned a hand coffee grinder — his is on its last legs.”",
-  ideeDate: "noted in March",
-  nogoTexte: "Doesn't drink alcohol.",
+  ideeParole: "He mentioned a hand coffee grinder — his is on its last legs.",
+  provIdee: "noted in March",
+  nogoParole: "I don't drink alcohol.",
+  provNogo: "he told you, in January",
 
   blocDatesTitre: "Every date, in one place",
   blocDates: "Birthdays, weddings, retirements, six months of a relationship: everything worth marking lives in the same calendar.",
-  maman: "Mum", retraite: "Retirement", nourEtMoi: "Nour & me", sixMois: "Six months",
+  date21: "21 Aug", age29: "turning 29",
+  maman: "Mum", retraite: "Retirement",
   age36: "turning 36", an5: "5 years",
 
   blocMotTitre: "A message that sounds like you",
@@ -73,6 +76,7 @@ export const en: typeof fr = {
   idee3: "The hand grinder he mentioned back in March",
   brouillon: "Draft · for Valery",
   brouillonTexte: "“Valery, 36 and still fixing the world at midnight. Thank you for last summer — I owe you at least one decent coffee. Happy birthday, old friend.”",
+  provBrouillon: "written from 9 notes about Valery",
   modifier: "Edit and send",
   regenerer: "Regenerate",
 
@@ -157,4 +161,29 @@ export const en: typeof fr = {
 
   // Legal pages (components/legal/LegalPage.tsx): the side table of contents.
   sommaire: "Contents",
+
+  // Aperçu du Mur — repris tel quel de la maquette v3.
+  murTitre: "A page of your own",
+  murTexte: "The people around you want to get it right too. Share your Wall: they'll find what would make you happy, and can leave you a note.",
+  murPoint1Titre: "An address to share",
+  murPoint1: "Send the link, it opens in the browser, and that's it.",
+  murPoint2Titre: "Your wishes, in your words",
+  murPoint2: "What would make you happy — and what wouldn't.",
+  murPoint3Titre: "The notes people leave you",
+  murPoint3: "They write to you from your Wall, and you read them in the app.",
+  murEvite: "What I'd rather skip",
+  murNo1: "scented candles",
+  murNo2: "alcohol",
+  murPiedTitre: "Say what would make you happy, too.",
+  murPiedLien: "Get my own Wall",
+  murHello: "Welcome — I'm Valentine",
+  murSous: "Glad you stopped by.",
+  murAime: "What I love",
+  murTag1: "perfume",
+  murTag2: "flowers",
+  murTag3: "cinema",
+  murDate: "My birthday is 14 March",
+  murIdee: "An idea? Here's what I'd love.",
+  murListe: "See my list",
+  murMot: "Leave me a note",
 };

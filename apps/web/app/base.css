@@ -71,7 +71,7 @@
 .site-burger { display: none; }
 .site-nav { display: flex; gap: var(--space-20); font-size: var(--text-body-s); flex-wrap: wrap; }
 
-@container page (max-width: 760px) {
+@container page (max-width: 920px) {
   .site-burger { display: flex; }
   .site-wordmark { display: none; }
   .site-nav {
