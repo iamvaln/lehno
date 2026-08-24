@@ -90,7 +90,7 @@ describe("liste d'attente", () => {
   });
 
   it("plafonne le rejeu sur une même adresse", async () => {
-    for (let i = 0; i < 3; i += 1) {
+    for (let i = 0; i < 5; i += 1) {
       await service.join({ email: "awa@example.com", locale: "fr" });
     }
     await expect(service.join({ email: "awa@example.com", locale: "fr" })).rejects.toBeInstanceOf(AppError);
@@ -158,6 +158,22 @@ describe("liste d'attente", () => {
     expect(parLeDelai).toEqual(parLeLeurre);
   });
 
+  // Une personne qui revient sur la page est une bonne nouvelle : on veut la
+  // voir dans le journal, sans y recopier son adresse — le journal n'est pas
+  // une copie de la liste.
+  it("laisse une trace quand quelqu'un revient, sans écrire son adresse", async () => {
+    const traces: string[] = [];
+    const journal = (service as unknown as { journal: { log: (m: string) => void } }).journal;
+    journal.log = (m: string): void => { traces.push(m); };
+
+    await service.join({ email: "awa@example.com", locale: "fr" });
+    expect(traces, "la première inscription n'est pas un retour").toHaveLength(0);
+
+    await service.join({ email: "awa@example.com", locale: "fr" });
+    expect(traces, "la seconde doit se voir").toHaveLength(1);
+    expect(traces[0]).not.toContain("awa@example.com");
+  });
+
   // La base est en citext, mais la clé du limiteur est une chaîne ordinaire :
   // sans normalisation, « AWA@ » et « awa@ » ouvrent deux compteurs et le
   // plafond se contourne par la touche majuscule. Le test précédent ne le
@@ -166,6 +182,8 @@ describe("liste d'attente", () => {
     await service.join({ email: "awa@example.com", locale: "fr" });
     await service.join({ email: "AWA@example.com", locale: "fr" });
     await service.join({ email: "Awa@Example.com", locale: "fr" });
+    await service.join({ email: "aWA@example.COM", locale: "fr" });
+    await service.join({ email: "AwA@ExAmPlE.com", locale: "fr" });
 
     await expect(
       service.join({ email: "aWa@ExAmPlE.cOm", locale: "fr" }),
