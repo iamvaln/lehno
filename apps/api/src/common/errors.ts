@@ -3,7 +3,7 @@ import { Catch, HttpException, Logger } from "@nestjs/common";
 import type { ErrorCode, ErrorEnvelope } from "@lehno/contracts";
 
 const STATUS: Partial<Record<ErrorCode, number>> = {
-  validation_failed: 400, waitlist_email_invalid: 400,
+  validation_failed: 400, waitlist_email_invalid: 400, contact_invalid: 400,
   unauthorized: 401, session_expired: 401, refresh_reused: 401, federated_token_invalid: 401,
   forbidden: 403, account_suspended: 403, account_pending_deletion: 403,
   not_found: 404,

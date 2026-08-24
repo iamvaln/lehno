@@ -23,5 +23,7 @@ export const en = {
     email_disposable: "That address is temporary. Use one you actually read.",
     waitlist_email_invalid: "That email doesn't look right.",
     waitlist_rejected: "That didn't go through. Try again in a moment.",
+    contact_invalid: "This form isn't valid. Check the fields and try again.",
+    contact_rejected: "That didn't go through. Try again in a moment.",
   },
 } as const;

@@ -18,9 +18,13 @@ import { ConfigController, ConfigService } from "./public/config.controller.js";
 import { LegalController, LegalService } from "./public/legal.controller.js";
 import { WaitlistController } from "./public/waitlist.controller.js";
 import { WaitlistService } from "./public/waitlist.service.js";
+import { ContactController } from "./public/contact.controller.js";
+import { ContactService } from "./public/contact.service.js";
 
 @Module({
-  controllers: [AuthController, ProfileController, ConfigController, LegalController, WaitlistController],
+  controllers: [
+    AuthController, ProfileController, ConfigController, LegalController, WaitlistController, ContactController,
+  ],
   providers: [
     PrismaService,
     // useFactory : la valeur se lit à l'INSTANCIATION du provider, pas à
@@ -64,6 +68,12 @@ import { WaitlistService } from "./public/waitlist.service.js";
         );
       },
     },
+    // Adresse de destination du formulaire de contact. Ce n'est pas un secret
+    // — juste l'adresse à laquelle écrire — donc un repli documenté plutôt
+    // qu'un refus de démarrer : hello@lehno.app est déjà l'adresse publique
+    // affichée ailleurs sur le site (voir apps/web/messages). Une variable
+    // d'environnement, quand elle est posée, la remplace.
+    { provide: "CONTACT_TO_EMAIL", useFactory: () => process.env.CONTACT_TO_EMAIL ?? "hello@lehno.app" },
     OtpService,
     TokenService,
     RateLimitService,
@@ -74,6 +84,7 @@ import { WaitlistService } from "./public/waitlist.service.js";
     ConfigService,
     LegalService,
     WaitlistService,
+    ContactService,
   ],
 })
 export class AppModule implements NestModule {

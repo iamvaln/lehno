@@ -5,6 +5,7 @@ import { SiteFooter } from "../landing/SiteFooter.js";
 import { SiteHeader } from "../landing/SiteHeader.js";
 import { Card, Icon, SocialGlyph } from "../ui/index.js";
 import type { Plateforme } from "../ui/index.js";
+import { ContactForm } from "./ContactForm.js";
 
 // Les six comptes publics de Lehno, dans l'ordre de la maquette
 // (design_handoff_surfaces_publiques/ui_kits/web/pages.html, table « contact »).
@@ -19,14 +20,11 @@ const RESEAUX: { plateforme: Plateforme; compte: string; url: string }[] = [
   { plateforme: "youtube", compte: "@lehno", url: "https://youtube.com/@lehno" },
 ];
 
-/** La page contact. La maquette (design_handoff_surfaces_publiques) montrait
- *  un vrai formulaire — TextField, Button, Banner — mais aucun point d'entrée
- *  API ne le reçoit dans ce dépôt : rendre ce formulaire inerte aurait coûté
- *  plus cher qu'aucun formulaire, car il aurait consommé la seule tentative
- *  que quelqu'un fait pour nous joindre. Cette page montre donc les deux
- *  moyens de contact qui fonctionnent réellement aujourd'hui : le courriel
- *  (déjà en service, voir apps/api/src/public/legal, hello@lehno.app) et les
- *  comptes publics des réseaux. */
+/** La page contact. Deux canaux, comme la maquette
+ *  (design_handoff_surfaces_publiques/ui_kits/web/ContactPage.jsx) : le
+ *  formulaire, reçu par apps/api/src/public/contact, et les comptes publics
+ *  des réseaux. Une liste de moyens de contact est une liste de promesses —
+ *  ni l'un ni l'autre n'est là pour la forme. */
 export function ContactPage({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
   return (
     <div className="page">
@@ -73,31 +71,7 @@ export function ContactPage({ t, langue }: { t: Messages; langue: Langue }): Rea
             }}
           >
             <Card surface="card" radius="2xl">
-              <h2
-                className="titre"
-                style={{ margin: "0 0 var(--space-4)", fontWeight: "var(--font-display-medium)", fontSize: "var(--text-display-xs)" }}
-              >
-                {t.contactEcrireTitre}
-              </h2>
-              <p
-                style={{
-                  margin: "0 0 var(--space-16)", fontSize: "var(--text-body-s)",
-                  lineHeight: "var(--leading-roomy)", color: "var(--text-secondary)",
-                }}
-              >
-                {t.contactEcrireTexte}
-              </p>
-              <a
-                href={`mailto:${t.contactEmail}`}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: "var(--space-10)",
-                  color: "var(--text-accent)", fontWeight: "var(--font-body-semibold)",
-                  fontSize: "var(--text-body-m)", textDecoration: "none",
-                }}
-              >
-                <Icon name="mail" size={18} />
-                {t.contactEmail}
-              </a>
+              <ContactForm t={t} />
             </Card>
 
             <Card surface="panel" radius="2xl">

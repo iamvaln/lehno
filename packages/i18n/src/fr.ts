@@ -23,5 +23,7 @@ export const fr = {
     email_disposable: "Cette adresse est temporaire. Indiquez-en une que vous consultez.",
     waitlist_email_invalid: "Cette adresse ne semble pas valide.",
     waitlist_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
+    contact_invalid: "Ce formulaire n'est pas valide. Vérifiez les champs et réessayez.",
+    contact_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
   },
 } as const;

@@ -159,4 +159,53 @@ describe("surfaces publiques — HTTP de bout en bout", () => {
       expect(await db.prisma.waitlistSignup.count()).toBe(0);
     });
   });
+
+  // Contrairement à contact.test.ts (qui appelle ContactService directement),
+  // ces tests passent par la route réelle : c'est elle, et non le service,
+  // qui porte la validation du sujet contre la liste fermée (contactSendSchema,
+  // .strict()) — un service reçoit déjà une valeur typée, la route reçoit ce
+  // que le monde envoie.
+  describe("POST /public/contact", () => {
+    const message = {
+      name: "Awa", email: "awa-http@example.com", subject: "question_app", message: "Une question sur mon compte.",
+    };
+
+    it("enregistre un message neuf", async () => {
+      const res = await post("/v1/public/contact", message);
+      expect(res.status).toBe(200);
+      expect(await json(res)).toEqual({ sent: true });
+      expect(await db.prisma.contactMessage.count()).toBe(1);
+    });
+
+    it("refuse un sujet hors de la liste fermée, sans rien enregistrer", async () => {
+      const res = await post("/v1/public/contact", { ...message, subject: "un_sujet_invente" });
+      expect(res.status).toBe(400);
+      const body = await json(res);
+      expect(body.code).toBe("contact_invalid");
+      expect(await db.prisma.contactMessage.count()).toBe(0);
+    });
+
+    it("refuse un message trop court", async () => {
+      const res = await post("/v1/public/contact", { ...message, message: "court" });
+      expect(res.status).toBe(400);
+      const body = await json(res);
+      expect(body.code).toBe("contact_invalid");
+      expect(await db.prisma.contactMessage.count()).toBe(0);
+    });
+
+    it("refuse une adresse invalide", async () => {
+      const res = await post("/v1/public/contact", { ...message, email: "pas-une-adresse" });
+      expect(res.status).toBe(400);
+      const body = await json(res);
+      expect(body.code).toBe("contact_invalid");
+      expect(await db.prisma.contactMessage.count()).toBe(0);
+    });
+
+    it("refuse un champ inattendu (contrat strict) — un robot qui ajoute un champ se désigne", async () => {
+      const res = await post("/v1/public/contact", { ...message, oops: true });
+      expect(res.status).toBe(400);
+      expect((await json(res)).code).toBe("contact_invalid");
+      expect(await db.prisma.contactMessage.count()).toBe(0);
+    });
+  });
 });

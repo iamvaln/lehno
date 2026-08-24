@@ -97,15 +97,36 @@ export const fr = {
   confidentialite: "Confidentialité",
   contact: "Contact",
 
-  // Page contact. La maquette montrait un formulaire (TextField, Button,
-  // Banner) mais aucun point d'entrée API ne le reçoit dans ce dépôt : cette
-  // page montre les moyens de contact réels, pas un formulaire inerte.
+  // Page contact, recopiée telle quelle depuis le paquet de passation
+  // (design_handoff_surfaces_publiques/ui_kits/web/pages.html, clé "contact") :
+  // un vrai formulaire existe désormais, reçu par apps/api/src/public/contact.
   contactKicker: "Contact",
   contactTitre: "Écrivez-nous",
-  contactChapeau: "Une question, un problème, un contenu à signaler : écrivez-nous, nous répondons sous deux jours ouvrés.",
-  contactEcrireTitre: "Par courriel",
-  contactEcrireTexte: "La voie la plus sûre pour une question sur votre compte, vos données ou un problème technique.",
-  contactEmail: "hello@lehno.app",
+  contactChapeau: "Une question, un problème, un contenu à signaler : ce formulaire arrive directement chez nous.",
+  contactLabelNom: "Votre nom",
+  contactLabelEmail: "Votre adresse e-mail",
+  contactLabelSujet: "De quoi s'agit-il ?",
+  contactLabelMessage: "Votre message",
+  contactAideMessage: "Dites-nous ce qui s'est passé, et depuis quel écran si c'est un problème technique.",
+  contactEmailErreur: "Cette adresse ne semble pas valide.",
+  contactEnvoyer: "Envoyer",
+  contactDelai: "Nous répondons sous deux jours ouvrés.",
+  contactConfirme: "C'est envoyé. Vous recevrez une réponse à l'adresse indiquée.",
+  // Reprend la formulation déjà retenue pour la liste d'attente
+  // (voir waitlistErreur) : un refus du serveur et une panne réseau se
+  // ressemblent pour la personne, l'un et l'autre se règlent en réessayant.
+  contactEnvoiErreur: "L'envoi n'a pas abouti. Réessayez dans un instant.",
+  // Les six motifs de la maquette, dans l'ordre où ils y figurent. L'ordre
+  // apparie chaque libellé à sa clé stable (voir ContactForm.tsx) : la clé
+  // ne s'affiche jamais, c'est elle qui part au serveur.
+  contactSujets: [
+    "Une question sur l'application",
+    "Un problème technique",
+    "Les crédits et les paiements",
+    "Signaler un contenu",
+    "Une demande sur mes données",
+    "Autre",
+  ],
   contactAilleursTitre: "Ailleurs",
   contactAilleursTexte: "On répond aussi en message privé, un peu moins vite.",
   piedFaq: "FAQ",
