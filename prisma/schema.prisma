@@ -714,3 +714,34 @@ model AIModel {
   @@index([enabled, priority])
   @@map("ai_model")
 }
+
+enum PromptKind {
+  message
+  illustration
+  photo_style
+  note_classification
+  sensitive_detection
+
+  @@map("prompt_kind")
+}
+
+// Les gabarits de production du studio. **Ils vivent en base, jamais dans le
+// code** : on les ajuste au vu des résultats, sans livraison. Les versions ne se
+// modifient pas — ajuster crée une version nouvelle, l'ancienne demeure, ce qui
+// permet d'y revenir et de comprendre un écart de qualité.
+model PromptTemplate {
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind             PromptKind
+  key              String     @db.VarChar(60)
+  version          Int        @default(1)
+  body             String
+  guardrails       Json?
+  aiModelId        String?    @map("ai_model_id") @db.Uuid
+  isActive         Boolean    @default(false) @map("is_active")
+  createdByAdminId String?    @map("created_by_admin_id") @db.Uuid
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([kind, key, version])
+  @@index([kind, key])
+  @@map("prompt_template")
+}

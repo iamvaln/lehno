@@ -63,7 +63,16 @@ Trois changements arrivés après l'écriture de ce plan.
 - [x] **9. Les modèles d'IA** — `AIModel` au schéma (le dictionnaire le décrit, la base ne l'a pas), puis `GET`/`PATCH /admin/ai-models`. Priorité de routage, activation à chaud.
 - [ ] **10. L'export d'une liste filtrée** — **écarté pour l'instant.** `DataExportRequest` ne convient pas : son `user_id` est non nul, avec cascade à la suppression du compte — c'est l'export qu'un utilisateur demande pour lui-même, au titre de ses droits. L'export d'une liste filtrée par l'équipe n'a aucune table au dictionnaire, et en inventer une est une décision qui appartient au propriétaire : durée de rétention du fichier, portée exacte, qui peut le relire. À trancher avec le studio.
 - [x] **11. Le tableau de bord** — `GET /admin/dashboard`, agrégé sur ce qui existe : comptes par état, suppressions à échéance, connexions échouées, gestes récents. Les tuiles qui demandent des murs, des crédits ou des paiements attendent leurs tables.
-- [ ] **12. Le studio du portrait** — en dernier, à la demande du propriétaire : trop de questions encore ouvertes.
+- [x] **12a. Les gabarits du studio** — `PromptTemplate` au schéma, `GET`/`POST /admin/portrait-studio/templates`, `PATCH /:id` pour revenir à une version. Versions immuables, une seule active par (`kind`, `key`), tenue par un index unique partiel.
+- [ ] **12b. Le reste du studio — quatre questions à trancher.**
+
+  **Les orientations.** La spec veut « les douze intentions, avec leur libellé dans les deux langues, leur ordre d'apparition et leur état d'activation ». Or `portrait_orientation` est un **enum PostgreSQL** au dictionnaire : un enum ne porte ni libellé, ni ordre, ni activation, et s'étendre demande une migration. Il faut soit une table `portrait_orientation` qui double l'enum, soit renoncer à régler l'ordre et l'activation depuis l'outil. *Question : table ou enum ?*
+
+  **Les styles de photo.** Le dictionnaire dit « trois styles définis par la marque ; leurs noms restent à arrêter ». On ne peut pas servir ce qui n'a pas de nom. *Question : quels sont les trois ?*
+
+  **Le banc d'essai.** « Lancer une production sur une fiche de démonstration, sans consommer de crédit ni toucher à un compte réel. » Il suppose une chaîne de génération qui n'existe pas encore — ni `ActionRun`, ni `AIUsage`, ni adaptateur de fournisseur —, et une **fiche de démonstration** dont personne n'a dit où elle vit : un compte semé, un jeu figé en base, ou des données inventées à la volée ? *Question : d'où vient la fiche de démonstration, et attend-on la chaîne de génération ?*
+
+  **Les mesures par orientation.** « Volume produit, taux de régénération, coût moyen, taux d'échec » se lisent dans `ActionRun` et `AIUsage`, qui n'existent pas au schéma. *Rien à trancher : c'est du travail qui attend ses tables.*
 
 **Hors de portée tant que le schéma ne les porte pas** : la modération (aucune table de signalement, et le dictionnaire n'en décrit pas), les transactions (ni `Payment` ni `CreditTransaction`), les liens externes, et la part des métriques qui compte des murs ou des crédits.
 
