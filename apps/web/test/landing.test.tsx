@@ -50,8 +50,14 @@ describe("landing", () => {
     expect(pleins.length).toBeLessThanOrEqual(1);
   });
 
-  it("aucune section « Mur » — c'est une surface à part", () => {
+  // Ce test affirmait l'inverse : « aucune section Mur, c'est une surface à
+  // part ». Il confondait deux choses — le Mur EST une surface publique à
+  // part, avec sa propre page, mais la landing en montre un aperçu, et la
+  // maquette v3 lui donne une section entière (id="mur"). La section avait
+  // disparu du code lors de la refonte, et ce test entérinait sa disparition
+  // au lieu de la signaler.
+  it("montre un aperçu du Mur, que la maquette lui accorde", () => {
     render(<Landing t={messages("fr")} langue="fr" configuration={config} avantLancement />);
-    expect(screen.queryByRole("heading", { name: /votre page à vous/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /votre page à vous/i })).toBeInTheDocument();
   });
 });

@@ -169,4 +169,29 @@ export const fr = {
 
   // Pages légales (components/legal/LegalPage.tsx) : le sommaire latéral.
   sommaire: "Sommaire",
+
+  // Aperçu du Mur — repris tel quel de la maquette v3.
+  murTitre: "Votre page à vous",
+  murTexte: "Vos proches veulent bien faire aussi. Partagez votre Mur : ils y trouvent ce qui vous ferait plaisir, et peuvent vous laisser un mot.",
+  murPoint1Titre: "Une adresse à partager",
+  murPoint1: "Un lien s'envoie, s'ouvre dans le navigateur, et voilà.",
+  murPoint2Titre: "Vos envies, écrites par vous",
+  murPoint2: "Ce qui vous ferait plaisir, et ce qui ne vous ferait pas plaisir.",
+  murPoint3Titre: "Les mots qu'on vous laisse",
+  murPoint3: "Vos proches vous écrivent depuis votre Mur, vous les retrouvez dans l'application.",
+  murEvite: "Ce que j'évite",
+  murNo1: "les bougies parfumées",
+  murNo2: "l'alcool",
+  murPiedTitre: "Vous aussi, dites ce qui vous ferait plaisir.",
+  murPiedLien: "Créer mon Mur",
+  murHello: "Bienvenue chez Valentine",
+  murSous: "Ravie de te voir passer.",
+  murAime: "Ce que j'aime",
+  murTag1: "parfums",
+  murTag2: "fleurs",
+  murTag3: "cinéma",
+  murDate: "Mon anniversaire, c'est le 14 mars",
+  murIdee: "Une idée ? Voici ce qui me ferait plaisir.",
+  murListe: "Voir ma liste",
+  murMot: "Laisse-moi un mot",
 };
