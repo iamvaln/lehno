@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
 import { Icon } from "../base/Icon.js";
-import { BrandMark } from "../base/BrandMark.js";
 
 export interface SidebarItem {
   id: string;
@@ -34,27 +33,25 @@ export interface SidebarProps {
 // quelque chose ». La valeur est nommée parce que le test la vérifie.
 const POINT_ALERTE = 6;
 
-// La pastille de marque ne descend jamais sous 28 px (images/brand/README.md) :
 // c'est le palier du favicon, dessiné pour cette taille.
-const TAILLE_PASTILLE = 28;
+// Le verrouillage ne descend pas sous 120 px (charte). La barre latérale en fait
+// 232 : 132 laisse respirer la pastille de rôle à côté.
+const LARGEUR_MARQUE = 132;
 
 const NAV: CSSProperties = { padding: "var(--space-14) var(--space-10) var(--space-24)" };
 
+// La marque ne se rétrécit pas pour faire tenir l'étiquette de rôle : elle a un
+// plancher de 120 px à la charte, et un logotype comprimé est un logotype abîmé.
+// C'est l'étiquette qui passe à la ligne quand la place manque.
 const ENTETE: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "var(--space-10)",
+  flexWrap: "wrap",
+  gap: "var(--space-8) var(--space-10)",
   padding: "0 var(--space-8) var(--space-16)",
 };
 
-const MARQUE: CSSProperties = {
-  fontWeight: "var(--font-body-bold)",
-  fontSize: "var(--text-body-m)",
-  letterSpacing: "var(--tracking-title)",
-};
-
 const ROLE: CSSProperties = {
-  marginLeft: "auto",
   fontSize: "var(--text-kicker)",
   fontWeight: "var(--font-body-bold)",
   letterSpacing: "var(--tracking-kicker)",
@@ -113,8 +110,23 @@ export function Sidebar({ familles, marque, active, onSelect, role }: SidebarPro
   return (
     <nav className="coquille-nav" style={NAV}>
       <div style={ENTETE}>
-        <BrandMark size={TAILLE_PASTILLE} alt={marque} />
-        <span style={MARQUE}>{marque}</span>
+        {/* Le verrouillage horizontal — signe et mot en un seul fichier, tel que
+            la charte le livre. Le mot n'est pas composé : c'est un tracé vectorisé
+            de Fraunces, que la police de l'outil ne saurait pas reproduire. Les
+            deux versions sont rendues, le thème posé sur <body> en cache une —
+            même procédé que les bascules du produit, et aucun scintillement. */}
+        <img
+          className="si-clair coquille-marque"
+          src="/brand/lehno-verrouillage-horizontal.svg"
+          alt={marque}
+          width={LARGEUR_MARQUE}
+        />
+        <img
+          className="si-sombre coquille-marque"
+          src="/brand/lehno-verrouillage-horizontal-blanc.svg"
+          alt={marque}
+          width={LARGEUR_MARQUE}
+        />
         {role ? <span className="coquille-role" style={ROLE}>{role}</span> : null}
       </div>
 

@@ -105,3 +105,11 @@
     display: none;
   }
 }
+
+/* Le verrouillage suit le thème : les deux versions sont rendues, celle qui ne
+   convient pas est masquée. Un seul fichier échangé en JavaScript aurait
+   scintillé le temps d'une image, le thème étant posé avant le premier rendu. */
+.coquille-marque { display: block; height: auto; }
+.lehno-nuit .si-clair { display: none; }
+.si-sombre { display: none; }
+.lehno-nuit .si-sombre { display: block; }
