@@ -116,3 +116,28 @@
     border-bottom: var(--border-width) solid var(--border-hairline);
   }
 }
+
+/* --------------------------------------------------------------------------
+   L'en-tête est collant : une ancre amènerait sa cible tout en haut de la
+   fenêtre, donc SOUS l'en-tête, et on croirait avoir atterri sur la section
+   suivante. C'est ce que faisait le bouton de la bande noire.
+
+   scroll-margin-top réserve la hauteur de l'en-tête plus un peu d'air :
+   14px de marge haute, 14 de basse, 34 de contenu, et 16 pour respirer.
+   -------------------------------------------------------------------------- */
+#commencer,
+#comment,
+#contenu,
+#mur,
+#prix {
+  scroll-margin-top: 78px;
+}
+
+/* Le bouton d'appel de l'en-tête : la maquette le rétrécit sous 920px, où la
+   place manque. Le style de repos vit dans SiteHeader.tsx, en ligne. */
+@container page (max-width: 920px) {
+  .ent-cta {
+    padding: var(--space-8) var(--space-14) !important;
+    font-size: var(--text-body-xs) !important;
+  }
+}

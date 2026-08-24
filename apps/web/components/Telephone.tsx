@@ -22,6 +22,12 @@ const CADRE: CSSProperties = {
   borderRadius: "var(--radius-device)",
   overflow: "hidden",
   position: "relative",
+  // isolation crée un contexte d'empilement propre au cadre. Sans lui, la
+  // Dynamic Island (z-index 50) et la barre d'état (40) se comparent aux
+  // z-index de la PAGE, dont l'en-tête collant (20) — et passent devant lui.
+  // On voyait alors l'îlot noir et « 8:30 » flotter dans l'en-tête au
+  // défilement. Enfermés ici, ils ne dépassent plus du téléphone.
+  isolation: "isolate",
   background: "var(--surface-page)",
   boxShadow: "var(--shadow-device)",
   flex: "none",

@@ -42,12 +42,34 @@ describe("landing", () => {
     for (const img of screen.getAllByRole("img")) expect(img).toHaveAccessibleName();
   });
 
-  // Le système l'impose : un seul bouton plein par vue.
-  it("une seule action est mise en avant", () => {
+  // Ce test n'en autorisait qu'un : « un seul bouton plein par vue », la règle
+  // de specs/design-system-lehno.md. La maquette v3 en pose deux — celui de
+  // l'en-tête et celui du formulaire du héros — et la maquette l'emporte sur
+  // la spécification (tranché le 24/08/2026).
+  //
+  // Les deux mènent au même endroit : l'en-tête garde l'action sous les yeux
+  // au défilement, le héros la porte. Ce n'est pas deux actions concurrentes,
+  // c'est la même, rappelée. Le plafond reste bas pour que ça ne dérive pas.
+  it("met en avant l'action de la page, sans la multiplier", () => {
     const { container } = render(<Landing t={messages("fr")} langue="fr" configuration={config} avantLancement />);
     const pleins = [...container.querySelectorAll("button, a")].filter((e) =>
       (e.getAttribute("style") ?? "").includes("var(--action)"));
-    expect(pleins.length).toBeLessThanOrEqual(1);
+    expect(pleins.length, "l'en-tête et le héros, pas davantage").toBeLessThanOrEqual(2);
+  });
+
+  // Les deux doivent viser la même chose, sinon ce sont bien deux actions.
+  it("fait pointer l'appel de l'en-tête vers le formulaire du héros", () => {
+    const { container } = render(<Landing t={messages("fr")} langue="fr" configuration={config} avantLancement />);
+    const appel = container.querySelector(".ent-cta");
+    expect(appel).not.toBeNull();
+    expect(appel).toHaveAttribute("href", "/fr#commencer");
+    expect(container.querySelector("#commencer"), "l'ancre visée doit exister").not.toBeNull();
+  });
+
+  it("ramène à l'accueil quand on clique la marque", () => {
+    const { container } = render(<Landing t={messages("fr")} langue="fr" configuration={config} avantLancement />);
+    const marque = container.querySelector("header a");
+    expect(marque).toHaveAttribute("href", "/fr");
   });
 
   // Ce test affirmait l'inverse : « aucune section Mur, c'est une surface à
