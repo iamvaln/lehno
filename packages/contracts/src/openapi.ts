@@ -167,6 +167,14 @@ const CHEMINS: Chemin[] = [
     authentifie: true,
     corps: createPersonSchema,
     reponse: personSchema,
+    // Nest rend 201 par défaut pour un POST sans @HttpCode explicite, et
+    // c'est le statut juste ici : la route rend une ressource nouvelle, avec
+    // un identifiant que le client apprend. Contrairement aux autres POST du
+    // contrat (/auth/otp envoie un code, /public/waitlist est idempotent à
+    // dessein, /public/contact achemine un message), aucun n'est une création
+    // au sens REST — celui-ci l'est, 201 se corrige donc ici plutôt qu'au
+    // contrôleur.
+    statut: 201,
   },
 ];
 

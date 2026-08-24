@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import jwt from "jsonwebtoken";
+import { createPersonSchema, type CreatePersonInput } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { PersonService } from "../src/me/person.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
@@ -62,6 +64,37 @@ describe("annuaire des proches", () => {
     expect(await service.list(awa)).toHaveLength(2);
   });
 
+  // Preuve de cloisonnement à l'écriture, en deux cas distincts et
+  // indépendants : la disparition de l'un des deux ne doit pas passer
+  // inaperçue derrière le succès de l'autre.
+  describe("cloisonnement à l'écriture", () => {
+    // Première protection : le schéma .strict() refuse un champ inattendu
+    // avant même que la requête n'atteigne le service — un corps qui porte
+    // userId ne doit jamais être une forme valide.
+    it("un corps de création portant userId est refusé par le schéma, avant le service", () => {
+      const résultat = createPersonSchema.safeParse({
+        displayName: "Otage",
+        userId: bila,
+      });
+      expect(résultat.success).toBe(false);
+    });
+
+    // Seconde protection, indépendante de la première : si l'appelant force
+    // le passage jusqu'au service (contournement du typage, comme un `as`
+    // le permettrait), la fiche appartient tout de même au demandeur —
+    // Scope.create écrit la portée après les données fournies, donc un
+    // userId glissé par l'appelant est écrasé, jamais honoré.
+    it("un userId forcé jusqu'au service n'usurpe pas l'appartenance de la fiche", async () => {
+      const usurpé = { displayName: "Otage", userId: bila } as unknown as CreatePersonInput;
+      await service.create(awa, usurpé);
+
+      const vusAwa = await service.list(awa);
+      const vusBila = await service.list(bila);
+      expect(vusAwa.map((p) => p.displayName)).toContain("Otage");
+      expect(vusBila.map((p) => p.displayName)).not.toContain("Otage");
+    });
+  });
+
   describe("HTTP de bout en bout", () => {
     let app: INestApplication;
     let baseUrl: string;
@@ -104,6 +137,24 @@ describe("annuaire des proches", () => {
     it("refuse un appel sans jeton", async () => {
       const r = await fetch(`${baseUrl}/v1/me/persons`);
       expect(r.status).toBe(401);
+    });
+
+    // Seul pont entre le contrat calculé et ce que le serveur rend réellement :
+    // le test de péremption du contrat ne compare que le fichier au calcul,
+    // jamais le calcul à la réponse HTTP effective. C'est ce test-ci qui
+    // aurait révélé, seul, que @Post() sans @HttpCode rend 201 — le contrat
+    // publié doit donc annoncer 201, pas 200.
+    it("crée un proche via HTTP avec un jeton valable", async () => {
+      const token = jwt.sign({ sub: awa }, SECRET, { algorithm: "HS256", expiresIn: 900 });
+      const r = await fetch(`${baseUrl}/v1/me/persons`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ displayName: "Valery" }),
+      });
+      expect(r.status).toBe(201);
+      const body = (await r.json()) as { id: string; displayName: string };
+      expect(body.displayName).toBe("Valery");
+      expect(body.id).toMatch(/^[0-9a-f-]{36}$/);
     });
   });
 });
