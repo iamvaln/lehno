@@ -12,6 +12,12 @@ export default tseslint.config(
     ignores: [
       "**/dist/**", "**/.next/**", "**/.turbo/**", "**/node_modules/**",
       "**/next-env.d.ts",
+      // specs/ porte les planches de conception et les paquets de passation :
+      // des prototypes écrits pour être lus et transposés, pas pour être
+      // compilés. Les linter revient à corriger le brouillon d'un designer —
+      // et un doublon de clé y est parfois voulu, l'un écrasant l'autre pour
+      // montrer une variante.
+      "**/specs/**",
     ],
   },
   js.configs.recommended,
