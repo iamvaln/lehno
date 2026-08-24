@@ -1,0 +1,374 @@
+<!-- @dsCard group="Application" viewport="1240x900" -->
+<!-- @startingPoint section="Application" subtitle="Planche de revue — la phase 1 à plat, thème, langue, modèle, OS" viewport="1240x1000" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Lehno — planche de revue, application</title>
+<link rel="stylesheet" href="../../styles.css">
+<link rel="icon" href="../../assets/brand/lehno-favicon-28.svg">
+<script src="https://unpkg.com/lucide@0.417.0/dist/umd/lucide.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../components/_card-boot.js"></script>
+<style>
+  html, body { margin: 0; }
+  body {
+    font-family: var(--font-body); background: var(--lehno-lilac);
+    color: var(--text-body); padding: 26px 24px 60px;
+  }
+  body.lehno-nuit { background: #0E0D13; }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+         font-weight: 600; color: var(--text-mention); }
+  .bar {
+    position: sticky; top: 0; z-index: 30; display: flex; gap: 22px; flex-wrap: wrap;
+    align-items: flex-end; background: var(--surface-page);
+    border: 1px solid var(--border-object); border-radius: var(--radius-xl);
+    padding: 14px 18px; margin-bottom: 26px;
+  }
+  .swap {
+    display: inline-flex; border: 1px solid var(--border-object);
+    border-radius: 999px; overflow: hidden; background: var(--surface-card);
+  }
+  .swap button {
+    font-family: var(--font-body); font-size: 12px; font-weight: 600;
+    padding: 7px 13px; border: none; background: none; cursor: pointer;
+    color: var(--text-secondary);
+  }
+  .swap button[aria-pressed="true"] { background: var(--action); color: var(--text-on-accent); }
+  .rangee { display: flex; gap: 26px; flex-wrap: wrap; align-items: flex-start; }
+  section { margin-bottom: 40px; }
+  h2 { font-family: var(--font-display); font-variation-settings: var(--font-display-settings);
+       font-weight: 500; font-size: 23px; letter-spacing: -.02em; margin: 0 0 4px; }
+  .note { font-size: 13px; color: var(--text-secondary); max-width: 66ch;
+          margin: 0 0 18px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/lehno">
+const C = await window.lehnoBoot([
+  "../../components/core/Icon.jsx",
+  "../../components/core/Button.jsx",
+  "../../components/core/Tag.jsx",
+  "../../components/core/Card.jsx",
+  "../../components/core/SectionLabel.jsx",
+  "../../components/core/Avatar.jsx",
+  "../../components/forms/TextField.jsx",
+  "../../components/content/Countdown.jsx",
+  "../../components/content/Provenance.jsx",
+  "../../components/content/Quote.jsx",
+  "../../components/content/EventCard.jsx",
+  "../../components/content/CategoryTag.jsx",
+  "../../components/content/CreditIndicator.jsx",
+  "../../components/feedback/Banner.jsx",
+  "../../components/feedback/SensitiveBanner.jsx",
+  "../../components/feedback/OfflineBanner.jsx",
+  "../../components/brand/Illustration.jsx",
+  "../../components/feedback/EmptyState.jsx",
+  "../../components/feedback/LoadingState.jsx",
+  "../../components/navigation/TabBar.jsx",
+  "../../components/navigation/NotificationBell.jsx",
+  "../../components/brand/Wordmark.jsx",
+  "../../components/brand/BrandMark.jsx",
+  "./copy.js",
+  "./PhoneFrame.jsx",
+  "./SplashScreen.jsx",
+  "./AppHeader.jsx",
+  "./AccueilScreen.jsx",
+  "./DatesScreen.jsx",
+  "./ProchesScreen.jsx",
+  "./ProcheScreen.jsx",
+  "./PreparationScreen.jsx",
+  "./GenerationScreen.jsx",
+  "./NotificationsScreen.jsx",
+  "./ReprisesScreen.jsx",
+  "./CollecteScreen.jsx",
+  "./PortraitImage.jsx",
+  "./PortraitScreen.jsx",
+  "./CompositionScreen.jsx",
+  "./CadrageIdeesScreen.jsx",
+  "./RechargeScreen.jsx",
+  "./ParrainageScreen.jsx",
+  "./MonMurScreen.jsx",
+  "./CompteScreens.jsx",
+  "./IdentiteScreen.jsx",
+  "./AValiderScreen.jsx",
+  "./MoiScreen.jsx",
+  "./ConnexionScreen.jsx",
+  "./CodeScreen.jsx",
+  "./PseudoScreen.jsx",
+  "./BienvenueScreen.jsx",
+  "./NoteScreen.jsx",
+  "./EvenementScreen.jsx",
+  "./RechercheScreen.jsx",
+  "./SouhaitScreen.jsx",
+  "./OccasionScreen.jsx"
+]);
+
+const {
+  COPY, PROCHES, PhoneFrame, MODELES, AppHeader, TabBar,
+  AccueilScreen, DatesScreen, ProchesScreen, ProcheScreen, PreparationScreen, MoiScreen,
+  GenerationScreen, NotificationsScreen, AValiderScreen, ReprisesScreen, CollecteScreen, IdentiteScreen, PortraitImage, PortraitScreen, CompositionScreen, CadrageIdeesScreen, RechargeScreen, ParrainageScreen, MonMurScreen,
+  ProfilScreen, ReglagesScreen, SecuriteScreen, PaiementScreen, AideScreen, ReservationsScreen,
+  SplashScreen, ConnexionScreen, CodeScreen, PseudoScreen, BienvenueScreen,
+  NoteScreen, EvenementScreen, RechercheScreen, SouhaitScreen, OccasionScreen
+} = C;
+
+/* La planche montre chaque écran AVEC ses données — c'est ce qu'on valide.
+   Les états particuliers ont leur propre rangée, plus bas : un état vide est
+   un écran à part entière, pas une variante à deviner. */
+const SUITE = [
+  { id: "splash",     num: "—",    nom: { fr: "Ouverture",           en: "Launch" } },
+  { id: "connexion",  num: "3.1",  nom: { fr: "Connexion",          en: "Sign in" } },
+  { id: "code",       num: "3.1",  nom: { fr: "Code reçu",           en: "Code" } },
+  { id: "pseudo",     num: "3.1",  nom: { fr: "Pseudo",              en: "Handle" } },
+  { id: "bienvenue",  num: "3.1",  nom: { fr: "Bienvenue",           en: "Welcome" } },
+  { id: "accueil",    num: "3.2",  nom: { fr: "Accueil",             en: "Home" }, onglet: "accueil" },
+  { id: "proches",    num: "3.3",  nom: { fr: "Proches",             en: "People" }, onglet: "proches" },
+  { id: "proche",     num: "3.4",  nom: { fr: "Fiche d'un proche",   en: "A person" }, titre: "Valery Bah" },
+  { id: "note",       num: "3.5",  nom: { fr: "Saisie d'une note",   en: "Write a note" }, titre: { fr: "Nouvelle note", en: "New note" } },
+  { id: "evenement",  num: "3.6",  nom: { fr: "Ajouter une date",    en: "Add a date" },  titre: { fr: "Nouvelle date", en: "New date" } },
+  { id: "recherche",  num: "3.15", nom: { fr: "Recherche",           en: "Search" } },
+  { id: "souhait",    num: "3.19", nom: { fr: "Un souhait",          en: "A wish" },      titre: { fr: "Souhait", en: "Wish" } },
+  { id: "occasion",   num: "3.21", nom: { fr: "Une occasion",        en: "An occasion" }, titre: { fr: "24 août", en: "24 Aug" } },
+  { id: "preparation", num: "3.7", nom: { fr: "Préparer",             en: "Prepare" },      titre: { fr: "Pour Valery", en: "For Valery" } },
+  { id: "generation",  num: "3.7", nom: { fr: "Le message écrit",     en: "The written message" }, titre: { fr: "Pour Valery", en: "For Valery" } },
+  { id: "notifications", num: "3.13", nom: { fr: "Notifications",     en: "Notifications" } },
+  { id: "valider",     num: "3.8",  nom: { fr: "À valider",           en: "To review" },    titre: { fr: "À valider", en: "To review" } },
+  { id: "reprises",    num: "3.16", nom: { fr: "Reprises en cours",   en: "In progress" },  titre: { fr: "En cours", en: "In progress" } },
+  { id: "collecte",    num: "3.20", nom: { fr: "Lien de collecte",     en: "Collection link" }, titre: { fr: "Faire compléter", en: "Have it filled in" } },
+  { id: "identite",    num: "3.18", nom: { fr: "Identité d'un proche", en: "Their details" },   titre: { fr: "Valery Bah", en: "Valery Bah" } },
+  { id: "cadrage",     num: "3.7",  nom: { fr: "Cadrer les idées",     en: "Frame the ideas" }, titre: { fr: "Idées pour Valery", en: "Ideas for Valery" } },
+  { id: "composition", num: "3.7",  nom: { fr: "Composer un portrait", en: "Compose a portrait" }, titre: { fr: "Un portrait de Valery", en: "A portrait of Valery" } },
+  { id: "portrait",    num: "3.22", nom: { fr: "Un portrait",           en: "A portrait" },     titre: { fr: "Le portrait", en: "The portrait" } },
+  { id: "moi",         num: "3.17", nom: { fr: "Moi",                   en: "Me" },             onglet: "moi" },
+  { id: "recharge",    num: "3.9",  nom: { fr: "Recharger",             en: "Top up" },         titre: { fr: "Recharger", en: "Top up" } },
+  { id: "parrainage",  num: "3.9",  nom: { fr: "Parrainage",            en: "Referral" },       titre: { fr: "Parrainage", en: "Referral" } },
+  { id: "monmur",      num: "3.10", nom: { fr: "Mon Mur",               en: "My Wall" },        titre: { fr: "Mon Mur", en: "My Wall" } },
+  { id: "profil",      num: "3.23", nom: { fr: "Mon profil",            en: "My profile" },     titre: { fr: "Mon profil", en: "My profile" } },
+  { id: "reglages",    num: "3.11", nom: { fr: "Rappels",               en: "Reminders" },      titre: { fr: "Rappels", en: "Reminders" } },
+  { id: "securite",    num: "3.24", nom: { fr: "Sécurité",              en: "Security" },       titre: { fr: "Sécurité", en: "Security" } },
+  { id: "paiement",    num: "3.25", nom: { fr: "Paiement",              en: "Payment" },        titre: { fr: "Paiement", en: "Payment" } },
+  { id: "reservations",num: "3.27", nom: { fr: "Mes réservations",      en: "My reservations" },titre: { fr: "Réservations", en: "Reservations" } },
+  { id: "aide",        num: "3.26", nom: { fr: "Aide",                  en: "Help" },           titre: { fr: "Aide", en: "Help" } }
+];
+
+const ETATS = [
+  { id: "accueil",   etat: "premier",    num: "3.2",  legende: { fr: "Premier lancement",   en: "First launch" } },
+  { id: "accueil",   etat: "vide",       num: "3.2",  legende: { fr: "Rien n'approche",     en: "Nothing coming up" } },
+  { id: "accueil",   etat: "chargement", num: "3.2",  legende: { fr: "Chargement",          en: "Loading" } },
+  { id: "proches",   etat: "vide",       num: "3.3",  legende: { fr: "Annuaire à ouvrir",   en: "Empty directory" } },
+  { id: "code",      etat: "expire",     num: "3.1",  legende: { fr: "Code expiré",         en: "Expired code" } },
+  { id: "dates",     etat: "liste",     num: "3.14", legende: { fr: "Vue liste",            en: "List view" } },
+  { id: "recherche", etat: "vide",       num: "3.15", legende: { fr: "Sans correspondance", en: "No match" } },
+  { id: "souhait",   etat: "vide",       num: "3.19", legende: { fr: "Souhaits à lister",   en: "No wishes yet" } },
+  { id: "note",      etat: "horsligne",  num: "3.5",  legende: { fr: "Hors connexion",      en: "Offline" } },
+  { id: "note",      etat: "erreur",     num: "3.5",  legende: { fr: "Erreur de saisie",    en: "Input error" } },
+  { id: "evenement", etat: "sensible",   num: "3.6",  legende: { fr: "Date sensible",       en: "Sensitive date" } },
+  { id: "occasion",  etat: "solde",      num: "3.21", legende: { fr: "Solde insuffisant",   en: "Not enough credits" } },
+  { id: "occasion",  etat: "passee",     num: "3.21", legende: { fr: "Occasion passée",     en: "Past occasion" } },
+  { id: "preparation",   etat: "sensible",  num: "3.7",  legende: { fr: "Date sensible",        en: "Sensitive date" } },
+  { id: "preparation",   etat: "solde",     num: "3.7",  legende: { fr: "Solde insuffisant",    en: "Not enough credits" } },
+  { id: "preparation",   etat: "horsligne", num: "3.7",  legende: { fr: "Hors connexion",       en: "Offline" } },
+  { id: "generation",    etat: "attente",   num: "3.7",  legende: { fr: "Lehno écrit",          en: "Lehno is writing" } },
+  { id: "generation",    etat: "idees",     num: "3.7",  legende: { fr: "Trois idées",          en: "Three ideas" } },
+  { id: "generation",    etat: "erreur",    num: "3.7",  legende: { fr: "Écriture interrompue", en: "Writing failed" } },
+  { id: "notifications", etat: "vide",      num: "3.13", legende: { fr: "Rien à signaler",      en: "Nothing to flag" } },
+  { id: "valider",       etat: "vide",      num: "3.8",  legende: { fr: "Tout est traité",      en: "All caught up" } },
+  { id: "reprises",      etat: "vide",      num: "3.16", legende: { fr: "Rien en plan",         en: "Nothing pending" } },
+  { id: "collecte",      etat: "revoque",   num: "3.20", legende: { fr: "Lien révoqué",         en: "Revoked link" } },
+  { id: "identite",      etat: "collecte",  num: "3.18", legende: { fr: "Née d'une collecte",   en: "From a collection" } },
+  { id: "portrait",      etat: "avalider",  num: "3.22", legende: { fr: "À approuver",          en: "To approve" } },
+  { id: "portrait",      etat: "partage",   num: "3.22", legende: { fr: "Déjà partagé",         en: "Already shared" } },
+  { id: "portrait",      etat: "vide",      num: "3.22", legende: { fr: "Aucun portrait",       en: "No portrait" } },
+  { id: "recharge",      etat: "attente",   num: "3.9",  legende: { fr: "Attente mobile money", en: "Mobile money wait" } },
+  { id: "recharge",      etat: "abouti",    num: "3.9",  legende: { fr: "Paiement abouti",      en: "Payment went through" } },
+  { id: "recharge",      etat: "echec",     num: "3.9",  legende: { fr: "Paiement échoué",      en: "Payment failed" } },
+  { id: "parrainage",    etat: "vide",      num: "3.9",  legende: { fr: "Personne encore",      en: "Nobody yet" } },
+  { id: "monmur",        etat: "prive",     num: "3.10", legende: { fr: "Mur hors ligne",       en: "Wall offline" } },
+  { id: "monmur",        etat: "aucunmot",  num: "3.10", legende: { fr: "Aucun mot reçu",       en: "No note received" } },
+  { id: "reglages",      etat: "refuse",    num: "3.11", legende: { fr: "Notifications refusées",en: "Notifications off" } },
+  { id: "securite",      etat: "inhabituelle", num: "3.24", legende: { fr: "Connexion inhabituelle", en: "Unusual sign-in" } },
+  { id: "paiement",      etat: "vide",      num: "3.25", legende: { fr: "Aucune méthode",       en: "No method" } },
+  { id: "paiement",      etat: "expire",    num: "3.25", legende: { fr: "Carte expirée",        en: "Expired card" } },
+  { id: "reservations",  etat: "vide",      num: "3.27", legende: { fr: "Aucune réservation",   en: "No reservation" } }
+];
+
+const CHROME_ABSENT = ["splash", "connexion", "code", "pseudo", "bienvenue", "recherche", "notifications"];
+
+function Ecran({ def, etat, langue, nuit, modele, os, legende }) {
+  const t = { ...COPY[langue], nuit };
+  const props = { t, etat, base: "../../", onOpen: () => {}, onSuite: () => {},
+                  onRetour: () => {}, onEnregistrer: () => {}, onRecherche: () => {},
+                  onInviter: () => {} };
+
+  let vue;
+  switch (def.id) {
+    case "splash":    vue = <SplashScreen {...props} />; break;
+    case "connexion": vue = <ConnexionScreen {...props} />; break;
+    case "code":      vue = <CodeScreen {...props} />; break;
+    case "pseudo":    vue = <PseudoScreen {...props} />; break;
+    case "bienvenue": vue = <BienvenueScreen {...props} />; break;
+    case "proches":   vue = <ProchesScreen {...props} gens={PROCHES} />; break;
+    case "proche":    vue = <ProcheScreen {...props} />; break;
+    case "note":      vue = <NoteScreen {...props} />; break;
+    case "evenement": vue = <EvenementScreen {...props} />; break;
+    case "recherche": vue = <RechercheScreen {...props} gens={PROCHES} />; break;
+    case "souhait":   vue = <SouhaitScreen {...props} />; break;
+    case "occasion":  vue = <OccasionScreen {...props} />; break;
+    case "dates":     vue = <DatesScreen {...props} />; break;
+    case "preparation":   vue = <PreparationScreen {...props} />; break;
+    case "generation":    vue = <GenerationScreen {...props} />; break;
+    case "notifications": vue = <NotificationsScreen {...props} />; break;
+    case "valider":       vue = <AValiderScreen {...props} />; break;
+    case "reprises":      vue = <ReprisesScreen {...props} />; break;
+    case "collecte":      vue = <CollecteScreen {...props} />; break;
+    case "identite":      vue = <IdentiteScreen {...props} />; break;
+    case "portrait":      vue = <PortraitScreen {...props} />; break;
+    case "composition":   vue = <CompositionScreen {...props} />; break;
+    case "cadrage":       vue = <CadrageIdeesScreen {...props} />; break;
+    case "moi":           vue = <MoiScreen {...props} />; break;
+    case "recharge":      vue = <RechargeScreen {...props} />; break;
+    case "parrainage":    vue = <ParrainageScreen {...props} />; break;
+    case "monmur":        vue = <MonMurScreen {...props} />; break;
+    case "profil":        vue = <ProfilScreen {...props} />; break;
+    case "reglages":      vue = <ReglagesScreen {...props} />; break;
+    case "securite":      vue = <SecuriteScreen {...props} />; break;
+    case "paiement":      vue = <PaiementScreen {...props} />; break;
+    case "aide":          vue = <AideScreen {...props} />; break;
+    case "reservations":  vue = <ReservationsScreen {...props} />; break;
+    default:          vue = <AccueilScreen {...props} echeances={PROCHES} />;
+  }
+
+  const chrome = CHROME_ABSENT.indexOf(def.id) < 0;
+  const titre = typeof def.titre === "string" ? def.titre : def.titre ? def.titre[langue] : undefined;
+  const nom = legende ? legende[langue] : def.nom[langue];
+
+  return (
+    <PhoneFrame os={os} modele={modele} auto pleinEcran={def.id === "splash"}
+      etiquette={def.num + " · " + nom}>
+      {chrome ? (
+        <AppHeader dark={nuit} base="../../" notifications={def.id === "accueil" ? 2 : 0}
+          onBack={titre ? () => {} : undefined} title={titre} />
+      ) : null}
+      {/* Pas d'« overflow: hidden » : le châssis est en « auto », donc il s'allonge
+          et l'écran se montre en entier — c'est le rôle de la planche. Et flex
+          column, sinon un écran qui veut occuper toute la hauteur ne peut pas
+          s'étirer : un « flex: 1 » sans conteneur flexible ne fait rien. */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>{vue}</div>
+      {def.onglet ? (
+        <div style={{ flex: "none", paddingBottom: MODELES[modele].safeBas ? 14 : 4 }}>
+          <TabBar active={def.onglet} tabs={[
+            { id: "accueil", label: COPY[langue].ongletAccueil, icon: "house" },
+            { id: "dates",   label: COPY[langue].ongletDates,   icon: "calendar" },
+            { id: "proches", label: COPY[langue].ongletProches, icon: "heart" },
+            { id: "moi",     label: COPY[langue].ongletMoi,     icon: "user" }
+          ]} />
+        </div>
+      ) : null}
+    </PhoneFrame>
+  );
+}
+
+function Bascule({ label, valeur, options, onSet }) {
+  return (
+    <div>
+      <div className="lbl" style={{ marginBottom: 6 }}>{label}</div>
+      <div className="swap" role="group" aria-label={label}>
+        {options.map(([k, l]) => (
+          <button key={k} type="button" aria-pressed={valeur === k} onClick={() => onSet(k)}>{l}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Planche() {
+  const [nuit, setNuit] = React.useState(false);
+  const [langue, setLangue] = React.useState("fr");
+  const [modele, setModele] = React.useState("standard");
+  const [os, setOs] = React.useState("ios");
+
+  React.useEffect(() => {
+    document.body.classList.toggle("lehno-nuit", nuit);
+    document.documentElement.lang = langue;
+  }, [nuit, langue]);
+
+  const commun = { langue, nuit, modele, os };
+
+  /* Les légendes se répètent (« tout est traité » sur deux écrans) : on les
+     dédoublonne pour la phrase, et c'est CE nombre qu'on annonce — sinon le
+     compte promis et la liste lisible se contredisent. Pas de mise en
+     minuscules : elle mangerait la capitale de Lehno. */
+  const legendes = [...new Set(ETATS.map((e) => e.legende.fr))];
+
+  return (
+    <>
+      <div className="bar">
+        <div>
+          <div className="lbl" style={{ marginBottom: 4 }}>Planche de revue</div>
+          <div className="lehno-display" style={{ fontSize: 19 }}>
+            La phase 1 — le carnet
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginLeft: "auto" }}>
+          <Bascule label="Thème" valeur={nuit ? "n" : "c"}
+            options={[["c", "Clair"], ["n", "Sombre"]]} onSet={(k) => setNuit(k === "n")} />
+          <Bascule label="Langue" valeur={langue}
+            options={[["fr", "FR"], ["en", "EN"]]} onSet={setLangue} />
+          <Bascule label="Modèle" valeur={modele}
+            options={[["se", "SE"], ["standard", "Courant"], ["max", "Grand"]]} onSet={setModele} />
+          <Bascule label="Système" valeur={os}
+            options={[["ios", "iOS"], ["android", "Android"]]} onSet={setOs} />
+        </div>
+      </div>
+
+      <section>
+        <h2>Les écrans, avec leurs données</h2>
+        <p className="note">
+          {SUITE.length} écrans dans l'ordre de la spec — de « {SUITE[0].nom.fr} » à
+          « {SUITE[SUITE.length - 1].nom.fr} ». C'est l'état nominal : celui qu'on voit tous
+          les jours. Les châssis s'allongent jusqu'à leur contenu — rien n'est coupé, et en
+          « SE » on voit d'un coup quels écrans débordent d'un vrai téléphone.
+        </p>
+        <div className="rangee">
+          {SUITE.map((d) => <Ecran key={d.id} def={d} etat="nominal" {...commun} />)}
+        </div>
+      </section>
+
+      <section>
+        <h2>Les états particuliers</h2>
+        <p className="note">
+          Chacun est un écran à part entière, pas une variante à deviner. Les textes annoncent
+          ce qui est possible, jamais ce qui manque — la spec l'impose et le calme est une
+          réponse. {ETATS.length} vues, pour {legendes.length} situations :{" "}
+          {legendes.join(" · ")}.
+        </p>
+        <div className="rangee">
+          {ETATS.map((e, i) => (
+            <Ecran key={e.id + e.etat + i}
+              def={{ ...(SUITE.find((s) => s.id === e.id) || {}), num: e.num }}
+              etat={e.etat} legende={e.legende} {...commun} />
+          ))}
+        </div>
+      </section>
+
+      <section style={{ marginBottom: 0 }}>
+        <h2>Ce que la planche ne montre pas</h2>
+        <p className="note">
+          Les parcours. Un écran juste peut s'enchaîner mal : le prototype cliquable
+          (<a href="prototype.html">prototype.html</a>) traverse les quatre parcours de la
+          spec §4. Les vingt-sept écrans de la spec mobile sont dessinés ; reste le
+          back-office, qui attend son arbitrage d'identité — un outil qu'on regarde huit
+          heures par jour n'a pas les besoins d'un carnet intime.
+        </p>
+      </section>
+    </>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Planche />);
+</script>
+</body>
+</html>

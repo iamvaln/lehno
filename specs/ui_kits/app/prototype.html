@@ -1,0 +1,403 @@
+<!-- @dsCard group="Application" viewport="1200x900" -->
+<!-- @startingPoint section="Application" subtitle="Prototype cliquable — thème, langue, modèle, OS" viewport="1200x980" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lehno — prototype de l'application</title>
+<link rel="stylesheet" href="../../styles.css">
+<link rel="icon" href="../../assets/brand/lehno-favicon-28.svg">
+<script src="https://unpkg.com/lucide@0.417.0/dist/umd/lucide.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../components/_card-boot.js"></script>
+<style>
+  html, body { margin: 0; }
+  body {
+    font-family: var(--font-body); background: var(--lehno-lilac);
+    color: var(--text-body); min-height: 100vh; padding: 26px 20px 60px;
+    box-sizing: border-box;
+  }
+  body.lehno-nuit { background: #0E0D13; }
+  .stage { display: flex; gap: 34px; align-items: flex-start; justify-content: center;
+           flex-wrap: wrap; max-width: 1140px; margin: 0 auto; }
+  .side { width: 290px; flex: none; }
+  .lbl { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+         font-weight: 600; color: var(--text-mention); }
+  .swap { display: inline-flex; border: 1px solid var(--border-object); border-radius: 999px;
+          overflow: hidden; background: var(--surface-card); }
+  .swap button { font-family: var(--font-body); font-size: 12px; font-weight: 600;
+                 padding: 7px 12px; border: none; background: none; cursor: pointer;
+                 color: var(--text-secondary); min-height: 32px; }
+  .swap button[aria-pressed="true"] { background: var(--action); color: var(--text-on-accent); }
+  .rail { display: grid; gap: 2px; margin-top: 10px; }
+  .rail button { all: unset; box-sizing: border-box; cursor: pointer; display: flex;
+                 align-items: center; gap: 8px; padding: 9px 11px; border-radius: 9px;
+                 font-family: var(--font-body); font-size: 13.5px; color: var(--text-secondary);
+                 min-height: 40px; }
+  .rail button[aria-current="true"] { background: var(--action-quiet-bg); color: var(--text-accent); font-weight: 600; }
+  .rail .num { font-size: 10.5px; color: var(--text-mention); min-width: 26px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/lehno">
+const C = await window.lehnoBoot([
+  "../../components/core/Icon.jsx",
+  "../../components/core/Button.jsx",
+  "../../components/core/Tag.jsx",
+  "../../components/core/Card.jsx",
+  "../../components/core/SectionLabel.jsx",
+  "../../components/core/Avatar.jsx",
+  "../../components/forms/TextField.jsx",
+  "../../components/content/Countdown.jsx",
+  "../../components/content/Provenance.jsx",
+  "../../components/content/Quote.jsx",
+  "../../components/content/CategoryTag.jsx",
+  "../../components/content/CreditIndicator.jsx",
+  "../../components/content/EventCard.jsx",
+  "../../components/feedback/Banner.jsx",
+  "../../components/feedback/SensitiveBanner.jsx",
+  "../../components/feedback/OfflineBanner.jsx",
+  "../../components/brand/Illustration.jsx",
+  "../../components/feedback/PaidActionSheet.jsx",
+  "../../components/feedback/EmptyState.jsx",
+  "../../components/feedback/LoadingState.jsx",
+  "../../components/navigation/TabBar.jsx",
+  "../../components/navigation/NotificationBell.jsx",
+  "../../components/brand/Wordmark.jsx",
+  "../../components/brand/BrandMark.jsx",
+  "./copy.js",
+  "./PhoneFrame.jsx",
+  "./SplashScreen.jsx",
+  "./AppHeader.jsx",
+  "./AccueilScreen.jsx",
+  "./DatesScreen.jsx",
+  "./ProchesScreen.jsx",
+  "./ProcheScreen.jsx",
+  "./PreparationScreen.jsx",
+  "./GenerationScreen.jsx",
+  "./NotificationsScreen.jsx",
+  "./ReprisesScreen.jsx",
+  "./CollecteScreen.jsx",
+  "./IdentiteScreen.jsx",
+  "./PortraitImage.jsx",
+  "./PortraitScreen.jsx",
+  "./CompositionScreen.jsx",
+  "./CadrageIdeesScreen.jsx",
+  "./RechargeScreen.jsx",
+  "./ParrainageScreen.jsx",
+  "./MonMurScreen.jsx",
+  "./CompteScreens.jsx",
+  "./AValiderScreen.jsx",
+  "./MoiScreen.jsx",
+  "./ConnexionScreen.jsx",
+  "./CodeScreen.jsx",
+  "./PseudoScreen.jsx",
+  "./BienvenueScreen.jsx",
+  "./NoteScreen.jsx",
+  "./EvenementScreen.jsx",
+  "./RechercheScreen.jsx",
+  "./SouhaitScreen.jsx",
+  "./OccasionScreen.jsx"
+]);
+
+const {
+  COPY, PROCHES, PhoneFrame, MODELES, AppHeader, TabBar, Button,
+  AccueilScreen, DatesScreen, ProchesScreen, ProcheScreen, PreparationScreen, MoiScreen,
+  GenerationScreen, PaidActionSheet, NotificationsScreen, AValiderScreen, ReprisesScreen,
+  CollecteScreen, IdentiteScreen, PortraitImage, PortraitScreen, CompositionScreen, CadrageIdeesScreen, RechargeScreen, ParrainageScreen, MonMurScreen,
+  ProfilScreen, ReglagesScreen, SecuriteScreen, PaiementScreen, AideScreen, ReservationsScreen,
+  SplashScreen, ConnexionScreen, CodeScreen, PseudoScreen, BienvenueScreen,
+  NoteScreen, EvenementScreen, RechercheScreen, SouhaitScreen, OccasionScreen
+} = C;
+
+/* Les écrans, dans l'ordre de la spec. « etats » liste ceux que l'écran sait
+   jouer — la spec §6 les impose, et c'est le rail de droite qui les expose. */
+const ECRANS = [
+  { id: "splash", num: "—", nom: { fr: "Ouverture", en: "Launch" }, chrome: false, etats: ["nominal"] },
+  { id: "connexion", num: "3.1", nom: { fr: "Connexion", en: "Sign in" }, chrome: false, etats: ["nominal", "erreur"] },
+  { id: "code", num: "3.1", nom: { fr: "Code reçu", en: "Code" }, chrome: false, etats: ["nominal", "erreur", "expire"] },
+  { id: "pseudo", num: "3.1", nom: { fr: "Pseudo", en: "Handle" }, chrome: false, etats: ["nominal", "erreur"] },
+  { id: "bienvenue", num: "3.1", nom: { fr: "Bienvenue", en: "Welcome" }, chrome: false, etats: ["nominal"] },
+  { id: "accueil", num: "3.2", nom: { fr: "Accueil", en: "Home" }, onglet: "accueil", etats: ["nominal", "premier", "vide", "chargement"] },
+  { id: "proches", num: "3.3", nom: { fr: "Proches", en: "People" }, onglet: "proches", etats: ["nominal", "vide", "chargement"] },
+  { id: "proche", num: "3.4", nom: { fr: "Fiche d'un proche", en: "A person" }, titre: "Valery Bah", etats: ["nominal"] },
+  { id: "note", num: "3.5", nom: { fr: "Saisie d'une note", en: "Write a note" }, titre: { fr: "Nouvelle note", en: "New note" }, etats: ["nominal", "chargement", "erreur", "horsligne"] },
+  { id: "evenement", num: "3.6", nom: { fr: "Ajouter une date", en: "Add a date" }, titre: { fr: "Nouvelle date", en: "New date" }, etats: ["nominal", "sensible", "erreur"] },
+  { id: "recherche", num: "3.15", nom: { fr: "Recherche", en: "Search" }, chrome: false, etats: ["nominal", "vide"] },
+  { id: "souhait", num: "3.19", nom: { fr: "Un souhait", en: "A wish" }, titre: { fr: "Souhait", en: "Wish" }, etats: ["nominal", "reserve", "vide", "horsligne"] },
+  { id: "occasion", num: "3.21", nom: { fr: "Une occasion", en: "An occasion" }, titre: { fr: "24 août", en: "24 Aug" }, etats: ["nominal", "sensible", "passee", "solde", "horsligne"] },
+  { id: "dates", num: "3.14", nom: { fr: "Dates", en: "Dates" }, onglet: "dates", etats: ["nominal", "liste"] },
+  { id: "preparation", num: "3.7", nom: { fr: "Préparer", en: "Prepare" }, titre: { fr: "Pour Valery", en: "For Valery" }, etats: ["nominal", "sensible", "solde", "horsligne"] },
+  { id: "generation", num: "3.7", nom: { fr: "Ce que Lehno a écrit", en: "What Lehno wrote" }, titre: { fr: "Pour Valery", en: "For Valery" }, etats: ["message", "idees", "attente", "erreur"] },
+  { id: "notifications", num: "3.13", nom: { fr: "Notifications", en: "Notifications" }, chrome: false, etats: ["nominal", "vide"] },
+  { id: "valider", num: "3.8", nom: { fr: "À valider", en: "To review" }, titre: { fr: "À valider", en: "To review" }, etats: ["nominal", "vide"] },
+  { id: "reprises", num: "3.16", nom: { fr: "Reprises en cours", en: "In progress" }, titre: { fr: "En cours", en: "In progress" }, etats: ["nominal", "vide"] },
+  { id: "collecte", num: "3.20", nom: { fr: "Lien de collecte", en: "Collection link" }, titre: { fr: "Faire compléter", en: "Have it filled in" }, etats: ["nominal", "revoque"] },
+  { id: "identite", num: "3.18", nom: { fr: "Identité d'un proche", en: "Their details" }, titre: { fr: "Valery Bah", en: "Valery Bah" }, etats: ["nominal", "collecte"] },
+  { id: "cadrage", num: "3.7", nom: { fr: "Cadrer les idées", en: "Frame the ideas" }, titre: { fr: "Idées pour Valery", en: "Ideas for Valery" }, etats: ["nominal", "solde"] },
+  { id: "composition", num: "3.7", nom: { fr: "Composer un portrait", en: "Compose a portrait" }, titre: { fr: "Un portrait de Valery", en: "A portrait of Valery" }, etats: ["nominal", "solde"] },
+  { id: "portrait", num: "3.22", nom: { fr: "Un portrait", en: "A portrait" }, titre: { fr: "Le portrait", en: "The portrait" }, etats: ["nominal", "avalider", "partage", "vide"] },
+  { id: "recharge", num: "3.9", nom: { fr: "Recharger", en: "Top up" }, titre: { fr: "Recharger", en: "Top up" }, etats: ["nominal", "attente", "abouti", "echec"] },
+  { id: "parrainage", num: "3.9", nom: { fr: "Parrainage", en: "Referral" }, titre: { fr: "Parrainage", en: "Referral" }, etats: ["nominal", "vide"] },
+  { id: "monmur", num: "3.10", nom: { fr: "Mon Mur", en: "My Wall" }, titre: { fr: "Mon Mur", en: "My Wall" }, etats: ["nominal", "prive", "aucunmot"] },
+  { id: "profil", num: "3.23", nom: { fr: "Mon profil", en: "My profile" }, titre: { fr: "Mon profil", en: "My profile" }, etats: ["nominal", "erreur"] },
+  { id: "reglages", num: "3.11", nom: { fr: "Rappels", en: "Reminders" }, titre: { fr: "Rappels", en: "Reminders" }, etats: ["nominal", "refuse"] },
+  { id: "securite", num: "3.24", nom: { fr: "Sécurité", en: "Security" }, titre: { fr: "Sécurité", en: "Security" }, etats: ["nominal", "inhabituelle"] },
+  { id: "paiement", num: "3.25", nom: { fr: "Paiement", en: "Payment" }, titre: { fr: "Paiement", en: "Payment" }, etats: ["nominal", "vide", "expire"] },
+  { id: "reservations", num: "3.27", nom: { fr: "Mes réservations", en: "My reservations" }, titre: { fr: "Réservations", en: "Reservations" }, etats: ["nominal", "vide"] },
+  { id: "aide", num: "3.26", nom: { fr: "Aide", en: "Help" }, titre: { fr: "Aide", en: "Help" }, etats: ["nominal"] },
+  { id: "moi", num: "3.17", nom: { fr: "Moi", en: "Me" }, onglet: "moi", etats: ["nominal"] }
+];
+
+const ETIQUETTES = {
+  fr: { nominal: "Nominal", premier: "Premier lancement", vide: "Vide", chargement: "Chargement", expire: "Code expiré",
+        erreur: "Erreur", horsligne: "Hors connexion", sensible: "Date sensible",
+        solde: "Solde insuffisant", reserve: "Réservé", passee: "Passée",
+        message: "Le message", idees: "Les idées", portrait: "Le portrait", attente: "Attente",
+        revoque: "Lien révoqué", collecte: "Née d'une collecte", avalider: "À approuver", partage: "Déjà partagé",
+        attente: "Attente mobile money", abouti: "Paiement abouti", echec: "Paiement échoué",
+        prive: "Hors ligne", refuse: "Notifications refusées", inhabituelle: "Connexion inhabituelle", expire: "Expirée",
+        aucunmot: "Aucun mot reçu" },
+  en: { nominal: "Default", premier: "First launch", vide: "Empty", chargement: "Loading", expire: "Expired code",
+        erreur: "Error", horsligne: "Offline", sensible: "Sensitive date",
+        solde: "Not enough credits", reserve: "Reserved", passee: "Past",
+        message: "The message", idees: "The ideas", portrait: "The portrait", attente: "Waiting",
+        revoque: "Revoked link", collecte: "From a collection", avalider: "To approve", partage: "Already shared",
+        attente: "Mobile money wait", abouti: "Payment went through", echec: "Payment failed",
+        prive: "Offline", refuse: "Notifications off", inhabituelle: "Unusual sign-in", expire: "Expired",
+        aucunmot: "No note received" }
+};
+
+function App() {
+  const [ecranId, setEcranId] = React.useState("accueil");
+  const [etat, setEtat] = React.useState("nominal");
+  const [nuit, setNuit] = React.useState(false);
+  const [langue, setLangue] = React.useState("fr");
+  const [modele, setModele] = React.useState("standard");
+  const [os, setOs] = React.useState("ios");
+  const [feuille, setFeuille] = React.useState(null);
+  const [solde, setSolde] = React.useState(4);
+  const [toast, setToast] = React.useState(null);
+
+  React.useEffect(() => { document.body.classList.toggle("lehno-nuit", nuit); }, [nuit]);
+
+  const t = { ...COPY[langue], nuit };
+  const ecran = ECRANS.find((e) => e.id === ecranId) || ECRANS[4];
+
+  /* Changer d'écran remet l'état sur celui que le nouvel écran sait jouer :
+     un « hors connexion » n'a pas de sens sur la connexion. */
+  const aller = (id) => {
+    const suivant = ECRANS.find((e) => e.id === id);
+    if (!suivant) return;
+    setEcranId(id);
+    if (suivant.etats.indexOf(etat) < 0) setEtat(suivant.etats[0]);
+  };
+
+  const props = { t, etat, onOpen: aller, onSuite: () => aller(ecran.id === "splash" ? "connexion"
+    : ecran.id === "connexion" ? "code"
+    : ecran.id === "code" ? "pseudo" : ecran.id === "pseudo" ? "bienvenue" : "accueil"),
+    onRetour: () => aller("proches"), onEnregistrer: () => aller("accueil"),
+    onInviter: () => aller("parrainage"),
+    onRecherche: () => aller("recherche"), base: "../../", solde,
+
+    /* Le chemin payant : rien ne se lance sans que le coût soit annoncé. */
+    onLancer: (quoi) => setFeuille(quoi),
+    /* Un portrait est une image : il a son propre écran. */
+    onVoir: (quoi) => {
+      if (quoi === "portrait") { setEcranId("portrait"); setEtat("nominal"); return; }
+      setEcranId("generation"); setEtat(quoi === "idees" ? "idees" : "message");
+    },
+    /* Le crédit se paie à la génération, jamais au partage : le texte est déjà
+       produit et payé. « Envoyer » passe la main au sélecteur du système. */
+    onEnvoyer: () => { setToast(t.resEnvoyerVia); setTimeout(() => setToast(null), 2400); },
+    onCopier: () => { setToast(t.resCopie); setTimeout(() => setToast(null), 2200); },
+    onFait: (m) => { setToast(m); setTimeout(() => setToast(null), 2600); },
+    onPayer: () => { setEcranId("recharge"); setEtat("attente");
+      setTimeout(() => { setEtat("abouti"); setSolde((v) => v + 12); }, 2400); } };
+
+  const NOMS = { portrait: t.prepPortraitTitre, idees: t.prepIdeesTitre, message: t.prepMessageTitre };
+  const RESULTATS = { portrait: t.prepPortraitTexte, idees: t.prepIdeesTexte, message: t.prepMessageTexte };
+
+  /* Lancer : on prélève, on montre l'attente, puis le résultat arrive. C'est la
+     seule séquence temporisée du prototype — l'attente est le moment que la
+     spec demande de soigner, elle ne peut pas être sautée. */
+  const confirmer = () => {
+    const quoi = feuille;
+    setFeuille(null);
+    setSolde((v) => Math.max(0, v - 1));
+    setEcranId("generation");
+    setEtat("attente");
+    setTimeout(() => {
+      if (quoi === "portrait") { setEcranId("portrait"); setEtat("avalider"); return; }
+      setEtat(quoi === "idees" ? "idees" : "message");
+    }, 2200);
+  };
+
+  let vue;
+  switch (ecran.id) {
+    case "splash": vue = <SplashScreen {...props} />; break;
+    case "connexion": vue = <ConnexionScreen {...props} />; break;
+    case "code": vue = <CodeScreen {...props} />; break;
+    case "pseudo": vue = <PseudoScreen {...props} />; break;
+    case "bienvenue": vue = <BienvenueScreen {...props} />; break;
+    case "proches": vue = <ProchesScreen {...props} gens={PROCHES} />; break;
+    case "proche": vue = <ProcheScreen {...props} />; break;
+    case "note": vue = <NoteScreen {...props} />; break;
+    case "evenement": vue = <EvenementScreen {...props} />; break;
+    case "recherche": vue = <RechercheScreen {...props} gens={PROCHES} />; break;
+    case "souhait": vue = <SouhaitScreen {...props} />; break;
+    case "occasion": vue = <OccasionScreen {...props} />; break;
+    case "dates": vue = <DatesScreen {...props} />; break;
+    case "preparation": vue = <PreparationScreen {...props} />; break;
+    case "generation": vue = <GenerationScreen {...props} />; break;
+    case "notifications": vue = <NotificationsScreen {...props} />; break;
+    case "valider": vue = <AValiderScreen {...props} />; break;
+    case "reprises": vue = <ReprisesScreen {...props} />; break;
+    case "collecte": vue = <CollecteScreen {...props} />; break;
+    case "identite": vue = <IdentiteScreen {...props} />; break;
+    case "portrait": vue = <PortraitScreen {...props} />; break;
+    case "composition": vue = <CompositionScreen {...props} />; break;
+    case "cadrage": vue = <CadrageIdeesScreen {...props} />; break;
+    case "recharge": vue = <RechargeScreen {...props} />; break;
+    case "parrainage": vue = <ParrainageScreen {...props} />; break;
+    case "monmur": vue = <MonMurScreen {...props} />; break;
+    case "profil": vue = <ProfilScreen {...props} />; break;
+    case "reglages": vue = <ReglagesScreen {...props} />; break;
+    case "securite": vue = <SecuriteScreen {...props} />; break;
+    case "paiement": vue = <PaiementScreen {...props} />; break;
+    case "aide": vue = <AideScreen {...props} />; break;
+    case "reservations": vue = <ReservationsScreen {...props} />; break;
+    case "moi": vue = <MoiScreen {...props} />; break;
+    default: vue = <AccueilScreen {...props} echeances={PROCHES} />;
+  }
+
+  const chrome = ecran.chrome !== false;
+  const titre = typeof ecran.titre === "string" ? ecran.titre
+    : ecran.titre ? ecran.titre[langue] : undefined;
+
+  const Bascule = ({ label, valeur, options, onSet }) => (
+    <div style={{ marginBottom: 14 }}>
+      <div className="lbl" style={{ marginBottom: 6 }}>{label}</div>
+      <div className="swap" role="group" aria-label={label}>
+        {options.map(([k, l]) => (
+          <button key={k} type="button" aria-pressed={valeur === k} onClick={() => onSet(k)}>{l}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="stage">
+      <div className="side">
+        <div className="lbl">Prototype</div>
+        <h1 className="lehno-display" style={{
+          fontSize: 25, letterSpacing: "-.025em", margin: "8px 0 16px", fontWeight: 500
+        }}>L'application</h1>
+
+        <Bascule label="Thème" valeur={nuit ? "n" : "c"}
+          options={[["c", "Clair"], ["n", "Sombre"]]} onSet={(k) => setNuit(k === "n")} />
+        <Bascule label="Langue" valeur={langue}
+          options={[["fr", "FR"], ["en", "EN"]]} onSet={setLangue} />
+        <Bascule label="Modèle" valeur={modele}
+          options={[["se", "SE"], ["standard", "Courant"], ["max", "Grand"]]} onSet={setModele} />
+        <Bascule label="Système" valeur={os}
+          options={[["ios", "iOS"], ["android", "Android"]]} onSet={setOs} />
+
+        <div className="lbl" style={{ marginTop: 20 }}>Solde</div>
+        <div className="lehno-display" style={{ fontSize: 21, marginTop: 4 }}>
+          {solde} <span style={{ fontFamily: "var(--font-body)", fontSize: 13, color: "var(--text-secondary)" }}>
+            {solde === 1 ? "crédit" : "crédits"}
+          </span>
+        </div>
+        <button type="button" onClick={() => setSolde(4)} className="lehno-focusable" style={{
+          all: "unset", cursor: "pointer", fontFamily: "var(--font-body)", fontSize: 12,
+          color: "var(--text-accent)", marginTop: 4
+        }}>Remettre à 4</button>
+
+        <div className="lbl" style={{ marginTop: 20 }}>Écrans</div>
+        <div className="rail">
+          {ECRANS.map((e) => (
+            <button key={e.id} type="button" aria-current={e.id === ecranId} onClick={() => aller(e.id)}>
+              <span className="num">{e.num}</span>{e.nom[langue]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <PhoneFrame os={os} modele={modele} pleinEcran={ecran.id === "splash"}
+        etiquette={ecran.num + " · " + ETIQUETTES[langue][etat]}>
+        {chrome ? (
+          <AppHeader dark={nuit} base="../../"
+            notifications={ecran.onglet ? 2 : 0}
+            onCloche={() => aller("notifications")}
+            onBack={ecran.onglet ? undefined : () => aller("accueil")}
+            title={titre} />
+        ) : null}
+        <div style={{
+          position: "relative", flex: 1, minHeight: 0, overflowY: "auto",
+          display: "flex", flexDirection: "column"
+        }}>
+          {vue}
+
+          {feuille ? (
+            <>
+              <div onClick={() => setFeuille(null)} style={{
+                position: "absolute", inset: 0, background: "rgba(15,13,19,.42)", zIndex: 8
+              }} />
+              <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 9 }}>
+                <PaidActionSheet t={t} titre={NOMS[feuille]} resultat={RESULTATS[feuille]}
+                  cout={1} solde={solde}
+                  onConfirmer={confirmer}
+                  onRecharger={() => { setFeuille(null); aller("moi"); }}
+                  onAnnuler={() => setFeuille(null)} />
+              </div>
+            </>
+          ) : null}
+
+          {toast ? (
+            <div style={{
+              position: "absolute", left: 14, right: 14, bottom: 16, zIndex: 10,
+              background: "var(--feedback-success-bg)", color: "var(--feedback-success)",
+              borderRadius: "var(--radius-lg)", padding: "13px 15px",
+              fontFamily: "var(--font-body)", fontSize: 13.5, lineHeight: 1.4
+            }}>{toast}</div>
+          ) : null}
+        </div>
+        {ecran.onglet ? (
+          <div style={{ flex: "none", paddingBottom: MODELES[modele].safeBas ? 14 : 4 }}>
+            <TabBar active={ecran.onglet} onSelect={aller}
+              tabs={[
+                { id: "accueil", label: t.ongletAccueil, icon: "house" },
+                { id: "dates", label: t.ongletDates, icon: "calendar" },
+                { id: "proches", label: t.ongletProches, icon: "heart" },
+                { id: "moi", label: t.ongletMoi, icon: "user" }
+              ]} />
+          </div>
+        ) : null}
+      </PhoneFrame>
+
+      <div className="side">
+        <div className="lbl">États de cet écran</div>
+        <div className="rail">
+          {ecran.etats.map((k) => (
+            <button key={k} type="button" aria-current={k === etat} onClick={() => setEtat(k)}>
+              {ETIQUETTES[langue][k]}
+            </button>
+          ))}
+        </div>
+        <p style={{ fontSize: 11.5, color: "var(--text-mention)", lineHeight: 1.5, marginTop: 18 }}>
+          Le rail ne propose que les états que cet écran sait jouer. Passez en <strong>SE</strong>
+          et en <strong>EN</strong> ensemble : c'est la combinaison qui révèle les libellés trop longs.
+        </p>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
