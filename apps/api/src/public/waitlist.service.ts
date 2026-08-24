@@ -8,10 +8,12 @@ import type { MailPort } from "../mail/mail.port.js";
 import { waitlistEmail } from "../mail/templates.js";
 import type { WaitlistJoinInput } from "@lehno/contracts";
 
-// Plafonds. Trois tentatives par heure sur une même boîte : au-delà, c'est un
-// rejeu, pas une hésitation. Dix par heure et par origine : assez pour un
-// foyer ou un bureau partagé, trop peu pour peupler une liste de diffusion.
-const PLAFOND_ADRESSE = 3;
+// Plafonds. Cinq tentatives par heure sur une même boîte : trois était trop
+// serré pour un geste aussi anodin — quelqu'un qui hésite et clique quatre
+// fois tombait sur une erreur. Cinq reste très loin de ce qu'il faut pour
+// bombarder une adresse. Dix par heure et par origine : assez pour un foyer ou
+// un bureau partagé, trop peu pour peupler une liste de diffusion.
+const PLAFOND_ADRESSE = 5;
 const PLAFOND_ORIGINE = 10;
 const FENETRE_MS = 3_600_000;
 
@@ -69,6 +71,10 @@ export class WaitlistService {
       });
     } catch (erreur) {
       if (erreur instanceof Prisma.PrismaClientKnownRequestError && erreur.code === "P2002") {
+        // Quelqu'un qui revient est une bonne nouvelle : on veut la voir
+        // passer. Sans l'adresse — le journal n'est pas une copie de la liste,
+        // et la même règle vaut ici que pour les échecs d'acheminement.
+        this.journal.log("liste d'attente : seconde tentative sur une boîte déjà inscrite");
         return { joined: true };
       }
       throw erreur;

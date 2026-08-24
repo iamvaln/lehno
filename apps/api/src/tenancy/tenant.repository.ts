@@ -7,6 +7,7 @@ import { AppError } from "../common/errors.js";
 const ABSENT = (): AppError => new AppError("not_found", "resource not found");
 
 type Delegate = {
+  create(a: { data: object }): Promise<unknown>;
   findMany(a: { where: object }): Promise<unknown[]>;
   findFirst(a: { where: object }): Promise<unknown | null>;
   updateMany(a: { where: object; data: object }): Promise<{ count: number }>;
@@ -46,6 +47,43 @@ class Scope<T extends Record<string, unknown>, F extends keyof T & string> {
   // restreindre. Deux conditions contradictoires (le périmètre visant un
   // compte, le `where` en visant un autre) ne rendent alors rien, au lieu de
   // laisser gagner la dernière écrite.
+  // La création porte le même risque que `updateOrThrow` : laisser l'appelant
+  // choisir à qui la ressource appartient. La parade diffère, parce qu'il n'y a
+  // rien à filtrer — le périmètre s'écrit APRÈS les données fournies, donc une
+  // clé d'appartenance glissée par l'appelant est écrasée, jamais honorée.
+  //
+  // On n'échoue pas sur une clé interdite ici, contrairement à la mise à jour :
+  // un appelant qui répète `userId: <le sien>` ne fait rien de mal, et un
+  // service qui compose ses données depuis un objet plus large ne devrait pas
+  // avoir à les élaguer. Ce qui compte est qu'il ne puisse pas GAGNER.
+  // `async` à dessein : la garde ci-dessous lève, et un refus synchrone
+  // échapperait au `try` d'un appelant qui entoure son `await`. Une méthode qui
+  // rend une promesse doit refuser par une promesse.
+  async create(data: object): Promise<T> {
+    // Toutes les portées ne se prêtent pas à la création. `events`, `notes` et
+    // `wishes` filtrent par RELATION — { person: { userId } } — parce que leur
+    // appartenance passe par un parent. Étalée dans les données, cette forme
+    // deviendrait une écriture imbriquée : Prisma tenterait de créer une
+    // personne, ou écrirait quelque chose que personne n'a voulu.
+    //
+    // On refuse donc franchement, avant d'atteindre la base. Ces ressources se
+    // créent en vérifiant d'abord le parent par findOrThrow, puis en écrivant
+    // avec sa clé — c'est ce que fait NoteService.
+    const valeurs = Object.values(this.scope);
+    if (valeurs.some((v) => typeof v === "object" && v !== null)) {
+      throw new AppError(
+        "internal_error",
+        "cette portée filtre par relation : créer par le parent, pas par le périmètre",
+      );
+    }
+
+    // Le périmètre s'écrit APRÈS les données fournies : une clé d'appartenance
+    // glissée par l'appelant est écrasée, jamais honorée. On n'échoue pas
+    // dessus, contrairement à la mise à jour — répéter son propre identifiant
+    // n'est pas une faute. Ce qui compte est qu'il ne puisse pas GAGNER.
+    return (await this.delegate.create({ data: { ...data, ...this.scope } })) as T;
+  }
+
   findMany(where: object = {}): Promise<T[]> {
     return this.delegate.findMany({ where: { AND: [this.scope, where] } }) as Promise<T[]>;
   }
