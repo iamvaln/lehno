@@ -1,5 +1,7 @@
 # Plan — le back-office de Lehno, en visuel
 
+Branche : `feature/back-office-visuel`, partie de `develop`.
+
 Source de design : `specs/ADMIN identity for Lehno.zip` (`design_handoff_back_office/`).
 Source fonctionnelle : `specs/ux-admin-lehno.md`.
 Contrats d'API : `specs/spec-technique-lehno.md` §7 et §3.
@@ -44,8 +46,11 @@ Reprises du plan de phase 0, plus celles propres à l'admin.
 
 1. **Périmètre** — ce que le paquet montre, exactement. Les quinze sections réemploient les
    quatre gabarits ; les construire douze fois avec des données inventées n'apprend rien.
-2. **Jetons** — `@lehno/tokens` gagne une couche admin plutôt que de reprendre le
-   vocabulaire d'alias du paquet. Une seule source de couleur dans le dépôt (tâche 2).
+2. **Jetons** — tranché, **et déjà livré** par le plan « socle de design » : `admin.ts`
+   porte `adminOverride` (ce que le back-office change, et rien d'autre) et `cssAdmin(theme)`
+   émet le bloc `.lehno-admin` / `.lehno-admin.lehno-nuit`. Les six couleurs et toute la
+   densité y sont, aux valeurs du paquet. **Il n'y a plus de travail de jetons à faire** —
+   seulement une feuille globale qui les consomme (tâche 2).
 3. **Journal d'audit** — réservé au rôle `admin`, comme la spec §6, et **contre** le paquet
    qui le donne en lecture au support. Le journal sert à contrôler le travail de l'équipe ;
    le donner à ceux qu'il observe lui retire sa fonction. Même arbitrage pour la suspension
@@ -54,21 +59,41 @@ Reprises du plan de phase 0, plus celles propres à l'admin.
    le `dico.json` et le README principal. Le README du ui_kit, qui annonce « Utilisateurs ·
    Réglages · Suivi · Outils », est périmé.
 
-## Une décision qui reste ouverte — à trancher en tâche 4
+## La pagination — tranchée par défaut, réversible
 
-**La pagination.** La spec technique §3 impose le parcours **par curseur** : la requête
+**Le conflit.** La spec technique §3 impose le parcours **par curseur** : la requête
 porte `limit` et `cursor`, la réponse rend les éléments et le curseur suivant. Le composant
 `Pagination` du paquet demande `page`, `parPage` et **`total`** — qu'une API à curseur ne
 peut pas fournir, et il affiche « 1–20 sur 347 » et « page 2 / 18 ».
 
-Les deux ne se concilient pas. Trois issues, la première recommandée :
-
-- **Adapter le composant au curseur** : « Précédent · Suivant », sans total ni numéro de
-  page. Fidèle à la spec, moins riche à l'écran.
+Les deux ne se concilient pas. **Retenu : adapter le composant au curseur** — « Précédent ·
+Suivant », sans total ni numéro de page. C'est la spec qui gouverne, et un composant qui
+réclame un total qu'aucune API ne rend serait un composant mort-né. La décision se renverse
+en une tâche si vous préférez l'une des deux autres :
 - **Faire une exception pour `/v1/admin`** : décalage et total, réservés à l'admin, dont les
-  volumes sont connus et le public interne. Le composant reste tel quel.
+  volumes sont connus et le public interne. Le composant resterait tel quel.
 - **Rendre le total facultatif** : le composant tombe sur « Précédent · Suivant » quand
   `total` est absent, et affiche le compte quand il est là.
+
+## La décision qui reste ouverte — les composants partagés
+
+Le paquet emploie cinq composants du produit : `Button`, `Icon`, `Banner`, `TextField`,
+`BrandMark`. Ils existent, écrits et éprouvés — mais dans **`apps/web/components/ui/`**,
+c'est-à-dire à l'intérieur d'une autre application. Le plan « socle de design » les y place
+délibérément et ne prévoit pas de paquet partagé.
+
+Trois issues :
+
+- **Extraire vers `packages/ui`**, consommé par `apps/web` et `apps/admin`. Juste à terme,
+  mais la manœuvre touche `apps/web` pendant que la landing s'y reconstruit — c'est là que
+  se joue le risque de conflit.
+- **Recopier les cinq dans `apps/admin`.** Rapide, et exactement la dérive que le dépôt
+  combat depuis le début.
+- **Attendre** : écrire d'abord tout ce qui est propre à l'admin — dix-sept composants sur
+  vingt-deux — et trancher quand la landing sera stabilisée.
+
+**Retenu pour commencer : attendre.** Les tâches 1, 3, 5, 6 et 7 n'en dépendent pas ; la
+question se pose au plus tôt à la tâche 4, et d'ici là la landing aura fusionné.
 
 ---
 
@@ -84,7 +109,8 @@ apps/admin/
   src/
     main.tsx
     App.tsx                    Routage local (aucun serveur) et état de rôle, thème, langue
-    styles/global.css          Structure seulement — aucune couleur
+    styles/global.css          Structure ; les couleurs viennent de @lehno/tokens
+    styles/variables.ts        Assemble cssVariables + cssTokens + cssAdmin
     i18n/{fr,en}.ts            Repris de dico.json, sans clé morte
     i18n/index.ts              messages(langue)
     composants/
@@ -101,7 +127,7 @@ apps/admin/
   test/*.test.tsx
 
 packages/contracts/src/admin.ts   Les types de /v1/admin, d'après la spec §7
-packages/tokens/src/admin.ts      La couche admin : couleurs et densité
+packages/tokens/src/admin.ts      Déjà livré par le socle — non modifié ici
 ```
 
 ---
@@ -109,7 +135,7 @@ packages/tokens/src/admin.ts      La couche admin : couleurs et densité
 ### Tâche 1 : Squelette Vite, membre de l'espace de travail
 
 **Fichiers :** `apps/admin/{package.json,vite.config.ts,vitest.config.ts,tsconfig.json,index.html}`,
-`apps/admin/src/{main.tsx,App.tsx}`, `apps/admin/src/styles/global.css`
+`apps/admin/src/{main.tsx,App.tsx}`
 **Test :** `apps/admin/test/amorcage.test.tsx`
 
 **Interfaces :** produit l'application `@lehno/admin`, montée par Vite, testée par Vitest.
@@ -119,26 +145,42 @@ Vite doit les résoudre, et il lui faut `resolve.extensionAlias` pour les import
 qui pointent des `.ts`, comme pour `apps/web`. Et `pnpm lint` traverse tout l'arbre depuis
 la racine : `dist/` est déjà ignoré, rien à ajouter.
 
-- [ ] **Étape 1 : le test qui échoue** — monter `<App />` et vérifier que la coquille rend
+- [x] **Étape 1 : le test qui échoue** — monter `<App />` et vérifier que la coquille rend
       la marque et le titre de la page d'accueil.
-- [ ] **Étape 2 : le voir échouer** — `pnpm --filter @lehno/admin test`, l'application
+- [x] **Étape 2 : le voir échouer** — `pnpm --filter @lehno/admin test`, l'application
       n'existe pas.
-- [ ] **Étape 3 : implémenter** le squelette. `global.css` ne porte **aucune couleur** :
+- [x] **Étape 3 : implémenter** le squelette. `global.css` ne porte **aucune couleur** :
       seulement la remise à zéro, la famille de texte et la règle de mouvement réduit.
-- [ ] **Étape 4 : le voir passer**, puis `pnpm --filter @lehno/admin build`.
-- [ ] **Étape 5 : commit** — `admin: squelette Vite, membre de l'espace de travail`
+      La feuille des couleurs vient à la tâche 2.
+- [x] **Étape 4 : le voir passer**, puis `pnpm --filter @lehno/admin build`.
+- [x] **Étape 5 : commit** — `admin: squelette Vite, membre de l'espace de travail`
 
 ---
 
-### Tâche 2 : La couche admin de `@lehno/tokens`
+### Tâche 2 : La feuille globale du back-office
 
-**Fichiers :** `packages/tokens/src/admin.ts`, export depuis `packages/tokens/src/index.ts`
-**Test :** `packages/tokens/src/admin.test.ts`
+**Fichiers :** `apps/admin/src/styles/global.css`, `apps/admin/src/styles/variables.ts`
+**Test :** `apps/admin/test/feuille.test.ts`
 
-**Interfaces :** produit `adminThemes: { light, dark }` et `adminTokens` (densité, rayons,
-échelle de texte), plus `adminCssVariables(theme)` sur le modèle de `cssVariables`.
+**Interfaces :** consomme `cssVariables`, `cssTokens` et `cssAdmin` de `@lehno/tokens` ;
+produit la feuille servie à l'outil.
 
-**Ce que la couche porte.** Six couleurs qui diffèrent du produit, et elles seules :
+**Rien à décider ici : la couche admin existe.** `packages/tokens/src/admin.ts` porte déjà
+`adminOverride` et `cssAdmin(theme)`, aux valeurs du paquet. Cette tâche ne fait que les
+poser, dans le bon ordre et sous les bonnes classes :
+
+```
+:root                       cssVariables("light") + cssTokens()
+:root[data-theme="dark"]    cssVariables("dark")
+.lehno-admin                cssAdmin("light")   — couleurs + densité de l'outil
+.lehno-admin.lehno-nuit     cssAdmin("dark")    — couleurs seulement
+```
+
+**Le piège.** `cssAdmin("light")` porte les jetons hors thème (densité, rayons, échelle) et
+`cssAdmin("dark")` ne porte que les couleurs — l'outil n'a pas de bascule à part. Poser le
+bloc sombre sans le clair laisserait un back-office à la densité du produit.
+
+**Pour mémoire, ce que la couche porte déjà** — six couleurs qui diffèrent du produit :
 
 | Rôle | Clair | Sombre |
 |---|---|---|
@@ -158,13 +200,13 @@ en sombre — **pas un quatrième violet**.
 Le violet, le rouge, l'abricot, les courbes de mouvement et la règle du focus **ne sont pas
 redéfinis** : ils viennent des thèmes du produit.
 
-- [ ] **Étape 1 : le test qui échoue** — les six couleurs sont celles du tableau ; le
-      contraste du texte sur `chrome` et sur `surface` passe 4,5:1 dans les deux thèmes ;
-      la couche admin ne redéfinit ni `violet` ni `apricot`.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter**, en réemployant `contrastRatio` déjà présent dans le paquet.
-- [ ] **Étape 4 : le voir passer** — `pnpm --filter @lehno/tokens test`.
-- [ ] **Étape 5 : commit** — `jetons: la couche admin, six couleurs et la densité d'un outil`
+- [x] **Étape 1 : le test qui échoue** — la feuille contient les quatre blocs ci-dessus ;
+      `.lehno-admin` porte `--control-height: 32px` ; `.lehno-admin.lehno-nuit` porte
+      `--surface-chrome: #131219` ; **aucune couleur n'est écrite en dur** dans `global.css`.
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: la feuille globale, posée sur la surcharge du socle`
 
 ---
 
@@ -188,12 +230,12 @@ de la spec §7, et les fixtures qui s'y conforment.
   seulement : le type ne porte jamais le numéro complet.
 - **Aucun contenu de fiche ni de note** n'apparaît dans un type d'administration.
 
-- [ ] **Étape 1 : le test qui échoue** — chaque fixture se valide contre son type ; un appel
+- [x] **Étape 1 : le test qui échoue** — chaque fixture se valide contre son type ; un appel
       de mutation sans `motif` ne compile pas ; aucun type ne porte de champ de contenu.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter** les types puis les fixtures.
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `contrats: les types de /v1/admin, et des fixtures qui s'y tiennent`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter** les types puis les fixtures.
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `contrats: les types de /v1/admin, et des fixtures qui s'y tiennent`
 
 ---
 
@@ -217,11 +259,11 @@ que les types de la tâche 3 en dépendent.
 - L'étiquette de rôle affiche le rôle connecté.
 - Le menu de compte n'expose « accès des administrateurs » qu'au rôle `admin`.
 
-- [ ] **Étape 1 : le test qui échoue** — les six points ci-dessus.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: la coquille, sa navigation en familles et son repli sous 900 px`
+- [x] **Étape 1 : le test qui échoue** — les six points ci-dessus.
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: la coquille, sa navigation en familles et son repli sous 900 px`
 
 ---
 
@@ -236,14 +278,14 @@ pagine : il affiche l'état du tri et remonte le clic ; la page trie, découpe, 
 `<Pagination>` dessous ». Sélection multiple facultative, actions par ligne dans un menu,
 défilement horizontal sous 900 px avec largeur minimale de 520 px.
 
-- [ ] **Étape 1 : le test qui échoue** — le tableau **ne réordonne pas** ses lignes quand on
+- [x] **Étape 1 : le test qui échoue** — le tableau **ne réordonne pas** ses lignes quand on
       clique un en-tête, il appelle `onTri` ; la colonne de cases n'apparaît que si
       `onSelection` est passé ; le chevron n'apparaît que si `onOuvrir` est passé ; `vide`
       rend l'état vide quand `lignes` est vide.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter**, pagination selon la décision de la tâche 4.
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: tableau, filtres et pagination, sans opinion sur les données`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter**, pagination selon la décision de la tâche 4.
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: tableau, filtres et pagination, sans opinion sur les données`
 
 ---
 
@@ -263,15 +305,44 @@ défilement horizontal sous 900 px avec largeur minimale de 520 px.
 - `ExportButton` **dit sa portée** avant d'exporter, et rappelle que l'export est journalisé.
 - `Toast` s'efface seul ; `Banner` reste. **Une erreur bloquante n'est jamais un toast.**
 
-- [ ] **Étape 1 : le test qui échoue** — les cinq points ci-dessus.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: le rôle retire, le motif s'exige, l'export dit sa portée`
+- [x] **Étape 1 : le test qui échoue** — les cinq points ci-dessus.
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: le rôle retire, le motif s'exige, l'export dit sa portée`
 
 ---
 
 ### Tâche 7 : Les messages, en deux langues
+
+**Le ton, avant les mots** — `specs/ton-et-ecriture-lehno.md` §2.5 : le back-office
+vouvoie, mais **plus direct** que l'application ; on s'adresse à quelqu'un qui
+travaille. Les termes du métier sont admis (idempotence, réconciliation), les
+euphémismes non : **un compte suspendu est suspendu**.
+
+Ce qui en découle, et qui s'applique ligne à ligne :
+
+- **Pas de passif** — c'est le premier signe du formalisme (§2.1). « Motif
+  enregistré », pas « votre motif a bien été pris en compte ».
+- **Lehno s'efface quand tout va bien, se nomme quand il doit répondre** (§3). Un
+  échec dit « on » : « On n'a pas pu rejouer ce paiement. » Jamais « une erreur
+  est survenue » — une erreur sans sujet est une posture qui n'assume pas.
+- **Une excuse a trois temps, dans cet ordre** (§4.5) : ce qui s'est passé, ce
+  qu'on a fait, ce qu'on peut faire maintenant.
+- **Un état vide annonce ce qui est possible**, jamais ce qui manque (§4.7).
+  « Rien à modérer aujourd'hui. », pas « Aucun contenu signalé ».
+- **On alerte sur des faits, jamais sur l'urgence** (§4.4). « Bloqué depuis 26 h »,
+  pas « Attention ! ». Ça vaut pour les trois `AlertPill` du tableau de bord.
+- **Aucun émoji, aucun point d'exclamation** (§5, §6).
+- **Les nombres en chiffres dès deux** (§5).
+- **L'anglais s'écrit, il ne se traduit pas** (§6) : contractions admises,
+  *sentence case* partout — `Mark as sent`, jamais `Mark As Sent`, qui est une
+  convention de logiciel d'entreprise.
+
+Un mot sur le vocabulaire : §5 proscrit « utilisateurs » **dans l'interface du
+produit**. Le back-office est l'exception qui se justifie — la section s'appelle
+Utilisateurs dans le paquet comme dans la spec, et l'équipe parle de comptes et
+d'utilisateurs. La règle vise l'intimité du produit, pas l'outil d'exploitation.
 
 **Fichiers :** `apps/admin/src/i18n/{fr,en,index}.ts`
 **Test :** `apps/admin/test/i18n.test.ts`
@@ -280,13 +351,13 @@ Repris de `ui_kits/admin/dico.json`, dont les dix-huit clés de premier niveau s
 symétriques entre `fr` et `en` — vérifié. Le type de `en` reprend celui de `fr`, ce qui
 interdit à la compilation une clé oubliée ou en trop, comme dans `apps/web`.
 
-- [ ] **Étape 1 : le test qui échoue** — les deux tables ont les mêmes clés, à toute
+- [x] **Étape 1 : le test qui échoue** — les deux tables ont les mêmes clés, à toute
       profondeur ; aucune valeur n'est vide ; les gabarits à trou (`{a}`, `{total}`) portent
       les mêmes trous dans les deux langues.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: les messages, en deux langues et sous un même type`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: les messages, en deux langues et sous un même type`
 
 ---
 
@@ -299,14 +370,14 @@ interdit à la compilation une clé oubliée ou en trop, comme dans `apps/web`.
 trois `AlertPill` au plus, sur une ligne, chacune menant à sa liste. Puis les cartes
 d'indicateurs, puis la file « à traiter ».
 
-- [ ] **Étape 1 : le test qui échoue** — jamais plus de trois alertes rendues, même si la
+- [x] **Étape 1 : le test qui échoue** — jamais plus de trois alertes rendues, même si la
       source en porte cinq ; les alertes précèdent les cartes dans l'ordre du document ;
       chaque carte mène à sa section ; la file « à traiter » rend un état vide qui dit ce
       qui est possible.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: le tableau de bord ouvre sur ce qui ne va pas`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: le tableau de bord ouvre sur ce qui ne va pas`
 
 ---
 
@@ -324,14 +395,14 @@ d'indicateurs, puis la file « à traiter ».
 - **Suppressions** — le gabarit liste, avec les deux gestes du délai de grâce : effacer
   maintenant, annuler. Les deux passent par `ConfirmWithReason`.
 
-- [ ] **Étape 1 : le test qui échoue** — le détail rend son historique d'interventions ; le
+- [x] **Étape 1 : le test qui échoue** — le détail rend son historique d'interventions ; le
       formulaire rappelle la valeur précédente d'un champ modifié et **n'enregistre pas
       sans geste explicite** ; « effacer maintenant » n'est pas rendu pour le rôle
       `support` ; la liste remet ses filtres à zéro.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: les trois gabarits, et les deux gestes du délai de grâce`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: les trois gabarits, et les deux gestes du délai de grâce`
 
 ---
 
@@ -343,25 +414,25 @@ d'indicateurs, puis la file « à traiter ».
 **La connexion est hors de la coquille**, sans navigation : une adresse, puis un code. Pas
 de mot de passe (§5.1).
 
-- [ ] **Étape 1 : le test qui échoue** — l'écran **répond la même chose** à une adresse
+- [x] **Étape 1 : le test qui échoue** — l'écran **répond la même chose** à une adresse
       connue et à une adresse inconnue ; le renvoi d'un code attend trente secondes ; trois
       codes refusés ferment la saisie.
-- [ ] **Étape 2 : le voir échouer.**
-- [ ] **Étape 3 : implémenter.**
-- [ ] **Étape 4 : le voir passer.**
-- [ ] **Étape 5 : commit** — `admin: l'entrée par code, qui ne dit jamais si un compte existe`
+- [x] **Étape 2 : le voir échouer.**
+- [x] **Étape 3 : implémenter.**
+- [x] **Étape 4 : le voir passer.**
+- [x] **Étape 5 : commit** — `admin: l'entrée par code, qui ne dit jamais si un compte existe`
 
 ---
 
 ### Tâche 11 : Vérification à l'œil, et clôture
 
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm --filter @lehno/admin build`.
-- [ ] Ouvrir l'outil en clair et en sombre, dans les deux langues, aux deux rôles.
-- [ ] Réduire sous 900 px : la barre latérale glisse, les tableaux défilent, la densité ne
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm --filter @lehno/admin build`.
+- [x] Ouvrir l'outil en clair et en sombre, dans les deux langues, aux deux rôles.
+- [x] Réduire sous 900 px : la barre latérale glisse, les tableaux défilent, la densité ne
       change pas. Sous 620 px, le compte connecté disparaît.
-- [ ] Vérifier qu'**aucune ombre** n'apparaît dans le CSS produit.
-- [ ] Comparer chaque écran au prototype du paquet, servi en parallèle.
-- [ ] **Commit** — `admin: vérification des deux thèmes, des deux langues et des deux rôles`
+- [x] Vérifier qu'**aucune ombre** n'apparaît dans le CSS produit.
+- [x] Comparer chaque écran au prototype du paquet, servi en parallèle.
+- [x] **Commit** — `admin: vérification des deux thèmes, des deux langues et des deux rôles`
 
 ---
 

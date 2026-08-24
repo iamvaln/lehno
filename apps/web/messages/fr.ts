@@ -8,6 +8,7 @@ export const fr = {
 
   navComment: "Comment ça marche",
   navContenu: "Ce qu'elle contient",
+  navMur: "Le Mur",
   navPrix: "Ce que ça coûte",
   cta: "Commencer",
 
@@ -50,6 +51,7 @@ export const fr = {
   etape3Titre: "Offrez quelque chose de juste.",
   etape3: "Une idée de cadeau qui lui ressemble, un mot dans votre ton à vous. Vous choisissez, vous envoyez.",
 
+  contenuKicker: "Ce que l'application contient",
   blocFicheTitre: "Vos proches, dans un carnet qui se souvient",
   blocFiche: "Une fiche par personne : sa date, ses goûts, ce qu'elle a laissé entendre. Ça s'enrichit au fil de l'année, sans effort. Et ça ressert chaque année.",
   registre: "registre amical",
@@ -57,13 +59,15 @@ export const fr = {
   idees: "Idées cadeaux",
   nogo: "Dislikes / no-go",
   tag1: "vinyles", tag2: "rando", tag3: "café de spécialité",
-  ideeTexte: "« Il a parlé d'un moulin à café manuel, le sien rend l'âme. »",
-  ideeDate: "noté en mars",
-  nogoTexte: "Ne boit pas d'alcool.",
+  ideeParole: "Il a parlé d'un moulin à café manuel, le sien rend l'âme.",
+  provIdee: "noté en mars",
+  nogoParole: "Je ne bois pas d'alcool.",
+  provNogo: "dit par lui, en janvier",
 
   blocDatesTitre: "Toutes vos dates, au même endroit",
   blocDates: "Anniversaires, mariages, retraites, six mois d'une histoire : tout ce qui mérite d'être marqué tient dans le même calendrier.",
-  maman: "Maman", retraite: "Départ en retraite", nourEtMoi: "Nour & moi", sixMois: "Six mois",
+  date21: "21 août", age29: "29 ans",
+  maman: "Maman", retraite: "Départ en retraite",
   age36: "36 ans", an5: "5 ans",
 
   blocMotTitre: "Un mot qui vient de vous",
@@ -74,6 +78,7 @@ export const fr = {
   idee3: "Le moulin à café manuel dont il a parlé en mars",
   brouillon: "Brouillon · pour Valery",
   brouillonTexte: "« Valery, 36 ans et toujours cette manie de refaire le monde à minuit. Merci pour l'été dernier — je te dois au moins un café correct. Bon anniversaire, mon vieux. »",
+  provBrouillon: "écrit à partir de 9 notes sur Valery",
   modifier: "Modifier et envoyer",
   regenerer: "Régénérer",
 
@@ -91,4 +96,122 @@ export const fr = {
   cgu: "Conditions d'utilisation",
   confidentialite: "Confidentialité",
   contact: "Contact",
+
+  // Page contact, recopiée telle quelle depuis le paquet de passation
+  // (design_handoff_surfaces_publiques/ui_kits/web/pages.html, clé "contact") :
+  // un vrai formulaire existe désormais, reçu par apps/api/src/public/contact.
+  contactKicker: "Contact",
+  contactTitre: "Écrivez-nous",
+  contactChapeau: "Une question, un problème, un contenu à signaler : ce formulaire arrive directement chez nous.",
+  contactLabelNom: "Votre nom",
+  contactLabelEmail: "Votre adresse e-mail",
+  contactLabelSujet: "De quoi s'agit-il ?",
+  contactLabelMessage: "Votre message",
+  contactAideMessage: "Dites-nous ce qui s'est passé, et depuis quel écran si c'est un problème technique.",
+  contactEmailErreur: "Cette adresse ne semble pas valide.",
+  contactEnvoyer: "Envoyer",
+  contactDelai: "Nous répondons sous deux jours ouvrés.",
+  contactConfirme: "C'est envoyé. Vous recevrez une réponse à l'adresse indiquée.",
+  // Reprend la formulation déjà retenue pour la liste d'attente
+  // (voir waitlistErreur) : un refus du serveur et une panne réseau se
+  // ressemblent pour la personne, l'un et l'autre se règlent en réessayant.
+  contactEnvoiErreur: "L'envoi n'a pas abouti. Réessayez dans un instant.",
+  // Les six motifs de la maquette, dans l'ordre où ils y figurent. L'ordre
+  // apparie chaque libellé à sa clé stable (voir ContactForm.tsx) : la clé
+  // ne s'affiche jamais, c'est elle qui part au serveur.
+  contactSujets: [
+    "Une question sur l'application",
+    "Un problème technique",
+    "Les crédits et les paiements",
+    "Signaler un contenu",
+    "Une demande sur mes données",
+    "Autre",
+  ],
+  contactAilleursTitre: "Ailleurs",
+  contactAilleursTexte: "On répond aussi en message privé, un peu moins vite.",
+  piedFaq: "FAQ",
+  mentionsLegales: "Mentions légales",
+
+  // Contenu de la FAQ, recopié tel quel depuis le paquet de passation
+  // (design_handoff_surfaces_publiques/ui_kits/web/pages.html, clé "faq") :
+  // quinze questions groupées par thème. Deux réponses restent en attente
+  // d'une décision produit ou juridique (expiration des crédits, accès aux
+  // contacts/agenda) — elles portent "couvre" au lieu de "reponse", et le
+  // rendu leur garde un bloc « à rédiger » plutôt que d'inventer une réponse.
+  faq: {
+    kicker: "FAQ",
+    titre: "Ce qu'on nous demande le plus souvent",
+    chapeau: "Si vous ne trouvez pas votre réponse, écrivez-nous : la page Contact met deux minutes.",
+    groupes: [
+      {
+        titre: "Commencer",
+        items: [
+          { q: "Faut-il payer pour utiliser Lehno ?", reponse: "Non. Retenir les dates, écrire des notes et recevoir les rappels ne coûte rien. Seules les créations — un message, un portrait, une idée de cadeau — coûtent un crédit." },
+          { q: "Sur quels téléphones l'application fonctionne-t-elle ?", reponse: "iOS et Android. Les versions minimales sont indiquées sur l'App Store et sur Google Play." },
+          { q: "Combien de temps faut-il pour s'y mettre ?", reponse: "Une date et un prénom suffisent. Les fiches se remplissent au fil de l'année, pas le jour de l'inscription." },
+        ],
+      },
+      {
+        titre: "Les crédits",
+        items: [
+          { q: "Combien coûte un crédit ?", reponse: "100 F le crédit, et 5 crédits offerts à l'inscription. Un crédit par contenu créé pour vous : le portrait, les idées de cadeau, le message." },
+          { q: "Les crédits expirent-ils ?", reponse: "Non, ils ne périment pas : ils restent acquis tant que le compte existe. Vous les dépensez au rythme qui vous convient." },
+          { q: "Comment payer sans carte bancaire ?", reponse: "Par mobile money, MTN ou Orange. La validation prend parfois quelques minutes : l'écran suit l'opération jusqu'au bout." },
+          { q: "Que se passe-t-il si une création échoue ?", reponse: "Le crédit revient sur votre solde, et l'application vous dit ce qui s'est passé." },
+        ],
+      },
+      {
+        titre: "Les proches et les notes",
+        items: [
+          { q: "Mes proches savent-ils que j'écris sur eux ?", reponse: "Non. Vos notes ne sont visibles que de vous, et ne servent qu'à ce que vous demandez." },
+          { q: "Qu'est-ce que je peux noter ?", reponse: "Tout ce qui aide à bien faire : des goûts, des envies entendues, un détail qui vous a marqué. Rien que vous ne diriez pas à la personne." },
+          { q: "Est-ce que l'application lit mes contacts ou mon agenda ?", reponse: "Non. Elle ne demande ni vos contacts ni votre agenda : les dates que vous suivez, c'est vous qui les saisissez." },
+        ],
+      },
+      {
+        titre: "Le Mur",
+        items: [
+          { q: "Qui peut voir mon Mur ?", reponse: "Toute personne qui a le lien. C'est une page publique, et elle se dépublie à tout moment depuis l'application." },
+          { q: "Puis-je choisir ce qui apparaît dessus ?", reponse: "Oui, élément par élément. Vos notes sur vos proches n'y figurent jamais." },
+          { q: "Comment signaler un Mur ?", reponse: "Chaque Mur porte un lien de signalement en pied de page. Ce qui est signalé est examiné, et retiré s'il doit l'être." },
+        ],
+      },
+      {
+        titre: "Le compte",
+        items: [
+          { q: "Comment me connecter sans mot de passe ?", reponse: "Un code arrive sur votre adresse e-mail. Vous pouvez aussi entrer par Google ou par Apple — c'est le même compte." },
+          { q: "Comment supprimer mon compte ?", reponse: "Depuis Moi, puis Compte et sécurité. La page « Supprimer votre compte » dit ce qui disparaît et ce qui est conservé." },
+        ],
+      },
+    ],
+  },
+  mentions: "Mentions légales",
+
+  // Pages légales (components/legal/LegalPage.tsx) : le sommaire latéral.
+  sommaire: "Sommaire",
+
+  // Aperçu du Mur — repris tel quel de la maquette v3.
+  murTitre: "Votre page à vous",
+  murTexte: "Vos proches veulent bien faire aussi. Partagez votre Mur : ils y trouvent ce qui vous ferait plaisir, et peuvent vous laisser un mot.",
+  murPoint1Titre: "Une adresse à partager",
+  murPoint1: "Un lien s'envoie, s'ouvre dans le navigateur, et voilà.",
+  murPoint2Titre: "Vos envies, écrites par vous",
+  murPoint2: "Ce qui vous ferait plaisir, et ce qui ne vous ferait pas plaisir.",
+  murPoint3Titre: "Les mots qu'on vous laisse",
+  murPoint3: "Vos proches vous écrivent depuis votre Mur, vous les retrouvez dans l'application.",
+  murEvite: "Ce que j'évite",
+  murNo1: "les bougies parfumées",
+  murNo2: "l'alcool",
+  murPiedTitre: "Vous aussi, dites ce qui vous ferait plaisir.",
+  murPiedLien: "Créer mon Mur",
+  murHello: "Bienvenue chez Valentine",
+  murSous: "Ravie de te voir passer.",
+  murAime: "Ce que j'aime",
+  murTag1: "parfums",
+  murTag2: "fleurs",
+  murTag3: "cinéma",
+  murDate: "Mon anniversaire, c'est le 14 mars",
+  murIdee: "Une idée ? Voici ce qui me ferait plaisir.",
+  murListe: "Voir ma liste",
+  murMot: "Laisse-moi un mot",
 };

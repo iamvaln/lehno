@@ -5,6 +5,7 @@ import { OtpService } from "../src/auth/otp.service.js";
 import { TokenService } from "../src/auth/token.service.js";
 import { RateLimitService } from "../src/common/rate-limit.service.js";
 import type { Mail, MailPort } from "../src/mail/mail.port.js";
+import { AppError } from "../src/common/errors.js";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -47,6 +48,24 @@ describe("authentification", () => {
       db.prisma as never, otp, new TokenService(db.prisma as never, SECRET),
       new RateLimitService(db.prisma as never), mailDeTest,
     );
+  });
+
+  // Le plafond du code de connexion se comptait sur la casse abaissée
+  // seulement. Une même boîte Gmail se laissait donc arroser en variant
+  // l'étiquette après le « + » : cinq courriers par heure et par variante,
+  // toutes livrées au même endroit.
+  it("plafonne le code de connexion sur la boîte, pas sur la saisie", async () => {
+    for (let i = 0; i < 5; i += 1) {
+      await auth.requestOtp({ email: `awa+${i}@gmail.com` });
+    }
+    await expect(auth.requestOtp({ email: "a.w.a@gmail.com" })).rejects.toBeInstanceOf(AppError);
+  });
+
+  // Aucune surface de l'application n'accepte une adresse jetable — celle-ci
+  // ouvrirait un compte.
+  it("refuse un code de connexion vers une adresse jetable", async () => {
+    await expect(auth.requestOtp({ email: "awa@mailinator.com" })).rejects.toBeInstanceOf(AppError);
+    expect(envoyés, "rien ne doit partir").toHaveLength(0);
   });
 
   it("la première vérification crée le compte", async () => {

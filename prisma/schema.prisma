@@ -164,13 +164,43 @@ model LoginActivity {
 }
 
 model WaitlistSignup {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email     String   @unique
-  locale    String?  @db.VarChar(10)
-  source    String?  @db.VarChar(64)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// L'adresse telle qu'elle a été saisie : c'est à elle qu'on écrit, et
+  /// c'est elle que la personne reconnaîtra.
+  email String @unique
+  /// La forme sous laquelle deux adresses désignent la même boîte — casse
+  /// abaissée, étiquette après le « + » retirée, points ignorés chez Gmail
+  /// (voir src/common/email.ts). C'est cette colonne qui porte l'unicité
+  /// réelle : sans elle, « a+1@ » et « a+2@ » peuplent la liste de la même
+  /// personne et lui envoient deux confirmations.
+  emailCanonical String  @unique @map("email_canonical") @db.Citext
+  locale         String? @db.VarChar(10)
+  source         String? @db.VarChar(64)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("waitlist_signup")
+}
+
+model ContactMessage {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Nom tel que saisi dans le formulaire.
+  name String
+  /// Adresse telle que saisie : c'est elle qui reçoit l'accusé de réception.
+  email String
+  /// Une des six clés de CONTACT_SUBJECTS (@lehno/contracts) — jamais un
+  /// texte libre venu du client, voir contact.controller.ts.
+  subject String @db.VarChar(32)
+  message String
+  locale  String? @db.VarChar(10)
+  /// Contrairement à la liste d'attente, rien d'autre ne porte ce message :
+  /// il est écrit ici AVANT toute tentative d'envoi, pour qu'une panne
+  /// d'acheminement vers l'équipe ne le perde jamais (voir
+  /// ContactService.send). Pas d'unicité ici : deux messages légitimes
+  /// peuvent venir de la même adresse.
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([createdAt])
+  @@map("contact_message")
 }
 
 enum PersonRegister {

@@ -178,7 +178,9 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 
 **Ses portraits.** Les portraits déjà produits pour ce proche, du plus récent au plus ancien, chacun indiquant sa date et la plage de notes retenue. Un geste en génère un nouveau, à tout moment (3.7). Un portrait s'ouvre pour être revu, approuvé ou partagé.
 
-**Événements et historique.** La liste des événements du proche (anniversaire et autres) : chacun ouvre l'occasion à venir (3.21) et donne accès à sa modification (3.6). En dessous, l'historique par année, replié : chaque occasion passée ouvre son détail (3.21) — message envoyé, vœux reçus.
+**Événements et historique.** La liste des événements du proche (anniversaire et autres) : chacun ouvre l'occasion à venir (3.21) et donne accès à sa modification (3.6). En dessous, l'historique par année, replié : chaque occasion passée ouvre son détail (3.21) — message envoyé, vœux reçus, **et ce qui a été offert cette année-là**.
+
+**Ce qu'on a déjà offert.** La fiche tient la liste des cadeaux offerts, année par année. Elle s'alimente de trois façons : marquer un souhait comme offert, retenir une idée proposée à la préparation, ou saisir librement un cadeau trouvé ailleurs. **La génération d'idées lit cette liste et écarte ce qui a déjà servi** — c'est ce qui empêche de proposer cette année le cadeau de l'an dernier.
 
 **Actions.** Ajouter une note · ajouter un souhait · ajouter ou modifier un événement · générer (portrait, idées, message) · partager un lien de collecte propre à la fiche · modifier l'identité.
 
@@ -231,7 +233,7 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 **Parcours d'ajout.**
 1. **Type** — anniversaire (mis en avant) ou autre événement (chemin secondaire).
 2. **Pour qui** — chercher un proche existant, ou **en créer un** au passage : son nom suffit, la fiche s'enrichira ensuite.
-3. **La date** — jour et mois ; pour un anniversaire, l'année est facultative. Pour un autre événement, un intitulé libre le nomme (« Mariage de Sarah »).
+3. **La date** — jour et mois ; pour un anniversaire, l'année reste facultative, l'écran indiquant qu'elle permet de proposer des cadeaux qui vont avec l'âge. Pour un autre événement, un intitulé libre le nomme (« Mariage de Sarah »).
 4. **Détails**, repliés par défaut — nature, répétition, délai d'anticipation du rappel (voir ci-dessous).
 5. **Enregistrer** — l'occasion à venir est créée, et l'application ouvre sa page (3.21), d'où l'on enchaîne : ajouter un souhait, une note, préparer.
 6. **Proposition de partage** — lorsque l'étape 2 a créé une nouvelle fiche, l'application propose dans la foulée d'envoyer à ce proche son lien de collecte, pour qu'il la complète lui-même (3.20). Cette proposition se décline d'un geste.
@@ -256,7 +258,7 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 **Rôle.** Produire un portrait, des idées de cadeaux ou un message. C'est le cœur de la valeur payante de l'application.
 
 **Principes communs.**
-- La génération part des **paramètres de la fiche** — le registre (ton) et la langue configurés pour ce proche, qui servent de valeurs par défaut et se modifient au moment de générer — et s'appuie sur **l'ensemble de la fiche** : les notes durables qui décrivent le proche, les notes de circonstance propres à l'occasion, la liste de souhaits, et le contexte de l'échéance visée.
+- La génération part des **paramètres de la fiche** — le registre (ton) et la langue configurés pour ce proche, qui servent de valeurs par défaut et se modifient au moment de générer. Elle s'appuie aussi sur ce que la fiche dit du proche : le **nom d'usage** (celui par lequel le message s'adresse à lui), le **lien** avec lui, sa **ville**, son **âge** si l'année de naissance est connue, le **canal** par lequel on lui écrit (qui règle la longueur), et **ce qui lui a déjà été offert**, que les idées écartent. Enfin, elle s'appuie sur **l'ensemble de la fiche** : les notes durables qui décrivent le proche, les notes de circonstance propres à l'occasion, la liste de souhaits, et le contexte de l'échéance visée.
 - **Deux temps distincts.** Le **portrait** se génère depuis la fiche du proche, quand l'utilisateur le souhaite (3.4). La **préparation d'une occasion** propose les **idées de cadeaux** et le **message** (3.21) ; une occasion sensible se concentre sur le message.
 - Chaque génération produit **un seul résultat**, dans le ton et la langue par défaut, plutôt qu'un éventail d'options : c'est un choix d'économie de ressources.
 - Chaque **génération consomme un crédit**. Pour un autre ton, une autre langue ou une autre orientation, l'utilisateur **régénère** — un nouveau résultat, un nouveau crédit. Le coût et le solde disponible sont annoncés avant de démarrer.
@@ -500,9 +502,17 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 
 **Rôle.** Ajuster ce qui définit le proche et oriente la génération.
 
-**Contenu du formulaire.** Photo ou initiale · nom · registre de communication (familier, amical, formel) · langue de communication · un éventuel indice de relation (« on se connaît d'où »). Le registre et la langue servent de valeurs par défaut à la génération (3.7).
+**Contenu du formulaire.** Deux groupes, l'essentiel d'abord.
 
-**États particuliers.** Fiche née d'une collecte publique : l'indice de relation renseigné par le répondant est repris, et reste corrigeable.
+*Qui c'est* — photo ou initiale · nom affiché · **nom d'usage**, la façon dont on l'appelle dans un message (« Karim », « Maman », « mon vieux ») · **lien** avec ce proche (famille proche, famille étendue, ami, partenaire, collègue, relation professionnelle, connaissance) · un éventuel indice de relation en toutes lettres (« on se connaît d'où »).
+
+*Ce qui oriente la préparation* — registre de communication (familier, amical, formel) · langue de communication · ville et pays, qui permettent de suggérer des adresses et des sorties · **canal habituel** par lequel on lui écrit, qui oriente la longueur du message produit.
+
+**Le genre, en dernier et facultatif.** Il vient après tout le reste, avec une option « je préfère ne pas préciser » retenue par défaut. L'écran dit à quoi il sert : orienter des idées de cadeaux **lorsqu'on ne sait encore presque rien** du proche. Une seule note bien prise vaut mieux que lui.
+
+**Ce qui sert à la génération.** Le nom d'usage, le lien, le registre et la langue en sont les valeurs par défaut (3.7) ; la ville nourrit les suggestions de lieux ; le canal règle la longueur.
+
+**États particuliers.** Fiche née d'une collecte publique : l'indice de relation renseigné par le répondant est repris, et peut proposer un lien que le propriétaire confirme. Nom d'usage absent : le nom affiché en tient lieu.
 
 ### 3.19 Détail et gestion d'un souhait
 

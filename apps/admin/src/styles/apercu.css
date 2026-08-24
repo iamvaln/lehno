@@ -1,0 +1,28 @@
+/* La bande d'aperçu — hors de l'outil, et elle doit se voir comme telle.
+   Elle disparaît le jour où l'authentification décide du rôle. */
+.apercu-bande {
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-band); color: var(--on-band);
+  font-size: var(--text-body-xs);
+}
+
+.apercu-mention {
+  text-transform: uppercase; letter-spacing: .12em;
+  font-weight: 600; opacity: .7; margin-right: auto;
+}
+
+.apercu-bande button {
+  font: inherit; font-weight: 600;
+  color: var(--on-band); background: transparent;
+  border: 1px solid currentColor; border-radius: var(--radius-sm);
+  padding: 0 var(--space-4); height: var(--control-height); cursor: pointer;
+  transition: background var(--duration-state) var(--ease-state);
+}
+
+.apercu-bande button[aria-pressed="true"] { background: var(--action); border-color: var(--action); }
+
+.apercu-separateur {
+  width: var(--border-width); height: var(--space-16);
+  background: currentColor; opacity: .3; margin: 0 var(--space-2);
+}

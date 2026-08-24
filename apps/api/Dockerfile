@@ -1,0 +1,117 @@
+# syntax=docker/dockerfile:1
+#
+# Image de l'API (@lehno/api — NestJS). Construction à exécuter depuis la
+# racine du dépôt, le contexte doit être le monorepo entier :
+#
+#   docker build -f apps/api/Dockerfile -t lehno-api .
+#
+# Cette image sert aussi le service « migrate » de docker-compose.yml (même
+# image, commande différente : node_modules/.bin/prisma migrate deploy) —
+# elle garde donc le CLI Prisma et le schéma, pas seulement le client.
+#
+# Étapes :
+#   base    — image commune, pnpm activé
+#   install — installation figée du monorepo entier (verrou respecté),
+#             c'est ici que « prisma generate » tourne une première fois
+#             (déclenché par le postinstall de @lehno/api)
+#   deploy  — pnpm deploy ne garde que les dépendances de production de
+#             @lehno/api, arborescence autonome
+#   runtime — image finale minimale, utilisateur non privilégié
+#
+# @lehno/contracts et @lehno/i18n exposent leurs sources TypeScript
+# (main: ./src/index.ts, pas de compilation). L'API les exécute donc via
+# tsx (esbuild) plutôt que par un « tsc » classique — c'est la même
+# contrainte que celle déjà documentée dans le code pour vitest
+# (voir apps/api/src/**/*.ts, commentaires « esbuild/vitest »).
+
+FROM node:20-alpine AS base
+# openssl : le moteur Prisma généré pour linux-musl en a besoin au chargement ;
+# son absence produit une erreur au démarrage, pas à la construction.
+RUN apk add --no-cache openssl
+RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+WORKDIR /repo
+# Résilience réseau (repris de gabee) : plus de tentatives, délai plus long,
+# moins de sockets en parallèle — évite un ERR_SOCKET_TIMEOUT sur une liaison
+# lente ou bridée, au prix d'une installation un peu plus lente.
+#
+# package-import-method=copy : pnpm relie par défaut node_modules au store
+# local par des liens durs (hardlinks). Cette image copie ensuite un
+# node_modules déjà lié (COPY --from=deploy plus bas) dans une AUTRE couche
+# — au « docker pull » sur le VPS, l'extraction overlayfs de containerd peut
+# alors échouer par intermittence (« link … no such file or directory »),
+# une course d'extraction entre couches, pas une vraie erreur de disque.
+# « copy » fait de chaque fichier de node_modules une copie réelle : plus de
+# lien dur entre couches, donc plus de course possible à l'extraction.
+ENV npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_maxtimeout=120000 \
+    npm_config_fetch_timeout=600000 \
+    npm_config_network_concurrency=4 \
+    npm_config_package_import_method=copy
+
+FROM base AS install
+# Contexte = racine du monorepo. prisma/ doit être présent avant l'install :
+# le postinstall de @lehno/api ("prisma generate") lit
+# apps/api/prisma.config.ts, qui pointe vers ../../prisma/schema.prisma.
+COPY . .
+RUN pnpm install --frozen-lockfile
+
+FROM install AS deploy
+# --prod exclut les devDependencies (vitest, testcontainers, typescript...) ;
+# prisma et tsx sont des dépendances de production de @lehno/api précisément
+# pour survivre à cet élagage — ils sont nécessaires au démarrage.
+RUN pnpm --filter @lehno/api deploy --prod /prod/api
+# Regénération explicite dans l'arborescence déployée, en dernière étape.
+# Constaté par un conteneur qui refusait de démarrer (« @prisma/client did
+# not initialize yet ») malgré un « prisma generate » déjà journalisé comme
+# réussi pendant l'install : « pnpm deploy » retasse node_modules après le
+# postinstall (élagage --prod), ce qui écrase le client engendré et le
+# fait retomber sur le module de repli « non initialisé ». Cette commande
+# doit donc rester la toute dernière écriture avant la copie dans l'image.
+#
+# Schéma copié DANS /prod/api et passé en --schema explicite plutôt que
+# via prisma.config.ts (qui pointe vers "../../prisma/schema.prisma") :
+# constaté aussi que l'invocation directe du binaire ici, sans lockfile
+# pnpm dans /prod/api, fait retomber Prisma sur une détection « npm » qui
+# tente de corriger le package.json déployé (« npm i prisma -D ») — et
+# plante sur les dépendances workspace:* que pnpm deploy n'a pas réécrites.
+# --schema en direct évite entièrement ce chemin de code. Le sous-dossier
+# est retiré ensuite : au démarrage, c'est prisma.config.ts (schéma partagé
+# à la racine du dépôt, voir l'étape « runtime ») qui fait foi.
+RUN mkdir -p /prod/api/prisma \
+  && cp /repo/prisma/schema.prisma /prod/api/prisma/schema.prisma \
+  && cp -r /repo/prisma/migrations /prod/api/prisma/migrations \
+  && cd /prod/api && node_modules/.bin/prisma generate --schema=/prod/api/prisma/schema.prisma \
+  && rm -rf /prod/api/prisma
+
+FROM base AS runtime
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# La structure reproduit apps/api + prisma + packages/tsconfig deux niveaux
+# au-dessus, exactement la disposition du monorepo — c'est ce que
+# apps/api/prisma.config.ts (schema: "../../prisma/schema.prisma") et le
+# tsconfig.json de l'API (extends: "../../packages/tsconfig/base.json",
+# experimentalDecorators) attendent pour résoudre leurs chemins relatifs.
+# Vérifié : sans packages/tsconfig/base.json copié, tsx échoue au démarrage
+# avec « Parameter decorators only work when experimental decorators are
+# enabled » — l'extends ne se résout plus et l'option se perd silencieusement.
+COPY --chown=node:node --from=deploy /prod/api ./apps/api
+COPY --chown=node:node prisma ./prisma
+COPY --chown=node:node packages/tsconfig/base.json packages/tsconfig/package.json ./packages/tsconfig/
+
+WORKDIR /repo/apps/api
+USER node
+EXPOSE 3000
+
+# /v1/public/config répond sans authentification et touche la base (lecture
+# de system_parameter) : un 200 y garantit à la fois que le serveur écoute
+# et que la connexion à Postgres fonctionne.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/v1/public/config').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+# Les migrations sont appliquées par le service « migrate » de
+# docker-compose.yml (même image, commande différente), avant que ce
+# service ne démarre — pas ici : un « prisma migrate deploy » par
+# instance, à chaque redémarrage, ferait courir plusieurs migrations
+# concurrentes si l'api tourne un jour à plus d'une réplique.
+CMD ["node", "--import", "tsx/esm", "src/main.ts"]

@@ -27,8 +27,9 @@ Un rappel de ce sur quoi le service repose, rassemblé en un endroit.
 | Envoi d'e-mails | Mailgun | Retenu, à l'essai |
 | Génération de contenus | Anthropic, DeepSeek, Grok — avec routage et repli entre eux | Retenus ; ordre de priorité à caler |
 | Paiement | MTN Mobile Money et Orange Money, en intégration directe | Retenus |
-| Hébergement | VPS | Retenu |
-| Sauvegardes | Stockage distant chiffré | |
+| Hébergement | VPS, partagé avec d'autres projets derrière un Traefik commun | Retenu |
+| Sauvegardes | Cloudflare R2, copies chiffrées | Retenu |
+| Drapeaux de fonctionnalité | Internes, pilotés depuis le back-office (7.1) | Retenu |
 | Supervision et suivi des erreurs | Sentry | Retenu |
 | Mesure d'usage | PostHog, version infogérée gratuite | Retenu |
 
@@ -43,6 +44,9 @@ Un rappel de ce sur quoi le service repose, rassemblé en un endroit.
 - **Synchrone par défaut.** Un appel rend son résultat. Deux opérations font exception, car elles dépendent d'un tiers : la **génération** (temps de calcul) et le **paiement** (validation chez l'opérateur). Elles s'initient par un appel et se résolvent ensuite.
 - **Rejouer sans dupliquer.** Toute opération qui engage de l'argent ou un crédit est idempotente : la répéter donne le même résultat qu'une seule exécution.
 - **Le contrat est stable.** L'interface est versionnée ; une application installée continue de fonctionner après une évolution du serveur.
+- **Le moindre privilège, partout.** Chaque acteur — utilisateur, rôle d'administration, service, jeton, conteneur, tâche programmée — ne reçoit que ce dont il a besoin pour faire son travail, et rien de plus. Un droit s'accorde parce qu'un usage l'exige, jamais parce qu'il serait commode. Cela vaut autant pour les rôles applicatifs (8) que pour les accès à l'infrastructure (9.11) : un compte de déploiement ne lit pas la base, un conteneur ne tourne pas en administrateur, un jeton de lien public n'ouvre qu'une ressource.
+- **La sécurité se conçoit, elle ne se rajoute pas.** Le cloisonnement, l'idempotence, la limitation de débit et la vérification côté serveur font partie du dessin de chaque fonctionnalité, pas d'une passe de durcissement ultérieure. La chaîne de livraison le vérifie à chaque contribution (9.12).
+- **Tout se livre derrière un drapeau.** Une fonctionnalité arrive en production éteinte, s'allume pour un public choisi, et s'éteint sans redéploiement (7.1). Livrer et mettre en service deviennent deux gestes distincts : le premier est banal, le second se décide.
 
 ## 3. Organisation de l'interface
 
@@ -105,6 +109,8 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | `/me/notes` | POST | Créer une note pour un ou plusieurs proches, avec une occasion facultative |
 | `/me/persons/{id}/notes` | GET, POST | Les notes durables du proche |
 | `/me/persons/{id}/portraits` | GET | Sa collection de portraits |
+| `/me/persons/{id}/gifts` | GET, POST | Ce qui lui a été offert, année par année ; en ajouter |
+| `/me/gifts/{id}` | PATCH, DELETE | Corriger ou retirer une entrée |
 | `/me/events` | GET, POST | Les événements ; création (anniversaire ou autre) |
 | `/me/events/{id}` | GET, PATCH, DELETE | Un événement et sa récurrence |
 | `/me/occurrences` | GET | Les échéances à venir — la vue Dates et l'accueil |
@@ -147,6 +153,8 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 **Déroulé.** Le lancement **débite le crédit et rend aussitôt** un identifiant, sans attendre la production. Le client **interroge** ensuite l'avancement jusqu'au résultat. En cas d'échec, le crédit est **rendu au solde** et la raison portée par la réponse.
 
 **Paramètres de la demande.** Le lancement porte la cible, le type de contenu, et les paramètres effectifs — ton, langue, plage de notes, mots d'orientation. Ceux qui sont absents prennent la valeur de la fiche.
+
+**Ce que le serveur ajoute.** Il complète la demande avec ce que la fiche sait du proche : nom d'usage, lien, ville, âge lorsque l'année de naissance est connue, canal habituel, et **la liste des cadeaux déjà offerts**, que les idées écartent. Le client n'a pas à les transmettre — ils appartiennent au serveur, qui les tient à jour.
 
 **Sans doublon.** Une même demande relancée (même cible, même paramètres, même clé d'idempotence) rejoint la génération en cours plutôt que d'en créer une seconde — et ne débite qu'une fois.
 
@@ -273,6 +281,27 @@ Réservée aux comptes d'administration, avec les deux rôles du modèle.
 **Motif obligatoire.** Les appels qui modifient l'état d'un compte, un solde ou un contenu **exigent un motif** dans leur corps. Sans lui, la requête échoue — c'est ce qui garantit que le journal d'audit dit quelque chose.
 
 **Droits.** Le rôle se vérifie à chaque appel. Le back-office masque ce qu'un rôle ne peut pas faire, mais c'est le serveur qui refuse.
+
+### 7.1 Les drapeaux de fonctionnalité
+
+| Chemin | Méthode | Rôle |
+|---|---|---|
+| `/admin/feature-flags` | GET, POST, PATCH | Lire, créer et basculer les drapeaux |
+| `/admin/feature-flags/{cle}/audience` | PATCH | Restreindre ou élargir le public d'un drapeau |
+
+**Pourquoi.** Une fonctionnalité qui ne peut pas s'éteindre oblige à redéployer pour se rétracter — au pire moment, sous pression, avec la chaîne complète à retraverser. Le drapeau sépare **livrer** de **mettre en service** : le code part en production éteint, s'allume quand on le décide, et s'éteint en une bascule si quelque chose se passe mal.
+
+**La mise en ligne est le premier drapeau.** L'état pré-lancement des surfaces publiques — liste d'attente contre liens de magasins (voir la spécification des surfaces publiques) — n'est pas une variable d'environnement mais un drapeau comme les autres, basculé depuis le back-office. Aucune remise en ligne n'est nécessaire pour ouvrir le service.
+
+**Ce que porte un drapeau.** Une clé stable et lisible, un libellé, un état, un public, une date de dernière bascule et l'auteur de celle-ci. Toute bascule passe au journal d'audit avec son motif, comme les autres actes sensibles.
+
+**Le public.** Un drapeau vaut pour tout le monde, pour une part tirée au sort, ou pour une liste nommée de comptes. La part et la liste servent l'ouverture progressive : on regarde les erreurs et les indicateurs monter avant d'élargir.
+
+**Ce qu'un drapeau n'est pas.** Ni un droit d'accès — les rôles restent l'affaire de la section 8 —, ni un réglage de produit, qui relève de `/admin/parameters`. Un drapeau répond à « cette fonctionnalité est-elle en service ? », pas à « cet utilisateur y a-t-il droit ? » ni à « combien coûte un crédit ? ».
+
+**Le serveur décide, ici aussi.** Le client demande l'état des drapeaux qui le concernent et adapte son affichage, mais un appel à une fonctionnalité éteinte est refusé côté serveur. Un drapeau caché dans l'interface n'est pas une protection.
+
+**Le drapeau meurt.** Un drapeau allumé pour tout le monde depuis longtemps est une dette : le code porte alors deux chemins dont un seul sert. Le back-office montre l'âge de chaque drapeau pour que le retrait se voie.
 
 ## 8. Droits d'accès
 
@@ -409,6 +438,8 @@ Un souhait porte une adresse, et cette adresse peut venir d'un proche via un lie
 - **Mises à jour de sécurité traitées en priorité**, à rythme régulier.
 - **Analyse du code à chaque contribution**, avec relecture obligatoire avant fusion.
 - **Secrets recherchés dans l'historique** à chaque contribution, pour attraper l'oubli avant qu'il ne parte.
+- **Une barrière qui refuse, pas qui rassure.** Chaque vérification de la chaîne doit avoir été vue refuser au moins une fois : on y introduit la faute qu'elle prétend attraper, on constate le refus, on la retire. Une barrière verte qui n'a jamais rougi ne prouve rien — et une barrière rouge en permanence, pour des motifs qu'on a renoncé à traiter, finit débranchée. Les deux se valent en danger.
+- **La mise en service se décide.** Le déploiement se déclenche par un **tag de version**, jamais par une fusion : une contribution acceptée ne part pas en production du seul fait qu'elle est acceptée. Le retour arrière consiste à repointer sur une version antérieure, sans reconstruction.
 
 ### 9.13 Notification du prestataire de paiement
 
@@ -628,7 +659,7 @@ Les e-mails et les notifications suivent la **langue de l'interface** du destina
 | **Purge des traces de connexion** | Chaque jour | Applique la durée de conservation définie |
 | **Purge des journaux techniques** | Chaque jour | Applique la rétention courte de l'infrastructure d'observation |
 | **Nettoyage des fichiers orphelins** | Chaque semaine | Retire les images qu'aucun contenu ne référence plus |
-| **Sauvegarde de la base** | Chaque jour | Copie chiffrée vers un stockage distant, hors du VPS |
+| **Sauvegarde de la base** | Chaque jour | Copie chiffrée vers **Cloudflare R2**, hors du VPS — un incident sur la machine ne doit pas emporter ses propres sauvegardes |
 | **Vérification de restauration** | Chaque mois | Restaure une sauvegarde sur un environnement de contrôle — une sauvegarde jamais restaurée ne vaut rien |
 
 ### 14.5 Ce qui reste hors des traitements programmés
@@ -700,7 +731,7 @@ La section Métriques s'appuie sur ces événements pour rendre les vues promise
 
 Chaque écran des trois spécifications trouve ici ses points d'entrée. Cette table sert de contrôle : un écran sans ligne signale un manque.
 
-**Application mobile.** Inscription et connexion → `/auth/*`, `/public/invitations/{code}` · Accueil → `/me/home` · Proches → `/me/persons` · Fiche d'un proche → `/me/persons/{id}`, `/notes`, `/portraits` · Saisie d'une note → `/me/notes`, `/me/persons/{id}/notes`, `/me/occurrences/{id}/notes` · Ajout d'un événement → `/me/events` · Génération → `/me/generations` · À valider → `/me/submissions`, `/me/received-wishes` · Crédits et recharge → `/me/credits`, `/me/payments` · Mon Mur → `/me/wall` · Réglages → `/me/notification-preferences`, `/me/data-export` · Surfaces publiques dans l'application → `/v1/public/*` · Centre de notifications → `/me/notifications` · Dates → `/me/occurrences` · Recherche → `/me/search` · Reprises → `/me/resumables` · Moi → agrégat des précédents · Modifier l'identité → `/me/persons/{id}` · Détail d'un souhait → `/me/wishes/{id}` · Partage d'un lien de collecte → `/me/collection-links` · Détail d'une occasion → `/me/occurrences/{id}` · Aperçu d'un portrait → `/me/portraits/{id}` · Mon profil → `/me/profile` · Mes réservations → `/me/reservations` · Sécurité et connexions → `/me/sessions`, `/me/identities`, `/me/account` · Méthode de paiement → `/me/payment-methods` · Aide → `/me/support-requests`, `/me/feedback`, `/public/legal/*`.
+**Application mobile.** Inscription et connexion → `/auth/*`, `/public/invitations/{code}` · Accueil → `/me/home` · Proches → `/me/persons` · Fiche d'un proche → `/me/persons/{id}`, `/notes`, `/portraits`, `/gifts` · Saisie d'une note → `/me/notes`, `/me/persons/{id}/notes`, `/me/occurrences/{id}/notes` · Ajout d'un événement → `/me/events` · Génération → `/me/generations` · À valider → `/me/submissions`, `/me/received-wishes` · Crédits et recharge → `/me/credits`, `/me/payments` · Mon Mur → `/me/wall` · Réglages → `/me/notification-preferences`, `/me/data-export` · Surfaces publiques dans l'application → `/v1/public/*` · Centre de notifications → `/me/notifications` · Dates → `/me/occurrences` · Recherche → `/me/search` · Reprises → `/me/resumables` · Moi → agrégat des précédents · Modifier l'identité → `/me/persons/{id}` · Détail d'un souhait → `/me/wishes/{id}` · Partage d'un lien de collecte → `/me/collection-links` · Détail d'une occasion → `/me/occurrences/{id}` · Aperçu d'un portrait → `/me/portraits/{id}` · Mon profil → `/me/profile` · Mes réservations → `/me/reservations` · Sécurité et connexions → `/me/sessions`, `/me/identities`, `/me/account` · Méthode de paiement → `/me/payment-methods` · Aide → `/me/support-requests`, `/me/feedback`, `/public/legal/*`.
 
 **Surfaces publiques.** Landing → `/public/config`, `/public/waitlist` (pré-lancement) · Collecte nominatif et public → `/public/collect/{token}` · Mur public → `/public/walls/{username}` · Dépôt de vœux → `/public/wishes/{token}` · Portrait partagé → `/public/portraits/{token}` · Invitation au parrainage → `/public/invitations/{code}` · Pages légales → `/public/legal/{document}` · Pages d'état → rendues par les réponses d'état des chemins ci-dessus.
 
@@ -714,3 +745,10 @@ Chaque écran des trois spécifications trouve ici ses points d'entrée. Cette t
 - Le **mécanisme de chiffrement au repos** des numéros de compte mobile money, et la rotation de sa clé.
 - Le **détail des schémas** de requête et de réponse, ressource par ressource, à produire au moment de l'implémentation.
 - Les **cadences exactes** des relances et du récapitulatif, ainsi que les **durées de conservation** des traces de connexion et des journaux techniques.
+- Le **modèle de données des drapeaux** (7.1) et les écrans qui les pilotent : forme exacte du public, mode d'évaluation côté serveur et côté client, et ce que le back-office montre de l'âge d'un drapeau.
+
+## 18. Ce qui conditionne la première mise en ligne
+
+Rien ne part en production tant que le service n'a pas une **version utilisable**. Le seuil retenu : la landing en ligne, **la liste d'attente câblée de bout en bout** — le formulaire poste réellement, l'adresse arrive en base, la personne reçoit une confirmation. Une landing dont le formulaire ne mène nulle part coûte plus qu'elle ne rapporte : elle consomme la seule visite qu'un curieux nous accordera.
+
+La chaîne de livraison existe et se déclenche par un tag de version (9.12) ; elle attend donc, elle ne manque pas. C'est une décision, pas un empêchement technique.

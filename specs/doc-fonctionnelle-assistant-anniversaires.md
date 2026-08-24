@@ -92,7 +92,19 @@ L'application n'assure pas l'envoi automatique des messages aux destinataires : 
 
 **DeviceSignup** — Trace des créations de compte par appareil, qui sert à plafonner leur nombre et à limiter l'abus du parrainage.
 
+**NotificationPreference** — Réglage d'une nature de message pour un utilisateur ; l'absence de ligne vaut valeurs par défaut.
+
+**Device** — Appareil enregistré pour recevoir les notifications poussées, distinct de `DeviceSignup`.
+
+**RefreshToken** — Jeton de rafraîchissement d'une session, dont la rotation permet de détecter le vol d'une copie.
+
+**WaitlistSignup** — Adresse déposée sur la liste d'attente pendant le pré-lancement, rattachée à aucun compte.
+
+**SupportRequest / Feedback / DataExportRequest** — Message à l'équipe, avis laissé depuis l'application, demande d'export de ses données.
+
 **PaymentMethod** — Moyen de paiement enregistré par un `User` pour ses recharges, et destination d'un éventuel remboursement. Une carte reste chez le prestataire, qui en rend une référence ; un compte mobile money s'identifie par son numéro, conservé chiffré car il sert à lancer les transactions.
+
+**GiftGiven** — Ce qui a été offert à un proche une année donnée, pour que la génération d'idées écarte ce qui a déjà servi.
 
 **PaymentStatusHistory** — L'historique des états d'un paiement : une ligne par état, avec son début, sa fin, ce qui l'a provoqué et qui en est l'auteur.
 

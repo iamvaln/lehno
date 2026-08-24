@@ -53,9 +53,27 @@ describe("schéma — identité", () => {
   });
 
   it("la liste d'attente refuse deux fois la même adresse", async () => {
-    await db.prisma.waitlistSignup.create({ data: { email: "x@example.com", locale: "fr" } });
+    await db.prisma.waitlistSignup.create({
+      data: { email: "x@example.com", emailCanonical: "x@example.com", locale: "fr" },
+    });
     await expect(
-      db.prisma.waitlistSignup.create({ data: { email: "X@EXAMPLE.COM", locale: "en" } }),
+      db.prisma.waitlistSignup.create({
+        data: { email: "X@EXAMPLE.COM", emailCanonical: "x@example.com", locale: "en" },
+      }),
+    ).rejects.toThrow();
+  });
+
+  // La contrainte sur la forme canonique se tient toute seule : deux adresses
+  // littéralement différentes, mais désignant la même boîte, sont refusées par
+  // la base — pas seulement par le service qui la précède.
+  it("la liste d'attente refuse deux adresses qui désignent la même boîte", async () => {
+    await db.prisma.waitlistSignup.create({
+      data: { email: "x+un@example.com", emailCanonical: "x@example.com", locale: "fr" },
+    });
+    await expect(
+      db.prisma.waitlistSignup.create({
+        data: { email: "x+deux@example.com", emailCanonical: "x@example.com", locale: "fr" },
+      }),
     ).rejects.toThrow();
   });
 

@@ -35,7 +35,7 @@ describe("authentification — HTTP de bout en bout", () => {
     process.env.DATABASE_URL = db.url;
     process.env.OTP_PEPPER = PEPPER;
     process.env.JWT_SECRET = SECRET;
-    // Aucun identifiant Mailgun ici : adhésion explicite à la console de
+    // Aucun identifiant Resend ici : adhésion explicite à la console de
     // développement requise depuis la revue tour 2 (voir app.module.ts) —
     // sans elle, le module refuserait de démarrer.
     process.env.LEHNO_MAIL_CONSOLE = "1";

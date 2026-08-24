@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
-import { WaitlistService } from "../src/public/waitlist.service.js";
 import { ConfigService } from "../src/public/config.controller.js";
 
 describe("surfaces publiques", () => {
@@ -32,17 +31,8 @@ describe("surfaces publiques", () => {
     expect((await new ConfigService(db.prisma as never).get()).creditUnitPrice).toBe(150);
   });
 
-  it("un dépôt sur la liste d'attente enregistre l'adresse", async () => {
-    const svc = new WaitlistService(db.prisma as never);
-    await svc.join({ email: "awa@example.com", locale: "fr" });
-    expect(await db.prisma.waitlistSignup.count()).toBe(1);
-  });
-
-  it("deux dépôts de la même adresse n'en font qu'un, et ne le disent pas", async () => {
-    const svc = new WaitlistService(db.prisma as never);
-    const a = await svc.join({ email: "awa@example.com", locale: "fr" });
-    const b = await svc.join({ email: "AWA@EXAMPLE.COM", locale: "en" });
-    expect(a).toEqual(b); // réponse identique : la liste ne s'énumère pas
-    expect(await db.prisma.waitlistSignup.count()).toBe(1);
-  });
+  // Les cas de la liste d'attente vivent dans waitlist.test.ts : depuis que
+  // le point d'entrée limite le débit et confirme par courriel, ils demandent
+  // un limiteur et un adaptateur de courriel, et ils couvrent sept
+  // propriétés plutôt que deux — dont l'indistinguabilité reprise ici.
 });

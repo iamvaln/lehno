@@ -26,6 +26,8 @@ export { TextField } from "./TextField.js";
 export { BrandMark } from "./BrandMark.js";
 export type { VariantePastille } from "./BrandMark.js";
 export { Wordmark } from "./Wordmark.js";
+export { Lockup } from "./Lockup.js";
+export type { LockupProps } from "./Lockup.js";
 export type { VarianteLogotype } from "./Wordmark.js";
 export { SocialGlyph } from "./SocialGlyph.js";
 export type { Plateforme } from "./SocialGlyph.js";

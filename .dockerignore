@@ -1,0 +1,37 @@
+# Contexte de construction Docker : on part du dépôt entier (les deux
+# Dockerfiles copient apps/, packages/ et prisma/), donc ce fichier exclut
+# seulement ce qui ne sert jamais à une image — pas de sous-répertoire de
+# sources applicatives.
+
+# Artefacts régénérés à l'intérieur du conteneur — les copier reviendrait à
+# figer un binaire natif construit sur la machine hôte (ex. moteur Prisma
+# lié à macOS) dans une image Linux, qui ne le chargerait pas au démarrage.
+node_modules
+**/node_modules
+dist
+**/dist
+.next
+**/.next
+.turbo
+**/.turbo
+*.tsbuildinfo
+
+# Secrets et environnement local — jamais dans le contexte de construction.
+.env
+.env.*
+!.env.example
+
+# Contrôle de version et outillage d'agent.
+.git
+.gitignore
+.github
+.worktrees
+.claude
+.superpowers
+.DS_Store
+
+# Documentation et maquettes, sans effet sur la construction des images
+# mais volumineuses (specs/, images/brand contiennent des PDF/PNG source).
+docs
+specs
+images
