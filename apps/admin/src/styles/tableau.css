@@ -1,0 +1,45 @@
+/* --------------------------------------------------------------------------
+   Le tableau de bord. La page ne pose aucun style en ligne : tout ce qui est
+   mise en page vit ici, comme pour les composants — un style en ligne ne porte
+   ni requête de média, ni survol, et une couleur écrite en ligne échappe au
+   thème sombre.
+
+   Trois rangs, dans l'ordre où la page a quelque chose à dire : ce qui ne va
+   pas, les chiffres, ce qui attend une décision.
+   -------------------------------------------------------------------------- */
+
+.admin-accueil-rang {
+  margin-bottom: var(--space-24);
+}
+
+/* Le titre d'un rang se lit comme un surtitre, pas comme un titre de page :
+   c'est un repère de lecture entre trois blocs, et le titre de la page est
+   déjà posé au-dessus. Même recette que l'en-tête du tableau et que le libellé
+   d'une carte — c'est le même rang de voix. */
+.admin-accueil-titre {
+  margin-bottom: var(--space-10);
+  font-family: var(--font-body);
+  font-size: var(--text-body-xs);
+  font-weight: var(--font-body-bold);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--text-mention);
+}
+
+/* Les alertes tiennent sur une ligne — trois au plus, le plafond est dans le
+   contrat. Le retour à la ligne reste possible : une pastille porte une phrase,
+   et une phrase longue ne doit pas déborder du cadre sur un écran étroit. */
+.admin-accueil-alertes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+/* auto-fit à 170 px : le nombre de colonnes suit la largeur du poste de travail
+   plutôt qu'un palier décidé d'avance. En deçà de 170 px, un chiffre et son
+   libellé en capitales ne tiennent plus côte à côte. */
+.admin-accueil-indicateurs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-12);
+}

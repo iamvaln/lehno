@@ -1,0 +1,26 @@
+@import "./composants.css";
+@import "./coquille.css";
+@import "./donnees.css";
+@import "./signaux.css";
+@import "./tableau.css";
+@import "./gabarits.css";
+@import "./apercu.css";
+@import "./connexion.css";
+
+/* Structure seulement. Les couleurs et la densité viennent de @lehno/tokens,
+   posées par la feuille de variables (tâche 2). */
+* { margin: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-body-m);
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

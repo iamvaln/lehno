@@ -1,0 +1,134 @@
+/* --------------------------------------------------------------------------
+   Les quatre gabarits du back-office : liste, détail, formulaire, suppressions.
+
+   Les pages n'ont aucun style en ligne — pas même « ce qui varie par
+   instance », puisque rien n'y varie : une page est une composition, pas un
+   composant paramétré. Tout ce qu'elles posent est une classe, et tout ce
+   qu'une classe vaut est ici. Aucune couleur, aucun rayon, aucune durée écrits
+   en dur : le lint le refuserait, et il aurait raison — une teinte écrite ici
+   ne suivrait pas la bascule du thème.
+
+   Les composants gardent leurs propres feuilles (composants.css, donnees.css,
+   signaux.css, coquille.css) ; celle-ci ne fait que les mettre en page.
+   -------------------------------------------------------------------------- */
+
+/* ------------------------------------------------ Les groupes d'un détail */
+
+/* Deux colonnes tant qu'elles tiennent, une seule ensuite. Un détail se lit en
+   colonnes de champs courts : les étirer sur toute la largeur écarte le libellé
+   de sa valeur au point qu'on ne les relie plus. */
+.gabarit-groupes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-28);
+  margin-bottom: var(--space-24);
+}
+
+.gabarit-groupe {
+  min-width: 0;
+}
+
+/* Le titre d'un groupe ou d'une face : un rang, pas un titre de page — il
+   nomme sans peser. */
+.gabarit-groupe-titre {
+  margin-bottom: var(--space-10);
+  font-family: var(--font-body);
+  font-size: var(--text-body-xs);
+  font-weight: var(--font-body-bold);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--text-mention);
+}
+
+/* Un champ de détail : la clé au-dessus, la valeur en dessous, un filet entre
+   deux. La lecture est verticale — c'est la même que celle d'un formulaire, en
+   lecture seule. */
+.gabarit-champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-8) 0;
+  border-top: var(--border-width) solid var(--border-hairline);
+}
+
+.gabarit-champ-cle {
+  font-size: var(--text-mention-s);
+  font-weight: var(--font-body-semibold);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--text-mention);
+}
+
+.gabarit-champ-valeur {
+  font-size: var(--text-body-s);
+  color: var(--text-body);
+}
+
+/* ------------------------------------------------------- Les volumétries */
+
+/* Ce qu'on montre d'un compte : des compteurs. La grille est celle des
+   indicateurs du tableau de bord — même objet, même forme. */
+.gabarit-chiffres {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-12);
+  margin-bottom: var(--space-16);
+}
+
+/* Ce qu'un écran ne montre pas, et pourquoi : le cloisonnement se dit, il ne
+   se devine pas à l'absence. */
+.gabarit-note {
+  margin-top: var(--space-12);
+  max-width: var(--measure);
+  font-size: var(--text-mention-s);
+  line-height: var(--leading-body);
+  color: var(--text-mention);
+}
+
+.gabarit-alerte {
+  margin-bottom: var(--space-20);
+}
+
+/* Le pied d'un détail : l'historique des interventions, détaché de ce qui
+   précède par de l'air plutôt que par un filet de plus. */
+.gabarit-pied {
+  margin-top: var(--space-32);
+}
+
+/* --------------------------------------------------------- Le formulaire */
+
+/* Un réglage se lit sur une ligne courte. Au-delà, l'œil perd le libellé en
+   route vers le champ. */
+.gabarit-form {
+  max-width: var(--page-max);
+  width: min(100%, 720px);
+}
+
+.gabarit-saisie {
+  width: 100%;
+  max-width: 260px;
+}
+
+/* Le rang d'enregistrement : le geste explicite à gauche, le rappel du journal
+   à droite — on sait ce qu'on engage avant de cliquer, pas après. */
+.gabarit-form-pied {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+  margin-top: var(--space-20);
+  padding-top: var(--space-16);
+  border-top: var(--border-width) solid var(--border-hairline);
+}
+
+.gabarit-mention {
+  margin-left: auto;
+  font-size: var(--text-mention-s);
+  color: var(--text-mention);
+}
+
+@media (max-width: 700px) {
+  .gabarit-mention {
+    margin-left: 0;
+  }
+}
