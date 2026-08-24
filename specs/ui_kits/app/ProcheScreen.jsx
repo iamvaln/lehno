@@ -8,13 +8,15 @@ import { Provenance } from "../../components/content/Provenance.jsx";
 import { Countdown } from "../../components/content/Countdown.jsx";
 import { Button } from "../../components/core/Button.jsx";
 
-export function ProcheScreen({ t, onOpen }) {
+/* « qui » vient du clic : sans lui, toucher Awa dans une liste ouvrait la fiche
+   de Valery. Le défaut par défaut n'est qu'un repli pour la planche. */
+export function ProcheScreen({ t, qui = "Valery Bah", onOpen }) {
   return (
     <div style={{ padding: "0 16px 18px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 4 }}>
-        <Avatar name="Valery Bah" size={54} />
+        <Avatar name={qui} size={54} />
         <div style={{ flex: 1 }}>
-          <div className="lehno-display" style={{ fontSize: 22 }}>Valery Bah</div>
+          <div className="lehno-display" style={{ fontSize: 22 }}>{qui}</div>
           <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Anniversaire · 24 août · registre amical</div>
         </div>
         <Countdown days={3} size="m" />
@@ -41,21 +43,21 @@ export function ProcheScreen({ t, onOpen }) {
       </Card>
 
       <div style={{ display: "grid", gap: 10 }}>
-        <Button platform="mobile" full onClick={() => onOpen("preparation")}>
+        <Button platform="mobile" full onClick={() => onOpen("preparation", { nom: qui })}>
           {t.fichePreparer(t.langue === "fr" ? "24 août" : "24 Aug")}
         </Button>
         <Button platform="mobile" full variant="outline" icon="plus"
-          onClick={() => onOpen("note")}>{t.ficheAjouterNote}</Button>
+          onClick={() => onOpen("note", { nom: qui })}>{t.ficheAjouterNote}</Button>
 
         {/* Les trois sorties de la fiche que la spec nomme : faire compléter
             par le proche, corriger ce qui oriente la génération, revoir les
             portraits déjà produits. */}
         <Button platform="mobile" full variant="text" icon="link"
-          onClick={() => onOpen("collecte")}>{t.ficheCollecte}</Button>
+          onClick={() => onOpen("collecte", { nom: qui })}>{t.ficheCollecte}</Button>
         <Button platform="mobile" full variant="text" icon="user-pen"
-          onClick={() => onOpen("identite")}>{t.ficheIdentite}</Button>
+          onClick={() => onOpen("identite", { nom: qui })}>{t.ficheIdentite}</Button>
         <Button platform="mobile" full variant="text" icon="sparkles"
-          onClick={() => onOpen("portrait")}>{t.fichePortraits}</Button>
+          onClick={() => onOpen("portrait", { nom: qui })}>{t.fichePortraits}</Button>
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ import { SensitiveBanner } from "../../components/feedback/SensitiveBanner.jsx";
 import { EmptyState } from "../../components/feedback/EmptyState.jsx";
 import { OfflineBanner } from "../../components/feedback/OfflineBanner.jsx";
 
-export function OccasionScreen({ t, etat = "nominal", onOpen }) {
+export function OccasionScreen({ t, qui = "Valery Bah", etat = "nominal", onOpen }) {
   const sensible = etat === "sensible";
   const passee = etat === "passee";
   const soldeVide = etat === "solde";
@@ -25,14 +25,14 @@ export function OccasionScreen({ t, etat = "nominal", onOpen }) {
 
       <div style={{ padding: "8px 16px 18px", flex: 1 }}>
         {/* En-tête : le proche, le type, la date et le décompte */}
-        <button type="button" onClick={() => onOpen && onOpen("proche")} className="lehno-focusable"
+        <button type="button" onClick={() => onOpen && onOpen("proche", { nom: qui })} className="lehno-focusable"
           style={{
             all: "unset", cursor: "pointer", display: "flex", alignItems: "center",
             gap: 12, width: "100%", boxSizing: "border-box"
           }}>
-          <Avatar name="Valery Bah" size={46} />
+          <Avatar name={qui} size={46} />
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span className="lehno-display" style={{ fontSize: 20, display: "block" }}>Valery Bah</span>
+            <span className="lehno-display" style={{ fontSize: 20, display: "block" }}>{qui}</span>
             <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
               {t.typeAnniversaire} · {t.langue === "fr" ? "24 août" : "24 Aug"}
             </span>
@@ -99,7 +99,7 @@ export function OccasionScreen({ t, etat = "nominal", onOpen }) {
             <div style={{ marginTop: 22 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                 <SectionLabel>{t.occNotes}</SectionLabel>
-                <button type="button" onClick={() => onOpen && onOpen("note")}
+                <button type="button" onClick={() => onOpen && onOpen("note", { nom: qui })}
                   className="lehno-focusable" style={{
                     all: "unset", cursor: "pointer", marginLeft: "auto",
                     fontFamily: "var(--font-body)", fontSize: 13, color: "var(--text-accent)"
@@ -119,12 +119,12 @@ export function OccasionScreen({ t, etat = "nominal", onOpen }) {
                 {!sensible ? (
                   <div>
                     <Button platform="mobile" full variant="outline" icon="sparkles"
-                      onClick={() => onOpen && onOpen("idees")}>{t.occIdees}</Button>
+                      onClick={() => onOpen && onOpen("idees", { nom: qui })}>{t.occIdees}</Button>
                     <CreditIndicator t={t} cout={1} style={{ marginTop: 7 }} />
                   </div>
                 ) : null}
                 <div>
-                  <Button platform="mobile" full onClick={() => onOpen && onOpen("message")}>
+                  <Button platform="mobile" full onClick={() => onOpen && onOpen("message", { nom: qui })}>
                     {t.occMessage}
                   </Button>
                   <CreditIndicator t={t} cout={1} style={{ marginTop: 7 }} />

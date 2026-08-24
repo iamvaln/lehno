@@ -69,6 +69,7 @@ const C = await window.lehnoBoot([
   "../../components/navigation/NotificationBell.jsx",
   "../../components/brand/Wordmark.jsx",
   "../../components/brand/BrandMark.jsx",
+  "../../components/brand/PortraitComposition.jsx",
   "./copy.js",
   "./PhoneFrame.jsx",
   "./SplashScreen.jsx",
@@ -83,9 +84,9 @@ const C = await window.lehnoBoot([
   "./ReprisesScreen.jsx",
   "./CollecteScreen.jsx",
   "./IdentiteScreen.jsx",
-  "./PortraitImage.jsx",
   "./PortraitScreen.jsx",
-  "./CompositionScreen.jsx",
+  "./StudioScreen.jsx",
+  "./SurfacePubliqueScreen.jsx",
   "./CadrageIdeesScreen.jsx",
   "./RechargeScreen.jsx",
   "./ParrainageScreen.jsx",
@@ -108,7 +109,7 @@ const {
   COPY, PROCHES, PhoneFrame, MODELES, AppHeader, TabBar, Button,
   AccueilScreen, DatesScreen, ProchesScreen, ProcheScreen, PreparationScreen, MoiScreen,
   GenerationScreen, PaidActionSheet, NotificationsScreen, AValiderScreen, ReprisesScreen,
-  CollecteScreen, IdentiteScreen, PortraitImage, PortraitScreen, CompositionScreen, CadrageIdeesScreen, RechargeScreen, ParrainageScreen, MonMurScreen,
+  CollecteScreen, IdentiteScreen, PortraitScreen, StudioScreen, SurfacePubliqueScreen, CadrageIdeesScreen, RechargeScreen, ParrainageScreen, MonMurScreen,
   ProfilScreen, ReglagesScreen, SecuriteScreen, PaiementScreen, AideScreen, ReservationsScreen,
   SplashScreen, ConnexionScreen, CodeScreen, PseudoScreen, BienvenueScreen,
   NoteScreen, EvenementScreen, RechercheScreen, SouhaitScreen, OccasionScreen
@@ -128,18 +129,19 @@ const ECRANS = [
   { id: "note", num: "3.5", nom: { fr: "Saisie d'une note", en: "Write a note" }, titre: { fr: "Nouvelle note", en: "New note" }, etats: ["nominal", "chargement", "erreur", "horsligne"] },
   { id: "evenement", num: "3.6", nom: { fr: "Ajouter une date", en: "Add a date" }, titre: { fr: "Nouvelle date", en: "New date" }, etats: ["nominal", "sensible", "erreur"] },
   { id: "recherche", num: "3.15", nom: { fr: "Recherche", en: "Search" }, chrome: false, etats: ["nominal", "vide"] },
-  { id: "souhait", num: "3.19", nom: { fr: "Un souhait", en: "A wish" }, titre: { fr: "Souhait", en: "Wish" }, etats: ["nominal", "reserve", "vide", "horsligne"] },
+  { id: "souhait", num: "3.19", nom: { fr: "Un souhait", en: "A wish" }, titre: { fr: "Souhait", en: "Wish" }, etats: ["nominal", "reserve", "vide", "horsligne", "anonyme"] },
   { id: "occasion", num: "3.21", nom: { fr: "Une occasion", en: "An occasion" }, titre: { fr: "24 août", en: "24 Aug" }, etats: ["nominal", "sensible", "passee", "solde", "horsligne"] },
   { id: "dates", num: "3.14", nom: { fr: "Dates", en: "Dates" }, onglet: "dates", etats: ["nominal", "liste"] },
-  { id: "preparation", num: "3.7", nom: { fr: "Préparer", en: "Prepare" }, titre: { fr: "Pour Valery", en: "For Valery" }, etats: ["nominal", "sensible", "solde", "horsligne"] },
-  { id: "generation", num: "3.7", nom: { fr: "Ce que Lehno a écrit", en: "What Lehno wrote" }, titre: { fr: "Pour Valery", en: "For Valery" }, etats: ["message", "idees", "attente", "erreur"] },
+  { id: "preparation", num: "3.7", nom: { fr: "Préparer", en: "Prepare" }, titre: { fr: "Préparer", en: "Prepare" }, etats: ["nominal", "sensible", "solde", "horsligne"] },
+  { id: "generation", num: "3.7", nom: { fr: "Ce que Lehno a écrit", en: "What Lehno wrote" }, titre: { fr: "Préparer", en: "Prepare" }, etats: ["message", "idees", "attente", "erreur"] },
   { id: "notifications", num: "3.13", nom: { fr: "Notifications", en: "Notifications" }, chrome: false, etats: ["nominal", "vide"] },
   { id: "valider", num: "3.8", nom: { fr: "À valider", en: "To review" }, titre: { fr: "À valider", en: "To review" }, etats: ["nominal", "vide"] },
   { id: "reprises", num: "3.16", nom: { fr: "Reprises en cours", en: "In progress" }, titre: { fr: "En cours", en: "In progress" }, etats: ["nominal", "vide"] },
   { id: "collecte", num: "3.20", nom: { fr: "Lien de collecte", en: "Collection link" }, titre: { fr: "Faire compléter", en: "Have it filled in" }, etats: ["nominal", "revoque"] },
   { id: "identite", num: "3.18", nom: { fr: "Identité d'un proche", en: "Their details" }, titre: { fr: "Valery Bah", en: "Valery Bah" }, etats: ["nominal", "collecte"] },
-  { id: "cadrage", num: "3.7", nom: { fr: "Cadrer les idées", en: "Frame the ideas" }, titre: { fr: "Idées pour Valery", en: "Ideas for Valery" }, etats: ["nominal", "solde"] },
-  { id: "composition", num: "3.7", nom: { fr: "Composer un portrait", en: "Compose a portrait" }, titre: { fr: "Un portrait de Valery", en: "A portrait of Valery" }, etats: ["nominal", "solde"] },
+  { id: "cadrage", num: "3.7", nom: { fr: "Cadrer les idées", en: "Frame the ideas" }, titre: { fr: "Cadrer les idées", en: "Frame the ideas" }, etats: ["nominal", "solde"] },
+  { id: "surface", num: "3.12", nom: { fr: "Un lien public", en: "A public link" }, titre: { fr: "Awa Diop", en: "Awa Diop" }, etats: ["voeu", "connecte", "mur", "collecte", "revoque", "voeuxclos"] },
+  { id: "studio", num: "3.7", nom: { fr: "Studio du portrait", en: "Portrait studio" }, titre: { fr: "Le studio", en: "The studio" }, etats: ["nominal", "solde"] },
   { id: "portrait", num: "3.22", nom: { fr: "Un portrait", en: "A portrait" }, titre: { fr: "Le portrait", en: "The portrait" }, etats: ["nominal", "avalider", "partage", "vide"] },
   { id: "recharge", num: "3.9", nom: { fr: "Recharger", en: "Top up" }, titre: { fr: "Recharger", en: "Top up" }, etats: ["nominal", "attente", "abouti", "echec"] },
   { id: "parrainage", num: "3.9", nom: { fr: "Parrainage", en: "Referral" }, titre: { fr: "Parrainage", en: "Referral" }, etats: ["nominal", "vide"] },
@@ -156,7 +158,7 @@ const ECRANS = [
 const ETIQUETTES = {
   fr: { nominal: "Nominal", premier: "Premier lancement", vide: "Vide", chargement: "Chargement", expire: "Code expiré",
         erreur: "Erreur", horsligne: "Hors connexion", sensible: "Date sensible",
-        solde: "Solde insuffisant", reserve: "Réservé", passee: "Passée",
+        solde: "Solde insuffisant", reserve: "Réservé", anonyme: "Réservé, sans nom", voeu: "Un vœu", connecte: "Reconnu", mur: "Un Mur", collecte: "Une collecte", revoque: "Lien révoqué", voeuxclos: "Vœux clos", passee: "Passée",
         message: "Le message", idees: "Les idées", portrait: "Le portrait", attente: "Attente",
         revoque: "Lien révoqué", collecte: "Née d'une collecte", avalider: "À approuver", partage: "Déjà partagé",
         attente: "Attente mobile money", abouti: "Paiement abouti", echec: "Paiement échoué",
@@ -164,7 +166,7 @@ const ETIQUETTES = {
         aucunmot: "Aucun mot reçu" },
   en: { nominal: "Default", premier: "First launch", vide: "Empty", chargement: "Loading", expire: "Expired code",
         erreur: "Error", horsligne: "Offline", sensible: "Sensitive date",
-        solde: "Not enough credits", reserve: "Reserved", passee: "Past",
+        solde: "Not enough credits", reserve: "Reserved", anonyme: "Reserved, no name", voeu: "A note", connecte: "Recognised", mur: "A Wall", collecte: "A collection", revoque: "Revoked link", voeuxclos: "Wishes closed", passee: "Past",
         message: "The message", idees: "The ideas", portrait: "The portrait", attente: "Waiting",
         revoque: "Revoked link", collecte: "From a collection", avalider: "To approve", partage: "Already shared",
         attente: "Mobile money wait", abouti: "Payment went through", echec: "Payment failed",
@@ -180,6 +182,9 @@ function App() {
   const [modele, setModele] = React.useState("standard");
   const [os, setOs] = React.useState("ios");
   const [feuille, setFeuille] = React.useState(null);
+  /* Le sujet du clic, retenu jusqu'au détail : c'est ce qui manquait pour que
+     toucher Awa ouvre la fiche d'Awa. */
+  const [sujet, setSujet] = React.useState(null);
   const [solde, setSolde] = React.useState(4);
   const [toast, setToast] = React.useState(null);
 
@@ -197,7 +202,9 @@ function App() {
     if (suivant.etats.indexOf(etat) < 0) setEtat(suivant.etats[0]);
   };
 
-  const props = { t, etat, onOpen: aller, onSuite: () => aller(ecran.id === "splash" ? "connexion"
+  const props = { t, etat, qui: sujet || undefined,
+    onOpen: (id, personne) => { setSujet(personne && personne.nom ? personne.nom : null); aller(id); },
+    onSuite: () => aller(ecran.id === "splash" ? "connexion"
     : ecran.id === "connexion" ? "code"
     : ecran.id === "code" ? "pseudo" : ecran.id === "pseudo" ? "bienvenue" : "accueil"),
     onRetour: () => aller("proches"), onEnregistrer: () => aller("accueil"),
@@ -260,7 +267,8 @@ function App() {
     case "collecte": vue = <CollecteScreen {...props} />; break;
     case "identite": vue = <IdentiteScreen {...props} />; break;
     case "portrait": vue = <PortraitScreen {...props} />; break;
-    case "composition": vue = <CompositionScreen {...props} />; break;
+    case "studio": vue = <StudioScreen {...props} />; break;
+    case "surface": vue = <SurfacePubliqueScreen {...props} />; break;
     case "cadrage": vue = <CadrageIdeesScreen {...props} />; break;
     case "recharge": vue = <RechargeScreen {...props} />; break;
     case "parrainage": vue = <ParrainageScreen {...props} />; break;
