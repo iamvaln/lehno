@@ -95,15 +95,30 @@ export const en: typeof fr = {
   confidentialite: "Privacy",
   contact: "Contact",
 
-  // Contact page. The mockup showed a form (TextField, Button, Banner), but
-  // no API endpoint receives it in this repo: this page shows the real
-  // contact channels instead of an inert form.
+  // Contact page, copied as-is from the handoff package
+  // (design_handoff_surfaces_publiques/ui_kits/web/pages.html, "contact" key):
+  // a real form now exists, received by apps/api/src/public/contact.
   contactKicker: "Contact",
   contactTitre: "Write to us",
-  contactChapeau: "A question, a problem, something to report: write to us, we reply within two working days.",
-  contactEcrireTitre: "By email",
-  contactEcrireTexte: "The safest channel for a question about your account, your data, or a technical problem.",
-  contactEmail: "hello@lehno.app",
+  contactChapeau: "A question, a problem, something to report: this form comes straight to us.",
+  contactLabelNom: "Your name",
+  contactLabelEmail: "Your email address",
+  contactLabelSujet: "What is it about?",
+  contactLabelMessage: "Your message",
+  contactAideMessage: "Tell us what happened, and from which screen if it's a technical problem.",
+  contactEmailErreur: "That address doesn't look valid.",
+  contactEnvoyer: "Send",
+  contactDelai: "We reply within two working days.",
+  contactConfirme: "Sent. You'll get a reply at the address you gave.",
+  contactEnvoiErreur: "That didn't go through. Try again in a moment.",
+  contactSujets: [
+    "A question about the app",
+    "A technical problem",
+    "Credits and payments",
+    "Report content",
+    "A request about my data",
+    "Something else",
+  ],
   contactAilleursTitre: "Elsewhere",
   contactAilleursTexte: "We answer direct messages too, a little more slowly.",
   piedFaq: "FAQ",

@@ -3,11 +3,10 @@ import { render, screen } from "@testing-library/react";
 import { ContactPage } from "../components/contact/ContactPage.js";
 import { messages } from "../messages/index.js";
 
-// La maquette (design_handoff_surfaces_publiques/ui_kits/web/ContactPage.jsx)
-// montre un vrai formulaire — TextField, Button, Banner — mais aucun point
-// d'entrée API ne le reçoit dans ce dépôt. Un formulaire qui ne poste nulle
-// part coûte plus cher qu'aucun formulaire : cette page montre donc les
-// moyens de contact réels (courriel, réseaux) et jamais de <form>.
+// Le point d'entrée existe désormais (apps/api/src/public/contact) : la page
+// porte un vrai formulaire, plus une adresse mailto en guise de repli. Voir
+// test/contact-form.test.tsx pour le comportement du formulaire lui-même —
+// ce fichier ne teste que la page qui l'accueille.
 describe("page contact", () => {
   it("rend le titre dans la langue demandée", () => {
     render(<ContactPage t={messages("fr")} langue="fr" />);
@@ -24,15 +23,9 @@ describe("page contact", () => {
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });
 
-  it("ne pose aucun formulaire — aucun point d'entrée API ne le reçoit", () => {
+  it("pose un formulaire — le point d'entrée existe désormais", () => {
     const { container } = render(<ContactPage t={messages("fr")} langue="fr" />);
-    expect(container.querySelector("form")).not.toBeInTheDocument();
-  });
-
-  it("propose une adresse électronique réelle, cliquable", () => {
-    render(<ContactPage t={messages("fr")} langue="fr" />);
-    const lien = screen.getByRole("link", { name: /hello@lehno\.app/ });
-    expect(lien).toHaveAttribute("href", "mailto:hello@lehno.app");
+    expect(container.querySelector("form")).toBeInTheDocument();
   });
 
   it("liste les six comptes publics, chacun ouvrant un nouvel onglet", () => {
