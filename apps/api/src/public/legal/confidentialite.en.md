@@ -29,7 +29,7 @@ law 2024/017; its operating arrangements await an implementing decree.
 
 Proxia Digital
 Akwa, Douala, Cameroon
-Phone: +237 691 980 190
+Phone: +237 691 980 189
 Email: hello@lehno.app
 
 Data Protection Officer (DPO): Valentine Nguemne — hello@lehno.app
@@ -258,5 +258,5 @@ Gazette._
 
 Data Protection Officer: Valentine Nguemne
 Proxia Digital — Akwa, Douala, Cameroon
-Phone: +237 691 980 190
+Phone: +237 691 980 189
 Email: hello@lehno.app

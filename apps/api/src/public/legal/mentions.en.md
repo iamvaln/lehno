@@ -6,7 +6,7 @@ _Version 2026-08-23 · Last updated: 23 August 2026_
 
 **Proxia Digital**
 Akwa, Douala, Cameroon
-Phone: +237 691 980 190
+Phone: +237 691 980 189
 Email: hello@lehno.app
 
 A limited liability company (SARL) under Cameroonian law.

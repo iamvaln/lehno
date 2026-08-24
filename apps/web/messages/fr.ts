@@ -142,8 +142,6 @@ export const fr = {
     kicker: "FAQ",
     titre: "Ce qu'on nous demande le plus souvent",
     chapeau: "Si vous ne trouvez pas votre réponse, écrivez-nous : la page Contact met deux minutes.",
-    aRediger: "À rédiger",
-    quiRedige: "Rédaction produit — ton Lehno, deux phrases par réponse",
     groupes: [
       {
         titre: "Commencer",
@@ -157,7 +155,7 @@ export const fr = {
         titre: "Les crédits",
         items: [
           { q: "Combien coûte un crédit ?", reponse: "100 F le crédit, et 5 crédits offerts à l'inscription. Un crédit par contenu créé pour vous : le portrait, les idées de cadeau, le message." },
-          { q: "Les crédits expirent-ils ?", couvre: "La réponse n'est pas tranchée. Elle doit dire la même chose ici et dans les conditions d'utilisation, dans les mêmes termes." },
+          { q: "Les crédits expirent-ils ?", reponse: "Non, ils ne périment pas : ils restent acquis tant que le compte existe. Vous les dépensez au rythme qui vous convient." },
           { q: "Comment payer sans carte bancaire ?", reponse: "Par mobile money, MTN ou Orange. La validation prend parfois quelques minutes : l'écran suit l'opération jusqu'au bout." },
           { q: "Que se passe-t-il si une création échoue ?", reponse: "Le crédit revient sur votre solde, et l'application vous dit ce qui s'est passé." },
         ],
@@ -167,7 +165,7 @@ export const fr = {
         items: [
           { q: "Mes proches savent-ils que j'écris sur eux ?", reponse: "Non. Vos notes ne sont visibles que de vous, et ne servent qu'à ce que vous demandez." },
           { q: "Qu'est-ce que je peux noter ?", reponse: "Tout ce qui aide à bien faire : des goûts, des envies entendues, un détail qui vous a marqué. Rien que vous ne diriez pas à la personne." },
-          { q: "Est-ce que l'application lit mes contacts ou mon agenda ?", couvre: "La réponse n'est pas tranchée : dire ce qui est demandé, à quel moment, et ce qui se passe si l'autorisation est refusée." },
+          { q: "Est-ce que l'application lit mes contacts ou mon agenda ?", reponse: "Non. Elle ne demande ni vos contacts ni votre agenda : les dates que vous suivez, c'est vous qui les saisissez." },
         ],
       },
       {

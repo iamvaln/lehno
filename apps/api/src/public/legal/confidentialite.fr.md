@@ -32,7 +32,7 @@ décret à venir.
 
 Proxia Digital
 Akwa, Douala, Cameroun
-Téléphone : +237 691 980 190
+Téléphone : +237 691 980 189
 Courriel : hello@lehno.app
 
 Délégué à la protection des données (DPO) : Valentine Nguemne — hello@lehno.app
@@ -279,5 +279,5 @@ officiel._
 
 Délégué à la protection des données : Valentine Nguemne
 Proxia Digital — Akwa, Douala, Cameroun
-Téléphone : +237 691 980 190
+Téléphone : +237 691 980 189
 Courriel : hello@lehno.app

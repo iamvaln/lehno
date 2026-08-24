@@ -46,7 +46,7 @@ export function FaqPage({ t, langue }: { t: Messages; langue: Langue }): ReactNo
             </p>
           </header>
 
-          <FaqAccordion groupes={p.groupes} labelARediger={p.aRediger} quiRedige={p.quiRedige} />
+          <FaqAccordion groupes={p.groupes} />
         </div>
       </main>
       <SiteFooter t={t} langue={langue} />

@@ -13,53 +13,7 @@ type Item = Groupe["items"][number];
 const OUVERTURE = "grid-template-rows var(--duration-enter) var(--ease-pose)";
 const ROTATION = "transform var(--duration-enter) var(--ease-pose)";
 
-// Le bloc « à rédiger » : deux réponses par langue ne sont pas encore
-// tranchées (expiration des crédits, accès aux contacts/agenda). Plutôt que
-// d'inventer une réponse, la question reste posée et ce bloc dit ce qu'elle
-// doit couvrir, et qui l'écrit — repris du prototype ARediger.jsx du paquet
-// de passation, propre à cette page : les pages légales n'en ont pas besoin ici.
-function ReponseEnAttente({ label, texte, qui }: { label: string; texte: string; qui: string }): ReactNode {
-  return (
-    <div
-      style={{
-        border: "var(--border-width) dashed var(--border-object)", borderRadius: "var(--radius-md)",
-        background: "var(--surface-panel)", padding: "var(--space-14) var(--space-16)",
-        margin: "var(--space-10) 0 var(--space-4)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex", alignItems: "center", gap: "var(--space-6)", marginBottom: "var(--space-6)",
-          fontFamily: "var(--font-body)", fontSize: "var(--text-mention-s)", fontWeight: "var(--font-body-bold)",
-          letterSpacing: "var(--tracking-kicker)", textTransform: "uppercase", color: "var(--text-mention)",
-        }}
-      >
-        <Icon name="pencil-line" size={13} color="var(--text-mention)" />
-        {label}
-      </div>
-      <p style={{ margin: 0, fontSize: "var(--text-body-s)", color: "var(--text-secondary)", maxWidth: "var(--measure)" }}>
-        {texte}
-      </p>
-      <div
-        style={{
-          marginTop: "var(--space-8)", paddingTop: "var(--space-8)",
-          borderTop: "var(--border-width) solid var(--border-hairline)",
-          fontSize: "var(--text-mention-s)", color: "var(--text-mention)",
-        }}
-      >
-        {qui}
-      </div>
-    </div>
-  );
-}
-
-// Une question de l'accordéon. Bouton véritable (pas un <div> cliquable) :
-// aria-expanded porte l'état, aria-controls désigne le panneau qu'il
-// commande. Le panneau lui-même reste dans le DOM replié — sa hauteur
-// s'anime via grid-template-rows — mais aria-hidden le retire de l'arbre
-// d'accessibilité tant qu'il est fermé, pour qu'un lecteur d'écran
-// n'annonce jamais une réponse invisible à l'écran.
-function FaqEntry({ item, labelARediger, quiRedige }: { item: Item; labelARediger: string; quiRedige: string }): ReactNode {
+function FaqEntry({ item }: { item: Item }): ReactNode {
   const [ouvert, setOuvert] = useState(false);
   const idPanneau = `faq-panneau-${useId()}`;
 
@@ -94,8 +48,7 @@ function FaqEntry({ item, labelARediger, quiRedige }: { item: Item; labelARedige
       >
         <div style={{ overflow: "hidden" }}>
           <div style={{ paddingBottom: "var(--space-18)" }}>
-            {"reponse" in item ? (
-              <p
+                          <p
                 style={{
                   margin: 0, fontSize: "var(--text-body-m)", lineHeight: "var(--leading-roomy)",
                   maxWidth: "var(--measure)", color: "var(--text-secondary)", textWrap: "pretty",
@@ -103,9 +56,6 @@ function FaqEntry({ item, labelARediger, quiRedige }: { item: Item; labelARedige
               >
                 {item.reponse}
               </p>
-            ) : (
-              <ReponseEnAttente label={labelARediger} texte={item.couvre} qui={quiRedige} />
-            )}
           </div>
         </div>
       </div>
@@ -117,7 +67,7 @@ function FaqEntry({ item, labelARediger, quiRedige }: { item: Item; labelARedige
 // (FaqPage.jsx) : plusieurs entrées peuvent rester ouvertes en même temps,
 // rien ne se referme tout seul quand une autre s'ouvre.
 export function FaqAccordion(
-  { groupes, labelARediger, quiRedige }: { groupes: Groupe[]; labelARediger: string; quiRedige: string },
+  { groupes }: { groupes: Groupe[] },
 ): ReactNode {
   return (
     <div style={{ display: "grid", gap: "var(--space-44)", maxWidth: 760 }}>
@@ -128,7 +78,7 @@ export function FaqAccordion(
           </h2>
           <div style={{ borderBottom: "var(--border-width) solid var(--border-hairline)" }}>
             {groupe.items.map((item) => (
-              <FaqEntry key={item.q} item={item} labelARediger={labelARediger} quiRedige={quiRedige} />
+              <FaqEntry key={item.q} item={item} />
             ))}
           </div>
         </section>

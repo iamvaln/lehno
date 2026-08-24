@@ -128,8 +128,6 @@ export const en: typeof fr = {
     kicker: "Frequently asked",
     titre: "What people ask us most",
     chapeau: "If your answer isn't here, write to us — the contact page takes two minutes.",
-    aRediger: "To be written",
-    quiRedige: "Product copy — Lehno tone, two sentences per answer",
     groupes: [
       {
         titre: "Getting started",
@@ -143,7 +141,7 @@ export const en: typeof fr = {
         titre: "Credits",
         items: [
           { q: "How much is a credit?", reponse: "100 F per credit, and 5 credits when you sign up. One credit per piece written for you: the portrait, the gift ideas, the message." },
-          { q: "Do credits expire?", couvre: "Not settled yet. The answer must say the same thing here and in the terms of use, in the same words." },
+          { q: "Do credits expire?", reponse: "No, they do not expire: they stay yours for as long as the account exists. You spend them at your own pace." },
           { q: "Can I pay without a bank card?", reponse: "With mobile money, MTN or Orange. Confirmation sometimes takes a few minutes: the screen follows the payment through." },
           { q: "What if a creation fails?", reponse: "The credit comes back to your balance, and the app tells you what happened." },
         ],
@@ -153,7 +151,7 @@ export const en: typeof fr = {
         items: [
           { q: "Do the people I write about know?", reponse: "No. Your notes are visible only to you, and serve only what you ask for." },
           { q: "What should I write down?", reponse: "Anything that helps you do well: tastes, wishes overheard, a detail that stayed with you. Nothing you wouldn't say to them." },
-          { q: "Does the app read my contacts or calendar?", couvre: "Not settled yet: say what is asked for, at what moment, and what happens if the permission is declined." },
+          { q: "Does the app read my contacts or calendar?", reponse: "No. It asks for neither your contacts nor your calendar: the dates you follow are the ones you enter yourself." },
         ],
       },
       {
