@@ -30,10 +30,16 @@ export function SiteFooter({ t, langue }: { t: Messages; langue: Langue }): Reac
         }}
       >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-12)" }}>
-            <BrandMark size={28} alt={t.altMarque} />
-            <Wordmark height={18} alt={t.altMarque} />
-          </div>
+          {/* La marque du pied ramène à l'accueil, comme celle de l'en-tête.
+              Un logo est un chemin de retour, où qu'il se trouve. */}
+          <a
+            href={`/${langue}`}
+            aria-label={t.altMarque}
+            style={{ display: "flex", alignItems: "center", gap: "var(--space-12)", textDecoration: "none" }}
+          >
+            <BrandMark size={28} alt="" />
+            <Wordmark height={18} alt="" />
+          </a>
           <div className="citation" style={{ fontSize: "var(--text-body-s)", color: "var(--text-secondary)", marginTop: "var(--space-6)" }}>{t.signature}</div>
         </div>
         <nav style={{ marginLeft: "auto", display: "flex", gap: "var(--space-20)", flexWrap: "wrap", fontSize: "var(--text-body-xs)", color: "var(--text-secondary)" }}>

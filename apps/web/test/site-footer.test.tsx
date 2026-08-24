@@ -15,9 +15,18 @@ describe("pied de page", () => {
   const t = messages("fr");
 
   it("porte les quatre liens de la maquette, dans son ordre", () => {
-    render(<SiteFooter t={t} langue="fr" />);
-    const liens = screen.getAllByRole("link").map((a) => a.textContent);
+    const { container } = render(<SiteFooter t={t} langue="fr" />);
+    // Dans la navigation seulement : la marque est elle aussi un lien, mais
+    // elle ramène à l'accueil et ne fait pas partie de cette liste.
+    const liens = [...container.querySelectorAll("nav a")].map((a) => a.textContent);
     expect(liens).toEqual([t.cgu, t.confidentialite, t.piedFaq, t.contact]);
+  });
+
+  it("ramène à l'accueil quand on clique la marque", () => {
+    const { container } = render(<SiteFooter t={t} langue="fr" />);
+    const marque = container.querySelector("a[aria-label]");
+    expect(marque, "la marque du pied doit être un lien").not.toBeNull();
+    expect(marque).toHaveAttribute("href", "/fr");
   });
 
   it("ne porte pas les mentions légales", () => {
