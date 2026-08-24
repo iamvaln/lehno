@@ -35,6 +35,20 @@ Le **service** OTP est réemployé tel quel : hachage HMAC sous clé, comparaiso
 - [ ] **10. Le reste** — `/admin/admins`, `/admin/external-links`, `/admin/exports`, `/admin/dashboard`.
 - [ ] **11. Câblage** — le back-office quitte ses fixtures pour l'API.
 
+## Relecture des specs du 24 août, 16 h 22
+
+Trois changements arrivés après l'écriture de ce plan.
+
+**Le portrait n'est plus une page, c'est une image.** `/public/portraits/{token}` **disparaît** de la spec technique. L'utilisateur enregistre l'image et l'envoie lui-même ; le pied de marque fait partie de l'image, et c'est ainsi qu'il fait connaître Lehno, sans lien à suivre. Le paquet de passation des surfaces publiques avait pris cette décision seul et la signalait comme telle : **la spec l'a rejointe**. Une surface publique de moins à construire.
+
+**Une section d'administration entière apparaît — le Studio du portrait (§5.8).** Cinq points d'entrée : `/admin/portrait-studio/{orientations,visual-styles,templates,templates/{id},preview}`. Ce n'est pas un réglage de plus : c'est la section « qui bougera le plus », avec un **banc d'essai** qui produit sur une fiche de démonstration **sans consommer de crédit ni toucher à un compte réel**.
+
+**`PromptTemplate` entre au dictionnaire, et c'est le morceau qui structure le reste.** Les gabarits de production vivent **en base, jamais dans le code**. Les versions sont **immuables** : ajuster crée une version nouvelle, l'ancienne demeure. Une seule version active par (`kind`, `key`), tenue par un index unique partiel. Et chaque `ActionRun` retient **la version exacte** qui l'a produit — sans quoi comprendre pourquoi les productions d'une semaine valaient mieux que celles de la suivante est impossible.
+
+- [ ] **12. Le studio du portrait** — `PromptTemplate` au schéma, ses cinq points d'entrée, et le banc d'essai. La tâche 8 (modèles d'IA) devient sa voisine : un gabarit vise un modèle.
+
+**Le back-office visuel ne porte pas cette section.** Le paquet de passation en décrivait quinze, aucune ne s'appelle Studio. L'outil livré est donc en retard d'un écran sur la spec — à signaler au propriétaire plutôt qu'à combler en silence.
+
 ## Ce que ce plan ne couvre pas
 
 Les codes promotionnels et les parrainages (`/admin/promo-codes`, `/admin/referrals`) : la phase 3 les porte, et aucun écran ne les demande aujourd'hui.
