@@ -20,10 +20,14 @@ import { WaitlistController } from "./public/waitlist.controller.js";
 import { WaitlistService } from "./public/waitlist.service.js";
 import { ContactController } from "./public/contact.controller.js";
 import { ContactService } from "./public/contact.service.js";
+import { AdminAuthController } from "./admin/admin-auth.controller.js";
+import { AdminOtpService } from "./admin/admin-otp.service.js";
+import { AdminTokenService } from "./admin/admin-token.service.js";
 
 @Module({
   controllers: [
     AuthController, ProfileController, ConfigController, LegalController, WaitlistController, ContactController,
+    AdminAuthController,
   ],
   providers: [
     PrismaService,
@@ -85,6 +89,8 @@ import { ContactService } from "./public/contact.service.js";
     LegalService,
     WaitlistService,
     ContactService,
+    AdminOtpService,
+    AdminTokenService,
   ],
 })
 export class AppModule implements NestModule {
