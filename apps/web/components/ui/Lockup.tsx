@@ -44,7 +44,10 @@ export function Lockup({ height = 34, markSize = 30, alt = "Lehno" }: LockupProp
           alt={alt}
           width={largeur}
           height={height}
-          style={{ display: "block", width: largeur, height }}
+          // Pas de « display » ici : .si-clair / .si-sombre le pilotent, et un
+          // style en ligne l'emporterait sur elles — les deux thèmes se seraient
+          // alors affichés l'un sous l'autre.
+          style={{ width: largeur, height }}
         />
         <img
           className="si-sombre"
@@ -52,7 +55,10 @@ export function Lockup({ height = 34, markSize = 30, alt = "Lehno" }: LockupProp
           alt={alt}
           width={largeur}
           height={height}
-          style={{ display: "block", width: largeur, height }}
+          // Pas de « display » ici : .si-clair / .si-sombre le pilotent, et un
+          // style en ligne l'emporterait sur elles — les deux thèmes se seraient
+          // alors affichés l'un sous l'autre.
+          style={{ width: largeur, height }}
         />
       </span>
       <span className="marque-pastille" style={{ lineHeight: 0 }}>

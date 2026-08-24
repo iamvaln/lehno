@@ -55,3 +55,33 @@ describe("verrouillage de la marque", () => {
     expect(src, "plus d'assemblage à la main").not.toMatch(/<BrandMark[\s\S]{0,120}<Wordmark/);
   });
 });
+
+// Un style en ligne l'emporte sur une classe. Les éléments dont la visibilité
+// est pilotée par .si-clair / .si-sombre — la bascule de thème — ne doivent
+// donc jamais porter « display » en ligne : les deux thèmes s'afficheraient
+// l'un sous l'autre, ce qui est exactement ce qui s'est produit.
+describe("bascule de thème par classe", () => {
+  const sources = [
+    join(racine, "components", "ui", "Lockup.tsx"),
+    join(racine, "components", "ui", "Wordmark.tsx"),
+    join(racine, "components", "BadgesMagasins.tsx"),
+    join(racine, "components", "BasculeTheme.tsx"),
+  ].filter((f) => existsSync(f));
+
+  it.each(sources.map((f) => [f.split("/").slice(-1)[0]!, f]))(
+    "%s ne fige pas display sur un élément à bascule",
+    (_nom, fichier) => {
+      const src = readFileSync(fichier, "utf-8");
+      // Chaque bloc d'élément portant si-clair ou si-sombre, jusqu'à sa
+      // fermeture : aucun ne doit contenir « display » dans un style en ligne.
+      const blocs = src.split(/<(?=[A-Za-z])/).filter((b) => /si-(clair|sombre)/.test(b));
+      for (const bloc of blocs) {
+        const jusquAuBout = bloc.slice(0, bloc.indexOf("/>") + 2 || undefined);
+        expect(
+          /style=\{\{[^}]*display:/.test(jusquAuBout),
+          `un display en ligne annule .si-clair/.si-sombre dans ${_nom}`,
+        ).toBe(false);
+      }
+    },
+  );
+});
