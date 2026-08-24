@@ -12,6 +12,7 @@ export const fr = {
     otp_invalid: "Ce code ne correspond pas.",
     otp_expired: "Ce code a expiré. Demandez-en un nouveau.",
     otp_too_many_attempts: "Trop d'essais. Demandez un nouveau code.",
+    reason_required: "Ce geste demande un motif : il sera gardé au journal.",
     otp_rate_limited: "Vous avez demandé plusieurs codes. Patientez un instant.",
     username_taken: "Ce pseudo est déjà pris.",
     username_invalid: "Ce pseudo ne convient pas.",

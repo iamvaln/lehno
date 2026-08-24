@@ -1,5 +1,5 @@
 import type { CanActivate, ExecutionContext } from "@nestjs/common";
-import { Injectable, SetMetadata } from "@nestjs/common";
+import { Inject, Injectable, SetMetadata } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { AppError } from "../common/errors.js";
 
@@ -19,7 +19,11 @@ export const Role = (role: "admin" | "support"): MethodDecorator & ClassDecorato
 
 @Injectable()
 export class RoleGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  // @Inject explicite : sous vitest/esbuild, design:paramtypes n'est pas émis
+  // (pas d'emitDecoratorMetadata), donc un paramètre typé sans jeton se
+  // résoudrait à `undefined` — la garde tomberait en 500 dès la première route
+  // gardée, et seulement une fois authentifié.
+  constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
     const requis = this.reflector.getAllAndOverride<string | undefined>(ROLE_REQUIS, [

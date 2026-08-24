@@ -25,11 +25,13 @@ import { AdminOtpService } from "./admin/admin-otp.service.js";
 import { AdminTokenService } from "./admin/admin-token.service.js";
 import { AdminGuard } from "./admin/admin.guard.js";
 import { RoleGuard } from "./admin/role.guard.js";
+import { AuditService } from "./admin/audit.service.js";
+import { ParametersController, ParametersService } from "./admin/parameters.controller.js";
 
 @Module({
   controllers: [
     AuthController, ProfileController, ConfigController, LegalController, WaitlistController, ContactController,
-    AdminAuthController,
+    AdminAuthController, ParametersController,
   ],
   providers: [
     PrismaService,
@@ -99,6 +101,8 @@ import { RoleGuard } from "./admin/role.guard.js";
     AdminTokenService,
     AdminGuard,
     RoleGuard,
+    AuditService,
+    ParametersService,
   ],
 })
 export class AppModule implements NestModule {
