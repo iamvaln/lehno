@@ -13,13 +13,17 @@ Le back-office visuel, lui, est fini et tourne sur des fixtures validées par `@
 
 **1. Le motif entre en colonne, pas en `metadata`.** Le dictionnaire donne à `AuditLog` un `metadata jsonb` et rien d'autre. Or la spec §7 pose que « les appels qui modifient l'état d'un compte, un solde ou un contenu **exigent un motif** ; sans lui la requête échoue ». Un motif rangé dans du JSON n'est ni contraint, ni indexable, ni lisible en SQL — et c'est précisément la trace qui doit faire foi. J'ajoute donc `reason text` au modèle, **non nul lorsque `actor_type = 'admin'`**, garanti par une contrainte de vérification. C'est un écart au dictionnaire, assumé et à reporter.
 
-**2. L'authentification admin réutilise le mécanisme OTP, sur ses propres tables.** Le dictionnaire dit « peut réutiliser le mécanisme OTP (à préciser à l'implémentation) ». `OtpCode` et `RefreshToken` référencent `user(id)` : les faire pointer aussi vers `admin(id)` demanderait une clé polymorphe, c'est-à-dire une intégrité qu'aucune contrainte ne tient. Le **service** OTP est réemployé tel quel — hachage HMAC sous clé, comparaison en temps constant, consommation atomique ; seules les tables changent.
+**2. Deux systèmes de comptes, deux jeux de tables.** Techniquement, `OtpCode` n'aurait rien demandé : son `user_id` est déjà nullable et son index porte sur `(target_email, reason)` — une valeur d'enum de plus aurait suffi. Le propriétaire tranche autrement, et pour une raison qui n'est pas technique : **un compte d'exploitation n'est pas un compte d'utilisateur**, et les deux ne partagent aucune table.
+
+Ce que ça achète : aucune requête ne peut confondre les deux natures de porteur, et une session ne peut pas fuiter d'un domaine à l'autre — par construction, plutôt que par vigilance. Ce que ça coûte : deux tables de plus, et une rotation de jeton qu'il ne faut pas écrire deux fois, d'où un service de rotation **paramétré par son dépôt**. C'est le stockage qui se dédouble, pas le raisonnement.
+
+Le **service** OTP est réemployé tel quel : hachage HMAC sous clé, comparaison en temps constant, consommation atomique. Seules les tables changent.
 
 **3. Le rôle se vérifie par une garde, jamais par le contrôleur.** `AdminGuard` établit qui appelle, `RolesGuard` lit un décorateur `@Role("admin")` posé sur la route. Un rôle insuffisant rend `403`. L'interface masque ce qu'elle ne peut pas faire, mais **c'est le serveur qui refuse** (§7) — et un test le vérifie sur chaque route réservée.
 
 ## Les tâches
 
-- [ ] **1. Schéma** — `Admin`, enum `AdminRole`, `AuditLog` (avec `reason`), `AdminOtpCode`, `AdminRefreshToken`. Migration, et tests de schéma sur le modèle de `schema-identity.test.ts`.
+- [ ] **1. Schéma** — `Admin`, enum `AdminRole`, `AuditLog` (avec `reason`), `AdminOtpCode`, `AdminRefreshToken`. Migration, et tests de schéma sur le modèle de `schema-identity.test.ts`. Les deux tables d'administration ne référencent **que** `admin(id)` : aucune colonne ne pointe vers `user`.
 - [ ] **2. Entrer** — `POST /admin/auth/otp`, `otp/verify`, `DELETE /admin/auth/session`. Réemploi d'`OtpService` et `TokenService`. **La réponse ne dit jamais si un compte existe.**
 - [ ] **3. Les deux gardes** — `AdminGuard`, `RolesGuard`, décorateur `@Role`. Un compte désactivé (`is_active = false`) est refusé même avec un jeton valide.
 - [ ] **4. Le journal** — `AuditService.consigner()`, appelé par chaque écriture. **Sans motif, l'appel échoue avant d'atteindre la base.** C'est le point d'appui de tout le reste.
