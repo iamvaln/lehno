@@ -1,23 +1,25 @@
 import type { ReactNode } from "react";
 import { LegalPage } from "../../../components/legal/LegalPage.js";
 import { chargerDocumentLegal } from "../../../lib/legal.js";
-import { estLangue, type Langue } from "../../../lib/langues.js";
+import type { Langue } from "../../../lib/langues.js";
 import { messages } from "../../../messages/index.js";
 
-// Le texte des conditions change rarement — un document juridique ne se
-// corrige pas au fil de la journée comme la configuration des prix. Un cache
-// plus long que celui de la landing (300s) évite un aller-retour à l'API à
-// chaque visite, sans pour autant figer le contenu pour de bon.
+// Le texte des conditions change rarement — un document juridique ne se corrige pas au fil
+// de la journée. Un cache d'une heure évite un aller-retour à l'API à chaque visite.
+//
+// Le chemin est dans la langue de la page : cette route n'existe qu'en
+// français (voir lib/chemins.ts). generateStaticParams ne rend que cette
+// langue-là, et dynamicParams la ferme aux autres — « /en/conditions » n'a pas
+// de sens et doit répondre 404, pas afficher la page.
 export const revalidate = 3600;
+export const dynamicParams = false;
 
-// Même forme que app/[locale]/page.tsx : rien que ce que Next lui donne, la
-// résolution de la langue et du contenu vit ici, le rendu vit dans
-// LegalPage (components/legal/), qui ne connaît rien de Next.
-type Proprietes = { params: Promise<{ locale: string }> };
+export function generateStaticParams(): { locale: string }[] {
+  return [{ locale: "fr" }];
+}
 
-export default async function Page({ params }: Proprietes): Promise<ReactNode> {
-  const { locale } = await params;
-  const langue: Langue = estLangue(locale) ? locale : "fr";
+export default async function Page(): Promise<ReactNode> {
+  const langue: Langue = "fr";
   const t = messages(langue);
   const document = await chargerDocumentLegal("cgu", langue, revalidate);
 

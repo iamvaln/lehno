@@ -4,23 +4,23 @@ import { chargerDocumentLegal } from "../../../lib/legal.js";
 import type { Langue } from "../../../lib/langues.js";
 import { messages } from "../../../messages/index.js";
 
-// Les mentions légales, en français.
+// La politique de confidentialité, en anglais.
 //
 // Le chemin est dans la langue de la page : cette route n'existe qu'en
-// français (voir lib/chemins.ts). generateStaticParams ne rend que cette
-// langue-là, et dynamicParams la ferme aux autres — « /en/mentions-legales » n'a pas
+// anglais (voir lib/chemins.ts). generateStaticParams ne rend que cette
+// langue-là, et dynamicParams la ferme aux autres — « /fr/privacy » n'a pas
 // de sens et doit répondre 404, pas afficher la page.
 export const revalidate = 3600;
 export const dynamicParams = false;
 
 export function generateStaticParams(): { locale: string }[] {
-  return [{ locale: "fr" }];
+  return [{ locale: "en" }];
 }
 
 export default async function Page(): Promise<ReactNode> {
-  const langue: Langue = "fr";
+  const langue: Langue = "en";
   const t = messages(langue);
-  const document = await chargerDocumentLegal("mentions", langue, revalidate);
+  const document = await chargerDocumentLegal("confidentialite", langue, revalidate);
 
-  return <LegalPage t={t} langue={langue} kicker={t.mentionsLegales} document={document} />;
+  return <LegalPage t={t} langue={langue} kicker={t.confidentialite} document={document} />;
 }

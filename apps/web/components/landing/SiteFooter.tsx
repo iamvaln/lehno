@@ -1,21 +1,22 @@
 import type { ReactNode } from "react";
 import type { Langue } from "../../lib/langues.js";
 import type { Messages } from "../../messages/index.js";
+import { cheminLegal } from "../../lib/chemins.js";
 import { BrandMark, Wordmark } from "../ui/index.js";
 
 export function SiteFooter({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
-  // Le chemin des URL reste en français dans les deux langues (/en/conditions
-  // existe déjà ainsi) : FAQ et mentions légales suivent la même convention.
-  // Ordre : les pages légales groupées (cgu, confidentialité, mentions
-  // légales), puis FAQ, puis contact — cgu/confidentialite/faq/contact
-  // reprennent l'ordre du prototype SiteFooter.jsx du paquet de passation,
-  // qui fait autorité ; les mentions légales, absentes de ce prototype mais
-  // requises par specs/ux-surfaces-publiques-lehno.md §3.8, rejoignent les
-  // deux autres pages légales sans déplacer FAQ ni contact.
+  // Les chemins légaux viennent de lib/chemins.ts : ils sont dans la langue
+  // de la page, « /en/privacy » et non « /en/confidentialite ». Contact et FAQ
+  // s'écrivent pareil dans les deux langues.
+  //
+  // Quatre liens, l'ordre de la maquette v3. Les mentions légales n'y figurent
+  // pas : specs/ux-surfaces-publiques-lehno.md les demandait au pied, mais le
+  // propriétaire a tranché que la maquette l'emporte. La page
+  // /{langue}/mentions-legales existe toujours et se construit ; il faut donc
+  // lui trouver une autre entrée, sinon elle devient injoignable.
   const liens: { href: string; texte: string }[] = [
-    { href: `/${langue}/conditions`, texte: t.cgu },
-    { href: `/${langue}/confidentialite`, texte: t.confidentialite },
-    { href: `/${langue}/mentions-legales`, texte: t.mentionsLegales },
+    { href: cheminLegal("cgu", langue), texte: t.cgu },
+    { href: cheminLegal("confidentialite", langue), texte: t.confidentialite },
     { href: `/${langue}/faq`, texte: t.piedFaq },
     { href: `/${langue}/contact`, texte: t.contact },
   ];
