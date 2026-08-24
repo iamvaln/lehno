@@ -19,6 +19,7 @@ import {
 } from "./auth.js";
 import { profileSchema, updateProfileSchema, usernameSchema } from "./profile.js";
 import { errorEnvelopeSchema } from "./errors.js";
+import { personSchema, createPersonSchema } from "./me.js";
 
 // Le contrat se CALCULE depuis les schémas Zod, il ne se recopie pas. Une
 // seconde déclaration des mêmes formes — en DTO décoré, par exemple — dériverait
@@ -150,6 +151,22 @@ const CHEMINS: Chemin[] = [
     authentifie: true,
     parametres: [{ nom: "username", dans: "query", schema: usernameSchema, requis: true }],
     reponse: usernameAvailableResponseSchema,
+  },
+  // ——— me/persons (apps/api/src/me) ————————————————————————————————
+  {
+    chemin: "/me/persons",
+    methode: "get",
+    resume: "Lister ses proches",
+    authentifie: true,
+    reponse: z.array(personSchema),
+  },
+  {
+    chemin: "/me/persons",
+    methode: "post",
+    resume: "Ajouter un proche à l'annuaire",
+    authentifie: true,
+    corps: createPersonSchema,
+    reponse: personSchema,
   },
 ];
 

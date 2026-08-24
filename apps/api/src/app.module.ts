@@ -14,6 +14,9 @@ import { ConsoleMailAdapter } from "./mail/console.adapter.js";
 import { ResendAdapter } from "./mail/resend.adapter.js";
 import { ProfileController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
+import { PersonController } from "./me/person.controller.js";
+import { PersonService } from "./me/person.service.js";
+import { TenantRepository } from "./tenancy/tenant.repository.js";
 import { ConfigController, ConfigService } from "./public/config.controller.js";
 import { LegalController, LegalService } from "./public/legal.controller.js";
 import { WaitlistController } from "./public/waitlist.controller.js";
@@ -23,7 +26,8 @@ import { ContactService } from "./public/contact.service.js";
 
 @Module({
   controllers: [
-    AuthController, ProfileController, ConfigController, LegalController, WaitlistController, ContactController,
+    AuthController, ProfileController, PersonController, ConfigController, LegalController, WaitlistController,
+    ContactController,
   ],
   providers: [
     PrismaService,
@@ -81,6 +85,8 @@ import { ContactService } from "./public/contact.service.js";
     FederatedService,
     AuthGuard,
     ProfileService,
+    TenantRepository,
+    PersonService,
     ConfigService,
     LegalService,
     WaitlistService,
