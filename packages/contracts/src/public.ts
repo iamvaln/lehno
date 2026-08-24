@@ -44,3 +44,40 @@ export type LegalDocument = (typeof LEGAL_DOCUMENTS)[number];
 
 export const LEGAL_LANGUAGES = ["fr", "en"] as const;
 export type LegalLanguage = (typeof LEGAL_LANGUAGES)[number];
+
+// Les six motifs de la maquette (design_handoff_surfaces_publiques/ui_kits/web/
+// pages.html, clé "contact" → "sujets"), sous forme de clés stables plutôt que
+// du texte affiché : le texte diffère par langue, la clé jamais — c'est elle
+// que le client envoie, et c'est contre cette liste fermée qu'elle se valide.
+// Un texte libre venu du client n'atterrit donc jamais tel quel dans le
+// courriel envoyé à l'équipe.
+export const CONTACT_SUBJECTS = [
+  "question_app",
+  "probleme_technique",
+  "credits_paiements",
+  "signaler_contenu",
+  "demande_donnees",
+  "autre",
+] as const;
+export type ContactSubject = (typeof CONTACT_SUBJECTS)[number];
+
+export const contactSendSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  email: z.string().email().max(254),
+  subject: z.enum(CONTACT_SUBJECTS),
+  // >9 caractères une fois les espaces de bord retirés : même règle que
+  // celle qui gouverne le bouton d'envoi côté client (voir ContactForm.tsx),
+  // reposée ici pour ne pas dépendre de la seule discipline du client.
+  message: z.string().trim().min(10).max(4000),
+  locale: z.enum(["fr", "en"]).optional(),
+  // Champ leurre et instant de rendu : même rôle qu'au formulaire de liste
+  // d'attente (voir waitlistJoinSchema ci-dessus) — un robot qui remplit
+  // tous les champs se désigne, une soumission plus rapide qu'un humain ne
+  // peut taper aussi.
+  website: z.string().max(254).optional(),
+  renderedAt: z.number().int().positive().optional(),
+}).strict();
+
+export type ContactSendInput = z.infer<typeof contactSendSchema>;
+
+export const contactSendResponseSchema = z.object({ sent: z.literal(true) }).strict();

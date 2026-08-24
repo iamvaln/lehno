@@ -25,6 +25,11 @@ export const ERROR_CODES = [
   // de soumission invraisemblable. Dire lequel a mordu apprendrait au robot
   // comment s'ajuster.
   "waitlist_rejected",
+  // formulaire de contact
+  "contact_invalid",
+  // Même raisonnement que waitlist_rejected, pour les deux mêmes filtres :
+  // un seul code, pour ne pas apprendre au robot lequel a mordu.
+  "contact_rejected",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
