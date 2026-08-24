@@ -50,6 +50,23 @@ Trois changements arrivés après l'écriture de ce plan.
 
 **Le back-office visuel ne porte pas cette section.** Le paquet de passation en décrivait quinze, aucune ne s'appelle Studio. L'outil livré est donc en retard d'un écran sur la spec — à signaler au propriétaire plutôt qu'à combler en silence.
 
+## La suite, en checklist — à suivre sans interruption
+
+- [x] **1. Schéma** de l'administration
+- [x] **2. Entrer** par code
+- [x] **3. Les deux gardes**
+- [x] **4. Les paramètres**, et le journal né avec eux
+- [x] **5. Les comptes** — liste, détail, changement d'état
+- [x] **6. Les demandes de suppression** — file de travail, sans écriture propre
+- [x] **7. Les deux lectures de suivi** — journal d'audit (admin) et connexions (support)
+- [ ] **8. Les administrateurs** — `GET`/`POST`/`PATCH`/`DELETE /admin/admins`. Inviter, changer de rôle, révoquer. Réservé à `admin`, et **on ne se révoque pas soi-même** : un outil qui laisse fermer la dernière porte derrière soi est un outil cassé.
+- [ ] **9. Les modèles d'IA** — `AIModel` au schéma (le dictionnaire le décrit, la base ne l'a pas), puis `GET`/`PATCH /admin/ai-models`. Priorité de routage, activation à chaud.
+- [ ] **10. L'export d'une liste filtrée** — `POST /admin/exports`, sur `DataExportRequest` qui existe déjà. L'export **dit sa portée**.
+- [ ] **11. Le tableau de bord** — `GET /admin/dashboard`, agrégé sur ce qui existe : comptes par état, suppressions à échéance, connexions échouées, gestes récents. Les tuiles qui demandent des murs, des crédits ou des paiements attendent leurs tables.
+- [ ] **12. Le studio du portrait** — en dernier, à la demande du propriétaire : trop de questions encore ouvertes.
+
+**Hors de portée tant que le schéma ne les porte pas** : la modération (aucune table de signalement, et le dictionnaire n'en décrit pas), les transactions (ni `Payment` ni `CreditTransaction`), les liens externes, et la part des métriques qui compte des murs ou des crédits.
+
 ## Ce que ce plan ne couvre pas
 
 Les codes promotionnels et les parrainages (`/admin/promo-codes`, `/admin/referrals`) : la phase 3 les porte, et aucun écran ne les demande aujourd'hui.
