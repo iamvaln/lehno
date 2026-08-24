@@ -61,8 +61,8 @@ Trois changements arrivés après l'écriture de ce plan.
 - [x] **7. Les deux lectures de suivi** — journal d'audit (admin) et connexions (support)
 - [x] **8. Les administrateurs** — `GET`/`POST`/`PATCH`/`DELETE /admin/admins`. Inviter, changer de rôle, révoquer. Réservé à `admin`, et **on ne se révoque pas soi-même** : un outil qui laisse fermer la dernière porte derrière soi est un outil cassé.
 - [x] **9. Les modèles d'IA** — `AIModel` au schéma (le dictionnaire le décrit, la base ne l'a pas), puis `GET`/`PATCH /admin/ai-models`. Priorité de routage, activation à chaud.
-- [ ] **10. L'export d'une liste filtrée** — `POST /admin/exports`, sur `DataExportRequest` qui existe déjà. L'export **dit sa portée**.
-- [ ] **11. Le tableau de bord** — `GET /admin/dashboard`, agrégé sur ce qui existe : comptes par état, suppressions à échéance, connexions échouées, gestes récents. Les tuiles qui demandent des murs, des crédits ou des paiements attendent leurs tables.
+- [ ] **10. L'export d'une liste filtrée** — **écarté pour l'instant.** `DataExportRequest` ne convient pas : son `user_id` est non nul, avec cascade à la suppression du compte — c'est l'export qu'un utilisateur demande pour lui-même, au titre de ses droits. L'export d'une liste filtrée par l'équipe n'a aucune table au dictionnaire, et en inventer une est une décision qui appartient au propriétaire : durée de rétention du fichier, portée exacte, qui peut le relire. À trancher avec le studio.
+- [x] **11. Le tableau de bord** — `GET /admin/dashboard`, agrégé sur ce qui existe : comptes par état, suppressions à échéance, connexions échouées, gestes récents. Les tuiles qui demandent des murs, des crédits ou des paiements attendent leurs tables.
 - [ ] **12. Le studio du portrait** — en dernier, à la demande du propriétaire : trop de questions encore ouvertes.
 
 **Hors de portée tant que le schéma ne les porte pas** : la modération (aucune table de signalement, et le dictionnaire n'en décrit pas), les transactions (ni `Payment` ni `CreditTransaction`), les liens externes, et la part des métriques qui compte des murs ou des crédits.
