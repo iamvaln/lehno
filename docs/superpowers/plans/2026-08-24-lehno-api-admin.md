@@ -59,7 +59,7 @@ Trois changements arrivés après l'écriture de ce plan.
 - [x] **5. Les comptes** — liste, détail, changement d'état
 - [x] **6. Les demandes de suppression** — file de travail, sans écriture propre
 - [x] **7. Les deux lectures de suivi** — journal d'audit (admin) et connexions (support)
-- [ ] **8. Les administrateurs** — `GET`/`POST`/`PATCH`/`DELETE /admin/admins`. Inviter, changer de rôle, révoquer. Réservé à `admin`, et **on ne se révoque pas soi-même** : un outil qui laisse fermer la dernière porte derrière soi est un outil cassé.
+- [x] **8. Les administrateurs** — `GET`/`POST`/`PATCH`/`DELETE /admin/admins`. Inviter, changer de rôle, révoquer. Réservé à `admin`, et **on ne se révoque pas soi-même** : un outil qui laisse fermer la dernière porte derrière soi est un outil cassé.
 - [ ] **9. Les modèles d'IA** — `AIModel` au schéma (le dictionnaire le décrit, la base ne l'a pas), puis `GET`/`PATCH /admin/ai-models`. Priorité de routage, activation à chaud.
 - [ ] **10. L'export d'une liste filtrée** — `POST /admin/exports`, sur `DataExportRequest` qui existe déjà. L'export **dit sa portée**.
 - [ ] **11. Le tableau de bord** — `GET /admin/dashboard`, agrégé sur ce qui existe : comptes par état, suppressions à échéance, connexions échouées, gestes récents. Les tuiles qui demandent des murs, des crédits ou des paiements attendent leurs tables.
