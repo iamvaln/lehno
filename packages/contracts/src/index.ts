@@ -3,3 +3,4 @@ export * from "./auth.js";
 export * from "./profile.js";
 export * from "./public.js";
 export * from "./admin.js";
+export * from "./me.js";
