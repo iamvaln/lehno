@@ -23,7 +23,10 @@ Le signe est posé à pleine page sur le violet #7B6BB7 : les boutiques applique
 | `adaptive-background-432.png` | `ic_launcher_background` — violet plein |
 | `launcher-192.png` … `launcher-48.png` | Rétrocompatibilité `mipmap-*`, pour les lanceurs sans icône adaptative |
 
-Les paliers 96, 72 et 48 utilisent le tracé épaissi : sous 100 px, les empattements de Fraunces se ferment.
+Tous les paliers viennent du **même tracé** que le logotype. Sous 128 px, seul le *trait*
+s'épaissit — d'une part calculée sur le canal, l'espace entre la hampe et la jambe droite,
+et jamais plus du quart de sa largeur. Les empattements ne sont jamais retirés : une icône
+qui les perd devient un autre `h`.
 
 ## Captures d'écran
 

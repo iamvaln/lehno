@@ -10,9 +10,11 @@ const BOUTON: CSSProperties = {
   justifyContent: "center",
   width: "var(--space-32)",
   height: "var(--space-32)",
-  color: "var(--text-secondary)",
+  // Sans bordure, comme la bascule de langue à côté : la maquette v3 pose ces
+  // deux commandes en aplat, elles s'habillent au survol (voir composants.css).
+  color: "var(--text-mention)",
   background: "transparent",
-  border: "var(--border-width) solid var(--border-object)",
+  border: "none",
   borderRadius: "var(--radius-xs)",
   padding: 0,
   cursor: "pointer",
@@ -41,7 +43,7 @@ export function BasculeTheme({ t }: { t: Messages }): ReactNode {
   };
 
   return (
-    <button type="button" onClick={basculer} aria-label={t.themeBascule} title={t.themeBascule} style={BOUTON}>
+    <button type="button" className="lehno-bascule" onClick={basculer} aria-label={t.themeBascule} title={t.themeBascule} style={BOUTON}>
       <span className="si-clair">
         <Icon name="moon" size={17} strokeWidth={1.9} />
         <span className="lecture-seule">{t.themeVersSombre}</span>

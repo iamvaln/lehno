@@ -40,13 +40,12 @@ describe("BrandMark", () => {
     expect(() => render(<BrandMark size={24} />)).toThrow(/28/);
   });
 
-  // La marque tient sur un seul tracé : sous 128 px, seul le trait s'épaissit aux
-  // paliers matriciels, et les empattements ne sont jamais retirés. Le palier
-  // distinct de 28 px a été retiré de la charte ; ce test empêche qu'une bascule
-  // vers un second dessin revienne par inadvertance.
-  it("sert le même tracé à toutes les tailles", () => {
+  // Une seule source, épaissie aux petites tailles : sous 40 px c'est le tracé
+  // du palier de 28 qui sert, trait renforcé et empattements conservés. Le
+  // réduire depuis le 512 donnerait une hampe trop fine et un canal fermé.
+  it("bascule sur le tracé épaissi sous 40 px", () => {
     const { unmount } = render(<BrandMark size={32} />);
-    expect(screen.getByRole("img")).toHaveAttribute("src", "/brand/lehno-icone-512.svg");
+    expect(screen.getByRole("img")).toHaveAttribute("src", "/brand/lehno-favicon-28.svg");
     unmount();
     render(<BrandMark size={120} />);
     expect(screen.getByRole("img")).toHaveAttribute("src", "/brand/lehno-icone-512.svg");

@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Langue } from "../lib/langues.js";
 import type { Messages } from "../messages/index.js";
-import { Countdown, Icon } from "./ui/index.js";
+import { Countdown, Icon, Wordmark } from "./ui/index.js";
 
 const LIGNE: CSSProperties = {
   border: "var(--border-width) solid var(--border-object)",
@@ -48,8 +48,8 @@ export function ApercuApplication({ t, langue }: { t: Messages; langue: Langue }
           borderBottom: "var(--border-width) solid var(--border-object)", flex: "none",
         }}
       >
-        <span className="titre" style={{ fontWeight: "var(--font-display-medium)", fontSize: 19 }} aria-hidden="true">
-          Le<span style={{ color: "var(--action)" }}>h</span>no
+        <span style={{ lineHeight: 0 }}>
+          <Wordmark height={18} alt={t.altMarque} />
         </span>
         <span style={{ position: "relative", color: "var(--text-body)", lineHeight: 0 }}>
           <Icon name="bell" size={19} />

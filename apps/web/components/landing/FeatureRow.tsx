@@ -1,11 +1,16 @@
 import type { ReactNode } from "react";
+import { SectionLabel } from "../ui/index.js";
 
 /** Une station de contenu : titre + texte d'un côté, illustration de l'autre.
  *  Les stations alternent blanc / lilas — c'est cette alternance qui rythme
  *  la page, pas des filets. */
 export function FeatureRow(
-  { id, titre, texte, panel = false, inverse = false, children, extra }: {
+  { id, kicker, titre, texte, panel = false, inverse = false, children, extra }: {
     id?: string;
+    /** Surtitre de la station elle-même — distinct du titre de navigation
+     *  (HowItWorks et Pricing en portent un chacun ; les autres stations n'en
+     *  ont pas besoin, la station précédente ou le fil de la page suffisant). */
+    kicker?: ReactNode;
     titre: ReactNode;
     texte: ReactNode;
     panel?: boolean;
@@ -17,6 +22,7 @@ export function FeatureRow(
   return (
     <section id={id} style={{ background: panel ? "var(--surface-panel)" : "var(--surface-page)" }}>
       <div style={{ maxWidth: "var(--page-max)", margin: "0 auto", padding: "var(--section-pad-y) var(--page-gutter)" }}>
+        {kicker && <SectionLabel style={{ marginBottom: "var(--space-28)" }}>{kicker}</SectionLabel>}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: "clamp(28px,4vw,56px)", alignItems: "center" }}>
           <div style={{ minWidth: 0, order: inverse ? 2 : 1 }}>
             <h2

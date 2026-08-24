@@ -1,12 +1,23 @@
 import type { ReactNode } from "react";
 import type { Langue } from "../../lib/langues.js";
 import type { Messages } from "../../messages/index.js";
-import { BrandMark, Wordmark } from "../ui/index.js";
+import { cheminLegal } from "../../lib/chemins.js";
+import { Lockup } from "../ui/index.js";
 
 export function SiteFooter({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
+  // Les chemins légaux viennent de lib/chemins.ts : ils sont dans la langue
+  // de la page, « /en/privacy » et non « /en/confidentialite ». Contact et FAQ
+  // s'écrivent pareil dans les deux langues.
+  //
+  // Quatre liens, l'ordre de la maquette v3. Les mentions légales n'y figurent
+  // pas : specs/ux-surfaces-publiques-lehno.md les demandait au pied, mais le
+  // propriétaire a tranché que la maquette l'emporte. La page
+  // /{langue}/mentions-legales existe toujours et se construit ; il faut donc
+  // lui trouver une autre entrée, sinon elle devient injoignable.
   const liens: { href: string; texte: string }[] = [
-    { href: `/${langue}/conditions`, texte: t.cgu },
-    { href: `/${langue}/confidentialite`, texte: t.confidentialite },
+    { href: cheminLegal("cgu", langue), texte: t.cgu },
+    { href: cheminLegal("confidentialite", langue), texte: t.confidentialite },
+    { href: `/${langue}/faq`, texte: t.piedFaq },
     { href: `/${langue}/contact`, texte: t.contact },
   ];
 
@@ -19,10 +30,15 @@ export function SiteFooter({ t, langue }: { t: Messages; langue: Langue }): Reac
         }}
       >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-12)" }}>
-            <BrandMark size={28} alt={t.altMarque} />
-            <Wordmark height={18} alt={t.altMarque} />
-          </div>
+          {/* La marque du pied ramène à l'accueil, comme celle de l'en-tête.
+              Un logo est un chemin de retour, où qu'il se trouve. */}
+          <a
+            href={`/${langue}`}
+            aria-label={t.altMarque}
+            style={{ display: "flex", alignItems: "center", textDecoration: "none" }}
+          >
+            <Lockup height={30} markSize={28} alt={t.altMarque} />
+          </a>
           <div className="citation" style={{ fontSize: "var(--text-body-s)", color: "var(--text-secondary)", marginTop: "var(--space-6)" }}>{t.signature}</div>
         </div>
         <nav style={{ marginLeft: "auto", display: "flex", gap: "var(--space-20)", flexWrap: "wrap", fontSize: "var(--text-body-xs)", color: "var(--text-secondary)" }}>

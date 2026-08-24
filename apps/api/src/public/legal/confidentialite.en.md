@@ -29,7 +29,7 @@ law 2024/017; its operating arrangements await an implementing decree.
 
 Proxia Digital
 Akwa, Douala, Cameroon
-Phone: +237 691 980 190
+Phone: +237 691 980 189
 Email: hello@lehno.app
 
 Data Protection Officer (DPO): Valentine Nguemne — hello@lehno.app
@@ -154,7 +154,9 @@ described, under a contract compliant with article 28 GDPR:
   States) and DeepSeek (China), with routing and fallback between them; **each is
   enabled only once the transfer safeguards required by law no. 2024/017 are in
   place with them**, and this list is updated at that point.
-- **Mailgun** — the Service's emails: one-time codes, reminders, confirmations.
+- **Resend (United States)** — the Service's emails: one-time codes, reminders,
+  confirmations. The recipient's address and the message body are passed to it
+  for the time it takes to deliver.
 - **OneSignal (United States)** — push notifications.
 - **Sentry** — technical error tracking. Incidents carry the correlation
   identifier and, where applicable, the account identifier — never the content of
@@ -256,5 +258,5 @@ Gazette._
 
 Data Protection Officer: Valentine Nguemne
 Proxia Digital — Akwa, Douala, Cameroon
-Phone: +237 691 980 190
+Phone: +237 691 980 189
 Email: hello@lehno.app

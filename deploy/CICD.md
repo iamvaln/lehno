@@ -100,11 +100,28 @@ directement.
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | identifiants de la base (service `db`) |
 | `DATABASE_URL` | `postgresql://<user>:<mdp>@db:5432/<db>` — lue par `api` et `migrate` |
 | `OTP_PEPPER`, `JWT_SECRET` | secrets applicatifs — l'api refuse de démarrer si absents (générer avec `openssl rand -base64 32`) |
-| `MAILGUN_API_KEY`, `MAILGUN_DOMAIN` | envoi de courriel — l'api refuse de démarrer sans les deux |
+| `RESEND_API_KEY`, `RESEND_FROM` | envoi de courriel — l'api refuse de démarrer sans les deux. `RESEND_FROM` doit porter un domaine vérifié chez Resend, par exemple `Lehno <no-reply@lehno.app>` |
 | `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID` | connexion fédérée, optionnels, vérifiés à l'usage |
+| `TRUST_PROXY_HOPS` | déjà posé à `1` par `docker-compose.yml`, rien à écrire ici. Ne le relevez que si un relais s'ajoute devant Traefik — voir l'encadré ci-dessous |
 | `SENTRY_DSN` | suivi des erreurs, optionnel |
 | `API_URL` | lue côté serveur par le rendu SSR du web — mettre `http://api:3000` (nom du service Docker, réseau interne), pas le domaine public |
 | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_LANCEMENT` | mêmes valeurs que les variables GitHub Actions ci-dessus — utiles seulement à un `docker compose build` local (en production, l'image publiée les porte déjà) |
+
+> **Sur `TRUST_PROXY_HOPS`.** Ce réglage dit combien de relais inverses on
+> exploite devant l'api. Il vaut `1` : le Traefik partagé du VPS. Sans lui,
+> `req.ip` vaudrait l'adresse de Traefik pour tout le monde et le plafond
+> « par origine » deviendrait un compteur unique partagé — le onzième
+> visiteur de l'heure refusé à cause des dix précédents.
+>
+> À l'inverse, le régler trop haut — ou le mettre à `true`, ce que proposent
+> la plupart des exemples en ligne — fait remonter jusqu'au premier maillon
+> de `X-Forwarded-For`, celui que le client écrit lui-même : n'importe qui
+> s'accorde alors autant d'origines qu'il veut. L'api refuse `true` et toute
+> valeur invraisemblable plutôt que de limiter dans le vide.
+>
+> La valeur `1` n'est sûre que parce que le service `api` **ne publie aucun
+> port** : il n'est joignable que par Traefik. Exposer son port en direct
+> rouvrirait la contrefaçon.
 
 Ce fichier n'est **pas** commité — voir `.env` et `.env.example` dans
 `.gitignore`, la même règle vaut pour `.env.production`. Le propriétaire du

@@ -67,3 +67,20 @@
 .lehno-bouton[data-rang="destructive-outline"]:not(:disabled):active {
   border-width: var(--border-width-firm);
 }
+
+/* --------------------------------------------------------------------------
+   Les deux commandes de l'en-tête — langue et thème.
+
+   La maquette v3 les pose en aplat, sans bordure, et les habille au survol :
+   un fond lilas, et l'encre qui remonte pour l'icône du thème. Un style en
+   ligne ne peut pas porter :hover, d'où leur présence ici.
+   -------------------------------------------------------------------------- */
+.lehno-bascule {
+  transition: background var(--duration-state) var(--ease-state),
+              color var(--duration-state) var(--ease-state);
+}
+
+.lehno-bascule:hover {
+  background: var(--surface-panel);
+  color: var(--text-body);
+}

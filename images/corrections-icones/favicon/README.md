@@ -1,6 +1,15 @@
 # Lehno — favicon, web et mobile
 
-Deux tracés : le dessin courant pour tout ce qui dépasse 100 px, le tracé épaissi (graisse 700, SOFT 0, empattements retirés) pour 16 à 64 px.
+**Un seul tracé**, celui de `lehno-icone-512.svg` — la même source que le logotype.
+Sous 128 px, seul le *trait* s'épaissit pour que la hampe reste visible ; les empattements
+ne sont jamais retirés. **L'épaississement se déduit du canal** — l'espace entre la hampe et
+la jambe droite — et ne lui prend jamais plus du quart de sa largeur : à 16 px ce canal ne
+mesure que 1,77 px, et une lettre au canal fermé n'est plus une lettre. Chaque fichier est
+sondé après génération pour vérifier qu'il reste ouvert. Une icône qui perd les empattements devient un autre `h`, et
+c'est le premier signe qu'un visiteur voit du site.
+
+À 16 px l'empattement tient dans moins d'un pixel : il y est suggéré par l'épaississement
+plutôt que dessiné. C'est la limite basse assumée du système, pas une seconde lettre.
 
 | Fichier | Emplacement |
 |---|---|
