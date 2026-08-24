@@ -141,3 +141,18 @@
     font-size: var(--text-body-xs) !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Le verrouillage de la marque, et son repli.
+
+   Au-dessus de 920px, le verrouillage entier — pastille et mot dans un seul
+   fichier, à l'espacement dessiné. En dessous, la place manque pour le mot :
+   la pastille reste seule. Une image unique ne se masque pas à moitié, d'où
+   deux éléments qui s'échangent plutôt qu'un seul qui rétrécit.
+   -------------------------------------------------------------------------- */
+.marque-pastille { display: none; }
+
+@container page (max-width: 920px) {
+  .marque-verrouillage { display: none; }
+  .marque-pastille { display: block; }
+}

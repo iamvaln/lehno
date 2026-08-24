@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { Langue } from "../../lib/langues.js";
 import type { Messages } from "../../messages/index.js";
 import { cheminLegal } from "../../lib/chemins.js";
-import { BrandMark, Wordmark } from "../ui/index.js";
+import { Lockup } from "../ui/index.js";
 
 export function SiteFooter({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
   // Les chemins légaux viennent de lib/chemins.ts : ils sont dans la langue
@@ -35,10 +35,9 @@ export function SiteFooter({ t, langue }: { t: Messages; langue: Langue }): Reac
           <a
             href={`/${langue}`}
             aria-label={t.altMarque}
-            style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}
+            style={{ display: "flex", alignItems: "center", textDecoration: "none" }}
           >
-            <BrandMark size={28} alt="" />
-            <Wordmark height={18} alt="" />
+            <Lockup height={30} markSize={28} alt={t.altMarque} />
           </a>
           <div className="citation" style={{ fontSize: "var(--text-body-s)", color: "var(--text-secondary)", marginTop: "var(--space-6)" }}>{t.signature}</div>
         </div>

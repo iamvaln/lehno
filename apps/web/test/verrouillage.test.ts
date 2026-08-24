@@ -1,49 +1,57 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// Le fichier de verrouillage porte l'espacement que le designer a dessiné
-// entre la pastille et le mot. On ne l'emploie pas tel quel — il n'en existe
-// pas de version sombre, et l'en-tête masque le mot sous 920px, ce qu'une
-// image unique ne sait pas faire — mais on lui emprunte sa proportion.
+// La marque s'affiche par le fichier de verrouillage, pas par deux images
+// assemblées à la main. Ce test gardait auparavant l'écart que j'avais choisi
+// entre la pastille et le mot — j'en affichais 12 là où le fichier en
+// prescrit 7. Le verrouillage rend la question sans objet : l'espacement est
+// dans le dessin, plus dans le code.
 //
-// Sans ce test, rien ne relierait le nombre écrit dans SiteHeader.tsx au
-// fichier qui le justifie : j'affichais 12px là où le verrouillage en
-// prescrit 7, soit près du double.
+// Reste à garder ce dont ce choix dépend : les deux fichiers, leur boîte
+// commune, et le fait que le sombre soit la version transparente.
 const racine = join(import.meta.dirname, "..");
+const marque = (nom: string): string => join(racine, "public", "brand", nom);
 
-function ratioDuVerrouillage(): number {
-  const svg = readFileSync(join(racine, "public", "brand", "lehno-verrouillage-horizontal.svg"), "utf-8");
-  const pastille = Number(/<rect[^>]*width="([\d.]+)"/.exec(svg)?.[1]);
-  const debutDuMot = [...svg.matchAll(/translate\((-?[\d.]+)/g)]
-    .map((m) => Number(m[1]))
-    .filter((x) => x > pastille)
-    .sort((a, b) => a - b)[0]!;
-  return (debutDuMot - pastille) / pastille;
-}
-
-const ecartEmploye = (fichier: string): { taille: number; gap: number } => {
-  const src = readFileSync(join(racine, "components", "landing", fichier), "utf-8");
-  return {
-    taille: Number(/<BrandMark size=\{(\d+)\}/.exec(src)?.[1]),
-    gap: Number(/alignItems: "center", gap: (\d+)/.exec(src)?.[1]),
-  };
-};
+const CLAIR = "lehno-verrouillage-horizontal.svg";
+const SOMBRE = "lehno-verrouillage-horizontal-blanc.svg";
 
 describe("verrouillage de la marque", () => {
-  it("le fichier prescrit une proportion lisible", () => {
-    expect(ratioDuVerrouillage()).toBeCloseTo(0.224, 2);
+  it.each([CLAIR, SOMBRE])("%s est servi par le site", (nom) => {
+    expect(existsSync(marque(nom)), `manquant : public/brand/${nom}`).toBe(true);
   });
 
-  it.each(["SiteHeader.tsx", "SiteFooter.tsx"])(
-    "%s espace la marque comme le verrouillage",
-    (fichier) => {
-      const { taille, gap } = ecartEmploye(fichier);
-      expect(taille, "taille de pastille introuvable").toBeGreaterThan(0);
-      expect(
-        gap,
-        `pour une pastille de ${taille}, le verrouillage donne ${Math.round(taille * ratioDuVerrouillage())}`,
-      ).toBe(Math.round(taille * ratioDuVerrouillage()));
-    },
-  );
+  // Les deux fichiers doivent partager leur boîte : sinon la bascule de thème
+  // ferait sauter la marque d'un pixel à l'autre.
+  it("les deux thèmes partagent la même boîte", () => {
+    const boite = (nom: string): string => {
+      const svg = readFileSync(marque(nom), "utf-8");
+      return /viewBox="([^"]+)"/.exec(svg)?.[1] ?? "";
+    };
+    expect(boite(CLAIR)).toBe("0 0 519.75 168");
+    expect(boite(SOMBRE)).toBe(boite(CLAIR));
+  });
+
+  // La notice du designer (images/verrouillages-sombres/LISEZ-MOI.md) impose
+  // la version transparente en code : les variantes à plaque dessinent un
+  // rectangle dès que le fond n'est pas exactement le leur.
+  it("le fichier sombre est transparent, sans plaque de fond", () => {
+    const svg = readFileSync(marque(SOMBRE), "utf-8");
+    const plaques = [...svg.matchAll(/<rect[^>]*width="519\.75"/g)];
+    expect(plaques, "une plaque pleine largeur trahit une variante à fond figé").toHaveLength(0);
+  });
+
+  // La pastille du thème sombre porte son propre violet : du blanc sur le
+  // violet clair ne mesure que 2,96:1, d'où le h à l'encre.
+  it("le fichier sombre emploie le violet du thème nuit", () => {
+    const svg = readFileSync(marque(SOMBRE), "utf-8");
+    expect(svg).toContain("#9C8BD8");
+    expect(svg).toContain("#15131D");
+  });
+
+  it.each(["SiteHeader.tsx", "SiteFooter.tsx"])("%s emploie le verrouillage", (fichier) => {
+    const src = readFileSync(join(racine, "components", "landing", fichier), "utf-8");
+    expect(src).toContain("<Lockup");
+    expect(src, "plus d'assemblage à la main").not.toMatch(/<BrandMark[\s\S]{0,120}<Wordmark/);
+  });
 });

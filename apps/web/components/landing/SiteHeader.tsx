@@ -5,7 +5,7 @@ import type { Langue } from "../../lib/langues.js";
 import type { Messages } from "../../messages/index.js";
 import { BasculeLangue } from "../BasculeLangue.js";
 import { BasculeTheme } from "../BasculeTheme.js";
-import { BrandMark, Icon, Wordmark } from "../ui/index.js";
+import { Icon, Lockup } from "../ui/index.js";
 
 // L'en-tête du site. Sous le seuil de repli (base.css, requête de conteneur
 // sur .page), la navigation se replie derrière un bouton — la langue, le
@@ -52,12 +52,9 @@ export function SiteHeader({ t, langue }: { t: Messages; langue: Langue }): Reac
         <a
           href={`/${langue}`}
           aria-label={t.altMarque}
-          style={{ display: "flex", alignItems: "center", gap: 7, textDecoration: "none" }}
+          style={{ display: "flex", alignItems: "center", textDecoration: "none" }}
         >
-          <BrandMark size={30} alt="" />
-          <span className="site-wordmark">
-            <Wordmark height={21} alt="" />
-          </span>
+          <Lockup height={34} markSize={30} alt={t.altMarque} />
         </a>
 
         <nav className="site-nav" data-ferme={ouvert ? "0" : "1"} style={{ marginLeft: "auto" }}>
