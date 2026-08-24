@@ -4,6 +4,7 @@ import "./env.js";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { nombreDeRelaisDeConfiance } from "./common/trust-proxy.js";
+import { originsAutorisees } from "./common/cors.js";
 import { AppModule } from "./app.module.js";
 import { AppExceptionFilter } from "./common/errors.js";
 
@@ -21,6 +22,18 @@ async function bootstrap(): Promise<void> {
   // partagé. Voir common/trust-proxy.ts, qui refuse « true » et les valeurs
   // invraisemblables.
   app.set("trust proxy", nombreDeRelaisDeConfiance(process.env.TRUST_PROXY_HOPS));
+
+  // Le site public et l'API vivent sur deux domaines : chaque envoi de
+  // formulaire depuis le navigateur passe par une requête préalable. Sans
+  // cela elle répond 404, et aucun formulaire ne part (voir common/cors.ts).
+  const origines = originsAutorisees(process.env["WEB_DOMAIN"]);
+  app.enableCors({
+    origin: origines,
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    allowedHeaders: ["content-type", "authorization"],
+    credentials: true,
+    maxAge: 86_400,
+  });
 
   app.setGlobalPrefix("v1");
   app.useGlobalFilters(new AppExceptionFilter());

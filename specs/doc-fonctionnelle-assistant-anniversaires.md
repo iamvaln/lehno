@@ -162,11 +162,13 @@ L'application n'assure pas l'envoi automatique des messages aux destinataires : 
 
 **PromoCode** — Code octroyant des crédits, en campagne (multi-usages, période) ou en coupon (usage unique).
 
-**GeneratedProfile** — Portrait d'une personne : une description de la relation composée à partir de ses notes, générable à tout moment sur une plage de notes choisie. Rattaché à la `Person`, avec cycle `generated` → `approved` → `shared` et partage sur les réseaux.
+**GeneratedProfile** — Portrait d'une personne : une **image** composée à partir de ses notes, que l'utilisateur envoie à son proche. Il règle au préalable ce que le portrait exprime (l'orientation), la voie d'image (illustration, photo traitée ou aucune) et la plage de notes retenue. Rattaché à la `Person`, générable à tout moment, avec cycle `generated` → `approved`.
 
 **GeneratedMessage** — Message de vœux généré et persistant (le brouillon), avec cycle `generated` → `edited` → `sent`.
 
 **Notification** — Trace d'un rappel ou d'une relance émis (type, canal, horodatage, état), pour le suivi et l'anti-doublon.
+
+**PromptTemplate** — Gabarit de production du studio : ce qu'on demande au modèle pour un message, une illustration ou un traitement de photo. Versionné, réglable par l'`Admin` sans livraison, et retenu par chaque `ActionRun`.
 
 **AIModel** — Modèle d'IA du catalogue et sa configuration de routage (priorité, coût, activation), éditable via le back-office.
 
@@ -354,7 +356,7 @@ Code promotionnel octroyant des crédits. Une même entité couvre deux usages v
 
 ### GeneratedProfile
 
-Portrait d'une `Person` produit par une `ActionRun` : une description singulière de la relation que l'utilisateur entretient avec ce proche, composée à partir des `Note` accumulées à son sujet. Il se génère **à tout moment**, depuis la fiche du proche — aujourd'hui, puis de nouveau dans six mois — et plusieurs portraits coexistent ainsi dans le temps, donnant à voir l'évolution de la relation. L'utilisateur choisit la **matière** retenue : tout l'historique des notes, ou une période (les douze derniers mois, depuis le dernier portrait, ou des dates qu'il fixe). Rattaché à la `Person` et à l'`ActionRun` qui l'a produit ; le lien vers une `EventOccurrence` reste facultatif, lorsque le portrait naît de la préparation d'un anniversaire. Il persiste et suit un cycle propre via un `status` : `generated` (produit) → `approved` (validé par l'utilisateur) → `shared` (rendu partageable). Le partage sur les réseaux suppose cette persistance : le portrait partagé dispose de sa propre adresse (un `shareToken`) et porte une trace discrète de Lehno.
+Portrait d'une `Person` produit par une `ActionRun` : une description singulière de la relation que l'utilisateur entretient avec ce proche, composée à partir des `Note` accumulées à son sujet. Il se génère **à tout moment**, depuis la fiche du proche — aujourd'hui, puis de nouveau dans six mois — et plusieurs portraits coexistent ainsi dans le temps, donnant à voir l'évolution de la relation. L'utilisateur choisit la **matière** retenue : tout l'historique des notes, ou une période (les douze derniers mois, depuis le dernier portrait, ou des dates qu'il fixe). Rattaché à la `Person` et à l'`ActionRun` qui l'a produit ; le lien vers une `EventOccurrence` reste facultatif, lorsque le portrait naît de la préparation d'un anniversaire. Il persiste et suit un cycle propre via un `status` : `generated` (produit) → `approved` (validé par l'utilisateur, moment où l'**image** se compose). Le portrait ne s'expose à aucune adresse publique : l'utilisateur enregistre l'image et l'envoie lui-même, accompagnée d'un mot. Le **pied de marque fait partie de l'image**, ce qui lui permet de faire connaître Lehno sans lien à suivre.
 
 ### GeneratedMessage
 
@@ -707,7 +709,7 @@ Le moment opportun pour proposer l'achat de crédits est le **pic d'intention** 
 
 ### Portrait partageable et acquisition
 
-Le portrait étant conçu pour être partagé, il devient un point d'entrée vers l'application : lorsqu'un utilisateur le publie pour un proche, il expose Lehno à son audience. Le portrait partagé porte à ce titre une trace discrète de Lehno, sans dénaturer son contenu, afin que le partage ramène de nouveaux visiteurs. L'action est ainsi à la fois premium et vectrice de croissance.
+Le portrait étant conçu pour être offert, il devient un point d'entrée vers l'application : lorsqu'un utilisateur l'envoie à un proche ou le publie, il expose Lehno à son entourage. L'image porte à ce titre un pied de marque discret, sans dénaturer son contenu, afin que celui qui la reçoit retienne le nom. L'action est ainsi à la fois premium et vectrice de croissance.
 
 ### Les crédits comme levier de croissance
 
@@ -737,11 +739,11 @@ La fiche d'une personne contient des informations privées sur des tiers, dont c
 
 Cette section signale les points techniques qui structurent les choix fonctionnels, sans entrer dans l'implémentation.
 
-**Plateforme et surfaces.** L'application du propriétaire est **mobile**. Plusieurs surfaces sont **web** : la landing page, les formulaires de collecte (ouverts par les répondants dans un navigateur), le `Wall` public, le portrait partagé et le back-office `Admin`. Toutes s'appuient sur les mêmes APIs.
+**Plateforme et surfaces.** L'application du propriétaire est **mobile**. Plusieurs surfaces sont **web** : la landing page, les formulaires de collecte (ouverts par les répondants dans un navigateur), le `Wall` public et le back-office `Admin`. Toutes s'appuient sur les mêmes APIs.
 
 **Organisation du code.** Les APIs et les différents clients (application mobile, frontends web) sont réunis dans un **monorepo**. Cette organisation partage le modèle de données et les contrats d'API entre backend et clients, autorise les refactors atomiques traversant l'API et ses consommateurs, et repose sur une CI unique — cohérent avec un découpage « API d'abord, clients ensuite ».
 
-**Stack technique.** L'ensemble est en **TypeScript**, ce qui maximise le partage au sein du monorepo. L'API repose sur **NestJS** et l'application mobile sur **React Native**. Côté web, les surfaces publiques — landing page, formulaires de collecte, `Wall` public et portrait partagé — sont réunies dans une seule application **Next.js**, dont le rendu serveur sert le SEO et les aperçus de partage sur les réseaux (balises Open Graph du portrait notamment) ; le back-office `Admin`, privé et sans besoin de rendu serveur, est une **SPA React (Vite)**. La base de données est **PostgreSQL**, cohérente avec un modèle relationnel.
+**Stack technique.** L'ensemble est en **TypeScript**, ce qui maximise le partage au sein du monorepo. L'API repose sur **NestJS** et l'application mobile sur **React Native**. Côté web, les surfaces publiques — landing page, formulaires de collecte et `Wall` public — sont réunies dans une seule application **Next.js**, dont le rendu serveur sert le SEO et les aperçus de partage sur les réseaux ; le back-office `Admin`, privé et sans besoin de rendu serveur, est une **SPA React (Vite)**. La base de données est **PostgreSQL**, cohérente avec un modèle relationnel.
 
 **Notifications.** L'e-mail couvre de façon fiable et universelle le besoin de rappel, en particulier le digest, et sert de canal dès le départ. L'application étant mobile, le **push est natif** (APNs / FCM) et arrive avec le client mobile ; il n'y a pas d'arbitrage d'architecture de notification à trancher.
 
@@ -763,7 +765,7 @@ Cette section signale les points techniques qui structurent les choix fonctionne
 
 L'implémentation est organisée en phases successives : chaque phase livre un ensemble cohérent et exploitable, sur lequel la suivante s'appuie. Deux principes ordonnent le découpage : on commence par ce qui rend l'application utile en solo avant d'ouvrir vers les autres ; et la **collecte précède la génération**, puisque les actions génératives n'ont de valeur qu'à la lumière des informations récoltées sur la personne.
 
-L'application du propriétaire est **mobile** ; plusieurs surfaces sont **web** (landing page, formulaires de collecte, `Wall` public, portrait partagé, back-office `Admin`). Toutes s'appuient sur les mêmes APIs, réunies avec les clients dans un **monorepo** (voir section 18). Chaque phase se construit backend/API d'abord, client ensuite.
+L'application du propriétaire est **mobile** ; plusieurs surfaces sont **web** (landing page, formulaires de collecte, `Wall` public, back-office `Admin`). Toutes s'appuient sur les mêmes APIs, réunies avec les clients dans un **monorepo** (voir section 18). Chaque phase se construit backend/API d'abord, client ensuite.
 
 **Phase 0 — Fondations & présence.** Le socle technique : data model, authentification, cloisonnement multi-tenant, infrastructure et CI du monorepo. Et la **landing page**, présence publique qui explique le produit et capte les premiers intéressés. Assez indépendante pour servir de pré-lancement (constituer une liste d'attente pendant la construction).
 

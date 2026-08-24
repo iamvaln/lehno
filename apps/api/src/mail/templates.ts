@@ -32,19 +32,15 @@ export function otpEmail(input: { code: string; locale: Locale }): { subject: st
 const ATTENTE = {
   fr: {
     subject: "Votre adresse est notée",
-    body: `C'est noté : vous serez prévenu à l'ouverture de Lehno.
+    body: `C'est noté : vous serez prévenu dès l'ouverture de Lehno.
 
-Un seul message, celui-là. Nous n'écrirons pas entre-temps.
-
-Si cette adresse n'est pas la vôtre, ignorez ce message : elle ne servira à rien d'autre.`,
+Si vous n'êtes pas à l'origine de cette inscription, ignorez ce message.`,
   },
   en: {
     subject: "Your address is noted",
-    body: `Noted: we'll let you know when Lehno opens.
+    body: `Noted: we'll let you know as soon as Lehno opens.
 
-One message, that one. Nothing in between.
-
-If this address isn't yours, ignore this note — it won't be used for anything else.`,
+If you didn't sign up, ignore this message.`,
   },
 } as const;
 

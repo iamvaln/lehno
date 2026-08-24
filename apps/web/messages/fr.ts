@@ -26,7 +26,7 @@ export const fr = {
   emailLabel: "Votre adresse e-mail",
   waitlist: "Nous préparons le lancement. Vous serez prévenu le jour où l'application ouvre.",
   merciTitre: "C'est noté. À très vite.",
-  merciSous: "Vous recevrez un mot dès l'ouverture — rien d'autre.",
+  merciSous: "Vous serez prévenu dès l'ouverture.",
   waitlistErreur: "L'envoi n'a pas abouti. Réessayez dans un instant.",
   altApple: "Télécharger dans l'App Store",
   altGoogle: "Disponible sur Google Play",

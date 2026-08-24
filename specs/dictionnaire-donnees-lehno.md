@@ -626,7 +626,7 @@ Souhait individuel d'une `Submission`, porté en ligne (plutôt qu'en blob) pour
 
 ## GeneratedProfile
 
-Portrait généré et persistant, partageable.
+Portrait généré et persistant. C'est une **image** que l'utilisateur envoie à son proche, accompagnée d'un mot.
 
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
@@ -637,14 +637,27 @@ Portrait généré et persistant, partageable.
 | source_to | date | oui | — | — | Fin de la plage de notes retenue ; nul si tout l'historique |
 | event_occurrence_id | uuid | oui | — | — | FK → event_occurrence(id) on delete set null ; renseigné si le portrait a été produit depuis la préparation d'un anniversaire |
 | user_id | uuid | non | — | — | Cloisonnement |
-| content | text | non | — | — | Portrait généré |
-| status | generated_profile_status (enum) | non | — | 'generated' | `generated` \| `approved` \| `shared` |
-| share_token | varchar(32) | oui | — | — | Adresse publique de partage (si `shared`) |
+| orientation | portrait_orientation (enum) | non | — | — | Ce que le portrait exprime ; commande le texte comme l'illustration |
+| visual_kind | portrait_visual (enum) | non | — | 'illustration' | `illustration` \| `photo` \| `none` — une seule voie d'image à la fois |
+| illustration_family | illustration_family (enum) | oui | — | — | `nature` \| `animal` \| `abstract` ; si `visual_kind = illustration` |
+| photo_style | photo_style (enum) | oui | — | — | Le style appliqué à la photo ; si `visual_kind = photo` |
+| brief_text | text | oui | — | — | Ce que l'utilisateur ajoute pour orienter le dessin ; conservé le temps de la génération |
+| sender_note | text | oui | — | — | La note de l'expéditeur, courte et discrète (« Fait avec soin par Valentine ») |
+| content | text | non | — | — | Le message produit, deux à quatre phrases à la première personne |
+| content_short | text | oui | — | — | Version courte du message, pour le format vertical |
+| status | generated_profile_status (enum) | non | — | 'generated' | `generated` \| `approved` |
+| image_url | text | oui | — | — | L'image composée, produite à l'approbation ; c'est elle que l'utilisateur enregistre et envoie |
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
-- Enum `generated_profile_status` : `generated`, `approved`, `shared`.
-- Le partage social s'appuie sur `share_token` + balises Open Graph ; trace discrète de Lehno.
+- Enum `generated_profile_status` : `generated`, `approved`.
+- Enum `portrait_orientation` : `relation`, `your_progress`, `our_progress`, `motivation`, `support`, `character`, `pride`, `affection`, `gratitude`, `what_you_taught_me`, `wish`, `tribute`.
+- Enum `portrait_visual` : `illustration`, `photo`, `none`.
+- Enum `illustration_family` : `nature`, `animal`, `abstract`.
+- Enum `photo_style` : trois styles définis par la marque ; leurs noms restent à arrêter.
+- **`tribute` est à part.** Il neutralise l'accent chaud, écarte toute illustration joyeuse et emprunte un registre sobre : une occasion sensible ne partage pas le gabarit d'une déclaration de fierté.
+- **La photo ne transite qu'au moment du traitement.** Elle n'est pas conservée ; seule l'image produite l'est (`image_url`).
+- **Le portrait est une image, pas une page.** Il ne s'expose à aucune adresse publique : l'utilisateur l'enregistre et l'envoie lui-même, accompagné d'un mot. Le **pied de marque fait partie de l'image** — c'est ainsi qu'il fait connaître Lehno, sans lien à suivre.
 - Le portrait se génère **à tout moment** depuis la fiche du proche, et **plusieurs portraits coexistent** dans le temps pour une même personne : ils donnent à voir l'évolution de la relation. `source_from` / `source_to` mémorisent la plage de notes retenue (les deux nuls = tout l'historique).
 
 ## GeneratedMessage
@@ -714,12 +727,14 @@ Exécution d'une action premium.
 | user_id | uuid | non | — | — | Auteur |
 | premium_action_id | uuid | non | — | — | FK → premium_action(id) on delete restrict |
 | event_occurrence_id | uuid | oui | — | — | Cible : l'occurrence pour laquelle la génération est lancée ; FK → event_occurrence(id) on delete set null |
+| prompt_template_id | uuid | oui | — | — | FK → prompt_template(id) on delete set null ; **la version exacte du gabarit qui a produit ce contenu** |
 | credits_spent | integer | non | — | — | Recopié à l'exécution (fige l'historique) |
 | status | action_run_status (enum) | non | — | — | `success` \| `failure` |
 | internal_cost | numeric(12,6) | oui | — | — | Coût IA réel = agrégat des `ai_usage` ; interne, non facturé |
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `action_run_status` : `success`, `failure`.
+- **La version du gabarit est retenue** : sans elle, comprendre pourquoi les productions d'une semaine valaient mieux que celles de la suivante devient impossible.
 
 ## CreditTransaction
 
@@ -846,6 +861,28 @@ Catalogue des modèles d'IA et configuration de routage.
 
 - Unicité logique (`provider`, `model_key`).
 
+## PromptTemplate
+
+Gabarit de production du studio : ce qu'on demande au modèle pour un message, une illustration ou un traitement de photo. **Les gabarits vivent en base**, jamais dans le code : ils s'ajustent au vu des résultats.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| kind | prompt_kind (enum) | non | — | — | Ce que le gabarit produit |
+| key | varchar(60) | non | — | — | L'orientation, la famille ou le style visé |
+| version | integer | non | — | 1 | S'incrémente à chaque modification |
+| body | text | non | — | — | Les consignes adressées au modèle |
+| guardrails | jsonb | oui | — | — | Ce qui est écarté : symboles, formules, tournures |
+| ai_model_id | uuid | oui | — | — | FK → ai_model(id) on delete set null ; le modèle visé |
+| is_active | boolean | non | — | false | Une seule version active par (`kind`, `key`) |
+| created_by_admin_id | uuid | oui | — | — | FK → admin(id) on delete set null |
+| created_at | timestamptz | non | — | now() | |
+
+- Enum `prompt_kind` : `message`, `illustration`, `photo_style`, `note_classification`, `sensitive_detection`.
+- Unicité sur (`kind`, `key`, `version`) ; **une seule version active** par (`kind`, `key`), garantie par un index unique partiel.
+- **Les versions ne se modifient pas.** Ajuster un gabarit crée une version nouvelle ; l'ancienne demeure, ce qui permet d'y revenir et de comprendre un écart de qualité.
+- Chaque `ActionRun` retient le `prompt_template_id` qui l'a produit (voir `ActionRun`).
+
 ## AIUsage
 
 Trace d'un appel modèle. Elle couvre **tous** les appels, y compris ceux qui ne produisent rien de visible.
@@ -959,7 +996,10 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | collection_link_type | nominatif, public |
 | submission_status | pending, validated, rejected |
 | submitted_wish_review | pending, retained, discarded |
-| generated_profile_status | generated, approved, shared |
+| generated_profile_status | generated, approved |
+| portrait_orientation | relation, your_progress, our_progress, motivation, support, character, pride, affection, gratitude, what_you_taught_me, wish, tribute |
+| portrait_visual | illustration, photo, none |
+| illustration_family | nature, animal, abstract |
 | generated_message_status | generated, edited, sent |
 | received_wish_status | pending, approved, rejected |
 | action_run_status | success, failure |
@@ -969,6 +1009,7 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | admin_role | support, admin |
 | ai_usage_status | success, error, timeout |
 | ai_purpose | note_classification, sensitive_detection, portrait, gift_ideas, wish_message |
+| prompt_kind | message, illustration, photo_style, note_classification, sensitive_detection |
 | audit_actor | admin, user |
 | notification_type | event_reminder, event_day_of, digest, contribution_received, wish_received, enrichment_nudge_global, enrichment_nudge_person, generation_ready, payment_succeeded, payment_failed, credits_received, login_code, security, account |
 | notification_channel | email, push, in_app |

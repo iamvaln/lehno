@@ -25,7 +25,7 @@ export const en: typeof fr = {
   emailLabel: "Your email address",
   waitlist: "We're getting ready to launch. We'll let you know the day the app opens.",
   merciTitre: "Noted. See you soon.",
-  merciSous: "You'll get a note the day we open — nothing else.",
+  merciSous: "We'll let you know as soon as we open.",
   waitlistErreur: "That didn't go through. Try again in a moment.",
   altApple: "Download on the App Store",
   altGoogle: "Get it on Google Play",
