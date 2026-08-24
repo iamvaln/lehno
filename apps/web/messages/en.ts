@@ -7,6 +7,7 @@ export const en: typeof fr = {
 
   navComment: "How it works",
   navContenu: "What's inside",
+  navMur: "The Wall",
   navPrix: "What it costs",
   cta: "Get started",
 

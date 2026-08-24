@@ -19,6 +19,7 @@ export function SiteHeader({ t, langue }: { t: Messages; langue: Langue }): Reac
   const liens: { href: string; texte: string }[] = [
     { href: "#comment", texte: t.navComment },
     { href: "#contenu", texte: t.navContenu },
+    { href: "#mur", texte: t.navMur },
     { href: "#prix", texte: t.navPrix },
   ];
 

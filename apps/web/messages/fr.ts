@@ -8,6 +8,7 @@ export const fr = {
 
   navComment: "Comment ça marche",
   navContenu: "Ce qu'elle contient",
+  navMur: "Le Mur",
   navPrix: "Ce que ça coûte",
   cta: "Commencer",
 
