@@ -80,11 +80,16 @@ describe("annuaire des proches", () => {
     });
 
     // Seconde protection, indépendante de la première : si l'appelant force
-    // le passage jusqu'au service (contournement du typage, comme un `as`
-    // le permettrait), la fiche appartient tout de même au demandeur —
-    // Scope.create écrit la portée après les données fournies, donc un
-    // userId glissé par l'appelant est écrasé, jamais honoré.
-    it("un userId forcé jusqu'au service n'usurpe pas l'appartenance de la fiche", async () => {
+    // le passage jusqu'au service (contournement du typage, comme un `as` le
+    // permettrait), la fiche appartient tout de même au demandeur — parce que
+    // le service ÉNUMÈRE les champs qu'il écrit au lieu d'étaler l'entrée, et
+    // qu'une clé inconnue n'atteint donc jamais le dépôt.
+    //
+    // Ce n'est PAS l'ordre d'écriture de Scope.create que ce cas éprouve :
+    // inverser cet ordre laisse ce test vert, la preuve étant portée par
+    // « ne laisse pas créer une ressource au nom d'un autre » dans
+    // tenancy.test.ts. Deux gardes en série, une preuve chacune.
+    it("un userId forcé jusqu'au service n'atteint pas le dépôt : le service énumère ses champs", async () => {
       const usurpé = { displayName: "Otage", userId: bila } as unknown as CreatePersonInput;
       await service.create(awa, usurpé);
 
