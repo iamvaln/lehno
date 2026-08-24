@@ -9,7 +9,7 @@ export const SEMANTIC_ROLES = [
   "borderHairline", "borderObject", "focusRing",
   "celebrate", "onCelebrate",
   "feedbackInfo", "feedbackInfoBg", "feedbackSuccess", "feedbackSuccessBg",
-  "feedbackWarning", "feedbackWarningBg", "feedbackError", "feedbackErrorBg",
+  "feedbackWarning", "feedbackWarningBg", "feedbackError", "feedbackErrorBg", "feedbackErrorPress",
 ] as const;
 
 export type SemanticRole = (typeof SEMANTIC_ROLES)[number];
@@ -29,7 +29,7 @@ export const semantic: Record<Theme, Record<SemanticRole, PrimitiveName>> = {
     feedbackInfo: "info", feedbackInfoBg: "infoBg",
     feedbackSuccess: "success", feedbackSuccessBg: "successBg",
     feedbackWarning: "warning", feedbackWarningBg: "warningBg",
-    feedbackError: "error", feedbackErrorBg: "errorBg",
+    feedbackError: "error", feedbackErrorBg: "errorBg", feedbackErrorPress: "errorPress",
   },
   dark: {
     surfacePage: "paper", surfacePanel: "lilac", surfaceCard: "card",
@@ -43,7 +43,7 @@ export const semantic: Record<Theme, Record<SemanticRole, PrimitiveName>> = {
     feedbackInfo: "info", feedbackInfoBg: "infoBg",
     feedbackSuccess: "success", feedbackSuccessBg: "successBg",
     feedbackWarning: "warning", feedbackWarningBg: "warningBg",
-    feedbackError: "error", feedbackErrorBg: "errorBg",
+    feedbackError: "error", feedbackErrorBg: "errorBg", feedbackErrorPress: "errorPress",
   },
 };
 

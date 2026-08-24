@@ -21,6 +21,10 @@ export const primitives = {
     success: "#166B43",
     warning: "#8A5A00",
     error: "#B3261E",
+    // Le fond du bouton destructeur pendant l'appui. Sur un téléphone il n'y a
+    // pas de survol : la pression est le seul retour que reçoit le doigt, et le
+    // web l'obtenait par filter: brightness(), qui n'existe pas en natif.
+    errorPress: "#8E1E17",
     infoBg: "#EDEAF7",
     successBg: "#E6F4EC",
     warningBg: "#FBF0DC",
@@ -51,6 +55,7 @@ export const primitives = {
     success: "#7ED9A6",
     warning: "#E3B25C",
     error: "#F2837A",
+    errorPress: "#C9635B",
     infoBg: "#2E2945",
     successBg: "#163024",
     warningBg: "#322814",
