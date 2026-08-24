@@ -23,7 +23,7 @@ Le **service** OTP est réemployé tel quel : hachage HMAC sous clé, comparaiso
 
 ## Les tâches
 
-- [ ] **1. Schéma** — `Admin`, enum `AdminRole`, `AuditLog` (avec `reason`), `AdminOtpCode`, `AdminRefreshToken`. Migration, et tests de schéma sur le modèle de `schema-identity.test.ts`. Les deux tables d'administration ne référencent **que** `admin(id)` : aucune colonne ne pointe vers `user`.
+- [x] **1. Schéma** — `Admin`, enum `AdminRole`, `AuditLog` (avec `reason`), `AdminOtpCode`, `AdminRefreshToken`. Migration, et tests de schéma sur le modèle de `schema-identity.test.ts`. Les deux tables d'administration ne référencent **que** `admin(id)` : aucune colonne ne pointe vers `user`.
 - [ ] **2. Entrer** — `POST /admin/auth/otp`, `otp/verify`, `DELETE /admin/auth/session`. Réemploi d'`OtpService` et `TokenService`. **La réponse ne dit jamais si un compte existe.**
 - [ ] **3. Les deux gardes** — `AdminGuard`, `RolesGuard`, décorateur `@Role`. Un compte désactivé (`is_active = false`) est refusé même avec un jeton valide.
 - [ ] **4. Le journal** — `AuditService.consigner()`, appelé par chaque écriture. **Sans motif, l'appel échoue avant d'atteindre la base.** C'est le point d'appui de tout le reste.
