@@ -73,8 +73,12 @@ const GABARITS: Record<string, string> = {
 // vient donc pas du dictionnaire, à la différence de tout le reste.
 const MARQUE = "Lehno";
 
-// Hors de l'outil : la bascule de rôle n'est pas un contrôle du produit — c'est
-// le serveur qui décide d'un rôle. Elle disparaît avec l'authentification réelle.
+// Hors de l'outil, et hors de la construction de production : la bascule de rôle
+// n'est pas un contrôle du produit — c'est le serveur qui décide d'un rôle, et un
+// bandeau qui laisse choisir le sien n'a rien à faire dans un outil livré. Elle ne
+// sert qu'à regarder les deux interfaces pendant qu'on les écrit, d'où le garde
+// « import.meta.env.DEV » : Vite l'évalue à la compilation et la bande disparaît
+// du paquet, code compris.
 function BandeApercu(
   { t, role, setRole, connecte, setConnecte }:
   {
@@ -155,7 +159,7 @@ export function App(): ReactNode {
   if (!connecte) {
     return (
       <>
-        <BandeApercu t={t} role={role} setRole={setRole} connecte={connecte} setConnecte={setConnecte} />
+        {import.meta.env.DEV ? <BandeApercu t={t} role={role} setRole={setRole} connecte={connecte} setConnecte={setConnecte} /> : null}
         <Connexion langue={langue} onEntre={() => setConnecte(true)} />
       </>
     );
@@ -166,7 +170,7 @@ export function App(): ReactNode {
       {/* Bande d'aperçu, hors de l'outil : la bascule de rôle n'est pas un
           contrôle du produit — c'est le serveur qui décide d'un rôle. Elle
           disparaît le jour où l'authentification arrive (tâche 10). */}
-      <BandeApercu t={t} role={role} setRole={setRole} connecte={connecte} setConnecte={setConnecte} />
+      {import.meta.env.DEV ? <BandeApercu t={t} role={role} setRole={setRole} connecte={connecte} setConnecte={setConnecte} /> : null}
 
       <AdminShell
         navOuverte={navOuverte}
