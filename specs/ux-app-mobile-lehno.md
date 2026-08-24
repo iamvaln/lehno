@@ -34,7 +34,7 @@ Ces termes reviennent tout au long du document.
 
 L'application a un **utilisateur principal** : la personne qui tient à ne rien oublier des dates importantes de ses proches et à bien les célébrer — celle pour qui Lehno est d'abord conçu. Pour elle, une fois connectée, l'application est un **espace privé** : ses fiches, ses notes, la validation des contributions et la génération n'existent que pour elle. L'application accueille néanmoins d'autres personnes : les proches qui complètent une fiche ou déposent un vœu, et celles qui l'ont installée sans avoir encore créé de compte — un public que l'application cherche justement à convertir (voir plus bas).
 
-Mais l'application ne se limite pas à ce rôle privé : elle **affiche aussi les surfaces publiques** — le Mur d'un proche, un portrait partagé, un formulaire de collecte ou de dépôt de vœux — directement en son sein. Ces surfaces existent en deux versions, alimentées par les mêmes données : une version **web**, pour les personnes qui n'ont pas encore l'application, et une version **dans l'application**, pour celles qui l'ont. Quand une personne équipée de l'application ouvre un lien public, celui-ci s'ouvre dans l'application plutôt que dans le navigateur, pour une expérience plus fluide.
+Mais l'application ne se limite pas à ce rôle privé : elle **affiche aussi les surfaces publiques** — le Mur d'un proche, un formulaire de collecte ou de dépôt de vœux — directement en son sein. Ces surfaces existent en deux versions, alimentées par les mêmes données : une version **web**, pour les personnes qui n'ont pas encore l'application, et une version **dans l'application**, pour celles qui l'ont. Quand une personne équipée de l'application ouvre un lien public, celui-ci s'ouvre dans l'application plutôt que dans le navigateur, pour une expérience plus fluide.
 
 Ce choix sert aussi l'**activation**. Une personne peut installer l'application, consulter le Mur d'un proche ou répondre à une collecte **sans avoir encore créé de compte**, puis être invitée, au bon moment, à créer le sien. On convertit ainsi une installation *dormante* — quelqu'un qui a l'application et a déjà agi, mais n'a pas de compte — en utilisateur actif.
 
@@ -98,7 +98,7 @@ Une **cloche de notifications** (le centre de notifications, voir 3.13) reste pr
 
 **Rôle.** Créer le compte et poser le strict nécessaire pour démarrer.
 
-**Usage avant compte.** L'application peut être utilisée sans compte pour tout ce qui relève du public : consulter le Mur d'un proche, répondre à une collecte, laisser un vœu, ouvrir un portrait partagé (voir 3.12). La création de compte est proposée au moment où elle prend du sens — pour enregistrer ses propres proches, obtenir son propre espace, tenir ses dates — la consultation, elle, reste ouverte à tout moment.
+**Usage avant compte.** L'application peut être utilisée sans compte pour tout ce qui relève du public : consulter le Mur d'un proche, répondre à une collecte, laisser un vœu (voir 3.12). La création de compte est proposée au moment où elle prend du sens — pour enregistrer ses propres proches, obtenir son propre espace, tenir ses dates — la consultation, elle, reste ouverte à tout moment.
 
 **Principe.** Les trois voies mènent au **même compte** : si l'adresse correspond à un compte existant, la connexion s'y rattache plutôt que d'en créer un second.
 
@@ -265,7 +265,20 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 - Le résultat est présenté pour être **relu et ajusté** ; l'envoi et la publication restent des gestes de l'utilisateur.
 - Le **bonus offert à l'inscription** permet d'essayer les trois features. Lorsqu'il s'épuise, une demande de génération mène à la recharge (3.9) : le paiement se présente à cet instant précis, au moment du besoin, plutôt qu'en amont.
 
-**Portrait.** Une description singulière de la relation qu'entretient l'utilisateur avec un proche, composée à partir des notes accumulées à son sujet. Il appartient au **proche** et se génère **à tout moment** depuis sa fiche — aujourd'hui, puis de nouveau dans six mois ; plusieurs portraits coexistent ainsi dans le temps et donnent à voir l'évolution de la relation. L'utilisateur choisit la **matière** retenue : tout l'historique des notes (par défaut), ou une période — les douze derniers mois, depuis le dernier portrait, ou des dates qu'il fixe. Une composition personnelle qui réunit trois couches : une **illustration** artistique en fond (couleurs, motifs et ambiance qui se dégagent des notes), un **nuage de mots** qui décrit le proche — le nom en grand, puis les traits et souvenirs puisés dans l'ensemble de ses notes — et un **mot en bas** : une courte phrase, puis une **signature** facultative de l'expéditeur — une formule d'envoi (dans le registre de la relation) suivie de son nom, par exemple « Amicalement, Valentine ». La formule suit le ton configuré pour le proche et se réécrit librement ; le nom reprend celui de l'utilisateur, ajustable au cas par cas. Proposée remplie par défaut, la signature se retire d'un geste — utile pour un portrait partagé publiquement. Un **pied de marque** discret clôt chaque portrait — le nom Lehno, la phrase de marque *« Chaque date qui compte, bien célébrée »*, les réseaux sociaux et le site (@lehno.app) — de sorte qu'un portrait partagé fasse aussi connaître l'application. L'utilisateur oriente le rendu par quelques mots. Le portrait s'**approuve**, puis se **partage** — dans l'application (sur le Mur, dans la fiche) comme à l'extérieur, via un lien public et un aperçu soigné pour les réseaux. Une première version compose le portrait à partir du texte de la fiche ; la possibilité d'ajouter une **image en entrée** arrivera dans un second temps, le traitement de l'image demandant davantage.
+**Portrait.** Une **image** qu'on compose pour un proche et qu'on lui envoie, accompagnée d'un mot : une illustration de ce qu'on veut lui exprimer à ce moment-là, fondée sur la relation qu'on a avec lui. Il appartient au **proche** et se génère **à tout moment** depuis sa fiche ; plusieurs portraits coexistent dans le temps et donnent à voir l'évolution de la relation.
+
+**Le studio.** Avant de lancer la production, l'utilisateur règle quatre choses.
+
+- **L'orientation** — ce qu'il veut dire. Notre relation · tes progrès · nos progrès · une motivation · un soutien · ce qui te caractérise · ma fierté · mon affection · ma gratitude · ce que tu m'as appris · un vœu · un hommage. C'est le premier choix, et il commande le texte comme l'image. **L'hommage est à part** : registre sobre, aucun accent chaud, aucune illustration joyeuse.
+- **L'image** — une **illustration**, une **photo traitée**, ou **aucune**. Une seule voie à la fois : deux images sur un portrait le surchargent.
+- **Le détail de l'image** — pour une illustration, la famille (nature, animal, abstrait) et quelques mots libres sur ce qu'il faut savoir du proche pour le dessiner ; pour une photo, le style parmi ceux que propose la marque. Une photo n'est jamais laissée telle quelle.
+- **La matière** — la plage de notes retenue : tout l'historique (par défaut), les douze derniers mois, depuis le dernier portrait, ou des dates fixées.
+
+**Ce que la composition porte.** Le **nom** du proche, le **message** produit selon l'orientation, une **note de l'expéditeur** courte et discrète (« Fait avec soin par Valentine »), et un **pied de marque** — lehno.app et les identifiants sociaux — assez discret pour ne pas voler la place, assez présent pour faire connaître l'application. Le tout dans une bande basse lorsqu'il y a une image ; sur toute la surface lorsqu'il n'y en a pas.
+
+**Le portrait s'approuve** — l'image se compose alors —, puis **s'enregistre et s'envoie** comme n'importe quelle photo. Il ne s'expose à aucune adresse publique : c'est le pied de marque, inscrit dans l'image, qui fait connaître l'application.
+
+*La composition détaillée, les gabarits et les briefs de génération figurent dans `spec-portrait-lehno.md`.*
 
 **Parcours du portrait.**
 1. **Entrée** — depuis la fiche du proche (3.4), à tout moment ; ou depuis la préparation d'un anniversaire (3.21).
@@ -395,7 +408,6 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 **Ce qui s'ouvre dans l'application.** Lorsqu'une personne équipée de l'application ouvre un lien public, il s'affiche dans l'application plutôt que dans le navigateur :
 - le **Mur d'un proche** (ses goûts, ses souhaits, ses vœux publiés) ;
 - un **formulaire de collecte** (compléter la fiche d'un proche) ou de **dépôt de vœux** (laisser un message d'anniversaire) ;
-- un **portrait partagé**.
 
 Le contenu et le comportement de ces surfaces sont décrits dans la spécification des surfaces publiques ; l'application les présente simplement dans un cadre plus fluide. Un avantage concret : une personne connectée qui répond à une collecte est reconnue automatiquement, son pseudo étant déjà connu.
 
@@ -563,23 +575,20 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 
 **Rôle.** Voir un portrait en grand, décider de le garder, et le diffuser. On y arrive juste après une génération, ou depuis la collection de portraits d'une fiche (3.4).
 
-**Contenu.** Le portrait en pleine page, avec sa date et la plage de notes retenue. En dessous, ce qui reste modifiable : la courte phrase et la signature (facultative). Le pied de marque Lehno fait partie de l'image.
+**Contenu.** Le portrait en pleine page, avec sa date et la plage de notes retenue. En dessous, ce qui reste modifiable : la courte phrase et la signature (facultative). **Le pied de marque Lehno fait partie de l'image** — c'est ce qui fait connaître l'application quand le portrait circule.
 
 **Actions.**
 - **Approuver** — le portrait passe de produit à validé, et rejoint la collection du proche.
 - **Régénérer** — relancer avec d'autres mots, une autre plage ou un autre ton (nouveau crédit, voir 3.7).
-- **Partager dans l'application** — l'exposer sur son Mur (3.10).
-- **Partager à l'extérieur** — l'application crée une adresse publique et un aperçu soigné pour les réseaux, puis ouvre la feuille de partage du téléphone.
+- **Partager** — l'application ouvre la feuille de partage du téléphone avec **l'image**, accompagnée d'un mot que l'utilisateur ajuste. Elle part par sa messagerie, comme n'importe quelle photo.
 - **Enregistrer l'image** sur le téléphone.
-- **Retirer le partage** — l'adresse publique cesse de répondre ; le portrait reste dans la collection.
 
 **Où mènent les éléments.**
 - *Régénérer* → composition du portrait (3.7).
-- *Partager sur mon Mur* → gestion du Mur (3.10).
-- *Partager à l'extérieur* / *enregistrer* → feuille de partage du téléphone.
+- *Partager* / *enregistrer* → feuille de partage du téléphone.
 - Le proche (en-tête) → sa fiche (3.4).
 
-**États particuliers.** Portrait encore à valider (l'approbation est mise en avant) ; portrait déjà partagé (l'adresse publique est rappelée, avec le moyen de la retirer) ; signature retirée (le portrait s'affiche sans nom d'expéditeur, utile pour un partage public).
+**États particuliers.** Portrait encore à valider (l'approbation est mise en avant ; l'image se compose à ce moment-là) ; signature retirée (le portrait s'affiche sans nom d'expéditeur).
 
 ### 3.23 Mon profil
 
@@ -613,7 +622,7 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 **Déconnexion.** Une confirmation courte, qui rassure : les données restent en ligne et se retrouvent intactes à la prochaine connexion. Puis retour à l'écran de connexion (3.1).
 
 **Suppression du compte, en trois temps.**
-1. **Ce qui disparaît** — la liste, sans détour : les fiches et leurs notes, les dates, les souhaits, les portraits et messages produits, le Mur et les vœux reçus. Les liens publics partagés cessent de répondre. Ce qui a déjà été envoyé à d'autres (un message, un portrait partagé) ne revient pas.
+1. **Ce qui disparaît** — la liste, sans détour : les fiches et leurs notes, les dates, les souhaits, les portraits et messages produits, le Mur et les vœux reçus. Les liens publics partagés cessent de répondre. Ce qui a déjà été envoyé à d'autres (un message, une image de portrait) ne revient pas.
 2. **Le solde et la raison du départ** — s'il reste des crédits achetés, leur remboursement est proposé (voir ci-dessous). L'écran demande aussi, **facultativement**, la raison du départ : quelques motifs à choisir et un champ libre, qu'on peut passer d'un geste.
 3. **Confirmer** — saisir son pseudo, puis un code à usage unique reçu par e-mail.
 

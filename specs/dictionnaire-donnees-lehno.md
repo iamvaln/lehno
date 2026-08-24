@@ -626,7 +626,7 @@ Souhait individuel d'une `Submission`, porté en ligne (plutôt qu'en blob) pour
 
 ## GeneratedProfile
 
-Portrait généré et persistant, partageable.
+Portrait généré et persistant. C'est une **image** que l'utilisateur envoie à son proche, accompagnée d'un mot.
 
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
@@ -637,14 +637,27 @@ Portrait généré et persistant, partageable.
 | source_to | date | oui | — | — | Fin de la plage de notes retenue ; nul si tout l'historique |
 | event_occurrence_id | uuid | oui | — | — | FK → event_occurrence(id) on delete set null ; renseigné si le portrait a été produit depuis la préparation d'un anniversaire |
 | user_id | uuid | non | — | — | Cloisonnement |
-| content | text | non | — | — | Portrait généré |
-| status | generated_profile_status (enum) | non | — | 'generated' | `generated` \| `approved` \| `shared` |
-| share_token | varchar(32) | oui | — | — | Adresse publique de partage (si `shared`) |
+| orientation | portrait_orientation (enum) | non | — | — | Ce que le portrait exprime ; commande le texte comme l'illustration |
+| visual_kind | portrait_visual (enum) | non | — | 'illustration' | `illustration` \| `photo` \| `none` — une seule voie d'image à la fois |
+| illustration_family | illustration_family (enum) | oui | — | — | `nature` \| `animal` \| `abstract` ; si `visual_kind = illustration` |
+| photo_style | photo_style (enum) | oui | — | — | Le style appliqué à la photo ; si `visual_kind = photo` |
+| brief_text | text | oui | — | — | Ce que l'utilisateur ajoute pour orienter le dessin ; conservé le temps de la génération |
+| sender_note | text | oui | — | — | La note de l'expéditeur, courte et discrète (« Fait avec soin par Valentine ») |
+| content | text | non | — | — | Le message produit, deux à quatre phrases à la première personne |
+| content_short | text | oui | — | — | Version courte du message, pour le format vertical |
+| status | generated_profile_status (enum) | non | — | 'generated' | `generated` \| `approved` |
+| image_url | text | oui | — | — | L'image composée, produite à l'approbation ; c'est elle que l'utilisateur enregistre et envoie |
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
-- Enum `generated_profile_status` : `generated`, `approved`, `shared`.
-- Le partage social s'appuie sur `share_token` + balises Open Graph ; trace discrète de Lehno.
+- Enum `generated_profile_status` : `generated`, `approved`.
+- Enum `portrait_orientation` : `relation`, `your_progress`, `our_progress`, `motivation`, `support`, `character`, `pride`, `affection`, `gratitude`, `what_you_taught_me`, `wish`, `tribute`.
+- Enum `portrait_visual` : `illustration`, `photo`, `none`.
+- Enum `illustration_family` : `nature`, `animal`, `abstract`.
+- Enum `photo_style` : trois styles définis par la marque ; leurs noms restent à arrêter.
+- **`tribute` est à part.** Il neutralise l'accent chaud, écarte toute illustration joyeuse et emprunte un registre sobre : une occasion sensible ne partage pas le gabarit d'une déclaration de fierté.
+- **La photo ne transite qu'au moment du traitement.** Elle n'est pas conservée ; seule l'image produite l'est (`image_url`).
+- **Le portrait est une image, pas une page.** Il ne s'expose à aucune adresse publique : l'utilisateur l'enregistre et l'envoie lui-même, accompagné d'un mot. Le **pied de marque fait partie de l'image** — c'est ainsi qu'il fait connaître Lehno, sans lien à suivre.
 - Le portrait se génère **à tout moment** depuis la fiche du proche, et **plusieurs portraits coexistent** dans le temps pour une même personne : ils donnent à voir l'évolution de la relation. `source_from` / `source_to` mémorisent la plage de notes retenue (les deux nuls = tout l'historique).
 
 ## GeneratedMessage
@@ -959,7 +972,10 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | collection_link_type | nominatif, public |
 | submission_status | pending, validated, rejected |
 | submitted_wish_review | pending, retained, discarded |
-| generated_profile_status | generated, approved, shared |
+| generated_profile_status | generated, approved |
+| portrait_orientation | relation, your_progress, our_progress, motivation, support, character, pride, affection, gratitude, what_you_taught_me, wish, tribute |
+| portrait_visual | illustration, photo, none |
+| illustration_family | nature, animal, abstract |
 | generated_message_status | generated, edited, sent |
 | received_wish_status | pending, approved, rejected |
 | action_run_status | success, failure |
