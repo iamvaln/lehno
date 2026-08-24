@@ -11,10 +11,19 @@ const ALGORITHM = "HS256" as const;
 const ACCESS_TTL_S = 30 * 60;
 const REFRESH_TTL_MS = 12 * 60 * 60_000;
 
-// La marque qui sépare les deux mondes. Sans elle, le même secret signant les
-// deux, un jeton d'utilisateur passerait la garde d'administration : il porte
-// un « sub » comme un autre. Deux systèmes de comptes séparés en base le
-// resteraient en apparence, et pas dans les faits.
+// Une clé de signature distincte de celle des utilisateurs. Un JWT ne consulte
+// aucune table : il porte sa preuve en lui-même, et une garde qui vérifie une
+// signature ne sait rien de l'URL par laquelle il est arrivé. Sous un secret
+// commun, un jeton d'utilisateur — qui porte un « sub » comme un autre — aurait
+// donc passé la garde d'administration, deux tables séparées ou non.
+//
+// Trois choses que la clé distincte donne et que la marque de type ne donne
+// pas : le jeton étranger échoue **à la signature**, avant qu'on lise sa charge ;
+// la compromission d'un secret n'ouvre pas l'autre monde ; et l'une des deux
+// clés peut tourner sans invalider les sessions de l'autre.
+//
+// La marque de type reste, en ceinture et bretelles : elle dit l'intention, et
+// elle protégerait encore si les deux clés venaient un jour à se confondre.
 const TYPE = "adm" as const;
 
 export type PaireAdmin = { accessToken: string; refreshToken: string; expiresIn: number };
@@ -23,9 +32,9 @@ export type PaireAdmin = { accessToken: string; refreshToken: string; expiresIn:
 export class AdminTokenService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject("JWT_SECRET") private readonly secret: string,
+    @Inject("ADMIN_JWT_SECRET") private readonly secret: string,
   ) {
-    if (!secret) throw new Error("JWT_SECRET manquant");
+    if (!secret) throw new Error("ADMIN_JWT_SECRET manquant : refuser de démarrer plutôt que de signer sans clé");
   }
 
   // Pas de clé ici, à la différence de l'OTP : 256 bits tirés au hasard ne

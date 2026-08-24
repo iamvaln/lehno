@@ -10,6 +10,8 @@ import { TokenService } from "../src/auth/token.service.js";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
+// Distinct de SECRET, et c'est le sujet d'un des tests : deux mondes, deux clés.
+const SECRET_ADMIN = "Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh";
 
 describe("administration — l'entrée par code", () => {
   let db: TestDb;
@@ -22,6 +24,7 @@ describe("administration — l'entrée par code", () => {
     process.env.DATABASE_URL = db.url;
     process.env.OTP_PEPPER = PEPPER;
     process.env.JWT_SECRET = SECRET;
+    process.env.ADMIN_JWT_SECRET = SECRET_ADMIN;
     process.env.LEHNO_MAIL_CONSOLE = "1";
     process.env.LEHNO_LOG_OTP = "1";
     app = await NestFactory.create(AppModule, { logger: false });
@@ -119,10 +122,10 @@ describe("administration — l'entrée par code", () => {
     expect(reponse.status).toBeGreaterThanOrEqual(400);
   });
 
-  // Le même secret signe les deux mondes. Sans marque de type dans la charge,
-  // un jeton d'utilisateur porte un « sub » comme un autre et passerait la garde
-  // d'administration : deux systèmes séparés en base le resteraient en apparence
-  // seulement.
+  // Un JWT ne consulte aucune table : il porte sa preuve en lui-même, et une
+  // garde qui vérifie une signature ne sait rien de l'URL par laquelle le jeton
+  // est arrivé. C'est pour ça que des tables séparées ne suffisaient pas — il
+  // fallait des clés séparées.
   it("un jeton d'utilisateur n'ouvre pas l'administration", async () => {
     const jetonsAdmin = app.get(AdminTokenService);
     const jetonsUtilisateur = app.get(TokenService);
@@ -133,6 +136,18 @@ describe("administration — l'entrée par code", () => {
     const paire = await jetonsUtilisateur.issuePair(u.id);
 
     expect(() => jetonsAdmin.verifierAcces(paire.accessToken)).toThrow();
+  });
+
+  // La réciproque, qui vaut d'être tenue aussi : une session d'exploitation ne
+  // doit pas ouvrir le compte d'un utilisateur.
+  it("un jeton d'administration n'ouvre pas un compte d'utilisateur", async () => {
+    const sam = await creerAdmin();
+    const jetonsAdmin = app.get(AdminTokenService);
+    const jetonsUtilisateur = app.get(TokenService);
+
+    const paire = await jetonsAdmin.ouvrir(sam.id);
+
+    expect(() => jetonsUtilisateur.verifyAccess(paire.accessToken)).toThrow();
   });
 
   it("aucune session d'administration n'atterrit dans les tables des utilisateurs", async () => {

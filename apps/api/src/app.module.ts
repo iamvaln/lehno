@@ -39,6 +39,10 @@ import { AdminTokenService } from "./admin/admin-token.service.js";
     // voulu : mieux vaut ne pas démarrer que hacher ou signer sans clé.
     { provide: "OTP_PEPPER", useFactory: () => process.env.OTP_PEPPER },
     { provide: "JWT_SECRET", useFactory: () => process.env.JWT_SECRET },
+    // Clé propre à l'administration : voir AdminTokenService. Deux mondes
+    // séparés jusque dans leurs signatures, sans quoi la séparation des tables
+    // ne serait qu'apparente.
+    { provide: "ADMIN_JWT_SECRET", useFactory: () => process.env.ADMIN_JWT_SECRET },
     // Même logique pour les vérificateurs fédérés : construits à
     // l'instanciation, ils refusent de démarrer sans l'identifiant client
     // du fournisseur (voir GoogleIdentityVerifier / AppleIdentityVerifier).
