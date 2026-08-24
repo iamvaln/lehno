@@ -15,26 +15,38 @@ export function ClosingBand(
       <div
         style={{
           maxWidth: "var(--page-max)", margin: "0 auto", padding: "clamp(52px,8vw,88px) var(--page-gutter)",
-          display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))",
-          gap: "clamp(28px,4vw,56px)", alignItems: "center",
+          // Flex et non grille : la maquette veut un titre qui prend toute la
+          // largeur disponible et une action qui se serre à droite, alignés
+          // par le bas. Une grille en colonnes égales bridait le titre à la
+          // moitié de la bande et le recentrait — c'est ce qui se voyait.
+          display: "flex", gap: "clamp(28px,5vw,64px)",
+          alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap",
         }}
       >
         <h2
           className="titre"
           style={{
-            fontWeight: "var(--font-display-medium)", fontSize: "clamp(32px,5vw,52px)", lineHeight: "var(--leading-display)",
-            letterSpacing: "var(--tracking-display)", margin: 0, maxWidth: "20ch", textWrap: "balance",
+            fontWeight: "var(--font-display-medium)", fontSize: "clamp(34px,6vw,60px)", lineHeight: "var(--leading-display)",
+            letterSpacing: "var(--tracking-display)", margin: 0,
+            flex: "1 1 0", minWidth: 0, textWrap: "balance",
           }}
         >
           {t.finTitre}
         </h2>
-        <div style={{ display: "flex", gap: "var(--space-14)", alignItems: "center", flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex", gap: "var(--space-14)", alignItems: "center",
+            flexWrap: "nowrap", flex: "0 0 auto",
+          }}
+        >
           {avantLancement ? (
             <a
-              href="#commencer"
+              href={`/${langue}#commencer`}
               style={{
-                background: "var(--celebrate)", color: "var(--on-celebrate)", padding: "var(--space-12) var(--space-20)",
-                borderRadius: "var(--radius-sm)", fontWeight: "var(--font-body-bold)", fontSize: "var(--text-body-s)",
+                // La maquette donne 16px/30px, rayon 12, texte 17 : une action
+                // de clôture est plus grosse qu'un bouton de formulaire.
+                background: "var(--celebrate)", color: "var(--on-celebrate)", padding: "var(--space-16) var(--space-32)",
+                borderRadius: "var(--radius-md)", fontWeight: "var(--font-body-bold)", fontSize: "var(--text-body-l)",
                 textDecoration: "none", fontFamily: "var(--font-body)",
               }}
             >

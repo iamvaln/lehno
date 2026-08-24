@@ -16,11 +16,14 @@ export function SiteHeader({ t, langue }: { t: Messages; langue: Langue }): Reac
   const [ouvert, setOuvert] = useState(false);
   const fermer = (): void => setOuvert(false);
 
+  // Chemins absolus, pas de simples ancres : cet en-tête coiffe aussi les
+  // pages secondaires (FAQ, contact, pages légales), où « #comment » ne
+  // désigne rien et laisse le visiteur sur place avec une URL sale.
   const liens: { href: string; texte: string }[] = [
-    { href: "#comment", texte: t.navComment },
-    { href: "#contenu", texte: t.navContenu },
-    { href: "#mur", texte: t.navMur },
-    { href: "#prix", texte: t.navPrix },
+    { href: `/${langue}#comment`, texte: t.navComment },
+    { href: `/${langue}#contenu`, texte: t.navContenu },
+    { href: `/${langue}#mur`, texte: t.navMur },
+    { href: `/${langue}#prix`, texte: t.navPrix },
   ];
 
   return (
