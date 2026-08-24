@@ -25,6 +25,18 @@ describe("les polices embarquées", () => {
   // Un fichier qui traîne sans être demandé finit par être chargé, et alourdit
   // le paquet sans rien rendre. Le dossier dit exactement ce que les styles
   // demandent — ni plus, ni moins.
+  // Metro n'accepte pas de chemin dynamique dans require : la table qui associe
+  // un nom à son fichier est donc écrite à la main, et c'est le seul endroit du
+  // port où une recopie subsiste. Elle est vérifiée ici plutôt que découverte
+  // sur un appareil — un nom absent de la table rend en police système.
+  it("la table chargée par l'application couvre exactement les huit", () => {
+    const source = readFileSync("polices/index.ts", "utf-8");
+    for (const nom of NOMS) {
+      expect(source, nom).toContain(`"${nom}": require("./${nom}.ttf")`);
+    }
+    expect(source.match(/require\("\.\/[^"]+\.ttf"\)/g) ?? []).toHaveLength(NOMS.length);
+  });
+
   it("ne porte aucun fichier que les styles ne demandent pas", () => {
     const surDisque = readdirSync("polices")
       .filter((f) => f.endsWith(".ttf"))

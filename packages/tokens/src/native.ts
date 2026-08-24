@@ -46,11 +46,13 @@ export const nativeSize = Object.fromEntries(
 // d'une page large décrivent une mise en page de navigateur — RN n'a ni ch ni
 // clamp, et un téléphone n'a pas de gouttière. Les convertir donnerait des
 // nombres qui ont l'air justes sans l'être.
+export type PasDEspacement = SansPrefixe<keyof typeof spacing, "space">;
+
 export const nativeSpace = Object.fromEntries(
   Object.entries(spacing)
     .filter(([cle]) => cle.startsWith("space"))
     .map(([cle, valeur]) => [Number(cle.slice(5)), sansUnite(valeur)]),
-) as Record<number, number>;
+) as Record<PasDEspacement, number>;
 
 // Un plancher tactile, pas un pas d'échelle : il vit donc à part. 44, jamais
 // moins, même quand le fond visible est plus court.
