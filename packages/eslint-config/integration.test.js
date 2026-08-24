@@ -68,19 +68,27 @@ describe("preuve d'intégration : ESLint réel sur apps/web/components/ui/", () 
   });
 });
 
-describe("intégrité de la liste d'exclusion (apps/web/components/*.tsx hérités)", () => {
-  it("ne référence que des fichiers qui existent réellement", async () => {
+describe("périmètre de la règle d'adhérence", () => {
+  // Ce test exigeait autrefois une liste d'exclusion non vide : les quinze
+  // composants d'avant le socle de design y figuraient, le temps qu'ils soient
+  // réécrits. Ils l'ont été, la liste a disparu, et le test est devenu faux.
+  //
+  // Il garde maintenant l'invariant inverse, celui qui compte désormais :
+  // AUCUNE exclusion. Une exclusion rajoutée en douce est le moyen le plus
+  // simple de faire taire cette règle sans qu'aucune chaîne ne rougisse.
+  it("couvre apps/web sans aucune exclusion", async () => {
     const configRacine = (await import("../../eslint.config.js")).default;
     const blocAdherence = configRacine.find(
       (bloc) => bloc.rules && Object.prototype.hasOwnProperty.call(bloc.rules, "lehno/jetons-seulement"),
     );
 
     expect(blocAdherence).toBeDefined();
-    expect(Array.isArray(blocAdherence.ignores)).toBe(true);
-    expect(blocAdherence.ignores.length).toBeGreaterThan(0);
+    expect(blocAdherence.files, "la règle doit viser apps/web").toBeDefined();
 
-    for (const chemin of blocAdherence.ignores) {
-      expect(existsSync(join(RACINE, chemin)), `${chemin} devrait exister`).toBe(true);
-    }
+    const exclusions = blocAdherence.ignores ?? [];
+    expect(
+      exclusions,
+      `exclusions trouvées : ${exclusions.join(", ")} — si elles sont voulues, dites ici pourquoi et ce qui les lèvera`,
+    ).toEqual([]);
   });
 });
