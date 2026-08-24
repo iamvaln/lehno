@@ -8,6 +8,10 @@ import { AppExceptionFilter } from "../src/common/errors.js";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
+// L'application entière refuse de démarrer sans clé d'administration : c'est
+// voulu, mieux vaut ne pas démarrer que signer sans clé. Ces suites montent
+// AppModule, elles la posent donc aussi.
+const SECRET_ADMIN = "Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh";
 
 // Revue tour 1 : config/legal/waitlist n'étaient éprouvés que par leurs
 // services, jamais par la route réelle. Deux propriétés ne se démontrent
@@ -35,6 +39,7 @@ describe("surfaces publiques — HTTP de bout en bout", () => {
     process.env.DATABASE_URL = db.url;
     process.env.OTP_PEPPER = PEPPER;
     process.env.JWT_SECRET = SECRET;
+    process.env.ADMIN_JWT_SECRET = SECRET_ADMIN;
     // Aucun identifiant Resend ici : adhésion explicite à la console de
     // développement requise depuis la revue tour 2 (voir app.module.ts) —
     // sans elle, le module refuserait de démarrer.

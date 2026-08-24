@@ -7,6 +7,10 @@ export const ERROR_CODES = [
   "unauthorized", "forbidden", "session_expired", "refresh_reused",
   // code à usage unique
   "otp_invalid", "otp_expired", "otp_too_many_attempts", "otp_rate_limited",
+  // Administration : un geste qui change un état exige son motif (spec §7).
+  // Un code à part plutôt que validation_failed — l'interface doit pouvoir dire
+  // « il manque le motif » et non « la requête est mal formée ».
+  "reason_required",
   // compte
   "username_taken", "username_invalid", "device_limit_reached",
   "account_suspended", "account_pending_deletion",

@@ -12,6 +12,7 @@ export const en = {
     otp_invalid: "That code doesn't match.",
     otp_expired: "That code has expired. Ask for a new one.",
     otp_too_many_attempts: "Too many wrong tries. That code's done — ask for a new one.",
+    reason_required: "This action needs a reason — the audit log keeps it.",
     otp_rate_limited: "You've already asked for several codes. Give it a moment before requesting another.",
     username_taken: "That username is already taken.",
     username_invalid: "That username doesn't work.",

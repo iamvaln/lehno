@@ -164,34 +164,34 @@ model LoginActivity {
 }
 
 model WaitlistSignup {
-  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// L'adresse telle qu'elle a été saisie : c'est à elle qu'on écrit, et
   /// c'est elle que la personne reconnaîtra.
-  email String @unique
+  email          String   @unique
   /// La forme sous laquelle deux adresses désignent la même boîte — casse
   /// abaissée, étiquette après le « + » retirée, points ignorés chez Gmail
   /// (voir src/common/email.ts). C'est cette colonne qui porte l'unicité
   /// réelle : sans elle, « a+1@ » et « a+2@ » peuplent la liste de la même
   /// personne et lui envoient deux confirmations.
-  emailCanonical String  @unique @map("email_canonical") @db.Citext
-  locale         String? @db.VarChar(10)
-  source         String? @db.VarChar(64)
+  emailCanonical String   @unique @map("email_canonical") @db.Citext
+  locale         String?  @db.VarChar(10)
+  source         String?  @db.VarChar(64)
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("waitlist_signup")
 }
 
 model ContactMessage {
-  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Nom tel que saisi dans le formulaire.
-  name String
+  name      String
   /// Adresse telle que saisie : c'est elle qui reçoit l'accusé de réception.
-  email String
+  email     String
   /// Une des six clés de CONTACT_SUBJECTS (@lehno/contracts) — jamais un
   /// texte libre venu du client, voir contact.controller.ts.
-  subject String @db.VarChar(32)
-  message String
-  locale  String? @db.VarChar(10)
+  subject   String   @db.VarChar(32)
+  message   String
+  locale    String?  @db.VarChar(10)
   /// Contrairement à la liste d'attente, rien d'autre ne porte ce message :
   /// il est écrit ici AVANT toute tentative d'envoi, pour qu'une panne
   /// d'acheminement vers l'équipe ne le perde jamais (voir
@@ -598,4 +598,150 @@ model DataExportRequest {
 
   @@index([userId])
   @@map("data_export_request")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Administration. Un compte d'exploitation n'est pas un compte d'utilisateur :
+// les deux ne partagent aucune table, et aucune colonne ci-dessous ne référence
+// `user`. La séparation rend impossible par construction ce qu'aucune relecture
+// ne garantit — qu'une session d'un domaine serve dans l'autre.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum AdminRole {
+  support
+  admin
+
+  @@map("admin_role")
+}
+
+model Admin {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String    @unique @db.Citext
+  displayName String?   @map("display_name")
+  role        AdminRole @default(support)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  otpCodes      AdminOtpCode[]
+  refreshTokens AdminRefreshToken[]
+
+  @@map("admin")
+}
+
+model AdminOtpCode {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  adminId     String    @map("admin_id") @db.Uuid
+  targetEmail String    @map("target_email")
+  codeHash    String    @map("code_hash")
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+  consumedAt  DateTime? @map("consumed_at") @db.Timestamptz
+  attempts    Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  // Un compte d'administration est créé à l'avance, jamais à la première
+  // connexion : il existe toujours. Une adresse inconnue n'écrit donc aucune
+  // ligne et ne déclenche aucun envoi — d'où admin_id non nul. Répondre la même
+  // chose qu'à une adresse connue se joue au temps de réponse, côté service
+  // (tâche 2), pas en écrivant une ligne dont personne ne se servira.
+  @@index([targetEmail])
+  @@map("admin_otp_code")
+}
+
+model AdminRefreshToken {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  adminId    String    @map("admin_id") @db.Uuid
+  familyId   String    @map("family_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  parentId   String?   @map("parent_id") @db.Uuid
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz
+  userAgent  String?   @map("user_agent")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, revokedAt])
+  @@index([familyId])
+  @@map("admin_refresh_token")
+}
+
+enum AuditActor {
+  admin
+  user
+
+  @@map("audit_actor")
+}
+
+model AuditLog {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorType  AuditActor @map("actor_type")
+  // Réfère à admin(id) ou user(id) selon actorType. Aucune clé étrangère : une
+  // trace qui doit faire foi ne disparaît pas avec ce qu'elle décrit.
+  actorId    String     @map("actor_id") @db.Uuid
+  action     String     @db.VarChar(64)
+  // Le motif. La spec §7 l'exige de tout geste d'administration ; la contrainte
+  // qui le tient est posée en migration, la base refusant l'écriture plutôt que
+  // le service. Un utilisateur agissant chez lui n'a rien à justifier.
+  reason     String?
+  targetType String?    @map("target_type") @db.VarChar(40)
+  targetId   String?    @map("target_id") @db.Uuid
+  metadata   Json?
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([actorType, actorId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// Le catalogue des modèles et leur ordre de repli. La priorité gouverne le
+// routage : le plus bas passe en premier, et l'indisponibilité de l'un bascule
+// sur le suivant (spec technique §, repli entre fournisseurs).
+model AIModel {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider   String   @db.VarChar(40)
+  modelKey   String   @map("model_key") @db.VarChar(80)
+  priority   Int
+  costInput  Decimal? @map("cost_input") @db.Decimal(12, 6)
+  costOutput Decimal? @map("cost_output") @db.Decimal(12, 6)
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([provider, modelKey])
+  @@index([enabled, priority])
+  @@map("ai_model")
+}
+
+enum PromptKind {
+  message
+  illustration
+  photo_style
+  note_classification
+  sensitive_detection
+
+  @@map("prompt_kind")
+}
+
+// Les gabarits de production du studio. **Ils vivent en base, jamais dans le
+// code** : on les ajuste au vu des résultats, sans livraison. Les versions ne se
+// modifient pas — ajuster crée une version nouvelle, l'ancienne demeure, ce qui
+// permet d'y revenir et de comprendre un écart de qualité.
+model PromptTemplate {
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind             PromptKind
+  key              String     @db.VarChar(60)
+  version          Int        @default(1)
+  body             String
+  guardrails       Json?
+  aiModelId        String?    @map("ai_model_id") @db.Uuid
+  isActive         Boolean    @default(false) @map("is_active")
+  createdByAdminId String?    @map("created_by_admin_id") @db.Uuid
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([kind, key, version])
+  @@index([kind, key])
+  @@map("prompt_template")
 }

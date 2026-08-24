@@ -8,6 +8,11 @@ export default tseslint.config(
   // « .next/** » n'ignore que celui de la racine, et le premier build d'apps/web
   // noie « pnpm lint » sous ses fichiers produits. next-env.d.ts est écrit par Next,
   // qui y met la référence en triple barre que la règle interdit.
+  // Ce paquet n'ignore que ce que la compilation produit — il vaut pour tout
+  // consommateur, quelle que soit sa disposition. Ce qui tient à la disposition
+  // de ce dépôt-ci — specs/, .worktrees/ — est déclaré dans son eslint.config.js
+  // racine : deux endroits qui diraient la même chose finiraient par se
+  // contredire.
   {
     ignores: [
       "**/dist/**", "**/.next/**", "**/.turbo/**", "**/node_modules/**",

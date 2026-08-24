@@ -20,10 +20,25 @@ import { WaitlistController } from "./public/waitlist.controller.js";
 import { WaitlistService } from "./public/waitlist.service.js";
 import { ContactController } from "./public/contact.controller.js";
 import { ContactService } from "./public/contact.service.js";
+import { AdminAuthController } from "./admin/admin-auth.controller.js";
+import { AdminOtpService } from "./admin/admin-otp.service.js";
+import { AdminTokenService } from "./admin/admin-token.service.js";
+import { AdminGuard } from "./admin/admin.guard.js";
+import { RoleGuard } from "./admin/role.guard.js";
+import { AuditService } from "./admin/audit.service.js";
+import { ParametersController, ParametersService } from "./admin/parameters.controller.js";
+import { AdminUsersController, AdminUsersService } from "./admin/users.controller.js";
+import { DeletionsController, DeletionsService } from "./admin/deletions.controller.js";
+import { LecturesController, LecturesService } from "./admin/lectures.controller.js";
+import { AdminsController, AdminsService } from "./admin/admins.controller.js";
+import { AIModelsController, AIModelsService } from "./admin/ai-models.controller.js";
+import { DashboardController, DashboardService } from "./admin/dashboard.controller.js";
+import { StudioController, StudioService } from "./admin/studio.controller.js";
 
 @Module({
   controllers: [
     AuthController, ProfileController, ConfigController, LegalController, WaitlistController, ContactController,
+    AdminAuthController, ParametersController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
   ],
   providers: [
     PrismaService,
@@ -35,6 +50,10 @@ import { ContactService } from "./public/contact.service.js";
     // voulu : mieux vaut ne pas démarrer que hacher ou signer sans clé.
     { provide: "OTP_PEPPER", useFactory: () => process.env.OTP_PEPPER },
     { provide: "JWT_SECRET", useFactory: () => process.env.JWT_SECRET },
+    // Clé propre à l'administration : voir AdminTokenService. Deux mondes
+    // séparés jusque dans leurs signatures, sans quoi la séparation des tables
+    // ne serait qu'apparente.
+    { provide: "ADMIN_JWT_SECRET", useFactory: () => process.env.ADMIN_JWT_SECRET },
     // Même logique pour les vérificateurs fédérés : construits à
     // l'instanciation, ils refusent de démarrer sans l'identifiant client
     // du fournisseur (voir GoogleIdentityVerifier / AppleIdentityVerifier).
@@ -85,6 +104,19 @@ import { ContactService } from "./public/contact.service.js";
     LegalService,
     WaitlistService,
     ContactService,
+    AdminOtpService,
+    AdminTokenService,
+    AdminGuard,
+    RoleGuard,
+    AuditService,
+    ParametersService,
+    AdminUsersService,
+    DeletionsService,
+    LecturesService,
+    AdminsService,
+    AIModelsService,
+    DashboardService,
+    StudioService,
   ],
 })
 export class AppModule implements NestModule {
