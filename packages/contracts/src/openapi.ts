@@ -183,7 +183,17 @@ export function construireOpenApi(): object {
               : {}),
         },
         "4XX": {
-          description: "Refus — l'enveloppe d'erreur du produit",
+          description: "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+          content: { "application/json": { schema: schema(errorEnvelopeSchema) } },
+        },
+        // internal_error (statusForCode le fixe à 500, voir
+        // apps/api/src/common/errors.ts) — rendu par AppExceptionFilter sur
+        // toute exception non prévue, y compris hors AppError, donc atteignable
+        // depuis n'importe quel chemin. Une défaillance du serveur, pas un
+        // refus de la requête : le client devrait réessayer, pas corriger sa
+        // demande — d'où un bloc séparé du "4XX" plutôt qu'absorbé dedans.
+        "500": {
+          description: "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
           content: { "application/json": { schema: schema(errorEnvelopeSchema) } },
         },
       },

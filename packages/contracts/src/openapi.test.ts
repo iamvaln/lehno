@@ -41,6 +41,21 @@ describe("contrat publié", () => {
     );
   });
 
+  // AppExceptionFilter (apps/api/src/common/errors.ts) rend un 500
+  // "internal_error" sur toute exception non prévue — sur n'importe quel
+  // chemin, pas seulement ceux qui le documentaient déjà sous "4XX". Un
+  // client qui ne voit que le "4XX" ne saurait pas qu'il doit prévoir un
+  // 500 à réessayer, distinct d'un refus à corriger.
+  it("documente le 500 générique sur chaque chemin, distinct du refus 4XX", () => {
+    const paths = (construireOpenApi() as { paths: Record<string, Record<string, { responses: Record<string, unknown> }>> }).paths;
+    for (const [chemin, operations] of Object.entries(paths)) {
+      for (const [methode, operation] of Object.entries(operations)) {
+        expect(operation.responses, `${methode.toUpperCase()} ${chemin}`).toHaveProperty("500");
+        expect(operation.responses, `${methode.toUpperCase()} ${chemin}`).toHaveProperty("4XX");
+      }
+    }
+  });
+
   // LE test qui compte. Un fichier engendré que rien ne vérifie pourrit : il
   // décrit alors une API qui n'existe plus, et un client s'y fie.
   it("le fichier versionné n'est pas périmé", () => {
