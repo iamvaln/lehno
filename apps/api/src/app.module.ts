@@ -31,11 +31,12 @@ import { AdminUsersController, AdminUsersService } from "./admin/users.controlle
 import { DeletionsController, DeletionsService } from "./admin/deletions.controller.js";
 import { LecturesController, LecturesService } from "./admin/lectures.controller.js";
 import { AdminsController, AdminsService } from "./admin/admins.controller.js";
+import { AIModelsController, AIModelsService } from "./admin/ai-models.controller.js";
 
 @Module({
   controllers: [
     AuthController, ProfileController, ConfigController, LegalController, WaitlistController, ContactController,
-    AdminAuthController, ParametersController, AdminUsersController, DeletionsController, LecturesController, AdminsController,
+    AdminAuthController, ParametersController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController,
   ],
   providers: [
     PrismaService,
@@ -111,6 +112,7 @@ import { AdminsController, AdminsService } from "./admin/admins.controller.js";
     DeletionsService,
     LecturesService,
     AdminsService,
+    AIModelsService,
   ],
 })
 export class AppModule implements NestModule {

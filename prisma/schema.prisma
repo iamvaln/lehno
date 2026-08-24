@@ -695,3 +695,22 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_log")
 }
+
+// Le catalogue des modèles et leur ordre de repli. La priorité gouverne le
+// routage : le plus bas passe en premier, et l'indisponibilité de l'un bascule
+// sur le suivant (spec technique §, repli entre fournisseurs).
+model AIModel {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider   String   @db.VarChar(40)
+  modelKey   String   @map("model_key") @db.VarChar(80)
+  priority   Int
+  costInput  Decimal? @map("cost_input") @db.Decimal(12, 6)
+  costOutput Decimal? @map("cost_output") @db.Decimal(12, 6)
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([provider, modelKey])
+  @@index([enabled, priority])
+  @@map("ai_model")
+}
