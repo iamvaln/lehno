@@ -1,0 +1,23 @@
+{
+  "name": "@lehno/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "polices": "tsx polices/cuire.ts"
+  },
+  "dependencies": {
+    "@lehno/contracts": "workspace:*",
+    "@lehno/tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "@lehno/tsconfig": "workspace:*",
+    "@types/node": "^20.16.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
