@@ -87,7 +87,10 @@ function Brouillon({ t }: { t: Messages }): ReactNode {
     <div style={{ background: "var(--surface-panel)", borderRadius: "var(--radius-xl)", padding: "var(--space-24)", minWidth: 0, boxSizing: "border-box" }}>
       <SectionLabel style={{ color: "var(--text-accent)" }}>{t.brouillon}</SectionLabel>
       <div style={{ marginTop: "var(--space-14)" }}>
-        <Quote size={19}>{t.brouillonTexte}</Quote>
+        {/* guillemets={false} : brouillonTexte porte déjà les siens, comme
+            dans la maquette. Sans cela, Quote en ajoute une seconde paire —
+            le texte dépasse son seuil de 90 caractères. */}
+        <Quote size={19} guillemets={false}>{t.brouillonTexte}</Quote>
         <Provenance origin={t.provBrouillon} />
       </div>
       <div style={{ display: "flex", gap: "var(--space-10)", marginTop: "var(--space-20)", flexWrap: "wrap" }}>

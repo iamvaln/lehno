@@ -37,6 +37,12 @@ export function SiteHeader({ t, langue }: { t: Messages; langue: Langue }): Reac
         style={{
           maxWidth: "var(--page-max)", margin: "0 auto", padding: "var(--space-14) var(--page-gutter)",
           display: "flex", alignItems: "center", gap: "var(--space-14)",
+          // flexWrap manquait : sous 920px, .site-nav passe en flex-basis 100%
+          // pour occuper sa propre ligne (voir base.css). Sans retour à la
+          // ligne autorisé, elle restait sur la même rangée que la marque et
+          // les commandes, et recouvrait le contenu au lieu de se déployer
+          // sous l'en-tête.
+          flexWrap: "wrap",
         }}
       >
         <BrandMark size={30} alt={t.altMarque} />
