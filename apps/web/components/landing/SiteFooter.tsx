@@ -35,7 +35,7 @@ export function SiteFooter({ t, langue }: { t: Messages; langue: Langue }): Reac
           <a
             href={`/${langue}`}
             aria-label={t.altMarque}
-            style={{ display: "flex", alignItems: "center", gap: "var(--space-12)", textDecoration: "none" }}
+            style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}
           >
             <BrandMark size={28} alt="" />
             <Wordmark height={18} alt="" />

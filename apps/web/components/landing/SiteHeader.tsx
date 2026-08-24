@@ -52,7 +52,7 @@ export function SiteHeader({ t, langue }: { t: Messages; langue: Langue }): Reac
         <a
           href={`/${langue}`}
           aria-label={t.altMarque}
-          style={{ display: "flex", alignItems: "center", gap: "var(--space-12)", textDecoration: "none" }}
+          style={{ display: "flex", alignItems: "center", gap: 7, textDecoration: "none" }}
         >
           <BrandMark size={30} alt="" />
           <span className="site-wordmark">
