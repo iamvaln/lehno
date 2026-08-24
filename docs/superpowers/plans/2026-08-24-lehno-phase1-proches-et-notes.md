@@ -24,6 +24,7 @@
 - **Une note peut relever de deux catégories.** Le double rattachement est voulu, pas toléré.
 - **Le classement est corrigeable.** `NoteCategory.assignedBy` vaut `auto` par défaut et `user` après correction.
 - **Aucun appel d'IA dans ce plan.** Les notes sont gratuites (« Les fonctions de base du Service sont gratuites », CGU §6) et un appel de modèle se paie en crédits. Le classement est donc heuristique — voir la décision en tête de la tâche 4.
+- **Toute tâche qui ajoute un chemin étend le contrat publié.** `docs/api/openapi.json` est engendré depuis les schémas Zod, jamais écrit à la main, et un test échoue s'il est périmé (tâche 0). Un contrat qui ment est pire qu'un contrat absent.
 - **TDD** : le test s'écrit d'abord, on le voit échouer, puis on le fait passer. Commit à chaque tâche.
 - Commentaires en français, identifiants et code en anglais. Messages de commit en français à l'impératif.
 - **Un `pnpm test` qui affiche « 0 tasks » n'est pas un feu vert**, et le cache de Turbo rejoue des succès périmés : vérifier « cache miss » ou lancer le paquet directement.
@@ -42,6 +43,181 @@
 | `apps/api/src/me/note.controller.ts` | Les chemins `/me/notes` et `/me/persons/{id}/notes` |
 
 Le classement vit dans son propre fichier parce qu'il se teste sans base, sans Nest et sans conteneur — et parce qu'il changera plus souvent que le reste.
+
+---
+
+### Tâche 0 : Le contrat publié
+
+**Décision.** Le contrat se dérive des **schémas Zod** de `packages/contracts`, pas de décorateurs Nest. `@nestjs/swagger` demanderait de redéclarer chaque schéma en DTO décoré : une seconde définition des mêmes formes, qui dérive de la première dès la première correction. Les contrats Zod sont déjà la source unique, partagée par le web et le mobile — le document se calcule à partir d'eux. Coût si ce choix est mauvais : un fichier d'engendrement à réécrire, sans toucher aux contrats ni aux routes.
+
+**Le fichier est versionné**, et non seulement servi. Un contrat dans un diff se relit ; un contrat qui n'existe qu'en mémoire ne se relit jamais. Et c'est ce qui rend le test de péremption possible.
+
+**Fichiers :**
+- Créer : `packages/contracts/src/openapi.ts`, `packages/contracts/scripts/build-openapi.ts`
+- Créer : `docs/api/openapi.json` (engendré)
+- Modifier : `packages/contracts/package.json` (dépendance et script)
+- Test : `packages/contracts/src/openapi.test.ts`
+
+**Interfaces :**
+- Produit : `construireOpenApi(): object` — le document complet, calculé depuis les schémas exportés.
+
+- [ ] **Étape 1 : écrire le test qui échoue**
+
+`packages/contracts/src/openapi.test.ts` :
+```ts
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { construireOpenApi } from "./openapi.js";
+
+describe("contrat publié", () => {
+  it("porte les métadonnées du service", () => {
+    const d = construireOpenApi() as { openapi: string; info: { title: string }; servers: unknown[] };
+    expect(d.openapi).toMatch(/^3\./);
+    expect(d.info.title).toBe("Lehno");
+    expect(d.servers).not.toHaveLength(0);
+  });
+
+  // Le contrat décrit ce que le serveur sert vraiment : les chemins publics
+  // existent déjà, ils doivent y être.
+  it("décrit les chemins déjà servis", () => {
+    const chemins = Object.keys((construireOpenApi() as { paths: object }).paths);
+    expect(chemins).toContain("/public/waitlist");
+    expect(chemins).toContain("/public/contact");
+  });
+
+  // LE test qui compte. Un fichier engendré que rien ne vérifie pourrit : il
+  // décrit alors une API qui n'existe plus, et un client s'y fie.
+  it("le fichier versionné n'est pas périmé", () => {
+    const surDisque = readFileSync(
+      join(import.meta.dirname, "..", "..", "..", "docs", "api", "openapi.json"),
+      "utf-8",
+    );
+    expect(
+      JSON.parse(surDisque),
+      "docs/api/openapi.json est périmé — relancer `pnpm --filter @lehno/contracts openapi`",
+    ).toEqual(construireOpenApi());
+  });
+});
+```
+
+- [ ] **Étape 2 : le voir échouer**
+
+Lancer : `pnpm --filter @lehno/contracts exec vitest run src/openapi.test.ts`
+Attendu : ÉCHEC — `Failed to load url ./openapi.js`
+
+- [ ] **Étape 3 : installer l'engendrement**
+
+```bash
+pnpm --filter @lehno/contracts add zod-to-json-schema
+pnpm install --frozen-lockfile   # le verrou doit suivre, la CI l'exige
+```
+
+- [ ] **Étape 4 : écrire le constructeur**
+
+`packages/contracts/src/openapi.ts` — décrire chaque chemin **une fois**, en tirant ses schémas de ceux qui existent déjà :
+
+```ts
+import { zodToJsonSchema } from "zod-to-json-schema";
+import type { ZodTypeAny } from "zod";
+import { waitlistJoinSchema, waitlistJoinResponseSchema, contactSendSchema, contactSendResponseSchema } from "./public.js";
+import { errorEnvelopeSchema } from "./errors.js";
+
+// Le contrat se CALCULE depuis les schémas Zod, il ne se recopie pas. Une
+// seconde déclaration des mêmes formes — en DTO décoré, par exemple — dériverait
+// de la première dès la première correction.
+const schema = (s: ZodTypeAny): object => zodToJsonSchema(s, { target: "openApi3" });
+
+type Chemin = {
+  chemin: string;
+  methode: "get" | "post" | "patch" | "delete";
+  resume: string;
+  authentifie?: boolean;
+  corps?: ZodTypeAny;
+  reponse?: ZodTypeAny;
+  statut?: number;
+};
+
+// Une entrée par chemin servi. Les tâches suivantes ajoutent les leurs ici, et
+// le test de péremption refuse un contrat qui ne les décrit pas.
+const CHEMINS: Chemin[] = [
+  { chemin: "/public/waitlist", methode: "post", resume: "S'inscrire à la liste d'attente", corps: waitlistJoinSchema, reponse: waitlistJoinResponseSchema },
+  { chemin: "/public/contact", methode: "post", resume: "Écrire à l'équipe", corps: contactSendSchema, reponse: contactSendResponseSchema },
+];
+
+export function construireOpenApi(): object {
+  const paths: Record<string, Record<string, unknown>> = {};
+
+  for (const c of CHEMINS) {
+    paths[c.chemin] ??= {};
+    paths[c.chemin]![c.methode] = {
+      summary: c.resume,
+      ...(c.authentifie ? { security: [{ bearerAuth: [] }] } : {}),
+      ...(c.corps ? { requestBody: { required: true, content: { "application/json": { schema: schema(c.corps) } } } } : {}),
+      responses: {
+        [String(c.statut ?? 200)]: {
+          description: "Succès",
+          ...(c.reponse ? { content: { "application/json": { schema: schema(c.reponse) } } } : {}),
+        },
+        "4XX": {
+          description: "Refus — l'enveloppe d'erreur du produit",
+          content: { "application/json": { schema: schema(errorEnvelopeSchema) } },
+        },
+      },
+    };
+  }
+
+  return {
+    openapi: "3.0.3",
+    info: {
+      title: "Lehno",
+      version: "1",
+      description: "L'assistant des dates qui comptent. Le contrat est engendré depuis les schémas Zod de @lehno/contracts — il ne s'écrit pas à la main.",
+    },
+    servers: [{ url: "https://api.lehno.app/v1" }, { url: "http://localhost:3001/v1", description: "développement" }],
+    components: {
+      securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" } },
+    },
+    paths,
+  };
+}
+```
+
+- [ ] **Étape 5 : écrire le script d'engendrement**
+
+`packages/contracts/scripts/build-openapi.ts` :
+```ts
+import { writeFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { construireOpenApi } from "../src/openapi.js";
+
+const sortie = join(import.meta.dirname, "..", "..", "..", "docs", "api");
+mkdirSync(sortie, { recursive: true });
+// Indenté et terminé par un saut de ligne : le fichier se relit dans un diff.
+writeFileSync(join(sortie, "openapi.json"), `${JSON.stringify(construireOpenApi(), null, 2)}\n`);
+console.log("docs/api/openapi.json engendré");
+```
+
+Ajouter à `packages/contracts/package.json` : `"openapi": "tsx scripts/build-openapi.ts"`.
+
+- [ ] **Étape 6 : engendrer, puis voir les tests passer**
+
+```bash
+pnpm --filter @lehno/contracts openapi
+pnpm --filter @lehno/contracts exec vitest run
+```
+Attendu : tous verts, `docs/api/openapi.json` créé.
+
+- [ ] **Étape 7 : prouver que le test de péremption mord**
+
+Modifier une ligne de `docs/api/openapi.json` à la main, relancer les tests, **coller la sortie d'échec**, puis réengendrer. Un fichier engendré que rien ne vérifie décrit tôt ou tard une API qui n'existe plus.
+
+- [ ] **Étape 8 : commit**
+
+```bash
+git add packages/contracts docs/api
+git commit -m "contrats: publie le contrat d'API, engendré depuis les schémas Zod"
+```
 
 ---
 
@@ -350,6 +526,17 @@ Ajouter à `apps/api/test/person.test.ts` un cas qui monte l'application et appe
   });
 ```
 
+- [ ] **Étape : étendre le contrat publié**
+
+Ajouter les chemins de cette tâche au tableau `CHEMINS` de `packages/contracts/src/openapi.ts`, puis réengendrer :
+
+```bash
+pnpm --filter @lehno/contracts openapi
+pnpm --filter @lehno/contracts exec vitest run
+```
+
+Le test de péremption échoue tant que `docs/api/openapi.json` ne décrit pas ce que la tâche vient de servir. Commiter le fichier engendré avec le reste.
+
 - [ ] **Étape 7 : commit**
 
 ```bash
@@ -466,6 +653,17 @@ Dans `person.controller.ts` :
 ```
 
 `ParseUUIDPipe` importe de `@nestjs/common`. Un identifiant malformé doit répondre 400, pas atteindre la base.
+
+- [ ] **Étape : étendre le contrat publié**
+
+Ajouter les chemins de cette tâche au tableau `CHEMINS` de `packages/contracts/src/openapi.ts`, puis réengendrer :
+
+```bash
+pnpm --filter @lehno/contracts openapi
+pnpm --filter @lehno/contracts exec vitest run
+```
+
+Le test de péremption échoue tant que `docs/api/openapi.json` ne décrit pas ce que la tâche vient de servir. Commiter le fichier engendré avec le reste.
 
 - [ ] **Étape 6 : commit**
 
@@ -782,6 +980,17 @@ Attendu : tous verts.
 
 `apps/api/src/me/note.controller.ts` sert `/me/persons/:id/notes` en GET et POST, sur le modèle exact de `PersonController` — `@UseGuards(AuthGuard)`, `@Param("id", ParseUUIDPipe)`, `ZodValidationPipe(createNoteSchema)`. Déclarer dans `app.module.ts`.
 
+- [ ] **Étape : étendre le contrat publié**
+
+Ajouter les chemins de cette tâche au tableau `CHEMINS` de `packages/contracts/src/openapi.ts`, puis réengendrer :
+
+```bash
+pnpm --filter @lehno/contracts openapi
+pnpm --filter @lehno/contracts exec vitest run
+```
+
+Le test de péremption échoue tant que `docs/api/openapi.json` ne décrit pas ce que la tâche vient de servir. Commiter le fichier engendré avec le reste.
+
 - [ ] **Étape 7 : commit**
 
 ```bash
@@ -921,6 +1130,17 @@ Attendu : tous verts.
 - [ ] **Étape 6 : prouver que la protection mord**
 
 Retirer la vérification `permis.length !== …`, relancer, **coller la sortie d'échec** dans le rapport, puis la remettre. Un test qui ne mord pas ne protège rien.
+
+- [ ] **Étape : étendre le contrat publié**
+
+Ajouter les chemins de cette tâche au tableau `CHEMINS` de `packages/contracts/src/openapi.ts`, puis réengendrer :
+
+```bash
+pnpm --filter @lehno/contracts openapi
+pnpm --filter @lehno/contracts exec vitest run
+```
+
+Le test de péremption échoue tant que `docs/api/openapi.json` ne décrit pas ce que la tâche vient de servir. Commiter le fichier engendré avec le reste.
 
 - [ ] **Étape 7 : brancher le chemin et commiter**
 
