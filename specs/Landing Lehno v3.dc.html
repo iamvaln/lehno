@@ -17,7 +17,7 @@
   .fr { font-family: Fraunces, Georgia, serif; font-variation-settings: 'SOFT' 40, 'WONK' 1; }
   .clair {
     --bg:#FFFFFF; --surface:#FAF9FC; --panel:#EDEAF7; --text:#221F2B; --muted:#4A4556;
-    --faint:#726E82; --line:#EDEBF2; --line2:#E2DDF0; --edge:#88839A; --violet:#7B6BB7; --violet-deep:#5A4B93;
+    --faint:#6B6579; --line:#EDEBF2; --line2:#E2DDF0; --edge:#88839A; --violet:#7B6BB7; --violet-deep:#5A4B93;
     --on-violet:#FFFFFF; --apricot:#F0CFB4; --on-apricot:#7A4A22; --band:#221F2B; --on-band:#FFFFFF;
     --band-accent:#F0CFB4; --on-band-accent:#221F2B; --card:#FFFFFF; --shadow:rgba(34,31,43,.10);
   }
@@ -31,7 +31,7 @@
   a:hover { color: var(--text); }
   .ent-burger { display: none; }
   .ent-nav { display: flex; gap: 18px; font-size: 15px; flex-wrap: wrap; }
-  @container page (max-width: 760px) {
+  @container page (max-width: 920px) {
     .ent-burger { display: flex; }
     .ent-mot { display: none; }
     .ent-cta { padding: 9px 14px !important; font-size: 14px !important; }
@@ -47,39 +47,21 @@
 
   <header style="max-width:1160px;margin:0 auto;padding:18px 20px;display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;border-bottom:1px solid var(--line)">
     <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:32px;height:32px;border-radius:24%;background:var(--violet);overflow:hidden;flex:none"><svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block"><text x="50" y="79" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="82" font-weight="600" fill="var(--on-violet)" style="font-variation-settings:'SOFT' 30,'WONK' 1">h</text></svg></div>
-      <div class="fr ent-mot" style="font-weight:500;font-size:24px;letter-spacing:-.02em">Le<span style="color:var(--violet)">h</span>no</div>
+      <img src="exports/lehno-icone-512.svg" alt="" style="display:block;width:32px;height:32px;flex:none" />
+      <div class="ent-mot" style="line-height:0">
+        <sc-if value="{{ jour }}" hint-placeholder-val="{{ true }}"><img src="exports/lehno-logotype-couleur.svg" alt="Lehno" style="display:block;height:22px;width:auto" /></sc-if>
+        <sc-if value="{{ nuit }}" hint-placeholder-val="{{ false }}"><img src="exports/lehno-logotype-blanc.svg" alt="Lehno" style="display:block;height:22px;width:auto" /></sc-if>
+      </div>
     </div>
     <nav class="ent-nav" data-ferme="{{ navFerme }}">
       <a href="#comment" onClick="{{ fermerMenu }}" style="color:var(--muted)">{{ t.navComment }}</a>
       <a href="#contenu" onClick="{{ fermerMenu }}" style="color:var(--muted)">{{ t.navContenu }}</a>
       <a href="#mur" onClick="{{ fermerMenu }}" style="color:var(--muted)">{{ t.navMur }}</a>
+      <a href="#prix" onClick="{{ fermerMenu }}" style="color:var(--muted)">{{ t.navPrix }}</a>
     </nav>
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap">
-      <button type="button" onClick="{{ toggleLang }}" aria-label="{{ t.langLabel }}" title="{{ t.langLabel }}" style="display:flex;align-items:center;gap:7px;font-family:Karla,sans-serif;font-size:13px;font-weight:600;color:var(--muted);background:transparent;border:1px solid var(--edge);border-radius:9px;padding:6px 11px;height:34px;cursor:pointer">
-        <sc-if value="{{ estFr }}" hint-placeholder-val="{{ true }}">
-          <span style="display:block;width:20px;height:14px;border-radius:2px;overflow:hidden;flex:none">
-            <svg viewBox="0 0 60 40" width="20" height="14" style="display:block" aria-hidden="true">
-              <rect width="60" height="40" fill="#012169"></rect>
-              <path d="M0 0 60 40 M60 0 0 40" stroke="#FFFFFF" stroke-width="9"></path>
-              <path d="M0 0 60 40 M60 0 0 40" stroke="#C8102E" stroke-width="4"></path>
-              <path d="M30 0 V40 M0 20 H60" stroke="#FFFFFF" stroke-width="14"></path>
-              <path d="M30 0 V40 M0 20 H60" stroke="#C8102E" stroke-width="8"></path>
-            </svg>
-          </span>
-        </sc-if>
-        <sc-if value="{{ estEn }}" hint-placeholder-val="{{ false }}">
-          <span style="display:block;width:20px;height:14px;border-radius:2px;overflow:hidden;flex:none">
-            <svg viewBox="0 0 60 40" width="20" height="14" style="display:block" aria-hidden="true">
-              <rect width="20" height="40" fill="#002654"></rect>
-              <rect x="20" width="20" height="40" fill="#FFFFFF"></rect>
-              <rect x="40" width="20" height="40" fill="#ED2939"></rect>
-            </svg>
-          </span>
-        </sc-if>
-        {{ t.langBtn }}
-      </button>
-      <button type="button" onClick="{{ toggleTheme }}" aria-label="{{ t.themeLabel }}" title="{{ t.themeLabel }}" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;color:var(--muted);background:transparent;border:1px solid var(--edge);border-radius:9px;padding:0;cursor:pointer">
+      <button type="button" onClick="{{ toggleLang }}" aria-label="{{ t.langLabel }}" title="{{ t.langLabel }}" style="display:flex;align-items:center;justify-content:center;height:34px;padding:0 8px;font-family:Karla,sans-serif;font-size:13px;font-weight:700;letter-spacing:.04em;color:var(--violet-deep);background:transparent;border:none;border-radius:9px;cursor:pointer" style-hover="background:var(--panel)">{{ t.langBtn }}</button>
+      <button type="button" onClick="{{ toggleTheme }}" aria-label="{{ t.themeLabel }}" title="{{ t.themeLabel }}" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;color:var(--faint);background:transparent;border:none;border-radius:9px;padding:0;cursor:pointer" style-hover="background:var(--panel);color:var(--text)">
         <sc-if value="{{ nuit }}" hint-placeholder-val="{{ false }}">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
         </sc-if>
@@ -87,7 +69,7 @@
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
         </sc-if>
       </button>
-      <a href="#commencer" class="ent-cta" style="background:var(--violet);color:var(--on-violet);padding:10px 18px;border-radius:10px;font-weight:600;font-size:15px">{{ t.cta }}</a>
+      <a href="#commencer" class="ent-cta" style="background:var(--violet);color:var(--on-violet);padding:10px 18px;border-radius:10px;font-weight:600;font-size:15px;margin-left:6px">{{ t.cta }}</a>
       <button type="button" class="ent-burger" onClick="{{ toggleMenu }}" aria-expanded="{{ ariaMenu }}" aria-label="{{ t.menuLabel }}" style="align-items:center;justify-content:center;width:34px;height:34px;color:var(--muted);background:transparent;border:1px solid var(--edge);border-radius:9px;padding:0;cursor:pointer">
         <sc-if value="{{ menuFerme }}" hint-placeholder-val="{{ true }}">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M3 12h18"></path><path d="M3 18h18"></path></svg>
@@ -143,8 +125,11 @@
     <div style="background:var(--panel);border-radius:28px;padding:clamp(24px,4vw,44px) 20px 0;display:flex;justify-content:center;min-width:0">
       <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ 330 }}" height="{{ 660 }}" dark="{{ nuit }}" time="8:30" hint-size="330px,660px">
       <div style="background:var(--bg);height:100%;padding-top:52px;box-sizing:border-box;font-family:Karla,system-ui,sans-serif;color:var(--text);display:flex;flex-direction:column;overflow:hidden">
-        <div style="padding:6px 16px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line2);flex:none">
-          <div class="fr" style="font-weight:500;font-size:19px;letter-spacing:-.01em">Le<span style="color:var(--violet)">h</span>no</div>
+        <div style="padding:6px 16px 4px;display:flex;justify-content:space-between;align-items:center;flex:none">
+          <div style="line-height:0">
+            <sc-if value="{{ jour }}" hint-placeholder-val="{{ true }}"><img src="exports/lehno-logotype-couleur.svg" alt="Lehno" style="display:block;height:18px;width:auto" /></sc-if>
+            <sc-if value="{{ nuit }}" hint-placeholder-val="{{ false }}"><img src="exports/lehno-logotype-blanc.svg" alt="Lehno" style="display:block;height:18px;width:auto" /></sc-if>
+          </div>
           <div style="position:relative;color:var(--text);line-height:0">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
             <span style="position:absolute;top:-5px;right:-6px;min-width:15px;height:15px;box-sizing:border-box;padding:0 3px;border-radius:999px;background:var(--apricot);color:var(--on-apricot);border:1.5px solid var(--bg);font-family:Karla,sans-serif;font-size:10px;font-weight:700;line-height:12px;text-align:center">3</span>
@@ -258,11 +243,13 @@
           </div>
           <div>
             <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600">{{ t.idees }}</div>
-            <p style="margin:8px 0 0;font-size:14.5px;color:var(--muted)">{{ t.ideeTexte }} <span style="color:var(--faint)">{{ t.ideeDate }}</span></p>
+            <p class="fr" style="margin:8px 0 0;font-style:italic;font-weight:400;font-size:15px;line-height:1.45;color:var(--muted)">{{ t.ideeParole }}</p>
+            <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line);display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--faint)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 0 12h-3"></path></svg><span>{{ t.provIdee }}</span></div>
           </div>
           <div>
             <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600">{{ t.nogo }}</div>
-            <p style="margin:8px 0 0;font-size:14.5px;color:var(--muted)">{{ t.nogoTexte }}</p>
+            <p class="fr" style="margin:8px 0 0;font-style:italic;font-weight:400;font-size:15px;line-height:1.45;color:var(--muted)">{{ t.nogoParole }}</p>
+            <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line);display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--faint)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 0 12h-3"></path></svg><span>{{ t.provNogo }}</span></div>
           </div>
         </div>
       </div>
@@ -280,6 +267,11 @@
       <div style="background:var(--card);border:1px solid var(--line2);border-radius:18px;overflow:hidden;min-width:0">
         <div style="display:grid">
           <div style="display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--line)">
+            <div class="fr" style="font-size:18px;font-weight:500;color:var(--violet-deep);min-width:62px">{{ t.date21 }}</div>
+            <div style="flex:1;min-width:0"><div class="fr" style="font-size:17px;font-weight:500">Celarine</div><div style="font-size:13px;color:var(--muted)">{{ t.anniv }} · {{ t.age29 }}</div></div>
+            <span style="background:var(--apricot);color:var(--on-apricot);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">{{ t.aujourdhui }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--line)">
             <div class="fr" style="font-size:18px;font-weight:500;color:var(--violet-deep);min-width:62px">{{ t.date24 }}</div>
             <div style="flex:1;min-width:0"><div class="fr" style="font-size:17px;font-weight:500">Valery Bah</div><div style="font-size:13px;color:var(--muted)">{{ t.anniv }} · {{ t.age36 }}</div></div>
             <span style="background:var(--panel);color:var(--violet-deep);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">{{ t.j3 }}</span>
@@ -289,15 +281,10 @@
             <div style="flex:1;min-width:0"><div class="fr" style="font-size:17px;font-weight:500">Mathias &amp; Rose</div><div style="font-size:13px;color:var(--muted)">{{ t.mariage }} · {{ t.an5 }}</div></div>
             <span style="background:var(--panel);color:var(--violet-deep);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">{{ t.j9 }}</span>
           </div>
-          <div style="display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--line)">
+          <div style="display:flex;align-items:center;gap:14px;padding:15px 20px">
             <div class="fr" style="font-size:18px;font-weight:500;color:var(--violet-deep);min-width:62px">{{ t.date2 }}</div>
             <div style="flex:1;min-width:0"><div class="fr" style="font-size:17px;font-weight:500">{{ t.maman }}</div><div style="font-size:13px;color:var(--muted)">{{ t.retraite }}</div></div>
             <span style="background:var(--panel);color:var(--violet-deep);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">{{ t.j12 }}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:14px;padding:15px 20px">
-            <div class="fr" style="font-size:18px;font-weight:500;color:var(--violet-deep);min-width:62px">{{ t.date14 }}</div>
-            <div style="flex:1;min-width:0"><div class="fr" style="font-size:17px;font-weight:500">{{ t.nourEtMoi }}</div><div style="font-size:13px;color:var(--muted)">{{ t.sixMois }}</div></div>
-            <span style="background:var(--panel);color:var(--violet-deep);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">{{ t.j24 }}</span>
           </div>
         </div>
       </div>
@@ -320,7 +307,8 @@
       </div>
       <div style="background:var(--panel);border-radius:18px;padding:26px 24px;min-width:0">
         <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--violet-deep);font-weight:600">{{ t.brouillon }}</div>
-        <p class="fr" style="font-size:clamp(18px,2.4vw,21px);line-height:1.45;font-weight:400;margin:14px 0 0;color:var(--text);text-wrap:pretty">{{ t.brouillonTexte }}</p>
+        <p class="fr" style="font-size:clamp(18px,2.4vw,21px);line-height:1.45;font-weight:400;font-style:italic;margin:14px 0 0;color:var(--text);text-wrap:pretty">{{ t.brouillonTexte }}</p>
+        <div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line2);display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--faint)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 0 12h-3"></path></svg><span>{{ t.provBrouillon }}</span></div>
         <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
           <span style="background:var(--violet);color:var(--on-violet);padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600">{{ t.modifier }}</span>
           <span style="background:var(--card);color:var(--violet-deep);padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600">{{ t.regenerer }}</span>
@@ -353,34 +341,34 @@
       </div>
       <div style="display:flex;justify-content:center;min-width:0">
         <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ 330 }}" height="{{ 660 }}" dark="{{ nuit }}" time="8:30" hint-size="330px,660px">
-        <div style="background:var(--bg);min-height:100%;font-family:Karla,system-ui,sans-serif;color:var(--text)">
-          <div style="background:var(--panel);padding:52px 22px 20px;text-align:center">
-            <img src="assets/valentine.png" alt="Valentine" style="display:block;width:58px;height:58px;border-radius:50%;object-fit:cover;object-position:50% 22%;background:var(--card);margin:0 auto 10px" />
-            <div class="fr" style="font-size:21px;font-weight:500;letter-spacing:-.01em;line-height:1.3">{{ t.murHello }}</div>
-            <div class="fr" style="font-style:italic;font-size:14px;color:var(--muted);margin-top:8px">{{ t.murSous }}</div>
+        <div style="background:var(--bg);height:100%;box-sizing:border-box;overflow:hidden;font-family:Karla,system-ui,sans-serif;color:var(--text)">
+          <div style="background:var(--panel);padding:44px 22px 14px;text-align:center">
+            <img src="assets/valentine.png" alt="Valentine" style="display:block;width:52px;height:52px;border-radius:50%;object-fit:cover;object-position:50% 22%;background:var(--card);margin:0 auto 9px" />
+            <div class="fr" style="font-size:20px;font-weight:500;letter-spacing:-.01em;line-height:1.3">{{ t.murHello }}</div>
+            <div class="fr" style="font-style:italic;font-size:13.5px;color:var(--muted);margin-top:6px">{{ t.murSous }}</div>
           </div>
-          <div style="padding:16px 18px 18px">
+          <div style="padding:14px 18px 12px">
             <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600">{{ t.murAime }}</div>
             <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">
               <span style="border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-size:13px">{{ t.murTag1 }}</span>
               <span style="border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-size:13px">{{ t.murTag2 }}</span>
               <span style="border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-size:13px">{{ t.murTag3 }}</span>
             </div>
-            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-top:13px">{{ t.murEvite }}</div>
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-top:11px">{{ t.murEvite }}</div>
             <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
               <span style="border:1px dashed var(--line2);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--muted)">{{ t.murNo1 }}</span>
               <span style="border:1px dashed var(--line2);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--muted)">{{ t.murNo2 }}</span>
             </div>
-            <div style="font-size:13.5px;color:var(--muted);margin-top:13px">{{ t.murDate }}</div>
-            <div style="border:1px solid var(--violet);border-radius:13px;padding:12px;text-align:center;margin-top:13px">
-              <div style="font-size:14px;color:var(--muted)">{{ t.murIdee }}</div>
-              <div style="margin-top:10px;color:var(--violet-deep);border:1px solid var(--violet);border-radius:10px;padding:8px;font-size:14px;font-weight:600">{{ t.murListe }}</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:11px">{{ t.murDate }}</div>
+            <div style="border:1px solid var(--violet);border-radius:13px;padding:11px;text-align:center;margin-top:11px">
+              <div style="font-size:13.5px;color:var(--muted)">{{ t.murIdee }}</div>
+              <div style="margin-top:8px;color:var(--violet-deep);border:1px solid var(--violet);border-radius:10px;padding:7px;font-size:13.5px;font-weight:600">{{ t.murListe }}</div>
             </div>
-            <div style="margin-top:10px;background:var(--violet);color:var(--on-violet);text-align:center;border-radius:10px;padding:11px;font-weight:600;font-size:15px">{{ t.murMot }}</div>
-            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line2);display:flex;align-items:center;gap:10px">
-              <div style="width:24px;height:24px;border-radius:24%;background:var(--violet);overflow:hidden;flex:none"><svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block"><text x="50" y="80" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="86" font-weight="650" fill="var(--on-violet)">h</text></svg></div>
-              <div style="font-size:12.5px;color:var(--muted);line-height:1.35;flex:1">{{ t.murPied }}</div>
-              <div style="font-size:12.5px;font-weight:700;color:var(--violet-deep);white-space:nowrap">{{ t.murPiedLien }}</div>
+            <div style="margin-top:9px;background:var(--violet);color:var(--on-violet);text-align:center;border-radius:10px;padding:10px;font-weight:600;font-size:14.5px">{{ t.murMot }}</div>
+            <div style="margin:11px -18px -12px;background:var(--panel);padding:13px 18px 15px;text-align:center">
+              <div class="fr" style="font-size:14.5px;font-weight:500;letter-spacing:-.01em;line-height:1.3">{{ t.murPiedTitre }}</div>
+              <div style="margin-top:9px;border:1px solid var(--violet);color:var(--violet-deep);border-radius:9px;padding:8px;font-size:13px;font-weight:600">{{ t.murPiedLien }}</div>
+              <img src="exports/lehno-icone-512.svg" alt="" style="display:block;width:20px;height:20px;margin:11px auto 0" />
             </div>
           </div>
         </div>
@@ -390,7 +378,7 @@
    </div>
   </section>
 
-  <section style="background:var(--bg)">
+  <section id="prix" style="background:var(--bg)">
    <div style="max-width:1160px;margin:0 auto;padding:clamp(44px,6vw,76px) 20px clamp(48px,7vw,84px)">
     <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600">{{ t.prixKicker }}</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:clamp(24px,4vw,48px);margin-top:28px">
@@ -400,7 +388,7 @@
         <p style="margin:0;color:var(--muted);max-width:40ch">{{ t.prixGratuit }}</p>
       </div>
       <div style="border-top:2px solid var(--line2);padding-top:18px">
-        <div class="fr" style="font-size:clamp(38px,5vw,52px);font-weight:400;line-height:1;letter-spacing:-.03em">{{ t.prixCreditsChiffre }}<span style="font-size:.42em;letter-spacing:0;color:var(--muted);margin-left:.5em">{{ t.prixCreditsUnite }}</span></div>
+        <div class="fr" style="font-size:clamp(38px,5vw,52px);font-weight:400;line-height:1;letter-spacing:-.03em;min-height:1em">{{ t.prixCreditsChiffre }}<span style="font-size:.42em;letter-spacing:0;color:var(--muted);margin-left:.5em">{{ t.prixCreditsUnite }}</span></div>
         <h3 class="fr" style="font-weight:500;font-size:clamp(19px,2.4vw,22px);letter-spacing:-.02em;margin:14px 0 8px">{{ t.prixCreditsTitre }}</h3>
         <p style="margin:0;color:var(--muted);max-width:40ch">{{ t.prixCredits }}</p>
       </div>
@@ -409,14 +397,14 @@
   </section>
 
   <section style="background:var(--band);color:var(--on-band)">
-    <div style="max-width:1160px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(28px,4vw,56px);align-items:center">
-      <h2 class="fr" style="font-weight:500;font-size:clamp(32px,5vw,52px);line-height:1.06;letter-spacing:-.032em;margin:0;max-width:20ch;text-wrap:balance">{{ t.finTitre }}</h2>
-      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+    <div style="max-width:1160px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px;display:flex;gap:clamp(28px,5vw,64px);align-items:flex-end;justify-content:space-between;flex-wrap:wrap">
+      <h2 class="fr" style="font-weight:500;font-size:clamp(34px,6vw,60px);line-height:1.04;letter-spacing:-.032em;margin:0;flex:1 1 0;min-width:0;text-wrap:balance">{{ t.finTitre }}</h2>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:nowrap;flex:0 0 auto">
         <sc-if value="{{ preLaunch }}" hint-placeholder-val="{{ true }}">
-          <a href="#commencer" style="background:var(--band-accent);color:var(--on-band-accent);padding:12px 20px;border-radius:10px;font-weight:700;font-size:15px">{{ t.cta }}</a>
+          <a href="#commencer" style="background:var(--band-accent);color:var(--on-band-accent);padding:16px 30px;border-radius:12px;font-weight:700;font-size:17px">{{ t.cta }}</a>
         </sc-if>
         <sc-if value="{{ launched }}" hint-placeholder-val="{{ false }}">
-          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+          <div style="display:flex;gap:12px;flex-wrap:nowrap;align-items:center">
             <a href="#" style="display:block;line-height:0">
               <sc-if value="{{ estFr }}" hint-placeholder-val="{{ true }}"><img src="assets/badges/appstore-fr-blanc.svg" alt="{{ t.altApple }}" style="display:block;height:45px;width:auto" /></sc-if>
               <sc-if value="{{ estEn }}" hint-placeholder-val="{{ false }}"><img src="assets/badges/appstore-en-blanc.svg" alt="{{ t.altApple }}" style="display:block;height:45px;width:auto" /></sc-if>
@@ -434,14 +422,18 @@
   <footer class="pied" style="max-width:1160px;margin:0 auto;padding:36px 20px 60px;display:flex;gap:16px 28px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line)">
     <div>
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:26px;height:26px;border-radius:24%;background:var(--violet);overflow:hidden;flex:none"><svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block"><text x="50" y="80" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="86" font-weight="650" fill="var(--on-violet)">h</text></svg></div>
-        <div class="fr" style="font-weight:500;font-size:19px;letter-spacing:-.02em">Le<span style="color:var(--violet)">h</span>no</div>
+        <img src="exports/lehno-icone-512.svg" alt="" style="display:block;width:26px;height:26px;flex:none" />
+        <div style="line-height:0">
+          <sc-if value="{{ jour }}" hint-placeholder-val="{{ true }}"><img src="exports/lehno-logotype-couleur.svg" alt="Lehno" style="display:block;height:18px;width:auto" /></sc-if>
+          <sc-if value="{{ nuit }}" hint-placeholder-val="{{ false }}"><img src="exports/lehno-logotype-blanc.svg" alt="Lehno" style="display:block;height:18px;width:auto" /></sc-if>
+        </div>
       </div>
       <div class="fr" style="font-style:italic;font-size:15px;color:var(--muted);margin-top:6px">{{ t.signature }}</div>
     </div>
     <nav style="margin-left:auto;display:flex;gap:12px 18px;font-size:14px;color:var(--muted);flex-wrap:wrap">
       <a href="#" style="color:var(--muted)">{{ t.cgu }}</a>
       <a href="#" style="color:var(--muted)">{{ t.confidentialite }}</a>
+      <a href="#" style="color:var(--muted)">{{ t.piedFaq }}</a>
       <a href="#" style="color:var(--muted)">{{ t.contact }}</a>
     </nav>
   </footer>
@@ -451,18 +443,16 @@
 <script type="text/x-dc" data-dc-script data-props="{&quot;preLaunch&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Landing&quot;}}">
 const STR = {
   fr: {
-    navComment: "Comment ça marche", navContenu: "Ce qu'elle contient", navMur: "Le Mur",
+    navComment: "Comment ça marche", navContenu: "Dans l'application", navMur: "Le Mur", navPrix: "Ce que ça coûte",
     cta: "Commencer", themeBtn: "Sombre", themeLabel: "Basculer en mode sombre",
     heroTitre: "Soyez là le jour J",
     heroSous: "Lehno retient les dates qui comptent et ce que vous savez de vos proches. Le moment venu, vous avez déjà tout pour bien faire.",
     emailPlaceholder: "votre adresse e-mail",
     waitlist: "Nous préparons le lancement. Vous serez prévenu le jour où l'application ouvre.",
     merciTitre: "C'est noté. À très vite.", merciSous: "Vous recevrez un mot dès l'ouverture — rien d'autre.",
-    voirMur: "Voir un exemple de Mur",
     appTitre: "Ce qui approche", anniv: "Anniversaire", mariage: "Mariage", aujourdhui: "aujourd'hui",
-    appNote: "Vous aviez noté : elle a parlé d'un cours de céramique près de chez elle.",
     appBouton: "Laisser une note",
-    date24: "24 août", date30: "30 août", date2: "2 sept.", date14: "14 sept.",
+    date21: "21 août", age29: "29 ans", date24: "24 août", date30: "30 août", date2: "2 sept.", date14: "14 sept.",
     j3: "J−3", j9: "J−9", j12: "J−12", j24: "J−24",
     etape1Titre: "Notez quand ça vous vient.",
     etape1: "Une idée de cadeau au détour d'une conversation, un détail qui vous marque. Vous ouvrez, vous écrivez, c'est rangé.",
@@ -475,8 +465,6 @@ const STR = {
     blocFiche: "Une fiche par personne : sa date, ses goûts, ce qu'elle a laissé entendre. Ça s'enrichit au fil de l'année, sans effort. Et ça ressert chaque année.",
     registre: "registre amical", gouts: "Intérêts / goûts", idees: "Idées cadeaux", nogo: "Dislikes / no-go",
     tag1: "vinyles", tag2: "rando", tag3: "café de spécialité",
-    ideeTexte: "« Il a parlé d'un moulin à café manuel, le sien rend l'âme. »", ideeDate: "noté en mars",
-    nogoTexte: "Ne boit pas d'alcool.",
     blocDatesTitre: "Toutes vos dates, au même endroit",
     blocDates: "Anniversaires, mariages, retraites, six mois d'une histoire : tout ce qui mérite d'être marqué tient dans le même calendrier.",
     maman: "Maman", retraite: "Départ en retraite", nourEtMoi: "Nour & moi", sixMois: "Six mois",
@@ -487,6 +475,11 @@ const STR = {
     idee1: "Une lettre sur ce que son amitié a changé cette année",
     idee2: "Un après-midi au marché aux vinyles, puis un café",
     idee3: "Le moulin à café manuel dont il a parlé en mars",
+    ideeParole: "Il a parlé d\u2019un moulin à café manuel, le sien rend l\u2019âme.",
+    nogoParole: "Je ne bois pas d\u2019alcool.",
+    provIdee: "noté en mars",
+    provNogo: "dit par lui, en janvier",
+    provBrouillon: "écrit à partir de 9 notes sur Valery",
     brouillon: "Brouillon · pour Valery",
     brouillonTexte: "« Valery, 36 ans et toujours cette manie de refaire le monde à minuit. Merci pour l'été dernier — je te dois au moins un café correct. Bon anniversaire, mon vieux. »",
     modifier: "Modifier et envoyer", regenerer: "Régénérer",
@@ -499,13 +492,10 @@ const STR = {
     murPoint3Titre: "Les mots qu'on vous laisse",
     murPoint3: "Vos proches vous écrivent depuis votre Mur, vous les retrouvez dans l'application.",
     tabAccueil: "Accueil", tabDates: "Dates", tabProches: "Proches", tabMoi: "Moi",
-    qaAnniv: "Ajouter un anniversaire", qaNote: "Laisser une note", qaFiche: "Faire compléter une fiche",
     salut: "Bonjour Valentine", salutSous: "Une date aujourd'hui, deux cette semaine.",
-    contribs: "3 contributions à valider", echeances: "Prochaines échéances", voirTout: "voir tout",
     preparer: "Préparer", marquer: "Marquer envoyé",
-    reprises: "Reprises en cours", brouillon: "Brouillon de message · Valery", reprendre: "Reprendre",
     murEvite: "Ce que j'évite", murNo1: "les bougies parfumées", murNo2: "l'alcool",
-    murPied: "Fait avec Lehno", murPiedLien: "Faire le mien",
+    murPiedTitre: "Vous aussi, dites ce qui vous ferait plaisir.", murPiedLien: "Créer mon Mur",
     murHello: "Bienvenue chez Valentine", murSous: "Ravie de te voir passer.",
     murAime: "Ce que j'aime", murTag1: "parfums", murTag2: "fleurs", murTag3: "cinéma",
     murDate: "Mon anniversaire, c'est le 14 mars",
@@ -513,29 +503,26 @@ const STR = {
     murListe: "Voir ma liste", murMot: "Laisse-moi un mot",
     prixKicker: "Ce que ça coûte",
     prixGratuitChiffre: "Gratuit",
-    prixCreditsChiffre: "100 F",
     prixCreditsUnite: "le crédit",
     prixGratuitTitre: "Sans limite de temps",
     prixGratuit: "Vos notes, les fiches de vos proches, vos dates, les rappels et votre Mur.",
     prixCreditsTitre: "À l'usage, en crédits",
-    prixCredits: "Un crédit par contenu créé pour vous : le portrait, les idées de cadeau, le message. 5 crédits offerts à l'inscription.",
     finTitre: "Faites de chaque jour J un moment qui leur ressemble.",
     signature: "Chaque date qui compte, bien célébrée.",
+    piedFaq: "FAQ",
     cgu: "Conditions d'utilisation", confidentialite: "Confidentialité", contact: "Contact"
   },
   en: {
-    navComment: "How it works", navContenu: "What's inside", navMur: "The Wall",
+    navComment: "How it works", navContenu: "Inside the app", navMur: "The Wall", navPrix: "What it costs",
     cta: "Get started", themeBtn: "Dark", themeLabel: "Switch to dark mode",
     heroTitre: "Be there on the day",
     heroSous: "Lehno keeps the dates that matter and what you know about the people you love. When the day comes, you already have what you need.",
     emailPlaceholder: "your email address",
     waitlist: "We're getting ready to launch. We'll let you know the day the app opens.",
     merciTitre: "Noted. See you soon.", merciSous: "You'll get a note the day we open — nothing else.",
-    voirMur: "See an example Wall",
     appTitre: "Coming up", anniv: "Birthday", mariage: "Anniversary", aujourdhui: "today",
-    appNote: "You wrote: she mentioned a ceramics class near her place.",
     appBouton: "Jot something down",
-    date24: "24 Aug", date30: "30 Aug", date2: "2 Sep", date14: "14 Sep",
+    date21: "21 Aug", age29: "turning 29", date24: "24 Aug", date30: "30 Aug", date2: "2 Sep", date14: "14 Sep",
     j3: "3 days", j9: "9 days", j12: "12 days", j24: "24 days",
     etape1Titre: "Write it down when it comes to you.",
     etape1: "A gift idea mid-conversation, a detail that sticks. You open the app, you type, it's filed away.",
@@ -548,8 +535,6 @@ const STR = {
     blocFiche: "One page per person: their date, their tastes, what they let slip. It fills up over the year, effortlessly. And it serves again every year.",
     registre: "friendly tone", gouts: "Interests / tastes", idees: "Gift ideas", nogo: "Dislikes / no-go",
     tag1: "vinyl", tag2: "hiking", tag3: "specialty coffee",
-    ideeTexte: "\u201CHe mentioned a hand coffee grinder — his is on its last legs.\u201D", ideeDate: "noted in March",
-    nogoTexte: "Doesn't drink alcohol.",
     blocDatesTitre: "Every date, in one place",
     blocDates: "Birthdays, weddings, retirements, six months of a relationship: everything worth marking lives in the same calendar.",
     maman: "Mum", retraite: "Retirement", nourEtMoi: "Nour & me", sixMois: "Six months",
@@ -560,6 +545,11 @@ const STR = {
     idee1: "A letter on what their friendship changed this year",
     idee2: "An afternoon at the record market, then coffee",
     idee3: "The hand grinder he mentioned back in March",
+    ideeParole: "He mentioned a hand coffee grinder — his is on its last legs.",
+    nogoParole: "I don\u2019t drink alcohol.",
+    provIdee: "noted in March",
+    provNogo: "he told you, in January",
+    provBrouillon: "written from 9 notes about Valery",
     brouillon: "Draft · for Valery",
     brouillonTexte: "\u201CValery, 36 and still fixing the world at midnight. Thank you for last summer — I owe you at least one decent coffee. Happy birthday, old friend.\u201D",
     modifier: "Edit and send", regenerer: "Regenerate",
@@ -572,36 +562,36 @@ const STR = {
     murPoint3Titre: "The notes people leave you",
     murPoint3: "They write to you from your Wall, and you read them in the app.",
     tabAccueil: "Home", tabDates: "Dates", tabProches: "People", tabMoi: "Me",
-    qaAnniv: "Add a birthday", qaNote: "Leave a note", qaFiche: "Ask someone to fill a page",
     salut: "Hi Valentine", salutSous: "One date today, two this week.",
-    contribs: "3 contributions to review", echeances: "Coming up", voirTout: "see all",
     preparer: "Prepare", marquer: "Mark as sent",
-    reprises: "In progress", brouillon: "Message draft · Valery", reprendre: "Resume",
     murEvite: "What I'd rather skip", murNo1: "scented candles", murNo2: "alcohol",
-    murPied: "Made with Lehno", murPiedLien: "Make mine",
+    murPiedTitre: "Say what would make you happy, too.", murPiedLien: "Get my own Wall",
     murHello: "Welcome — I'm Valentine", murSous: "Glad you stopped by.",
     murAime: "What I love", murTag1: "perfume", murTag2: "flowers", murTag3: "cinema",
     murDate: "My birthday is 14 March",
-    murIdee: "Looking for an idea? Here's what would make me happy.",
+    murIdee: "An idea? Here's what I'd love.",
     murListe: "See my list", murMot: "Leave me a note",
     prixKicker: "What it costs",
     prixGratuitChiffre: "Free",
-    prixCreditsChiffre: "100 F",
     prixCreditsUnite: "per credit",
     prixGratuitTitre: "With no time limit",
     prixGratuit: "Your notes, the pages for the people you love, your dates, the reminders and your Wall.",
     prixCreditsTitre: "Pay as you go, in credits",
-    prixCredits: "One credit per piece created for you: the portrait, the gift ideas, the message. 5 credits when you sign up.",
     finTitre: "Make every big day feel like the person it's for.",
     signature: "Every date that matters, properly celebrated.",
+    piedFaq: "FAQ",
     cgu: "Terms of Use", confidentialite: "Privacy", contact: "Contact"
   }
 };
 
 class Component extends DCLogic {
-  state = { lang: "fr", nuit: false, email: "", sent: false, menu: false };
+  state = { lang: "fr", nuit: false, email: "", sent: false, menu: false, config: null };
 
   componentDidMount() {
+    fetch("public/config.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((config) => { if (config) this.setState({ config }); })
+      .catch(() => {});
     try {
       const l = localStorage.getItem("lehno.lang");
       const n = localStorage.getItem("lehno.nuit");
@@ -633,6 +623,18 @@ class Component extends DCLogic {
     const pre = this.props.preLaunch ?? true;
     const fr = this.state.lang === "fr";
     const t = Object.assign({}, STR[this.state.lang]);
+    const cfg = this.state.config;
+    if (cfg) {
+      t.prixCreditsChiffre = cfg.credit_unit_price + " " + (cfg.credit_currency || "F");
+      t.prixCredits = fr
+        ? "Un crédit par contenu créé pour vous : le portrait, les idées de cadeau, le message. " + cfg.signup_free_credits + " crédits offerts à l'inscription."
+        : "One credit per piece created for you: the portrait, the gift ideas, the message. " + cfg.signup_free_credits + " credits when you sign up.";
+    } else {
+      t.prixCreditsChiffre = "";
+      t.prixCredits = fr
+        ? "Un crédit par contenu créé pour vous : le portrait, les idées de cadeau, le message. Des crédits sont offerts à l'inscription."
+        : "One credit per piece created for you: the portrait, the gift ideas, the message. You get credits when you sign up.";
+    }
     t.themeLabel = this.state.nuit
       ? (fr ? "Passer en mode clair" : "Switch to light mode")
       : (fr ? "Passer en mode sombre" : "Switch to dark mode");
@@ -648,6 +650,7 @@ class Component extends DCLogic {
       theme: this.state.nuit ? "nuit" : "clair",
       nuit: this.state.nuit,
       clair: !this.state.nuit,
+      jour: !this.state.nuit,
       estFr: this.state.lang === "fr",
       estEn: this.state.lang === "en",
       appleFrNoir: fr && !this.state.nuit,
