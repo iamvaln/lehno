@@ -30,15 +30,16 @@ L'accès passe par une **connexion** (5.1). L'entrée est ensuite un **tableau d
 **Économie** — les leviers
 4. Paramètres
 5. Modèles d'IA
-6. Offres et croissance
+6. Studio du portrait
+7. Offres et croissance
 
 **Supervision** — l'observation
-7. Métriques
-8. Journal d'audit
-9. Connexions
+8. Métriques
+9. Journal d'audit
+10. Connexions
 
 **Outils** — les plateformes tierces
-10. Liens externes
+11. Liens externes
 
 ## 3. Glossaire
 
@@ -155,7 +156,27 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Suivi.** La consommation rapportée aux revenus des crédits, pour vérifier que le prix du crédit couvre bien le coût réel des actions.
 
-### 5.8 Offres et croissance
+### 5.8 Studio du portrait
+
+**Rôle.** Régler ce que le portrait propose et ce qu'on demande aux modèles pour le produire. C'est la section qui bougera le plus : on ajuste un gabarit, on regarde le résultat, on ajuste encore.
+
+**Les orientations.** Les douze intentions qu'un portrait peut exprimer, avec leur libellé dans les deux langues, leur ordre d'apparition et leur état d'activation. Si les mesures montrent que trois orientations sur douze servent, on désactive les autres sans livraison.
+
+**Les familles d'illustration et les styles de photo.** Leur nom, leur description, leur état d'activation, et le modèle qui les produit.
+
+**Les gabarits de production.** Un par orientation pour le message, un par famille d'illustration, un par style de photo. Chacun porte ses consignes, ses garde-fous et le modèle auquel il s'adresse.
+
+**Les garde-fous.** Les listes de ce qu'on écarte — symboles d'occasion, visages, superlatifs, formules de carte de vœux. Elles se complètent à mesure qu'on voit passer des résultats.
+
+**Le versionnage.** Un gabarit modifié conserve son historique, et **chaque portrait produit retient la version qui l'a produit**. Sans cela, comprendre pourquoi les résultats d'hier valaient mieux que ceux d'aujourd'hui devient impossible.
+
+**Le banc d'essai.** Lancer une production depuis le back-office, sur une fiche de démonstration, **sans consommer de crédit ni toucher à un compte réel**. Modifier un gabarit à l'aveugle et attendre les retours d'utilisateurs coûterait des semaines.
+
+**Actions.** Modifier un gabarit · activer ou désactiver une orientation, une famille, un style · essayer une production · comparer deux versions d'un gabarit sur la même fiche de démonstration · revenir à une version antérieure.
+
+**Ce que la section montre.** Pour chaque orientation et chaque style : le volume produit, le taux de régénération — un contenu qu'on relance aussitôt est un contenu manqué —, le coût moyen, le taux d'échec.
+
+### 5.9 Offres et croissance
 
 **Rôle.** Animer l'acquisition et suivre ce qu'elle rapporte.
 
@@ -165,7 +186,7 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Actions.** Créer, modifier, désactiver un code promotionnel · suivre les parrainages · corriger un octroi litigieux.
 
-### 5.9 Métriques
+### 5.10 Métriques
 
 **Rôle.** Comprendre l'usage au-delà des chiffres du tableau de bord.
 
@@ -173,7 +194,7 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Actions.** Choisir la période, croiser les axes, exporter.
 
-### 5.10 Journal d'audit
+### 5.11 Journal d'audit
 
 **Rôle.** Savoir qui a fait quoi. C'est le contrepoids des pouvoirs de cet outil.
 
@@ -181,7 +202,7 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Actions.** Rechercher, filtrer par auteur, par période, par nature ; exporter. Le journal est en lecture seule : ses entrées sont définitives, ce qui fonde sa valeur de preuve.
 
-### 5.11 Connexions
+### 5.12 Connexions
 
 **Rôle.** Repérer les accès anormaux.
 
@@ -189,7 +210,7 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Usage.** Détecter les séries d'échecs, les accès inhabituels, et documenter un incident de sécurité.
 
-### 5.12 Liens externes
+### 5.13 Liens externes
 
 **Rôle.** Rassembler les portes d'entrée vers les plateformes tierces sur lesquelles s'appuie le service, pour les atteindre depuis un seul endroit plutôt que de chercher chaque adresse ailleurs.
 
@@ -207,10 +228,12 @@ Deux rôles. Le premier suffit à l'assistance quotidienne ; le second ouvre les
 - Modérer : masquer un contenu public, révoquer un lien, désactiver un Mur, notifier un utilisateur.
 - Traiter les suppressions en cours, y compris restaurer un compte pendant le délai de grâce.
 - Consulter le tableau de bord, les métriques, les connexions et les liens externes.
+- Essayer une production du studio sur une fiche de démonstration, sans rien modifier.
 
 **Administrateur** — tout ce qui précède, et davantage.
 - Modifier les paramètres globaux (prix du crédit, bonus, délais, seuils).
 - Piloter les modèles d'IA : activation, priorité de routage, configuration.
+- Régler le studio du portrait : orientations, familles, styles, gabarits de production, garde-fous.
 - Créer et gérer les codes promotionnels ; corriger un octroi de parrainage.
 - Ajuster manuellement un solde de crédits ; déclencher un remboursement ; lever le blocage anti-fraude d'un remboursement ; confirmer manuellement un paiement en attente.
 - Effacer un compte sans attendre la fin du délai de grâce.
@@ -221,6 +244,9 @@ Deux rôles. Le premier suffit à l'assistance quotidienne ; le second ouvre les
 ## 7. Éléments transverses
 
 - **Recherche globale** — retrouver un utilisateur, un paiement ou un contenu depuis n'importe où.
+- **Deux thèmes** — l'outil suit le thème du système, clair ou sombre, et laisse l'imposer. Les séances de travail sont longues ; le choix appartient à celui qui l'utilise.
+- **Mise en page** — conçue pour l'ordinateur, largeurs de tableau ajustables, et lisible sur une tablette pour dépanner en déplacement.
+- **Langue** — l'interface suit la langue de l'administrateur, français ou anglais.
 - **Confirmation et motif** — toute action irréversible ou sensible demande une confirmation explicite et un motif, repris dans le journal d'audit.
 - **Export** — les listes filtrées s'exportent, pour l'analyse ou la conformité.
 - **États vides et chargement** — mêmes principes que les autres surfaces : dire ce qui manque, et orienter.

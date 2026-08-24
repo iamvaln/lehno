@@ -11,16 +11,18 @@ import { messages } from "../../../messages/index.js";
 // anglais (voir lib/chemins.ts). generateStaticParams ne rend que cette
 // langue-là, et dynamicParams la ferme aux autres — « /fr/legal-notice » n'a pas
 // de sens et doit répondre 404, pas afficher la page.
-export const revalidate = 3600;
-
-// Liste vide, à dessein : cette page N'EST PAS pré-rendue à la construction.
-// L'image du site se construit dans GitHub Actions, où l'API n'existe pas —
-// le repli « contenu indisponible » s'y figeait alors dans la page, et y
-// restait une heure. Elle se rend donc à la première visite, quand l'API est
-// joignable, puis se met en cache pour la durée ci-dessus.
-export function generateStaticParams(): { locale: string }[] {
-  return [];
-}
+// Rendue à chaque visite, jamais pré-rendue.
+//
+// Deux tentatives ont échoué avant celle-ci. Le contenu vient de l'API, qui
+// n'existe pas pendant la construction de l'image — dans GitHub Actions, il
+// n'y a ni base ni serveur. Le repli « contenu indisponible » se figeait donc
+// dans un fichier HTML embarqué dans l'image, et une liste de paramètres vide
+// n'y changeait rien : c'est le gabarit parent qui impose les deux langues.
+//
+// force-dynamic est la seule forme qui garantit que la page voit l'API. Le
+// coût est un appel interne de conteneur à conteneur, sur une page qu'on
+// visite rarement — moins cher qu'un texte juridique qui ne s'affiche pas.
+export const dynamic = "force-dynamic";
 
 type Proprietes = { params: Promise<{ locale: string }> };
 
@@ -32,7 +34,7 @@ export default async function Page({ params }: Proprietes): Promise<ReactNode> {
   if (locale !== "en") notFound();
   const langue: Langue = "en";
   const t = messages(langue);
-  const document = await chargerDocumentLegal("mentions", langue, revalidate);
+  const document = await chargerDocumentLegal("mentions", langue, 0);
 
   return <LegalPage t={t} langue={langue} kicker={t.mentionsLegales} document={document} />;
 }

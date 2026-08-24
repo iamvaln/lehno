@@ -168,6 +168,8 @@ L'application n'assure pas l'envoi automatique des messages aux destinataires : 
 
 **Notification** — Trace d'un rappel ou d'une relance émis (type, canal, horodatage, état), pour le suivi et l'anti-doublon.
 
+**PromptTemplate** — Gabarit de production du studio : ce qu'on demande au modèle pour un message, une illustration ou un traitement de photo. Versionné, réglable par l'`Admin` sans livraison, et retenu par chaque `ActionRun`.
+
 **AIModel** — Modèle d'IA du catalogue et sa configuration de routage (priorité, coût, activation), éditable via le back-office.
 
 **AIUsage** — Trace d'un appel à un modèle (modèle utilisé, tokens, coût réel, latence, statut), rattachée à une `ActionRun` ; sa somme forme l'`internalCost`.

@@ -727,12 +727,14 @@ Exécution d'une action premium.
 | user_id | uuid | non | — | — | Auteur |
 | premium_action_id | uuid | non | — | — | FK → premium_action(id) on delete restrict |
 | event_occurrence_id | uuid | oui | — | — | Cible : l'occurrence pour laquelle la génération est lancée ; FK → event_occurrence(id) on delete set null |
+| prompt_template_id | uuid | oui | — | — | FK → prompt_template(id) on delete set null ; **la version exacte du gabarit qui a produit ce contenu** |
 | credits_spent | integer | non | — | — | Recopié à l'exécution (fige l'historique) |
 | status | action_run_status (enum) | non | — | — | `success` \| `failure` |
 | internal_cost | numeric(12,6) | oui | — | — | Coût IA réel = agrégat des `ai_usage` ; interne, non facturé |
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `action_run_status` : `success`, `failure`.
+- **La version du gabarit est retenue** : sans elle, comprendre pourquoi les productions d'une semaine valaient mieux que celles de la suivante devient impossible.
 
 ## CreditTransaction
 
@@ -858,6 +860,28 @@ Catalogue des modèles d'IA et configuration de routage.
 | updated_at | timestamptz | non | — | now() | |
 
 - Unicité logique (`provider`, `model_key`).
+
+## PromptTemplate
+
+Gabarit de production du studio : ce qu'on demande au modèle pour un message, une illustration ou un traitement de photo. **Les gabarits vivent en base**, jamais dans le code : ils s'ajustent au vu des résultats.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| kind | prompt_kind (enum) | non | — | — | Ce que le gabarit produit |
+| key | varchar(60) | non | — | — | L'orientation, la famille ou le style visé |
+| version | integer | non | — | 1 | S'incrémente à chaque modification |
+| body | text | non | — | — | Les consignes adressées au modèle |
+| guardrails | jsonb | oui | — | — | Ce qui est écarté : symboles, formules, tournures |
+| ai_model_id | uuid | oui | — | — | FK → ai_model(id) on delete set null ; le modèle visé |
+| is_active | boolean | non | — | false | Une seule version active par (`kind`, `key`) |
+| created_by_admin_id | uuid | oui | — | — | FK → admin(id) on delete set null |
+| created_at | timestamptz | non | — | now() | |
+
+- Enum `prompt_kind` : `message`, `illustration`, `photo_style`, `note_classification`, `sensitive_detection`.
+- Unicité sur (`kind`, `key`, `version`) ; **une seule version active** par (`kind`, `key`), garantie par un index unique partiel.
+- **Les versions ne se modifient pas.** Ajuster un gabarit crée une version nouvelle ; l'ancienne demeure, ce qui permet d'y revenir et de comprendre un écart de qualité.
+- Chaque `ActionRun` retient le `prompt_template_id` qui l'a produit (voir `ActionRun`).
 
 ## AIUsage
 
@@ -985,6 +1009,7 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | admin_role | support, admin |
 | ai_usage_status | success, error, timeout |
 | ai_purpose | note_classification, sensitive_detection, portrait, gift_ideas, wish_message |
+| prompt_kind | message, illustration, photo_style, note_classification, sensitive_detection |
 | audit_actor | admin, user |
 | notification_type | event_reminder, event_day_of, digest, contribution_received, wish_received, enrichment_nudge_global, enrichment_nudge_person, generation_ready, payment_succeeded, payment_failed, credits_received, login_code, security, account |
 | notification_channel | email, push, in_app |

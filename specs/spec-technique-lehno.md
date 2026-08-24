@@ -152,6 +152,8 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 
 **Ce que le serveur ajoute.** Il complète la demande avec ce que la fiche sait du proche : nom d'usage, lien, ville, âge lorsque l'année de naissance est connue, canal habituel, et **la liste des cadeaux déjà offerts**, que les idées écartent. Le client n'a pas à les transmettre — ils appartiennent au serveur, qui les tient à jour.
 
+**Les gabarits vivent en base.** Ce qu'on demande au modèle — consignes et garde-fous — se règle depuis le back-office, jamais dans le code. Chaque production retient **la version exacte du gabarit** qui l'a produite (`ActionRun.prompt_template_id`), sans quoi un écart de qualité reste inexplicable.
+
 **Sans doublon.** Une même demande relancée (même cible, même paramètres, même clé d'idempotence) rejoint la génération en cours plutôt que d'en créer une seconde — et ne débite qu'une fois.
 
 ### 5.5 Mur
@@ -257,6 +259,11 @@ Réservée aux comptes d'administration, avec les deux rôles du modèle.
 | `/admin/moderation/{id}/decision` | POST | Masquer, révoquer, désactiver, classer |
 | `/admin/parameters` | GET, PATCH | La configuration globale |
 | `/admin/ai-models` | GET, PATCH | Catalogue et routage |
+| `/admin/portrait-studio/orientations` | GET, PATCH | Les orientations : libellés, ordre, activation |
+| `/admin/portrait-studio/visual-styles` | GET, POST, PATCH | Familles d'illustration et styles de photo |
+| `/admin/portrait-studio/templates` | GET, POST | Les gabarits de production et leurs versions |
+| `/admin/portrait-studio/templates/{id}` | GET, PATCH | Un gabarit, son historique, le retour à une version antérieure |
+| `/admin/portrait-studio/preview` | POST | Essayer une production sur une fiche de démonstration, sans crédit ni compte réel |
 | `/admin/promo-codes` | GET, POST, PATCH | Les codes promotionnels |
 | `/admin/metrics` | GET | L'usage détaillé |
 | `/admin/audit-log` | GET | Le journal des actions sensibles |
@@ -670,7 +677,7 @@ Un tracking plan vaut par les questions qu'il permet de trancher. Celles-ci, d'a
 `reminder.sent` (nature, canal, délai d'anticipation) · `reminder.opened` · `reminder.led_to_preparation` · `occasion.prepared` · `message.marked_sent`. Cette suite mesure la promesse du produit de bout en bout.
 
 **Génération**
-`generation.started` (type, paramètres modifiés par rapport aux défauts : ton, langue, plage) · `generation.succeeded` (durée, fournisseur retenu, coût) · `generation.failed` (raison) · `generation.regenerated` (ce qui a été changé) · `portrait.approved` · `portrait.shared` (destination) · `idea.retained`.
+`generation.started` (type, paramètres modifiés par rapport aux défauts : ton, langue, plage ; pour un portrait : orientation, voie d'image, famille ou style) · `generation.succeeded` (durée, fournisseur retenu, coût) · `generation.failed` (raison) · `generation.regenerated` (ce qui a été changé) · `portrait.approved` · `portrait.shared` (destination) · `idea.retained`.
 
 **Collecte et surfaces publiques**
 `collection_link.shared` (nominatif ou public) · `collection_form.opened` · `submission.sent` (champs renseignés) · `submission.reviewed` (validée, corrigée, rejetée ; souhaits retenus et écartés) · `wall.viewed` (visiteur avec ou sans compte) · `wall.wishlist_opened` · `wish_message.sent` · `invitation.opened` · `invitation.converted`.
