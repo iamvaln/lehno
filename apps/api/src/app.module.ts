@@ -23,6 +23,8 @@ import { ContactService } from "./public/contact.service.js";
 import { AdminAuthController } from "./admin/admin-auth.controller.js";
 import { AdminOtpService } from "./admin/admin-otp.service.js";
 import { AdminTokenService } from "./admin/admin-token.service.js";
+import { AdminGuard } from "./admin/admin.guard.js";
+import { RoleGuard } from "./admin/role.guard.js";
 
 @Module({
   controllers: [
@@ -95,6 +97,8 @@ import { AdminTokenService } from "./admin/admin-token.service.js";
     ContactService,
     AdminOtpService,
     AdminTokenService,
+    AdminGuard,
+    RoleGuard,
   ],
 })
 export class AppModule implements NestModule {
