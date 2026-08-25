@@ -67,7 +67,6 @@ jobs:
           # variables ▸ Actions ▸ Variables), pas des secrets.
           build-args: |
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-            NEXT_PUBLIC_LANCEMENT=${{ vars.NEXT_PUBLIC_LANCEMENT }}
           tags: |
             ${{ env.REGISTRY }}/lehno-web:${{ github.ref_name }}
             ${{ env.REGISTRY }}/lehno-web:latest
