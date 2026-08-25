@@ -4,3 +4,4 @@ export * from "./profile.js";
 export * from "./public.js";
 export * from "./admin.js";
 export * from "./me.js";
+export * from "./flags.js";

@@ -599,3 +599,15 @@ model DataExportRequest {
   @@index([userId])
   @@map("data_export_request")
 }
+
+// La table ne porte que l'état. Quels drapeaux existent, leur description et
+// leur lisibilité publique sont des faits de code (packages/contracts/src/flags.ts),
+// pas des données — les dupliquer ici ouvrirait une fuite d'un clic depuis
+// l'administration. Une ligne absente vaut éteint (voir FlagsService).
+model FeatureFlag {
+  key       String   @id @db.VarChar(64)
+  enabled   Boolean  @default(false)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("feature_flag")
+}
