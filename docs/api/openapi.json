@@ -427,13 +427,20 @@
                     "referralBonusInvited": {
                       "type": "number",
                       "minimum": 0
+                    },
+                    "flags": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "boolean"
+                      }
                     }
                   },
                   "required": [
                     "signupFreeCredits",
                     "creditUnitPrice",
                     "currency",
-                    "referralBonusInvited"
+                    "referralBonusInvited",
+                    "flags"
                   ],
                   "additionalProperties": false
                 }
