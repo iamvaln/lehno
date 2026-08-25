@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { nativeFont, nativeLeading, nativeLineHeight, nativeSize, nativeSpace } from "@lehno/tokens";
-import { useTheme } from "@lehno/ui-native";
+import { Button, useTheme } from "@lehno/ui-native";
 
 /* Écran de contrôle du socle — il ne survivra pas au lot 4, qui pose l'accueil.
  *
@@ -50,6 +50,14 @@ export default function Controle() {
           {e.texte}
         </Text>
       ))}
+
+      <View style={{ gap: nativeSpace[8], marginTop: nativeSpace[16] }}>
+        <Button variant="primary" full icon="sparkles">Préparer</Button>
+        <Button variant="outline" icon="chevron-right" iconAfter="chevron-right">Contour</Button>
+        <Button variant="text">Laisser une note</Button>
+        <Button variant="destructive" icon="trash-2">Supprimer</Button>
+        <Button variant="neutral" disabled>Désactivé</Button>
+      </View>
 
       <View style={styles.nuancier}>
         {(["action", "celebrate", "feedbackError", "feedbackErrorPress"] as const).map((role) => (

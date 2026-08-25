@@ -21,6 +21,13 @@ config.resolver.nodeModulesPaths = [
 // Le doublon de React qu'elle prévient n'a pas lieu d'être : le dépôt n'en
 // installe qu'une version, et pnpm ne la duplique pas.
 
+// Metro lit bien la carte « exports » des paquets — c'est déjà son défaut — mais
+// il arrive ici sans aucun nom de condition, et ne peut donc choisir aucune de
+// ses branches : « ./icons/* » ne résout alors vers rien. Les nommer rend
+// l'entrée profonde possible, seul moyen de ne pas embarquer les mille cinq
+// cents icônes que personne n'affiche, Metro n'élaguant pas.
+config.resolver.unstable_conditionNames = ["react-native", "import", "require"];
+
 // Les paquets partagés suffixent leurs imports relatifs en « .js », comme le
 // veut l'ESM de Node dont l'API dépend — alors que les fichiers sont des « .ts ».
 // TypeScript le sait (moduleResolution: Bundler) ; Metro résout littéralement et
