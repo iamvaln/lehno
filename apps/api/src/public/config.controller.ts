@@ -1,12 +1,16 @@
 import { Controller, Get, Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { FlagsService } from "../flags/flags.service.js";
 import type { PublicConfig } from "@lehno/contracts";
 
 @Injectable()
 export class ConfigService {
   // @Inject(PrismaService) explicite : voir ProfileService, même contrainte
   // esbuild/vitest (pas d'emitDecoratorMetadata).
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(FlagsService) private readonly flags: FlagsService,
+  ) {}
 
   // Lu en base à chaque appel : un prix écrit en dur devient faux le jour
   // où l'administration change `system_parameter`.
@@ -21,6 +25,10 @@ export class ConfigService {
       creditUnitPrice: num("credit_unit_price", 100),
       currency: "XAF",
       referralBonusInvited: num("referral_bonus_invited", 0),
+      // FlagsService.lirePublics() ne lit que les clés que le registre
+      // (packages/contracts/src/flags.ts) marque publiques — un drapeau privé
+      // allumé en base n'atteint jamais cette réponse.
+      flags: await this.flags.lirePublics(),
     };
   }
 }

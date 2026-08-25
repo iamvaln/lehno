@@ -23,8 +23,17 @@ export default async function Page({ params }: Proprietes): Promise<ReactNode> {
   const configuration = await chargerConfig(revalidate);
 
   // Un seul booléen bascule le héros et la clôture entre capture d'adresse et
-  // badges de magasins. Il vient de l'environnement, pas du code.
-  const avantLancement = process.env["NEXT_PUBLIC_LANCEMENT"] !== "1";
+  // badges de magasins. Il vient du drapeau "launch.live" (registre en
+  // apps/api/src/flags — administrable sans redéploiement), pas d'une
+  // variable d'environnement cuite dans l'image au build : une bascule au
+  // jour du lancement doit être un clic en administration, pas une chaîne de
+  // livraison. Absence de la clé = pré-lancement, même si la cause est une
+  // panne d'API (voir le commentaire sur CONFIG_REPLI dans config-publique.ts
+  // — flags: {} y est un choix, pas un oubli).
+  //
+  // Ce booléen peut mettre jusqu'à `revalidate` (300s, cinq minutes) à
+  // refléter un changement : le cache de la page, pas une bascule instantanée.
+  const avantLancement = configuration.flags["launch.live"] !== true;
 
   return <Landing t={t} langue={langue} configuration={configuration} avantLancement={avantLancement} />;
 }

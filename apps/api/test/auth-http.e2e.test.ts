@@ -8,6 +8,10 @@ import { OtpService } from "../src/auth/otp.service.js";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
+// L'application entière refuse de démarrer sans clé d'administration : c'est
+// voulu, mieux vaut ne pas démarrer que signer sans clé. Ces suites montent
+// AppModule, elles la posent donc aussi.
+const SECRET_ADMIN = "Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh";
 
 // Revue tour 1, points 4 et 6 : l'indistinguabilité d'une adresse inconnue
 // doit s'éprouver par le point d'entrée HTTP réel (statut, corps, en-têtes),
@@ -35,6 +39,7 @@ describe("authentification — HTTP de bout en bout", () => {
     process.env.DATABASE_URL = db.url;
     process.env.OTP_PEPPER = PEPPER;
     process.env.JWT_SECRET = SECRET;
+    process.env.ADMIN_JWT_SECRET = SECRET_ADMIN;
     // Aucun identifiant Resend ici : adhésion explicite à la console de
     // développement requise depuis la revue tour 2 (voir app.module.ts) —
     // sans elle, le module refuserait de démarrer.

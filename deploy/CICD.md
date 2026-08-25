@@ -42,12 +42,16 @@ Inlinées dans le bundle client au build de l'image web (voir
 | Variable | Valeur (exemple) |
 | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `https://api.lehno.app` |
-| `NEXT_PUBLIC_LANCEMENT` | `0` (pré-lancement) ou `1` (badges de stores) |
 
 ```bash
 gh variable set NEXT_PUBLIC_API_URL --body "https://api.lehno.app"
-gh variable set NEXT_PUBLIC_LANCEMENT --body "0"
 ```
+
+La bascule de lancement (pré-lancement ↔ liens de magasins) n'est plus une
+variable de build : c'est le drapeau `launch.live`, lu à l'exécution via
+`/v1/public/config` (voir `packages/contracts/src/flags.ts`). Il s'allume en
+administration, pas par un redéploiement — jusqu'à cinq minutes pour
+paraître (`revalidate` de la page, `apps/web/app/[locale]/page.tsx`).
 
 ### 2. Secrets de déploiement (Settings ▸ Secrets ▸ Actions, ou via gh)
 
@@ -105,7 +109,7 @@ directement.
 | `TRUST_PROXY_HOPS` | déjà posé à `1` par `docker-compose.yml`, rien à écrire ici. Ne le relevez que si un relais s'ajoute devant Traefik — voir l'encadré ci-dessous |
 | `SENTRY_DSN` | suivi des erreurs, optionnel |
 | `API_URL` | lue côté serveur par le rendu SSR du web — mettre `http://api:3000` (nom du service Docker, réseau interne), pas le domaine public |
-| `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_LANCEMENT` | mêmes valeurs que les variables GitHub Actions ci-dessus — utiles seulement à un `docker compose build` local (en production, l'image publiée les porte déjà) |
+| `NEXT_PUBLIC_API_URL` | même valeur que la variable GitHub Actions ci-dessus — utile seulement à un `docker compose build` local (en production, l'image publiée la porte déjà) |
 
 > **Sur `TRUST_PROXY_HOPS`.** Ce réglage dit combien de relais inverses on
 > exploite devant l'api. Il vaut `1` : le Traefik partagé du VPS. Sans lui,

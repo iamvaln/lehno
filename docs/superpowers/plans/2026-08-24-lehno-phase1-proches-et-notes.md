@@ -676,7 +676,11 @@ git commit -m "me: la fiche d'un proche — lecture, correction, suppression"
 
 ### Tâche 4 : Le classement des notes
 
-**Décision, à ne pas rediscuter en cours de route.** Le classement est **heuristique**, sans appel de modèle. Deux raisons : les notes sont gratuites alors qu'un appel d'IA se paie en crédits (CGU §6), et un classement synchrone ne peut pas dépendre d'un tiers dont la spécification dit qu'il peut échouer. La documentation fonctionnelle exige seulement que le classement soit **automatique et corrigeable** (§7) — elle n'impose aucun moyen. Coût si ce choix est mauvais : un classement moins fin, que l'utilisateur corrige d'un geste, et une fonction pure à remplacer plus tard sans toucher au reste.
+**Décision, à ne pas rediscuter en cours de route.** Le classement de CETTE tâche est **heuristique**, sans appel de modèle, parce que les notes sont gratuites alors qu'un appel d'IA se paie en crédits (CGU §6).
+
+**Correction du 25/08/2026 (partenaire humain).** Ce paragraphe invoquait aussi « un classement synchrone ne peut pas dépendre d'un tiers qui peut échouer ». La prémisse est fausse : le classement n'a jamais eu à être synchrone. L'utilisateur écrit sa note, ferme l'application et vaque ; le classement se fait en arrière-plan et reste **silencieux pour le client** en cas d'échec — silencieux pour lui, pas pour nous, qui gardons journaux et alertes (spec §14.1, « Observés »). Une note non classée reste dans la liste globale du proche, telle qu'elle a été saisie. Point final.
+
+Ce que cela change : la fonction pure ci-dessous reste le plancher — la note a ses catégories à l'instant où elle est enregistrée, sans dépendance ni attente. Une passe d'IA pourra plus tard **réviser les rattachements `auto` sans jamais toucher aux corrections `user`**, en arrière-plan, derrière son propre drapeau. Ce n'est pas cette tâche : elle attend la couche de traitements programmés (spec §14), que rien n'a encore construite. La documentation fonctionnelle exige seulement que le classement soit **automatique et corrigeable** (§7) — elle n'impose aucun moyen. Coût si ce choix est mauvais : un classement moins fin, que l'utilisateur corrige d'un geste, et une fonction pure à remplacer plus tard sans toucher au reste.
 
 **Fichiers :**
 - Créer : `apps/api/src/me/note-classifier.ts`
@@ -720,10 +724,21 @@ describe("classement d'une note", () => {
     expect(c).toContain("encouragements");
   });
 
-  // Une note qu'on ne sait pas ranger doit tomber quelque part : sans cela,
-  // elle disparaîtrait de toutes les vues de la fiche.
-  it("range dans facts ce qu'il ne sait pas classer", () => {
-    expect(classer("azerty qwerty")).toEqual(["facts"]);
+  // Une note qu'on ne sait pas ranger ne se range NULLE PART. Elle reste dans
+  // la liste globale du proche, telle qu'elle a été saisie — le classement est
+  // une décoration par-dessus, jamais une condition de visibilité.
+  //
+  // Le repli sur « facts » qui figurait ici était doublement faux. Sa raison
+  // — « sans cela elle disparaîtrait de toutes les vues » — est fausse :
+  // listForPerson rend toutes les notes du proche, catégorie ou pas, et
+  // NoteCategory est une association N–N où zéro ligne est un état valide.
+  // Et son effet était pire que le trou qu'il prétendait combler : une note
+  // rangée dans « facts » faute de mieux devient indiscernable d'une note qui
+  // parle vraiment d'un fait. La catégorie se remplit alors de bruit qu'on ne
+  // sait plus séparer du signal, et personne ne peut corriger ce qu'il ne
+  // peut pas repérer.
+  it("ne range nulle part ce qu'il ne sait pas classer", () => {
+    expect(classer("azerty qwerty")).toEqual([]);
   });
 
   it("ne rend jamais deux fois la même catégorie", () => {
@@ -784,9 +799,11 @@ export function classer(texte: string): CategoryCode[] {
   const t = normaliser(texte);
   const trouves = INDICES.filter(({ mots }) => mots.some((m) => t.includes(m))).map(({ code }) => code);
 
-  // Une note qu'on ne sait pas ranger tombe dans les faits : sans cela elle
-  // disparaîtrait de toutes les vues de la fiche.
-  return trouves.length > 0 ? [...new Set(trouves)] : ["facts"];
+  // Aucun indice trouvé : aucune catégorie. La note reste dans la liste
+  // globale du proche, telle qu'elle a été saisie. Ranger d'office dans
+  // « facts » ce qu'on n'a pas su lire polluerait la catégorie d'un bruit
+  // qu'aucune correction ne saurait ensuite repérer.
+  return [...new Set(trouves)];
 }
 ```
 
@@ -865,6 +882,24 @@ export type CreateNoteInput = z.infer<typeof createNoteSchema>;
     const liens = await db.prisma.noteCategory.findMany({ where: { noteId: n.id } });
     expect(liens).toHaveLength(n.categories.length);
     expect(liens.every((l) => l.assignedBy === "auto")).toBe(true);
+  });
+
+  // L'INVARIANT que le classement ne doit jamais mettre en cause : une note
+  // sans aucune catégorie reste dans la liste globale du proche, telle qu'elle
+  // a été saisie. Le classement décore, il ne conditionne pas la visibilité.
+  //
+  // Sans ce cas, une jointure interne sur les catégories — écrite un jour pour
+  // « simplifier » la requête — ferait disparaître silencieusement les notes
+  // non classées. C'est précisément la perte que l'ancien repli sur « facts »
+  // prétendait éviter, en la payant d'un mensonge. On l'évite ici par un test.
+  it("rend les notes sans aucune catégorie", async () => {
+    const p = await persons.create(awa, { displayName: "Valery" });
+    const n = await notes.createForPerson(awa, p.id, { content: "azerty qwerty" });
+    expect(n.categories).toEqual([]);
+
+    const listees = await notes.listForPerson(awa, p.id);
+    expect(listees.map((x) => x.id)).toContain(n.id);
+    expect(listees.find((x) => x.id === n.id)?.content).toBe("azerty qwerty");
   });
 
   it("n'écrit pas de note sur le proche d'un autre", async () => {

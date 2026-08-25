@@ -37,9 +37,7 @@ FROM install AS builder
 # peuvent pas être fournies seulement à l'exécution du conteneur. Valeurs de
 # repli identiques à apps/web/.env.example.
 ARG NEXT_PUBLIC_API_URL=http://localhost:3000
-ARG NEXT_PUBLIC_LANCEMENT=0
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV NEXT_PUBLIC_LANCEMENT=${NEXT_PUBLIC_LANCEMENT}
 RUN pnpm --filter @lehno/web build
 
 FROM base AS runtime
