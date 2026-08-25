@@ -32,9 +32,31 @@ export async function chargerConfig(revalidate: number): Promise<ConfigPublique>
   try {
     const reponse = await fetch(`${base}/v1/public/config`, { next: { revalidate } });
     if (!reponse.ok) return CONFIG_REPLI;
-    return (await reponse.json()) as ConfigPublique;
+    return fusionner(await reponse.json());
   } catch {
     // Serveur injoignable, DNS muet, délai dépassé : la page paraît quand même.
     return CONFIG_REPLI;
   }
+}
+
+// Une réponse peut être valide — 200, JSON bien formé — et pourtant incomplète :
+// c'est le cas pendant un déploiement où l'image du site part avant celle de
+// l'api, et après un retour arrière de l'api. On complète donc champ par champ
+// depuis le repli plutôt que de faire confiance à la charge reçue.
+//
+// Sans cette fusion, un champ manquant ne dégradait pas la page : il la faisait
+// PLANTER. `flags` absent, et `configuration.flags["launch.live"]` lève un
+// TypeError qui rend la landing entière en erreur — pire que le serveur
+// éteint, cas pour lequel CONFIG_REPLI avait justement été écrit.
+function fusionner(charge: unknown): ConfigPublique {
+  if (typeof charge !== "object" || charge === null) return CONFIG_REPLI;
+  const recu = charge as Partial<ConfigPublique>;
+  return {
+    ...CONFIG_REPLI,
+    ...recu,
+    // Seul champ dont on lit une sous-clé : il doit être un OBJET, pas
+    // seulement présent. `null` passerait le test de présence et planterait
+    // pareil.
+    flags: typeof recu.flags === "object" && recu.flags !== null ? recu.flags : CONFIG_REPLI.flags,
+  };
 }
