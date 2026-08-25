@@ -1,11 +1,16 @@
 name: CI
 
-# Barrières de qualité sur chaque PR et sur les push vers main. Ne déploie
-# jamais — voir release.yml, déclenché uniquement par un tag git `v*`.
+# Barrières de qualité sur chaque PR et sur les push vers develop et main. Ne
+# déploie jamais — voir release.yml, déclenché uniquement par un tag git `v*`.
+#
+# `develop` y figure parce que c'est la branche où le travail atterrit : les
+# agents y poussent directement, sans passer par une PR. Tant qu'elle n'était
+# pas surveillée, rien ne vérifiait ce qui s'y accumulait — et la CI a pu
+# rester rouge sur main du 24 août sans que personne ne s'en aperçoive.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [develop, main]
 
 # Annule les exécutions périmées sur la même réf pour économiser des minutes.
 concurrency:
