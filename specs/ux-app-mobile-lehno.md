@@ -79,6 +79,10 @@ L'application vise le **minimalisme élégant** : peu d'éléments, chacun à sa
 
 **Le texte parle, l'ornement se tait.** Une phrase juste vaut mieux qu'un compteur : « Une date aujourd'hui, deux cette semaine » remplace trois cartes de chiffres. Les illustrations et les icônes décoratives restent l'exception.
 
+**Le produit se livre par morceaux.** Les proches, les notes, les dates et les rappels forment le socle ; le reste s'allume quand il est prêt. Chaque écran d'une fonctionnalité extinguible **se rend derrière son drapeau** : si elle est éteinte, il n'existe pas.
+
+**Un trou doit rester habitable.** Une fonctionnalité éteinte laisse une place vide, et l'écran doit tenir sans elle : la barre d'onglets vit à trois comme à quatre, une carte prévue pour deux actions n'en paraît pas amputée avec une seule, et les renvois vers une fonctionnalité éteinte **disparaissent** plutôt que de mener nulle part.
+
 **Le calme est une réponse.** Un écran sans rien à traiter le dit sereinement, plutôt que de se remplir. L'absence d'échéance est une bonne nouvelle, pas un vide à combler.
 
 ## 2. Architecture de navigation
@@ -88,7 +92,10 @@ La navigation principale se fait par onglets, en bas de l'écran, pensés pour l
 1. **Accueil** — ce qui approche, et de quoi noter une idée.
 2. **Dates** — les dates à venir, organisées par le temps (voir 3.14).
 3. **Proches** — l'annuaire, organisé par personne.
-4. **Moi** — le hub personnel : le Mur, les crédits, le compte, l'aide (voir 3.17).
+4. **Moi** — ce que je montre de moi : mon Mur, mes listes de souhaits, mon lien de vœux (voir 3.17).
+5. **Réglages** — ce qui me concerne : profil, crédits et paiements, notifications, sécurité, données, aide (voir 3.28).
+
+**Pourquoi cinq.** Les deux moitiés du produit n'ont pas la même mécanique. *Célébrer les autres* est intime : ça se partage à quelques proches, ça retient. *Être célébré* est public : un Mur, une liste se partagent en un statut et atteignent des dizaines de personnes d'un coup — **c'est ce qui fait entrer les gens**. Traiter cette moitié comme une annexe des réglages reviendrait à ranger la porte d'entrée dans un placard.
 
 Une **cloche de notifications** (le centre de notifications, voir 3.13) reste présente dans l'en-tête et affiche une pastille dès qu'un élément demande l'attention. La validation des contributions reçues se fait depuis ce centre, qui en indique le nombre et ouvre l'écran de validation (3.8). Chaque geste vit dans l'écran qui lui correspond : **laisser une note** depuis l'accueil (3.2), **créer une date** depuis l'onglet Dates (3.14) ou une fiche (3.4), **faire compléter une fiche** depuis celle du proche concerné (3.20).
 
@@ -112,6 +119,8 @@ Une **cloche de notifications** (le centre de notifications, voir 3.13) reste pr
 
 **Retour d'un utilisateur connu.** La session persiste : on retrouve l'accueil directement. Après une déconnexion, seule l'étape 2 (et 3 si la voie e-mail est choisie) se rejoue — le pseudo, le code de parrainage et la bienvenue appartiennent à la première connexion.
 
+**Arrivée par un lien.** Un lien public — collecte, Mur, dépôt de vœux — n'impose aucune connexion : la surface s'ouvre telle quelle, et la proposition de créer un compte vient après le geste (3.12). Un lien suivi avant l'installation est **retrouvé à la première ouverture** de l'application.
+
 **Arrivée par un lien d'invitation.** Le lien porte le code de parrainage. Ouvert sur un téléphone qui a déjà l'application, il mène directement à la création de compte, code prérempli. Ouvert sans l'application, il présente d'abord la page d'invitation (voir la spécification des surfaces publiques), puis l'installation ; le code est conservé jusqu'à la création du compte.
 
 **États particuliers.** Code erroné (nombre de tentatives limité), code expiré (possibilité d'en renvoyer un), e-mail non reçu (renvoyer ou vérifier l'adresse), connexion externe interrompue ou refusée (retour à l'écran, les autres voies restant disponibles), pseudo déjà pris (proposition d'une variante), code de parrainage inconnu ou expiré (l'écran le signale et laisse poursuivre, le champ étant facultatif), code correspondant à son propre compte (signalé de même), plafond de comptes atteint sur cet appareil (la création est refusée, avec le moyen de joindre l'assistance), arrivée par un lien public sans compte (la surface publique s'ouvre directement, l'entrée dans l'application venant plus tard — voir 3.12).
@@ -124,6 +133,7 @@ Une **cloche de notifications** (le centre de notifications, voir 3.13) reste pr
 - **Une phrase d'accueil** — le prénom, puis l'état des lieux en une ligne : « Une date aujourd'hui, deux cette semaine. » Elle répond avant même qu'on lise les cartes, et remplace tout compteur.
 - **Les prochaines échéances** — les trois plus proches. La plus imminente porte un fond teinté et ses **deux actions visibles** (*préparer*, *marquer envoyé*) ; les suivantes restent des lignes calmes, avec leur décompte à droite. Chaque carte ouvre le détail de l'occasion (3.21).
 - **Laisser une note** — un bouton unique, à portée de pouce, en bas de l'écran.
+- **Faire ma liste** — une invitation discrète, présente tant qu'aucune liste n'existe. Elle mène à 3.29. Sa place ici se justifie par ce qu'elle déclenche : une liste partagée fait entrer des gens.
 
 **Ce que l'accueil ne porte pas.** Les gestes rares — ajouter un anniversaire, faire compléter une fiche — occupaient auparavant le haut de l'écran pour un usage de quelques fois par an. Ils rejoignent les endroits où ils ont du sens : l'onglet Dates pour créer une date, la fiche d'un proche pour lui demander de la compléter. Les contributions à valider passent par la cloche, qui en porte le compteur : elles attendent sans se périmer dans la journée.
 
@@ -174,7 +184,7 @@ Les textes annoncent **ce qui est possible** plutôt que ce qui manque : ils év
 - La **préparation assistée** : générer des idées de cadeaux et un brouillon de message. Chaque action annonce son coût en crédits (voir 3.7). Le portrait, lui, se génère à tout moment depuis le bloc *Ses portraits* ci-dessous.
 Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine date, la préparation restant accessible d'un geste.
 
-**Ce qu'on sait du proche** (la mémoire). Les notes rangées par catégories : centres d'intérêt, choses à éviter, faits marquants, idées de cadeaux, etc. Les catégories durables (centres d'intérêt, choses à éviter) valent d'une année sur l'autre ; les autres s'enrichissent au fil du temps. Un geste ajoute une note (rangée automatiquement, voir 3.5), et sa catégorie reste corrigeable.
+**Ce qu'on sait du proche** (la mémoire). Les notes rangées par catégories : centres d'intérêt, choses à éviter, faits marquants, idées de cadeaux, etc. Les catégories durables (centres d'intérêt, choses à éviter) valent d'une année sur l'autre ; les autres s'enrichissent au fil du temps. Un geste ajoute une note (rangée automatiquement, voir 3.5), et sa catégorie reste corrigeable. Un bloc **« à ranger »** paraît en tête lorsque des notes attendent leur catégorie — celles que l'application n'a pas su classer. Un appui suffit à en choisir une, et le bloc disparaît une fois vidé. **Une note non rangée sert quand même** : la préparation lit son contenu comme celui des autres.
 
 **Ses portraits.** Les portraits déjà produits pour ce proche, du plus récent au plus ancien, chacun indiquant sa date et la plage de notes retenue. Un geste en génère un nouveau, à tout moment (3.7). Un portrait s'ouvre pour être revu, approuvé ou partagé.
 
@@ -209,7 +219,9 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 
 **Plusieurs proches, plusieurs notes.** Désigner deux personnes crée **une note pour chacune**, indépendantes ensuite : les corriger, les compléter ou les supprimer se fait séparément.
 
-**Classement.** L'application **range automatiquement** la note dans une ou plusieurs catégories, **sans rien demander** ; une confirmation légère permet, d'un simple appui, de **corriger la catégorie**.
+**Classement.** La note est **enregistrée aussitôt**, telle qu'elle a été écrite. L'application la range ensuite dans une ou plusieurs catégories, **en arrière-plan et sans rien demander** — on écrit, on ferme, on passe à autre chose. La catégorie s'affiche à la prochaine consultation de la fiche, et se corrige d'un appui.
+
+**Une note peut rester sans catégorie**, quand l'application ne sait pas la ranger. Elle n'est ni perdue ni inutile : la préparation lit son contenu comme celui des autres. Elle apparaît sur la fiche dans un bloc **« à ranger »**, que l'utilisateur vide d'un geste en choisissant une catégorie — ce qui rend le classement corrigible plutôt que subi.
 
 **Depuis une fiche ou une occasion.** Le rattachement est déjà connu : les champs sont préremplis, il reste à écrire.
 
@@ -278,6 +290,15 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 
 **Le portrait s'approuve** — l'image se compose alors —, puis **s'enregistre et s'envoie** comme n'importe quelle photo. Il ne s'expose à aucune adresse publique : c'est le pied de marque, inscrit dans l'image, qui fait connaître l'application.
 
+**Le parcours du studio, en six temps.**
+
+1. **L'écran s'ouvre déjà réglé.** Le serveur rend les orientations et les ambiances actives, avec leurs **valeurs par défaut** — l'utilisateur peut produire sans rien toucher.
+2. **Il change ce qu'il veut** — l'orientation, la voie d'image, la famille ou le style, la plage de notes. Chaque réglage reste franchissable.
+3. **Il ajoute ce qu'il veut**, en texte libre : ce qu'il faut savoir du proche pour le dessiner, et la note qui accompagnera le portrait.
+4. **Il voit un récapitulatif** de ce qui va servir, et **ce que cela coûte** — le prix vient du serveur. Chaque ligne du récapitulatif **ramène à son réglage** : voir « orientation : ma fierté » sans pouvoir la changer d'un geste serait pénible.
+5. **Il confirme.** Le crédit est débité, la production commence, et l'écran l'accompagne — il indique ce qui se passe, laisse **quitter sans perdre**, et prévient à l'aboutissement (3.16).
+6. **Le résultat arrive en deux temps.** Le **texte s'affiche dès qu'il est prêt** — nom et message —, l'**image ensuite**, en se dessinant progressivement. Les faire attendre l'un l'autre ferait patienter pour rien : le message se produit en quelques secondes, l'image demande davantage.
+
 *La composition détaillée, les gabarits et les briefs de génération figurent dans `spec-portrait-lehno.md`.*
 
 **Parcours du portrait.**
@@ -332,6 +353,8 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 - **Méthodes de paiement** — celles qui sont enregistrées, la plus récemment utilisée en tête (3.25).
 - **Inviter un ami** — le parrainage, avec ce que chacun y gagne.
 
+**Quand le paiement dans l'application est indisponible.** Un autre chemin s'ouvre : l'écran affiche **les numéros et les noms** sur lesquels verser, l'utilisateur fait son dépôt depuis son application d'opérateur, puis revient **déposer le justificatif** avec le palier visé. L'écran annonce le délai de vérification, et la demande reste visible avec son état jusqu'au crédit. Ce chemin sert aussi lorsqu'un opérateur est injoignable ou qu'un paiement échoue à répétition.
+
 **Quand la recharge est proposée.** Au moment où le besoin se fait sentir (solde à zéro alors qu'une génération est demandée, ou échéance qui approche sans crédits disponibles), et de façon anticipée (une alerte discrète avant de se retrouver à court). Le rechargement reste toujours une action volontaire de l'utilisateur.
 
 **Leviers de croissance (phase ultérieure).** Saisie d'un **code promotionnel** ; partage de son **code de parrainage** (le filleul et le parrain reçoivent alors des crédits). Ces entrées apparaissent discrètement lorsque la fonctionnalité est active.
@@ -339,7 +362,7 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 **Principes.** Le solde est rappelé partout où une action payante est proposée. Le prix d'un crédit est unique et fixé par l'administrateur.
 
 **Parcours d'achat.**
-1. **Choisir un montant** — quelques paliers de crédits, avec le prix correspondant. Le solde après achat est annoncé.
+1. **Choisir un palier** — quelques montants proposés, chacun avec le nombre de crédits obtenus et, sur les plus grands, **la remise annoncée en clair** (« +20 % offerts »). Aucune saisie libre : le plus petit palier fixe le minimum. Le solde après achat est annoncé.
 2. **Méthode de paiement** — le comportement dépend de ce qui est déjà connu.
    - **Premier achat**, aucune méthode enregistrée : l'écran d'ajout s'ouvre dans la foulée (opérateur et numéro, ou carte — voir 3.25). La méthode est **enregistrée au passage** et l'achat se poursuit sans revenir en arrière.
    - **Achats suivants** : la méthode **utilisée le plus récemment** est proposée d'emblée. Un geste permet d'en **choisir une autre** parmi celles enregistrées, ou d'en **ajouter une nouvelle** — auquel cas elle est enregistrée et devient celle qui sera proposée la fois suivante.
@@ -409,11 +432,21 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 - le **Mur d'un proche** (ses goûts, ses souhaits, ses vœux publiés) ;
 - un **formulaire de collecte** (compléter la fiche d'un proche) ou de **dépôt de vœux** (laisser un message d'anniversaire) ;
 
-Le contenu et le comportement de ces surfaces sont décrits dans la spécification des surfaces publiques ; l'application les présente simplement dans un cadre plus fluide. Un avantage concret : une personne connectée qui répond à une collecte est reconnue automatiquement, son pseudo étant déjà connu.
+Le contenu et le comportement de ces surfaces sont décrits dans la spécification des surfaces publiques ; l'application les présente simplement dans un cadre plus fluide.
+
+**Comment le lien atteint l'application.** Les adresses publiques sont déclarées comme **liens universels** : le domaine sert un fichier d'association, l'application déclare les chemins qu'elle prend en charge. Ouvrir un lien de collecte, de Mur ou de dépôt de vœux ouvre alors l'application, sans passer par le navigateur ni demander quoi que ce soit.
+
+**Trois situations, trois comportements.**
+
+- **L'application est installée, la personne est connectée** — la surface s'ouvre dans l'application, et la personne est **reconnue** : son pseudo est déjà connu, elle n'a rien à saisir. Si le lien est le sien, l'application la ramène à l'écran correspondant de son espace plutôt qu'à la vue publique.
+- **L'application est installée, sans compte** — la surface s'ouvre quand même, **sans écran de connexion** : répondre à une collecte ou laisser un vœu ne demande aucun compte. La proposition d'en créer un vient après, une fois le geste accompli.
+- **L'application n'est pas installée** — le lien s'ouvre dans le navigateur, où la surface est pleinement utilisable. Rien n'oblige à installer pour répondre.
+
+**Le lien survit à l'installation.** Une personne qui suit un lien, installe l'application, puis l'ouvre, **retrouve la surface qu'elle visait** — elle n'a pas à revenir chercher le message pour cliquer une seconde fois. Le mécanisme est le même que celui du code de parrainage (3.1).
 
 **Invitation à créer un compte.** Ces consultations sont accessibles sans compte. Au fil de l'usage — après avoir consulté un Mur, répondu à une collecte, ou voulu conserver quelque chose pour soi — l'application propose, avec tact, de créer son propre espace. C'est le chemin qui convertit une installation dormante en utilisateur actif.
 
-**États particuliers.** Lien invalide ou révoqué, échéance de vœux fermée, Mur non publié : mêmes messages que sur le web, présentés dans l'application. Personne connectée qui ouvre son propre lien : l'application la ramène à l'écran correspondant de son espace plutôt qu'à la vue publique.
+**États particuliers.** Lien invalide ou révoqué, échéance de vœux fermée, Mur non publié : mêmes messages que sur le web, présentés dans l'application. Chemin inconnu de l'application (une adresse plus récente que la version installée) : ouverture dans le navigateur, sans rupture.
 
 ### 3.13 Centre de notifications
 
@@ -490,25 +523,18 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 
 ### 3.17 Moi
 
-**Rôle.** Le hub personnel : tout ce qui touche au compte et à la présence publique de l'utilisateur, regroupé en sections claires (à la manière d'un écran de réglages). On y consulte peu souvent, mais on y trouve tout.
+**Rôle.** Ce que je montre de moi. C'est la moitié publique du produit — celle qui se partage, et par laquelle les gens découvrent Lehno.
 
-**Contenu, en sections.**
-- **En-tête de profil** : pseudo et e-mail, avec accès à leur modification.
-- **Ma vitrine** : le Mur (activer, choisir ce qui s'expose, prévisualiser, partager — voir 3.10).
-- **Mes réservations** : les cadeaux qu'on s'est réservés sur le Mur de proches (3.27).
-- **Crédits** : le solde, l'historique des crédits (offerts, achetés, dépensés) et l'**historique des paiements** (les achats réglés, avec leur reçu), la recharge (3.9), et le parrainage (partager son code, voir les crédits gagnés).
-- **Compte** : préférences de notification et données personnelles (3.11), sécurité et connexions (3.24).
-- **Aide** : aide et support, à propos (version, pages légales), donner un avis (3.26).
+**Contenu.**
+- **Mon Mur** — l'activer, choisir ce qui s'expose, écrire son mot d'accueil, prévisualiser, partager (3.10).
+- **Mes listes de souhaits** — une par occasion à moi. Les créer, les tenir, les partager, voir ce qui a été réservé (3.29).
+- **Mon lien de vœux** — à partager pour qu'on me laisse un mot ; renouvelé chaque année.
+- **Les mots reçus** — ce qu'on m'a écrit, qui reste privé.
+- **Mes réservations** — les cadeaux que je me suis réservés sur le Mur de proches (3.27).
 
-**Où mènent les éléments.**
-- En-tête de profil → mon profil (3.23).
-- Ma vitrine → gestion du Mur (3.10).
-- Mes réservations → 3.27.
-- Crédits → crédits et recharge (3.9).
-- Compte → réglages (3.11) ; *sécurité et connexions* → 3.24.
-- Aide → 3.26.
+**Où mènent les éléments.** Mon Mur → 3.10 · Mes listes → 3.29 · Mes réservations → 3.27.
 
-**Note.** Ce hub réunit ce qui relève de « mon compte ». Les gestes de **création** (ajouter un proche, un événement, une note) vivent ailleurs — sur l'accueil, l'onglet Dates ou une fiche.
+**États particuliers.** Mur désactivé (l'écran l'indique et propose de l'activer) ; aucune liste (invitation à en faire une, sans insistance) ; aucun mot reçu encore.
 
 ### 3.18 Modifier l'identité d'un proche
 
@@ -680,6 +706,39 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 **Où mènent les éléments.** Une réservation → le Mur public du proche concerné (3.12).
 
 **États particuliers.** Aucune réservation (message sobre, sans injonction) ; souhait retiré par son propriétaire depuis la réservation (la ligne le signale) ; occasion passée (la réservation reste visible un temps, puis s'archive).
+
+### 3.28 Réglages
+
+**Rôle.** Ce qui me concerne : le compte, l'argent, les préférences. On y vient rarement, on y trouve tout.
+
+**Contenu, en sections.**
+- **Profil** — photo, pseudo, nom d'affichage, e-mail, langue (3.23).
+- **Crédits et paiements** — le solde, les mouvements, la recharge (3.9), les méthodes enregistrées (3.25), le parrainage.
+- **Notifications et données** — ce que l'application envoie, l'heure d'envoi, l'export de ses données (3.11).
+- **Sécurité et connexions** — moyens de connexion, connexions récentes, suppression du compte (3.24).
+- **Aide** — support, à propos, pages légales, donner un avis (3.26).
+
+**Où mènent les éléments.** Profil → 3.23 · Crédits → 3.9 · Notifications → 3.11 · Sécurité → 3.24 · Aide → 3.26.
+
+**Note.** Les gestes de **création** — ajouter un proche, un événement, une note — vivent ailleurs : sur l'accueil, l'onglet Dates ou une fiche.
+
+### 3.29 Mes listes de souhaits
+
+**Rôle.** Tenir mes propres listes et les partager. C'est la fonctionnalité la plus visible du produit vers l'extérieur : une liste se partage en un statut et atteint d'un coup des dizaines de personnes.
+
+**Une liste par occasion à moi.** Mon anniversaire, un mariage, une crémaillère — les occasions que j'ai créées pour moi-même. Un souhait appartient à une occasion : un cadeau de Noël n'est pas un cadeau de mariage.
+
+**Contenu d'une liste.** Les souhaits, chacun avec son intitulé, sa photo si elle existe, ses précisions (taille, couleur, où le trouver), un lien et un prix indicatifs. Et son **état** : disponible, réservé, déjà offert.
+
+**Ce que je vois et que le public ne voit pas.** Le public voit *qu'un cadeau est réservé*, jamais par qui — sauf si le réservant a choisi de se faire connaître, auquel cas **je** vois son nom. Un souhait peut aussi rester privé, absent de la version partagée.
+
+**Actions.** Créer une liste · ajouter, modifier, retirer un souhait · exposer un souhait ou le garder pour moi · **partager la liste** · marquer un souhait comme déjà offert.
+
+**Je suis prévenu quand on réserve.** Une notification signale chaque réservation confirmée — c'est ce qui rend la liste vivante après le partage.
+
+**Où mènent les éléments.** Un souhait → son détail (3.19) · *Partager* → la feuille de partage du téléphone, avec l'adresse publique de la liste.
+
+**États particuliers.** Aucune occasion à moi (l'écran propose d'en créer une) ; liste vide (invitation à ajouter un premier souhait) ; liste partagée dont l'occasion est passée (elle s'archive et cesse d'accepter des réservations).
 
 ## 4. Parcours clés
 

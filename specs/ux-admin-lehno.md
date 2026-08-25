@@ -29,17 +29,18 @@ L'accès passe par une **connexion** (5.1). L'entrée est ensuite un **tableau d
 
 **Économie** — les leviers
 4. Paramètres
-5. Modèles d'IA
-6. Studio du portrait
-7. Offres et croissance
+5. Fonctionnalités
+6. Modèles d'IA
+7. Studio du portrait — *réglages en service · composition · banc d'essai*
+8. Offres et croissance
 
 **Supervision** — l'observation
-8. Métriques
-9. Journal d'audit
-10. Connexions
+9. Métriques
+10. Journal d'audit
+11. Connexions
 
 **Outils** — les plateformes tierces
-11. Liens externes
+12. Liens externes
 
 ## 3. Glossaire
 
@@ -101,6 +102,7 @@ Chaque section suit le même modèle, ce qui rend l'outil prévisible.
 - **Économie** — crédits vendus et consommés, revenus, coûts d'IA réels, marge qui en résulte.
 - **À traiter** — les files qui attendent : contenus signalés, suppressions de compte en cours, paiements échoués, remboursements bloqués par la règle anti-fraude.
 - **Tendances** — l'évolution des indicateurs principaux dans le temps.
+- **Ressources** — l'espace occupé sur le stockage de fichiers et sa progression, rapportés au plafond du plan.
 
 Chaque élément « à traiter » mène directement à la section concernée.
 
@@ -121,6 +123,10 @@ Chaque élément « à traiter » mène directement à la section concernée.
 **Deux vues.** L'une liste les **paiements** — achats et remboursements, avec leur état ; l'autre liste les **mouvements de crédits** — octrois, achats, consommations, ajustements. Chacune se filtre par état, par période, par utilisateur et par moyen de paiement.
 
 **Détail.** Un paiement avec son montant, son moyen, sa référence chez le prestataire, son issue et son motif d'échec le cas échéant ; les crédits qu'il a produits ; et l'**historique de ses états** — chacun avec sa durée, ce qui l'a provoqué (geste de l'utilisateur, notification du prestataire, interrogation, décision d'un administrateur, traitement programmé) et son auteur.
+
+**Les paliers d'achat.** Les montants proposés dans l'application, leurs crédits et leur remise affichée. Aucune saisie libre : on achète un palier, et le plus petit fixe le minimum. Valeurs de départ : 500 F → 5 crédits · 1 000 → 10 · 2 000 → 22 (+10 %) · 5 000 → 57 (+15 %) · 10 000 → 120 (+20 %).
+
+**Les recharges manuelles.** Une file de demandes à traiter : l'utilisateur a versé sur un numéro affiché dans l'application et déposé un justificatif. **Le justificatif ne prouve rien** — un montage est facile : l'administrateur **vérifie la réception sur le compte de l'opérateur** avant d'approuver. Approuver crédite le compte ; rejeter exige un motif. Le justificatif s'efface une fois la demande traitée.
 
 **Actions.** Ajuster manuellement le solde d'un utilisateur, avec motif obligatoire · déclencher un remboursement · lever au cas par cas le blocage anti-fraude d'un remboursement, avec motif · relancer une opération restée en suspens · **confirmer manuellement un paiement en attente**, avec motif, lorsque l'opération a visiblement abouti chez l'opérateur sans que le prestataire l'ait rapporté.
 
@@ -144,7 +150,21 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Actions.** Modifier une valeur, avec rappel de la précédente et journalisation du changement.
 
-### 5.7 Modèles d'IA
+### 5.7 Fonctionnalités
+
+**Rôle.** Allumer et éteindre les fonctionnalités, pour livrer le produit **par morceaux** plutôt que d'un bloc.
+
+**Contenu.** La liste des drapeaux, chacun avec ce qu'il gouverne en clair et son état. Le socle — proches, notes, dates, rappels, compte — n'y figure pas : il n'est pas extinguible.
+
+**Chaque drapeau montre ce qu'il couvre** : les écrans qu'il éteint et les points d'entrée qu'il ferme. Un administrateur doit voir **ce qu'il éteint** avant de basculer, sans avoir à lire le code. Cette couverture vient du registre, tenu côté serveur.
+
+**Ce que l'écran montre avant d'agir.** Éteindre une fonctionnalité en emporte parfois d'autres : le Mur emporte le dépôt de vœux et la réservation, la liste de souhaits emporte la réservation. **L'écran annonce les conséquences** avant la bascule, plutôt que de les laisser découvrir.
+
+**Actions.** Allumer ou éteindre un drapeau. Chaque bascule est journalisée avec son auteur et sa date.
+
+**Précaution.** Éteindre l'achat de crédits laisse les générations disponibles et gratuites, si leur propre drapeau est allumé — et c'est la recharge manuelle qui prend le relais. Éteindre le paiement ne doit jamais éteindre le produit.
+
+### 5.8 Modèles d'IA
 
 **Rôle.** Piloter ce qui produit les contenus payants, et en surveiller le coût.
 
@@ -156,27 +176,41 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Suivi.** La consommation rapportée aux revenus des crédits, pour vérifier que le prix du crédit couvre bien le coût réel des actions.
 
-### 5.8 Studio du portrait
+**Le facturé et le réel, côte à côte.** Chaque production affiche ce qu'elle a coûté en face de ce qu'elle a rapporté. Le prix étant **unique pour tous**, certaines productions coûtent plus qu'elles ne rapportent et d'autres moins ; c'est la moyenne qui compte. Les **opérations d'administration ne facturent rien** — essais du studio, régénérations offertes, classement des notes — mais leur coût entre dans le calcul : les omettre donnerait une marge flatteuse et fausse.
 
-**Rôle.** Régler ce que le portrait propose et ce qu'on demande aux modèles pour le produire. C'est la section qui bougera le plus : on ajuste un gabarit, on regarde le résultat, on ajuste encore.
+### 5.9 Studio du portrait
 
-**Les orientations.** Les douze intentions qu'un portrait peut exprimer, avec leur libellé dans les deux langues, leur ordre d'apparition et leur état d'activation. Si les mesures montrent que trois orientations sur douze servent, on désactive les autres sans livraison.
+**Rôle.** Régler ce que le portrait propose et ce qu'on demande aux modèles pour le produire. C'est la section qui bougera le plus : on ajuste, on essaie, on ajuste encore.
 
-**Les familles d'illustration et les styles de photo.** Leur nom, leur description, leur état d'activation, et le modèle qui les produit.
+**Réservée aux administrateurs.** Le studio touche à la configuration des modèles et engage des coûts à chaque essai : il reste fermé au rôle support, y compris en lecture.
 
-**Les gabarits de production.** Un par orientation pour le message, un par famille d'illustration, un par style de photo. Chacun porte ses consignes, ses garde-fous et le modèle auquel il s'adresse.
+**Ce que l'administrateur décide**
 
-**Les garde-fous.** Les listes de ce qu'on écarte — symboles d'occasion, visages, superlatifs, formules de carte de vœux. Elles se complètent à mesure qu'on voit passer des résultats.
+- **Le modèle** appelé pour chaque production — message, illustration, traitement de photo.
+- **Les orientations** proposées dans l'application : leurs libellés dans les deux langues, leur ordre, leur activation. Si les mesures montrent que trois orientations sur douze servent, on désactive les autres sans livraison.
+- **Les ambiances** : familles d'illustration et styles de photo, avec leur nom, leur description et leur activation.
+- **Le motif identitaire** employé, et l'emploi qui lui revient.
+- **Les gabarits de production** — un par orientation, par famille, par style — avec leurs consignes et leurs garde-fous.
 
-**Le versionnage.** Un gabarit modifié conserve son historique, et **chaque portrait produit retient la version qui l'a produit**. Sans cela, comprendre pourquoi les résultats d'hier valaient mieux que ceux d'aujourd'hui devient impossible.
+**Trois entrées, trois moments du travail**
 
-**Le banc d'essai.** Lancer une production depuis le back-office, sur une fiche de démonstration, **sans consommer de crédit ni toucher à un compte réel**. Modifier un gabarit à l'aveugle et attendre les retours d'utilisateurs coûterait des semaines.
+**a) Réglages en service** — ce qui tourne aujourd'hui, et rien d'autre : le modèle appelé pour chaque production, les orientations actives et leur ordre, les ambiances, le motif retenu. S'y trouvent l'**historique des publications** — auteur, date, ce que chacune changeait — et le **retour arrière**, qui republie une version antérieure sans la reconstruire.
 
-**Actions.** Modifier un gabarit · activer ou désactiver une orientation, une famille, un style · essayer une production · comparer deux versions d'un gabarit sur la même fiche de démonstration · revenir à une version antérieure.
+**b) Composition** — le brouillon qu'on modifie : les gabarits de production, leurs consignes et leurs garde-fous, les libellés dans les deux langues, l'activation de chaque orientation et de chaque ambiance. **On y travaille librement : rien ne change pour les utilisateurs tant qu'on n'a pas publié.**
 
-**Ce que la section montre.** Pour chaque orientation et chaque style : le volume produit, le taux de régénération — un contenu qu'on relance aussitôt est un contenu manqué —, le coût moyen, le taux d'échec.
+**c) Banc d'essai** — là où l'on décide. On produit une combinaison sur un **profil de simulation**, on voit le résultat tel que l'utilisateur le verrait, et on **compare deux essais côte à côte** sur le même profil. Savoir si une combinaison vaut mieux que celle en service compte davantage que de la voir seule.
 
-### 5.9 Offres et croissance
+**La publication se fait depuis le banc d'essai**, non depuis la composition : on publie après avoir vu un résultat, pas après avoir tapé un texte. Elle reste **refusée tant qu'aucun essai n'a tourné** sur la combinaison en cours.
+
+**Les profils de simulation.** L'administrateur les compose et les conserve, depuis le banc d'essai. Ils doivent couvrir ce qui met un gabarit à l'épreuve : une fiche **riche** et une fiche **pauvre** (deux notes suffisent), un **nom court** et un **nom long**, les **deux langues**, une relation **familiale** et une **professionnelle**, et au moins un **cas sensible** — c'est celui qui révèle si un gabarit dérape.
+
+**Le coût des essais.** Chaque simulation appelle un modèle et se paie en argent réel. Le banc d'essai affiche **ce que l'essai a coûté** et le cumul du jour ; un plafond quotidien évite qu'une après-midi de réglages passe inaperçue. Les essais ne consomment aucun crédit et ne touchent aucun compte réel — mais leur coût entre dans le suivi de marge.
+
+**Ce que la section montre.** Pour chaque orientation et chaque ambiance : le volume produit, le **taux de régénération** — un contenu qu'on relance aussitôt est un contenu manqué —, le coût moyen, le taux d'échec.
+
+**Actions.** *Réglages* : consulter, revenir à une publication antérieure. *Composition* : modifier le brouillon, activer ou désactiver une orientation ou une ambiance. *Banc d'essai* : composer un profil, essayer une combinaison, comparer deux essais, publier.
+
+### 5.10 Offres et croissance
 
 **Rôle.** Animer l'acquisition et suivre ce qu'elle rapporte.
 
@@ -186,7 +220,7 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Actions.** Créer, modifier, désactiver un code promotionnel · suivre les parrainages · corriger un octroi litigieux.
 
-### 5.10 Métriques
+### 5.11 Métriques
 
 **Rôle.** Comprendre l'usage au-delà des chiffres du tableau de bord.
 
@@ -194,7 +228,7 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Actions.** Choisir la période, croiser les axes, exporter.
 
-### 5.11 Journal d'audit
+### 5.12 Journal d'audit
 
 **Rôle.** Savoir qui a fait quoi. C'est le contrepoids des pouvoirs de cet outil.
 
@@ -202,7 +236,7 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Actions.** Rechercher, filtrer par auteur, par période, par nature ; exporter. Le journal est en lecture seule : ses entrées sont définitives, ce qui fonde sa valeur de preuve.
 
-### 5.12 Connexions
+### 5.13 Connexions
 
 **Rôle.** Repérer les accès anormaux.
 
@@ -210,11 +244,11 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Usage.** Détecter les séries d'échecs, les accès inhabituels, et documenter un incident de sécurité.
 
-### 5.13 Liens externes
+### 5.14 Liens externes
 
 **Rôle.** Rassembler les portes d'entrée vers les plateformes tierces sur lesquelles s'appuie le service, pour les atteindre depuis un seul endroit plutôt que de chercher chaque adresse ailleurs.
 
-**Contenu.** Les outils utilisés, regroupés par nature — supervision technique et suivi des erreurs (Sentry), mesure d'usage (PostHog), hébergement (VPS) et base de données, stockage et sauvegardes, prestataire de paiement (MTN MoMo, Orange Money), fournisseurs d'IA (Anthropic, DeepSeek, Grok), envoi d'e-mails (Mailgun), notifications poussées (OneSignal), magasins d'applications. Chaque entrée porte le nom de l'outil, ce à quoi il sert dans Lehno, et le lien vers sa console.
+**Contenu.** Les outils utilisés, regroupés par nature — supervision technique et suivi des erreurs (Sentry), mesure d'usage (PostHog), hébergement (VPS) et base de données, stockage des fichiers (Cloudflare R2) et sauvegardes, prestataire de paiement (MTN MoMo, Orange Money), fournisseurs d'IA (Anthropic, DeepSeek, Grok), envoi d'e-mails (Mailgun), notifications poussées (OneSignal), magasins d'applications. Chaque entrée porte le nom de l'outil, ce à quoi il sert dans Lehno, et le lien vers sa console.
 
 **Note.** Ce sont de simples raccourcis : chaque plateforme conserve sa propre authentification et ses propres données. La liste s'entretient à mesure que la pile technique évolue.
 
@@ -228,18 +262,19 @@ Deux rôles. Le premier suffit à l'assistance quotidienne ; le second ouvre les
 - Modérer : masquer un contenu public, révoquer un lien, désactiver un Mur, notifier un utilisateur.
 - Traiter les suppressions en cours, y compris restaurer un compte pendant le délai de grâce.
 - Consulter le tableau de bord, les métriques, les connexions et les liens externes.
-- Essayer une production du studio sur une fiche de démonstration, sans rien modifier.
 
 **Administrateur** — tout ce qui précède, et davantage.
-- Modifier les paramètres globaux (prix du crédit, bonus, délais, seuils).
+- Modifier les paramètres globaux (prix du crédit, bonus, délais, seuils), les paliers d'achat et les drapeaux de fonctionnalité.
 - Piloter les modèles d'IA : activation, priorité de routage, configuration.
-- Régler le studio du portrait : orientations, familles, styles, gabarits de production, garde-fous.
+- Régler le studio du portrait : orientations, ambiances, motif, gabarits de production, garde-fous, profils de simulation et essais.
 - Créer et gérer les codes promotionnels ; corriger un octroi de parrainage.
 - Ajuster manuellement un solde de crédits ; déclencher un remboursement ; lever le blocage anti-fraude d'un remboursement ; confirmer manuellement un paiement en attente.
 - Effacer un compte sans attendre la fin du délai de grâce.
 - Consulter le journal d'audit et gérer les accès des administrateurs.
 
-**Règles communes.** Toute action sensible, quel que soit le rôle, est journalisée avec son auteur et son motif. L'interface **n'expose que les actions permises** par le rôle : chacun voit exactement ce qu'il peut faire. Le journal d'audit est réservé aux administrateurs — c'est ce qui lui donne sa valeur de contrôle sur le travail de l'équipe.
+**Ce que le support ne voit pas.** La famille **Économie** — paramètres, modèles d'IA, studio du portrait, offres — reste hors de sa navigation. Ce sont les leviers qui engagent le service et ses coûts.
+
+**Règles communes.** Toute action sensible, quel que soit le rôle, est journalisée avec son auteur et son motif. L'interface **n'expose que les actions permises** par le rôle : chacun voit exactement ce qu'il peut faire, et une section entièrement fermée ne figure pas dans son menu. Le journal d'audit est réservé aux administrateurs — c'est ce qui lui donne sa valeur de contrôle sur le travail de l'équipe.
 
 ## 7. Éléments transverses
 

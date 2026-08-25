@@ -28,6 +28,7 @@ Un rappel de ce sur quoi le service repose, rassemblé en un endroit.
 | Génération de contenus | Anthropic, DeepSeek, Grok — avec routage et repli entre eux | Retenus ; ordre de priorité à caler |
 | Paiement | MTN Mobile Money et Orange Money, en intégration directe | Retenus |
 | Hébergement | VPS | Retenu |
+| Stockage des fichiers | Cloudflare R2, plan gratuit | Retenu |
 | Sauvegardes | Stockage distant chiffré | |
 | Supervision et suivi des erreurs | Sentry | Retenu |
 | Mesure d'usage | PostHog, version infogérée gratuite | Retenu |
@@ -71,7 +72,9 @@ Trois surfaces distinctes, aux règles différentes. Elles partagent le même se
 
 Le client n'affiche jamais le message brut : il traduit le code dans la langue de l'utilisateur. C'est ce qui rend l'application bilingue sans dépendre du serveur.
 
-**Statuts.** `400` requête mal formée · `401` identification manquante ou invalide · `403` droit refusé · `404` ressource absente ou hors de son périmètre · `409` conflit d'état · `422` règle métier non satisfaite · `429` trop de requêtes · `5xx` incident serveur.
+**Statuts.** `200` succès · **`201`** création rendant une ressource nouvelle, le client apprenant son identifiant · **`204`** suppression, rien à rendre · `400` requête mal formée · `401` identification manquante ou invalide · `403` droit refusé · `404` ressource absente, hors de son périmètre, **ou gouvernée par un drapeau éteint** · `409` conflit d'état · `422` règle métier non satisfaite · `429` trop de requêtes · `5xx` incident serveur.
+
+**Les `POST` qui ne créent rien gardent `200`** : `/auth/otp` envoie un code, `/public/waitlist` est idempotent à dessein, une décision de validation modifie un état.
 
 **Idempotence.** Les créations qui engagent quelque chose (achat, génération) acceptent une **clé d'idempotence** fournie par le client. Une même clé rend la même réponse sans réexécuter. Elle vaut pour une durée limitée.
 
@@ -113,11 +116,17 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | `/me/occurrences/{id}` | GET | Le détail d'une occasion |
 | `/me/occurrences/{id}/notes` | GET, POST | Les notes de circonstance |
 | `/me/occurrences/{id}/wishes` | GET, POST | La liste de souhaits de l'occasion |
-| `/me/wishes/{id}` | PATCH, DELETE | Un souhait : état, exposition publique |
+| `/me/wishes/{id}` | PATCH, DELETE | Un souhait de proche : état, repère personnel |
+| `/me/wishlists` | GET, POST | **Mes** listes, une par occasion à moi |
+| `/me/wishlists/{id}/wishes` | GET, POST | Les souhaits d'une de mes listes |
+| `/me/wishlists/{id}/share` | GET | L'adresse publique de la liste, à partager |
+| `/me/owner-wishes/{id}` | PATCH, DELETE | Un de mes souhaits |
 
 **Listes d'échéances.** `/me/occurrences` accepte une fenêtre de dates et un plafond : l'accueil en demande trois, l'écran Dates un mois. C'est le même appel, paramétré — les deux surfaces ne divergent pas.
 
-**Classement des notes.** La création d'une note rend la note **avec ses catégories déjà attribuées**. Le client affiche le rangement et propose de le corriger ; le classement reste une décision du serveur.
+**Classement des notes.** La création rend la note **aussitôt enregistrée**, sans attendre son classement : celui-ci se fait **en arrière-plan**. Le client n'attend pas, et **un échec de classement n'est ni montré ni bloquant** — la note existe et sert. Il n'est silencieux que pour l'utilisateur : journaux et alertes le rapportent.
+
+**Une note peut n'avoir aucune catégorie.** Aucun repli sur une catégorie fourre-tout : `NoteCategory` est une association, et zéro ligne est un état valide. La génération lit le **contenu** des notes, rangées ou non.
 
 **Une note pour plusieurs proches.** Un point d'entrée dédié, `/me/notes`, accepte un texte, **une liste de proches** et une occasion facultative. Il crée **une note par proche**, indépendantes ensuite, et les rend toutes avec leur classement. Sans occasion, chaque note rejoint la fiche de son proche ; avec, elle appartient à cette célébration. La liste des proches est vérifiée avant toute écriture : un identifiant qui ne désigne pas un proche du demandeur fait échouer l'appel entier, sans rien créer.
 
@@ -139,6 +148,8 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 
 | Chemin | Méthode | Rôle |
 |---|---|---|
+| `/me/features` | GET | Les fonctionnalités actives pour le demandeur |
+| `/me/studio/options` | GET | Ce que le studio propose : orientations et ambiances actives, valeurs par défaut, prix |
 | `/me/generations` | POST | Lancer une génération (portrait, idées, message) |
 | `/me/generations/{id}` | GET | Suivre son avancement, puis lire le résultat |
 | `/me/generations` | GET | Les générations en cours et récentes — les reprises |
@@ -151,6 +162,12 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 **Paramètres de la demande.** Le lancement porte la cible, le type de contenu, et les paramètres effectifs — ton, langue, plage de notes, mots d'orientation. Ceux qui sont absents prennent la valeur de la fiche. Un **portrait** porte en plus ce que le studio a réglé : l'orientation, la voie d'image, la famille d'illustration ou le style de photo, et la note de l'expéditeur (voir `spec-portrait-lehno.md`).
 
 **Ce que le serveur ajoute.** Il complète la demande avec ce que la fiche sait du proche : nom d'usage, lien, ville, âge lorsque l'année de naissance est connue, canal habituel, et **la liste des cadeaux déjà offerts**, que les idées écartent. Le client n'a pas à les transmettre — ils appartiennent au serveur, qui les tient à jour.
+
+**Ce que le studio charge.** L'écran de production s'ouvre déjà réglé : `/me/studio/options` rend les orientations et les ambiances **actives** — celles que la configuration en service expose —, leurs valeurs par défaut, et le **prix**. Le client n'a rien à deviner, et une orientation désactivée disparaît de l'application sans livraison.
+
+**Le prix est unique.** Un portrait coûte le même nombre de crédits quelle que soit la dépense réelle qu'il engage — un traitement de photo coûte davantage à produire qu'un message, sans coûter davantage à l'utilisateur. C'est un choix assumé : le prix est un réglage d'administration, pas un calcul.
+
+**Le coût réel est enregistré à part.** Chaque production consigne ce qu'elle a réellement coûté (`AIUsage.cost`) en face de ce qui a été facturé (`ActionRun.credits_spent`). **Les opérations d'administration ne facturent rien** — essais du studio, régénérations offertes, classement des notes — mais leur coût compte tout autant. C'est cet écart, tenu dans le temps, qui dit si le prix du crédit couvre l'exploitation.
 
 **Les gabarits vivent en base.** Ce qu'on demande au modèle — consignes et garde-fous — se règle depuis le back-office, jamais dans le code. Chaque production retient **la version exacte du gabarit** qui l'a produite (`ActionRun.prompt_template_id`), sans quoi un écart de qualité reste inexplicable.
 
@@ -169,13 +186,19 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | Chemin | Méthode | Rôle |
 |---|---|---|
 | `/me/credits` | GET | Solde et mouvements |
-| `/me/payments` | GET, POST | L'historique ; lancer un achat |
+| `/me/credit-bundles` | GET | Les paliers d'achat proposés, avec leur remise |
+| `/me/payments` | GET, POST | L'historique ; lancer un achat sur un palier |
+| `/me/manual-topups` | GET, POST | Demander une recharge manuelle ; suivre les siennes |
 | `/me/payments/{id}` | GET | Suivre une opération, puis son issue |
 | `/me/payment-methods` | GET, POST | Les méthodes enregistrées, la plus récemment utilisée en tête ; en ajouter une |
 | `/me/payment-methods/{id}` | DELETE | En retirer une |
 | `/me/reservations` | GET | Les souhaits qu'on s'est réservés sur le Mur de proches |
 | `/me/referral` | GET | Son code, ses filleuls, les crédits gagnés |
 | `/me/promo-codes` | POST | Saisir un code promotionnel |
+
+**Achat par palier.** Un achat porte **un palier** (`/me/credit-bundles`), jamais un montant libre : le plus petit palier fixe le minimum. Les paliers, leurs crédits et leurs remises se règlent depuis l'administration.
+
+**Recharge manuelle.** Lorsque le paiement dans l'application est indisponible, `/me/manual-topups` ouvre une demande : le palier visé, le montant versé, l'opérateur, et un justificatif. Un administrateur **vérifie la réception sur le compte de l'opérateur** — le justificatif ne prouve rien par lui-même — puis crédite ou rejette avec motif.
 
 **Méthode.** La création d'un achat accepte soit l'identifiant d'une méthode enregistrée, soit les éléments d'une **nouvelle méthode à enregistrer au passage** — le cas du premier achat. Sans indication, le serveur retient la méthode utilisée le plus récemment.
 
@@ -219,31 +242,98 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | `/me/support-requests` | POST | Écrire à l'équipe ; la version de l'application et le type d'appareil accompagnent le message |
 | `/me/feedback` | POST | Envoyer un avis depuis l'application |
 
-## 6. Surfaces publiques (`/v1/public`)
+## 6. Les drapeaux de fonctionnalité
+
+Le produit se livre **par morceaux**. Les proches, les notes, les dates et les rappels forment le socle ; tout le reste s'allume quand il est prêt.
+
+### 6.1 Le registre et l'état
+
+**Le registre vit dans le code**, l'**état vit en base**. Les deux ne portent pas la même chose :
+
+- **En code** — les clés existantes, ce que chacune gouverne, sa portée (application ou surface publique), ses dépendances, et **la liste des points d'entrée et des écrans qu'elle couvre**. Ajouter un drapeau demande un déploiement ; en échange, une clé mal orthographiée ne compile pas.
+- **En base** — l'état seul : `key`, `enabled`, `updated_at`, et qui a basculé. Une ligne absente vaut **éteint**.
+
+**Réconciliation au démarrage** : les clés du registre absentes de la base y sont créées éteintes ; un état déjà réglé n'est jamais touché.
+
+**Le back-office lit le registre par l'API** — c'est ce qui lui permet d'annoncer les conséquences d'une bascule et de montrer ce que chaque drapeau couvre, sans dupliquer l'information.
+
+### 6.2 Le mécanisme
+
+- **Le client demande la liste résolue pour lui** — `/me/features` pour l'application, `/public/features` pour les surfaces sans compte. Le serveur rend *ce qui est actif*, jamais l'état brut des drapeaux : le jour où l'activation deviendra sélective, rien ne changera côté client.
+- **L'appel se fait au démarrage**, et se rafraîchit ensuite. Une **valeur de repli** est embarquée dans le client : si l'appel échoue, l'application s'ouvre sur le socle plutôt que vide.
+- **Un drapeau inconnu vaut éteint.** Le parc ne se met pas à jour d'un bloc.
+- **La vérité est côté serveur.** Le client masque, le serveur **refuse** : un appel visant une fonctionnalité éteinte rend **`404`**, et rien n'est débité. Un `403` distinguerait « éteinte » de « non authentifiée » et révélerait ainsi l'existence de la fonctionnalité — c'est la même règle que pour la ressource d'autrui.
+- **Le garde passe avant l'authentification.** Autrement, le statut trahirait ce qu'on cherche à taire.
+- **Éteint par défaut.** Un drapeau s'allume ; il ne s'oublie pas allumé.
+
+### 6.3 La liste
+
+**Le socle, sans drapeau** — proches, notes, dates, occasions, rappels et notifications, compte. Si ce socle s'éteint, il n'y a plus d'application.
+
+**Un drapeau par capacité, non par route.** Ce que l'utilisateur perçoit comme une seule chose s'éteint d'un bloc.
+
+| Drapeau | Ce qu'il gouverne | Ce qu'il couvre |
+|---|---|---|
+| `wishlist` | Les souhaits notés sur la fiche d'un proche | Écrans 3.19 · `/me/occurrences/{id}/wishes`, `/me/wishes/{id}` |
+| `wishlist.own` | Mes propres listes, leur partage et leur réservation | Écrans 3.29, public 3.6 · `/me/wishlists*`, `/me/owner-wishes/{id}`, `/public/wishlists/{token}` |
+| `wall` | Le Mur, sa gestion et sa page publique | Écrans 3.10, public 3.4 · `/me/wall*`, `/public/walls/{username}` |
+| `collect` | Les liens de collecte et la validation des contributions | Écrans 3.8, 3.20, public 3.2 et 3.3 · `/me/collection-links*`, `/me/submissions*`, `/public/collect/{token}` |
+| `wishes` | Le dépôt de vœux et les vœux reçus | Public 3.5 · `/me/wall/wish-link`, `/me/received-wishes*`, `/public/wishes/{token}` |
+| `reservation` | La réservation d'un souhait par un visiteur | Écran 3.27 · `/me/reservations`, `/public/owner-wishes/{id}/reserve*` |
+| `generation.message` | Le message généré | Écran 3.7 (message) · `/me/generations` (type message), `/me/messages/{id}` |
+| `generation.ideas` | Les idées de cadeaux | Écran 3.7 (idées) · `/me/generations` (type idées) |
+| `generation.portrait` | Le studio et le portrait | Écrans 3.22 et le studio · `/me/studio/options`, `/me/generations` (type portrait), `/me/portraits/*` |
+| `credits` | L'achat de crédits dans l'application | Écran 3.9 (achat), 3.25 · `/me/credit-bundles`, `/me/payments`, `/me/payment-methods*` |
+| `topup.manual` | La recharge manuelle, avec justificatif | Écran 3.9 (autre chemin) · `/me/manual-topups*` |
+| `referral` | Le parrainage et la page d'invitation | Écran 3.9 (inviter), public 3.7 · `/me/referral`, `/public/invitations/{code}` |
+| `launch.live` | Sur la landing : les liens vers les magasins, ou le formulaire de liste d'attente | Public 3.1 · `/public/waitlist` |
+
+**Cette couverture vit dans le registre**, et le back-office l'affiche : un administrateur doit voir **ce qu'il éteint** avant de basculer, sans lire le code.
+
+### 6.4 Les dépendances
+
+Certaines extinctions en emportent d'autres. Le serveur les résout **avant** de rendre la liste, pour que le client n'ait aucune règle à connaître.
+
+- `wall` éteint emporte `wishes` et `reservation` — le dépôt de vœux et la réservation passent par le Mur.
+- `wishlist.own` éteint emporte `reservation` — il n'y a plus de liste partagée à réserver.
+- `credits` éteint : les générations restent **disponibles et gratuites** si leur propre drapeau est allumé. Éteindre l'achat ne doit pas éteindre le produit ; c'est `topup.manual` qui prend le relais pour les recharges.
+
+### 6.5 Ce que l'extinction demande au dessin
+
+Une fonctionnalité éteinte laisse un trou, et **le trou doit rester habitable**. Trois endroits l'exigent :
+
+- **La barre d'onglets** tient à trois comme à quatre ; aucune largeur n'est figée, et l'onglet d'ouverture existe toujours.
+- **Les cartes à deux actions** savent vivre avec une seule — la carte d'échéance perd *préparer* si la génération est éteinte, et ne doit pas paraître amputée.
+- **Les renvois disparaissent** plutôt que de mener à un écran vide : une fiche ne propose pas un studio éteint, une occasion ne propose pas une préparation indisponible.
+
+## 7. Surfaces publiques (`/v1/public`)
 
 Ces appels se font **sans compte**. L'autorisation tient au **jeton porté par le lien** : il désigne la ressource et vaut permission, rien d'autre.
 
 | Chemin | Méthode | Rôle |
 |---|---|---|
 | `/public/walls/{username}` | GET | Un Mur publié |
-| `/public/walls/{username}/wishes` | GET | Les souhaits publics et leur état ; les réservations du visiteur sont signalées s'il présente son jeton |
-| `/public/wishes/{id}/reserve` | POST | Réserver un souhait : nom facultatif et choix de se faire connaître ; un visiteur sans compte y ajoute son adresse, un utilisateur connecté réserve en un geste |
-| `/public/wishes/{id}/reserve/verify` | POST | Saisir le code reçu ; la réservation devient effective et un jeton de session est remis |
+| `/public/wishlists/{token}` | GET | Une liste partagée et l'état de ses souhaits ; les réservations du visiteur y sont signalées s'il présente son jeton |
+| `/public/owner-wishes/{id}/reserve` | POST | Réserver un souhait : nom facultatif et choix de se faire connaître ; un visiteur sans compte y ajoute son adresse, un utilisateur connecté réserve en un geste |
+| `/public/owner-wishes/{id}/reserve/verify` | POST | Saisir le code reçu ; la réservation devient effective et un jeton de session est remis |
 | `/public/collect/{token}` | GET, POST | Le formulaire de collecte ; envoyer une contribution |
 | `/public/collect/{token}/submissions` | GET | Ce que ce répondant a déjà envoyé, avec le sort de ses souhaits |
 | `/public/wishes/{token}` | GET, POST | Le dépôt de vœux d'une occasion |
 | `/public/invitations/{code}` | GET | Une invitation au parrainage : qui invite, ce que l'invité y gagne |
+| `/public/features` | GET | Les fonctionnalités actives sur les surfaces sans compte |
 | `/public/config` | GET | Les valeurs publiques d'affichage : crédits offerts à l'inscription, bonus d'invitation, prix du crédit |
 | `/public/legal/{document}` | GET | Conditions d'utilisation, politique de confidentialité, mentions légales |
 | `/public/waitlist` | POST | Déposer son adresse sur la liste d'attente, tant que la landing est en pré-lancement |
 
 **Configuration publique.** La page d'invitation et la landing annoncent des montants qui se règlent côté administration. Elles les lisent ici plutôt que de les figer dans le code du site.
 
+**Liens universels.** Le domaine sert les fichiers d'association attendus par les deux systèmes mobiles, et l'application déclare les chemins qu'elle prend en charge — Murs, collectes, dépôts de vœux, invitations. Un lien ouvre alors l'application lorsqu'elle est installée, le navigateur sinon. Un chemin inconnu d'une version installée s'ouvre dans le navigateur plutôt que d'échouer : **le parc ne se met pas à jour d'un bloc**.
+
 **Ce qui sort d'ici.** Uniquement ce que le propriétaire a rendu public. Les notes, les fiches des proches, les souhaits privés et les vœux ne franchissent jamais cette frontière — la règle vit dans la requête, pas dans le client.
 
 **Réponses d'état.** Un lien révoqué, une fenêtre de vœux fermée, un Mur dépublié : le serveur rend un état explicite que la page traduit en message, plutôt qu'une absence sèche.
 
-## 7. Administration (`/v1/admin`)
+## 8. Administration (`/v1/admin`)
 
 Réservée aux comptes d'administration, avec les deux rôles du modèle.
 
@@ -258,12 +348,20 @@ Réservée aux comptes d'administration, avec les deux rôles du modèle.
 | `/admin/moderation` | GET | Les contenus à examiner |
 | `/admin/moderation/{id}/decision` | POST | Masquer, révoquer, désactiver, classer |
 | `/admin/parameters` | GET, PATCH | La configuration globale |
+| `/admin/feature-flags` | GET, PATCH | Allumer et éteindre les fonctionnalités ; la lecture rend **ce que chaque drapeau couvre** — écrans et points d'entrée — d'après le registre |
+| `/admin/credit-bundles` | GET, POST, PATCH | Les paliers d'achat et leurs remises |
+| `/admin/manual-topups` | GET | Les demandes de recharge manuelle à traiter |
+| `/admin/manual-topups/{id}/decision` | POST | Approuver ou rejeter, avec motif |
 | `/admin/ai-models` | GET, PATCH | Catalogue et routage |
-| `/admin/portrait-studio/orientations` | GET, PATCH | Les orientations : libellés, ordre, activation |
-| `/admin/portrait-studio/visual-styles` | GET, POST, PATCH | Familles d'illustration et styles de photo |
+| `/admin/portrait-studio/candidates` | GET | Les valeurs candidates : modèles, orientations, ambiances, motifs, gabarits |
+| `/admin/portrait-studio/config` | GET, PATCH | La configuration en service et le brouillon en cours |
+| `/admin/portrait-studio/config/publish` | POST | Mettre le brouillon en service |
+| `/admin/portrait-studio/config/rollback` | POST | Republier une version antérieure |
+| `/admin/portrait-studio/config/history` | GET | Les publications, leur auteur et leur date |
+| `/admin/portrait-studio/profiles` | GET, POST, PATCH, DELETE | Les profils de simulation |
+| `/admin/portrait-studio/trials` | GET, POST | Essayer une combinaison sur un profil ; relire les essais |
 | `/admin/portrait-studio/templates` | GET, POST | Les gabarits de production et leurs versions |
 | `/admin/portrait-studio/templates/{id}` | GET, PATCH | Un gabarit, son historique, le retour à une version antérieure |
-| `/admin/portrait-studio/preview` | POST | Essayer une production sur une fiche de démonstration, sans crédit ni compte réel |
 | `/admin/promo-codes` | GET, POST, PATCH | Les codes promotionnels |
 | `/admin/metrics` | GET | L'usage détaillé |
 | `/admin/audit-log` | GET | Le journal des actions sensibles |
@@ -280,11 +378,13 @@ Réservée aux comptes d'administration, avec les deux rôles du modèle.
 | `/admin/external-links` | GET, POST, PATCH, DELETE | Les raccourcis vers les plateformes tierces |
 | `/admin/exports` | POST | Demander l'export d'une liste filtrée |
 
+**Le studio, deux règles.** La **publication est refusée** tant qu'aucun essai n'a tourné sur le brouillon en cours. Et un essai **coûte en argent réel** sans consommer de crédit : il s'enregistre dans le suivi de consommation, avec un plafond quotidien.
+
 **Motif obligatoire.** Les appels qui modifient l'état d'un compte, un solde ou un contenu **exigent un motif** dans leur corps. Sans lui, la requête échoue — c'est ce qui garantit que le journal d'audit dit quelque chose.
 
 **Droits.** Le rôle se vérifie à chaque appel. Le back-office masque ce qu'un rôle ne peut pas faire, mais c'est le serveur qui refuse.
 
-## 8. Droits d'accès
+## 9. Droits d'accès
 
 Chaque point d'entrée porte une **exigence d'accès explicite**, vérifiée avant tout traitement. Rien n'est ouvert par omission : un chemin sans règle déclarée est refusé.
 
@@ -328,7 +428,7 @@ Un rôle insuffisant rend **`403`** — ici, l'existence du chemin est déjà co
 - Le **cloisonnement** s'applique aussi en administration : consulter le compte d'un utilisateur donne accès à son état, ses volumétries et ses mouvements — le contenu de ses fiches et de ses notes demeure hors de portée.
 - Le **journal d'audit** enregistre l'auteur réel, y compris lorsqu'un administrateur agit pour le compte de quelqu'un.
 
-## 9. Sécurité
+## 10. Sécurité
 
 ### 9.1 Sessions
 
@@ -374,7 +474,21 @@ Une photo de profil est un fichier venu de l'extérieur ; il mérite le même so
 - **Métadonnées retirées**, notamment la position géographique qu'un téléphone y inscrit.
 - **Servis depuis un domaine distinct** de l'application, avec un nom tiré au hasard.
 
-### 9.7 Liens saisis par des tiers
+### 9.7 Le stockage des fichiers
+
+**Cloudflare R2**, compatible S3, sert les portraits, les photos de profil et les photos de souhaits. Le plan gratuit couvre **10 Go de stockage, un million d'écritures et dix millions de lectures par mois, sans frais de sortie** — les opérations ne seront jamais contraignantes, le stockage l'est.
+
+**L'accès passe par des URL signées à durée courte.** Le serveur produit le fichier, le dépose, et rend une adresse temporaire ; le client la télécharge directement. L'application redemande une adresse lorsqu'elle a besoin d'afficher — la base garde la **référence de l'objet**, jamais l'URL signée. Le nom du fichier est tiré au hasard : un portrait est un contenu intime, son adresse ne se devine pas.
+
+**Trois mesures tiennent les 10 Go.**
+
+- **Redimensionner à l'enregistrement.** Un portrait servi en 1080 pixels n'est pas conservé plus grand ; une photo de profil encore moins. Rien n'est stocké à une taille qui ne sert pas.
+- **Effacer ce qui est jetable.** La **photo source** d'un portrait est retirée dès le traitement terminé : seule l'image produite compte. Les fichiers qu'aucun contenu ne référence plus partent au nettoyage hebdomadaire (voir 15.4). Les exports de données expirent avec leur lien.
+- **Surveiller l'occupation.** Le tableau de bord du back-office affiche l'espace occupé et sa progression ; une alerte se déclenche bien avant le plafond, pas lorsqu'il est atteint.
+
+Au-delà du plan gratuit, le passage au payant est indolore et sans frais de sortie.
+
+### 9.8 Liens saisis par des tiers
 
 Un souhait porte une adresse, et cette adresse peut venir d'un proche via un lien de collecte.
 
@@ -382,23 +496,24 @@ Un souhait porte une adresse, et cette adresse peut venir d'un proche via un lie
 - **Ouverts en isolation** : la page d'origine reste ignorée du site visité, qui n'a aucune prise sur l'onglet appelant.
 - **Affichés en clair** sur les surfaces publiques, pour que le visiteur voie où il va avant de cliquer.
 
-### 9.8 Surfaces web publiques
+### 9.9 Surfaces web publiques
 
 - **En-têtes de sécurité** : politique de contenu restreignant les sources, transport strictement chiffré, refus de l'encadrement par un site tiers, type de contenu respecté.
-- **Origines autorisées** déclarées explicitement pour les appels depuis le navigateur ; toute autre est refusée.
+- **Origines autorisées** déclarées explicitement pour les appels depuis le navigateur — une **liste fermée**, jamais `*`.
+- **Relais de confiance** : le nombre de relais placés devant l'API se déclare, sans quoi l'adresse d'origine lue est celle du relais. Le plafond « par origine » deviendrait alors **un compteur unique partagé par tous les visiteurs**, et la limitation ne limiterait plus rien.
 - **Cookies** — s'il en faut : inaccessibles au script, restreints au domaine et à la navigation propre au site.
 - **Formulaires publics protégés** contre l'envoi automatisé, par une épreuve légère qui se déclenche à la suspicion plutôt qu'à chaque visite.
 
-### 9.9 Abus
+### 9.10 Abus
 
-- **Débit limité** là où l'on peut appeler sans compte : envoi d'une contribution via un lien de collecte, dépôt d'un vœu, **réservation d'un souhait**, et **demande d'un code de connexion** (`/auth/otp`) — cette dernière bornée **par adresse destinataire** autant que par origine, comme le détaille 9.2. Borner la seule origine laisserait ces points d'entrée servir à arroser la boîte d'un tiers.
+- **Débit limité** là où l'on peut appeler sans compte : envoi d'une contribution via un lien de collecte, dépôt d'un vœu, **réservation d'un souhait**, et **demande d'un code de connexion** (`/auth/otp`) — cette dernière bornée **par adresse destinataire** autant que par origine, comme le détaille 10.2. Borner la seule origine laisserait ces points d'entrée servir à arroser la boîte d'un tiers.
 - **Plafond de comptes par appareil** vérifié avant toute création, l'adresse étant conservée pour les investigations.
 - **Taille des contenus bornée** en entrée ; les images sont vérifiées et recompressées avant stockage.
 - **Coût de la génération protégé.** Chaque appel d'IA se paie en argent réel : le crédit est **débité avant** l'appel, une même demande relancée rejoint celle en cours, et un plafond d'appels par compte et par heure contient l'emballement, qu'il vienne d'un défaut du client ou d'une intention.
 - **Réservations protégées.** Les adresses jetables sont refusées, et l'énumération d'une même boîte par suffixes (`a+1@`, `a+2@`) est détectée : la partie qui suit le `+` est ignorée pour le décompte des demandes.
 - **Codes promotionnels et parrainage bornés** : usage unique par compte, plafond global par code, et octroi du bonus d'invitation à la seule création de compte.
 
-### 9.10 Données
+### 9.11 Données
 
 - **Deux natures de moyens de paiement, deux traitements.** Une **carte** reste chez le prestataire, qui nous rend une référence opaque : rien de bancaire ne descend jusqu'à nous. Un **compte mobile money**, lui, s'identifie par son **numéro de téléphone** : nous le conservons en base, puisqu'il est nécessaire pour initier une transaction et pour verser un remboursement.
 - **Le numéro conservé est protégé en conséquence** : chiffré au repos, sorti en clair pour la seule communication avec le prestataire, et **masqué à l'affichage** dans l'application comme dans le back-office (opérateur et derniers chiffres). Il ne paraît dans aucun journal.
@@ -406,27 +521,27 @@ Un souhait porte une adresse, et cette adresse peut venir d'un proche via un lie
 - **Suppression réellement effective** au terme du délai de grâce, jusqu'aux fichiers stockés.
 - **Les traces de sécurité** (connexions, audit, créations de compte par appareil) survivent à la suppression sous une forme anonymisée : leur lien vers le compte est rompu, la ligne demeure. Elles font foi, et certaines fondent une protection — un plafond dont les traces s'effacent avec les comptes se contourne en créant puis supprimant.
 
-### 9.11 Secrets et accès à l'infrastructure
+### 9.12 Secrets et accès à l'infrastructure
 
 - **Les secrets vivent hors du code** : clés de fournisseurs, jetons de signature et accès à la base sont fournis par l'environnement, et l'historique du dépôt en reste exempt.
 - **Rotation possible sans redéploiement**, et rotation effective après tout départ de l'équipe ou tout soupçon de fuite.
 - **Accès aux consoles tierces nominatif**, avec double facteur — la section des liens externes du back-office ne fait qu'y mener, chaque plateforme gardant sa propre authentification.
 - **Accès à la base de production réservé** et tracé ; les environnements de travail utilisent des données anonymisées.
 
-### 9.12 Dépendances et livraison
+### 9.13 Dépendances et livraison
 
 - **Dépendances figées** par un verrou de version, et vérifiées automatiquement contre les vulnérabilités connues.
 - **Mises à jour de sécurité traitées en priorité**, à rythme régulier.
 - **Analyse du code à chaque contribution**, avec relecture obligatoire avant fusion.
 - **Secrets recherchés dans l'historique** à chaque contribution, pour attraper l'oubli avant qu'il ne parte.
 
-### 9.13 Notification du prestataire de paiement
+### 9.14 Notification du prestataire de paiement
 
 - **Signature vérifiée** avant tout traitement.
 - **Rejeu ignoré** : une notification déjà traitée ne produit rien de plus.
 - **Le montant confirmé à la source** : le serveur vérifie l'opération auprès du prestataire avant d'octroyer les crédits, la notification servant de déclencheur.
 
-## 10. Performance
+## 11. Performance
 
 ### 10.1 Budgets
 
@@ -466,7 +581,7 @@ Une fiche compte des dizaines de notes, un compte quelques dizaines de proches. 
 
 L'application garde de quoi consulter ce qui a déjà été chargé — les fiches, les échéances à venir. Les actions qui écrivent attendent le réseau, et l'écran le dit.
 
-## 11. Multilingue
+## 12. Multilingue
 
 L'application existe en français et en anglais, et cette dualité traverse le contrat. Trois langues distinctes cohabitent, qu'il faut garder séparées.
 
@@ -506,7 +621,7 @@ Une page publique est lue par des visiteurs dont on ignore tout. Elle choisit sa
 - Les **décomptes de jours** se calculent dans le fuseau de l'utilisateur, que le client transmet — sans quoi « aujourd'hui » désignerait autre chose selon l'endroit.
 - Les **montants** portent toujours leur devise ; l'affichage suit la langue.
 
-## 12. Journalisation et supervision
+## 13. Journalisation et supervision
 
 ### 12.1 Trois registres distincts
 
@@ -530,9 +645,10 @@ Chaque requête traitée laisse : un **identifiant de corrélation** (qui suit l
 
 - **Santé** — taux d'erreur par surface, latence au neuvième dixième, disponibilité des points d'entrée.
 - **Ressources de la machine** — espace disque, mémoire, charge du processeur, connexions ouvertes à la base. Sur un VPS, l'épuisement d'une ressource arrête tout : la surveiller vaut mieux que la découvrir.
+- **Occupation du stockage de fichiers** — l'espace employé sur R2 et sa progression, rapportés au plafond du plan.
 - **Files d'attente** — générations en attente, paiements restés en suspens, notifications à envoyer : leur âge dit plus que leur nombre.
 - **Tiers** — disponibilité et latence d'Anthropic, DeepSeek et Grok, du prestataire de paiement, de Mailgun et de OneSignal ; taux de rebond des e-mails et taux de jetons d'appareil invalides.
-- **Économie** — coût réel des appels d'IA rapporté aux revenus des crédits, suivi en continu plutôt qu'en fin de mois.
+- **Économie** — coût réel des appels d'IA rapporté aux revenus des crédits, suivi en continu plutôt qu'en fin de mois. Y compris les appels **non facturés** : essais du studio, classement des notes, détection du sensible.
 - **Abus** — séries d'échecs de connexion, créations de comptes rapprochées sur un même appareil, envois massifs sur les surfaces publiques.
 
 ### 12.4 Ce qui déclenche une alerte
@@ -545,6 +661,7 @@ Une alerte se justifie lorsqu'une personne doit agir. Le seuil compte moins que 
 - Rappels du matin partis en retard : c'est la promesse du produit qui est en jeu.
 - Coût d'IA par crédit qui dépasse le prix du crédit.
 - Espace disque ou mémoire proches de la saturation, et échec d'une sauvegarde quotidienne.
+- **Occupation du stockage de fichiers au-delà de 70 % du plafond** — le seuil laisse le temps de décider, plutôt que d'agir dans l'urgence.
 
 ### 12.5 Suivre une opération de bout en bout
 
@@ -552,7 +669,7 @@ L'identifiant de corrélation accompagne une action depuis l'appel initial jusqu
 
 Au-delà de cette durée de conservation courte, la vie d'un paiement se relit dans `PaymentStatusHistory` : c'est une donnée métier, conservée en base et présentée dans le back-office.
 
-## 13. Notifications
+## 14. Notifications
 
 ### 13.1 Principes
 
@@ -596,9 +713,9 @@ Au-delà de cette durée de conservation courte, la vie d'un paiement se relit d
 
 ### 13.5 Langue et contenu
 
-Les e-mails et les notifications suivent la **langue de l'interface** du destinataire (voir 11.3). Leur contenu se compose de gabarits par nature et par langue, alimentés par les données du moment — jamais de texte assemblé à la volée.
+Les e-mails et les notifications suivent la **langue de l'interface** du destinataire (voir 12.3). Leur contenu se compose de gabarits par nature et par langue, alimentés par les données du moment — jamais de texte assemblé à la volée.
 
-## 14. Traitements programmés
+## 15. Traitements programmés
 
 ### 14.1 Règles communes
 
@@ -606,7 +723,7 @@ Les e-mails et les notifications suivent la **langue de l'interface** du destina
 - **Rattrapage plutôt qu'abandon.** Après une interruption, un traitement reprend ce qu'il a manqué : les rappels du matin partent en retard plutôt que de sauter un jour.
 - **Selon le fuseau de chacun.** Tout ce qui concerne une heure locale (rappels, récapitulatifs) s'exécute selon le fuseau de chaque utilisateur.
 - **Étalés.** Les envois de masse se répartissent sur une plage plutôt que de partir à la même seconde.
-- **Observés.** Chaque traitement rend son compte : durée, volume traité, échecs. Leur âge et leur retard nourrissent les alertes (12.4).
+- **Observés.** Chaque traitement rend son compte : durée, volume traité, échecs. Leur âge et leur retard nourrissent les alertes (13.4).
 
 ### 14.2 Le rythme quotidien
 
@@ -637,7 +754,8 @@ Les e-mails et les notifications suivent la **langue de l'interface** du destina
 | **Purge des codes à usage unique** | Chaque heure | Retire les codes expirés ou consommés |
 | **Purge des traces de connexion** | Chaque jour | Applique la durée de conservation définie |
 | **Purge des journaux techniques** | Chaque jour | Applique la rétention courte de l'infrastructure d'observation |
-| **Nettoyage des fichiers orphelins** | Chaque semaine | Retire les images qu'aucun contenu ne référence plus |
+| **Nettoyage des fichiers orphelins** | Chaque semaine | Retire du stockage les images qu'aucun contenu ne référence plus |
+| **Retrait des photos sources** | Chaque heure | Efface les photos déposées dont le portrait est produit — seule l'image composée demeure |
 | **Sauvegarde de la base** | Chaque jour | Copie chiffrée vers un stockage distant, hors du VPS |
 | **Vérification de restauration** | Chaque mois | Restaure une sauvegarde sur un environnement de contrôle — une sauvegarde jamais restaurée ne vaut rien |
 
@@ -645,7 +763,7 @@ Les e-mails et les notifications suivent la **langue de l'interface** du destina
 
 La **génération** et le **paiement** se lancent à la demande, et chacun se résout à sa façon. La **génération** est suivie par **interrogation** : le client demande où en est la production jusqu'à ce qu'elle aboutisse. Le **paiement** attend d'abord la **notification du prestataire**, puis, ce délai passé, l'**interrogation de son point d'état** ; un administrateur peut trancher en dernier ressort (5.6). Les traitements ci-dessus leur servent de **filet** : solder une génération qui dépasse son délai, réconcilier un paiement resté en attente.
 
-## 15. Tracking plan
+## 16. Tracking plan
 
 ### 15.1 Ce à quoi il doit répondre
 
@@ -683,7 +801,7 @@ Un tracking plan vaut par les questions qu'il permet de trancher. Celles-ci, d'a
 `collection_link.shared` (nominatif ou public) · `collection_form.opened` · `submission.sent` (champs renseignés) · `submission.reviewed` (validée, corrigée, rejetée ; souhaits retenus et écartés) · `wall.viewed` (visiteur avec ou sans compte) · `wall.wishlist_opened` · `wish_message.sent` · `invitation.opened` · `invitation.converted`.
 
 **Crédits et paiement**
-`credits.exhausted` — le moment où l'on bute sur le solde · `purchase.started` (palier) · `payment_method.added` (nature) · `payment.succeeded` / `.failed` / `.expired` (durée d'attente, voie de résolution) · `referral.completed`.
+`credits.exhausted` — le moment où l'on bute sur le solde · `purchase.started` (palier, remise) · `manual_topup.requested` · `manual_topup.resolved` (approuvée ou rejetée, délai de traitement) · `payment_method.added` (nature) · `payment.succeeded` / `.failed` / `.expired` (durée d'attente, voie de résolution) · `referral.completed`.
 
 **Réglages**
 `notification_preference.changed` (nature, canal) · `wall.enabled` / `.disabled` · `ui_language.changed`.
@@ -706,7 +824,7 @@ L'envoi passe par une **couche d'abstraction interne**, comme les autres service
 
 La section Métriques s'appuie sur ces événements pour rendre les vues promises : usage par fonctionnalité, exécutions des actions payantes et leur issue, rétention, conversion vers l'achat, volumes de contributions.
 
-## 16. Couverture des écrans
+## 17. Couverture des écrans
 
 Chaque écran des trois spécifications trouve ici ses points d'entrée. Cette table sert de contrôle : un écran sans ligne signale un manque.
 
@@ -716,7 +834,7 @@ Chaque écran des trois spécifications trouve ici ses points d'entrée. Cette t
 
 **Back-office.** Connexion → `/admin/auth/*` · Tableau de bord → `/admin/dashboard` · Comptes → `/admin/users` · Crédits et paiements → `/admin/payments`, `/admin/users/{id}/credits` · Modération → `/admin/moderation` · Paramètres → `/admin/parameters` · Modèles d'IA → `/admin/ai-models` · Offres et croissance → `/admin/promo-codes`, `/admin/referrals` · Métriques → `/admin/metrics` · Journal d'audit → `/admin/audit-log` · Connexions → `/admin/login-activity` · Liens externes → `/admin/external-links`.
 
-## 17. Ce qui reste à décider
+## 18. Ce qui reste à décider
 
 - L'**ordre de routage** entre Anthropic, DeepSeek et Grok, et le modèle retenu chez chacun — à caler sur le coût réel et la qualité observée.
 - Le **délai d'attente de la notification** du prestataire, avant de basculer sur l'interrogation, et le **délai d'expiration** d'un paiement en attente — l'un et l'autre à caler sur les usages de l'opérateur.

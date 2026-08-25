@@ -130,6 +130,8 @@ L'application n'assure pas l'envoi automatique des messages aux destinataires : 
 
 **Category** — Catégorie de classement d'une `Note` (idées cadeaux, faits marquants, intérêts / goûts, dislikes / no-go, etc.). Antérieurement appelée « tiroir » dans les échanges.
 
+**OwnerWish** — **Mon** souhait, sur **ma** liste, rattaché à une occasion qui m'appartient. Sa raison d'être est d'être partagé : c'est la surface la plus visible du produit vers l'extérieur, et seule elle accepte des réservations.
+
 **WishlistItem** — Souhait structuré (libellé, lien, prix, statut), rattaché à une `EventOccurrence` et exposable sur le `Wall`.
 
 **ReceivedWish** — Message d'anniversaire reçu d'un tiers via le `Wall`, rattaché à une `EventOccurrence` ; entrant, distinct de la wishlist et du message généré.
@@ -167,6 +169,14 @@ L'application n'assure pas l'envoi automatique des messages aux destinataires : 
 **GeneratedMessage** — Message de vœux généré et persistant (le brouillon), avec cycle `generated` → `edited` → `sent`.
 
 **Notification** — Trace d'un rappel ou d'une relance émis (type, canal, horodatage, état), pour le suivi et l'anti-doublon.
+
+**FeatureFlag** — Drapeau de fonctionnalité. Le produit se livre par morceaux : les proches, les notes, les dates et les rappels forment le socle, le reste s'allume quand il est prêt. Une fonctionnalité éteinte disparaît de l'application **et se refuse côté serveur**.
+
+**CreditBundle** — Palier d'achat de crédits, réglé par l'administration : montant, crédits obtenus, remise affichée. On achète un palier, jamais un montant libre.
+
+**ManualTopUp** — Demande de recharge manuelle : l'utilisateur verse sur un numéro affiché et dépose un justificatif, un administrateur vérifie la réception puis crédite. Sert lorsque le paiement dans l'application est indisponible.
+
+**StudioConfig / StudioProfile / StudioTrial** — La configuration du studio du portrait, les profils de simulation qui servent à l'éprouver, et les essais eux-mêmes. Un brouillon se modifie librement ; une publication le met en service, et se révoque si elle déçoit.
 
 **PromptTemplate** — Gabarit de production du studio : ce qu'on demande au modèle pour un message, une illustration ou un traitement de photo. Versionné, réglable par l'`Admin` sans livraison, et retenu par chaque `ActionRun`.
 
@@ -456,7 +466,21 @@ Cette fluidité est un objectif de conception : capture rapide, aucun champ obli
 
 ### Classement automatique
 
-Au moment de la validation d'une note, le système en détermine la catégorie de rattachement (section 8) et l'y range **sans solliciter l'utilisateur**. La catégorie attribuée est visible et **corrigeable d'un geste** si le classement proposé ne convient pas. Ce fonctionnement combine le confort de la saisie libre et la lisibilité d'une fiche organisée.
+La note est **enregistrée aussitôt**, telle qu'elle a été écrite. Le système en détermine ensuite la catégorie de rattachement (section 8) **en arrière-plan**, sans solliciter l'utilisateur : celui-ci a écrit, fermé l'application, et vaqué à ses affaires. La catégorie attribuée est visible et **corrigeable d'un geste** si le classement proposé ne convient pas.
+
+**Un échec de classement reste silencieux pour l'utilisateur.** Il n'est ni montré, ni bloquant — la note existe et sert, classée ou non. Il n'est silencieux que pour lui : l'équipe garde ses journaux et ses alertes.
+
+**Une note peut n'appartenir à aucune catégorie.** Lorsque le système ne sait pas la ranger, elle reste telle quelle : **aucun repli** sur une catégorie fourre-tout. *Faits marquants* a un sens précis (section 8) et n'est pas une corbeille.
+
+Ce que cela ne coûte pas : le classement sert la **lisibilité de la fiche**. La génération assistée lit le **contenu** des notes, rangées ou non — une note sans catégorie nourrit donc le message et les idées comme les autres.
+
+### Une catégorie contraint, les autres organisent
+
+Les sept catégories ne pèsent pas du même poids. **Six organisent l'affichage** de la fiche ; **une contraint ce que le produit propose** — `dislikes_nogo`, la contrainte active.
+
+Se tromper sur *Faits marquants* coûte un rangement approximatif, que l'utilisateur corrige d'un geste. Se tromper sur *Dislikes / no-go* fait proposer du vin à quelqu'un qui ne boit pas.
+
+C'est pourquoi cette catégorie mérite une vigilance particulière au classement, et pourquoi sa correction par l'utilisateur importe davantage que les autres.
 
 ### Notes à double rattachement
 
