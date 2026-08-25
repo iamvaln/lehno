@@ -21,6 +21,7 @@ import { profileSchema, updateProfileSchema, usernameSchema } from "./profile.js
 import { errorEnvelopeSchema } from "./errors.js";
 import { personSchema, createPersonSchema, updatePersonSchema } from "./me.js";
 import { featuresResponseSchema } from "./flags.js";
+import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
 
 // Le contrat se CALCULE depuis les schémas Zod, il ne se recopie pas. Une
 // seconde déclaration des mêmes formes — en DTO décoré, par exemple — dériverait
@@ -97,6 +98,28 @@ const CHEMINS: Chemin[] = [
     resume: "Lister les fonctionnalités actives pour le demandeur",
     authentifie: true,
     reponse: featuresResponseSchema,
+  },
+  {
+    chemin: "/me/credits",
+    methode: "get",
+    resume: "Lire son solde de crédits et ses derniers mouvements",
+    authentifie: true,
+    reponse: creditBalanceSchema,
+  },
+  {
+    chemin: "/me/referral",
+    methode: "get",
+    resume: "Lire son code de parrainage, ses filleuls et ses gains",
+    authentifie: true,
+    reponse: referralSummarySchema,
+  },
+  {
+    // Ouverte sans compte : c'est la page qu'ouvre un lien d'invitation.
+    chemin: "/public/invitations/{code}",
+    methode: "get",
+    resume: "Lire une invitation : qui invite, et ce que l'invité y gagne",
+    parametres: [{ nom: "code", dans: "path", schema: z.string().max(16), requis: true }],
+    reponse: invitationSchema,
   },
   {
     chemin: "/public/legal/{document}",

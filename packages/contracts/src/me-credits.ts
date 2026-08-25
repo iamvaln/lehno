@@ -127,3 +127,39 @@ export const creditBalanceSchema = z.object({
 
 export type CreditBalance = z.infer<typeof creditBalanceSchema>;
 export type CreditTransaction = z.infer<typeof creditTransactionSchema>;
+
+// ── Le parrainage ───────────────────────────────────────────────────────────
+
+export const REFERRAL_STATUSES = ["invited", "registered", "credited"] as const;
+
+export const referredPersonSchema = z.object({
+  // Le pseudo, jamais l'adresse : un parrain n'a pas à connaître la boîte de
+  // ses filleuls sous prétexte qu'il les a invités.
+  username: z.string(),
+  status: z.enum(REFERRAL_STATUSES),
+  createdAt: z.string(),
+}).strict();
+
+export const referralSummarySchema = z.object({
+  code: z.string(),
+  invited: z.array(referredPersonSchema),
+  // Somme des mouvements rattachés à ses parrainages. Calculée, comme le
+  // solde — un compteur stocké finirait par diverger du registre.
+  creditsEarned: z.number().int().min(0),
+}).strict();
+
+export type ReferralSummary = z.infer<typeof referralSummarySchema>;
+
+// ── La page d'invitation, ouverte sans compte ───────────────────────────────
+
+/* Ce qu'un invité voit avant d'avoir un compte. Le strict minimum pour donner
+   envie et rassurer : qui invite, et ce qu'on y gagne. Aucune donnée du
+   parrain au-delà de son pseudo — un code d'invitation circule, et tout ce
+   qu'on met ici circule avec lui. */
+export const invitationSchema = z.object({
+  code: z.string(),
+  inviterUsername: z.string(),
+  creditsForInvited: z.number().int().min(0),
+}).strict();
+
+export type Invitation = z.infer<typeof invitationSchema>;

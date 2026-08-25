@@ -6,6 +6,9 @@ import { PrismaService } from "./prisma/prisma.service.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthGuard } from "./auth/auth.guard.js";
 import { SignupService } from "./onboarding/signup.service.js";
+import {
+  CreditsController, CreditsService, ReferralController, InvitationController,
+} from "./onboarding/credits.controller.js";
 import { FlagsService } from "./flags/flags.service.js";
 import { FeatureGuard } from "./flags/feature.guard.js";
 import { MeFeaturesController, PublicFeaturesController } from "./flags/features.controller.js";
@@ -46,6 +49,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
   controllers: [
     AuthController, ProfileController, PersonController, ConfigController, LegalController,
     MeFeaturesController, PublicFeaturesController,
+    CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
     AdminAuthController, ParametersController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
   ],
@@ -109,6 +113,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     FederatedService,
     AuthGuard,
     SignupService,
+    CreditsService,
     FlagsService,
     FeatureGuard,
     ProfileService,
