@@ -19,7 +19,9 @@ import {
 } from "./auth.js";
 import { profileSchema, updateProfileSchema, usernameSchema } from "./profile.js";
 import { errorEnvelopeSchema } from "./errors.js";
-import { personSchema, createPersonSchema, updatePersonSchema } from "./me.js";
+import {
+  personSchema, createPersonSchema, updatePersonSchema, noteSchema, createNoteSchema,
+} from "./me.js";
 import { featuresResponseSchema } from "./flags.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
 
@@ -233,6 +235,25 @@ const CHEMINS: Chemin[] = [
     parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
     corps: updatePersonSchema,
     reponse: personSchema,
+  },
+  {
+    chemin: "/me/persons/{personId}/notes",
+    methode: "get",
+    resume: "Lister les notes d'un proche, de la plus récente à la plus ancienne",
+    authentifie: true,
+    parametres: [{ nom: "personId", dans: "path", schema: z.string().uuid(), requis: true }],
+    reponse: z.array(noteSchema),
+  },
+  {
+    chemin: "/me/persons/{personId}/notes",
+    methode: "post",
+    resume: "Écrire une note sur un proche",
+    authentifie: true,
+    parametres: [{ nom: "personId", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: createNoteSchema,
+    reponse: noteSchema,
+    // Une ressource neuve, dont le client apprend l'identifiant.
+    statut: 201,
   },
   {
     chemin: "/me/persons/{id}",
