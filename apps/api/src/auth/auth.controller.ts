@@ -60,12 +60,12 @@ export class AuthController {
     @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
   ): Promise<Session> {
-    // referralCode : accepté par le contrat, câblé au crédit d'invitation dans une tâche à venir.
     return this.auth.verifyOtp({
       email: body.email,
       code: body.code,
       ip,
       ...(body.deviceId !== undefined ? { deviceId: body.deviceId } : {}),
+      ...(body.referralCode !== undefined ? { referralCode: body.referralCode } : {}),
       ...(userAgent !== undefined ? { userAgent } : {}),
     });
   }

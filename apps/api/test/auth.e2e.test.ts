@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AuthService } from "../src/auth/auth.service.js";
+import { SignupService } from "../src/onboarding/signup.service.js";
+import { LegalService } from "../src/public/legal.controller.js";
 import { OtpService } from "../src/auth/otp.service.js";
 import { TokenService } from "../src/auth/token.service.js";
 import { RateLimitService } from "../src/common/rate-limit.service.js";
@@ -46,6 +48,7 @@ describe("authentification", () => {
     const mailDeTest: MailPort = { send: async (m) => { envoyés.push(m); } };
     auth = new AuthService(
       db.prisma as never, otp, new TokenService(db.prisma as never, SECRET),
+      new SignupService(db.prisma as never, new LegalService()),
       new RateLimitService(db.prisma as never), mailDeTest,
     );
   });

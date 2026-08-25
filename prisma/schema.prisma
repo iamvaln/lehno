@@ -59,6 +59,18 @@ model User {
   sendHour            Int             @default(9) @map("send_hour") @db.SmallInt
   digestFrequency     DigestFrequency @default(monthly) @map("digest_frequency")
   reminderLeadDays    Int?            @map("reminder_lead_days")
+  // Trace de l'acceptation des conditions. Aucune case à cocher : les CGU
+  // disent elles-mêmes « en créant un compte […] vous acceptez », et c'est la
+  // création du compte qui vaut acceptation.
+  //
+  // La VERSION est la moitié utile. Un horodatage seul ne dit pas quel texte a
+  // été accepté : le jour où les conditions changent, il faudrait remonter
+  // l'historique du dossier légal pour le reconstituer. Elle se lit dans le
+  // document servi, jamais dans une constante — une constante finirait par
+  // mentir le jour où quelqu'un met à jour les CGU sans y penser.
+  acceptedTermsAt      DateTime? @map("accepted_terms_at") @db.Timestamptz
+  acceptedTermsVersion String?   @map("accepted_terms_version") @db.VarChar(32)
+
   createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz
   updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -80,8 +92,74 @@ model User {
   supportRequests         SupportRequest[]
   feedbacks               Feedback[]
   dataExportRequests      DataExportRequest[]
+  creditTransactions      CreditTransaction[]
+  referralsMade           Referral[]               @relation("parrain")
+  referralReceived        Referral?                @relation("filleul")
 
   @@map("user")
+}
+
+enum ReferralStatus {
+  invited
+  registered
+  credited
+
+  @@map("referral_status")
+}
+
+// Trace d'un parrainage.
+model Referral {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  referrerId    String         @map("referrer_id") @db.Uuid
+  // Nul tant que le filleul ne s'est pas inscrit. UNIQUE : c'est
+  // l'anti-double-crédit, et il vit dans le schéma plutôt que dans du code
+  // qu'on oublie de relire. Une même personne ne peut être créditée qu'une
+  // fois, quelle que soit la voie par laquelle elle est arrivée.
+  invitedUserId String?        @unique @map("invited_user_id") @db.Uuid
+  codeUsed      String         @map("code_used") @db.VarChar(16)
+  status        ReferralStatus @default(invited)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+
+  referrer    User  @relation("parrain", fields: [referrerId], references: [id], onDelete: Cascade)
+  invitedUser User? @relation("filleul", fields: [invitedUserId], references: [id], onDelete: SetNull)
+
+  creditTransactions CreditTransaction[]
+
+  @@index([referrerId])
+  @@map("referral")
+}
+
+enum CreditTxnType {
+  grant
+  purchase
+  consumption
+  adjustment
+
+  @@map("credit_txn_type")
+}
+
+// Registre des mouvements de crédits. Le solde d'un compte en est la SOMME :
+// aucune colonne de solde n'est stockée, donc aucune ne peut se désynchroniser
+// du registre qui fait foi.
+//
+// `action_run_id` et `promo_code_id` du dictionnaire manquent ici : leurs
+// tables n'existent pas encore. Une colonne sans sa contrainte serait une
+// demi-vérité — elles arriveront par migration avec ce qu'elles référencent.
+model CreditTransaction {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String        @map("user_id") @db.Uuid
+  type       CreditTxnType
+  // Signé : positif pour un crédit, négatif pour un débit.
+  amount     Int
+  referralId String?       @map("referral_id") @db.Uuid
+  reason     String?
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referral Referral? @relation(fields: [referralId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@map("credit_transaction")
 }
 
 model OtpCode {

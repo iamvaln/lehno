@@ -5,6 +5,7 @@ import { RateLimitService } from "./common/rate-limit.service.js";
 import { PrismaService } from "./prisma/prisma.service.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthGuard } from "./auth/auth.guard.js";
+import { SignupService } from "./onboarding/signup.service.js";
 import { FlagsService } from "./flags/flags.service.js";
 import { FeatureGuard } from "./flags/feature.guard.js";
 import { MeFeaturesController, PublicFeaturesController } from "./flags/features.controller.js";
@@ -107,6 +108,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     AuthService,
     FederatedService,
     AuthGuard,
+    SignupService,
     FlagsService,
     FeatureGuard,
     ProfileService,

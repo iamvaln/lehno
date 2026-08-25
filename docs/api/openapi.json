@@ -1357,6 +1357,10 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 128
+                  },
+                  "referralCode": {
+                    "type": "string",
+                    "maxLength": 16
                   }
                 },
                 "required": [
