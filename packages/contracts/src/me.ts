@@ -88,3 +88,38 @@ export const updatePersonSchema = createPersonSchema
   });
 
 export type UpdatePersonInput = z.infer<typeof updatePersonSchema>;
+
+// ── Les notes ───────────────────────────────────────────────────────────────
+
+// L'ensemble FIXE du système : aucune catégorie personnalisée. Cinq
+// ponctuelles, deux durables — voir la doc fonctionnelle §8.
+export const CATEGORY_CODES = [
+  "gift_ideas", "message_ideas", "facts", "encouragements", "challenges",
+  "interests", "dislikes_nogo",
+] as const;
+export type CategoryCode = (typeof CATEGORY_CODES)[number];
+
+export const noteSchema = z.object({
+  id: z.string().uuid(),
+  personId: z.string().uuid(),
+  content: z.string(),
+  // Nul pour une note DURABLE — elle décrit le proche et vaut d'une année sur
+  // l'autre. Renseigné pour une note de circonstance, qui appartient à une
+  // occasion. C'est ce champ, et lui seul, qui distingue les deux natures.
+  eventOccurrenceId: z.string().uuid().nullable(),
+  // Peut être VIDE, et c'est un état valide : une note que le système n'a pas
+  // su ranger reste telle qu'elle a été saisie. Aucun repli sur une catégorie
+  // fourre-tout — « Faits marquants » a un sens précis et n'est pas une
+  // corbeille. La génération lit le CONTENU, rangé ou non.
+  categories: z.array(z.enum(CATEGORY_CODES)),
+  createdAt: z.string(),
+}).strict();
+
+export type Note = z.infer<typeof noteSchema>;
+
+export const createNoteSchema = z.object({
+  content: z.string().trim().min(1).max(4000),
+  eventOccurrenceId: z.string().uuid().optional(),
+}).strict();
+
+export type CreateNoteInput = z.infer<typeof createNoteSchema>;

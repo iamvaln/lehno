@@ -23,6 +23,8 @@ import { ProfileController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
 import { PersonController } from "./me/person.controller.js";
 import { PersonService } from "./me/person.service.js";
+import { NoteController } from "./me/note.controller.js";
+import { NoteService } from "./me/note.service.js";
 import { TenantRepository } from "./tenancy/tenant.repository.js";
 import { ConfigController, ConfigService } from "./public/config.controller.js";
 import { LegalController, LegalService } from "./public/legal.controller.js";
@@ -47,7 +49,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
 
 @Module({
   controllers: [
-    AuthController, ProfileController, PersonController, ConfigController, LegalController,
+    AuthController, ProfileController, PersonController, NoteController, ConfigController, LegalController,
     MeFeaturesController, PublicFeaturesController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
@@ -119,6 +121,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     ProfileService,
     TenantRepository,
     PersonService,
+    NoteService,
     ConfigService,
     LegalService,
     WaitlistService,
