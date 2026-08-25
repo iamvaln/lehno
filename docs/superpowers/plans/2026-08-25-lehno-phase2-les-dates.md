@@ -330,6 +330,15 @@ Lancer les tests. Attendu : « chaque échéance se calcule depuis la référenc
 
 **Ce que le contrat impose déjà** (`me-events.ts`, ne pas le réécrire) : `createEventSchema` exige un `label` quand `kind` vaut `other` — un événement libre porte son libellé, un anniversaire prend le sien dans les traductions. `scheduleSchema` refuse les formes mêlées : une règle est récurrente **ou** décalée.
 
+**Ce que la maquette impose** (§3.6, lue et non devinée) :
+
+- **Un proche n'a qu'un anniversaire.** « Proche déjà porteur d'un anniversaire : l'application le signale plutôt que d'en créer un second. » La règle se tient au SERVEUR — un client qui l'oublie ne doit pas pouvoir en créer deux. Elle rend `409`, le conflit d'état.
+- **Une date déjà passée cette année vise l'année suivante.** Le noyau de calendrier le fait déjà en sautant les échéances passées ; un cas l'épingle pour que personne ne « corrige » ce comportement.
+- **Les récurrences se composent au formulaire**, étape 4, repliée par défaut : « chaque année pour un anniversaire ; à échéances multiples pour un événement qui en compte plusieurs (par exemple un mois puis trois mois après une date) ». Un événement porte donc **une ou plusieurs** règles — la table `Schedule` est en relation multiple, pas unique.
+- **Le délai d'anticipation du rappel** se personnalise, et vit sur la règle (`Schedule.leadTimeDays`).
+
+Le contrat n'a pas encore de forme pour la création d'un événement AVEC ses règles : `createEventSchema` ne porte pas de `schedules`. À étendre — voir l'étape 5.
+
 - [ ] **Étape 1 : écrire le test qui échoue**
 
 `apps/api/test/event.test.ts` — même montage que `note.test.ts` (base, deux comptes, `TenantRepository`), puis :
@@ -389,6 +398,75 @@ Lancer les tests. Attendu : « chaque échéance se calcule depuis la référenc
     expect(await db.prisma.eventOccurrence.count({ where: { eventId: e.id } })).toBe(0);
   });
 
+  // « Proche déjà porteur d'un anniversaire : l'application le signale plutôt
+  // que d'en créer un second » (§3.6). La règle vit au SERVEUR : un client qui
+  // l'oublie ne doit pas pouvoir en créer deux, sinon la fiche affiche deux
+  // anniversaires pour la même personne et les rappels partent en double.
+  it("refuse un second anniversaire pour le même proche", async () => {
+    const p = await persons.create(awa, { displayName: "Valery" });
+    await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+
+    await expect(
+      events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1991-05-02" }),
+    ).rejects.toMatchObject({ code: "conflict" });
+    expect(await db.prisma.event.count({ where: { personId: p.id } })).toBe(1);
+  });
+
+  // En revanche plusieurs événements LIBRES coexistent : une même personne a
+  // un mariage et une crémaillère.
+  it("accepte plusieurs événements libres pour le même proche", async () => {
+    const p = await persons.create(awa, { displayName: "Valery" });
+    await events.create(awa, { personId: p.id, kind: "other", label: "Mariage", referenceDate: "2019-07-02" });
+    await events.create(awa, { personId: p.id, kind: "other", label: "Crémaillère", referenceDate: "2021-09-11" });
+    expect(await db.prisma.event.count({ where: { personId: p.id } })).toBe(2);
+  });
+
+  // « Date déjà passée cette année : l'occasion créée vise l'année suivante »
+  // (§3.6). Le noyau de calendrier le fait en sautant les échéances passées ;
+  // ce cas l'épingle pour que personne ne « corrige » ce comportement.
+  it("une date déjà passée cette année ouvre l'échéance de l'an prochain", async () => {
+    const p = await persons.create(awa, { displayName: "Valery" });
+    // Hier, l'an dernier : l'échéance de cette année est derrière nous.
+    const hier = new Date(Date.now() - 86_400_000);
+    const jourMois = hier.toISOString().slice(5, 10);
+    const e = await events.create(awa, {
+      personId: p.id, kind: "birthday", referenceDate: `1990-${jourMois}`,
+    });
+
+    const [o] = await db.prisma.eventOccurrence.findMany({ where: { eventId: e.id } });
+    const annee = Number(o?.occurrenceDate.toISOString().slice(0, 4));
+    expect(annee).toBe(hier.getUTCFullYear() + 1);
+  });
+
+  // Un événement porte UNE OU PLUSIEURS règles : « à échéances multiples pour
+  // un événement qui en compte plusieurs — par exemple un mois puis trois mois
+  // après une date » (§3.6). Une relation unique aurait rendu ce cas
+  // inexprimable.
+  it("garde plusieurs règles pour un même événement", async () => {
+    const p = await persons.create(awa, { displayName: "Valery" });
+    const e = await events.create(awa, {
+      personId: p.id, kind: "other", label: "Suivi", referenceDate: "2026-01-15",
+      schedules: [
+        { type: "offset", offsetUnit: "month", offsetAmount: 1, leadTimeDays: 3 },
+        { type: "offset", offsetUnit: "month", offsetAmount: 3 },
+      ],
+    });
+
+    const regles = await db.prisma.schedule.findMany({ where: { eventId: e.id } });
+    expect(regles).toHaveLength(2);
+    expect(regles.map((r) => r.offsetAmount).sort()).toEqual([1, 3]);
+    expect(regles.find((r) => r.offsetAmount === 1)?.leadTimeDays).toBe(3);
+  });
+
+  // Un anniversaire sans règle explicite se répète chaque année : c'est ce que
+  // le formulaire annonce, et l'utilisateur n'a rien à composer pour cela.
+  it("un anniversaire reçoit sa règle annuelle sans qu'on la demande", async () => {
+    const p = await persons.create(awa, { displayName: "Valery" });
+    const e = await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const [regle] = await db.prisma.schedule.findMany({ where: { eventId: e.id } });
+    expect(regle).toMatchObject({ type: "recurrent", unit: "year", interval: 1 });
+  });
+
   // L'année de naissance peut être inconnue : on note le jour sans l'âge.
   it("accepte une date dont l'année n'est pas connue", async () => {
     const p = await persons.create(awa, { displayName: "Valery" });
@@ -424,6 +502,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { CreateEventInput, UpdateEventInput, Event as EventContrat } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
+import { AppError } from "../common/errors.js";
 import { echeances, type Regle } from "./calendrier.js";
 
 // Un anniversaire se répète tous les ans. C'est la règle par défaut, et la
@@ -459,6 +538,28 @@ export class EventService {
     // échouer AVANT toute écriture, et rendre 404 plutôt que 403.
     await this.depot.persons(userId).findOrThrow(input.personId);
 
+    // « Proche déjà porteur d'un anniversaire : l'application le signale plutôt
+    // que d'en créer un second » (§3.6). La règle se tient ICI : un client qui
+    // l'oublie ne doit pas pouvoir en créer deux, sinon la fiche affiche deux
+    // anniversaires et les rappels partent en double. Les événements libres,
+    // eux, se cumulent — une même personne a un mariage et une crémaillère.
+    if (input.kind === "birthday") {
+      const deja = await this.prisma.event.findFirst({
+        where: { personId: input.personId, kind: "birthday" }, select: { id: true },
+      });
+      if (deja) throw new AppError("conflict", "this person already has a birthday");
+    }
+
+    // Un anniversaire se répète chaque année sans qu'on le demande : c'est ce
+    // que le formulaire annonce. Les autres événements portent les règles
+    // qu'on leur a composées, et ils peuvent en avoir plusieurs — « un mois
+    // puis trois mois après une date » (§3.6).
+    const regles = input.schedules ?? (
+      input.kind === "birthday"
+        ? [{ type: "recurrent" as const, unit: "year" as const, interval: 1 }]
+        : []
+    );
+
     const ligne = await this.prisma.event.create({
       data: {
         personId: input.personId,
@@ -468,6 +569,16 @@ export class EventService {
         eventNature: input.nature ?? "happy",
         referenceDate: new Date(`${input.referenceDate}T00:00:00Z`),
         yearKnown: input.yearKnown ?? true,
+        schedules: {
+          create: regles.map((r) => ({
+            type: r.type,
+            unit: r.unit ?? null,
+            interval: r.interval ?? null,
+            offsetUnit: r.offsetUnit ?? null,
+            offsetAmount: r.offsetAmount ?? null,
+            leadTimeDays: r.leadTimeDays ?? null,
+          })),
+        },
       },
     });
 
@@ -599,6 +710,26 @@ Enregistrer `EventController` dans les `controllers` et `EventService` dans les 
 
 - [ ] **Étape 5 : étendre le contrat, côté schémas**
 
+`createEventSchema` ne porte pas de règles, alors que le formulaire en compose
+(§3.6, étape 4). Ajouter le champ dans `packages/contracts/src/me-events.ts`,
+**sans toucher au reste** :
+
+```ts
+// Les règles se composent au formulaire (§3.6) : « chaque année pour un
+// anniversaire ; à échéances multiples pour un événement qui en compte
+// plusieurs — par exemple un mois puis trois mois après une date ». D'où un
+// TABLEAU : une relation unique rendrait ce cas inexprimable.
+//
+// Facultatif : un anniversaire reçoit sa règle annuelle sans qu'on la demande,
+// et l'utilisateur n'a rien à composer pour le cas ordinaire.
+schedules: z.array(scheduleSchema).max(6).optional(),
+```
+
+`scheduleSchema` est déclaré plus bas dans le fichier : le déplacer AVANT
+`createEventSchema`, sans en changer une ligne. Un `const` n'est pas hissé, et
+le référencer avant sa déclaration lève à l'exécution.
+
+
 `createEventSchema` se termine par un `.refine()` — c'est donc un `ZodEffects`,
 et **`.partial()` n'existe pas dessus**. Écrire `createEventSchema.partial()`
 ne compile pas. Ajouter à `packages/contracts/src/me-events.ts` :
@@ -694,8 +825,10 @@ Le statut se **dérive** de la date et des délais : `upcoming` avant la fenêtr
     expect(deux).toHaveLength(2);
   });
 
-  // Négatif pour une échéance passée : la vue Dates montre le mois écoulé, et
-  // un décompte non signé rendrait « J−3 » trois jours APRÈS la date.
+  // Négatif pour une échéance passée. Ce n'est PAS pour la vue Dates, qui se
+  // concentre sur ce qui vient (§3.14) : c'est le détail d'une occasion, qui
+  // s'ouvre aussi sur une occasion passée et affiche « passée » (§3.21). Un
+  // décompte non signé y rendrait « J−3 » trois jours APRÈS la date.
   it("compte les jours, en signé", async () => {
     const p = await persons.create(awa, { displayName: "Valery" });
     const e = await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
@@ -1225,7 +1358,6 @@ Remplacer les décomptes par une dérivation de la liste rendue — `counts.toda
 
 ## Ce que ce plan ne fait pas
 
-- **Les récurrences libres.** `Schedule` accepte cinq unités et deux formes de décalage, mais la saisie ne propose que l'anniversaire annuel. L'écran qui compose une récurrence viendra avec elles ; le noyau de calendrier les sait déjà calculer.
 - **La bascule automatique des occurrences.** À la fermeture d'une fenêtre, l'occurrence de l'année suivante doit s'ouvrir (dictionnaire, `EventOccurrence`). C'est un traitement programmé (§15.2), et rien de cette couche n'existe encore — le statut se dérivant à la lecture, l'absence de bascule ne fausse aucun affichage, elle laisse seulement l'occurrence suivante non matérialisée.
 - **Les souhaits d'une occasion** (`/me/occurrences/{id}/wishes`) : ils dépendent de `WishlistItem`, qui relève du drapeau `wishlist` et d'un autre chantier.
 - **Les portraits et les cadeaux d'un proche** (`/me/persons/{id}/portraits`, `/gifts`) : dépendent de `GeneratedProfile` et `GiftGiven`, absentes du schéma.
