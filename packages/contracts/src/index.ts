@@ -7,3 +7,7 @@ export * from "./me-events.js";
 export * from "./me-home.js";
 export * from "./me-generation.js";
 export * from "./me-studio.js";
+export * from "./me-wishes.js";
+export * from "./me-contributions.js";
+export * from "./me-credits.js";
+export * from "./me-app.js";
