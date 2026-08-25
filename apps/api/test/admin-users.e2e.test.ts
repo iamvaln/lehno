@@ -86,6 +86,54 @@ describe("administration — les comptes", () => {
     expect(corps.items[0]?.etat).toBe("suspendu");
   });
 
+  // Le solde est la somme des mouvements : aucune colonne de solde n'est
+  // stockée, donc aucune ne peut se désynchroniser. Le calculer ici plutôt que
+  // le lire est la conséquence directe de ce choix de modèle.
+  it("rend le solde de crédits, somme signée des mouvements", async () => {
+    const u = await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
+    await db.prisma.creditTransaction.createMany({
+      data: [
+        { userId: u.id, type: "grant", amount: 5 },
+        { userId: u.id, type: "purchase", amount: 20 },
+        { userId: u.id, type: "consumption", amount: -3 },
+      ],
+    });
+    const { entete } = await session("support");
+
+    const corps = (await (await lister(entete)).json()) as { items: { credits: number | null }[] };
+
+    expect(corps.items[0]?.credits).toBe(22);
+  });
+
+  it("un compte sans mouvement a zéro, pas « inconnu »", async () => {
+    await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
+    const { entete } = await session("support");
+
+    const corps = (await (await lister(entete)).json()) as { items: { credits: number | null }[] };
+
+    expect(corps.items[0]?.credits).toBe(0);
+  });
+
+  // La fiche distingue ce qui a été acheté de ce qui a été offert : c'est la
+  // différence entre un compte qui paie et un compte qu'on entretient.
+  it("la fiche sépare le solde, les achats et les dons", async () => {
+    const u = await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
+    await db.prisma.creditTransaction.createMany({
+      data: [
+        { userId: u.id, type: "grant", amount: 5 },
+        { userId: u.id, type: "purchase", amount: 20 },
+        { userId: u.id, type: "consumption", amount: -3 },
+      ],
+    });
+    const { entete } = await session("support");
+
+    const corps = (await (await fetch(`${baseUrl}/v1/admin/users/${u.id}`, { headers: entete })).json()) as {
+      credits: { solde: number; achetes: number; offerts: number } | null;
+    };
+
+    expect(corps.credits).toEqual({ solde: 22, achetes: 20, offerts: 5 });
+  });
+
   it("refuse sans session", async () => {
     expect((await fetch(`${baseUrl}/v1/admin/users`)).status).toBe(401);
   });

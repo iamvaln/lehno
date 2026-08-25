@@ -14,6 +14,11 @@ const LIMITE_DEFAUT = 25;
 // Traduire ici plutôt qu'à l'écran a une raison : le jour où Prisma renomme une
 // valeur d'enum, c'est ce fichier qui ne compile plus — pas l'affichage qui
 // devient faux en silence.
+/** Les identifiants de la page, hors la ligne-sentinelle du curseur. */
+function page_ids(lignes: { id: string }[], limite: number): string[] {
+  return lignes.slice(0, limite).map((l) => l.id);
+}
+
 const ETAT: Record<UserStatus, "actif" | "suspendu" | "suppression_en_cours" | "efface"> = {
   active: "actif",
   suspended: "suspendu",
@@ -66,6 +71,19 @@ export class AdminUsersService {
 
     // On demande un élément de plus que la page : sa présence dit qu'il reste
     // quelque chose, sans avoir à compter le tout.
+    // Le solde est la somme signée des mouvements — aucune colonne ne le
+    // stocke, donc aucune ne peut se désynchroniser. Un seul groupBy pour toute
+    // la page plutôt qu'une requête par ligne.
+    const soldes = new Map<string, number>();
+    if (page_ids(lignes, limite).length > 0) {
+      const sommes = await this.prisma.creditTransaction.groupBy({
+        by: ["userId"],
+        where: { userId: { in: page_ids(lignes, limite) } },
+        _sum: { amount: true },
+      });
+      for (const somme of sommes) soldes.set(somme.userId, somme._sum.amount ?? 0);
+    }
+
     const page = lignes.slice(0, limite);
     return {
       items: page.map((u) => ({
@@ -73,10 +91,9 @@ export class AdminUsersService {
         pseudo: u.username,
         email: u.email,
         etat: ETAT[u.status],
-        // Nul, et non zéro : les crédits n'existent pas encore en base, et
-        // « 0 crédit » se lit comme un solde vide sur un compte qui pourrait en
-        // avoir mille.
-        credits: null,
+        // Zéro, et non nul : un compte sans mouvement a bien zéro crédit. Le
+        // nul était réservé au temps où la table n'existait pas.
+        credits: soldes.get(u.id) ?? 0,
         inscritLe: u.createdAt.toISOString(),
       })),
       nextCursor: lignes.length > limite ? (page.at(-1)?.id ?? null) : null,
@@ -102,7 +119,7 @@ export class AdminUsersService {
     // laissée par un proche via un lien de collecte appartient au carnet sans
     // avoir d'auteur (dictionnaire, Note.author_user_id nul si contribution
     // anonyme). Compter authoredNotes l'aurait oubliée.
-    const [occasions, notes, derniere] = await Promise.all([
+    const [occasions, notes, derniere, mouvements] = await Promise.all([
       this.prisma.event.count({ where: { person: { userId: id } } }),
       this.prisma.note.count({ where: { person: { userId: id } } }),
       // La dernière entrée réussie, pas la dernière tentative : une série
@@ -112,7 +129,22 @@ export class AdminUsersService {
         orderBy: { createdAt: "desc" },
         select: { createdAt: true },
       }),
+      // Par type : la fiche distingue ce qui a été acheté de ce qui a été
+      // offert, c'est la différence entre un compte qui paie et un compte
+      // qu'on entretient.
+      this.prisma.creditTransaction.groupBy({
+        by: ["type"],
+        where: { userId: id },
+        _sum: { amount: true },
+      }),
     ]);
+
+    const parType = new Map(mouvements.map((m) => [m.type, m._sum.amount ?? 0]));
+    const credits = {
+      solde: [...parType.values()].reduce((total, montant) => total + montant, 0),
+      achetes: parType.get("purchase") ?? 0,
+      offerts: parType.get("grant") ?? 0,
+    };
 
     return {
       id: u.id,
@@ -130,7 +162,7 @@ export class AdminUsersService {
         // Nul tant que la table des Murs n'existe pas.
         murs: null,
       },
-      credits: null,
+      credits,
     };
   }
 

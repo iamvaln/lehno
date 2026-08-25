@@ -82,10 +82,11 @@ export const compteLigneSchema = z.object({
   pseudo: z.string(),
   email: z.string(),
   etat: etatCompteSchema,
-  // Nul tant que les crédits n'existent pas en base. Servir zéro serait un
-  // mensonge lisible : l'écran dirait « 0 crédit » d'un compte qui pourrait en
-  // avoir mille. Nul dit « on ne sait pas encore », et l'écran l'écrit ainsi.
-  credits: z.number().int().nullable(),
+  // Le solde est la somme signée des mouvements. Un compte sans mouvement a
+  // bien zéro, ce qui n'est pas la même chose qu'une mesure absente : cette
+  // colonne a été nullable le temps que credit_transaction existe, elle ne
+  // l'est plus.
+  credits: z.number().int(),
   inscritLe: z.string(),
 }).strict();
 
@@ -110,12 +111,12 @@ export const compteDetailSchema = z.object({
     // Nul tant que la table des Murs n'existe pas — voir compteLigneSchema.
     murs: z.number().int().nonnegative().nullable(),
   }).strict(),
-  /** Nul tant que les crédits n'existent pas en base. */
+  /** Acheté et offert se distinguent : payer n'est pas être entretenu. */
   credits: z.object({
     solde: z.number().int(),
     achetes: z.number().int().nonnegative(),
     offerts: z.number().int().nonnegative(),
-  }).strict().nullable(),
+  }).strict(),
 }).strict();
 
 /** La page d'une liste : pas de total, un curseur (spec technique §3). */

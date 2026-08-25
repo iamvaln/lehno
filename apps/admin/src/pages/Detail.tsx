@@ -200,9 +200,7 @@ export function Detail({
       {onglet === "credits" ? (
         <>
           <h2 className="gabarit-groupe-titre">{t.compte.groupes.credits}</h2>
-          {compte.credits === null ? (
-            <EmptyState titre={t.nonMesure.explication} texte={t.nonMesure.bloc} />
-          ) : (
+          {(
             <>
               <div className="gabarit-chiffres">
                 <StatCard libelle={t.compte.champs.solde} valeur={nombre.format(compte.credits.solde)} />

@@ -9,14 +9,14 @@ const t = messages("fr");
 
 const ligne = (n: number, over: Record<string, unknown> = {}) => ({
   id: `u-${n}`, pseudo: `compte${n}`, email: `c${n}@exemple.cm`,
-  etat: "actif", credits: null, inscritLe: "2026-01-0" + n + "T09:00:00.000Z", ...over,
+  etat: "actif", credits: 0, inscritLe: "2026-01-0" + n + "T09:00:00.000Z", ...over,
 });
 
 const FICHE = {
   id: "u-1", pseudo: "compte1", email: "c1@exemple.cm", etat: "actif", langue: "fr",
   inscritLe: "2026-01-01T09:00:00.000Z", derniereConnexion: null, suppressionDemandeeLe: null,
   volumetrie: { proches: 4, occasions: 7, notes: 12, murs: null },
-  credits: null,
+  credits: { solde: 22, achetes: 20, offerts: 5 },
 };
 
 const reponse = (statut: number, corps?: unknown): Response =>
