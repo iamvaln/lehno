@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nativeTouchMin, resolve } from "@lehno/tokens";
+import { nativeBorder, nativeTouchMin, resolve } from "@lehno/tokens";
 import { RANGS_DE_BOUTON, rangsDuBouton, styleDuBouton } from "./Button.styles.js";
 
 const CLAIR = resolve("light");
@@ -60,10 +60,11 @@ describe("le style du bouton", () => {
     expect(style.conteneur.opacity).toBe(0.45);
   });
 
-  /* 1 pt, pas hairlineWidth × 2 : celui-ci rend 0,67 sur un écran 3x et 1 sur
-     un 2x, donc la bordure changerait d'épaisseur selon l'appareil. */
-  it("pose une bordure d'un point, la même sur tous les écrans", () => {
-    expect(styleDuBouton({ couleurs: CLAIR }).conteneur.borderWidth).toBe(1);
+  /* Le filet vient de la charte, pas d'un chiffre écrit ici. Le pilote posait
+     hairlineWidth × 2, qui rend 0,67 sur un écran 3x et 1 sur un 2x : la
+     bordure changeait d'épaisseur selon l'appareil. */
+  it("prend son filet dans la charte", () => {
+    expect(styleDuBouton({ couleurs: CLAIR }).conteneur.borderWidth).toBe(nativeBorder.width);
   });
 
   // « full » étire le bouton ; sinon il se cale à sa largeur de contenu. Sans

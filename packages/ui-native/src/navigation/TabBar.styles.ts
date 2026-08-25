@@ -1,5 +1,7 @@
 import type { TextStyle, ViewStyle } from "react-native";
-import { nativeFont, nativeTouchMin } from "@lehno/tokens";
+import {
+  nativeBorder, nativeFont, nativeTouchMin,
+} from "@lehno/tokens";
 import type { Couleurs } from "../theme.js";
 
 /* Quatre onglets, pas davantage.
@@ -21,7 +23,7 @@ export function styleDOnglets({
       flexDirection: "row",
       // La barre se sépare du contenu par un filet, jamais par une ombre : la
       // même règle que les cartes, et pour la même raison.
-      borderTopWidth: 1,
+      borderTopWidth: nativeBorder.width,
       borderTopColor: couleurs.borderHairline,
       backgroundColor: couleurs.surfacePage,
     },
