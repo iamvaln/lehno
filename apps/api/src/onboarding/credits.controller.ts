@@ -27,6 +27,9 @@ export class CreditsService {
       transactions: mouvements.map((m) => ({
         id: m.id,
         type: m.type,
+        // Le CODE, que le client traduit. `reason` reste une note libre
+        // d'exploitation, jamais affichée à l'utilisateur.
+        source: m.source,
         amount: m.amount,
         reason: m.reason,
         createdAt: m.createdAt.toISOString(),

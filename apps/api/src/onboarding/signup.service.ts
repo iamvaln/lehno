@@ -92,8 +92,8 @@ export class SignupService {
           if (creditsOfferts > 0) {
             await tx.creditTransaction.create({
               data: {
-                userId: user.id, type: "grant", amount: creditsOfferts,
-                reason: "inscription",
+                userId: user.id, type: "grant", source: "signup_grant",
+                amount: creditsOfferts,
               },
             });
           }
@@ -155,16 +155,16 @@ export class SignupService {
     if (bonusParrain > 0) {
       await tx.creditTransaction.create({
         data: {
-          userId: parrain.id, type: "grant", amount: bonusParrain,
-          referralId: referral.id, reason: "parrainage — filleul inscrit",
+          userId: parrain.id, type: "grant", source: "referral_bonus",
+          amount: bonusParrain, referralId: referral.id,
         },
       });
     }
     if (bonusFilleul > 0) {
       await tx.creditTransaction.create({
         data: {
-          userId: filleulId, type: "grant", amount: bonusFilleul,
-          referralId: referral.id, reason: "parrainage — arrivé par une invitation",
+          userId: filleulId, type: "grant", source: "referral_bonus",
+          amount: bonusFilleul, referralId: referral.id,
         },
       });
     }

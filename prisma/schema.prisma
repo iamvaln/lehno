@@ -129,6 +129,22 @@ model Referral {
   @@map("referral")
 }
 
+// Pourquoi un mouvement existe, en code stable. `type` ne suffit pas : un
+// « grant » d'inscription et un « grant » de parrainage se ressemblent, et ce
+// sont pourtant deux gestes distincts dont l'un se mérite. Le client traduit ce
+// code ; il ne lit jamais `reason`, qui reste une note libre d'exploitation.
+enum CreditSource {
+  signup_grant
+  referral_bonus
+  purchase
+  manual_topup
+  promo_code
+  consumption
+  admin_adjustment
+
+  @@map("credit_source")
+}
+
 enum CreditTxnType {
   grant
   purchase
@@ -149,6 +165,7 @@ model CreditTransaction {
   id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId     String        @map("user_id") @db.Uuid
   type       CreditTxnType
+  source     CreditSource
   // Signé : positif pour un crédit, négatif pour un débit.
   amount     Int
   referralId String?       @map("referral_id") @db.Uuid
