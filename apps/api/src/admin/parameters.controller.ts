@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Injectable, Patch, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
+import { EventKind } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -25,6 +26,24 @@ export type ParametreServeur = {
   updatedAt: string;
 };
 
+// Les types d'occasion sont un enum du schéma, pas une table. On les rend pour
+// qu'un administrateur voie lesquels existent, en disant qu'ils ne se règlent
+// pas d'ici : offrir un interrupteur qui n'enregistre rien est pire que ne rien
+// offrir. Les valeurs viennent de l'enum lui-même — elles ne peuvent pas
+// dériver de ce que la base connaît.
+const TYPES_OCCASION = Object.values(EventKind).map((id) => ({
+  id,
+  actif: true,
+  // « sensitive » est une nature d'événement, portée par chaque occasion et non
+  // par son type : aucun type n'est sensible en soi.
+  sensible: false,
+  reglable: false,
+}));
+
+const TYPE_VALEUR = new Set(["number", "money", "duration", "boolean", "string"]);
+const typeContrat = (brut: string): "number" | "money" | "duration" | "boolean" | "string" =>
+  (TYPE_VALEUR.has(brut) ? brut : "string") as "number" | "money" | "duration" | "boolean" | "string";
+
 @Injectable()
 export class ParametersService {
   constructor(
@@ -32,13 +51,41 @@ export class ParametersService {
     @Inject(AuditService) private readonly journal: AuditService,
   ) {}
 
-  async lister(): Promise<{ items: ParametreServeur[] }> {
+  // La forme est celle du contrat publié : deux groupes, pas une liste plate.
+  // Libellé, aide et unité n'y figurent pas — le serveur transporte des clés,
+  // jamais des phrases composées, et c'est ce qui rend l'outil bilingue sans
+  // qu'il ait à connaître la langue de qui l'appelle.
+  async lister() {
     const lignes = await this.prisma.systemParameter.findMany({ orderBy: { key: "asc" } });
+
+    // « Modifier une valeur, avec rappel de la précédente » (ux-admin §5.6). La
+    // précédente ne vit nulle part dans system_parameter — la colonne porte
+    // l'état, pas l'histoire. C'est le journal d'audit qui la garde, dans le
+    // « from » de la dernière écriture.
+    const traces = await this.prisma.auditLog.findMany({
+      where: { action: "parameter_update" },
+      orderBy: { createdAt: "desc" },
+      select: { metadata: true },
+    });
+    const precedente = new Map<string, string>();
+    for (const trace of traces) {
+      const details = trace.metadata as { key?: string; from?: string } | null;
+      // La plus récente gagne, et les plus anciennes ne l'écrasent pas : la
+      // liste est déjà triée du plus récent au plus ancien.
+      if (details?.key && details.from !== undefined && !precedente.has(details.key)) {
+        precedente.set(details.key, details.from);
+      }
+    }
+
     return {
-      items: lignes.map((l) => ({
-        key: l.key, value: l.value, valueType: l.valueType,
-        description: l.description, updatedAt: l.updatedAt.toISOString(),
+      economie: lignes.map((l) => ({
+        cle: l.key,
+        valeur: l.value,
+        type: typeContrat(l.valueType),
+        valeurPrecedente: precedente.get(l.key) ?? null,
+        misAJourLe: l.updatedAt.toISOString(),
       })),
+      typesEvenement: TYPES_OCCASION,
     };
   }
 
@@ -94,7 +141,7 @@ export class ParametersController {
   // La lecture reste ouverte au support : consulter la configuration aide à
   // répondre à un utilisateur qui demande pourquoi son crédit coûte ce prix.
   @Get()
-  lister(): Promise<{ items: ParametreServeur[] }> {
+  lister() {
     return this.service.lister();
   }
 

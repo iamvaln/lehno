@@ -161,22 +161,32 @@ export type DemandeSuppression = z.infer<typeof demandeSuppressionSchema>;
 
 // Un rang de formulaire rappelle la valeur précédente : c'est ce qui permet de
 // voir ce qu'on change avant d'enregistrer.
+// Le serveur transporte des clés, jamais des phrases composées (contrat commun
+// §2) : c'est ce qui rend l'outil bilingue sans que le serveur ait à connaître
+// la langue de qui l'appelle. Libellé, aide et unité vivent donc dans le
+// dictionnaire de l'outil, indexés par cette clé — et une clé qu'il ne connaît
+// pas s'affiche telle quelle, ce qui se voit, plutôt que vide.
 export const parametreSchema = z.object({
   cle: z.string(),
-  libelle: z.string(),
-  aide: z.string().nullable(),
   valeur: z.union([z.string(), z.number()]),
+  /** Le type dit comment saisir : un prix n'est pas un délai. */
+  type: z.enum(["number", "money", "duration", "boolean", "string"]),
+  /** « Modifier une valeur, avec rappel de la précédente » (ux-admin §5.6). */
   valeurPrecedente: z.union([z.string(), z.number()]).nullable(),
-  unite: z.string().nullable(),
+  misAJourLe: z.string(),
 }).strict();
 
 export const parametresSchema = z.object({
   economie: z.array(parametreSchema),
+  // Les types d'occasion sont un enum du code, pas une table : leur activation
+  // n'est stockée nulle part et ne peut donc pas se régler ici. Le serveur les
+  // rend pour qu'on voie lesquels existent ; l'écran les montre en lecture.
   typesEvenement: z.array(z.object({
     id: z.string(),
-    libelle: z.string(),
     actif: z.boolean(),
     sensible: z.boolean(),
+    /** Faux tant qu'aucune table ne porte l'activation. */
+    reglable: z.boolean(),
   }).strict()),
 }).strict();
 

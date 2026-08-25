@@ -408,6 +408,27 @@ export const en: typeof fr = {
     rienAEnregistrer: "Nothing has changed since the last save.",
     journal: "The audit log keeps every change and its author.",
     erreurEntier: "A whole number above zero.",
+    // Voir fr.ts : le serveur transporte des clés, l'outil porte les phrases.
+    cles: {
+      reminder_lead_days_default: { libelle: "Reminder lead time", aide: "How many days before the date the reminder goes out, by default.", unite: "days" },
+      wish_window_lead_days: { libelle: "Wish window opens", aide: "How many days before the date the link accepts wishes.", unite: "days" },
+      wish_window_trail_days: { libelle: "Wish window closes", aide: "How many days after the date the link stays open.", unite: "days" },
+      max_accounts_per_device: { libelle: "Accounts per device", aide: "Beyond this, sign-up is refused from that device.", unite: null },
+      account_grace_period_days: { libelle: "Grace period", aide: "The time left before an account is erased for good.", unite: "days" },
+      signup_free_credits: { libelle: "Credits given at sign-up", aide: "What a new account gets to try things out.", unite: "credits" },
+      credit_unit_price: { libelle: "Credit price", aide: "The unit price, in CFA francs.", unite: "FCFA" },
+    },
+    motif: {
+      titre: "Save these settings",
+      question: "Why this change?",
+      consequence: "These values drive the product and take effect right away. The log keeps the reason, your name and the time.",
+      motifs: [
+        "Pricing adjustment",
+        "Correcting a wrong value",
+        "Launch decision",
+      ],
+    },
+    nonReglable: "These types come from the code: their state cannot be set here. They are shown so you know which ones exist.",
     occasions: {
       sous: "What the product offers to celebrate. The order is the one shown at creation.",
       col: {

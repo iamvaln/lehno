@@ -432,6 +432,30 @@ export const fr = {
     rienAEnregistrer: "Rien n'a changé depuis le dernier enregistrement.",
     journal: "Le journal d'audit garde chaque changement et son auteur.",
     erreurEntier: "Un nombre entier supérieur à zéro.",
+    // Les libellés des paramètres vivent ici, indexés par la clé que le serveur
+    // envoie : il transporte des clés, jamais des phrases composées. Une clé
+    // qu'on ne connaît pas s'affiche telle quelle — ça se voit, et c'est mieux
+    // qu'une ligne vide.
+    cles: {
+      reminder_lead_days_default: { libelle: "Anticipation des rappels", aide: "Combien de jours avant la date le rappel part, par défaut.", unite: "jours" },
+      wish_window_lead_days: { libelle: "Ouverture de la fenêtre de vœux", aide: "Combien de jours avant la date le lien accepte des vœux.", unite: "jours" },
+      wish_window_trail_days: { libelle: "Fermeture de la fenêtre de vœux", aide: "Combien de jours après la date le lien reste ouvert.", unite: "jours" },
+      max_accounts_per_device: { libelle: "Comptes par appareil", aide: "Au-delà, la création est refusée depuis cet appareil.", unite: null },
+      account_grace_period_days: { libelle: "Délai de grâce", aide: "Le temps laissé avant l'effacement définitif d'un compte.", unite: "jours" },
+      signup_free_credits: { libelle: "Crédits offerts à l'inscription", aide: "Ce qu'un compte neuf reçoit pour essayer.", unite: "crédits" },
+      credit_unit_price: { libelle: "Prix du crédit", aide: "Le prix unitaire, en francs CFA.", unite: "FCFA" },
+    },
+    motif: {
+      titre: "Enregistrer ces réglages",
+      question: "Pourquoi ce changement ?",
+      consequence: "Ces valeurs pilotent le produit et prennent effet tout de suite. Le journal garde le motif, votre nom et l'heure.",
+      motifs: [
+        "Ajustement tarifaire",
+        "Correction d'une valeur erronée",
+        "Décision de lancement",
+      ],
+    },
+    nonReglable: "Ces types viennent du code : leur état ne se règle pas ici. Ils sont montrés pour qu'on sache lesquels existent.",
     occasions: {
       sous: "Ce que le produit propose de célébrer. L'ordre est celui du choix à la création.",
       col: {

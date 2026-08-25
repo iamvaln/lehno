@@ -16,8 +16,8 @@ const ETAT_SERVEUR: Record<string, string> = {
   efface: "deleted",
 };
 import { useRessource } from "./api/hooks.js";
-import { compteDetailSchema, dashboardSchema, pageComptesSchema } from "@lehno/contracts";
-import { interventions, parametres, profil, suppressions } from "./fixtures/index.js";
+import { compteDetailSchema, dashboardSchema, pageComptesSchema, parametresSchema } from "@lehno/contracts";
+import { interventions, profil, suppressions } from "./fixtures/index.js";
 import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
@@ -185,6 +185,10 @@ export function App(): ReactNode {
   // garde le chemin parcouru, sinon « Précédent » n'existe pas.
   const [requeteComptes, setRequeteComptes] = useState<RequeteComptes>({});
   const [curseurs, setCurseurs] = useState<(string | null)[]>([null]);
+  // Après écriture, on relit : le serveur renvoie la valeur précédente calculée
+  // depuis le journal, et c'est lui qui fait foi — pas ce qu'on croit avoir
+  // écrit.
+  const [tourParametres, setTourParametres] = useState(0);
   const curseur = curseurs.at(-1) ?? null;
 
   const etatComptes = useRessource(
@@ -210,6 +214,13 @@ export function App(): ReactNode {
       ? api.appeler(`/admin/users/${ouvert}`, { schema: compteDetailSchema })
       : Promise.resolve(null)),
     [section, ouvert],
+  );
+
+  const etatParametres = useRessource(
+    () => (section === "parametres"
+      ? api.appeler("/admin/parameters", { schema: parametresSchema })
+      : Promise.resolve(null)),
+    [section, tourParametres],
   );
 
   let vue: ReactNode;
@@ -269,7 +280,36 @@ export function App(): ReactNode {
       />
     );
   } else if (section === "parametres") {
-    vue = <Edition role={role} langue={langue} parametres={parametres} />;
+    vue = (
+      <Ressource
+        etat={etatParametres}
+        t={t}
+        enfant={(reglages) => (reglages ? (
+          <Edition
+            role={role}
+            langue={langue}
+            parametres={reglages}
+            onEnregistrer={(valeurs, motif) => {
+              void (async () => {
+                // Un paramètre à la fois : le serveur écrit et journalise chaque
+                // clé dans sa propre transaction, et une écriture refusée ne
+                // doit pas entraîner celles qui ont abouti.
+                for (const parametre of valeurs.economie) {
+                  const avant = reglages.economie.find((p) => p.cle === parametre.cle);
+                  if (!avant || String(avant.valeur) === String(parametre.valeur)) continue;
+                  await api.appeler("/admin/parameters", {
+                    methode: "PATCH",
+                    corps: { key: parametre.cle, value: String(parametre.valeur), reason: motif },
+                  });
+                }
+                setTourParametres((n) => n + 1);
+              })();
+            }}
+            onRetour={(id) => aller(id ?? "tableau")}
+          />
+        ) : null)}
+      />
+    );
   } else if (section === "suppressions") {
     vue = <Suppressions role={role} langue={langue} demandes={suppressions.items} />;
   } else {

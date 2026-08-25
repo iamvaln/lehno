@@ -8,11 +8,14 @@ import { en } from "../src/i18n/en.js";
 // où un point d'exclamation se glisse. Ce fichier tient les règles de
 // specs/ton-et-ecriture-lehno.md que la machine peut tenir.
 
-type Noeud = string | readonly Noeud[] | { readonly [cle: string]: Noeud };
+// `null` est une feuille comme une autre : une unité absente — « comptes par
+// appareil » n'en a pas — se dit null, et pas par une chaîne vide qu'on
+// finirait par afficher.
+type Noeud = string | null | readonly Noeud[] | { readonly [cle: string]: Noeud };
 
 /** Tous les chemins de feuilles, tableaux compris — `comptes.suspendre.motifs.0`. */
 function chemins(noeud: Noeud, prefixe = ""): string[] {
-  if (typeof noeud === "string") return [prefixe];
+  if (noeud === null || typeof noeud === "string") return [prefixe];
   if (Array.isArray(noeud)) {
     return noeud.flatMap((item, i) => chemins(item as Noeud, `${prefixe}.${i}`));
   }
@@ -23,6 +26,9 @@ function chemins(noeud: Noeud, prefixe = ""): string[] {
 
 /** Les feuilles, appariées à leur chemin. */
 function feuilles(noeud: Noeud, prefixe = ""): [string, string][] {
+  // Une feuille nulle n'a pas de texte à vérifier : c'est une absence voulue,
+  // pas une phrase oubliée. Le test de parité des clés, lui, la voit bien.
+  if (noeud === null) return [];
   if (typeof noeud === "string") return [[prefixe, noeud]];
   if (Array.isArray(noeud)) {
     return noeud.flatMap((item, i) => feuilles(item as Noeud, `${prefixe}.${i}`));
