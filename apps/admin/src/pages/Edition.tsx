@@ -2,10 +2,10 @@ import { useState, type ReactNode } from "react";
 import type { AdminRole, Parametre, Parametres } from "@lehno/contracts";
 import { Breadcrumb, FormRow, PageHeader, PageTabs } from "../composants/page/index.js";
 import { DataTable, type Colonne } from "../composants/donnees/index.js";
-import { RoleGate } from "../composants/actions/index.js";
+import { ConfirmWithReason, RoleGate } from "../composants/actions/index.js";
 import { Toast } from "../composants/signaux/index.js";
 import { Button } from "../composants/base/index.js";
-import { messages, type Langue } from "../i18n/index.js";
+import { messages, type Langue, type Messages } from "../i18n/index.js";
 import { parametres as parametresDemo } from "../fixtures/index.js";
 
 /* Le gabarit de formulaire — réservé aux sections de configuration, monté ici
@@ -30,7 +30,8 @@ export interface EditionProps {
   role: AdminRole;
   langue?: Langue;
   parametres?: Parametres;
-  onEnregistrer?: (valeurs: Parametres) => void;
+  /** Le motif accompagne toujours l'enregistrement : sans lui, le serveur refuse. */
+  onEnregistrer?: (valeurs: Parametres, motif: string) => void;
   onRetour?: (id?: string) => void;
 }
 
@@ -38,10 +39,30 @@ function avecUnite(valeur: string | number, unite: string | null): string {
   return unite === null ? String(valeur) : `${valeur} ${unite}`;
 }
 
+/**
+ * Le serveur transporte une clé, jamais une phrase composée : c'est ce qui rend
+ * l'outil bilingue sans qu'il ait à connaître la langue de qui l'appelle.
+ *
+ * Une clé que le dictionnaire ne connaît pas s'affiche telle quelle. C'est
+ * volontairement laid : ça se voit et ça se corrige, là où une ligne vide
+ * passerait pour une place libre.
+ */
+function dire(t: Messages, cle: string): { libelle: string; aide: string | null; unite: string | null } {
+  const connu = (t.parametres.cles as Record<string, { libelle: string; aide: string; unite: string | null } | undefined>)[cle];
+  return connu ?? { libelle: cle, aide: null, unite: null };
+}
+
 // Un réglage numérique ne se laisse pas vider ni mettre à zéro : le contrôle est
 // le même que celui du serveur, et il se lit sous le champ, pas après l'appel.
+function estNumerique(parametre: Parametre): boolean {
+  return parametre.type === "number" || parametre.type === "money" || parametre.type === "duration";
+}
+
 function invalide(parametre: Parametre, saisie: string): boolean {
-  if (typeof parametre.valeur !== "number") return saisie.trim() === "";
+  // Le type vient du serveur, qui le tient de la base. S'en remettre à la forme
+  // de la valeur reçue serait fragile : « 100 » arrive en chaîne, et le champ
+  // deviendrait libre au premier paramètre servi ainsi.
+  if (!estNumerique(parametre)) return saisie.trim() === "";
   return !ENTIER_POSITIF.test(saisie.trim()) || Number(saisie) <= 0;
 }
 
@@ -64,14 +85,20 @@ export function Edition({
     Object.fromEntries(parametres.typesEvenement.map((type) => [type.id, type.actif])),
   );
   const [accuse, setAccuse] = useState<string | null>(null);
+  // Le serveur refuse une écriture sans motif d'au moins six caractères — la
+  // contrainte est posée en base, pas dans un service. L'écran le demande donc
+  // avant d'appeler, plutôt que d'essuyer un refus qu'il ne saurait pas
+  // expliquer à qui vient de cliquer.
+  const [demandeMotif, setDemandeMotif] = useState(false);
 
   const saisieDe = (parametre: Parametre) => saisies[parametre.cle] ?? String(parametre.valeur);
   const actifDe = (type: TypeOccasion) => occasions[type.id] ?? type.actif;
 
   const valide = reference.economie.every((p) => !invalide(p, saisieDe(p)));
+  const changes = reference.economie.filter((p) => saisieDe(p) !== String(p.valeur));
   const modifie =
-    reference.economie.some((p) => saisieDe(p) !== String(p.valeur)) ||
-    reference.typesEvenement.some((type) => actifDe(type) !== type.actif);
+    changes.length > 0 ||
+    reference.typesEvenement.some((type) => type.reglable && actifDe(type) !== type.actif);
 
   // Rien ne part avant ce geste. La valeur qu'on quitte devient la valeur
   // précédente : c'est ce que le prochain écran rappellera.
@@ -81,21 +108,29 @@ export function Edition({
       setAccuse(t.parametres.rienAEnregistrer);
       return;
     }
+    setDemandeMotif(true);
+  };
+
+  const confirmer = (motif: string) => {
+    setDemandeMotif(false);
     const valeurs: Parametres = {
       economie: reference.economie.map((p) => ({
         ...p,
-        valeur: typeof p.valeur === "number" ? Number(saisieDe(p)) : saisieDe(p),
+        // La valeur reste telle qu'elle a été saisie. La base stocke du texte et
+        // porte le type à côté ; convertir ici ferait perdre « 07 » ou « 1.50 »
+        // avant même que le serveur ait pu dire s'il les accepte.
+        valeur: saisieDe(p),
         valeurPrecedente: p.valeur,
       })),
       typesEvenement: reference.typesEvenement.map((type) => ({ ...type, actif: actifDe(type) })),
     };
     setReference(valeurs);
-    onEnregistrer?.(valeurs);
+    onEnregistrer?.(valeurs, motif);
     setAccuse(t.parametres.enregistre);
   };
 
   const colonnes: Colonne<TypeOccasion>[] = [
-    { cle: "libelle", titre: t.parametres.occasions.col.nom },
+    { cle: "id", titre: t.parametres.occasions.col.nom },
     {
       cle: "registre",
       titre: t.parametres.occasions.col.registre,
@@ -110,7 +145,10 @@ export function Edition({
       rendu: (type) => (
         <select
           className="admin-champ admin-focus"
-          aria-label={type.libelle}
+          aria-label={type.id}
+          // Un interrupteur qui n'enregistre rien est pire que pas
+          // d'interrupteur : l'administrateur croit avoir réglé quelque chose.
+          disabled={!type.reglable}
           value={actifDe(type) ? "propose" : "masque"}
           onChange={(e) =>
             setOccasions((courant) => ({ ...courant, [type.id]: e.target.value === "propose" }))
@@ -170,22 +208,22 @@ export function Edition({
               <FormRow
                 key={parametre.cle}
                 champId={champId}
-                label={parametre.libelle}
-                aide={parametre.aide ?? ""}
+                label={dire(t, parametre.cle).libelle}
+                aide={dire(t, parametre.cle).aide ?? ""}
                 erreur={invalide(parametre, saisie) ? t.parametres.erreurEntier : ""}
                 precedente={
                   parametre.valeurPrecedente === null
                     ? null
                     : t.parametres.precedente.replace(
                         "{valeur}",
-                        avecUnite(parametre.valeurPrecedente, parametre.unite),
+                        avecUnite(parametre.valeurPrecedente, dire(t, parametre.cle).unite),
                       )
                 }
               >
                 <input
                   id={champId}
                   className="admin-champ admin-focus gabarit-saisie"
-                  inputMode={typeof parametre.valeur === "number" ? "numeric" : "text"}
+                  inputMode={estNumerique(parametre) ? "numeric" : "text"}
                   value={saisie}
                   aria-invalid={invalide(parametre, saisie) || undefined}
                   onChange={(e) =>
@@ -200,10 +238,32 @@ export function Edition({
       ) : (
         <div className="gabarit-form">
           <DataTable colonnes={colonnes} lignes={reference.typesEvenement} />
+          {reference.typesEvenement.every((type) => !type.reglable) ? (
+            <p className="gabarit-note">{t.parametres.nonReglable}</p>
+          ) : null}
           <p className="gabarit-note">{t.parametres.occasions.noteSensible}</p>
           {pied}
         </div>
       )}
+
+      {demandeMotif ? (
+        <ConfirmWithReason
+          titre={t.parametres.motif.titre}
+          consequence={t.parametres.motif.consequence}
+          motifs={[...t.parametres.motif.motifs]}
+          libelles={{
+            motif: t.parametres.motif.question,
+            choisir: t.confirmation.motifManquant,
+            autre: t.confirmation.autre,
+            precision: t.confirmation.autrePlaceholder,
+            journal: t.confirmation.motifAide,
+            annuler: t.confirmation.annuler,
+            confirmer: t.confirmation.confirmer,
+          }}
+          onAnnuler={() => setDemandeMotif(false)}
+          onConfirmer={confirmer}
+        />
+      ) : null}
 
       {accuse ? (
         <Toast libelleFermer={t.commun.fermer} onDismiss={() => setAccuse(null)}>

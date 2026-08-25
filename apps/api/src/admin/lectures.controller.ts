@@ -47,13 +47,15 @@ export class LecturesService {
       items: page.map((e) => ({
         id: e.id,
         date: e.createdAt.toISOString(),
-        actorType: e.actorType,
-        actorId: e.actorId,
+        acteurType: e.actorType,
+        // Pas de nom : actorId n'est pas une clé étrangère en base — une trace
+        // qui doit faire foi ne disparaît pas avec le compte qu'elle décrit.
+        acteurId: e.actorId,
         action: e.action,
-        reason: e.reason,
-        targetType: e.targetType,
-        targetId: e.targetId,
-        metadata: e.metadata,
+        motif: e.reason,
+        cibleType: e.targetType,
+        cibleId: e.targetId,
+        details: e.metadata ?? null,
       })),
       nextCursor: lignes.length > limite ? (page.at(-1)?.id ?? null) : null,
     };
@@ -82,8 +84,8 @@ export class LecturesService {
         // essaie mille adresses à la suite. Le contrat écrit pour l'écran
         // annonçait une adresse IP — la table n'en garde pas, elle garde un
         // lieu approximatif (spec technique §9 : l'IP ne descend pas en base).
-        attemptedEmail: l.attemptedEmail,
-        result: l.result,
+        adresseTentee: l.attemptedEmail,
+        resultat: l.result,
         appareil: l.userAgent,
         lieu: l.geoApprox,
       })),

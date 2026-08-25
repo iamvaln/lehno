@@ -113,6 +113,11 @@ export function TableauDeBord({ donnees, t, onAller }: TableauDeBordProps) {
         <DataTable
           colonnes={colonnes}
           lignes={donnees.aTraiter}
+          // « Chaque élément à traiter mène directement à la section
+          // concernée » (ux-admin §5.2). Ce n'est pas un raccourci de confort :
+          // les files du délai de grâce, de la modération et des messages ne
+          // figurent pas au menu — c'est par ici qu'on y entre.
+          onOuvrir={(ligne) => onAller(ligne.section)}
           vide={<EmptyState titre={t.tableau.vide.titre} texte={t.tableau.vide.texte} />}
         />
       </Rang>

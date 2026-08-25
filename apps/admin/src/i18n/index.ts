@@ -20,3 +20,19 @@ export function messages(langue: Langue): Messages {
 }
 
 export { fr, en };
+
+/** Les codes d'erreur que l'outil sait dire. */
+export type CleCode = keyof Messages["codes"];
+
+/**
+ * Ramène un code venu du client à un code que le dictionnaire sait dire.
+ *
+ * Le serveur en émet une trentaine, dont la plupart appartiennent aux surfaces
+ * publiques ou à l'espace privé — l'administration n'en rencontrera jamais.
+ * Les traduire tous encombrerait le dictionnaire de phrases mortes ; en laisser
+ * passer un afficherait une case vide. On retombe donc sur l'erreur générique,
+ * qui dit au moins quoi faire : réessayer.
+ */
+export function codeConnu(code: string): CleCode {
+  return code in fr.codes ? (code as CleCode) : "internal_error";
+}

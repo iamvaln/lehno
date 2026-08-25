@@ -5,6 +5,7 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 import { AdminTokenService } from "../src/admin/admin-token.service.js";
+import { pageSuppressionsSchema } from "@lehno/contracts";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -59,6 +60,16 @@ describe("administration — les demandes de suppression", () => {
 
   const lister = (entete: Record<string, string>, requete = "") =>
     fetch(`${baseUrl}/v1/admin/deletions${requete}`, { headers: entete });
+
+  it("la file suit le contrat publié, au champ près", async () => {
+    await enAttente(1, 3);
+    const { entete } = await session("support");
+
+    const corps = await (await lister(entete)).json();
+
+    const valide = pageSuppressionsSchema.safeParse(corps);
+    expect(valide.success ? null : valide.error.issues).toBeNull();
+  });
 
   it("refuse sans session", async () => {
     expect((await fetch(`${baseUrl}/v1/admin/deletions`)).status).toBe(401);

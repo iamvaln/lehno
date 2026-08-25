@@ -40,10 +40,9 @@ export const en: typeof fr = {
   },
 
   familles: {
-    attention: "Needs a decision",
-    finances: "Finance",
-    gestion: "Management",
-    surveiller: "Monitoring",
+    exploitation: "Operations",
+    economie: "Economy",
+    supervision: "Monitoring",
     outils: "Tools",
   },
 
@@ -55,9 +54,14 @@ export const en: typeof fr = {
     contact: "Contact messages",
     attente: "Waitlist",
     transactions: "Transactions",
-    comptes: "Users",
-    acces: "Administrators",
-    parametres: "Settings",
+    comptes: "Accounts",
+    credits: "Credits and payments",
+    acces: "Administrator access",
+    parametres: "Parameters",
+    fonctionnalites: "Features",
+    modeles: "AI models",
+    studio: "Portrait studio",
+    offres: "Offers and growth",
     metriques: "Metrics",
     audit: "Audit log",
     connexions: "Sign-ins",
@@ -119,6 +123,74 @@ export const en: typeof fr = {
     journal: "The export shows up in the audit log.",
     encours: "Preparing the file…",
     lance: "Export started on {n} rows. The file will arrive by email.",
+  },
+
+  // Voir fr.ts : un écran qui charge et un écran vide ne disent pas la même chose.
+  actions: {
+    chargement: "Loading…",
+    reessayer: "Try again",
+    echecTitre: "Loading did not go through",
+  },
+
+  // Voir fr.ts : une valeur qu'on ne sait pas encore compter n'est pas zéro.
+  nonMesure: {
+    court: "—",
+    explication: "Not measured yet",
+    bloc: "This measure does not exist yet. It will appear here once the feature ships.",
+  },
+
+  // Voir fr.ts : `journal` est la section, `audit` l'historique d'un compte.
+  journal: {
+    titre: "Audit log",
+    sous: "What the team did, and why. Nothing here can be changed or removed.",
+    col: { date: "When", acteur: "Who", action: "What", motif: "Why", cible: "On what" },
+    sansMotif: "User's own action",
+    acteurs: { admin: "Administration", user: "User" },
+    vide: {
+      titre: "No entries in this period",
+      texte: "Every administrative action lands here, with its author, target and reason.",
+    },
+  },
+
+  entrees: {
+    titre: "Sign-ins",
+    sous: "Successful entries and refused attempts. No IP address: it never reaches the database.",
+    col: { date: "When", compte: "Account", adresse: "Address tried", resultat: "Result", appareil: "Device", lieu: "Approximate location" },
+    resultats: { success: "Signed in", failure: "Refused" },
+    inconnu: "—",
+    vide: {
+      titre: "No attempts in this period",
+      texte: "Every entry, successful or not, lands here with its device and approximate location.",
+    },
+  },
+
+  modeles: {
+    titre: "AI models",
+    sous: "The order we try them in, and what each one costs at the provider.",
+    col: { rang: "Try order", fournisseur: "Provider", modele: "Model", etat: "State", entree: "Input cost", sortie: "Output cost" },
+    etats: { actif: "In service", eteint: "Off" },
+    sansCout: "Not priced",
+    unite: "$ / M tokens",
+    eteindre: "Turn this model off",
+    rallumer: "Put back in service",
+    dialogueEteindre: {
+      titre: "Turn off {modele}",
+      consequence: "Work will move to the next model in the try order. If this is the last one in service, the server will refuse.",
+      motifs: [
+        "The model fails too often",
+        "Cost has grown too high",
+        "Replaced by another provider",
+      ],
+    },
+    dialogueRallumer: {
+      titre: "Put {modele} back in service",
+      consequence: "It returns to the try order, at its rank.",
+      motifs: [
+        "The provider incident is over",
+        "Rolling back a trial",
+      ],
+    },
+    manque: "Real spend and what it earned are not shown yet: usage records do not exist in the database. This catalogue says what we try, and in what order.",
   },
 
   echecs: {
@@ -390,6 +462,27 @@ export const en: typeof fr = {
     rienAEnregistrer: "Nothing has changed since the last save.",
     journal: "The audit log keeps every change and its author.",
     erreurEntier: "A whole number above zero.",
+    // Voir fr.ts : le serveur transporte des clés, l'outil porte les phrases.
+    cles: {
+      reminder_lead_days_default: { libelle: "Reminder lead time", aide: "How many days before the date the reminder goes out, by default.", unite: "days" },
+      wish_window_lead_days: { libelle: "Wish window opens", aide: "How many days before the date the link accepts wishes.", unite: "days" },
+      wish_window_trail_days: { libelle: "Wish window closes", aide: "How many days after the date the link stays open.", unite: "days" },
+      max_accounts_per_device: { libelle: "Accounts per device", aide: "Beyond this, sign-up is refused from that device.", unite: null },
+      account_grace_period_days: { libelle: "Grace period", aide: "The time left before an account is erased for good.", unite: "days" },
+      signup_free_credits: { libelle: "Credits given at sign-up", aide: "What a new account gets to try things out.", unite: "credits" },
+      credit_unit_price: { libelle: "Credit price", aide: "The unit price, in CFA francs.", unite: "FCFA" },
+    },
+    motif: {
+      titre: "Save these settings",
+      question: "Why this change?",
+      consequence: "These values drive the product and take effect right away. The log keeps the reason, your name and the time.",
+      motifs: [
+        "Pricing adjustment",
+        "Correcting a wrong value",
+        "Launch decision",
+      ],
+    },
+    nonReglable: "These types come from the code: their state cannot be set here. They are shown so you know which ones exist.",
     occasions: {
       sous: "What the product offers to celebrate. The order is the one shown at creation.",
       col: {
@@ -464,6 +557,27 @@ export const en: typeof fr = {
     fauxUn: "Code refused. One try left.",
     epuise: "3 codes refused. Ask for a new one to carry on.",
     echec: "We couldn't send the code. Nothing went out to that address. Try again in a moment.",
+  },
+
+  // Le serveur rend un code stable, jamais une phrase (voir fr.ts).
+  codes: {
+    otp_invalid: "Wrong code.",
+    otp_expired: "That code has expired. Request a new one.",
+    otp_too_many_attempts: "Too many wrong codes. Request a new one to continue.",
+    otp_rate_limited: "Too many requests. Wait a moment before trying again.",
+    unauthorized: "Your session has expired. Sign in again.",
+    session_expired: "Your session has expired. Sign in again.",
+    refresh_reused: "Your session was closed as a precaution. Sign in again.",
+    forbidden: "Your role does not allow this action.",
+    not_found: "Not found.",
+    conflict: "Things changed in the meantime. Reload before trying again.",
+    validation_failed: "That request is malformed.",
+    reason_required: "A reason is required, at least six characters.",
+    rate_limited: "Too many requests. Wait a moment.",
+    internal_error: "The service hit an error. Try again in a moment.",
+    account_suspended: "This account is suspended.",
+    reseau_indisponible: "The service is unreachable. Check your connection.",
+    reponse_invalide: "The service answered something unexpected. Try again in a moment.",
   },
 
   gabarits: {

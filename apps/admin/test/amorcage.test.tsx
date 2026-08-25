@@ -1,8 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { App } from "../src/App.js";
+import { magasinLocal } from "../src/api/session.js";
 
 describe("amorçage du back-office", () => {
+  // L'outil ne s'ouvre plus par défaut : sans session, App rend la connexion.
+  // Ces trois-là décrivent l'outil ouvert, on lui en pose donc une.
+  beforeEach(() => {
+    localStorage.clear();
+    magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role: "admin" });
+  });
+
   it("rend une région principale", async () => {
     render(<App />);
     expect(screen.getByRole("main")).toBeInTheDocument();

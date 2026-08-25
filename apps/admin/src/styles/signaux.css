@@ -326,7 +326,10 @@
   font-size: var(--text-body-xs);
   color: var(--text-mention);
 }
-.admin-export-menu {
+/* Le panneau porte la mise en place ; le menu qu'il contient n'est plus qu'une
+   liste de choix. Les deux sont séparés parce qu'un role="menu" n'admet que des
+   menuitem, et que le rappel de journalisation devait en sortir. */
+.admin-export-panneau {
   position: absolute;
   top: calc(100% + var(--space-6));
   right: 0;

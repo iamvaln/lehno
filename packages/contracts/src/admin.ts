@@ -82,6 +82,10 @@ export const compteLigneSchema = z.object({
   pseudo: z.string(),
   email: z.string(),
   etat: etatCompteSchema,
+  // Le solde est la somme signée des mouvements. Un compte sans mouvement a
+  // bien zéro, ce qui n'est pas la même chose qu'une mesure absente : cette
+  // colonne a été nullable le temps que credit_transaction existe, elle ne
+  // l'est plus.
   credits: z.number().int(),
   inscritLe: z.string(),
 }).strict();
@@ -98,18 +102,29 @@ export const compteDetailSchema = z.object({
   langue: z.enum(["fr", "en"]),
   inscritLe: z.string(),
   derniereConnexion: z.string().nullable(),
+  /** Renseigné pendant le délai de grâce, nul sinon. */
+  suppressionDemandeeLe: z.string().nullable(),
   volumetrie: z.object({
     proches: z.number().int().nonnegative(),
     occasions: z.number().int().nonnegative(),
     notes: z.number().int().nonnegative(),
-    murs: z.number().int().nonnegative(),
+    // Nul tant que la table des Murs n'existe pas — voir compteLigneSchema.
+    murs: z.number().int().nonnegative().nullable(),
   }).strict(),
+  /** Acheté et offert se distinguent : payer n'est pas être entretenu. */
   credits: z.object({
     solde: z.number().int(),
     achetes: z.number().int().nonnegative(),
     offerts: z.number().int().nonnegative(),
   }).strict(),
 }).strict();
+
+/** La page d'une liste : pas de total, un curseur (spec technique §3). */
+export const pageComptesSchema = z.object({
+  items: z.array(compteLigneSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+export type PageComptes = z.infer<typeof pageComptesSchema>;
 
 export type CompteLigne = z.infer<typeof compteLigneSchema>;
 export type CompteDetail = z.infer<typeof compteDetailSchema>;
@@ -143,26 +158,43 @@ export const demandeSuppressionSchema = z.object({
 
 export type DemandeSuppression = z.infer<typeof demandeSuppressionSchema>;
 
+/** La file des demandes : une page à curseur, la plus urgente d'abord. */
+export const pageSuppressionsSchema = z.object({
+  items: z.array(demandeSuppressionSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+export type PageSuppressions = z.infer<typeof pageSuppressionsSchema>;
+
 // ——— Configurations ———————————————————————————————————————————
 
 // Un rang de formulaire rappelle la valeur précédente : c'est ce qui permet de
 // voir ce qu'on change avant d'enregistrer.
+// Le serveur transporte des clés, jamais des phrases composées (contrat commun
+// §2) : c'est ce qui rend l'outil bilingue sans que le serveur ait à connaître
+// la langue de qui l'appelle. Libellé, aide et unité vivent donc dans le
+// dictionnaire de l'outil, indexés par cette clé — et une clé qu'il ne connaît
+// pas s'affiche telle quelle, ce qui se voit, plutôt que vide.
 export const parametreSchema = z.object({
   cle: z.string(),
-  libelle: z.string(),
-  aide: z.string().nullable(),
   valeur: z.union([z.string(), z.number()]),
+  /** Le type dit comment saisir : un prix n'est pas un délai. */
+  type: z.enum(["number", "money", "duration", "boolean", "string"]),
+  /** « Modifier une valeur, avec rappel de la précédente » (ux-admin §5.6). */
   valeurPrecedente: z.union([z.string(), z.number()]).nullable(),
-  unite: z.string().nullable(),
+  misAJourLe: z.string(),
 }).strict();
 
 export const parametresSchema = z.object({
   economie: z.array(parametreSchema),
+  // Les types d'occasion sont un enum du code, pas une table : leur activation
+  // n'est stockée nulle part et ne peut donc pas se régler ici. Le serveur les
+  // rend pour qu'on voie lesquels existent ; l'écran les montre en lecture.
   typesEvenement: z.array(z.object({
     id: z.string(),
-    libelle: z.string(),
     actif: z.boolean(),
     sensible: z.boolean(),
+    /** Faux tant qu'aucune table ne porte l'activation. */
+    reglable: z.boolean(),
   }).strict()),
 }).strict();
 
@@ -214,3 +246,98 @@ export type SessionAdmin = z.infer<typeof sessionAdminSchema>;
 // L'échange du jeton long. Il ne porte pas de jeton d'accès : c'est justement
 // parce que celui-ci a expiré qu'on passe ici.
 export const rafraichissementSchema = z.object({ refreshToken: z.string().min(1) }).strict();
+
+
+// ——— Journal d'audit ——————————————————————————————————————————
+
+/**
+ * Une trace, telle qu'elle fait foi. Rien ici ne se modifie ni ne s'efface :
+ * il n'existe aucun chemin d'écriture vers le journal depuis l'extérieur.
+ *
+ * `acteurId` n'est pas une clé étrangère en base — une trace qui doit faire foi
+ * ne disparaît pas avec le compte qu'elle décrit. L'écran affiche donc un
+ * identifiant, pas toujours un nom.
+ */
+export const traceAuditSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  acteurType: z.enum(["admin", "user"]),
+  acteurId: z.string(),
+  action: z.string(),
+  /** Obligatoire pour un administrateur, absent pour un utilisateur chez lui. */
+  motif: z.string().nullable(),
+  cibleType: z.string().nullable(),
+  cibleId: z.string().nullable(),
+  details: z.unknown().nullable(),
+}).strict();
+
+export const pageAuditSchema = z.object({
+  items: z.array(traceAuditSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+export type TraceAudit = z.infer<typeof traceAuditSchema>;
+export type PageAudit = z.infer<typeof pageAuditSchema>;
+
+// ——— Connexions ———————————————————————————————————————————————
+
+/**
+ * Une tentative d'entrée, réussie ou non.
+ *
+ * Pas d'adresse IP : la spécification technique §9 dit qu'elle ne descend pas
+ * en base. Ce qu'on garde est un lieu approximatif — assez pour voir qu'une
+ * série d'essais vient d'ailleurs, pas assez pour suivre quelqu'un.
+ *
+ * L'adresse tentée reste visible même quand aucun compte n'y correspond : c'est
+ * elle qui montre qu'on essaie mille adresses à la suite.
+ */
+export const connexionSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  compte: z.string().nullable(),
+  adresseTentee: z.string().nullable(),
+  resultat: z.enum(["success", "failure"]),
+  appareil: z.string().nullable(),
+  lieu: z.string().nullable(),
+}).strict();
+
+export const pageConnexionsSchema = z.object({
+  items: z.array(connexionSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+export type Connexion = z.infer<typeof connexionSchema>;
+export type PageConnexions = z.infer<typeof pageConnexionsSchema>;
+
+
+// ——— Modèles d'IA —————————————————————————————————————————————
+
+/**
+ * Un modèle du catalogue, et son rang dans l'ordre de repli.
+ *
+ * Les coûts sont ceux du fournisseur, par million de jetons, tels qu'on les a
+ * relevés — ils peuvent manquer pour un modèle qu'on n'a pas encore tarifé.
+ *
+ * Ce que ce contrat **ne porte pas** : la dépense réelle et ce qu'elle a
+ * rapporté. Le §5.8 les demande face à face, mais `AIUsage` et `ActionRun`
+ * n'existent pas encore. Les inventer ici donnerait un écran qui affiche des
+ * zéros là où il devrait afficher une marge.
+ */
+export const modeleIaSchema = z.object({
+  id: z.string(),
+  fournisseur: z.string(),
+  modele: z.string(),
+  /** Le plus petit d'abord : c'est l'ordre dans lequel on essaie. */
+  rang: z.number().int(),
+  actif: z.boolean(),
+  coutEntree: z.number().nullable(),
+  coutSortie: z.number().nullable(),
+  misAJourLe: z.string(),
+}).strict();
+
+export const catalogueIaSchema = z.object({
+  items: z.array(modeleIaSchema),
+}).strict();
+
+export type ModeleIa = z.infer<typeof modeleIaSchema>;
+export type CatalogueIa = z.infer<typeof catalogueIaSchema>;

@@ -5,6 +5,7 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 import { AdminTokenService } from "../src/admin/admin-token.service.js";
+import { compteDetailSchema, pageComptesSchema } from "@lehno/contracts";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -48,6 +49,91 @@ describe("administration — les comptes", () => {
   const lister = (entete: Record<string, string>, requete = "") =>
     fetch(`${baseUrl}/v1/admin/users${requete}`, { headers: entete });
 
+  // Le contrat est la seule chose que les deux côtés partagent. Tant que rien ne
+  // le vérifiait, le serveur a servi « username » et « status » là où l'outil
+  // attendait « pseudo » et « etat » — deux mondes compilés séparément, chacun
+  // convaincu d'avoir raison. Ces deux tests-là sont la charnière : ils
+  // échouent le jour où l'un des deux bouge sans l'autre.
+  it("la page de comptes suit le contrat publié, au champ près", async () => {
+    await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
+    const { entete } = await session("support");
+
+    const corps = await (await lister(entete)).json();
+
+    const valide = pageComptesSchema.safeParse(corps);
+    expect(valide.success ? null : valide.error.issues).toBeNull();
+  });
+
+  it("la fiche d'un compte suit le contrat publié, au champ près", async () => {
+    const u = await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
+    const { entete } = await session("support");
+
+    const corps = await (await fetch(`${baseUrl}/v1/admin/users/${u.id}`, { headers: entete })).json();
+
+    const valide = compteDetailSchema.safeParse(corps);
+    expect(valide.success ? null : valide.error.issues).toBeNull();
+  });
+
+  // Les états se disent dans la langue du contrat, pas dans celle de la base.
+  // Sans ça, l'écran devrait traduire un enum Prisma — et le jour où Prisma
+  // renomme une valeur, c'est l'affichage qui casse, pas le typage.
+  it("rend les états dans les termes du contrat", async () => {
+    await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm", status: "suspended" });
+    const { entete } = await session("support");
+
+    const corps = (await (await lister(entete)).json()) as { items: { etat: string }[] };
+
+    expect(corps.items[0]?.etat).toBe("suspendu");
+  });
+
+  // Le solde est la somme des mouvements : aucune colonne de solde n'est
+  // stockée, donc aucune ne peut se désynchroniser. Le calculer ici plutôt que
+  // le lire est la conséquence directe de ce choix de modèle.
+  it("rend le solde de crédits, somme signée des mouvements", async () => {
+    const u = await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
+    await db.prisma.creditTransaction.createMany({
+      data: [
+        { userId: u.id, type: "grant", amount: 5 },
+        { userId: u.id, type: "purchase", amount: 20 },
+        { userId: u.id, type: "consumption", amount: -3 },
+      ],
+    });
+    const { entete } = await session("support");
+
+    const corps = (await (await lister(entete)).json()) as { items: { credits: number | null }[] };
+
+    expect(corps.items[0]?.credits).toBe(22);
+  });
+
+  it("un compte sans mouvement a zéro, pas « inconnu »", async () => {
+    await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
+    const { entete } = await session("support");
+
+    const corps = (await (await lister(entete)).json()) as { items: { credits: number | null }[] };
+
+    expect(corps.items[0]?.credits).toBe(0);
+  });
+
+  // La fiche distingue ce qui a été acheté de ce qui a été offert : c'est la
+  // différence entre un compte qui paie et un compte qu'on entretient.
+  it("la fiche sépare le solde, les achats et les dons", async () => {
+    const u = await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
+    await db.prisma.creditTransaction.createMany({
+      data: [
+        { userId: u.id, type: "grant", amount: 5 },
+        { userId: u.id, type: "purchase", amount: 20 },
+        { userId: u.id, type: "consumption", amount: -3 },
+      ],
+    });
+    const { entete } = await session("support");
+
+    const corps = (await (await fetch(`${baseUrl}/v1/admin/users/${u.id}`, { headers: entete })).json()) as {
+      credits: { solde: number; achetes: number; offerts: number } | null;
+    };
+
+    expect(corps.credits).toEqual({ solde: 22, achetes: 20, offerts: 5 });
+  });
+
   it("refuse sans session", async () => {
     expect((await fetch(`${baseUrl}/v1/admin/users`)).status).toBe(401);
   });
@@ -83,8 +169,8 @@ describe("administration — les comptes", () => {
     await creerUtilisateur(2, { status: "suspended" });
     const { entete } = await session("support");
 
-    const corps = (await (await lister(entete, "?status=suspended")).json()) as { items: { username: string }[] };
-    expect(corps.items.map((u) => u.username)).toEqual(["u2"]);
+    const corps = (await (await lister(entete, "?status=suspended")).json()) as { items: { pseudo: string }[] };
+    expect(corps.items.map((u) => u.pseudo)).toEqual(["u2"]);
   });
 
   it("cherche par pseudo ou adresse", async () => {
@@ -92,8 +178,8 @@ describe("administration — les comptes", () => {
     await creerUtilisateur(2, { username: "valery", email: "valery@example.com" });
     const { entete } = await session("support");
 
-    const corps = (await (await lister(entete, "?q=awa")).json()) as { items: { username: string }[] };
-    expect(corps.items.map((u) => u.username)).toEqual(["awa"]);
+    const corps = (await (await lister(entete, "?q=awa")).json()) as { items: { pseudo: string }[] };
+    expect(corps.items.map((u) => u.pseudo)).toEqual(["awa"]);
   });
 
   // Le cloisonnement tient en administration : consulter un compte donne son
