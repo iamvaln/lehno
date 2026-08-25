@@ -14,8 +14,23 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
+  # ── La barrière : rien ne se construit avant que tout soit vérifié ──────────
+  #
+  # Sans ce job, un tag déployait sans qu'aucun test n'ait tourné : CI et
+  # Release étaient deux chaînes indépendantes, et v0.1.2 à v0.1.4 sont parties
+  # en production alors que la CI était rouge. Personne ne l'a vu, parce que
+  # rien ne reliait l'une à l'autre.
+  #
+  # Les étapes sont celles de la CI, appelées depuis la même définition
+  # (verification.yml) : impossible que la chaîne de déploiement vérifie moins
+  # que celle des PR.
+  verifier:
+    uses: ./.github/workflows/verification.yml
+    secrets: inherit
+
   # ── Construit et pousse l'image api (NestJS) ────────────────────────────────
   build-api:
+    needs: [verifier]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -43,6 +58,7 @@ jobs:
 
   # ── Construit et pousse l'image web (Next.js) ───────────────────────────────
   build-web:
+    needs: [verifier]
     runs-on: ubuntu-latest
     permissions:
       contents: read

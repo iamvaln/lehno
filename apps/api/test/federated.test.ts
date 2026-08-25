@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { FederatedService, type IdentityVerifier } from "../src/auth/federated.service.js";
+import { SignupService } from "../src/onboarding/signup.service.js";
+import { LegalService } from "../src/public/legal.controller.js";
 import { TokenService } from "../src/auth/token.service.js";
 
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -14,7 +16,8 @@ describe("identités externes", () => {
   let userId: string;
   const build = (v: IdentityVerifier) =>
     new FederatedService(db.prisma as never, new TokenService(db.prisma as never, SECRET),
-      { google: v, apple: v });
+      { google: v, apple: v },
+      new SignupService(db.prisma as never, new LegalService()));
 
   beforeAll(async () => { db = await withDatabase(); }, 120_000);
   afterAll(async () => { await db.close(); });

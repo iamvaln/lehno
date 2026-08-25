@@ -16,11 +16,26 @@ export class PersonService {
   }
 
   async create(userId: string, input: CreatePersonInput): Promise<Person> {
+    // Les champs s'ÉNUMÈRENT au lieu de s'étaler : une clé inattendue — un
+    // userId glissé par un appelant qui contourne le typage — n'atteint jamais
+    // le dépôt. C'est la première des deux gardes du cloisonnement à
+    // l'écriture, la seconde étant l'ordre d'écriture de Scope.create.
+    //
+    // Le prix de cette énumération : un champ ajouté au contrat et oublié ici
+    // ne serait jamais écrit, en silence. C'est ce que garde le test
+    // « écrit tous les champs du contrat » de person.test.ts.
     const ligne = await this.depot.persons(userId).create({
       displayName: input.displayName,
+      callingName: input.callingName ?? null,
+      avatarUrl: input.avatarUrl ?? null,
+      relation: input.relation ?? null,
       register: input.register ?? null,
       language: input.language ?? null,
       relationHint: input.relationHint ?? null,
+      city: input.city ?? null,
+      gender: input.gender ?? null,
+      country: input.country ?? null,
+      preferredChannel: input.preferredChannel ?? null,
     });
     return rendre(ligne);
   }
@@ -43,17 +58,25 @@ export class PersonService {
 
 // La date se rend en chaîne ISO : le contrat est du JSON, pas un objet Date.
 function rendre(p: {
-  id: string; displayName: string; isSelf: boolean;
-  register: string | null; language: string | null; relationHint: string | null;
-  createdAt: Date;
+  id: string; displayName: string; callingName: string | null; avatarUrl: string | null;
+  isSelf: boolean; relation: string | null; register: string | null; language: string | null;
+  relationHint: string | null; gender: string | null; city: string | null;
+  country: string | null; preferredChannel: string | null; createdAt: Date;
 }): Person {
   return {
     id: p.id,
     displayName: p.displayName,
+    callingName: p.callingName,
+    avatarUrl: p.avatarUrl,
     isSelf: p.isSelf,
+    relation: p.relation as Person["relation"],
+    relationHint: p.relationHint,
+    gender: p.gender as Person["gender"],
+    city: p.city,
+    country: p.country,
     register: p.register as Person["register"],
     language: p.language,
-    relationHint: p.relationHint,
+    preferredChannel: p.preferredChannel as Person["preferredChannel"],
     createdAt: p.createdAt.toISOString(),
   };
 }

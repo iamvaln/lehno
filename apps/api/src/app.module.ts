@@ -5,8 +5,13 @@ import { RateLimitService } from "./common/rate-limit.service.js";
 import { PrismaService } from "./prisma/prisma.service.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthGuard } from "./auth/auth.guard.js";
+import { SignupService } from "./onboarding/signup.service.js";
+import {
+  CreditsController, CreditsService, ReferralController, InvitationController,
+} from "./onboarding/credits.controller.js";
 import { FlagsService } from "./flags/flags.service.js";
 import { FeatureGuard } from "./flags/feature.guard.js";
+import { MeFeaturesController, PublicFeaturesController } from "./flags/features.controller.js";
 import { AuthService } from "./auth/auth.service.js";
 import { FederatedService } from "./auth/federated.service.js";
 import { OtpService } from "./auth/otp.service.js";
@@ -18,6 +23,8 @@ import { ProfileController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
 import { PersonController } from "./me/person.controller.js";
 import { PersonService } from "./me/person.service.js";
+import { NoteController, NotesController } from "./me/note.controller.js";
+import { NoteService } from "./me/note.service.js";
 import { TenantRepository } from "./tenancy/tenant.repository.js";
 import { ConfigController, ConfigService } from "./public/config.controller.js";
 import { LegalController, LegalService } from "./public/legal.controller.js";
@@ -42,7 +49,9 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
 
 @Module({
   controllers: [
-    AuthController, ProfileController, PersonController, ConfigController, LegalController,
+    AuthController, ProfileController, PersonController, NoteController, NotesController, ConfigController, LegalController,
+    MeFeaturesController, PublicFeaturesController,
+    CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
     AdminAuthController, ParametersController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
   ],
@@ -105,11 +114,14 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     AuthService,
     FederatedService,
     AuthGuard,
+    SignupService,
+    CreditsService,
     FlagsService,
     FeatureGuard,
     ProfileService,
     TenantRepository,
     PersonService,
+    NoteService,
     ConfigService,
     LegalService,
     WaitlistService,

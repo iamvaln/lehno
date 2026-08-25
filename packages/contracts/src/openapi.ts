@@ -19,7 +19,12 @@ import {
 } from "./auth.js";
 import { profileSchema, updateProfileSchema, usernameSchema } from "./profile.js";
 import { errorEnvelopeSchema } from "./errors.js";
-import { personSchema, createPersonSchema, updatePersonSchema } from "./me.js";
+import {
+  personSchema, createPersonSchema, updatePersonSchema,
+  noteSchema, createNoteSchema, createNotesSchema,
+} from "./me.js";
+import { featuresResponseSchema } from "./flags.js";
+import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
 
 // Le contrat se CALCULE depuis les schémas Zod, il ne se recopie pas. Une
 // seconde déclaration des mêmes formes — en DTO décoré, par exemple — dériverait
@@ -79,6 +84,45 @@ const CHEMINS: Chemin[] = [
     methode: "get",
     resume: "Lire la configuration publique (prix, crédits offerts, devise)",
     reponse: publicConfigSchema,
+  },
+  {
+    // Ce qui est ACTIF pour un visiteur sans compte, dépendances déjà
+    // résolues — jamais l'état brut des drapeaux (spécification §6.2). Une
+    // liste, pas un dictionnaire : « éteint » et « inconnu » se confondent
+    // côté client, à dessein.
+    chemin: "/public/features",
+    methode: "get",
+    resume: "Lister les fonctionnalités actives sur les surfaces sans compte",
+    reponse: featuresResponseSchema,
+  },
+  {
+    chemin: "/me/features",
+    methode: "get",
+    resume: "Lister les fonctionnalités actives pour le demandeur",
+    authentifie: true,
+    reponse: featuresResponseSchema,
+  },
+  {
+    chemin: "/me/credits",
+    methode: "get",
+    resume: "Lire son solde de crédits et ses derniers mouvements",
+    authentifie: true,
+    reponse: creditBalanceSchema,
+  },
+  {
+    chemin: "/me/referral",
+    methode: "get",
+    resume: "Lire son code de parrainage, ses filleuls et ses gains",
+    authentifie: true,
+    reponse: referralSummarySchema,
+  },
+  {
+    // Ouverte sans compte : c'est la page qu'ouvre un lien d'invitation.
+    chemin: "/public/invitations/{code}",
+    methode: "get",
+    resume: "Lire une invitation : qui invite, et ce que l'invité y gagne",
+    parametres: [{ nom: "code", dans: "path", schema: z.string().max(16), requis: true }],
+    reponse: invitationSchema,
   },
   {
     chemin: "/public/legal/{document}",
@@ -192,6 +236,37 @@ const CHEMINS: Chemin[] = [
     parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
     corps: updatePersonSchema,
     reponse: personSchema,
+  },
+  {
+    // Chemin distinct de /me/persons/{id}/notes : cette note n'appartient à
+    // aucun proche en particulier, et la loger sous l'un d'eux obligerait à en
+    // désigner un comme propriétaire de l'appel, ce qu'il n'est pas.
+    chemin: "/me/notes",
+    methode: "post",
+    resume: "Écrire une même note pour plusieurs proches",
+    authentifie: true,
+    corps: createNotesSchema,
+    reponse: z.array(noteSchema),
+    statut: 201,
+  },
+  {
+    chemin: "/me/persons/{personId}/notes",
+    methode: "get",
+    resume: "Lister les notes d'un proche, de la plus récente à la plus ancienne",
+    authentifie: true,
+    parametres: [{ nom: "personId", dans: "path", schema: z.string().uuid(), requis: true }],
+    reponse: z.array(noteSchema),
+  },
+  {
+    chemin: "/me/persons/{personId}/notes",
+    methode: "post",
+    resume: "Écrire une note sur un proche",
+    authentifie: true,
+    parametres: [{ nom: "personId", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: createNoteSchema,
+    reponse: noteSchema,
+    // Une ressource neuve, dont le client apprend l'identifiant.
+    statut: 201,
   },
   {
     chemin: "/me/persons/{id}",

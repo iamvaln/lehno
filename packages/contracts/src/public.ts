@@ -7,10 +7,6 @@ export const publicConfigSchema = z.object({
   creditUnitPrice: z.number().nonnegative(),
   currency: z.string().length(3),
   referralBonusInvited: z.number().nonnegative(),
-  // Les drapeaux PUBLICS du registre (voir flags.ts, CLES_PUBLIQUES), et eux
-  // seuls — un drapeau privé ici annoncerait au monde ce qu'on prépare avant
-  // qu'on le décide.
-  flags: z.record(z.string(), z.boolean()),
 }).strict();
 
 export type PublicConfig = z.infer<typeof publicConfigSchema>;

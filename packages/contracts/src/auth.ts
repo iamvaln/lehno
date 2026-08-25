@@ -22,6 +22,10 @@ export const federatedSchema = z.object({
   provider: z.enum(["google", "apple"]),
   idToken: z.string().min(1),
   deviceId: z.string().min(1).max(128).optional(),
+  // La §5.1 veut le code de parrainage sur les TROIS voies. Il manquait ici :
+  // une inscription par Google ou Apple ne pouvait en porter aucun, et le
+  // filleul perdait son bonus selon la porte qu'il avait empruntée.
+  referralCode: z.string().max(16).optional(),
 }).strict();
 
 export type Session = z.infer<typeof sessionSchema>;

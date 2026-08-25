@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { ConfigService } from "../src/public/config.controller.js";
-import { FlagsService } from "../src/flags/flags.service.js";
 
 describe("surfaces publiques", () => {
   let db: TestDb;
@@ -22,26 +21,25 @@ describe("surfaces publiques", () => {
       ],
       skipDuplicates: true,
     });
-    const flags = new FlagsService(db.prisma as never);
-    const cfg = await new ConfigService(db.prisma as never, flags).get();
+    const cfg = await new ConfigService(db.prisma as never).get();
     expect(cfg.signupFreeCredits).toBe(5);
     expect(cfg.creditUnitPrice).toBe(100);
 
     await db.prisma.systemParameter.update({
       where: { key: "credit_unit_price" }, data: { value: "150" },
     });
-    expect((await new ConfigService(db.prisma as never, flags).get()).creditUnitPrice).toBe(150);
+    expect((await new ConfigService(db.prisma as never).get()).creditUnitPrice).toBe(150);
   });
 
-  // La preuve que ce test réclame explicitement (cahier tâche 2c) : un
-  // drapeau PRIVÉ allumé en base ne doit jamais apparaître dans la
-  // configuration publique — seuls les drapeaux du registre marqués
-  // « public: true » (voir packages/contracts/src/flags.ts) y figurent.
-  it("un drapeau privé allumé n'apparaît pas dans la configuration publique", async () => {
-    await db.prisma.featureFlag.create({ data: { key: "me.persons", enabled: true } });
-    const cfg = await new ConfigService(db.prisma as never, new FlagsService(db.prisma as never)).get();
-    expect(cfg.flags).not.toHaveProperty("me.persons");
-    expect(cfg.flags).toHaveProperty("launch.live");
+  // La configuration publique ne porte PLUS aucun drapeau : la spécification
+  // §6.2 veut que les clients reçoivent la liste RÉSOLUE de ce qui est actif,
+  // par /public/features, et jamais l'état brut. Ce cas garde la frontière —
+  // remettre des drapeaux ici les exposerait sous une forme que le contrat
+  // commun interdit.
+  it("ne porte aucun drapeau : ils passent par /public/features", async () => {
+    await db.prisma.featureFlag.create({ data: { key: "launch.live", enabled: true } });
+    const cfg = await new ConfigService(db.prisma as never).get();
+    expect(cfg).not.toHaveProperty("flags");
   });
 
   // Les cas de la liste d'attente vivent dans waitlist.test.ts : depuis que

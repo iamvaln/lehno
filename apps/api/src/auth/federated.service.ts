@@ -1,7 +1,7 @@
-import { randomBytes } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma, type IdentityProvider, type User } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { SignupService } from "../onboarding/signup.service.js";
 import { TokenService, type Pair } from "./token.service.js";
 import { AppError } from "../common/errors.js";
 
@@ -9,7 +9,12 @@ export interface IdentityVerifier {
   verify(idToken: string): Promise<{ providerUserId: string; email: string | null; emailVerified: boolean }>;
 }
 
-type SignInInput = { provider: IdentityProvider; idToken: string; deviceId?: string; userAgent?: string };
+type SignInInput = {
+  provider: IdentityProvider; idToken: string; deviceId?: string;
+  // La §5.1 veut le parrainage sur les trois voies : il manquait ici.
+  referralCode?: string;
+  userAgent?: string;
+};
 
 @Injectable()
 export class FederatedService {
@@ -20,6 +25,7 @@ export class FederatedService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(TokenService) private readonly tokens: TokenService,
     @Inject("IDENTITY_VERIFIERS") private readonly verifiers: Record<IdentityProvider, IdentityVerifier>,
+    @Inject(SignupService) private readonly signup: SignupService,
   ) {}
 
   // Revue tour 1, point 3 : un compte suspendu ou en cours de suppression ne
@@ -86,16 +92,32 @@ export class FederatedService {
     let user = await this.prisma.user.findUnique({ where: { email: claims.email } });
     let isNewAccount = false;
     if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          email: claims.email, emailVerified: true,
-          username: `u${randomBytes(4).toString("hex")}`,
-          referralCode: randomBytes(6).toString("base64url").slice(0, 8).toUpperCase(),
-        },
+      // Le MÊME chemin que la voie par code — et c'est le correctif. Cette
+      // branche créait le compte de son côté, puis écrivait la ligne
+      // d'appareil sans jamais lire le plafond : il suffisait donc de
+      // s'inscrire par Google ou Apple pour le contourner. Une protection
+      // posée sur une seule porte n'en est pas une.
+      //
+      // deviceId devient obligatoire ici aussi. Sans lui, le plafond se
+      // contournerait en omettant simplement un champ facultatif.
+      if (!input.deviceId) {
+        await this.recordAttempt(claims.email, input.userAgent, null, "failure");
+        throw new AppError("validation_failed", "deviceId is required to create an account", {
+          deviceId: "required to create an account",
+        });
+      }
+      const creation = await this.signup.creer({
+        email: claims.email,
+        emailVerified: true,
+        deviceId: input.deviceId,
+        referralCode: input.referralCode,
       });
+      if (creation.plafondAtteint) {
+        await this.recordAttempt(claims.email, input.userAgent, null, "failure");
+        throw new AppError("device_limit_reached", "too many accounts from this device");
+      }
+      user = await this.prisma.user.findUniqueOrThrow({ where: { id: creation.user.id } });
       isNewAccount = true;
-      if (input.deviceId)
-        await this.prisma.deviceSignup.create({ data: { deviceId: input.deviceId, userId: user.id } });
     }
     try {
       this.assertActive(user);
