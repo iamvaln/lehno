@@ -95,7 +95,6 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-        NEXT_PUBLIC_LANCEMENT: ${NEXT_PUBLIC_LANCEMENT}
     image: ${REGISTRY:-ghcr.io/iamvaln}/lehno-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: ${ENV_FILE:-.env.production}

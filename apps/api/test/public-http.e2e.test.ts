@@ -93,9 +93,21 @@ describe("surfaces publiques — HTTP de bout en bout", () => {
       // max_accounts_per_device, account_grace_period_days — qui ne doivent
       // jamais franchir cette route.
       expect(Object.keys(body).sort()).toEqual(
-        ["creditUnitPrice", "currency", "referralBonusInvited", "signupFreeCredits"].sort(),
+        ["creditUnitPrice", "currency", "flags", "referralBonusInvited", "signupFreeCredits"].sort(),
       );
       expect(publicConfigSchema.safeParse(body).success).toBe(true);
+    });
+
+    // Preuve par la panne (cahier tâche 2c) : un drapeau PRIVÉ allumé en base
+    // ne doit jamais franchir cette route, même en HTTP réel — seule la
+    // route (pas seulement le service, déjà couvert par public.test.ts) le
+    // démontre vraiment.
+    it("un drapeau privé allumé en base ne fuite pas ici", async () => {
+      await db.prisma.featureFlag.create({ data: { key: "me.persons", enabled: true } });
+      const res = await fetch(`${baseUrl}/v1/public/config`);
+      const body = (await res.json()) as { flags: Record<string, boolean> };
+      expect(body.flags).not.toHaveProperty("me.persons");
+      expect(body.flags).toEqual({ "launch.live": false });
     });
   });
 

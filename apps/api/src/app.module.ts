@@ -5,6 +5,8 @@ import { RateLimitService } from "./common/rate-limit.service.js";
 import { PrismaService } from "./prisma/prisma.service.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthGuard } from "./auth/auth.guard.js";
+import { FlagsService } from "./flags/flags.service.js";
+import { FeatureGuard } from "./flags/feature.guard.js";
 import { AuthService } from "./auth/auth.service.js";
 import { FederatedService } from "./auth/federated.service.js";
 import { OtpService } from "./auth/otp.service.js";
@@ -14,6 +16,9 @@ import { ConsoleMailAdapter } from "./mail/console.adapter.js";
 import { ResendAdapter } from "./mail/resend.adapter.js";
 import { ProfileController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
+import { PersonController } from "./me/person.controller.js";
+import { PersonService } from "./me/person.service.js";
+import { TenantRepository } from "./tenancy/tenant.repository.js";
 import { ConfigController, ConfigService } from "./public/config.controller.js";
 import { LegalController, LegalService } from "./public/legal.controller.js";
 import { WaitlistController } from "./public/waitlist.controller.js";
@@ -37,7 +42,8 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
 
 @Module({
   controllers: [
-    AuthController, ProfileController, ConfigController, LegalController, WaitlistController, ContactController,
+    AuthController, ProfileController, PersonController, ConfigController, LegalController,
+    WaitlistController, ContactController,
     AdminAuthController, ParametersController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
   ],
   providers: [
@@ -99,7 +105,11 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     AuthService,
     FederatedService,
     AuthGuard,
+    FlagsService,
+    FeatureGuard,
     ProfileService,
+    TenantRepository,
+    PersonService,
     ConfigService,
     LegalService,
     WaitlistService,
