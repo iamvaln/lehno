@@ -348,14 +348,60 @@ enum WishlistOrigin {
   owner
 }
 
+enum PersonRelation {
+  famille_proche
+  famille_etendue
+  ami
+  partenaire
+  collegue
+  relation_pro
+  connaissance
+
+  @@map("person_relation")
+}
+
+enum PersonGender {
+  female
+  male
+  other
+  unspecified
+
+  @@map("person_gender")
+}
+
+enum ContactChannel {
+  whatsapp
+  sms
+  email
+  autre
+
+  @@map("contact_channel")
+}
+
 model Person {
   id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId       String          @map("user_id") @db.Uuid
   displayName  String          @map("display_name")
+  // Comment on l'APPELLE — « Karim », « Maman », « mon vieux ». C'est ce nom
+  // qui paraît dans les contenus générés ; à défaut, display_name.
+  callingName  String?         @map("calling_name")
+  avatarUrl    String?         @map("avatar_url")
   isSelf       Boolean         @default(false) @map("is_self")
+  // `relation` et `relationHint` COEXISTENT, et ce n'est pas une redondance :
+  // l'énumération sert la génération, le texte libre garde la nuance qu'elle
+  // écrase — « on a fait la fac ensemble » ne rentre dans aucune case.
+  relation     PersonRelation?
+  // Signal de DERNIER recours : il oriente des idées de cadeaux quand rien
+  // d'autre n'est disponible. Une seule note bien prise vaut mieux que lui, et
+  // `unspecified` est une valeur légitime — jamais un champ à remplir.
+  gender       PersonGender?   @default(unspecified)
+  city         String?
+  country      String?         @db.VarChar(2)
   register     PersonRegister?
   language     String?         @db.VarChar(10)
   relationHint String?         @map("relation_hint")
+  // Par où on lui écrit d'ordinaire : oriente la LONGUEUR du message produit.
+  preferredChannel ContactChannel? @map("preferred_channel")
   createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz
 
