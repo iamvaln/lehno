@@ -111,6 +111,103 @@ describe("administration — l'entrée par code", () => {
     expect(corps.role).toBe("support");
   });
 
+  // Une session d'exploitation dure trente minutes ; le jeton de
+  // rafraîchissement vit douze heures. Sans échange, l'administrateur repasse
+  // par sa boîte aux lettres deux fois par heure — et le jeton long qu'on lui
+  // remet ne sert à rien.
+  const ouvrirSession = async (over: Record<string, unknown> = {}) => {
+    const admin = await creerAdmin(over);
+    const code = await otp.demander(admin.email);
+    const reponse = await fetch(`${baseUrl}/v1/admin/auth/otp/verify`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: admin.email, code }),
+    });
+    const paire = (await reponse.json()) as { accessToken: string; refreshToken: string; role: string };
+    return { admin, ...paire };
+  };
+
+  const rafraichir = (refreshToken: string) =>
+    fetch(`${baseUrl}/v1/admin/auth/refresh`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+  it("le jeton de rafraîchissement s'échange contre une paire neuve", async () => {
+    const session = await ouvrirSession();
+
+    const reponse = await rafraichir(session.refreshToken);
+
+    expect(reponse.status).toBe(200);
+    const neuve = (await reponse.json()) as { accessToken: string; refreshToken: string; role: string };
+    expect(neuve.refreshToken).not.toBe(session.refreshToken);
+    expect(app.get(AdminTokenService).verifierAcces(neuve.accessToken).adminId).toBe(session.admin.id);
+    // Le rôle repart avec la paire : il peut avoir changé depuis l'ouverture,
+    // et l'outil doit suivre sans attendre une reconnexion.
+    expect(neuve.role).toBe("support");
+  });
+
+  // Impossible de distinguer le voleur du légitime : les deux présentent le
+  // même jeton. On ne tranche donc pas, on ferme tout.
+  it("rejouer un jeton consommé révoque toute la lignée", async () => {
+    const session = await ouvrirSession();
+    const premiere = await rafraichir(session.refreshToken);
+    const enfant = (await premiere.json()) as { refreshToken: string };
+
+    const rejeu = await rafraichir(session.refreshToken);
+
+    expect(rejeu.status).toBe(401);
+    expect(((await rejeu.json()) as { code: string }).code).toBe("refresh_reused");
+    // Ce qui compte n'est pas le refus du rejeu, c'est que l'enfant tombe avec :
+    // sinon le voleur garde une session ouverte pendant qu'on refuse la sienne.
+    const apres = await rafraichir(enfant.refreshToken);
+    expect(apres.status).toBe(401);
+  });
+
+  // Le point propre à l'administration : révoquer un compte doit couper la
+  // session en cours. Sans cette vérification, un administrateur écarté tient
+  // encore douze heures en faisant tourner son jeton.
+  it("un compte désactivé ne rafraîchit plus", async () => {
+    const session = await ouvrirSession();
+    await db.prisma.admin.update({ where: { id: session.admin.id }, data: { isActive: false } });
+
+    const reponse = await rafraichir(session.refreshToken);
+
+    expect(reponse.status).toBe(401);
+  });
+
+  it("un jeton de rafraîchissement d'utilisateur n'ouvre pas d'administration", async () => {
+    const utilisateur = await db.prisma.user.create({
+      data: { email: "client@exemple.cm", username: "client", referralCode: "CLI1" },
+    });
+    const paire = await app.get(TokenService).issuePair(utilisateur.id);
+
+    const reponse = await rafraichir(paire.refreshToken);
+
+    expect(reponse.status).toBe(401);
+    // Et il ne doit surtout pas avoir été consommé au passage : les deux mondes
+    // ne se touchent pas, même pour échouer.
+    const ligne = await db.prisma.refreshToken.findFirstOrThrow();
+    expect(ligne.consumedAt).toBeNull();
+  });
+
+  it("se déconnecter coupe la lignée, pas seulement le dernier jeton", async () => {
+    const session = await ouvrirSession();
+    const premiere = await rafraichir(session.refreshToken);
+    const enfant = (await premiere.json()) as { refreshToken: string };
+
+    await fetch(`${baseUrl}/v1/admin/auth/session`, {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ refreshToken: enfant.refreshToken }),
+    });
+
+    expect((await rafraichir(enfant.refreshToken)).status).toBe(401);
+    const vivants = await db.prisma.adminRefreshToken.count({ where: { revokedAt: null } });
+    expect(vivants).toBe(0);
+  });
+
   it("un mauvais code est refusé", async () => {
     await creerAdmin();
     await demander("sam@lehno.app");

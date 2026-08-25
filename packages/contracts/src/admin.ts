@@ -199,3 +199,18 @@ export const verificationCodeSchema = z.object({
   email: z.string().email().max(254),
   code: z.string().regex(/^\d{6}$/),
 }).strict();
+
+// La paire rendue par une entrée réussie comme par un échange. Le rôle repart
+// à chaque tour : il peut avoir changé depuis l'ouverture de la session, et
+// l'outil doit suivre sans attendre une reconnexion.
+export const sessionAdminSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  expiresIn: z.number().int().positive(),
+  role: adminRoleSchema,
+}).strict();
+export type SessionAdmin = z.infer<typeof sessionAdminSchema>;
+
+// L'échange du jeton long. Il ne porte pas de jeton d'accès : c'est justement
+// parce que celui-ci a expiré qu'on passe ici.
+export const rafraichissementSchema = z.object({ refreshToken: z.string().min(1) }).strict();
