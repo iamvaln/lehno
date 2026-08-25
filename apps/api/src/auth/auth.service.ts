@@ -8,12 +8,18 @@ import { RateLimitService } from "../common/rate-limit.service.js";
 import { assertUsableEmail, canonicalEmail } from "../common/email.js";
 import { OtpService } from "./otp.service.js";
 import { TokenService, type Pair } from "./token.service.js";
+import { SignupService } from "../onboarding/signup.service.js";
 import type { MailPort } from "../mail/mail.port.js";
 import { otpEmail } from "../mail/templates.js";
 
-type VerifyInput = { email: string; code: string; deviceId?: string; userAgent?: string; ip?: string };
-
-const MAX_ACCOUNT_CREATION_ATTEMPTS = 5;
+type VerifyInput = {
+  email: string; code: string; deviceId?: string;
+  // Facultatif, et jeté jusqu'ici : le contrat l'acceptait, le contrôleur ne
+  // le transmettait pas, et le filleul perdait son bonus sans qu'aucune
+  // erreur ne le dise.
+  referralCode?: string;
+  userAgent?: string; ip?: string;
+};
 
 @Injectable()
 export class AuthService {
@@ -26,6 +32,7 @@ export class AuthService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(OtpService) private readonly otp: OtpService,
     @Inject(TokenService) private readonly tokens: TokenService,
+    @Inject(SignupService) private readonly signup: SignupService,
     @Inject(RateLimitService) private readonly limiter: RateLimitService,
     @Inject("MAIL_PORT") private readonly mail: MailPort,
   ) {}
@@ -85,45 +92,6 @@ export class AuthService {
     };
   }
 
-  // Plafond vérifié et compte créé comme UN SEUL geste atomique. Deux volets :
-  //
-  // 1. Verrou consultatif transactionnel sur le deviceId (pg_advisory_xact_lock
-  //    sur le hash du deviceId) : sérialise les créations concurrentes d'un
-  //    même appareil, sans bloquer les appareils différents. Un simple
-  //    lire-le-compte-puis-écrire (comme avant cette révision) laisserait
-  //    deux créations concurrentes lire toutes deux un compteur encore sous
-  //    le plafond avant qu'aucune n'écrive — exactement le motif déjà corrigé
-  //    dans OtpService et TokenService.
-  // 2. Le pseudo provisoire tient sur 32 bits (32 bits = 8 hex, format fixé
-  //    par le contrat) : une collision reste possible. Si la création échoue
-  //    sur la contrainte d'unicité, on retire complètement la transaction —
-  //    verrou compris — et on retire avec un nouveau tirage, plutôt que de
-  //    laisser échouer un parcours qui a déjà consommé le code à usage unique.
-  private async createAccountForDevice(
-    email: string,
-    deviceId: string,
-  ): Promise<{ limitReached: true } | { limitReached: false; user: Prisma.PromiseReturnType<PrismaService["user"]["create"]> }> {
-    for (let attempt = 1; attempt <= MAX_ACCOUNT_CREATION_ATTEMPTS; attempt++) {
-      try {
-        return await this.prisma.$transaction(async (tx) => {
-          await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${deviceId}))`;
-          const seuil = await this.paramNumber(tx, "max_accounts_per_device", 3);
-          const déjà = await tx.deviceSignup.count({ where: { deviceId } });
-          if (déjà >= seuil) return { limitReached: true as const };
-          const user = await tx.user.create({ data: this.randomAccountFields(email) });
-          await tx.deviceSignup.create({ data: { deviceId, userId: user.id } });
-          return { limitReached: false as const, user };
-        });
-      } catch (e) {
-        const isUniqueClash = e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
-        if (isUniqueClash && attempt < MAX_ACCOUNT_CREATION_ATTEMPTS) continue;
-        throw e;
-      }
-    }
-    // Inatteignable : la boucle rend ou relance à chaque itération.
-    throw new AppError("internal_error", "could not allocate a unique account after several attempts");
-  }
-
   private async recordAttempt(
     input: VerifyInput,
     userId: string | null,
@@ -173,12 +141,17 @@ export class AuthService {
         });
       }
 
-      const outcome = await this.createAccountForDevice(input.email, deviceId);
-      if (outcome.limitReached) {
+      const creation = await this.signup.creer({
+        email: input.email,
+        emailVerified: true,
+        deviceId,
+        referralCode: input.referralCode,
+      });
+      if (creation.plafondAtteint) {
         await this.recordAttempt(input, null, "failure");
         throw new AppError("device_limit_reached", "too many accounts from this device");
       }
-      user = outcome.user;
+      user = await this.prisma.user.findUniqueOrThrow({ where: { id: creation.user.id } });
       isNewAccount = true;
     } else if (!user.emailVerified) {
       user = await this.prisma.user.update({ where: { id: user.id }, data: { emailVerified: true } });

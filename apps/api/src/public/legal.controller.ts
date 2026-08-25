@@ -31,6 +31,28 @@ export class LegalService {
       throw new AppError("not_found", "legal document file missing");
     }
   }
+
+  // La version d'un document, lue dans son en-tête — « _Version 2026-08-23 · … ».
+  //
+  // Elle se lit DANS le document servi, jamais dans une constante posée à côté.
+  // Une constante finirait par mentir le jour où quelqu'un met à jour les
+  // conditions sans y penser : on enregistrerait alors des acceptations de la
+  // mauvaise version, et rien ne rougirait — la trace juridique serait fausse
+  // sans qu'aucune chaîne ne le dise.
+  //
+  // Un document sans version reconnaissable fait ÉCHOUER l'appel plutôt que de
+  // rendre une valeur de repli : mieux vaut refuser de créer un compte que
+  // d'enregistrer une acceptation dont on ne sait pas de quoi elle parle.
+  async version(document: string, language: string): Promise<string> {
+    const texte = await this.read(document, language);
+    const trouve = /^_Version\s+(\S+)/m.exec(texte);
+    if (!trouve?.[1])
+      throw new AppError(
+        "internal_error",
+        `le document légal ${document}.${language} ne porte pas de ligne « _Version … »`,
+      );
+    return trouve[1];
+  }
 }
 
 @Controller("public/legal")
