@@ -19,7 +19,7 @@ import {
 } from "./auth.js";
 import { profileSchema, updateProfileSchema, usernameSchema } from "./profile.js";
 import { errorEnvelopeSchema } from "./errors.js";
-import { personSchema, createPersonSchema } from "./me.js";
+import { personSchema, createPersonSchema, updatePersonSchema } from "./me.js";
 
 // Le contrat se CALCULE depuis les schémas Zod, il ne se recopie pas. Une
 // seconde déclaration des mêmes formes — en DTO décoré, par exemple — dériverait
@@ -175,6 +175,33 @@ const CHEMINS: Chemin[] = [
     // au sens REST — celui-ci l'est, 201 se corrige donc ici plutôt qu'au
     // contrôleur.
     statut: 201,
+  },
+  {
+    chemin: "/me/persons/{id}",
+    methode: "get",
+    resume: "Lire la fiche d'un proche",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    reponse: personSchema,
+  },
+  {
+    chemin: "/me/persons/{id}",
+    methode: "patch",
+    resume: "Corriger la fiche d'un proche",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: updatePersonSchema,
+    reponse: personSchema,
+  },
+  {
+    chemin: "/me/persons/{id}",
+    methode: "delete",
+    resume: "Supprimer un proche (emporte ses notes)",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    // 204 comme /auth/session : la suppression ne rend rien à décrire.
+    sansContenu: true,
+    statut: 204,
   },
 ];
 
