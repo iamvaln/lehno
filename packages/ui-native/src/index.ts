@@ -45,3 +45,8 @@ export * from "./navigation/NotificationBell.js";
 export * from "./navigation/NotificationBell.styles.js";
 export * from "./navigation/TabBar.js";
 export * from "./navigation/TabBar.styles.js";
+export * from "./brand/Illustration.js";
+export * from "./brand/Illustration.data.js";
+export * from "./brand/Illustration.styles.js";
+export * from "./brand/Wordmark.js";
+export * from "./brand/Wordmark.data.js";
