@@ -1,10 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
-import { EmptyState } from "./composants/donnees/index.js";
+import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { TableauDeBord, Liste, Detail, Edition, Suppressions, Connexion, Profil } from "./pages/index.js";
 import { codeConnu, messages, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
-import { dashboard, comptes, compteDetail, interventions, parametres, profil, suppressions } from "./fixtures/index.js";
+import { useRessource } from "./api/hooks.js";
+import { dashboardSchema } from "@lehno/contracts";
+import { comptes, compteDetail, interventions, parametres, profil, suppressions } from "./fixtures/index.js";
 import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
@@ -157,13 +159,31 @@ export function App(): ReactNode {
     })),
   }));
 
+  // Appelé sans condition, comme tout hook : le placer derrière le « if » de la
+  // section changerait l'ordre des hooks d'un rendu à l'autre. Il ne charge que
+  // lorsque la section le demande — c'est la clé qui le décide.
+  const etatTableau = useRessource(
+    () => (section === "tableau"
+      ? api.appeler("/admin/dashboard", { schema: dashboardSchema })
+      : Promise.resolve(null)),
+    [section],
+  );
+
   let vue: ReactNode;
   if (section === "profil") {
     vue = <Profil profil={profil} langue={langue} />;
   } else if (section === "comptes" && ouvert) {
     vue = <Detail role={role} langue={langue} compte={compteDetail} interventions={interventions.items} onRetour={() => setOuvert(null)} />;
   } else if (section === "tableau") {
-    vue = <TableauDeBord donnees={dashboard} t={t} onAller={aller} />;
+    vue = (
+      <Ressource
+        etat={etatTableau}
+        t={t}
+        enfant={(donnees) => (
+          donnees ? <TableauDeBord donnees={donnees} t={t} onAller={aller} /> : null
+        )}
+      />
+    );
   } else if (section === "comptes") {
     vue = <Liste role={role} langue={langue} comptes={comptes.items} onOuvrir={(c) => setOuvert(c.id)} />;
   } else if (section === "parametres") {

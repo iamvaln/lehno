@@ -143,6 +143,14 @@ export const fr = {
 
   // Trois temps, dans cet ordre : ce qui s'est passé, ce qu'on a fait, ce qu'on
   // peut faire maintenant. Aucune de ces phrases n'est sans sujet.
+  // Un écran qui charge et un écran vide ne disent pas la même chose : sans
+  // état d'attente, une base lente ressemble à un système sans activité.
+  actions: {
+    chargement: "Chargement…",
+    reessayer: "Réessayer",
+    echecTitre: "Le chargement n'a pas abouti",
+  },
+
   echecs: {
     chargement: "On n'a pas réussi à charger cette liste. Rien n'a bougé côté données. Réessayez, ou revenez dans un instant.",
     action: "On n'a pas pu appliquer ce geste. L'état du compte est celui d'avant. Réessayez, ou passez la main à un administrateur.",

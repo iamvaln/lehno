@@ -18,12 +18,27 @@ const reponse = (statut: number, corps?: unknown): Response =>
 // veut. C'est le serveur qui doit gagner.
 const PAIRE = { accessToken: "acces", refreshToken: "refresh", expiresIn: 1800, role: "support" };
 
-function serveur(...reponses: Response[]) {
-  const appels = vi.fn();
-  for (const r of reponses) appels.mockResolvedValueOnce(r);
-  appels.mockResolvedValue(reponse(200, {}));
+// Routé par chemin, pas par ordre d'appel : l'outil charge son tableau de bord
+// dès l'entrée, et une file de réponses ordonnée se décale au premier écran qui
+// se met à parler tout seul.
+const TABLEAU_VIDE = { alertes: [], indicateurs: [], aTraiter: [] };
+
+function serveur(reponses: Record<string, Response> = {}) {
+  const appels = vi.fn((url: string) => {
+    for (const [chemin, r] of Object.entries(reponses)) {
+      if (url.includes(chemin)) return Promise.resolve(r.clone());
+    }
+    return Promise.resolve(reponse(200, TABLEAU_VIDE));
+  });
   vi.stubGlobal("fetch", appels);
   return appels;
+}
+
+/** Le premier appel vers ce chemin, quel que soit son rang. */
+function appelVers(appels: ReturnType<typeof vi.fn>, chemin: string): [string, RequestInit] {
+  const trouve = appels.mock.calls.find(([url]) => String(url).includes(chemin));
+  if (!trouve) throw new Error(`aucun appel vers ${chemin}`);
+  return trouve as [string, RequestInit];
 }
 
 async function entrer(utilisateur: ReturnType<typeof userEvent.setup>) {
@@ -41,7 +56,7 @@ describe("la session d'administration, du serveur à l'écran", () => {
   });
 
   it("demander un code appelle le serveur avec l'adresse saisie", async () => {
-    const appels = serveur(reponse(200, { envoye: true }));
+    const appels = serveur({ "/admin/auth/otp": reponse(200, { envoye: true }) });
     const utilisateur = userEvent.setup();
     render(<App />);
 
@@ -49,8 +64,7 @@ describe("la session d'administration, du serveur à l'écran", () => {
     await utilisateur.click(screen.getByRole("button", { name: t.connexion.envoyer }));
     await screen.findByLabelText(t.connexion.code);
 
-    const [url, init] = appels.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain("/admin/auth/otp");
+    const [, init] = appelVers(appels, "/admin/auth/otp");
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body as string)).toEqual({ email: ADRESSE });
   });
@@ -59,7 +73,10 @@ describe("la session d'administration, du serveur à l'écran", () => {
   // une réponse du serveur. Un support qui se déclarerait administrateur dans
   // son navigateur ne doit rien y gagner.
   it("le rôle affiché après entrée est celui du serveur", async () => {
-    serveur(reponse(200, { envoye: true }), reponse(200, PAIRE));
+    serveur({
+      "/admin/auth/otp/verify": reponse(200, PAIRE),
+      "/admin/auth/otp": reponse(200, { envoye: true }),
+    });
     const utilisateur = userEvent.setup();
     render(<App />);
 
@@ -88,7 +105,7 @@ describe("la session d'administration, du serveur à l'écran", () => {
 
   it("se déconnecter ferme la session côté serveur et vide le magasin", async () => {
     magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role: "admin" });
-    const appels = serveur(reponse(204));
+    const appels = serveur({ "/admin/auth/session": reponse(204) });
     const utilisateur = userEvent.setup();
     render(<App />);
 
@@ -98,8 +115,7 @@ describe("la session d'administration, du serveur à l'écran", () => {
     await utilisateur.click(await screen.findByRole("button", { name: t.barre.deconnexion }));
 
     await waitFor(() => expect(screen.getByLabelText(t.connexion.adresse)).toBeInTheDocument());
-    const [url, init] = appels.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain("/admin/auth/session");
+    const [, init] = appelVers(appels, "/admin/auth/session");
     expect(init.method).toBe("DELETE");
     expect(magasinLocal.lire()).toBeNull();
   });

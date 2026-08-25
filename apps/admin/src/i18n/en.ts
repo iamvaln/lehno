@@ -125,6 +125,13 @@ export const en: typeof fr = {
     lance: "Export started on {n} rows. The file will arrive by email.",
   },
 
+  // Voir fr.ts : un écran qui charge et un écran vide ne disent pas la même chose.
+  actions: {
+    chargement: "Loading…",
+    reessayer: "Try again",
+    echecTitre: "Loading did not go through",
+  },
+
   echecs: {
     chargement: "We couldn't load this list. Nothing moved on the data side. Try again, or come back in a moment.",
     action: "We couldn't apply that action. The account is exactly as it was. Try again, or hand it to an administrator.",
