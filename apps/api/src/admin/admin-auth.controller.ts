@@ -4,6 +4,7 @@ import { AdminOtpService } from "./admin-otp.service.js";
 import { AdminTokenService } from "./admin-token.service.js";
 import type { MailPort } from "../mail/mail.port.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
+import { rafraichissementSchema } from "@lehno/contracts";
 
 const demandeSchema = z.object({ email: z.string().email().max(254) }).strict();
 const verificationSchema = z.object({
@@ -50,6 +51,19 @@ export class AdminAuthController {
     const admin = await this.otp.verifier(corps.email, corps.code);
     const paire = await this.jetons.ouvrir(admin.id, userAgent);
     return { ...paire, role: admin.role };
+  }
+
+  // Sans ce chemin, le jeton de rafraîchissement émis à l'entrée ne s'échange
+  // nulle part : la session meurt au bout de trente minutes et l'administrateur
+  // repasse par sa boîte aux lettres. Les deux mondes étant séparés — clés,
+  // tables et chemins —, /v1/auth/refresh ne peut pas servir ici.
+  @Post("refresh")
+  @HttpCode(200)
+  async rafraichir(
+    @Body(new ZodValidationPipe(rafraichissementSchema)) corps: { refreshToken: string },
+    @Headers("user-agent") userAgent?: string,
+  ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number; role: string }> {
+    return this.jetons.tourner(corps.refreshToken, userAgent);
   }
 
   @Delete("session")
