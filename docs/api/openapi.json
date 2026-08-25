@@ -2960,8 +2960,51 @@
                       "displayName": {
                         "type": "string"
                       },
+                      "callingName": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "avatarUrl": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "isSelf": {
                         "type": "boolean"
+                      },
+                      "relation": {
+                        "type": "string",
+                        "enum": [
+                          "famille_proche",
+                          "famille_etendue",
+                          "ami",
+                          "partenaire",
+                          "collegue",
+                          "relation_pro",
+                          "connaissance"
+                        ],
+                        "nullable": true
+                      },
+                      "relationHint": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "gender": {
+                        "type": "string",
+                        "enum": [
+                          "female",
+                          "male",
+                          "other",
+                          "unspecified"
+                        ],
+                        "nullable": true
+                      },
+                      "city": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "country": {
+                        "type": "string",
+                        "nullable": true
                       },
                       "register": {
                         "type": "string",
@@ -2976,8 +3019,14 @@
                         "type": "string",
                         "nullable": true
                       },
-                      "relationHint": {
+                      "preferredChannel": {
                         "type": "string",
+                        "enum": [
+                          "whatsapp",
+                          "sms",
+                          "email",
+                          "autre"
+                        ],
                         "nullable": true
                       },
                       "createdAt": {
@@ -2987,10 +3036,17 @@
                     "required": [
                       "id",
                       "displayName",
+                      "callingName",
+                      "avatarUrl",
                       "isSelf",
+                      "relation",
+                      "relationHint",
+                      "gender",
+                      "city",
+                      "country",
                       "register",
                       "language",
-                      "relationHint",
+                      "preferredChannel",
                       "createdAt"
                     ],
                     "additionalProperties": false
@@ -3130,6 +3186,27 @@
                     "minLength": 1,
                     "maxLength": 120
                   },
+                  "callingName": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "avatarUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048
+                  },
+                  "relation": {
+                    "type": "string",
+                    "enum": [
+                      "famille_proche",
+                      "famille_etendue",
+                      "ami",
+                      "partenaire",
+                      "collegue",
+                      "relation_pro",
+                      "connaissance"
+                    ]
+                  },
                   "register": {
                     "type": "string",
                     "enum": [
@@ -3148,6 +3225,34 @@
                   "relationHint": {
                     "type": "string",
                     "maxLength": 80
+                  },
+                  "gender": {
+                    "type": "string",
+                    "enum": [
+                      "female",
+                      "male",
+                      "other",
+                      "unspecified"
+                    ]
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "country": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 2,
+                    "pattern": "^[A-Za-z]{2}$"
+                  },
+                  "preferredChannel": {
+                    "type": "string",
+                    "enum": [
+                      "whatsapp",
+                      "sms",
+                      "email",
+                      "autre"
+                    ]
                   }
                 },
                 "required": [
@@ -3173,8 +3278,51 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "callingName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "isSelf": {
                       "type": "boolean"
+                    },
+                    "relation": {
+                      "type": "string",
+                      "enum": [
+                        "famille_proche",
+                        "famille_etendue",
+                        "ami",
+                        "partenaire",
+                        "collegue",
+                        "relation_pro",
+                        "connaissance"
+                      ],
+                      "nullable": true
+                    },
+                    "relationHint": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "gender": {
+                      "type": "string",
+                      "enum": [
+                        "female",
+                        "male",
+                        "other",
+                        "unspecified"
+                      ],
+                      "nullable": true
+                    },
+                    "city": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "country": {
+                      "type": "string",
+                      "nullable": true
                     },
                     "register": {
                       "type": "string",
@@ -3189,8 +3337,14 @@
                       "type": "string",
                       "nullable": true
                     },
-                    "relationHint": {
+                    "preferredChannel": {
                       "type": "string",
+                      "enum": [
+                        "whatsapp",
+                        "sms",
+                        "email",
+                        "autre"
+                      ],
                       "nullable": true
                     },
                     "createdAt": {
@@ -3200,10 +3354,17 @@
                   "required": [
                     "id",
                     "displayName",
+                    "callingName",
+                    "avatarUrl",
                     "isSelf",
+                    "relation",
+                    "relationHint",
+                    "gender",
+                    "city",
+                    "country",
                     "register",
                     "language",
-                    "relationHint",
+                    "preferredChannel",
                     "createdAt"
                   ],
                   "additionalProperties": false
@@ -3358,8 +3519,51 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "callingName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "isSelf": {
                       "type": "boolean"
+                    },
+                    "relation": {
+                      "type": "string",
+                      "enum": [
+                        "famille_proche",
+                        "famille_etendue",
+                        "ami",
+                        "partenaire",
+                        "collegue",
+                        "relation_pro",
+                        "connaissance"
+                      ],
+                      "nullable": true
+                    },
+                    "relationHint": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "gender": {
+                      "type": "string",
+                      "enum": [
+                        "female",
+                        "male",
+                        "other",
+                        "unspecified"
+                      ],
+                      "nullable": true
+                    },
+                    "city": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "country": {
+                      "type": "string",
+                      "nullable": true
                     },
                     "register": {
                       "type": "string",
@@ -3374,8 +3578,14 @@
                       "type": "string",
                       "nullable": true
                     },
-                    "relationHint": {
+                    "preferredChannel": {
                       "type": "string",
+                      "enum": [
+                        "whatsapp",
+                        "sms",
+                        "email",
+                        "autre"
+                      ],
                       "nullable": true
                     },
                     "createdAt": {
@@ -3385,10 +3595,17 @@
                   "required": [
                     "id",
                     "displayName",
+                    "callingName",
+                    "avatarUrl",
                     "isSelf",
+                    "relation",
+                    "relationHint",
+                    "gender",
+                    "city",
+                    "country",
                     "register",
                     "language",
-                    "relationHint",
+                    "preferredChannel",
                     "createdAt"
                   ],
                   "additionalProperties": false
@@ -3538,6 +3755,27 @@
                     "minLength": 1,
                     "maxLength": 120
                   },
+                  "callingName": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "avatarUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048
+                  },
+                  "relation": {
+                    "type": "string",
+                    "enum": [
+                      "famille_proche",
+                      "famille_etendue",
+                      "ami",
+                      "partenaire",
+                      "collegue",
+                      "relation_pro",
+                      "connaissance"
+                    ]
+                  },
                   "register": {
                     "type": "string",
                     "enum": [
@@ -3556,6 +3794,34 @@
                   "relationHint": {
                     "type": "string",
                     "maxLength": 80
+                  },
+                  "gender": {
+                    "type": "string",
+                    "enum": [
+                      "female",
+                      "male",
+                      "other",
+                      "unspecified"
+                    ]
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "country": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 2,
+                    "pattern": "^[A-Za-z]{2}$"
+                  },
+                  "preferredChannel": {
+                    "type": "string",
+                    "enum": [
+                      "whatsapp",
+                      "sms",
+                      "email",
+                      "autre"
+                    ]
                   }
                 },
                 "additionalProperties": false
@@ -3578,8 +3844,51 @@
                     "displayName": {
                       "type": "string"
                     },
+                    "callingName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "isSelf": {
                       "type": "boolean"
+                    },
+                    "relation": {
+                      "type": "string",
+                      "enum": [
+                        "famille_proche",
+                        "famille_etendue",
+                        "ami",
+                        "partenaire",
+                        "collegue",
+                        "relation_pro",
+                        "connaissance"
+                      ],
+                      "nullable": true
+                    },
+                    "relationHint": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "gender": {
+                      "type": "string",
+                      "enum": [
+                        "female",
+                        "male",
+                        "other",
+                        "unspecified"
+                      ],
+                      "nullable": true
+                    },
+                    "city": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "country": {
+                      "type": "string",
+                      "nullable": true
                     },
                     "register": {
                       "type": "string",
@@ -3594,8 +3903,14 @@
                       "type": "string",
                       "nullable": true
                     },
-                    "relationHint": {
+                    "preferredChannel": {
                       "type": "string",
+                      "enum": [
+                        "whatsapp",
+                        "sms",
+                        "email",
+                        "autre"
+                      ],
                       "nullable": true
                     },
                     "createdAt": {
@@ -3605,10 +3920,17 @@
                   "required": [
                     "id",
                     "displayName",
+                    "callingName",
+                    "avatarUrl",
                     "isSelf",
+                    "relation",
+                    "relationHint",
+                    "gender",
+                    "city",
+                    "country",
                     "register",
                     "language",
-                    "relationHint",
+                    "preferredChannel",
                     "createdAt"
                   ],
                   "additionalProperties": false
