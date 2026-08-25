@@ -123,3 +123,17 @@ export const createNoteSchema = z.object({
 }).strict();
 
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
+
+// Une même note, écrite pour plusieurs proches à la fois. Elle se DUPLIQUE :
+// chaque proche reçoit la sienne, indépendante ensuite — corriger le
+// classement de l'une ne touche pas les autres, et supprimer un proche
+// n'emporte pas les notes des autres.
+export const createNotesSchema = z.object({
+  content: z.string().trim().min(1).max(4000),
+  // Au moins un proche, et pas cinquante : une note se partage entre quelques
+  // personnes, elle ne se diffuse pas.
+  personIds: z.array(z.string().uuid()).min(1).max(20),
+  eventOccurrenceId: z.string().uuid().optional(),
+}).strict();
+
+export type CreateNotesInput = z.infer<typeof createNotesSchema>;

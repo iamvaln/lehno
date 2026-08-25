@@ -136,6 +136,85 @@ describe("les notes d'un proche", () => {
     expect(await db.prisma.note.count({ where: { personId: p.id } })).toBe(0);
   });
 
+  describe("une note pour plusieurs proches", () => {
+    it("crée une note par proche, indépendantes", async () => {
+      const a = await persons.create(awa, { displayName: "Valery" });
+      const b = await persons.create(awa, { displayName: "Celarine" });
+
+      const creees = await notes.createForMany(awa, {
+        content: "Ils adorent le cinéma", personIds: [a.id, b.id],
+      });
+
+      expect(creees).toHaveLength(2);
+      expect(new Set(creees.map((n) => n.id)).size).toBe(2);
+      expect(creees.map((n) => n.personId).sort()).toEqual([a.id, b.id].sort());
+      // Indépendantes : chacune porte son propre classement, et corriger l'une
+      // plus tard ne touchera pas l'autre.
+      expect(creees.every((n) => n.categories.includes("interests"))).toBe(true);
+    });
+
+    // TOUT OU RIEN. Sans vérification préalable, la première note partirait
+    // avant qu'on découvre que la seconde n'est pas permise : l'appelant
+    // recevrait une erreur en croyant que rien n'a été écrit, alors qu'une
+    // note serait déjà sur une fiche.
+    it("n'écrit rien si un seul identifiant n'est pas au demandeur", async () => {
+      const mien = await persons.create(awa, { displayName: "Valery" });
+      const autre = await persons.create(bila, { displayName: "Celarine" });
+
+      await expect(
+        notes.createForMany(awa, { content: "essai", personIds: [mien.id, autre.id] }),
+      ).rejects.toMatchObject({ code: "not_found" });
+
+      expect(await db.prisma.note.count(), "aucune note ne doit exister").toBe(0);
+    });
+
+    // Un identifiant qui ne désigne personne échoue comme celui d'un autre :
+    // les deux rendent 404, et rien ne les distingue de l'extérieur.
+    it("n'écrit rien si un identifiant ne désigne personne", async () => {
+      const mien = await persons.create(awa, { displayName: "Valery" });
+      await expect(
+        notes.createForMany(awa, {
+          content: "essai",
+          personIds: [mien.id, "00000000-0000-4000-8000-000000000000"],
+        }),
+      ).rejects.toMatchObject({ code: "not_found" });
+      expect(await db.prisma.note.count()).toBe(0);
+    });
+
+    // Le même proche cité deux fois ne mérite pas deux notes identiques — et
+    // sans dédoublonnage, le décompte de vérification serait faussé.
+    it("un proche cité deux fois ne reçoit qu'une note", async () => {
+      const a = await persons.create(awa, { displayName: "Valery" });
+      const creees = await notes.createForMany(awa, {
+        content: "aime le café", personIds: [a.id, a.id],
+      });
+      expect(creees).toHaveLength(1);
+      expect(await db.prisma.note.count({ where: { personId: a.id } })).toBe(1);
+    });
+
+    it("attache l'occasion à toutes les notes quand elle est donnée", async () => {
+      // Monter l'événement et son occurrence directement en base : cette tâche
+      // ne construit pas les chemins des dates, elle s'appuie sur le schéma.
+      const a = await persons.create(awa, { displayName: "Valery" });
+      const b = await persons.create(awa, { displayName: "Celarine" });
+      const e = await db.prisma.event.create({
+        data: {
+          personId: a.id, authorUserId: awa, kind: "birthday",
+          eventNature: "happy", label: "Anniversaire",
+          referenceDate: new Date("1990-03-14"),
+        },
+      });
+      const o = await db.prisma.eventOccurrence.create({
+        data: { eventId: e.id, userId: awa, occurrenceDate: new Date("2026-03-14") },
+      });
+
+      const creees = await notes.createForMany(awa, {
+        content: "Ils adorent le cinéma", personIds: [a.id, b.id], eventOccurrenceId: o.id,
+      });
+      expect(creees.every((n) => n.eventOccurrenceId === o.id)).toBe(true);
+    });
+  });
+
   describe("HTTP de bout en bout", () => {
     const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
     const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";

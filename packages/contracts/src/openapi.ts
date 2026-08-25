@@ -20,7 +20,8 @@ import {
 import { profileSchema, updateProfileSchema, usernameSchema } from "./profile.js";
 import { errorEnvelopeSchema } from "./errors.js";
 import {
-  personSchema, createPersonSchema, updatePersonSchema, noteSchema, createNoteSchema,
+  personSchema, createPersonSchema, updatePersonSchema,
+  noteSchema, createNoteSchema, createNotesSchema,
 } from "./me.js";
 import { featuresResponseSchema } from "./flags.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
@@ -235,6 +236,18 @@ const CHEMINS: Chemin[] = [
     parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
     corps: updatePersonSchema,
     reponse: personSchema,
+  },
+  {
+    // Chemin distinct de /me/persons/{id}/notes : cette note n'appartient à
+    // aucun proche en particulier, et la loger sous l'un d'eux obligerait à en
+    // désigner un comme propriétaire de l'appel, ce qu'il n'est pas.
+    chemin: "/me/notes",
+    methode: "post",
+    resume: "Écrire une même note pour plusieurs proches",
+    authentifie: true,
+    corps: createNotesSchema,
+    reponse: z.array(noteSchema),
+    statut: 201,
   },
   {
     chemin: "/me/persons/{personId}/notes",
