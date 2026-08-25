@@ -624,6 +624,7 @@ model Admin {
 
   otpCodes      AdminOtpCode[]
   refreshTokens AdminRefreshToken[]
+  featureFlags  FeatureFlag[]
 
   @@map("admin")
 }
@@ -754,6 +755,12 @@ model FeatureFlag {
   key       String   @id @db.VarChar(64)
   enabled   Boolean  @default(false)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  // Nul tant que personne n'a basculé : la réconciliation au démarrage crée
+  // les lignes manquantes, elle ne décide rien. « SetNull » plutôt que cascade
+  // — la trace d'une bascule survit au retrait du compte qui l'a faite.
+  updatedByAdminId String? @map("updated_by_admin_id") @db.Uuid
+
+  updatedBy Admin? @relation(fields: [updatedByAdminId], references: [id], onDelete: SetNull)
 
   @@map("feature_flag")
 }

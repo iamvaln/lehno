@@ -93,21 +93,39 @@ describe("surfaces publiques — HTTP de bout en bout", () => {
       // max_accounts_per_device, account_grace_period_days — qui ne doivent
       // jamais franchir cette route.
       expect(Object.keys(body).sort()).toEqual(
-        ["creditUnitPrice", "currency", "flags", "referralBonusInvited", "signupFreeCredits"].sort(),
+        ["creditUnitPrice", "currency", "referralBonusInvited", "signupFreeCredits"].sort(),
       );
       expect(publicConfigSchema.safeParse(body).success).toBe(true);
     });
 
-    // Preuve par la panne (cahier tâche 2c) : un drapeau PRIVÉ allumé en base
-    // ne doit jamais franchir cette route, même en HTTP réel — seule la
-    // route (pas seulement le service, déjà couvert par public.test.ts) le
-    // démontre vraiment.
-    it("un drapeau privé allumé en base ne fuite pas ici", async () => {
-      await db.prisma.featureFlag.create({ data: { key: "me.persons", enabled: true } });
+    // La configuration ne porte PLUS aucun drapeau : la spécification §6.2
+    // veut que les clients reçoivent la liste RÉSOLUE de ce qui est actif, par
+    // /public/features, et jamais l'état brut. Ce cas garde la frontière en
+    // HTTP réel — un drapeau allumé en base ne doit rien changer ici.
+    it("ne porte aucun drapeau, même allumé en base", async () => {
+      await db.prisma.featureFlag.create({ data: { key: "launch.live", enabled: true } });
       const res = await fetch(`${baseUrl}/v1/public/config`);
-      const body = (await res.json()) as { flags: Record<string, boolean> };
-      expect(body.flags).not.toHaveProperty("me.persons");
-      expect(body.flags).toEqual({ "launch.live": false });
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(body).not.toHaveProperty("flags");
+    });
+  });
+
+  describe("GET /public/features", () => {
+    // Un drapeau d'application n'a rien à faire sur une surface sans compte :
+    // l'exposer annoncerait au monde ce qu'on prépare. La preuve se fait ici,
+    // en HTTP réel — le service seul ne démontre pas ce que la route rend.
+    it("ne laisse pas fuiter un drapeau d'application", async () => {
+      await db.prisma.featureFlag.createMany({
+        data: [
+          { key: "credits", enabled: true },
+          { key: "generation.portrait", enabled: true },
+          { key: "launch.live", enabled: true },
+        ],
+      });
+      const res = await fetch(`${baseUrl}/v1/public/features`);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { features: string[] };
+      expect(body.features).toEqual(["launch.live"]);
     });
   });
 

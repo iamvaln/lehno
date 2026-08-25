@@ -7,6 +7,7 @@ import { AuthController } from "./auth/auth.controller.js";
 import { AuthGuard } from "./auth/auth.guard.js";
 import { FlagsService } from "./flags/flags.service.js";
 import { FeatureGuard } from "./flags/feature.guard.js";
+import { MeFeaturesController, PublicFeaturesController } from "./flags/features.controller.js";
 import { AuthService } from "./auth/auth.service.js";
 import { FederatedService } from "./auth/federated.service.js";
 import { OtpService } from "./auth/otp.service.js";
@@ -43,6 +44,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
 @Module({
   controllers: [
     AuthController, ProfileController, PersonController, ConfigController, LegalController,
+    MeFeaturesController, PublicFeaturesController,
     WaitlistController, ContactController,
     AdminAuthController, ParametersController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
   ],

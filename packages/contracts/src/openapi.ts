@@ -20,6 +20,7 @@ import {
 import { profileSchema, updateProfileSchema, usernameSchema } from "./profile.js";
 import { errorEnvelopeSchema } from "./errors.js";
 import { personSchema, createPersonSchema, updatePersonSchema } from "./me.js";
+import { featuresResponseSchema } from "./flags.js";
 
 // Le contrat se CALCULE depuis les schémas Zod, il ne se recopie pas. Une
 // seconde déclaration des mêmes formes — en DTO décoré, par exemple — dériverait
@@ -79,6 +80,23 @@ const CHEMINS: Chemin[] = [
     methode: "get",
     resume: "Lire la configuration publique (prix, crédits offerts, devise)",
     reponse: publicConfigSchema,
+  },
+  {
+    // Ce qui est ACTIF pour un visiteur sans compte, dépendances déjà
+    // résolues — jamais l'état brut des drapeaux (spécification §6.2). Une
+    // liste, pas un dictionnaire : « éteint » et « inconnu » se confondent
+    // côté client, à dessein.
+    chemin: "/public/features",
+    methode: "get",
+    resume: "Lister les fonctionnalités actives sur les surfaces sans compte",
+    reponse: featuresResponseSchema,
+  },
+  {
+    chemin: "/me/features",
+    methode: "get",
+    resume: "Lister les fonctionnalités actives pour le demandeur",
+    authentifie: true,
+    reponse: featuresResponseSchema,
   },
   {
     chemin: "/public/legal/{document}",

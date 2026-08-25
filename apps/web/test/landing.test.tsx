@@ -5,7 +5,7 @@ import { messages } from "../messages/index.js";
 import type { ConfigPublique } from "../lib/config-publique.js";
 
 const config: ConfigPublique = {
-  signupFreeCredits: 5, creditUnitPrice: 100, currency: "XAF", referralBonusInvited: 0, flags: {},
+  signupFreeCredits: 5, creditUnitPrice: 100, currency: "XAF", referralBonusInvited: 0,
 };
 
 // Landing ne connaît rien de Next : elle reçoit sa configuration toute faite,

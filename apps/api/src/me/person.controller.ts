@@ -15,19 +15,20 @@ import {
 import { createPersonSchema, updatePersonSchema, type CreatePersonInput, type Person, type UpdatePersonInput } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
-import { Feature } from "../flags/feature.decorator.js";
-import { FeatureGuard } from "../flags/feature.guard.js";
 import { PersonService } from "./person.service.js";
 
 // Posé par AuthGuard : req.userId. Type minimal, comme ProfileController.
 type AuthedRequest = { userId: string };
 
 @Controller("me/persons")
-// FeatureGuard AVANT AuthGuard : une surface éteinte l'est pour tout le
-// monde, jeton valable ou pas. Dans l'autre ordre, le statut distinguerait
-// « éteinte » de « non authentifiée » et raconterait qu'elle existe.
-@UseGuards(FeatureGuard, AuthGuard)
-@Feature("me.persons")
+// Pas de @Feature ici : les proches relèvent du SOCLE, qui n'a pas de drapeau
+// (spécification technique §6.3). Un interrupteur dessus ne servirait qu'à
+// casser le produit — s'il s'éteint, il n'y a plus d'application.
+//
+// Un drapeau « me.persons » avait été posé ici avant que la règle ne soit
+// écrite ; il a été retiré. Voir le test du registre, qui interdit désormais
+// qu'une clé du socle y réapparaisse.
+@UseGuards(AuthGuard)
 export class PersonController {
   constructor(@Inject(PersonService) private readonly persons: PersonService) {}
 

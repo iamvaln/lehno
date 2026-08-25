@@ -189,17 +189,6 @@ describe("annuaire des proches", () => {
       else process.env.LEHNO_MAIL_CONSOLE = previousEnv.LEHNO_MAIL_CONSOLE;
     });
 
-    // La route est gardée par @Feature("me.persons") et la table est vidée
-    // avant chaque test : sans ce rallumage, tout répondrait 404 et les
-    // assertions ci-dessous mesureraient le drapeau, pas la route.
-    beforeEach(async () => {
-      await db.prisma.featureFlag.upsert({
-        where: { key: "me.persons" },
-        update: { enabled: true },
-        create: { key: "me.persons", enabled: true },
-      });
-    });
-
     it("refuse un appel sans jeton", async () => {
       const r = await fetch(`${baseUrl}/v1/me/persons`);
       expect(r.status).toBe(401);
