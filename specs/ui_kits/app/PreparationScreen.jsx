@@ -55,7 +55,7 @@ function Piste({ titre, texte, cout, solde, fait, onLancer, onVoir, onRecharger,
 }
 
 export function PreparationScreen({
-  t, etat = "nominal", qui = "Valery", quoi, solde = 4,
+  t, etat = "nominal", qui = "Valery Bah", quoi, solde = 4,
   onLancer, onVoir, onOpen
 }) {
   const sensible = etat === "sensible";
@@ -67,10 +67,11 @@ export function PreparationScreen({
     <div style={{ padding: "0 16px 18px" }}>
       {horsligne ? <OfflineBanner texte={t.horsConnexion} style={{ margin: "0 -16px 14px" }} /> : null}
 
-      {/* Pas de titre ici : l'en-tête porte déjà « Pour Valery ». Pas de
-          sur-titre non plus — les trois cartes disent ce qu'elles sont. Reste
-          la date, qui situe, et la seule phrase qui apprenne quelque chose :
-          rien ne part sans vous. */}
+      {/* Pas de sur-titre : les cartes disent ce qu'elles sont. Reste le sujet,
+          la date qui situe, et la seule phrase qui apprenne quelque chose. */}
+      {/* Le sujet s'affiche ici : le porter dans le titre du châssis le
+          figeait, et l'écran nommait Valery quelle que soit la personne. */}
+      <div className="lehno-display" style={{ fontSize: 21, marginTop: 2 }}>{t.prepPour(qui)}</div>
       <div style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4 }}>
         {quoi || (t.langue === "fr" ? "Anniversaire · 24 août" : "Birthday · 24 Aug")}
       </div>

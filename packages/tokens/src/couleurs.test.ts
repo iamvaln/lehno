@@ -28,6 +28,9 @@ describe("couleurs", () => {
     ["textOnAccent", "action"], ["onBand", "surfaceBand"], ["onCelebrate", "celebrate"],
     ["feedbackInfo", "feedbackInfoBg"], ["feedbackSuccess", "feedbackSuccessBg"],
     ["feedbackWarning", "feedbackWarningBg"], ["feedbackError", "feedbackErrorBg"],
+    // Le bouton destructeur pressé : son libellé reste lisible pendant l'appui.
+    // En sombre il ne mesure que 4,63 — trop juste pour rester hors des tests.
+    ["surfacePage", "feedbackErrorPress"],
   ] as const)("%s sur %s atteint 4,5:1 dans les deux thèmes", (fg, bg) => {
     for (const theme of ["light", "dark"] as const) {
       const c = resolve(theme);
@@ -39,6 +42,20 @@ describe("couleurs", () => {
   it("en thème sombre, le texte d'un bouton plein est de l'encre, pas du blanc", () => {
     expect(resolve("dark").textOnAccent).toBe("#15131D");
     expect(contrastRatio("#FFFFFF", resolve("dark").action)).toBeLessThan(4.5);
+  });
+
+  // Sur un téléphone il n'y a pas de survol : la pression est le seul retour que
+  // reçoit le doigt. Le web s'en sortait pour le rang destructeur avec
+  // filter: brightness(), qui n'existe pas en natif — d'où un fond pressé propre.
+  // Ce test tient parce que le premier port avait donné au rang destructeur un
+  // fond pressé identique à son fond au repos : le bouton le plus grave du
+  // système ne répondait pas au toucher, et rien ne le signalait.
+  it("le fond pressé du rang destructeur se distingue de son fond au repos", () => {
+    for (const theme of ["light", "dark"] as const) {
+      const c = resolve(theme);
+      expect(c.feedbackErrorPress, theme).not.toBe(c.feedbackError);
+      expect(contrastRatio(c.feedbackError, c.feedbackErrorPress), theme).toBeGreaterThan(1.3);
+    }
   });
 
   it("l'anneau de focus se distingue du fond qu'il entoure", () => {

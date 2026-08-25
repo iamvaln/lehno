@@ -83,8 +83,12 @@ function Attente({ t, onQuitter }) {
 }
 
 export function GenerationScreen({
-  t, etat = "message", qui = "Valery", solde = 3, onEnvoyer, onCopier, onRetour, onOpen
+  t, etat = "message", qui = "Valery Bah", solde = 3, onEnvoyer, onCopier, onRetour, onOpen
 }) {
+  /* Les hooks AVANT tout return anticipé : leur nombre ne peut pas dépendre de
+     l'état, et le prototype change l'état sur la même instance. */
+  const [choisie, setChoisie] = React.useState(null);
+
   if (etat === "attente") return <Attente t={t} onQuitter={() => onOpen && onOpen("accueil")} />;
 
   if (etat === "erreur") {
@@ -108,13 +112,13 @@ export function GenerationScreen({
   }
 
   const langue = t.langue === "fr" ? "fr" : "en";
-  /* Une idée retenue, pas plusieurs : on offre un cadeau, on n'en liste pas. */
-  const [choisie, setChoisie] = React.useState(null);
+
 
   if (etat === "idees") {
     return (
       <div style={{ padding: "0 16px 18px" }}>
-        <div className="lehno-display" style={{ fontSize: 22, marginBottom: 14 }}>{t.resIdeesTitre}</div>
+        <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.prepPour(qui)}</div>
+        <div className="lehno-display" style={{ fontSize: 22, margin: "2px 0 14px" }}>{t.resIdeesTitre}</div>
         <div style={{ display: "grid", gap: 8 }}>
           {IDEES[langue].map((idee, i) => {
             const prise = choisie === i;

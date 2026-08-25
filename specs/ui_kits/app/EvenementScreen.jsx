@@ -7,10 +7,12 @@ import { Avatar } from "../../components/core/Avatar.jsx";
 import { SensitiveBanner } from "../../components/feedback/SensitiveBanner.jsx";
 import { Banner } from "../../components/feedback/Banner.jsx";
 
-export function EvenementScreen({ t, etat = "nominal", onEnregistrer }) {
+export function EvenementScreen({ t, etat = "nominal", qui = "Valery Bah", onEnregistrer }) {
   const [type, setType] = React.useState("anniversaire");
   const [details, setDetails] = React.useState(false);
-  const sensible = etat === "sensible";
+  const [sansAnnee, setSansAnnee] = React.useState(false);
+  const [nature, setNature] = React.useState(etat === "sensible" ? "sensitive" : "happy");
+  const sensible = etat === "sensible" || nature === "sensitive";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
@@ -53,8 +55,8 @@ export function EvenementScreen({ t, etat = "nominal", onEnregistrer }) {
             border: "1px solid var(--border-object)", minHeight: "var(--touch-min)",
             boxSizing: "border-box"
           }}>
-            <Avatar name="Valery Bah" size={32} />
-            <span className="lehno-display" style={{ fontSize: 15.5, flex: 1 }}>Valery Bah</span>
+            <Avatar name={qui} size={32} />
+            <span className="lehno-display" style={{ fontSize: 15.5, flex: 1 }}>{qui}</span>
             <Icon name="chevron-down" size={15} color="var(--text-mention)" />
           </div>
           <div style={{ fontSize: 12.5, color: "var(--text-mention)", marginTop: 7 }}>
@@ -62,14 +64,46 @@ export function EvenementScreen({ t, etat = "nominal", onEnregistrer }) {
           </div>
         </div>
 
+        {/* Le libellé libre n'existe que pour « autre » : un anniversaire porte
+            un libellé de traduction, pas un texte saisi. */}
+        {type === "autre" ? (
+          <div style={{ marginTop: 22 }}>
+            <TextField platform="mobile" label={t.evtLabel}
+              defaultValue={t.langue === "fr" ? "Mariage" : "Wedding"} hint={t.evtLabelAide} />
+          </div>
+        ) : null}
+
         <div style={{ marginTop: 22, display: "grid", gap: 12 }}>
           <SectionLabel>{t.evtDate}</SectionLabel>
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ flex: 1 }}><TextField platform="mobile" label={t.evtJour} defaultValue="24" /></div>
             <div style={{ flex: 2 }}><TextField platform="mobile" label={t.evtMois} defaultValue={t.langue === "fr" ? "août" : "August"} /></div>
-            <div style={{ flex: 1.2 }}><TextField platform="mobile" label={t.evtAnnee} defaultValue="1990" /></div>
+            <div style={{ flex: 1.2, opacity: sansAnnee ? 0.45 : 1 }}>
+              <TextField platform="mobile" label={t.evtAnnee}
+                defaultValue={sansAnnee ? "" : "1990"} />
+            </div>
           </div>
-          <div style={{ fontSize: 12.5, color: "var(--text-mention)" }}>{t.evtAnneeAide}</div>
+          {/* Une case, pas une phrase : « je ne connais pas l'année » est un
+              état du modèle, et un champ vide ne dit pas s'il est inconnu ou
+              seulement oublié. */}
+          <button type="button" onClick={() => setSansAnnee((v) => !v)}
+            role="checkbox" aria-checked={sansAnnee} className="lehno-focusable"
+            style={{
+              all: "unset", cursor: "pointer", display: "flex", alignItems: "center",
+              gap: 9, minHeight: "var(--touch-min)", fontFamily: "var(--font-body)",
+              fontSize: 13.5, color: "var(--text-secondary)"
+            }}>
+            <span style={{
+              width: 20, height: 20, borderRadius: 5, flex: "none",
+              display: "grid", placeItems: "center",
+              border: "1px solid " + (sansAnnee ? "transparent" : "var(--border-object)"),
+              background: sansAnnee ? "var(--action)" : "transparent"
+            }}>
+              {sansAnnee ? <Icon name="check" size={13} strokeWidth={2.6}
+                color="var(--text-on-accent)" /> : null}
+            </span>
+            {t.evtAnneeInconnue}
+          </button>
         </div>
 
         <button type="button" onClick={() => setDetails((v) => !v)} aria-expanded={details}
@@ -85,8 +119,23 @@ export function EvenementScreen({ t, etat = "nominal", onEnregistrer }) {
           <div style={{ display: "grid", gap: 14, marginTop: 12 }}>
             <div>
               <SectionLabel>{t.evtNature}</SectionLabel>
-              <div style={{ fontSize: 14, marginTop: 6 }}>{t.evtNatureJoyeux}</div>
-              <div style={{ fontSize: 12.5, color: "var(--text-mention)", marginTop: 3 }}>{t.evtNatureAide}</div>
+              <div style={{ display: "flex", gap: 7, marginTop: 9 }}>
+                {[["happy", t.evtNatureJoyeux], ["sensitive", t.evtNatureSensible]].map(([k, l]) => {
+                  const actif = nature === k;
+                  return (
+                    <button key={k} type="button" onClick={() => setNature(k)} aria-pressed={actif}
+                      className="lehno-focusable" style={{
+                        fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 600,
+                        padding: "8px 14px", minHeight: 38, borderRadius: "var(--radius-pill)",
+                        cursor: "pointer",
+                        border: "1px solid " + (actif ? "transparent" : "var(--border-object)"),
+                        background: actif ? "var(--action)" : "transparent",
+                        color: actif ? "var(--text-on-accent)" : "var(--text-secondary)"
+                      }}>{l}</button>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 12.5, color: "var(--text-mention)", marginTop: 8 }}>{t.evtNatureAide}</div>
             </div>
             <div>
               <SectionLabel>{t.evtRappel}</SectionLabel>

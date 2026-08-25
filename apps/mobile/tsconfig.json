@@ -1,0 +1,24 @@
+{
+  "extends": "../../packages/tsconfig/base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": [
+      "node"
+    ],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "declaration": false,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "app",
+    "components",
+    "fixtures",
+    "messages",
+    "polices",
+    "test"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

@@ -1,73 +1,53 @@
-# À compléter — UI kit application, d'après `uploads/ux-app-mobile-lehno.md`
+# Ce qui reste — UI kit application
 
-La spec UX mobile est arrivée après la construction du kit. Elle nomme **27 écrans**
-et **6 composants transverses** ; le kit en couvre 6. Voici le delta, par ordre
-d'utilité.
+Les 27 écrans de la spec sont livrés. Ce fichier ne garde que le **reste**, et
+chaque ligne dit qui décide.
 
-## 1. Corrections sur l'existant
+## Ce qui attend une décision de votre part
 
-- **Accueil (3.2)** — la phrase d'accueil est un texte composé selon la situation
-  (« Une date aujourd'hui, deux cette semaine »), écrit en entier dans chaque langue,
-  avec ses variantes singulier / pluriel. Pas de recollage de morceaux.
-- **Accueil** — la carte la plus imminente porte **deux actions visibles**
-  (*préparer*, *marquer envoyé*) ; les suivantes restent des lignes calmes.
-  Le kit n'en montre qu'une.
-- **Accueil** — deux états vides distincts : premier lancement (bouton *Ajouter un
-  anniversaire* à la place de *Laisser une note*) et aucune échéance proche.
-- **Proches (3.3)** — chaque ligne porte un **tag de type d'échéance**, neutre pour
-  l'anniversaire, coloré pour les autres. Tri par date puis alphabétique. Absent du kit.
-- **Fiche (3.4)** — il manque les blocs *Ses portraits*, *Événements et historique*,
-  et le bloc *préparer* qui se réduit hors échéance.
+**L'identité du back-office.** Conclusion prise — une police plus adaptée à une
+surface d'exploitation, donc Karla partout et Fraunces qui sort. Les douze
+sections attendent d'être construites sur cette base.
 
-## 2. Écrans manquants — par phase de construction
+**Les polices en binaire.** Bloquant pour React Native, et pour lui seul : le web
+charge Fraunces et Karla depuis Google Fonts, mais RN ne charge pas une police
+par URL. Il faut des `.ttf` **statiques** — les axes de Fraunces (SOFT 40,
+WONK 1) doivent être cuits dans le fichier, le support variable étant irrégulier
+sur Android — et la licence autorisant l'embarquement dans une app publiée.
 
-**Phase 1 (le socle)** — 3.1 connexion (5 vues), 3.5 saisie d'une note,
-3.6 formulaire d'événement, 3.15 recherche, 3.19 détail d'un souhait,
-3.21 détail d'une occasion.
+**Les décisions natives.** Elles n'ont pas d'équivalent dans une planche, et le
+kit web ne peut pas les exprimer :
 
-**Phase 2** — 3.8 à valider, 3.13 centre de notifications, 3.20 partage d'un lien
-de collecte.
+- ce qui **pousse** (chevron retour) et ce qui **monte en modale** — la
+  préparation, la saisie de note, la feuille payante ;
+- l'**en-tête au défilement** : fixe, ou titre qui se replie ;
+- le **clavier** : ce qui remonte, où se pose le bouton plein quand il est ouvert
+  (critique pour la note, le formulaire d'événement, le code) ;
+- la **zone sûre** : ce qui passe sous l'encoche, ce qui passe sous la barre ;
+- le **tirer-pour-rafraîchir** : sur quels écrans ;
+- l'**attente de génération** — « quitter sans perdre » est un comportement, pas
+  une image.
 
-**Phase 3** — 3.7 génération (composition, attente, aperçu), 3.16 reprises en cours,
-3.22 aperçu et partage d'un portrait.
+## Ce qui m'appartient
 
-**Parrainage (3.9)** — écran manquant, et « Inviter un ami » de l'écran de
-bienvenue l'attend : il renvoie provisoirement vers Moi.
+**Unifier le portrait.** `PortraitImage.jsx` et
+`components/brand/PortraitComposition.jsx` dessinent le même objet de deux
+façons. Le second est le canonique ; le premier doit disparaître au profit de lui.
 
-**Phase 4** — 3.9 crédits et recharge (avec l'attente mobile money), 3.10 Mon Mur
-(côté privé), 3.12 surfaces publiques dans l'application, 3.25 méthodes de paiement.
+**Répliquer le port React Native.** Le pilote — `tokens.js`, `Button.js`,
+`EventCard.js`, `AccueilScreen.js` — établit la convention. Le reste est
+mécanique : 274 `<div>`, 132 éléments de texte, 36 boutons, 51 grilles à repenser
+en flex, 62 raccourcis `border` à séparer, 65 attributs `aria-*` à convertir,
+et environ 190 propriétés sans effet à retirer. À lancer si la convention du
+pilote vous convient.
 
-**Transverse** — 3.11 réglages, 3.17 Moi (à refaire en sections), 3.18 identité d'un
-proche, 3.23 profil, 3.24 sécurité, 3.26 aide, 3.27 mes réservations.
+## Ce qui n'est pas dessiné, et pourquoi
 
-## 3. Composants transverses à ajouter (§5)
+**Le détail d'une notification.** La spec §3.13 est explicite : une notification
+poussée « mène directement à l'écran concerné, **sans passer par la liste** ».
+Elle est un chemin, pas une destination — un écran de détail ajouterait un clic
+pour relire ce que la ligne dit déjà en entier.
 
-| Composant | Ce que la spec impose |
-|---|---|
-| `NotificationBell` | Toujours dans l'en-tête, pastille sur non-lus. *Existe en dur dans `AppHeader` — à extraire.* |
-| `CreditIndicator` | Présent à chaque action payante ; le coût s'affiche **avant** de lancer. |
-| `EventCard` | La brique réutilisée accueil + fiches. La plus imminente porte ses actions. *Existe en dur — à extraire.* |
-| `CategoryTag` | Sur chaque note ; un appui reclasse. |
-| `SensitiveBanner` | Événement sensible : ton adapté, aucune idée de cadeau. |
-| `PaidActionSheet` | Rappelle coût, solde et résultat attendu avant toute génération. |
-
-## 4. États transverses (§6)
-
-Trois familles absentes du kit, et la spec les traite comme du contenu, pas comme
-des accidents :
-
-- **États vides** — un par écran, « tournés vers l'action ». Les textes annoncent
-  **ce qui est possible**, jamais ce qui manque : pas de « aucun proche », « vide »,
-  « rien à faire ». *« Le calme est une réponse. »*
-- **Chargement** — génération (attente soignée, que l'on peut **quitter sans perdre**),
-  listes, envoi.
-- **Hors connexion** — bandeau ; consultation possible en cache, génération et partage
-  mis en attente et repris au retour du réseau.
-
-## 5. Deux principes à inscrire dans le readme
-
-- **Un écran, une intention** — et **au plus un bouton plein par écran**. Le readme
-  porte déjà la règle des trois rangs ; il lui manque cette formulation.
-- **Ce qui est rare vit ailleurs** — un geste fait quelques fois par an ne prend pas
-  la place d'un geste quotidien. C'est ce qui explique que l'accueil ne porte que
-  *Laisser une note*.
+**L'écran d'ouverture comme illustration.** Le brief le liste, mais « le signe
+seul sur fond de marque » est l'actif existant : la pastille sur un aplat violet.
+En dessiner une version séparée créerait un second signe à maintenir.

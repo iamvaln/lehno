@@ -3,7 +3,7 @@ import { Button } from "../../components/core/Button.jsx";
 import { SectionLabel } from "../../components/core/SectionLabel.jsx";
 import { Icon } from "../../components/core/Icon.jsx";
 import { Provenance } from "../../components/content/Provenance.jsx";
-import { PortraitImage } from "./PortraitImage.jsx";
+import { PortraitComposition, AMBIANCES } from "../../components/brand/PortraitComposition.jsx";
 import { EmptyState } from "../../components/feedback/EmptyState.jsx";
 
 /* Aperçu et partage d'un portrait (3.22).
@@ -20,8 +20,10 @@ import { EmptyState } from "../../components/feedback/EmptyState.jsx";
    La date et la plage de notes accompagnent l'image : sans elles, deux
    portraits de la même personne sont indistinguables dans sa collection. */
 
-export function PortraitScreen({ t, etat = "nominal", base = "../../", onOpen }) {
-  const [signature, setSignature] = React.useState(true);
+export function PortraitScreen({ t, etat = "nominal", qui = "Valery Bah", base = "../../", onOpen }) {
+  const [avecNote, setAvecNote] = React.useState(true);
+  const [voie, setVoie] = React.useState("illustration");
+  const [ambiance, setAmbiance] = React.useState(t.nuit ? "encre" : "papier");
   const aValider = etat === "avalider";
   const surLeMur = etat === "partage";
 
@@ -49,10 +51,62 @@ export function PortraitScreen({ t, etat = "nominal", base = "../../", onOpen })
         </div>
       ) : null}
 
-      {/* L'image telle qu'elle partira : composée, pas mise en page.
-          « signature » porte le nom de qui offre, non un booléen. */}
-      <PortraitImage t={t} nom="Valery" annee={2026}
-        signature={signature ? "Valentine" : undefined} />
+      {/* L'image telle qu'elle partira. Un seul tracé dans le projet : celui du
+          design system, éprouvé sur les bornes du contenu (8 à 20 mots, nom de
+          3 à 20 caractères) et sur les trois formats. */}
+      <PortraitComposition
+        nom={qui.split(" ")[0]}
+        message={t.portraitMessage}
+        note={avecNote ? t.portraitNote : undefined}
+        photo="../../assets/valentine.png"
+        ambiance={ambiance}
+        voie={voie}
+        format="carre"
+        base="../../"
+      />
+
+      {/* La voie et l'ambiance sont des choix de l'utilisateur, pas des
+          réglages de développement : le brief les nomme ainsi. */}
+      <div style={{ marginTop: 16 }}>
+        <SectionLabel>{t.portraitVoie}</SectionLabel>
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 9 }}>
+          {[["illustration", t.portraitVoieIllustration], ["photo", t.portraitVoiePhoto],
+            ["aucune", t.portraitVoieAucune]].map(([k, l]) => {
+            const actif = voie === k;
+            return (
+              <button key={k} type="button" onClick={() => setVoie(k)} aria-pressed={actif}
+                className="lehno-focusable" style={{
+                  all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center",
+                  minHeight: 36, padding: "0 13px", borderRadius: "var(--radius-pill)",
+                  fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 600,
+                  border: "1px solid " + (actif ? "transparent" : "var(--border-object)"),
+                  background: actif ? "var(--action)" : "transparent",
+                  color: actif ? "var(--text-on-accent)" : "var(--text-secondary)"
+                }}>{l}</button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <SectionLabel>{t.portraitAmbiance}</SectionLabel>
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 9 }}>
+          {["papier", "lilas", "encre"].map((k) => {
+            const actif = ambiance === k;
+            return (
+              <button key={k} type="button" onClick={() => setAmbiance(k)} aria-pressed={actif}
+                className="lehno-focusable" style={{
+                  all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center",
+                  minHeight: 36, padding: "0 13px", borderRadius: "var(--radius-pill)",
+                  fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 600,
+                  border: "1px solid " + (actif ? "transparent" : "var(--border-object)"),
+                  background: actif ? "var(--action)" : "transparent",
+                  color: actif ? "var(--text-on-accent)" : "var(--text-secondary)"
+                }}>{AMBIANCES[k].nom}</button>
+            );
+          })}
+        </div>
+      </div>
 
       <Provenance origin={t.portraitPlage(plage)}
         date={t.langue === "fr" ? "22 août" : "22 Aug"} />
@@ -64,7 +118,7 @@ export function PortraitScreen({ t, etat = "nominal", base = "../../", onOpen })
           <>
             <Button platform="mobile" full icon="check">{t.portraitApprouver}</Button>
             <Button platform="mobile" full variant="outline" icon="refresh-cw"
-              onClick={() => onOpen && onOpen("composition")}>{t.resRegenerer}</Button>
+              onClick={() => onOpen && onOpen("studio")}>{t.resRegenerer}</Button>
             <Button platform="mobile" full variant="text">{t.resJeter}</Button>
           </>
         ) : (
@@ -91,18 +145,18 @@ export function PortraitScreen({ t, etat = "nominal", base = "../../", onOpen })
             {t.portraitSignatureAide}
           </div>
         </div>
-        <button type="button" role="switch" aria-checked={signature}
-          onClick={() => setSignature((v) => !v)} className="lehno-focusable"
+        <button type="button" role="switch" aria-checked={avecNote}
+          onClick={() => setAvecNote((v) => !v)} className="lehno-focusable"
           aria-label={t.portraitSignature} style={{
             all: "unset", cursor: "pointer", flex: "none", width: 44, height: 26,
             borderRadius: 999, padding: 3, boxSizing: "border-box",
-            background: signature ? "var(--action)" : "var(--border-object)",
+            background: avecNote ? "var(--action)" : "var(--border-object)",
             transition: "background var(--transition-state)"
           }}>
           <span style={{
             display: "block", width: 20, height: 20, borderRadius: "50%",
             background: "var(--surface-page)",
-            transform: signature ? "translateX(18px)" : "translateX(0)",
+            transform: avecNote ? "translateX(18px)" : "translateX(0)",
             transition: "transform var(--transition-state)"
           }} />
         </button>

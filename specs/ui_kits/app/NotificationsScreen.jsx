@@ -77,7 +77,7 @@ export function NotificationsScreen({ t, etat = "nominal", onOpen }) {
         <Ligne t={t} icone="cake" nonLu decompte={0}
           texte={t.notifAujourdhui("Awa Diop")}
           quand={t.langue === "fr" ? "ce matin" : "this morning"}
-          onOuvrir={() => onOpen && onOpen("occasion")} />
+          onOuvrir={() => onOpen && onOpen("occasion", { nom: "Awa Diop" })} />
         <Ligne t={t} icone="inbox" nonLu
           texte={t.notifContribution(2)}
           quand={t.langue === "fr" ? "ce matin" : "this morning"}
@@ -88,7 +88,7 @@ export function NotificationsScreen({ t, etat = "nominal", onOpen }) {
       <div style={{ marginTop: 4 }}>
         <Ligne t={t} icone="calendar" decompte={3}
           texte={t.notifRappel("Valery Bah", 3)} quand={hier}
-          onOuvrir={() => onOpen && onOpen("occasion")} />
+          onOuvrir={() => onOpen && onOpen("occasion", { nom: "Valery Bah" })} />
         <Ligne t={t} icone="sparkles"
           texte={t.notifPortrait("Awa Diop")} quand={hier}
           onOuvrir={() => onOpen && onOpen("generation")} />

@@ -14,7 +14,7 @@
 #             ici, le traçage de fichiers de Next joue le même rôle
 #   runtime — image finale minimale, utilisateur non privilégié
 
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /repo
 # Résilience réseau + copies réelles plutôt que liens durs entre couches —

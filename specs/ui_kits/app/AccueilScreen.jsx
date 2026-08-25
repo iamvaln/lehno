@@ -86,7 +86,7 @@ export function AccueilScreen({ t, prenom = "Valentine", echeances = [], etat = 
               noteOrigine={i === 0 ? (t.langue === "fr" ? e.noteOrigine : e.noteOrigineEn) : undefined}
               noteDate={i === 0 ? (t.langue === "fr" ? e.noteDate : e.noteDateEn) : undefined}
               actions={[t.preparer, t.marquerEnvoye]}
-              onPreparer={() => onOpen && onOpen("preparation")}
+              onPreparer={() => onOpen && onOpen("preparation", e)}
               onEnvoye={() => onOpen && onOpen("envoye")}
               onOuvrir={() => onOpen && onOpen("occasion", e)}
               style={{ marginBottom: 10 }} />
