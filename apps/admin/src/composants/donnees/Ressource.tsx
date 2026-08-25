@@ -38,5 +38,15 @@ export function Ressource<T>(
     );
   }
 
-  return <>{enfant(etat.donnees)}</>;
+  // Rendu sans conteneur qui change : ce qui compte ici est que l'enfant ne
+  // soit pas démonté entre deux pages, sans quoi il perdrait son état — le
+  // contenu de son champ de recherche, par exemple.
+  return (
+    <>
+      <div className="admin-ressource-rafraichit" role="status" aria-live="polite">
+        {etat.rafraichit ? t.actions.chargement : ""}
+      </div>
+      {enfant(etat.donnees)}
+    </>
+  );
 }

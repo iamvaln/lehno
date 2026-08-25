@@ -2,11 +2,22 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { TableauDeBord, Liste, Detail, Edition, Suppressions, Connexion, Profil } from "./pages/index.js";
+import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
+
+// Les états se disent en français dans le contrat ; la requête, elle, parle au
+// serveur dans les termes de sa base. La traduction est ici, et nulle part
+// ailleurs.
+const ETAT_SERVEUR: Record<string, string> = {
+  actif: "active",
+  suspendu: "suspended",
+  suppression_en_cours: "pending_deletion",
+  efface: "deleted",
+};
 import { useRessource } from "./api/hooks.js";
-import { dashboardSchema } from "@lehno/contracts";
-import { comptes, compteDetail, interventions, parametres, profil, suppressions } from "./fixtures/index.js";
+import { compteDetailSchema, dashboardSchema, pageComptesSchema } from "@lehno/contracts";
+import { interventions, parametres, profil, suppressions } from "./fixtures/index.js";
 import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
@@ -169,11 +180,57 @@ export function App(): ReactNode {
     [section],
   );
 
+  // La requête courante de la liste, et la pile des curseurs déjà franchis.
+  // Une API à curseur ne sait pas revenir en arrière : c'est l'appelant qui
+  // garde le chemin parcouru, sinon « Précédent » n'existe pas.
+  const [requeteComptes, setRequeteComptes] = useState<RequeteComptes>({});
+  const [curseurs, setCurseurs] = useState<(string | null)[]>([null]);
+  const curseur = curseurs.at(-1) ?? null;
+
+  const etatComptes = useRessource(
+    () => (section === "comptes" && !ouvert
+      ? api.appeler("/admin/users", {
+        schema: pageComptesSchema,
+        requete: {
+          ...(requeteComptes.q ? { q: requeteComptes.q } : {}),
+          ...(requeteComptes.etat && requeteComptes.etat !== "tous"
+            ? { status: ETAT_SERVEUR[requeteComptes.etat] }
+            : {}),
+          ...(requeteComptes.limit ? { limit: String(requeteComptes.limit) } : {}),
+          ...(curseur ? { cursor: curseur } : {}),
+        },
+      })
+      : Promise.resolve(null)),
+    [section, ouvert, requeteComptes.q, requeteComptes.etat, requeteComptes.limit, curseur],
+    { garderAncien: true },
+  );
+
+  const etatFiche = useRessource(
+    () => (section === "comptes" && ouvert
+      ? api.appeler(`/admin/users/${ouvert}`, { schema: compteDetailSchema })
+      : Promise.resolve(null)),
+    [section, ouvert],
+  );
+
   let vue: ReactNode;
   if (section === "profil") {
     vue = <Profil profil={profil} langue={langue} />;
   } else if (section === "comptes" && ouvert) {
-    vue = <Detail role={role} langue={langue} compte={compteDetail} interventions={interventions.items} onRetour={() => setOuvert(null)} />;
+    vue = (
+      <Ressource
+        etat={etatFiche}
+        t={t}
+        enfant={(compte) => (compte ? (
+          <Detail
+            role={role}
+            langue={langue}
+            compte={compte}
+            interventions={interventions.items}
+            onRetour={() => setOuvert(null)}
+          />
+        ) : null)}
+      />
+    );
   } else if (section === "tableau") {
     vue = (
       <Ressource
@@ -185,7 +242,32 @@ export function App(): ReactNode {
       />
     );
   } else if (section === "comptes") {
-    vue = <Liste role={role} langue={langue} comptes={comptes.items} onOuvrir={(c) => setOuvert(c.id)} />;
+    vue = (
+      <Ressource
+        etat={etatComptes}
+        t={t}
+        enfant={(page) => (page ? (
+          <Liste
+            role={role}
+            langue={langue}
+            comptes={page.items}
+            onOuvrir={(c) => setOuvert(c.id)}
+            onRequete={(requete) => {
+              // Toute nouvelle question repart de la première page : garder le
+              // curseur ferait chercher « awa » à partir du centième compte.
+              setRequeteComptes(requete);
+              setCurseurs([null]);
+            }}
+            curseurSuivant={page.nextCursor}
+            aPrecedent={curseurs.length > 1}
+            onPageSuivante={() => {
+              if (page.nextCursor) setCurseurs((c) => [...c, page.nextCursor]);
+            }}
+            onPagePrecedente={() => setCurseurs((c) => (c.length > 1 ? c.slice(0, -1) : c))}
+          />
+        ) : null)}
+      />
+    );
   } else if (section === "parametres") {
     vue = <Edition role={role} langue={langue} parametres={parametres} />;
   } else if (section === "suppressions") {

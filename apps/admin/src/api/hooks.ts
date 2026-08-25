@@ -12,12 +12,29 @@ import { codeConnu, type CleCode } from "../i18n/index.js";
  */
 export type Etat<T> =
   | { statut: "chargement" }
-  | { statut: "pret"; donnees: T }
+  /** `rafraichit` : la donnée affichée est la précédente, une neuve est en vol. */
+  | { statut: "pret"; donnees: T; rafraichit: boolean }
   | { statut: "echec"; code: CleCode };
 
 export type Ressource<T> = Etat<T> & { recharger: () => void };
 
-export function useRessource<T>(charger: () => Promise<T>, cles: readonly unknown[]): Ressource<T> {
+/**
+ * `garderAncien` : pendant un rechargement, continuer d'afficher la donnée
+ * précédente au lieu de repasser par l'état d'attente.
+ *
+ * Ce n'est pas un confort. Une liste qui se vide à chaque frappe démonte son
+ * champ de recherche, qui perd son contenu : on tape « awa », le serveur reçoit
+ * « a », et l'écran redevient vide entre chaque lettre.
+ *
+ * Il faut le demander, et une fiche ne le demande pas : afficher le compte
+ * précédent en attendant le suivant montrerait les chiffres de quelqu'un
+ * d'autre sous le nom qu'on vient d'ouvrir.
+ */
+export function useRessource<T>(
+  charger: () => Promise<T>,
+  cles: readonly unknown[],
+  options: { garderAncien?: boolean } = {},
+): Ressource<T> {
   const [etat, setEtat] = useState<Etat<T>>({ statut: "chargement" });
   const [tour, setTour] = useState(0);
 
@@ -26,6 +43,8 @@ export function useRessource<T>(charger: () => Promise<T>, cles: readonly unknow
   // décident quand recharger, et elles seules.
   const charge = useRef(charger);
   charge.current = charger;
+  const garderAncien = useRef(options.garderAncien === true);
+  garderAncien.current = options.garderAncien === true;
 
   useEffect(() => {
     // Un composant démonté pendant l'appel — on change de section, l'appel est
@@ -33,10 +52,14 @@ export function useRessource<T>(charger: () => Promise<T>, cles: readonly unknow
     // mise à jour hors de l'arbre, et surtout l'écran suivant afficherait les
     // données du précédent.
     let vivant = true;
-    setEtat({ statut: "chargement" });
+    setEtat((precedent) => (
+      garderAncien.current && precedent.statut === "pret"
+        ? { ...precedent, rafraichit: true }
+        : { statut: "chargement" }
+    ));
     charge.current()
       .then((donnees) => {
-        if (vivant) setEtat({ statut: "pret", donnees });
+        if (vivant) setEtat({ statut: "pret", donnees, rafraichit: false });
       })
       .catch((echec: unknown) => {
         if (!vivant) return;
