@@ -49,10 +49,9 @@ export const fr = {
 
   // Rangées par ce que l'administrateur vient faire, pas par objet manipulé.
   familles: {
-    attention: "À traiter",
-    finances: "Finances",
-    gestion: "Gestion",
-    surveiller: "Suivi",
+    exploitation: "Exploitation",
+    economie: "Économie",
+    supervision: "Supervision",
     outils: "Outils",
   },
 
@@ -64,9 +63,14 @@ export const fr = {
     contact: "Messages de contact",
     attente: "Liste d'attente",
     transactions: "Transactions",
-    comptes: "Utilisateurs",
-    acces: "Administrateurs",
-    parametres: "Configurations",
+    comptes: "Comptes",
+    credits: "Crédits et paiements",
+    acces: "Accès administrateurs",
+    parametres: "Paramètres",
+    fonctionnalites: "Fonctionnalités",
+    modeles: "Modèles d'IA",
+    studio: "Studio du portrait",
+    offres: "Offres et croissance",
     metriques: "Métriques",
     audit: "Journal d'audit",
     connexions: "Connexions",

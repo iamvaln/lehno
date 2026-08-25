@@ -134,13 +134,30 @@ describe("l'anglais est en sentence case", () => {
 });
 
 describe("ce que le back-office doit couvrir", () => {
-  it("les cinq familles de navigation et les quinze sections", () => {
+  // Les familles de la spécification révisée (ux-admin §5, brief-maj-admin §1).
+  // Elles rangent par ce que l'administrateur vient faire — et « Économie »
+  // porte les leviers qui engagent le service, ce qui la rend fermable d'un
+  // bloc au support.
+  it("les quatre familles de navigation, dans l'ordre de la spécification", () => {
     expect(Object.keys(fr.familles)).toEqual([
-      "attention", "finances", "gestion", "surveiller", "outils",
+      "exploitation", "economie", "supervision", "outils",
     ]);
-    expect(fr.familles.attention).toBe("À traiter");
-    expect(fr.familles.surveiller).toBe("Suivi");
-    expect(Object.keys(fr.sections)).toHaveLength(15);
+    expect(fr.familles.economie).toBe("Économie");
+    expect(en.familles.economie).toBe("Economy");
+  });
+
+  // Les quatorze sections numérotées, plus « Mon profil » et les quatre files
+  // du « à traiter » qui ne figurent pas au menu mais restent atteignables
+  // depuis le tableau de bord.
+  it("les sections numérotées de la spécification ont toutes leur libellé", () => {
+    for (const section of [
+      "tableau", "comptes", "credits", "moderation",
+      "parametres", "fonctionnalites", "modeles", "studio", "offres",
+      "metriques", "audit", "connexions", "liens",
+    ] as const) {
+      expect(fr.sections[section], `fr.sections.${section}`).toMatch(/\S/);
+      expect(en.sections[section], `en.sections.${section}`).toMatch(/\S/);
+    }
   });
 
   it("les quatre états d'un compte, dits comme ils sont", () => {

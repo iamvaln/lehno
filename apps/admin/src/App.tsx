@@ -3,6 +3,7 @@ import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState } from "./composants/donnees/index.js";
 import { TableauDeBord, Liste, Detail, Edition, Suppressions, Connexion, Profil } from "./pages/index.js";
 import { codeConnu, messages, type Langue } from "./i18n/index.js";
+import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
 import { dashboard, comptes, compteDetail, interventions, parametres, profil, suppressions } from "./fixtures/index.js";
 import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
@@ -39,23 +40,14 @@ function themeInitial(): boolean {
   return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-// Les familles rangent les sections par ce que l'administrateur vient faire, pas
-// par domaine. Le tableau de bord se pose au-dessus, sans titre : c'est l'accueil,
-// pas une tâche — d'où une famille sans titre, que Sidebar rend sans en-tête.
-const NAVIGATION: { famille: keyof ReturnType<typeof messages>["familles"] | null; items: string[] }[] = [
-  { famille: null, items: ["tableau"] },
-  { famille: "attention", items: ["alertes", "moderation", "suppressions", "contact", "attente"] },
-  { famille: "finances", items: ["transactions"] },
-  { famille: "gestion", items: ["comptes", "acces", "parametres"] },
-  { famille: "surveiller", items: ["metriques", "audit", "connexions"] },
-  { famille: "outils", items: ["liens"] },
-];
 
 const ICONES: Record<string, string> = {
   tableau: "layout-dashboard", alertes: "triangle-alert", moderation: "shield",
   suppressions: "user-minus", contact: "mail", attente: "hourglass",
-  transactions: "receipt", comptes: "users", acces: "user-cog",
-  parametres: "sliders-horizontal", metriques: "chart-column", audit: "scroll-text",
+  transactions: "receipt", comptes: "users", credits: "receipt",
+  acces: "user-cog", parametres: "sliders-horizontal",
+  fonctionnalites: "toggle-right", modeles: "brain", studio: "image",
+  offres: "gift", metriques: "chart-column", audit: "scroll-text",
   connexions: "key-round", liens: "external-link",
 };
 
@@ -147,12 +139,15 @@ export function App(): ReactNode {
   }
 
   const aller = (id: string): void => {
-    setSection(id);
+    // Cacher l'entrée ne suffit pas : un raccourci du tableau de bord, une
+    // adresse gardée en mémoire ou un retour arrière y mèneraient encore. Une
+    // section hors des droits ramène au tableau de bord (ux-admin §5.1).
+    setSection(sectionAutorisee(role, id) ? id : "tableau");
     setOuvert(null);
     setNavOuverte(false);
   };
 
-  const familles = NAVIGATION.map(({ famille, items }) => ({
+  const familles = famillesDuRole(role).map(({ famille, items }) => ({
     titre: famille ? t.familles[famille] : "",
     items: items.map((id) => ({
       id,
