@@ -1,5 +1,8 @@
 import { Body, Controller, Get, Inject, Param, ParseUUIDPipe, Post, Req, UseGuards } from "@nestjs/common";
-import { createNoteSchema, type CreateNoteInput, type Note } from "@lehno/contracts";
+import {
+  createNoteSchema, createNotesSchema,
+  type CreateNoteInput, type CreateNotesInput, type Note,
+} from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { NoteService } from "./note.service.js";
@@ -30,5 +33,23 @@ export class NoteController {
     @Body(new ZodValidationPipe(createNoteSchema)) body: CreateNoteInput,
   ): Promise<Note> {
     return this.notes.createForPerson(req.userId, personId, body);
+  }
+}
+
+// Une note pour PLUSIEURS proches. Son chemin est distinct de celui d'un
+// proche donné parce qu'elle n'appartient à aucun d'eux en particulier : la
+// loger sous /me/persons/{id}/notes obligerait à en désigner un comme
+// propriétaire de l'appel, ce qu'il n'est pas.
+@Controller("me/notes")
+@UseGuards(AuthGuard)
+export class NotesController {
+  constructor(@Inject(NoteService) private readonly notes: NoteService) {}
+
+  @Post()
+  create(
+    @Req() req: AuthedRequest,
+    @Body(new ZodValidationPipe(createNotesSchema)) body: CreateNotesInput,
+  ): Promise<Note[]> {
+    return this.notes.createForMany(req.userId, body);
   }
 }

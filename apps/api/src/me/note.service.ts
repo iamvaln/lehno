@@ -1,8 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { CreateNoteInput, Note } from "@lehno/contracts";
+import type { CreateNoteInput, CreateNotesInput, Note } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
 import { classer } from "./note-classifier.js";
+import { AppError } from "../common/errors.js";
 
 @Injectable()
 export class NoteService {
@@ -53,6 +54,53 @@ export class NoteService {
       include: { categories: { include: { category: true } } },
     });
     return rendre(ligne);
+  }
+
+  // Une même note pour plusieurs proches. Elle se DUPLIQUE : chacun reçoit la
+  // sienne, indépendante ensuite — corriger le classement de l'une ne touche
+  // pas les autres, et supprimer un proche n'emporte pas les notes des autres.
+  //
+  // TOUT OU RIEN. La liste est vérifiée AVANT la moindre écriture. Sans cette
+  // vérification préalable, la première note partirait puis on découvrirait
+  // que la seconde n'est pas permise : l'appelant recevrait une erreur en
+  // croyant que rien n'a été écrit, alors qu'une note serait déjà posée sur
+  // la fiche de quelqu'un d'autre.
+  async createForMany(userId: string, input: CreateNotesInput): Promise<Note[]> {
+    // Dédoublonnés : le même proche cité deux fois ne mérite pas deux notes
+    // identiques, et le décompte de vérification ci-dessous serait faussé.
+    const ids = [...new Set(input.personIds)];
+
+    // Une seule requête, dans la portée cloisonnée : ce qui n'appartient pas
+    // au demandeur n'en revient tout simplement pas.
+    const permis = await this.depot.persons(userId).findMany({ id: { in: ids } });
+    if (permis.length !== ids.length) {
+      // 404 et non 403 : révéler qu'un identifiant existe mais appartient à
+      // quelqu'un d'autre en ferait un oracle. Un identifiant inconnu et un
+      // identifiant d'autrui rendent donc la même chose.
+      throw new AppError("not_found", "resource not found");
+    }
+
+    const codes = classer(input.content);
+    const categories = codes.length
+      ? await this.prisma.category.findMany({ where: { code: { in: codes } } })
+      : [];
+
+    // En transaction : si l'une des écritures échoue, aucune ne demeure.
+    const lignes = await this.prisma.$transaction(
+      ids.map((personId) =>
+        this.prisma.note.create({
+          data: {
+            personId,
+            authorUserId: userId,
+            content: input.content,
+            eventOccurrenceId: input.eventOccurrenceId ?? null,
+            categories: { create: categories.map((c) => ({ categoryId: c.id })) },
+          },
+          include: { categories: { include: { category: true } } },
+        }),
+      ),
+    );
+    return lignes.map(rendre);
   }
 }
 
