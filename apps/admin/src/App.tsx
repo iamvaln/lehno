@@ -2,9 +2,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState } from "./composants/donnees/index.js";
 import { TableauDeBord, Liste, Detail, Edition, Suppressions, Connexion, Profil } from "./pages/index.js";
-import { messages, type Langue } from "./i18n/index.js";
+import { codeConnu, messages, type Langue } from "./i18n/index.js";
 import { dashboard, comptes, compteDetail, interventions, parametres, profil, suppressions } from "./fixtures/index.js";
-import type { AdminRole } from "@lehno/contracts";
+import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
+import { creerClient, ErreurApi } from "./api/client.js";
+import { baseApi, magasinAvecMemoire } from "./api/session.js";
 
 // La surcharge du back-office tient à une classe sur <body> : index.html la pose
 // pour l'application servie, cet effet la pose pour tout autre hôte — un test, un
@@ -98,14 +100,21 @@ function BandeApercu(
   );
 }
 
+// Le client se crée une fois, hors du composant : il porte la session, et une
+// instance par rendu perdrait le jeton rafraîchi entre deux appels.
+const api = creerClient({ base: baseApi(), magasin: magasinAvecMemoire() });
+
 export function App(): ReactNode {
   const [langue, setLangue] = useState<Langue>("fr");
   const [nuit, setNuit] = useState(themeInitial);
-  const [role, setRole] = useState<AdminRole>("support");
+  // Le rôle n'est plus un état qu'on choisit : c'est ce que le serveur a
+  // répondu. La bande d'aperçu peut encore le basculer en développement, mais
+  // elle ne décide de rien — le serveur refuse par ailleurs.
+  const [role, setRole] = useState<AdminRole>(() => api.session()?.role ?? "support");
   const [section, setSection] = useState("tableau");
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [navOuverte, setNavOuverte] = useState(false);
-  const [connecte, setConnecte] = useState(true);
+  const [connecte, setConnecte] = useState(() => api.session() !== null);
 
   useClasseAdmin(nuit);
   const t = messages(langue);
@@ -115,6 +124,27 @@ export function App(): ReactNode {
   useEffect(() => {
     document.title = t.outil.titre;
   }, [t]);
+
+  // Fermer la session côté serveur avant de rendre l'écran de connexion : un
+  // jeton de rafraîchissement qu'on abandonne sans le révoquer reste valable
+  // douze heures pour qui l'aurait copié.
+  async function deconnecter(): Promise<void> {
+    const session = api.session();
+    try {
+      if (session) {
+        await api.appeler("/admin/auth/session", {
+          methode: "DELETE",
+          corps: { refreshToken: session.rafraichissement },
+        });
+      }
+    } catch {
+      // Le serveur est injoignable : on ferme quand même de ce côté-ci plutôt
+      // que de laisser l'outil ouvert. Le jeton expirera de lui-même.
+    } finally {
+      api.fermer();
+      setConnecte(false);
+    }
+  }
 
   const aller = (id: string): void => {
     setSection(id);
@@ -160,7 +190,37 @@ export function App(): ReactNode {
     return (
       <>
         {import.meta.env.DEV ? <BandeApercu t={t} role={role} setRole={setRole} connecte={connecte} setConnecte={setConnecte} /> : null}
-        <Connexion langue={langue} onEntre={() => setConnecte(true)} />
+        <Connexion
+          langue={langue}
+          onDemanderCode={async ({ email }) => {
+            await api.appeler("/admin/auth/otp", {
+              methode: "POST",
+              corps: { email },
+              schema: demandeCodeReponseSchema,
+            });
+          }}
+          onVerifierCode={async ({ email, code }) => {
+            try {
+              const paire = await api.appeler("/admin/auth/otp/verify", {
+                methode: "POST",
+                corps: { email, code },
+                schema: sessionAdminSchema,
+              });
+              api.ouvrir({
+                acces: paire.accessToken,
+                rafraichissement: paire.refreshToken,
+                role: paire.role,
+              });
+              setRole(paire.role);
+              return true;
+            } catch (echec) {
+              // L'écran traduit le code ; il ne verra jamais le message du
+              // serveur. Une erreur d'une autre nature vaut refus muet.
+              return echec instanceof ErreurApi ? codeConnu(echec.code) : false;
+            }
+          }}
+          onEntre={() => setConnecte(true)}
+        />
       </>
     );
   }
@@ -194,7 +254,7 @@ export function App(): ReactNode {
             onTheme={() => setNuit((n) => !n)}
             onMenu={() => setNavOuverte(true)}
             onProfil={() => aller("profil")}
-            onDeconnexion={() => setConnecte(false)}
+            onDeconnexion={() => void deconnecter()}
             t={t.barre}
           />
         }

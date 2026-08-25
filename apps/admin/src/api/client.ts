@@ -74,9 +74,15 @@ export type Client = {
 };
 
 export function creerClient(
-  { base, magasin, fetch: appeler = globalThis.fetch }:
+  { base, magasin, fetch: injecte }:
   { base: string; magasin: MagasinSession; fetch?: typeof globalThis.fetch },
 ): Client {
+  // Résolu à l'appel, jamais à la création : le client est instancié au
+  // chargement du module, et figer `globalThis.fetch` à cet instant capturerait
+  // une implémentation que l'hôte peut encore remplacer — un service worker qui
+  // s'installe, une instrumentation, un test.
+  const appeler = (...arguments_: Parameters<typeof globalThis.fetch>): Promise<Response> =>
+    (injecte ?? globalThis.fetch)(...arguments_);
   const url = (chemin: string, requete?: Record<string, string | undefined>): string => {
     const complet = `${base.replace(/\/$/, "")}/${chemin.replace(/^\//, "")}`;
     if (!requete) return complet;
