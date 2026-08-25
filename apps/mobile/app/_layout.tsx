@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider, useCouleurs } from "@lehno/ui-native";
+import { LangueProvider } from "../lib/langue.js";
 import { POLICES } from "../polices/index.js";
 
 /* La coquille. Trois choses s'y posent, et l'ordre compte : la zone sûre doit
@@ -33,7 +34,11 @@ export default function Racine() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <Coquille />
+        {/* La langue enveloppe la navigation : un écran qui se monte avant elle
+            afficherait « undefined » à chaque libellé. */}
+        <LangueProvider>
+          <Coquille />
+        </LangueProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
