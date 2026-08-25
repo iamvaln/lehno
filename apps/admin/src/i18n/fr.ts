@@ -189,6 +189,38 @@ export const fr = {
     },
   },
 
+  modeles: {
+    titre: "Modèles d'IA",
+    sous: "L'ordre dans lequel on essaie, et ce que chaque modèle coûte au fournisseur.",
+    col: { rang: "Ordre d'essai", fournisseur: "Fournisseur", modele: "Modèle", etat: "État", entree: "Coût entrée", sortie: "Coût sortie" },
+    etats: { actif: "En service", eteint: "Éteint" },
+    // Un coût absent n'est pas un coût nul : c'est un modèle qu'on n'a pas
+    // encore tarifé. « 0 » le ferait passer pour gratuit dans un calcul de marge.
+    sansCout: "Non tarifé",
+    unite: "$ / M jetons",
+    eteindre: "Éteindre ce modèle",
+    rallumer: "Remettre en service",
+    dialogueEteindre: {
+      titre: "Éteindre {modele}",
+      consequence: "Les productions passeront au modèle suivant dans l'ordre d'essai. Si c'est le dernier en service, le serveur refusera.",
+      motifs: [
+        "Le modèle échoue trop souvent",
+        "Coût devenu trop élevé",
+        "Remplacé par un autre fournisseur",
+      ],
+    },
+    dialogueRallumer: {
+      titre: "Remettre {modele} en service",
+      consequence: "Il reprendra sa place dans l'ordre d'essai, à son rang.",
+      motifs: [
+        "L'incident du fournisseur est clos",
+        "Retour arrière après un essai",
+      ],
+    },
+    // Ce que cet écran ne montre pas encore, et pourquoi.
+    manque: "La dépense réelle et ce qu'elle a rapporté n'apparaissent pas encore : les relevés d'usage n'existent pas en base. Ce catalogue dit ce qu'on essaie et dans quel ordre.",
+  },
+
   echecs: {
     chargement: "On n'a pas réussi à charger cette liste. Rien n'a bougé côté données. Réessayez, ou revenez dans un instant.",
     action: "On n'a pas pu appliquer ce geste. L'état du compte est celui d'avant. Réessayez, ou passez la main à un administrateur.",

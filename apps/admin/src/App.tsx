@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
-import { TableauDeBord, Liste, Detail, Edition, Lecture, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Toast } from "./composants/signaux/index.js";
+import { TableauDeBord, Liste, Detail, Edition, Lecture, Modeles, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
-import { codeConnu, messages, type Langue } from "./i18n/index.js";
+import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
 
 // Les états se disent en français dans le contrat ; la requête, elle, parle au
@@ -24,7 +25,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  compteDetailSchema, dashboardSchema, pageAuditSchema, pageComptesSchema,
+  catalogueIaSchema, compteDetailSchema, dashboardSchema, pageAuditSchema, pageComptesSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
@@ -205,6 +206,9 @@ export function App(): ReactNode {
   // écrit.
   const [tourParametres, setTourParametres] = useState(0);
   const [tourSuppressions, setTourSuppressions] = useState(0);
+  const [tourModeles, setTourModeles] = useState(0);
+  // Le refus d'une écriture se dit à l'écran, traduit depuis son code.
+  const [avis, setAvis] = useState<CleCode | null>(null);
   const [curseursLecture, setCurseursLecture] = useState<(string | null)[]>([null]);
   const curseurLecture = curseursLecture.at(-1) ?? null;
 
@@ -289,6 +293,13 @@ export function App(): ReactNode {
     [section, curseurLecture],
   );
 
+  const etatModeles = useRessource(
+    () => (section === "modeles"
+      ? api.appeler("/admin/ai-models", { schema: catalogueIaSchema })
+      : Promise.resolve(null)),
+    [section, tourModeles],
+  );
+
   let vue: ReactNode;
   if (section === "profil") {
     vue = <Profil profil={profil} langue={langue} />;
@@ -304,6 +315,39 @@ export function App(): ReactNode {
             compte={compte}
             interventions={interventions.items}
             onRetour={() => setOuvert(null)}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "modeles") {
+    vue = (
+      <Ressource
+        etat={etatModeles}
+        t={t}
+        enfant={(catalogue) => (catalogue ? (
+          <Modeles
+            role={role}
+            langue={langue}
+            modeles={catalogue.items}
+            onBasculer={(modele, actif, motif) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/ai-models", {
+                    methode: "PATCH",
+                    corps: { id: modele.id, enabled: actif, reason: motif },
+                  });
+                } catch (echec) {
+                  // Le serveur refuse d'éteindre le dernier modèle en service :
+                  // couper toute génération sans que rien ne le dise avant la
+                  // première panne. L'écran traduit ce refus plutôt que de
+                  // laisser croire à une panne de l'outil.
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourModeles((n) => n + 1);
+                }
+              })();
+            }}
+            onRetour={aller}
           />
         ) : null)}
       />
@@ -518,6 +562,12 @@ export function App(): ReactNode {
           contrôle du produit — c'est le serveur qui décide d'un rôle. Elle
           disparaît le jour où l'authentification arrive (tâche 10). */}
       {import.meta.env.DEV ? <BandeApercu t={t} role={role} setRole={setRole} connecte={connecte} setConnecte={setConnecte} /> : null}
+
+      {avis ? (
+        <Toast libelleFermer={t.commun.fermer} onDismiss={() => setAvis(null)}>
+          {t.codes[avis]}
+        </Toast>
+      ) : null}
 
       <AdminShell
         navOuverte={navOuverte}

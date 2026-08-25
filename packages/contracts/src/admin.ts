@@ -308,3 +308,36 @@ export const pageConnexionsSchema = z.object({
 
 export type Connexion = z.infer<typeof connexionSchema>;
 export type PageConnexions = z.infer<typeof pageConnexionsSchema>;
+
+
+// ——— Modèles d'IA —————————————————————————————————————————————
+
+/**
+ * Un modèle du catalogue, et son rang dans l'ordre de repli.
+ *
+ * Les coûts sont ceux du fournisseur, par million de jetons, tels qu'on les a
+ * relevés — ils peuvent manquer pour un modèle qu'on n'a pas encore tarifé.
+ *
+ * Ce que ce contrat **ne porte pas** : la dépense réelle et ce qu'elle a
+ * rapporté. Le §5.8 les demande face à face, mais `AIUsage` et `ActionRun`
+ * n'existent pas encore. Les inventer ici donnerait un écran qui affiche des
+ * zéros là où il devrait afficher une marge.
+ */
+export const modeleIaSchema = z.object({
+  id: z.string(),
+  fournisseur: z.string(),
+  modele: z.string(),
+  /** Le plus petit d'abord : c'est l'ordre dans lequel on essaie. */
+  rang: z.number().int(),
+  actif: z.boolean(),
+  coutEntree: z.number().nullable(),
+  coutSortie: z.number().nullable(),
+  misAJourLe: z.string(),
+}).strict();
+
+export const catalogueIaSchema = z.object({
+  items: z.array(modeleIaSchema),
+}).strict();
+
+export type ModeleIa = z.infer<typeof modeleIaSchema>;
+export type CatalogueIa = z.infer<typeof catalogueIaSchema>;

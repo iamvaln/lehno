@@ -164,6 +164,35 @@ export const en: typeof fr = {
     },
   },
 
+  modeles: {
+    titre: "AI models",
+    sous: "The order we try them in, and what each one costs at the provider.",
+    col: { rang: "Try order", fournisseur: "Provider", modele: "Model", etat: "State", entree: "Input cost", sortie: "Output cost" },
+    etats: { actif: "In service", eteint: "Off" },
+    sansCout: "Not priced",
+    unite: "$ / M tokens",
+    eteindre: "Turn this model off",
+    rallumer: "Put back in service",
+    dialogueEteindre: {
+      titre: "Turn off {modele}",
+      consequence: "Work will move to the next model in the try order. If this is the last one in service, the server will refuse.",
+      motifs: [
+        "The model fails too often",
+        "Cost has grown too high",
+        "Replaced by another provider",
+      ],
+    },
+    dialogueRallumer: {
+      titre: "Put {modele} back in service",
+      consequence: "It returns to the try order, at its rank.",
+      motifs: [
+        "The provider incident is over",
+        "Rolling back a trial",
+      ],
+    },
+    manque: "Real spend and what it earned are not shown yet: usage records do not exist in the database. This catalogue says what we try, and in what order.",
+  },
+
   echecs: {
     chargement: "We couldn't load this list. Nothing moved on the data side. Try again, or come back in a moment.",
     action: "We couldn't apply that action. The account is exactly as it was. Try again, or hand it to an administrator.",
