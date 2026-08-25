@@ -466,6 +466,27 @@ export const en: typeof fr = {
     echec: "We couldn't send the code. Nothing went out to that address. Try again in a moment.",
   },
 
+  // Le serveur rend un code stable, jamais une phrase (voir fr.ts).
+  codes: {
+    otp_invalid: "Wrong code.",
+    otp_expired: "That code has expired. Request a new one.",
+    otp_too_many_attempts: "Too many wrong codes. Request a new one to continue.",
+    otp_rate_limited: "Too many requests. Wait a moment before trying again.",
+    unauthorized: "Your session has expired. Sign in again.",
+    session_expired: "Your session has expired. Sign in again.",
+    refresh_reused: "Your session was closed as a precaution. Sign in again.",
+    forbidden: "Your role does not allow this action.",
+    not_found: "Not found.",
+    conflict: "Things changed in the meantime. Reload before trying again.",
+    validation_failed: "That request is malformed.",
+    reason_required: "A reason is required, at least six characters.",
+    rate_limited: "Too many requests. Wait a moment.",
+    internal_error: "The service hit an error. Try again in a moment.",
+    account_suspended: "This account is suspended.",
+    reseau_indisponible: "The service is unreachable. Check your connection.",
+    reponse_invalide: "The service answered something unexpected. Try again in a moment.",
+  },
+
   gabarits: {
     tableau: "Dashboard",
     liste: "Filterable list, then detail",

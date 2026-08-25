@@ -4,6 +4,10 @@ import { demandeCodeSchema, verificationCodeSchema } from "@lehno/contracts";
 import { BrandMark, Button } from "../composants/base/index.js";
 import { messages, type Langue } from "../i18n/index.js";
 
+/** Les codes que l'écran sait dire. Dérivé du dictionnaire : un code sans
+ *  phrase ne compile pas, plutôt que de s'afficher vide en séance. */
+type CleCode = keyof ReturnType<typeof messages>["codes"];
+
 /* L'entrée du back-office (§5.1). Une adresse, puis un code à six chiffres :
  * **pas de mot de passe**. L'écran vit hors de la coquille — ni barre latérale,
  * ni barre haute, ni navigation : on n'est pas encore dans l'outil.
@@ -58,13 +62,20 @@ export interface ConnexionProps {
    *  distinguerait un compte connu d'un compte inconnu trahirait l'équipe.
    *  Un rejet ne dit qu'une panne d'envoi. */
   onDemanderCode?: (demande: DemandeCode) => void | Promise<void>;
-  /** Vérifie le code. Par défaut, la simulation de l'aperçu. */
-  onVerifierCode?: (verification: VerificationCode) => boolean | Promise<boolean>;
+  /** Vérifie le code. Par défaut, la simulation de l'aperçu.
+   *
+   *  Rend `true` si l'entrée est acquise, `false` pour un refus sans raison
+   *  dite, ou **le code du refus** — que l'écran traduit. Un code expiré n'est
+   *  pas un code faux : le dire coûterait une tentative pour rien. */
+  onVerifierCode?: (verification: VerificationCode) => Verdict | Promise<Verdict>;
   /** L'entrée est acquise : à l'appelant d'ouvrir l'outil. */
   onEntre?: () => void;
 }
 
 type Etape = "adresse" | "code";
+
+/** `true` entre ; `false` refuse sans raison dite ; un code dit laquelle. */
+export type Verdict = boolean | CleCode;
 
 export function Connexion({
   langue = "fr",
@@ -132,11 +143,26 @@ export function Connexion({
     if (!verification.success || bloque || enCours) return;
 
     setEnCours(true);
-    const admis = await onVerifierCode(verification.data);
+    const verdict = await onVerifierCode(verification.data);
     setEnCours(false);
 
-    if (admis) {
+    if (verdict === true) {
       onEntre?.();
+      return;
+    }
+
+    setCode("");
+
+    // Un refus qui porte un code autre qu'« otp_invalid » n'est pas un code
+    // faux : il a expiré, le serveur a fermé la saisie, ou le service est
+    // injoignable. Décompter une tentative punirait quelqu'un qui n'a rien
+    // fait de mal — et masquerait la vraie cause derrière « code refusé ».
+    if (typeof verdict === "string" && verdict !== "otp_invalid") {
+      setErreur(t.codes[verdict]);
+      // Le serveur tient son propre compte, et il survit à un rechargement de
+      // page là où le compteur de l'écran repart à trois. Quand il dit que
+      // c'est fini, c'est fini.
+      if (verdict === "otp_too_many_attempts") setRestantes(0);
       return;
     }
 
@@ -144,7 +170,6 @@ export function Connexion({
     // annonce combien il en reste avant que ça arrive.
     const reste = restantes - 1;
     setRestantes(reste);
-    setCode("");
     setErreur(
       reste > 1
         ? t.connexion.faux.replace("{n}", String(reste))

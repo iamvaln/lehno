@@ -489,6 +489,30 @@ export const fr = {
     echec: "On n'a pas pu envoyer le code. Rien n'est parti vers cette adresse. Réessayez dans un instant.",
   },
 
+  // Le serveur rend un code stable, jamais une phrase : son message est destiné
+  // au journal, écrit dans une seule langue, et cite des identifiants internes.
+  // C'est ici que le code devient lisible — et c'est ce qui rend l'outil
+  // bilingue sans que le serveur ait à connaître la langue de qui l'appelle.
+  codes: {
+    otp_invalid: "Code refusé.",
+    otp_expired: "Ce code a expiré. Demandez-en un nouveau.",
+    otp_too_many_attempts: "Trop de codes refusés. Demandez-en un nouveau pour reprendre.",
+    otp_rate_limited: "Trop de demandes. Patientez un instant avant de réessayer.",
+    unauthorized: "Votre session a expiré. Reconnectez-vous.",
+    session_expired: "Votre session a expiré. Reconnectez-vous.",
+    refresh_reused: "Votre session a été fermée par sécurité. Reconnectez-vous.",
+    forbidden: "Votre rôle ne permet pas cette action.",
+    not_found: "Introuvable.",
+    conflict: "L'état a changé entre-temps. Rechargez avant de réessayer.",
+    validation_failed: "La demande est mal formée.",
+    reason_required: "Un motif est nécessaire, d'au moins six caractères.",
+    rate_limited: "Trop de demandes. Patientez un instant.",
+    internal_error: "Le service a rencontré une erreur. Réessayez dans un instant.",
+    account_suspended: "Ce compte est suspendu.",
+    reseau_indisponible: "Le service est injoignable. Vérifiez votre connexion.",
+    reponse_invalide: "Le service a répondu quelque chose d'inattendu. Réessayez dans un instant.",
+  },
+
   gabarits: {
     tableau: "Tableau de bord",
     liste: "Liste filtrable, puis détail",
