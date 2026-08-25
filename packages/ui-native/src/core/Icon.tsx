@@ -9,8 +9,8 @@ import { useCouleurs } from "../ThemeProvider.js";
 export interface IconProps {
   name: string;
   size?: number;
-  color?: string;
-  strokeWidth?: number;
+  color?: string | undefined;
+  strokeWidth?: number | undefined;
 }
 
 export function Icon({ name, size = 20, color, strokeWidth }: IconProps) {

@@ -8,15 +8,18 @@ import { styleDuBouton, type RangDeBouton } from "./Button.styles.js";
 /* Le JSX ne décide rien : Button.styles.ts porte les rangs, la cible tactile,
    la bordure et la couleur de l'icône. Ici il ne reste qu'à les appliquer. */
 
+/* Sous `exactOptionalPropertyTypes`, une prop déclarée « ?: T » refuse qu'on
+   lui passe explicitement `undefined` — ce que fait pourtant tout composant qui
+   transmet la sienne. Les props transmises portent donc « | undefined ». */
 export interface ButtonProps {
   children: ReactNode;
   variant?: RangDeBouton;
   full?: boolean;
   disabled?: boolean;
-  icon?: string;
-  iconAfter?: string;
-  onPress?: () => void;
-  style?: StyleProp<ViewStyle>;
+  icon?: string | undefined;
+  iconAfter?: string | undefined;
+  onPress?: (() => void) | undefined;
+  style?: StyleProp<ViewStyle> | undefined;
 }
 
 export function Button({

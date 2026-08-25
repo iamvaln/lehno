@@ -6,7 +6,7 @@ import { styleDeSurTitre } from "./SectionLabel.styles.js";
 
 export interface SectionLabelProps {
   children: ReactNode;
-  style?: StyleProp<TextStyle>;
+  style?: StyleProp<TextStyle> | undefined;
 }
 
 export function SectionLabel({ children, style }: SectionLabelProps) {

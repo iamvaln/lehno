@@ -7,7 +7,7 @@ import { styleDEtiquette, type TonDEtiquette } from "./Tag.styles.js";
 export interface TagProps {
   children: ReactNode;
   tone?: TonDEtiquette;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle> | undefined;
 }
 
 export function Tag({ children, tone = "outline", style }: TagProps) {

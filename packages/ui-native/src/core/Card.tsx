@@ -10,7 +10,7 @@ export interface CardProps {
   surface?: SurfaceDeCarte;
   radius?: NomDeRayon;
   padding?: number;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle> | undefined;
 }
 
 export function Card({ children, surface = "card", radius = "xl", padding = 22, style }: CardProps) {

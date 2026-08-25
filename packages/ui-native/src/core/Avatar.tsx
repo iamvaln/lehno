@@ -4,7 +4,7 @@ import { initiale, styleDAvatar } from "./Avatar.styles.js";
 
 export interface AvatarProps {
   name?: string;
-  source?: string;
+  source?: string | undefined;
   size?: number;
 }
 
