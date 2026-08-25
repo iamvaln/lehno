@@ -151,6 +151,15 @@ export const fr = {
     echecTitre: "Le chargement n'a pas abouti",
   },
 
+  // Une valeur qu'on ne sait pas encore compter n'est pas zéro. Le dire au lieu
+  // de l'écrire « 0 » évite de faire passer une lacune de la base pour un
+  // constat sur le compte qu'on regarde.
+  nonMesure: {
+    court: "—",
+    explication: "Pas encore mesuré",
+    bloc: "Cette mesure n'existe pas encore. Elle apparaîtra ici quand la fonctionnalité sera en service.",
+  },
+
   echecs: {
     chargement: "On n'a pas réussi à charger cette liste. Rien n'a bougé côté données. Réessayez, ou revenez dans un instant.",
     action: "On n'a pas pu appliquer ce geste. L'état du compte est celui d'avant. Réessayez, ou passez la main à un administrateur.",

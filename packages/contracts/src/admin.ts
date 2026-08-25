@@ -82,7 +82,10 @@ export const compteLigneSchema = z.object({
   pseudo: z.string(),
   email: z.string(),
   etat: etatCompteSchema,
-  credits: z.number().int(),
+  // Nul tant que les crédits n'existent pas en base. Servir zéro serait un
+  // mensonge lisible : l'écran dirait « 0 crédit » d'un compte qui pourrait en
+  // avoir mille. Nul dit « on ne sait pas encore », et l'écran l'écrit ainsi.
+  credits: z.number().int().nullable(),
   inscritLe: z.string(),
 }).strict();
 
@@ -98,18 +101,29 @@ export const compteDetailSchema = z.object({
   langue: z.enum(["fr", "en"]),
   inscritLe: z.string(),
   derniereConnexion: z.string().nullable(),
+  /** Renseigné pendant le délai de grâce, nul sinon. */
+  suppressionDemandeeLe: z.string().nullable(),
   volumetrie: z.object({
     proches: z.number().int().nonnegative(),
     occasions: z.number().int().nonnegative(),
     notes: z.number().int().nonnegative(),
-    murs: z.number().int().nonnegative(),
+    // Nul tant que la table des Murs n'existe pas — voir compteLigneSchema.
+    murs: z.number().int().nonnegative().nullable(),
   }).strict(),
+  /** Nul tant que les crédits n'existent pas en base. */
   credits: z.object({
     solde: z.number().int(),
     achetes: z.number().int().nonnegative(),
     offerts: z.number().int().nonnegative(),
-  }).strict(),
+  }).strict().nullable(),
 }).strict();
+
+/** La page d'une liste : pas de total, un curseur (spec technique §3). */
+export const pageComptesSchema = z.object({
+  items: z.array(compteLigneSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+export type PageComptes = z.infer<typeof pageComptesSchema>;
 
 export type CompteLigne = z.infer<typeof compteLigneSchema>;
 export type CompteDetail = z.infer<typeof compteDetailSchema>;

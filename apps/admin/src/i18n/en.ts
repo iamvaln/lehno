@@ -132,6 +132,13 @@ export const en: typeof fr = {
     echecTitre: "Loading did not go through",
   },
 
+  // Voir fr.ts : une valeur qu'on ne sait pas encore compter n'est pas zéro.
+  nonMesure: {
+    court: "—",
+    explication: "Not measured yet",
+    bloc: "This measure does not exist yet. It will appear here once the feature ships.",
+  },
+
   echecs: {
     chargement: "We couldn't load this list. Nothing moved on the data side. Try again, or come back in a moment.",
     action: "We couldn't apply that action. The account is exactly as it was. Try again, or hand it to an administrator.",

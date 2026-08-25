@@ -72,7 +72,9 @@ export interface ListeProps {
 }
 
 function valeurTriee(compte: CompteLigne, cle: string): string | number {
-  if (cle === "credits") return compte.credits;
+  // Un solde inconnu se range au fond plutôt qu'en tête : sans mesure, mieux
+  // vaut ne pas prétendre qu'il vaut zéro.
+  if (cle === "credits") return compte.credits ?? Number.NEGATIVE_INFINITY;
   if (cle === "pseudo") return compte.pseudo;
   if (cle === "email") return compte.email;
   return compte.inscritLe;
@@ -118,8 +120,12 @@ export function Liste({
     const q = recherche.trim().toLowerCase();
     const retenus = comptes.filter((compte) => {
       if (filtreEtat !== "tous" && compte.etat !== filtreEtat) return false;
+      // Un solde qu'on ne connaît pas ne satisfait aucun filtre de solde : il
+      // n'est ni nul ni positif, et le compter dans l'un ou l'autre ferait
+      // passer une lacune de la base pour un fait sur le compte.
+      if (filtreSolde !== "tous" && compte.credits === null) return false;
       if (filtreSolde === "zero" && compte.credits !== 0) return false;
-      if (filtreSolde === "positif" && compte.credits <= 0) return false;
+      if (filtreSolde === "positif" && (compte.credits ?? 0) <= 0) return false;
       if (q === "") return true;
       return `${compte.pseudo} ${compte.email}`.toLowerCase().includes(q);
     });

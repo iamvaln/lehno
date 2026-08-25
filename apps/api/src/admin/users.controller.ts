@@ -9,6 +9,17 @@ import { RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
 
 const LIMITE_DEFAUT = 25;
+
+// Les états se disent dans les termes du contrat, pas dans ceux de la base.
+// Traduire ici plutôt qu'à l'écran a une raison : le jour où Prisma renomme une
+// valeur d'enum, c'est ce fichier qui ne compile plus — pas l'affichage qui
+// devient faux en silence.
+const ETAT: Record<UserStatus, "actif" | "suspendu" | "suppression_en_cours" | "efface"> = {
+  active: "actif",
+  suspended: "suspendu",
+  pending_deletion: "suppression_en_cours",
+  deleted: "efface",
+};
 const LIMITE_MAX = 200;
 
 const requeteSchema = z.object({
@@ -58,8 +69,15 @@ export class AdminUsersService {
     const page = lignes.slice(0, limite);
     return {
       items: page.map((u) => ({
-        id: u.id, username: u.username, email: u.email,
-        status: u.status, createdAt: u.createdAt.toISOString(),
+        id: u.id,
+        pseudo: u.username,
+        email: u.email,
+        etat: ETAT[u.status],
+        // Nul, et non zéro : les crédits n'existent pas encore en base, et
+        // « 0 crédit » se lit comme un solde vide sur un compte qui pourrait en
+        // avoir mille.
+        credits: null,
+        inscritLe: u.createdAt.toISOString(),
       })),
       nextCursor: lignes.length > limite ? (page.at(-1)?.id ?? null) : null,
     };
@@ -84,24 +102,35 @@ export class AdminUsersService {
     // laissée par un proche via un lien de collecte appartient au carnet sans
     // avoir d'auteur (dictionnaire, Note.author_user_id nul si contribution
     // anonyme). Compter authoredNotes l'aurait oubliée.
-    const [occasions, notes] = await Promise.all([
+    const [occasions, notes, derniere] = await Promise.all([
       this.prisma.event.count({ where: { person: { userId: id } } }),
       this.prisma.note.count({ where: { person: { userId: id } } }),
+      // La dernière entrée réussie, pas la dernière tentative : une série
+      // d'échecs ne doit pas se lire comme une visite.
+      this.prisma.loginActivity.findFirst({
+        where: { userId: id, result: "success" },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      }),
     ]);
 
     return {
       id: u.id,
-      username: u.username,
+      pseudo: u.username,
       email: u.email,
-      status: u.status,
-      langue: u.uiLanguage,
+      etat: ETAT[u.status],
+      langue: u.uiLanguage === "en" ? ("en" as const) : ("fr" as const),
       inscritLe: u.createdAt.toISOString(),
+      derniereConnexion: derniere?.createdAt.toISOString() ?? null,
       suppressionDemandeeLe: u.deletionRequestedAt?.toISOString() ?? null,
       volumetrie: {
         proches: u._count.people,
         occasions,
         notes,
+        // Nul tant que la table des Murs n'existe pas.
+        murs: null,
       },
+      credits: null,
     };
   }
 

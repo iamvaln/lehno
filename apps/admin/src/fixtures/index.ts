@@ -62,6 +62,7 @@ export const compteDetail: CompteDetail = {
   pseudo: "awa",
   email: "awa@example.cm",
   etat: "actif",
+  suppressionDemandeeLe: null,
   langue: "fr",
   inscritLe: "2026-03-04",
   derniereConnexion: "2026-08-22",

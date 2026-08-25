@@ -53,6 +53,12 @@ export interface DetailProps {
   onAjuster?: (motif: string) => void;
 }
 
+/** Un nombre, ou le tiret qui dit qu'on ne le connaît pas encore. */
+function compte_(valeur: number | null, format: Intl.NumberFormat, t: { court: string; explication: string }): ReactNode {
+  if (valeur === null) return <span title={t.explication}>{t.court}</span>;
+  return format.format(valeur);
+}
+
 function Champ({ cle, valeur }: { cle: string; valeur: ReactNode }): ReactNode {
   return (
     <div className="gabarit-champ">
@@ -138,7 +144,9 @@ export function Detail({
         onSelect={(id) => setOnglet(id as Onglet)}
         onglets={[
           { id: "vue", label: t.compte.onglets.vue },
-          { id: "murs", label: t.compte.onglets.murs, compte: compte.volumetrie.murs },
+          // Sans mesure, pas de pastille de compte : « 0 » dirait que ce
+          // compte n'a aucun Mur, alors qu'on n'en sait rien.
+          { id: "murs", label: t.compte.onglets.murs, ...(compte.volumetrie.murs === null ? {} : { compte: compte.volumetrie.murs }) },
           { id: "credits", label: t.compte.onglets.credits },
           { id: "securite", label: t.compte.onglets.securite },
         ]}
@@ -166,7 +174,7 @@ export function Detail({
               <Champ cle={t.compte.champs.proches} valeur={nombre.format(compte.volumetrie.proches)} />
               <Champ cle={t.compte.champs.occasions} valeur={nombre.format(compte.volumetrie.occasions)} />
               <Champ cle={t.compte.champs.notes} valeur={nombre.format(compte.volumetrie.notes)} />
-              <Champ cle={t.compte.champs.murs} valeur={nombre.format(compte.volumetrie.murs)} />
+              <Champ cle={t.compte.champs.murs} valeur={compte_(compte.volumetrie.murs, nombre, t.nonMesure)} />
             </section>
           </div>
           <p className="gabarit-note">{t.compte.cloisonnement}</p>
@@ -176,7 +184,9 @@ export function Detail({
       {onglet === "murs" ? (
         <>
           <h2 className="gabarit-groupe-titre">{t.compte.murs.titre}</h2>
-          {compte.volumetrie.murs > 0 ? (
+          {compte.volumetrie.murs === null ? (
+            <EmptyState titre={t.nonMesure.explication} texte={t.nonMesure.bloc} />
+          ) : compte.volumetrie.murs > 0 ? (
             <div className="gabarit-chiffres">
               <StatCard libelle={t.compte.champs.murs} valeur={nombre.format(compte.volumetrie.murs)} />
             </div>
@@ -190,12 +200,18 @@ export function Detail({
       {onglet === "credits" ? (
         <>
           <h2 className="gabarit-groupe-titre">{t.compte.groupes.credits}</h2>
-          <div className="gabarit-chiffres">
-            <StatCard libelle={t.compte.champs.solde} valeur={nombre.format(compte.credits.solde)} />
-            <StatCard libelle={t.compte.champs.achetes} valeur={nombre.format(compte.credits.achetes)} />
-            <StatCard libelle={t.compte.champs.offerts} valeur={nombre.format(compte.credits.offerts)} />
-          </div>
-          <p className="gabarit-note">{t.compte.credits.note}</p>
+          {compte.credits === null ? (
+            <EmptyState titre={t.nonMesure.explication} texte={t.nonMesure.bloc} />
+          ) : (
+            <>
+              <div className="gabarit-chiffres">
+                <StatCard libelle={t.compte.champs.solde} valeur={nombre.format(compte.credits.solde)} />
+                <StatCard libelle={t.compte.champs.achetes} valeur={nombre.format(compte.credits.achetes)} />
+                <StatCard libelle={t.compte.champs.offerts} valeur={nombre.format(compte.credits.offerts)} />
+              </div>
+              <p className="gabarit-note">{t.compte.credits.note}</p>
+            </>
+          )}
         </>
       ) : null}
 
