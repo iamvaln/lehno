@@ -72,7 +72,7 @@ describe("la session d'administration, du serveur à l'écran", () => {
     // bascule. Chercher le texte au large attraperait celui-là et passerait
     // même si l'outil affichait « Administrateur ».
     await utilisateur.click(screen.getByRole("button", { name: ADRESSE }));
-    const menu = await screen.findByRole("menu");
+    const menu = await screen.findByRole("group", { name: ADRESSE });
     expect(within(menu).getByText(t.barre.roleSupport)).toBeInTheDocument();
     expect(within(menu).queryByText(t.barre.roleAdmin)).not.toBeInTheDocument();
   });

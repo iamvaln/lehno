@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode, useId } from "react";
 import { Icon } from "../base/Icon.js";
 
 export type LangueOutil = "fr" | "en";
@@ -173,6 +173,10 @@ export function Topbar({
 }: TopbarProps) {
   const [ouvert, setOuvert] = useState(false);
   const ancre = useRef<HTMLDivElement>(null);
+  const panneau = useRef<HTMLDivElement>(null);
+  const declencheur = useRef<HTMLButtonElement>(null);
+  const idPanneau = useId();
+  const idLangue = useId();
 
   // Un menu qui ne se referme qu'en cliquant son propre bouton piège la souris :
   // le clic à côté et la touche d'échappement sont les deux sorties attendues.
@@ -182,7 +186,11 @@ export function Topbar({
       if (ancre.current && !ancre.current.contains(e.target as Node)) setOuvert(false);
     };
     const echap = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOuvert(false);
+      if (e.key !== "Escape") return;
+      setOuvert(false);
+      // Refermer sans rendre le focus laisserait le clavier au début du
+      // document, très loin d'où l'on était.
+      declencheur.current?.focus();
     };
     document.addEventListener("pointerdown", dehors);
     document.addEventListener("keydown", echap);
@@ -190,6 +198,15 @@ export function Topbar({
       document.removeEventListener("pointerdown", dehors);
       document.removeEventListener("keydown", echap);
     };
+  }, [ouvert]);
+
+  // Le focus entre dans le panneau à l'ouverture. Sans ça, ouvrir au clavier ne
+  // mène nulle part : le panneau paraît, et la tabulation suivante continue
+  // dans la page derrière lui.
+  useEffect(() => {
+    if (!ouvert) return;
+    const premiere = panneau.current?.querySelector<HTMLElement>("button, [href], [tabindex]:not([tabindex='-1'])");
+    premiere?.focus();
   }, [ouvert]);
 
   const entree = (label: string | undefined, onClick?: () => void, danger?: boolean): ReactNode => (
@@ -235,11 +252,12 @@ export function Topbar({
 
         <div ref={ancre} style={{ position: "relative" }}>
           <button
+            ref={declencheur}
             type="button"
             className="coquille-compte-bouton coquille-outil"
             onClick={() => setOuvert((v) => !v)}
-            aria-haspopup="menu"
             aria-expanded={ouvert}
+            aria-controls={idPanneau}
             aria-label={compte || t.compte}
             style={{
               ...OUTIL,
@@ -260,7 +278,14 @@ export function Topbar({
           </button>
 
           {ouvert ? (
-            <div role="menu" className="coquille-menu" style={MENU}>
+            <div
+              ref={panneau}
+              id={idPanneau}
+              role="group"
+              aria-label={compte || t.compte}
+              className="coquille-menu"
+              style={MENU}
+            >
               <div style={{ padding: "var(--space-4) var(--space-12) var(--space-8)" }}>
                 <div style={{ fontSize: "var(--text-body-s)", color: "var(--text-body)" }}>{compte}</div>
                 <div style={{ fontSize: "var(--text-mention-s)", color: "var(--text-mention)" }}>
@@ -275,8 +300,8 @@ export function Topbar({
                 padding: "var(--space-2) var(--space-12) var(--space-6)",
                 fontSize: "var(--text-body-s)", color: "var(--text-secondary)",
               }}>
-                <span style={{ flex: 1 }}>{t.langue}</span>
-                <div style={{ display: "flex", gap: "var(--space-4)" }}>
+                <span id={idLangue} style={{ flex: 1 }}>{t.langue}</span>
+                <div role="group" aria-labelledby={idLangue} style={{ display: "flex", gap: "var(--space-4)" }}>
                   {LANGUES.map((code) => (
                     <button
                       key={code}
