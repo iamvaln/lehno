@@ -2,12 +2,12 @@ import { Fragment, type ReactNode } from "react";
 import type { Langue } from "../../lib/langues.js";
 import type { Bloc, DocumentLegal, Inline } from "../../lib/markdown-leger.js";
 import type { Messages } from "../../messages/index.js";
-import { SiteFooter } from "../landing/SiteFooter.js";
-import { SiteHeader } from "../landing/SiteHeader.js";
+import { PublicShell } from "../PublicShell.js";
 import { SectionLabel } from "../ui/index.js";
 
 // Le gabarit des pages légales (conditions, confidentialité) : même en-tête
-// et même pied que la landing (SiteHeader, SiteFooter), un titre puis un
+// et même pied que la landing — c'est la coquille publique qui les porte —,
+// un titre puis un
 // sommaire latéral collant à gauche du corps du texte — qui devient une
 // bande statique en tête du contenu sous le seuil de repli, comme le reste
 // du site (.legal-grid, .legal-somm dans base.css, sur la même requête de
@@ -65,9 +65,7 @@ export function LegalPage(
   { t, langue, kicker, document }: { t: Messages; langue: Langue; kicker: string; document: DocumentLegal },
 ): ReactNode {
   return (
-    <div className="page">
-      <SiteHeader t={t} langue={langue} />
-      <main>
+    <PublicShell t={t} langue={langue}>
         <div
           style={{
             maxWidth: "var(--page-max)", margin: "0 auto",
@@ -152,8 +150,6 @@ export function LegalPage(
             </div>
           )}
         </div>
-      </main>
-      <SiteFooter t={t} langue={langue} />
-    </div>
+    </PublicShell>
   );
 }

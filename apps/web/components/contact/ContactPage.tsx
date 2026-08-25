@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import type { Langue } from "../../lib/langues.js";
 import type { Messages } from "../../messages/index.js";
-import { SiteFooter } from "../landing/SiteFooter.js";
-import { SiteHeader } from "../landing/SiteHeader.js";
+import { PublicShell } from "../PublicShell.js";
 import { Card, Icon, SocialGlyph } from "../ui/index.js";
 import type { Plateforme } from "../ui/index.js";
 import { ContactForm } from "./ContactForm.js";
@@ -27,9 +26,7 @@ const RESEAUX: { plateforme: Plateforme; compte: string; url: string }[] = [
  *  ni l'un ni l'autre n'est là pour la forme. */
 export function ContactPage({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
   return (
-    <div className="page">
-      <SiteHeader t={t} langue={langue} />
-      <main>
+    <PublicShell t={t} langue={langue}>
         <div
           style={{
             maxWidth: "var(--page-max)", margin: "0 auto",
@@ -112,8 +109,6 @@ export function ContactPage({ t, langue }: { t: Messages; langue: Langue }): Rea
             </Card>
           </div>
         </div>
-      </main>
-      <SiteFooter t={t} langue={langue} />
-    </div>
+    </PublicShell>
   );
 }
