@@ -9,3 +9,4 @@ export { Suppressions } from "./Suppressions.js";
 // La connexion vit hors de la coquille : ni barre latérale, ni barre haute.
 export { Connexion } from "./Connexion.js";
 export { Profil } from "./Profil.js";
+export { Lecture, type LectureProps } from "./Lecture.js";

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
-import { TableauDeBord, Liste, Detail, Edition, Suppressions, Connexion, Profil } from "./pages/index.js";
+import { TableauDeBord, Liste, Detail, Edition, Lecture, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -9,6 +9,13 @@ import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
 // Les états se disent en français dans le contrat ; la requête, elle, parle au
 // serveur dans les termes de sa base. La traduction est ici, et nulle part
 // ailleurs.
+/** Une date lisible, dans la langue de l'outil. */
+function quand(iso: string, langue: Langue): string {
+  return new Intl.DateTimeFormat(langue === "en" ? "en-GB" : "fr-FR", {
+    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  }).format(new Date(iso));
+}
+
 const ETAT_SERVEUR: Record<string, string> = {
   actif: "active",
   suspendu: "suspended",
@@ -16,7 +23,11 @@ const ETAT_SERVEUR: Record<string, string> = {
   efface: "deleted",
 };
 import { useRessource } from "./api/hooks.js";
-import { compteDetailSchema, dashboardSchema, pageComptesSchema, pageSuppressionsSchema, parametresSchema } from "@lehno/contracts";
+import {
+  compteDetailSchema, dashboardSchema, pageAuditSchema, pageComptesSchema,
+  pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
+  type Connexion, type TraceAudit,
+} from "@lehno/contracts";
 import { interventions, profil } from "./fixtures/index.js";
 import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
@@ -152,6 +163,10 @@ export function App(): ReactNode {
   }
 
   const aller = (id: string): void => {
+    // Changer de section repart de la première page : garder le curseur du
+    // journal en ouvrant les connexions demanderait au serveur une page qui
+    // n'existe pas dans cette table.
+    setCurseursLecture([null]);
     // Cacher l'entrée ne suffit pas : un raccourci du tableau de bord, une
     // adresse gardée en mémoire ou un retour arrière y mèneraient encore. Une
     // section hors des droits ramène au tableau de bord (ux-admin §5.1).
@@ -190,6 +205,8 @@ export function App(): ReactNode {
   // écrit.
   const [tourParametres, setTourParametres] = useState(0);
   const [tourSuppressions, setTourSuppressions] = useState(0);
+  const [curseursLecture, setCurseursLecture] = useState<(string | null)[]>([null]);
+  const curseurLecture = curseursLecture.at(-1) ?? null;
 
   // Les deux gestes du délai de grâce sont des changements d'état de compte, et
   // passent par le seul chemin qui en porte un — motif obligatoire, règle de
@@ -250,6 +267,28 @@ export function App(): ReactNode {
     [section, tourSuppressions],
   );
 
+  // Les deux lectures partagent leur pile de curseurs : on n'en regarde qu'une
+  // à la fois, et changer de section en repart de la première page.
+  const etatAudit = useRessource(
+    () => (section === "audit"
+      ? api.appeler("/admin/audit-log", {
+        schema: pageAuditSchema,
+        ...(curseurLecture ? { requete: { cursor: curseurLecture } } : {}),
+      })
+      : Promise.resolve(null)),
+    [section, curseurLecture],
+  );
+
+  const etatConnexions = useRessource(
+    () => (section === "connexions"
+      ? api.appeler("/admin/login-activity", {
+        schema: pageConnexionsSchema,
+        ...(curseurLecture ? { requete: { cursor: curseurLecture } } : {}),
+      })
+      : Promise.resolve(null)),
+    [section, curseurLecture],
+  );
+
   let vue: ReactNode;
   if (section === "profil") {
     vue = <Profil profil={profil} langue={langue} />;
@@ -265,6 +304,76 @@ export function App(): ReactNode {
             compte={compte}
             interventions={interventions.items}
             onRetour={() => setOuvert(null)}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "audit") {
+    vue = (
+      <Ressource
+        etat={etatAudit}
+        t={t}
+        enfant={(page) => (page ? (
+          <Lecture<TraceAudit>
+            langue={langue}
+            titre={t.journal.titre}
+            sous={t.journal.sous}
+            lignes={page.items}
+            vide={t.journal.vide}
+            colonnes={[
+              { cle: "date", titre: t.journal.col.date, largeur: 190, rendu: (l) => quand(l.date, langue) },
+              { cle: "acteurType", titre: t.journal.col.acteur, largeur: 150, rendu: (l) => t.journal.acteurs[l.acteurType] },
+              { cle: "action", titre: t.journal.col.action },
+              {
+                cle: "motif",
+                titre: t.journal.col.motif,
+                // L'absence se dit. Une case vide se lirait comme un oubli,
+                // alors qu'un utilisateur agissant chez lui n'a rien à
+                // justifier.
+                rendu: (l) => l.motif ?? t.journal.sansMotif,
+              },
+              { cle: "cibleType", titre: t.journal.col.cible, discret: true, rendu: (l) => l.cibleType ?? t.entrees.inconnu },
+            ]}
+            curseurSuivant={page.nextCursor}
+            aPrecedent={curseursLecture.length > 1}
+            onPageSuivante={() => {
+              if (page.nextCursor) setCurseursLecture((c) => [...c, page.nextCursor]);
+            }}
+            onPagePrecedente={() => setCurseursLecture((c) => (c.length > 1 ? c.slice(0, -1) : c))}
+            onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "connexions") {
+    vue = (
+      <Ressource
+        etat={etatConnexions}
+        t={t}
+        enfant={(page) => (page ? (
+          <Lecture<Connexion>
+            langue={langue}
+            titre={t.entrees.titre}
+            sous={t.entrees.sous}
+            lignes={page.items}
+            vide={t.entrees.vide}
+            colonnes={[
+              { cle: "date", titre: t.entrees.col.date, largeur: 190, rendu: (l) => quand(l.date, langue) },
+              { cle: "compte", titre: t.entrees.col.compte, rendu: (l) => l.compte ?? t.entrees.inconnu },
+              // C'est elle qui montre qu'on essaie mille adresses à la suite :
+              // la masquer faute de compte cacherait ce qu'on vient regarder.
+              { cle: "adresseTentee", titre: t.entrees.col.adresse, rendu: (l) => l.adresseTentee ?? t.entrees.inconnu },
+              { cle: "resultat", titre: t.entrees.col.resultat, largeur: 130, rendu: (l) => t.entrees.resultats[l.resultat] },
+              { cle: "appareil", titre: t.entrees.col.appareil, discret: true, rendu: (l) => l.appareil ?? t.entrees.inconnu },
+              { cle: "lieu", titre: t.entrees.col.lieu, discret: true, rendu: (l) => l.lieu ?? t.entrees.inconnu },
+            ]}
+            curseurSuivant={page.nextCursor}
+            aPrecedent={curseursLecture.length > 1}
+            onPageSuivante={() => {
+              if (page.nextCursor) setCurseursLecture((c) => [...c, page.nextCursor]);
+            }}
+            onPagePrecedente={() => setCurseursLecture((c) => (c.length > 1 ? c.slice(0, -1) : c))}
+            onRetour={aller}
           />
         ) : null)}
       />
@@ -368,7 +477,7 @@ export function App(): ReactNode {
     return (
       <>
         {import.meta.env.DEV ? <BandeApercu t={t} role={role} setRole={setRole} connecte={connecte} setConnecte={setConnecte} /> : null}
-        <Connexion
+        <EcranConnexion
           langue={langue}
           onDemanderCode={async ({ email }) => {
             await api.appeler("/admin/auth/otp", {

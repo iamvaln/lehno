@@ -139,6 +139,31 @@ export const en: typeof fr = {
     bloc: "This measure does not exist yet. It will appear here once the feature ships.",
   },
 
+  // Voir fr.ts : `journal` est la section, `audit` l'historique d'un compte.
+  journal: {
+    titre: "Audit log",
+    sous: "What the team did, and why. Nothing here can be changed or removed.",
+    col: { date: "When", acteur: "Who", action: "What", motif: "Why", cible: "On what" },
+    sansMotif: "User's own action",
+    acteurs: { admin: "Administration", user: "User" },
+    vide: {
+      titre: "No entries in this period",
+      texte: "Every administrative action lands here, with its author, target and reason.",
+    },
+  },
+
+  entrees: {
+    titre: "Sign-ins",
+    sous: "Successful entries and refused attempts. No IP address: it never reaches the database.",
+    col: { date: "When", compte: "Account", adresse: "Address tried", resultat: "Result", appareil: "Device", lieu: "Approximate location" },
+    resultats: { success: "Signed in", failure: "Refused" },
+    inconnu: "—",
+    vide: {
+      titre: "No attempts in this period",
+      texte: "Every entry, successful or not, lands here with its device and approximate location.",
+    },
+  },
+
   echecs: {
     chargement: "We couldn't load this list. Nothing moved on the data side. Try again, or come back in a moment.",
     action: "We couldn't apply that action. The account is exactly as it was. Try again, or hand it to an administrator.",

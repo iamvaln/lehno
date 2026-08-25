@@ -246,3 +246,65 @@ export type SessionAdmin = z.infer<typeof sessionAdminSchema>;
 // L'échange du jeton long. Il ne porte pas de jeton d'accès : c'est justement
 // parce que celui-ci a expiré qu'on passe ici.
 export const rafraichissementSchema = z.object({ refreshToken: z.string().min(1) }).strict();
+
+
+// ——— Journal d'audit ——————————————————————————————————————————
+
+/**
+ * Une trace, telle qu'elle fait foi. Rien ici ne se modifie ni ne s'efface :
+ * il n'existe aucun chemin d'écriture vers le journal depuis l'extérieur.
+ *
+ * `acteurId` n'est pas une clé étrangère en base — une trace qui doit faire foi
+ * ne disparaît pas avec le compte qu'elle décrit. L'écran affiche donc un
+ * identifiant, pas toujours un nom.
+ */
+export const traceAuditSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  acteurType: z.enum(["admin", "user"]),
+  acteurId: z.string(),
+  action: z.string(),
+  /** Obligatoire pour un administrateur, absent pour un utilisateur chez lui. */
+  motif: z.string().nullable(),
+  cibleType: z.string().nullable(),
+  cibleId: z.string().nullable(),
+  details: z.unknown().nullable(),
+}).strict();
+
+export const pageAuditSchema = z.object({
+  items: z.array(traceAuditSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+export type TraceAudit = z.infer<typeof traceAuditSchema>;
+export type PageAudit = z.infer<typeof pageAuditSchema>;
+
+// ——— Connexions ———————————————————————————————————————————————
+
+/**
+ * Une tentative d'entrée, réussie ou non.
+ *
+ * Pas d'adresse IP : la spécification technique §9 dit qu'elle ne descend pas
+ * en base. Ce qu'on garde est un lieu approximatif — assez pour voir qu'une
+ * série d'essais vient d'ailleurs, pas assez pour suivre quelqu'un.
+ *
+ * L'adresse tentée reste visible même quand aucun compte n'y correspond : c'est
+ * elle qui montre qu'on essaie mille adresses à la suite.
+ */
+export const connexionSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  compte: z.string().nullable(),
+  adresseTentee: z.string().nullable(),
+  resultat: z.enum(["success", "failure"]),
+  appareil: z.string().nullable(),
+  lieu: z.string().nullable(),
+}).strict();
+
+export const pageConnexionsSchema = z.object({
+  items: z.array(connexionSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+export type Connexion = z.infer<typeof connexionSchema>;
+export type PageConnexions = z.infer<typeof pageConnexionsSchema>;

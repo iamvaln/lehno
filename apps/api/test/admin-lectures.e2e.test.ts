@@ -5,6 +5,7 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 import { AdminTokenService } from "../src/admin/admin-token.service.js";
+import { pageAuditSchema, pageConnexionsSchema } from "@lehno/contracts";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -60,15 +61,28 @@ describe("administration — les deux lectures de suivi", () => {
       expect((await lire("audit-log", entete)).status).toBe(403);
     });
 
+    // Le contrat est la seule chose que les deux côtés partagent. Sans ce test,
+    // le serveur peut renommer un champ sans que rien ne s'en aperçoive avant
+    // l'écran.
+    it("suit le contrat publié, au champ près", async () => {
+      const { compte, entete } = await session("admin");
+      await consigner(compte.id, "user_status_update");
+
+      const corps = await (await lire("audit-log", entete)).json();
+
+      const valide = pageAuditSchema.safeParse(corps);
+      expect(valide.success ? null : valide.error.issues).toBeNull();
+    });
+
     it("est lisible par un administrateur", async () => {
       const { compte, entete } = await session("admin");
       await consigner(compte.id, "user_status_update");
 
       const res = await lire("audit-log", entete);
       expect(res.status).toBe(200);
-      const corps = (await res.json()) as { items: { action: string; reason: string }[] };
+      const corps = (await res.json()) as { items: { action: string; motif: string }[] };
       expect(corps.items[0]?.action).toBe("user_status_update");
-      expect(corps.items[0]?.reason).toBe("Motif de démonstration");
+      expect(corps.items[0]?.motif).toBe("Motif de démonstration");
     });
 
     it("filtre par action et par auteur", async () => {
@@ -110,6 +124,17 @@ describe("administration — les deux lectures de suivi", () => {
         data: { result, attemptedEmail: "awa@example.com", ...over },
       });
 
+    it("suivent le contrat publié, au champ près", async () => {
+      const { entete } = await session("admin");
+      await tenter("failure");
+      await tenter("success", { userAgent: "Chrome — macOS", geoApprox: "Douala, CM" });
+
+      const corps = await (await lire("login-activity", entete)).json();
+
+      const valide = pageConnexionsSchema.safeParse(corps);
+      expect(valide.success ? null : valide.error.issues).toBeNull();
+    });
+
     // « Consulter le tableau de bord, les métriques, les connexions » appartient
     // au support (ux-admin §6) : c'est ce qu'on regarde pour répondre à
     // quelqu'un qui n'arrive pas à entrer.
@@ -119,8 +144,8 @@ describe("administration — les deux lectures de suivi", () => {
 
       const res = await lire("login-activity", entete);
       expect(res.status).toBe(200);
-      const corps = (await res.json()) as { items: { result: string }[] };
-      expect(corps.items[0]?.result).toBe("failure");
+      const corps = (await res.json()) as { items: { resultat: string }[] };
+      expect(corps.items[0]?.resultat).toBe("failure");
     });
 
     it("filtrent par résultat", async () => {
@@ -128,8 +153,8 @@ describe("administration — les deux lectures de suivi", () => {
       await tenter("success");
       await tenter("failure");
 
-      const corps = (await (await lire("login-activity?result=failure", entete)).json()) as { items: { result: string }[] };
-      expect(corps.items.map((l) => l.result)).toEqual(["failure"]);
+      const corps = (await (await lire("login-activity?result=failure", entete)).json()) as { items: { resultat: string }[] };
+      expect(corps.items.map((l) => l.resultat)).toEqual(["failure"]);
     });
 
     it("filtrent par période", async () => {

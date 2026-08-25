@@ -160,6 +160,35 @@ export const fr = {
     bloc: "Cette mesure n'existe pas encore. Elle apparaîtra ici quand la fonctionnalité sera en service.",
   },
 
+  // La section « Journal d'audit ». À ne pas confondre avec `audit` ci-dessus,
+  // qui nomme l'historique des interventions **sur un compte**, dans sa fiche.
+  // Les deux existent, et ne montrent pas la même chose.
+  journal: {
+    titre: "Journal d'audit",
+    sous: "Ce que l'équipe a fait, avec son motif. Rien ne s'y modifie ni ne s'y efface.",
+    col: { date: "Quand", acteur: "Qui", action: "Quoi", motif: "Pourquoi", cible: "Sur quoi" },
+    // Un utilisateur agissant chez lui n'a rien à justifier ; l'absence se dit,
+    // plutôt que de laisser une case vide qu'on prendrait pour un oubli.
+    sansMotif: "Geste de l'utilisateur",
+    acteurs: { admin: "Administration", user: "Utilisateur" },
+    vide: {
+      titre: "Aucune trace sur cette période",
+      texte: "Chaque geste d'administration s'inscrit ici, avec son auteur, sa cible et son motif.",
+    },
+  },
+
+  entrees: {
+    titre: "Connexions",
+    sous: "Les entrées réussies et les tentatives refusées. Sans adresse IP : elle ne descend pas en base.",
+    col: { date: "Quand", compte: "Compte", adresse: "Adresse tentée", resultat: "Résultat", appareil: "Appareil", lieu: "Lieu approximatif" },
+    resultats: { success: "Entrée", failure: "Refusée" },
+    inconnu: "—",
+    vide: {
+      titre: "Aucune tentative sur cette période",
+      texte: "Chaque entrée, réussie ou non, s'inscrit ici avec son appareil et son lieu approximatif.",
+    },
+  },
+
   echecs: {
     chargement: "On n'a pas réussi à charger cette liste. Rien n'a bougé côté données. Réessayez, ou revenez dans un instant.",
     action: "On n'a pas pu appliquer ce geste. L'état du compte est celui d'avant. Réessayez, ou passez la main à un administrateur.",
