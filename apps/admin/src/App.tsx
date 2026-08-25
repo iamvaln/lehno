@@ -16,8 +16,8 @@ const ETAT_SERVEUR: Record<string, string> = {
   efface: "deleted",
 };
 import { useRessource } from "./api/hooks.js";
-import { compteDetailSchema, dashboardSchema, pageComptesSchema, parametresSchema } from "@lehno/contracts";
-import { interventions, profil, suppressions } from "./fixtures/index.js";
+import { compteDetailSchema, dashboardSchema, pageComptesSchema, pageSuppressionsSchema, parametresSchema } from "@lehno/contracts";
+import { interventions, profil } from "./fixtures/index.js";
 import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
@@ -189,6 +189,26 @@ export function App(): ReactNode {
   // depuis le journal, et c'est lui qui fait foi — pas ce qu'on croit avoir
   // écrit.
   const [tourParametres, setTourParametres] = useState(0);
+  const [tourSuppressions, setTourSuppressions] = useState(0);
+
+  // Les deux gestes du délai de grâce sont des changements d'état de compte, et
+  // passent par le seul chemin qui en porte un — motif obligatoire, règle de
+  // rôle, journal. Un second chemin d'écriture finirait par diverger du
+  // premier : l'un journalisant, l'autre non.
+  const changerEtat = (id: string, statut: string, motif: string): void => {
+    void (async () => {
+      try {
+        await api.appeler(`/admin/users/${id}`, {
+          methode: "PATCH",
+          corps: { status: statut, reason: motif },
+        });
+      } finally {
+        // On relit dans tous les cas : après un refus, la file affichée est
+        // celle d'avant, et c'est elle qui fait foi.
+        setTourSuppressions((n) => n + 1);
+      }
+    })();
+  };
   const curseur = curseurs.at(-1) ?? null;
 
   const etatComptes = useRessource(
@@ -221,6 +241,13 @@ export function App(): ReactNode {
       ? api.appeler("/admin/parameters", { schema: parametresSchema })
       : Promise.resolve(null)),
     [section, tourParametres],
+  );
+
+  const etatSuppressions = useRessource(
+    () => (section === "suppressions"
+      ? api.appeler("/admin/deletions", { schema: pageSuppressionsSchema })
+      : Promise.resolve(null)),
+    [section, tourSuppressions],
   );
 
   let vue: ReactNode;
@@ -311,7 +338,21 @@ export function App(): ReactNode {
       />
     );
   } else if (section === "suppressions") {
-    vue = <Suppressions role={role} langue={langue} demandes={suppressions.items} />;
+    vue = (
+      <Ressource
+        etat={etatSuppressions}
+        t={t}
+        enfant={(file) => (file ? (
+          <Suppressions
+            role={role}
+            langue={langue}
+            demandes={file.items}
+            onRestaurer={(demande, motif) => changerEtat(demande.id, "active", motif)}
+            onEffacer={(demande, motif) => changerEtat(demande.id, "deleted", motif)}
+          />
+        ) : null)}
+      />
+    );
   } else {
     vue = (
       <EmptyState

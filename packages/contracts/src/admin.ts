@@ -158,6 +158,13 @@ export const demandeSuppressionSchema = z.object({
 
 export type DemandeSuppression = z.infer<typeof demandeSuppressionSchema>;
 
+/** La file des demandes : une page à curseur, la plus urgente d'abord. */
+export const pageSuppressionsSchema = z.object({
+  items: z.array(demandeSuppressionSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+export type PageSuppressions = z.infer<typeof pageSuppressionsSchema>;
+
 // ——— Configurations ———————————————————————————————————————————
 
 // Un rang de formulaire rappelle la valeur précédente : c'est ce qui permet de
