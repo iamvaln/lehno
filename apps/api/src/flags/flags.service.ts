@@ -1,5 +1,5 @@
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
-import { DRAPEAUX, type CleDrapeau } from "@lehno/contracts";
+import { DRAPEAUX, CLES_PUBLIQUES, type CleDrapeau } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 
 @Injectable()
@@ -19,6 +19,20 @@ export class FlagsService implements OnModuleInit {
     // Ligne absente = éteint — même règle que le reste du projet (pas de
     // domaine configuré -> aucune origine CORS autorisée).
     return ligne?.enabled ?? false;
+  }
+
+  // Lecture groupée, en UNE requête, des drapeaux PUBLICS et eux seuls —
+  // /v1/public/config en a besoin pour ne jamais fuiter un drapeau privé.
+  // Filtrer sur CLES_PUBLIQUES ici, avant la requête, plutôt que de tout lire
+  // puis trier après coup : une clé qui n'a jamais quitté la base ne peut pas
+  // fuiter par un tri oublié demain. Ligne absente = éteint, même règle
+  // qu'estActif().
+  async lirePublics(): Promise<Record<string, boolean>> {
+    const lignes = await this.prisma.featureFlag.findMany({
+      where: { key: { in: [...CLES_PUBLIQUES] } },
+    });
+    const etatParCle = new Map(lignes.map((ligne) => [ligne.key, ligne.enabled]));
+    return Object.fromEntries(CLES_PUBLIQUES.map((cle) => [cle, etatParCle.get(cle) ?? false]));
   }
 
   // Au démarrage, avant qu'aucune requête gardée par @Feature ne soit servie.
