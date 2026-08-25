@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { CreatePersonInput, Person } from "@lehno/contracts";
+import type { CreatePersonInput, Person, UpdatePersonInput } from "@lehno/contracts";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
 
 // L'annuaire et la fiche. Toutes les lectures passent par la portée cloisonnée
@@ -23,6 +23,21 @@ export class PersonService {
       relationHint: input.relationHint ?? null,
     });
     return rendre(ligne);
+  }
+
+  async get(userId: string, id: string): Promise<Person> {
+    return rendre(await this.depot.persons(userId).findOrThrow(id));
+  }
+
+  async update(userId: string, id: string, input: UpdatePersonInput): Promise<Person> {
+    // updateOrThrow refuse les colonnes d'appartenance dans les données et rend
+    // un not_found si la ressource n'est pas au demandeur — les deux
+    // protections viennent du dépôt, pas d'un contrôle ici.
+    return rendre(await this.depot.persons(userId).updateOrThrow(id, input as never));
+  }
+
+  async remove(userId: string, id: string): Promise<void> {
+    await this.depot.persons(userId).deleteOrThrow(id);
   }
 }
 

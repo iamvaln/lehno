@@ -1,5 +1,18 @@
-import { Body, Controller, Get, Inject, Post, Req, UseGuards } from "@nestjs/common";
-import { createPersonSchema, type CreatePersonInput, type Person } from "@lehno/contracts";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
+import { createPersonSchema, updatePersonSchema, type CreatePersonInput, type Person, type UpdatePersonInput } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { Feature } from "../flags/feature.decorator.js";
@@ -29,5 +42,25 @@ export class PersonController {
     @Body(new ZodValidationPipe(createPersonSchema)) body: CreatePersonInput,
   ): Promise<Person> {
     return this.persons.create(req.userId, body);
+  }
+
+  @Get(":id")
+  get(@Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string): Promise<Person> {
+    return this.persons.get(req.userId, id);
+  }
+
+  @Patch(":id")
+  update(
+    @Req() req: AuthedRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(updatePersonSchema)) body: UpdatePersonInput,
+  ): Promise<Person> {
+    return this.persons.update(req.userId, id, body);
+  }
+
+  @Delete(":id")
+  @HttpCode(204)
+  remove(@Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string): Promise<void> {
+    return this.persons.remove(req.userId, id);
   }
 }

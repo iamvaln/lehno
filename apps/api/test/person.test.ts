@@ -100,6 +100,51 @@ describe("annuaire des proches", () => {
     });
   });
 
+  it("rend la fiche d'un proche", async () => {
+    const p = await service.create(awa, { displayName: "Valery" });
+    expect((await service.get(awa, p.id)).displayName).toBe("Valery");
+  });
+
+  // 404 et non 403 : la fiche d'un autre n'existe pas pour le demandeur. Un 403
+  // confirmerait qu'elle existe, et l'identifiant deviendrait un oracle.
+  it("ne rend pas la fiche d'un autre compte", async () => {
+    const p = await service.create(bila, { displayName: "Celarine" });
+    await expect(service.get(awa, p.id)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("met à jour le registre sans toucher au reste", async () => {
+    const p = await service.create(awa, { displayName: "Valery", register: "amical" });
+    const m = await service.update(awa, p.id, { register: "formel" });
+    expect(m.register).toBe("formel");
+    expect(m.displayName).toBe("Valery");
+  });
+
+  it("ne met pas à jour la fiche d'un autre compte", async () => {
+    const p = await service.create(bila, { displayName: "Celarine" });
+    await expect(service.update(awa, p.id, { register: "formel" })).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  // Supprimer un proche emporte ses notes : la cascade est déclarée au schéma,
+  // ce test la constate plutôt que de la supposer.
+  it("supprime le proche et ses notes", async () => {
+    const p = await service.create(awa, { displayName: "Valery" });
+    await db.prisma.note.create({ data: { personId: p.id, content: "aime le café" } });
+
+    await service.remove(awa, p.id);
+
+    expect(await db.prisma.person.count({ where: { id: p.id } })).toBe(0);
+    expect(await db.prisma.note.count({ where: { personId: p.id } })).toBe(0);
+  });
+
+  // Cloisonnement à la suppression : la protection la plus coûteuse à rater du
+  // lot, un DELETE qui ignore la portée efface les données de quelqu'un
+  // d'autre. Preuve indépendante du cas symétrique ci-dessus sur update.
+  it("ne supprime pas la fiche d'un autre compte", async () => {
+    const p = await service.create(bila, { displayName: "Celarine" });
+    await expect(service.remove(awa, p.id)).rejects.toMatchObject({ code: "not_found" });
+    expect(await db.prisma.person.count({ where: { id: p.id } })).toBe(1);
+  });
+
   describe("HTTP de bout en bout", () => {
     let app: INestApplication;
     let baseUrl: string;
@@ -171,6 +216,86 @@ describe("annuaire des proches", () => {
       const body = (await r.json()) as { id: string; displayName: string };
       expect(body.displayName).toBe("Valery");
       expect(body.id).toMatch(/^[0-9a-f-]{36}$/);
+    });
+
+    it("lit la fiche d'un proche via HTTP", async () => {
+      const p = await service.create(awa, { displayName: "Valery" });
+      const token = jwt.sign({ sub: awa }, SECRET, { algorithm: "HS256", expiresIn: 900 });
+      const r = await fetch(`${baseUrl}/v1/me/persons/${p.id}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(r.status).toBe(200);
+      const body = (await r.json()) as { displayName: string };
+      expect(body.displayName).toBe("Valery");
+    });
+
+    it("met à jour une fiche via HTTP", async () => {
+      const p = await service.create(awa, { displayName: "Valery", register: "amical" });
+      const token = jwt.sign({ sub: awa }, SECRET, { algorithm: "HS256", expiresIn: 900 });
+      const r = await fetch(`${baseUrl}/v1/me/persons/${p.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ register: "formel" }),
+      });
+      expect(r.status).toBe(200);
+      const body = (await r.json()) as { register: string; displayName: string };
+      expect(body.register).toBe("formel");
+      expect(body.displayName).toBe("Valery");
+    });
+
+    // Seul pont entre le contrat calculé et ce que le serveur rend réellement :
+    // le test de péremption du contrat ne compare que le fichier au calcul,
+    // jamais le calcul à la réponse HTTP effective. Sans ce test-ci, un
+    // contrôleur qui rendrait 200 au lieu de 204 laisserait le contrat mentir
+    // sans qu'aucun test ne le révèle.
+    it("supprime une fiche via HTTP et rend 204", async () => {
+      const p = await service.create(awa, { displayName: "Valery" });
+      const token = jwt.sign({ sub: awa }, SECRET, { algorithm: "HS256", expiresIn: 900 });
+      const r = await fetch(`${baseUrl}/v1/me/persons/${p.id}`, {
+        method: "DELETE",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(r.status).toBe(204);
+      const corps = await r.text();
+      expect(corps).toBe("");
+      expect(await db.prisma.person.count({ where: { id: p.id } })).toBe(0);
+    });
+
+    // Cloisonnement observé au niveau HTTP, pas seulement au niveau du
+    // service : la fiche d'un autre compte n'existe pas pour le demandeur,
+    // sur les trois verbes.
+    it("rend 404 sur GET/PATCH/DELETE pour la fiche d'un autre compte", async () => {
+      const p = await service.create(bila, { displayName: "Celarine" });
+      const token = jwt.sign({ sub: awa }, SECRET, { algorithm: "HS256", expiresIn: 900 });
+
+      const get = await fetch(`${baseUrl}/v1/me/persons/${p.id}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(get.status).toBe(404);
+
+      const patch = await fetch(`${baseUrl}/v1/me/persons/${p.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ register: "formel" }),
+      });
+      expect(patch.status).toBe(404);
+
+      const del = await fetch(`${baseUrl}/v1/me/persons/${p.id}`, {
+        method: "DELETE",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(del.status).toBe(404);
+
+      expect(await db.prisma.person.count({ where: { id: p.id } })).toBe(1);
+    });
+
+    // Un identifiant malformé doit répondre 400, sans atteindre la base.
+    it("refuse un identifiant malformé avec 400", async () => {
+      const token = jwt.sign({ sub: awa }, SECRET, { algorithm: "HS256", expiresIn: 900 });
+      const r = await fetch(`${baseUrl}/v1/me/persons/pas-un-uuid`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(r.status).toBe(400);
     });
   });
 });
