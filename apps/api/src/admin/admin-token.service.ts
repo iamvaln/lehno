@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 
@@ -33,7 +34,7 @@ export type PaireAdmin = { accessToken: string; refreshToken: string; expiresIn:
 // un throw y déclenche un retour arrière, ce qui annulerait la révocation de
 // lignée qu'on veut au contraire faire tenir. La transaction rend donc une
 // issue neutre, et on ne jette qu'une fois validée.
-type TransactionPrisma = Omit<PrismaService, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;
+type TransactionPrisma = Prisma.TransactionClient | PrismaService;
 
 type Issue =
   | { ok: true; paire: PaireAdmin & { role: string } }
