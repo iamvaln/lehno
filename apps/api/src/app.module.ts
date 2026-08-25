@@ -5,6 +5,8 @@ import { RateLimitService } from "./common/rate-limit.service.js";
 import { PrismaService } from "./prisma/prisma.service.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthGuard } from "./auth/auth.guard.js";
+import { FlagsService } from "./flags/flags.service.js";
+import { FeatureGuard } from "./flags/feature.guard.js";
 import { AuthService } from "./auth/auth.service.js";
 import { FederatedService } from "./auth/federated.service.js";
 import { OtpService } from "./auth/otp.service.js";
@@ -84,6 +86,8 @@ import { ContactService } from "./public/contact.service.js";
     AuthService,
     FederatedService,
     AuthGuard,
+    FlagsService,
+    FeatureGuard,
     ProfileService,
     TenantRepository,
     PersonService,
