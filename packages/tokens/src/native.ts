@@ -19,6 +19,7 @@ type SansPrefixe<Cle, Prefixe extends string> =
 
 export type NomDeTaille = SansPrefixe<keyof typeof typography, "text">;
 export type NomDInterlignage = SansPrefixe<keyof typeof typography, "leading">;
+export type NomDInterlettrage = SansPrefixe<keyof typeof typography, "tracking">;
 export type NomDeDuree = SansPrefixe<keyof typeof motion, "duration">;
 export type NomDeCourbe = SansPrefixe<keyof typeof motion, "ease">;
 export type Courbe = [number, number, number, number];
@@ -152,4 +153,19 @@ export const nativeLeading = Object.fromEntries(
 
 export function nativeLineHeight(taille: number, facteur: number): number {
   return Math.round(taille * facteur);
+}
+
+/* L'interlettrage est un facteur de la taille en CSS — l'unité em — et une
+   valeur absolue en RN. Le jeton reste donc un facteur, comme l'interlignage,
+   et la conversion se fait à l'usage. Le sur-titre en capitales ne tient que
+   par lui : sans conversion, « CE QUI APPROCHE » rendrait serré au lieu
+   d'espacé, et le resserrement des titres disparaîtrait. */
+export const nativeTracking = Object.fromEntries(
+  Object.entries(typography)
+    .filter(([cle]) => cle.startsWith("tracking"))
+    .map(([cle, valeur]) => [cle.slice(8, 9).toLowerCase() + cle.slice(9), sansUnite(valeur)]),
+) as Record<NomDInterlettrage, number>;
+
+export function nativeLetterSpacing(taille: number, em: number): number {
+  return taille * em;
 }

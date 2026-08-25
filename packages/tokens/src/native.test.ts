@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   nativeColors, nativeDuration, nativeEasing, nativeFont, nativeLeading,
+  nativeLetterSpacing, nativeTracking,
   nativeLineHeight, nativeRadius, nativeSize, nativeSpace, nativeTouchMin,
   resolve, SEMANTIC_ROLES, spacing, typography,
 } from "./index.js";
@@ -114,6 +115,19 @@ describe("émission React Native", () => {
   it("ne porte aucune graisse que le produit n'emploie pas", () => {
     expect(nativeFont).not.toHaveProperty("bodyLight");
     expect(typography).not.toHaveProperty("fontBodyLight");
+  });
+
+  // L'interlettrage est un facteur de la taille en CSS (em) et une valeur
+  // absolue en RN. Le sur-titre en capitales ne tient que par lui : sans
+  // conversion, « CE QUI APPROCHE » rendrait serré au lieu d'espacé.
+  it("rend l'interlettrage en points, depuis les em de la charte", () => {
+    expect(nativeTracking.kicker).toBe(0.14);
+    expect(nativeLetterSpacing(nativeSize.kicker, nativeTracking.kicker)).toBeCloseTo(1.54, 2);
+  });
+
+  // Les titres se resserrent : un em négatif doit le rester une fois converti.
+  it("garde le signe d'un resserrement", () => {
+    expect(nativeLetterSpacing(nativeSize.displayS, nativeTracking.display)).toBeCloseTo(-0.9, 2);
   });
 
   // En CSS l'interlignage est un facteur qui suit la taille ; en RN c'est une
