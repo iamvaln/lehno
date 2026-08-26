@@ -882,21 +882,19 @@
                           "amount": {
                             "type": "integer"
                           },
-                          "source": {
-                            "type": "string",
-                            "enum": [
-                              "signup_grant",
-                              "referral_bonus",
-                              "purchase",
-                              "manual_topup",
-                              "promo_code",
-                              "consumption",
-                              "admin_adjustment"
-                            ]
-                          },
                           "reason": {
                             "type": "string",
-                            "nullable": true
+                            "enum": [
+                              "signup",
+                              "referral",
+                              "purchase",
+                              "promo",
+                              "gift",
+                              "reward",
+                              "usage",
+                              "refund",
+                              "correction"
+                            ]
                           },
                           "createdAt": {
                             "type": "string"
@@ -906,7 +904,6 @@
                           "id",
                           "type",
                           "amount",
-                          "source",
                           "reason",
                           "createdAt"
                         ],
