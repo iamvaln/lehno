@@ -15,6 +15,8 @@ type SignInInput = {
   // La §5.1 veut le parrainage sur les trois voies : il manquait ici.
   referralCode?: string;
   userAgent?: string;
+  /** L'adresse au moment de la tentative, pour la trace. */
+  ip?: string;
 };
 
 @Injectable()
@@ -44,10 +46,17 @@ export class FederatedService {
   // peine d'un angle mort dans les traces de sécurité pour la voie la plus
   // exposée (jeton d'un tiers, pas un secret qu'on émet nous-mêmes).
   private async recordAttempt(
-    email: string | null, userAgent: string | undefined, userId: string | null, result: "success" | "failure",
+    email: string | null, userAgent: string | undefined, userId: string | null,
+    result: "success" | "failure", provider: "google" | "apple", ip?: string,
   ): Promise<void> {
     await this.prisma.loginActivity.create({
-      data: { userId, attemptedEmail: email, result, userAgent: userAgent ?? null },
+      data: {
+        userId, attemptedEmail: email, result,
+        // La voie, et non « externe » : c'est la distinction entre Google et
+        // Apple qui permet de voir qu'un seul des deux est en cause.
+        method: provider, ip: ip ?? null,
+        userAgent: userAgent ?? null,
+      },
     });
   }
 
@@ -59,7 +68,7 @@ export class FederatedService {
       // Un jeton rejeté par le fournisseur laisse une trace comme un code à
       // usage unique invalide en laisse une (voir AuthService.verifyOtp) :
       // sans elle, le tout premier échec de cette voie resterait invisible.
-      await this.recordAttempt(null, input.userAgent, null, "failure");
+      await this.recordAttempt(null, input.userAgent, null, "failure", input.provider, input.ip);
       throw new AppError("federated_token_invalid", "provider token rejected");
     }
 
@@ -72,21 +81,21 @@ export class FederatedService {
       try {
         this.assertActive(existing.user);
       } catch (e) {
-        await this.recordAttempt(claims.email, input.userAgent, existing.userId, "failure");
+        await this.recordAttempt(claims.email, input.userAgent, existing.userId, "failure", input.provider, input.ip);
         throw e;
       }
       await this.prisma.federatedIdentity.update({
         where: { id: existing.id }, data: { lastUsedAt: new Date() },
       });
       const pair = await this.tokens.issuePair(existing.userId, input.userAgent);
-      await this.recordAttempt(claims.email, input.userAgent, existing.userId, "success");
+      await this.recordAttempt(claims.email, input.userAgent, existing.userId, "success", input.provider, input.ip);
       return { outcome: "session" as const, ...pair, isNewAccount: false };
     }
 
     // Ensuite l'adresse, mais seulement si le fournisseur la dit vérifiée :
     // sinon n'importe qui déclarerait l'adresse d'autrui.
     if (!claims.email || !claims.emailVerified) {
-      await this.recordAttempt(claims.email, input.userAgent, null, "failure");
+      await this.recordAttempt(claims.email, input.userAgent, null, "failure", input.provider, input.ip);
       throw new AppError("federated_token_invalid", "provider did not supply a verified email");
     }
 
@@ -101,7 +110,7 @@ export class FederatedService {
       // Le fournisseur a vérifié l'adresse ; on atteste cette vérification par
       // un jeton d'inscription, et /auth/register fera le reste en une
       // transaction.
-      await this.recordAttempt(claims.email, input.userAgent, null, "success");
+      await this.recordAttempt(claims.email, input.userAgent, null, "success", input.provider, input.ip);
       const jeton = this.tokens.issueRegistration(claims.email);
       const deviceLimitReached = input.deviceId
         ? await this.signup.plafondAtteint(input.deviceId)
@@ -118,7 +127,7 @@ export class FederatedService {
     try {
       this.assertActive(user);
     } catch (e) {
-      await this.recordAttempt(claims.email, input.userAgent, user.id, "failure");
+      await this.recordAttempt(claims.email, input.userAgent, user.id, "failure", input.provider, input.ip);
       throw e;
     }
 
@@ -134,14 +143,14 @@ export class FederatedService {
         },
       });
     } catch (e) {
-      await this.recordAttempt(claims.email, input.userAgent, user.id, "failure");
+      await this.recordAttempt(claims.email, input.userAgent, user.id, "failure", input.provider, input.ip);
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")
         throw new AppError("federated_already_linked", "account already linked to a provider identity");
       throw e;
     }
 
     const pair = await this.tokens.issuePair(user.id, input.userAgent);
-    await this.recordAttempt(claims.email, input.userAgent, user.id, "success");
+    await this.recordAttempt(claims.email, input.userAgent, user.id, "success", input.provider, input.ip);
     return { outcome: "session" as const, ...pair, isNewAccount: false };
   }
 }

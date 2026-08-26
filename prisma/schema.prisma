@@ -41,6 +41,18 @@ enum LoginResult {
   failure
 }
 
+// Par où quelqu'un est entré. Sans elle, une série d'échecs par code ne se
+// distingue pas d'une série par fournisseur externe — or c'est exactement
+// l'usage que ux-admin §5.13 annonce : « détecter les séries d'échecs, les
+// accès inhabituels, et documenter un incident de sécurité ».
+enum LoginMethod {
+  otp
+  google
+  apple
+
+  @@map("login_method")
+}
+
 model User {
   id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email               String          @unique
@@ -235,6 +247,9 @@ model DeviceSignup {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   deviceId  String   @map("device_id") @db.VarChar(128)
   userId    String?  @map("user_id") @db.Uuid
+  // Conservée pour d'éventuelles investigations, sans entrer dans le calcul du
+  // plafond — celui-ci porte sur le seul deviceId (dictionnaire, DeviceSignup).
+  ip        String?  @db.Inet
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -248,6 +263,12 @@ model LoginActivity {
   userId         String?     @map("user_id") @db.Uuid
   attemptedEmail String?     @map("attempted_email")
   result         LoginResult
+  // La voie d'entrée. Nulle sur les traces écrites avant qu'elle existe.
+  method         LoginMethod?
+  // L'adresse au moment de la tentative. Elle sert aux investigations, et non
+  // à l'affichage courant : le back-office rend le lieu approximatif, pas
+  // l'adresse. Voir dictionnaire, LoginActivity.
+  ip             String?     @db.Inet
   userAgent      String?     @map("user_agent")
   geoApprox      String?     @map("geo_approx")
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz

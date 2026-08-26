@@ -29,6 +29,38 @@ describe("identités externes", () => {
     userId = u.id;
   });
 
+  // La voie, et non « externe » : c'est la distinction entre Google et Apple
+  // qui permet de voir qu'un seul des deux est en cause lors d'un incident.
+  // Une trace qui dirait seulement « pas par code » ne servirait à rien.
+  it("une entrée par Google note sa voie et son adresse", async () => {
+    const svc = build(verifier({ providerUserId: "g-7", email: "awa@example.com", emailVerified: true }));
+
+    await svc.signIn({ provider: "google", idToken: "x", ip: "102.244.18.7" });
+
+    const trace = await db.prisma.loginActivity.findFirstOrThrow({ orderBy: { createdAt: "desc" } });
+    expect(trace.method).toBe("google");
+    expect(trace.ip).toBe("102.244.18.7");
+  });
+
+  it("une entrée par Apple note la sienne, pas celle de Google", async () => {
+    const svc = build(verifier({ providerUserId: "a-7", email: "karim@example.com", emailVerified: true }));
+
+    await svc.signIn({ provider: "apple", idToken: "x" });
+
+    const trace = await db.prisma.loginActivity.findFirstOrThrow({ orderBy: { createdAt: "desc" } });
+    expect(trace.method).toBe("apple");
+  });
+
+  // Un jeton refusé est précisément ce qu'on veut pouvoir compter par voie.
+  it("un refus note aussi la voie", async () => {
+    const svc = build({ verify: () => { throw new Error("jeton invalide"); } } as never);
+
+    await svc.signIn({ provider: "google", idToken: "x" }).catch(() => {});
+
+    const trace = await db.prisma.loginActivity.findFirstOrThrow({ where: { result: "failure" } });
+    expect(trace.method).toBe("google");
+  });
+
   it("rattache au compte existant quand l'adresse vérifiée correspond", async () => {
     const svc = build(verifier({ providerUserId: "g-1", email: "awa@example.com", emailVerified: true }));
     const s = await svc.signIn({ provider: "google", idToken: "x" });
