@@ -64,6 +64,9 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
 import { MaintenanceService } from "./maintenance/maintenance.service.js";
 import { MaintenanceGuard } from "./maintenance/maintenance.guard.js";
 import { MaintenanceController } from "./maintenance/maintenance.controller.js";
+import { TrackingService } from "./tracking/tracking.service.js";
+import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
+import { PostHogAdapter } from "./tracking/posthog.adapter.js";
 
 @Module({
   controllers: [
@@ -82,6 +85,22 @@ import { MaintenanceController } from "./maintenance/maintenance.controller.js";
     // interrupteur d'arrêt. Ses exemptions vivent dans le garde.
     { provide: APP_GUARD, useClass: MaintenanceGuard },
     MaintenanceService,
+    // La mesure, derrière son port (§16.5). Sans clé PostHog et sans adhésion
+    // explicite à la console, l'adaptateur ne fait RIEN — contrairement au
+    // courrier, l'absence de mesure n'est pas une raison de refuser de
+    // démarrer : elle ne rend pas le produit faux, seulement aveugle. Et un
+    // développement local ne doit pas exiger un compte chez un tiers.
+    {
+      provide: "TRACKING_PORT",
+      useFactory: () => {
+        const cle = process.env.POSTHOG_API_KEY;
+        const hote = process.env.POSTHOG_HOST ?? "https://eu.i.posthog.com";
+        if (cle) return new PostHogAdapter(cle, hote);
+        if (process.env.LEHNO_TRACKING_CONSOLE === "1") return new ConsoleTrackingAdapter();
+        return { capture: async (): Promise<void> => {} };
+      },
+    },
+    TrackingService,
     // useFactory : la valeur se lit à l'INSTANCIATION du provider, pas à
     // l'évaluation du décorateur (qui n'a lieu qu'une fois, au chargement du
     // module). Sans ça, une valeur d'environnement posée ou retirée après

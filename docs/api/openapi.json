@@ -3,7 +3,7 @@
   "info": {
     "title": "Lehno",
     "version": "1",
-    "description": "L'assistant des dates qui comptent. Le contrat est engendré depuis les schémas Zod de @lehno/contracts — il ne s'écrit pas à la main."
+    "description": "L'assistant des dates qui comptent. Le contrat est engendré depuis les\nschémas Zod de @lehno/contracts — il ne s'écrit pas à la main.\n\n## Les en-têtes de mesure\n\nLe serveur émet les événements du plan de mesure quand le fait se\nproduit chez lui — une inscription, un proche créé, une note prise. Il\nsait qui, quand, et quels drapeaux étaient actifs. **Il ne sait pas d'où**\nl'appel vient : ces cinq en-têtes le lui disent, sur chaque requête.\n\n| En-tête | Exemple | Ce qu'il permet |\n|---|---|---|\n| `X-Lehno-Surface` | `app` | Séparer l'application du web public |\n| `X-Lehno-App-Version` | `1.4.2` | Rattacher une rupture de courbe à une version |\n| `X-Lehno-Language` | `fr` | Segmenter par langue d'interface |\n| `X-Lehno-Theme` | `dark` | Savoir si le thème sombre sert |\n| `X-Lehno-Session` | un identifiant de session | Recoller un parcours avant l'ouverture du compte |\n\n**Aucun n'est obligatoire** : absent, il vaut simplement « inconnu », et\nrien n'échoue. Mais une mesure sans surface ni version ne se segmente\npas, et une question du plan reste sans réponse.\n\n**Ils sont nettoyés et bornés** à l'arrivée : un en-tête est écrit par le\nclient, et rien de ce qu'il écrit n'atteint un journal tel quel.\n\n**L'adresse électronique n'y figure pas et ne doit jamais y figurer.**\nL'identifiant de session suffit avant l'ouverture d'un compte ;\nl'identifiant de compte prend le relais après."
   },
   "servers": [
     {
