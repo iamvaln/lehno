@@ -389,3 +389,73 @@ export const basculeDrapeauSchema = z.object({
 
 export type DrapeauAdmin = z.infer<typeof drapeauAdminSchema>;
 export type DrapeauxAdmin = z.infer<typeof drapeauxAdminSchema>;
+
+// ——— Les réglages du paiement ————————————————————————————————
+
+/**
+ * Un palier d'achat. Aucune saisie libre d'un montant : on achète un palier,
+ * et le plus petit fixe le minimum. La remise s'affiche — c'est un argument de
+ * vente, pas un calcul caché.
+ */
+export const palierSchema = z.object({
+  id: z.string(),
+  montant: z.number(),
+  devise: z.string(),
+  credits: z.number().int().positive(),
+  remisePourcent: z.number().int().nullable(),
+  position: z.number().int(),
+  actif: z.boolean(),
+}).strict();
+
+/**
+ * Ce que le **service** propose : un opérateur, un pays, un barème.
+ *
+ * À ne pas confondre avec la méthode qu'un **client** a enregistrée. Les fondre
+ * reviendrait à porter un taux de frais sur le numéro de téléphone de chaque
+ * client, et à devoir tous les corriger le jour où un opérateur change son
+ * barème.
+ */
+export const canalSchema = z.object({
+  id: z.string(),
+  nature: z.enum(["mobile_money", "card"]),
+  operateur: z.string(),
+  /** Les frais diffèrent d'un pays à l'autre, même chez le même opérateur. */
+  pays: z.string(),
+  libelle: z.string(),
+  fraisPourcent: z.number(),
+  fraisFixe: z.number(),
+  fraisMin: z.number().nullable(),
+  fraisMax: z.number().nullable(),
+  /** `payer` : le client verse en plus. `payee` : c'est prélevé sur le versement. */
+  fraisPortesPar: z.enum(["payer", "payee"]),
+  devise: z.string(),
+  actif: z.boolean(),
+  position: z.number().int().nullable(),
+}).strict();
+
+/**
+ * Un compte d'opérateur sur lequel les clients versent.
+ *
+ * Le numéro est rendu **en entier** à l'administration : c'est celui qu'on
+ * dicte à un client au téléphone, et qu'on va lire sur l'application de
+ * l'opérateur pour vérifier une réception. Ce n'est pas une donnée de client,
+ * c'est un compte du service.
+ */
+export const compteCollecteSchema = z.object({
+  id: z.string(),
+  libelle: z.string(),
+  operateur: z.string(),
+  numero: z.string(),
+  /** Ce que le client voit. Distinct de `actif`, qui dit ce qui reste employable. */
+  visibleDansApp: z.boolean(),
+  actif: z.boolean(),
+  position: z.number().int().nullable(),
+}).strict();
+
+export const paliersSchema = z.object({ items: z.array(palierSchema) }).strict();
+export const canauxSchema = z.object({ items: z.array(canalSchema) }).strict();
+export const comptesCollecteSchema = z.object({ items: z.array(compteCollecteSchema) }).strict();
+
+export type Palier = z.infer<typeof palierSchema>;
+export type Canal = z.infer<typeof canalSchema>;
+export type CompteCollecte = z.infer<typeof compteCollecteSchema>;
