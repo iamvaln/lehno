@@ -92,6 +92,35 @@ describe("l'engendrement des échéances", () => {
   // « tous les 0 » n'est pas une récurrence : c'est une boucle sans fin. Le
   // contrat le refuse déjà à la saisie ; ce cas garde le noyau lui-même, qui
   // sert aussi ailleurs.
+  // Une date de naissance ancienne : l'engendrement estime d'abord un premier
+  // « k » plutôt que d'itérer soixante-seize fois, puis ajuste. Si cette
+  // estimation dépassait, on rendrait l'échéance de l'année SUIVANTE — et
+  // l'anniversaire disparaîtrait pendant un an sans que rien ne le dise.
+  it.each([
+    ["1950-03-14", "2026-08-25", "2027-03-14"],
+    ["1900-12-31", "2026-08-25", "2026-12-31"],
+    ["1930-01-01", "2026-08-25", "2027-01-01"],
+  ])("une naissance en %s se retrouve depuis %s", (reference, depuis, attendu) => {
+    expect(echeances(reference, { unite: "year", pas: 1 }, depuis, 1)).toEqual([attendu]);
+  });
+
+  // Né un 29 février : le jour se marque le 28 les années communes, et
+  // RETROUVE son vrai jour l'année bissextile suivante. Un calcul qui figerait
+  // le 28 une fois pour toutes passerait les autres cas et raterait celui-ci.
+  it("un 29 février retrouve son jour en année bissextile", () => {
+    expect(echeances("1952-02-29", { unite: "year", pas: 1 }, "2026-08-25", 1)).toEqual(["2027-02-28"]);
+    expect(echeances("1952-02-29", { unite: "year", pas: 1 }, "2028-01-01", 1)).toEqual(["2028-02-29"]);
+  });
+
+  // La règle du siècle : 1900 n'était PAS bissextile, 2000 l'était. Une
+  // implémentation qui teste seulement « divisible par 4 » se trompe une fois
+  // par siècle — assez rare pour passer inaperçu, assez sûr pour arriver.
+  it("applique la règle du siècle, pas seulement la divisibilité par quatre", () => {
+    expect(ajouterMois("1900-01-29", 1)).toBe("1900-02-28");
+    expect(ajouterMois("2000-01-29", 1)).toBe("2000-02-29");
+    expect(ajouterMois("2100-01-29", 1)).toBe("2100-02-28");
+  });
+
   it("refuse un pas nul ou négatif plutôt que de boucler", () => {
     expect(() => echeances("2026-01-01", { unite: "year", pas: 0 }, "2026-01-01", 3)).toThrow();
     expect(() => echeances("2026-01-01", { unite: "year", pas: -1 }, "2026-01-01", 3)).toThrow();
