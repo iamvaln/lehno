@@ -46,7 +46,11 @@ export async function withDatabase(): Promise<TestDb> {
 // `system_parameter` (tâche 8) suit la même règle : amorcée une fois pour
 // toutes par la migration `notifications`, jamais rejouée ensuite — la
 // vider la rendrait indisponible dès le premier `resetDatabase()`.
-const REFERENCE_TABLES = new Set(["category", "system_parameter"]);
+// `credit_bundle` de même : les cinq paliers de départ sont semés par la
+// migration des paiements et jamais rejoués. Les vider laisserait
+// l'application sans rien à proposer à l'achat, et un test qui ajuste un
+// palier déciderait du point de départ du suivant.
+const REFERENCE_TABLES = new Set(["category", "system_parameter", "credit_bundle"]);
 
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`

@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { FederatedService, type IdentityVerifier } from "../src/auth/federated.service.js";
+import { SignupService } from "../src/onboarding/signup.service.js";
+import { LegalService } from "../src/public/legal.controller.js";
 import { TokenService } from "../src/auth/token.service.js";
 
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -14,7 +16,8 @@ describe("identités externes", () => {
   let userId: string;
   const build = (v: IdentityVerifier) =>
     new FederatedService(db.prisma as never, new TokenService(db.prisma as never, SECRET),
-      { google: v, apple: v });
+      { google: v, apple: v },
+      new SignupService(db.prisma as never, new LegalService()));
 
   beforeAll(async () => { db = await withDatabase(); }, 120_000);
   afterAll(async () => { await db.close(); });
@@ -26,9 +29,43 @@ describe("identités externes", () => {
     userId = u.id;
   });
 
+  // La voie, et non « externe » : c'est la distinction entre Google et Apple
+  // qui permet de voir qu'un seul des deux est en cause lors d'un incident.
+  // Une trace qui dirait seulement « pas par code » ne servirait à rien.
+  it("une entrée par Google note sa voie et son adresse", async () => {
+    const svc = build(verifier({ providerUserId: "g-7", email: "awa@example.com", emailVerified: true }));
+
+    await svc.signIn({ provider: "google", idToken: "x", ip: "102.244.18.7" });
+
+    const trace = await db.prisma.loginActivity.findFirstOrThrow({ orderBy: { createdAt: "desc" } });
+    expect(trace.method).toBe("google");
+    expect(trace.ip).toBe("102.244.18.7");
+  });
+
+  it("une entrée par Apple note la sienne, pas celle de Google", async () => {
+    const svc = build(verifier({ providerUserId: "a-7", email: "karim@example.com", emailVerified: true }));
+
+    await svc.signIn({ provider: "apple", idToken: "x" });
+
+    const trace = await db.prisma.loginActivity.findFirstOrThrow({ orderBy: { createdAt: "desc" } });
+    expect(trace.method).toBe("apple");
+  });
+
+  // Un jeton refusé est précisément ce qu'on veut pouvoir compter par voie.
+  it("un refus note aussi la voie", async () => {
+    const svc = build({ verify: () => { throw new Error("jeton invalide"); } } as never);
+
+    await svc.signIn({ provider: "google", idToken: "x" }).catch(() => {});
+
+    const trace = await db.prisma.loginActivity.findFirstOrThrow({ where: { result: "failure" } });
+    expect(trace.method).toBe("google");
+  });
+
   it("rattache au compte existant quand l'adresse vérifiée correspond", async () => {
     const svc = build(verifier({ providerUserId: "g-1", email: "awa@example.com", emailVerified: true }));
     const s = await svc.signIn({ provider: "google", idToken: "x" });
+    expect(s.outcome).toBe("session");
+    if (s.outcome !== "session") throw new Error("session attendue");
     expect(s.isNewAccount).toBe(false);
     expect(await db.prisma.user.count()).toBe(1);
     expect(await db.prisma.federatedIdentity.count()).toBe(1);
@@ -40,6 +77,8 @@ describe("identités externes", () => {
     });
     const svc = build(verifier({ providerUserId: "a-1", email: "relais@privaterelay.example", emailVerified: true }));
     const s = await svc.signIn({ provider: "apple", idToken: "x" });
+    expect(s.outcome).toBe("session");
+    if (s.outcome !== "session") throw new Error("session attendue");
     expect(s.isNewAccount).toBe(false);
     expect(await db.prisma.user.count()).toBe(1);
   });
@@ -50,11 +89,17 @@ describe("identités externes", () => {
       .rejects.toMatchObject({ code: "federated_token_invalid" });
   });
 
-  it("crée un compte quand rien ne correspond", async () => {
+  // La première connexion fédérée NE CRÉE PAS DE COMPTE non plus. La §3.1 veut
+  // le choix du pseudo « à la première connexion, QUELLE QUE SOIT LA VOIE
+  // empruntée » : si Google créait le compte tout de suite, le parcours
+  // divergerait selon la porte, et le code de parrainage — saisi à l'écran du
+  // pseudo — n'aurait nulle part où aller.
+  it("une adresse inconnue invite à s'inscrire, sans rien écrire", async () => {
     const svc = build(verifier({ providerUserId: "g-2", email: "karim@example.com", emailVerified: true }));
     const s = await svc.signIn({ provider: "google", idToken: "x", deviceId: "dev-1" });
-    expect(s.isNewAccount).toBe(true);
-    expect(await db.prisma.user.count()).toBe(2);
+    expect(s.outcome).toBe("registration");
+    // Le compte existant du montage reste seul : aucun second n'est né.
+    expect(await db.prisma.user.count()).toBe(1);
   });
 
   // Revue tour 1, point 3 : la branche qui reconnaît une identité déjà liée

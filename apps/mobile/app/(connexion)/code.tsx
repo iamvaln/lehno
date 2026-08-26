@@ -15,7 +15,7 @@ import { useCompact } from "../../lib/compact.js";
 import { appelPublic, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { poseLesJetons } from "../../lib/jetons.js";
-import { requestOtpResultSchema, verifyOtpResultSchema } from "@lehno/contracts";
+import { requestOtpResultSchema, verifyOutcomeSchema } from "@lehno/contracts";
 import { identifiantDeLAppareil } from "../../lib/appareil.js";
 
 const LONGUEUR = 6;
@@ -77,7 +77,7 @@ export default function Code() {
         method: "POST",
         body: JSON.stringify({ email, code: saisi, deviceId: appareil }),
       });
-      const issue = verifyOtpResultSchema.parse(brut);
+      const issue = verifyOutcomeSchema.parse(brut);
 
       /* Deux issues, et c'est ici que le parcours se sépare. Une adresse connue
          ouvre une session : on range les jetons et on entre. Une adresse

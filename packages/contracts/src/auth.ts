@@ -1,21 +1,18 @@
 import { z } from "zod";
-
-/* L'authentification, telle que le serveur la sert.
- *
- * La source est le contrat publié par le serveur, pas ce fichier : il tourne
- * sur d'autres machines que la mienne, et c'est lui qui fait foi. Ce fichier
- * transcrit ce qu'il annonce, pour que le client le vérifie à la compilation.
- */
+import { usernameSchema } from "./profile.js";
 
 export const requestOtpSchema = z.object({ email: z.string().email().max(254) }).strict();
 
-/* La demande de code rend toujours `sent: true`, adresse connue ou non — dire
-   le contraire apprendrait qui a un compte.
-
-   `retryAfterSeconds` est le délai avant d'en redemander un, et il vient du
-   limiteur du serveur. L'écran doit l'afficher plutôt qu'une constante : une
-   valeur écrite en dur finit par contredire le limiteur, et l'écran promet
-   alors un renvoi que le serveur refuse. */
+/* Ce que la demande rend. Toujours `sent: true`, adresse connue ou non — dire
+ * le contraire apprendrait qui a un compte.
+ *
+ * `retryAfterSeconds` porte le délai avant d'en redemander un, et il CROÎT —
+ * cinq secondes, puis vingt-cinq, puis cent vingt-cinq. Il vient donc du
+ * serveur : une formule recopiée côté client ferait appliquer deux règles au
+ * parc, et celle du serveur resterait la seule qui compte.
+ *
+ * Il vivait en ligne dans le constructeur du contrat publié, où le client ne
+ * pouvait pas l'importer. Ici, les deux le lisent au même endroit. */
 export const requestOtpResultSchema = z.object({
   sent: z.literal(true),
   retryAfterSeconds: z.number().int().positive(),
@@ -30,110 +27,105 @@ export const verifyOtpSchema = z.object({
   referralCode: z.string().max(16).optional(),
 }).strict();
 
-/* Le pseudo à l'inscription : commence par une lettre ou un chiffre, puis
-   lettres, chiffres, point, tiret ou tiret bas. Il forme l'adresse du Mur, d'où
-   le refus de tout ce qui n'entre pas dans une URL.
-
-   IL DIFFÈRE DE CELUI DE `profile.ts`, qui n'accepte en modification que
-   minuscules, chiffres et tirets bas. Un pseudo « Awa.Diop » passe donc à
-   l'inscription et devient impossible à corriger ensuite. Les deux doivent
-   converger vers celui-ci ; le nom distinct tient l'écart visible en attendant,
-   plutôt qu'un seul nom qui cacherait laquelle des deux règles s'applique. */
-export const registrationUsernameSchema = z.string().min(3).max(30).regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/);
-
-/* La session ouverte. `signupCredits` n'accompagne que celle qui vient de
-   naître : c'est ce que l'écran de bienvenue annonce, et l'écrire en dur le
-   ferait mentir dès que le montant change en administration. */
 export const sessionSchema = z.object({
-  outcome: z.literal("session"),
   accessToken: z.string(),
   refreshToken: z.string(),
   expiresIn: z.number().int().positive(),
   isNewAccount: z.boolean(),
-  signupCredits: z.number().int().min(0).optional(),
-  referral: z.record(z.unknown()).optional(),
 }).strict();
 
-export type Session = z.infer<typeof sessionSchema>;
-
-/* L'issue d'inscription. Le jeton qu'elle porte ne sert qu'à créer le compte
-   et à faire valoir un parrainage — il n'ouvre rien. Le ranger comme un jeton
-   de session donnerait une application qui se croit connectée.
-
-   `deviceLimitReached` arrive AVEC ce jeton, pas à sa place : l'écran peut
-   ainsi le dire avant que la personne choisisse un pseudo pour rien. */
+/* Ce que rend une vérification réussie : une session, ou une INVITATION À
+ * S'INSCRIRE.
+ *
+ * Une adresse connue ouvre sa session et va droit à l'accueil. Une adresse
+ * inconnue ne crée RIEN : elle rend un jeton d'inscription, et l'écran du
+ * pseudo suit. Le compte naît à l'appel suivant, avec son pseudo et son code
+ * de parrainage — d'un seul geste.
+ *
+ * Pourquoi ne pas créer le compte tout de suite, comme avant : le code de
+ * parrainage se saisit à l'écran du pseudo, donc APRÈS. Créer d'abord et
+ * rattacher ensuite ouvrirait un chemin pour réclamer un parrainage plus tard,
+ * sur un compte de six mois. Les deux opérations doivent être atomiques, donc
+ * elles se font ensemble ou pas du tout.
+ *
+ * Le jeton d'inscription n'est PAS une session : il n'ouvre aucune ressource,
+ * il ne vaut que pour l'appel de création, une seule fois, et il expire vite. */
 export const registrationSchema = z.object({
-  outcome: z.literal("registration"),
   registrationToken: z.string(),
   expiresIn: z.number().int().positive(),
+  // L'adresse vérifiée, que l'écran du pseudo rappelle. Elle vient du serveur
+  // et non de la saisie : c'est celle qui a reçu le code.
   email: z.string().email(),
+  // Indicatif, et volontairement non bloquant ici : le plafond fait foi à la
+  // création, sous verrou. Le rendre dès maintenant évite de faire choisir un
+  // pseudo à quelqu'un dont la création sera refusée au bout.
   deviceLimitReached: z.boolean(),
 }).strict();
 
 export type Registration = z.infer<typeof registrationSchema>;
 
-/* Deux issues à la vérification du code, et c'est le cœur du parcours : une
-   adresse connue ouvre une session, une adresse nouvelle demande une
-   inscription. L'union discriminée oblige le client à traiter les deux. */
-export const verifyOtpResultSchema = z.discriminatedUnion("outcome", [
-  sessionSchema,
-  registrationSchema,
+/* Une vérification rend l'un OU l'autre. Le discriminant est explicite plutôt
+ * que déduit de la présence d'un champ : un client qui teste « si accessToken
+ * existe » se trompera le jour où la forme gagnera un champ. */
+export const verifyOutcomeSchema = z.discriminatedUnion("outcome", [
+  z.object({ outcome: z.literal("session") }).merge(sessionSchema).strict(),
+  z.object({ outcome: z.literal("registration") }).merge(registrationSchema).strict(),
 ]);
 
-export type VerifyOtpResult = z.infer<typeof verifyOtpResultSchema>;
+export type VerifyOutcome = z.infer<typeof verifyOutcomeSchema>;
 
-/* La création du compte. L'identifiant d'appareil y est obligatoire — c'est lui
-   qui borne le nombre de comptes créés depuis un même téléphone. */
+/* La création du compte : pseudo, appareil, et le code facultatif. Tout se
+ * fait ici, en une transaction — le plafond par appareil, le compte, les
+ * crédits d'inscription et le parrainage. */
 export const registerSchema = z.object({
   registrationToken: z.string().min(1),
-  username: registrationUsernameSchema,
+  // Le MÊME schéma que partout ailleurs — voir profile.ts. Le recopier ici
+  // avait fait diverger les deux règles, et un pseudo accepté à l'inscription
+  // pouvait être refusé à la première correction de profil.
+  username: usernameSchema,
   deviceId: z.string().min(1).max(128),
   referralCode: z.string().max(16).optional(),
 }).strict();
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 
+/* Ce que l'écran de bienvenue affiche. Le DÉTAIL, pas un total : cadeau de
+ * bienvenue et bonus de parrainage sont deux gestes distincts, et l'un des deux
+ * se mérite — les confondre dans un solde unique efface la raison d'inviter
+ * quelqu'un.
+ *
+ * `referral` est nul quand aucun code n'a été donné, et porte son issue sinon :
+ * un code inconnu ou un code à soi ne casse pas l'inscription, il se signale. */
+export const REFERRAL_OUTCOMES = ["credited", "unknown", "self"] as const;
+
+export const registeredSchema = z.object({
+  outcome: z.literal("session"),
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  expiresIn: z.number().int().positive(),
+  isNewAccount: z.literal(true),
+  signupCredits: z.number().int().min(0),
+  referral: z.object({
+    outcome: z.enum(REFERRAL_OUTCOMES),
+    // Le pseudo du parrain, pour « invité par … ». Nul si le code n'a mené
+    // à personne.
+    inviterUsername: z.string().nullable(),
+    bonusCredits: z.number().int().min(0),
+  }).nullable(),
+}).strict();
+
+export type Registered = z.infer<typeof registeredSchema>;
+
 export const refreshSchema = z.object({ refreshToken: z.string().min(1) }).strict();
-
-/* Ce que le renouvellement rend — et il diffère de la session ouverte par la
-   connexion : PAS D'`outcome`. Le serveur en pose un sur `/auth/otp/verify` et
-   `/auth/federated`, où il faut distinguer deux issues, mais pas sur
-   `/auth/refresh`, qui n'en a qu'une.
-
-   Défendable, et pourtant gênant : deux formes de session obligent le client à
-   savoir laquelle il a demandée avant de lire la réponse. Les unifier vaudrait
-   mieux ; ce schéma tient l'écart visible en attendant qu'elles le soient. */
-export const refreshedSessionSchema = z.object({
-  accessToken: z.string(),
-  refreshToken: z.string(),
-  expiresIn: z.number().int().positive(),
-  isNewAccount: z.literal(false),
-}).strict();
-
-export type RefreshedSession = z.infer<typeof refreshedSessionSchema>;
-
-/* La session SANS issue nommée, telle que `apps/api` la rend encore.
- *
- * Le serveur déployé a dépassé cette forme : sa vérification de code et sa
- * connexion externe rendent l'union discriminée ci-dessus, et il expose
- * `/auth/register`, que ce dépôt n'a pas. Le code d'ici est donc en retard sur
- * ce qui tourne — et c'est le serveur qui fait foi.
- *
- * Ce schéma n'existe que pour que le code en retard continue de compiler
- * pendant qu'il rattrape. Il doit disparaître quand ce sera fait : le garder
- * plus longtemps laisserait croire que deux contrats coexistent légitimement.
- */
-export const sessionHeriteeSchema = z.object({
-  accessToken: z.string(),
-  refreshToken: z.string(),
-  expiresIn: z.number().int().positive(),
-  isNewAccount: z.boolean(),
-}).strict();
-
-export type SessionHeritee = z.infer<typeof sessionHeriteeSchema>;
 
 export const federatedSchema = z.object({
   provider: z.enum(["google", "apple"]),
   idToken: z.string().min(1),
   deviceId: z.string().min(1).max(128).optional(),
+  // La §5.1 veut le code de parrainage sur les TROIS voies. Il manquait ici :
+  // une inscription par Google ou Apple ne pouvait en porter aucun, et le
+  // filleul perdait son bonus selon la porte qu'il avait empruntée.
+  referralCode: z.string().max(16).optional(),
 }).strict();
+
+export type Session = z.infer<typeof sessionSchema>;

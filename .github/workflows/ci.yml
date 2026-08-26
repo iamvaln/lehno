@@ -1,79 +1,26 @@
 name: CI
 
-# Barrières de qualité sur chaque PR et sur les push vers main. Ne déploie
-# jamais — voir release.yml, déclenché uniquement par un tag git `v*`.
+# Barrières de qualité sur chaque PR et sur les push vers develop et main. Ne
+# déploie jamais — voir release.yml, déclenché uniquement par un tag git `v*`.
+#
+# `develop` y figure parce que c'est la branche où le travail atterrit : les
+# agents y poussent directement, sans passer par une PR. Tant qu'elle n'était
+# pas surveillée, rien ne vérifiait ce qui s'y accumulait — et la CI a pu
+# rester rouge sur main du 24 août sans que personne ne s'en aperçoive.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [develop, main]
 
 # Annule les exécutions périmées sur la même réf pour économiser des minutes.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # Adhésion à Node 24 pour les actions JS ci-dessous (checkout, etc.) avant
-  # la bascule par défaut du 2026-06-16 et le retrait de Node 20 le
-  # 2026-09-16. Garde les versions d'action figées (v4) valides jusqu'à ce
-  # que chaque mainteneur publie une version majeure.
-  # Voir https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
+  # Les étapes vivent dans verification.yml, que release.yml appelle aussi :
+  # une seule définition, deux chaînes. Les recopier ici les ferait diverger,
+  # et le déploiement finirait par vérifier moins que la CI.
   verifier:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 } # historique complet : gitleaks scanne les commits, pas seulement l'état courant
-
-      - name: Prépare pnpm
-        uses: pnpm/action-setup@v4 # version lue depuis le "packageManager" de package.json
-
-      - name: Prépare Node
-        uses: actions/setup-node@v4
-        with: { node-version-file: .nvmrc, cache: pnpm }
-
-      - name: Installe (verrou figé)
-        run: pnpm install --frozen-lockfile
-
-      # Le postinstall de @lehno/api régénère déjà le client à l'install,
-      # mais une étape explicite fait de cette dépendance un fait de la
-      # chaîne plutôt qu'un effet de bord d'un hook — typecheck et test en
-      # dépendent tous deux pour résoudre les types du client Prisma.
-      - name: Génère le client Prisma
-        run: pnpm --filter @lehno/api exec prisma generate
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Vérifie les types
-        run: pnpm typecheck
-
-      # Contrairement à gabee, qui lève un service PostgreSQL pour le job :
-      # les tests de @lehno/api emploient Testcontainers (voir
-      # apps/api/test/db.ts), qui lève ses propres bases éphémères via le
-      # Docker du runner — déjà disponible sur ubuntu-latest, rien à
-      # déclarer ici. Aucune configuration ne suppose un Postgres déjà
-      # présent sur un port fixe (voir DATABASE_URL, jamais lu avant que
-      # withDatabase() n'écrive l'URL du conteneur qu'il vient de lever).
-      - name: Test
-        run: pnpm test
-
-      # Ne couvre que @lehno/web : @lehno/api n'a pas d'étape de compilation,
-      # elle exécute son TypeScript par tsx au démarrage (voir son
-      # package.json et apps/api/Dockerfile). Ce sont donc « Vérifie les
-      # types » et « Test » qui font foi pour l'API, pas cette barrière-ci.
-      - name: Build
-        run: pnpm build
-
-      # GITLEAKS_CONFIG explicite plutôt que la découverte implicite du
-      # .gitleaks.toml à la racine : sans lui, l'action a déjà remonté onze
-      # fuites — toutes le même secret de démonstration du jeu de tests — et
-      # la barrière serait rouge à chaque exécution. Le fichier dit ce qu'il
-      # écarte et pourquoi.
-      - name: Secrets dans l'historique
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
+    uses: ./.github/workflows/verification.yml
+    secrets: inherit

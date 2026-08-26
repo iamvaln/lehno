@@ -12,6 +12,16 @@ const REFRESH_TTL_MS = 60 * 24 * 3_600_000; // soixante jours
 // la liste ferme par construction toute confusion d'algorithme.
 const ALGORITHM = "HS256";
 
+// La marque qui sépare les deux familles de jetons. Elles sont signées de la
+// MÊME clé : sans elle, rien ne les distinguerait qu'un champ absent.
+const PURPOSE_ACCESS = "access";
+const PURPOSE_REGISTRATION = "registration";
+
+// Le temps de choisir un pseudo, pas davantage. Un jeton d'inscription qui
+// traînerait des heures serait un compte en attente de création sur une adresse
+// vérifiée il y a longtemps.
+const REGISTRATION_TTL_SECONDS = 15 * 60;
+
 export type Pair = { accessToken: string; refreshToken: string; expiresIn: number };
 
 type RotateOutcome = { ok: true; pair: Pair } | { ok: false; reason: "session_expired" | "refresh_reused" };
@@ -36,10 +46,66 @@ export class TokenService {
 
   verifyAccess(token: string): { userId: string } {
     try {
-      const payload = jwt.verify(token, this.secret, { algorithms: [ALGORITHM] }) as { sub: string };
+      const payload = jwt.verify(token, this.secret, { algorithms: [ALGORITHM] }) as {
+        sub?: unknown; purpose?: unknown;
+      };
+
+      // Deux vérifications que la signature ne fait PAS.
+      //
+      // 1. `sub` doit exister et être une chaîne non vide. Sans ce contrôle,
+      //    un jeton signé de la même clé mais dépourvu de sujet — le jeton
+      //    d'inscription en est un — passerait le garde avec un userId
+      //    `undefined`, et les requêtes cloisonnées partiraient sur une portée
+      //    vide. La signature dit « ce jeton vient de nous », pas « ce jeton
+      //    ouvre une session ».
+      //
+      // 2. Un jeton portant un `purpose` autre qu'« access » est refusé.
+      //    C'est ce qui empêche un jeton d'inscription de servir de session :
+      //    il est signé de la même clé, et seule cette marque les distingue.
+      if (typeof payload.sub !== "string" || payload.sub.length === 0) {
+        throw new AppError("session_expired", "access token invalid or expired");
+      }
+      if (payload.purpose !== undefined && payload.purpose !== PURPOSE_ACCESS) {
+        throw new AppError("session_expired", "access token invalid or expired");
+      }
       return { userId: payload.sub };
     } catch {
       throw new AppError("session_expired", "access token invalid or expired");
+    }
+  }
+
+  // Le jeton d'inscription : il atteste qu'une adresse a été vérifiée, et rien
+  // d'autre. Pas de sujet — aucun compte n'existe encore —, une marque
+  // explicite, et une vie courte.
+  //
+  // Il n'ouvre AUCUNE ressource : verifyAccess le refuse deux fois, sur
+  // l'absence de sujet et sur la marque. Le porter en en-tête d'autorisation
+  // ne donne accès à rien.
+  issueRegistration(email: string): { registrationToken: string; expiresIn: number } {
+    const expiresIn = REGISTRATION_TTL_SECONDS;
+    return {
+      registrationToken: jwt.sign({ purpose: PURPOSE_REGISTRATION, email }, this.secret, {
+        algorithm: ALGORITHM, expiresIn,
+      }),
+      expiresIn,
+    };
+  }
+
+  verifyRegistration(token: string): { email: string } {
+    try {
+      const payload = jwt.verify(token, this.secret, { algorithms: [ALGORITHM] }) as {
+        purpose?: unknown; email?: unknown;
+      };
+      // La marque se vérifie AVANT tout : un jeton d'accès présenté ici ne
+      // doit pas créer de compte, pas plus qu'un jeton d'inscription n'ouvre
+      // de session. La séparation vaut dans les deux sens.
+      if (payload.purpose !== PURPOSE_REGISTRATION || typeof payload.email !== "string") {
+        throw new AppError("unauthorized", "registration token invalid or expired");
+      }
+      return { email: payload.email };
+    } catch (e) {
+      if (e instanceof AppError) throw e;
+      throw new AppError("unauthorized", "registration token invalid or expired");
     }
   }
 
@@ -49,11 +115,15 @@ export class TokenService {
     parentId: string | null,
     userAgent: string | undefined,
     client: Prisma.TransactionClient | PrismaService,
+    ip?: string,
   ): Promise<Pair> {
     const refreshToken = randomBytes(32).toString("base64url");
     await client.refreshToken.create({
       data: {
         userId, familyId, parentId, tokenHash: this.hash(refreshToken),
+        // Nulle quand on ne la connaît pas — une trace absente vaut mieux
+        // qu'une trace inventée.
+        ip: ip ?? null,
         expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
         userAgent: userAgent ?? null,
       },
@@ -62,11 +132,11 @@ export class TokenService {
     return { accessToken, refreshToken, expiresIn: ACCESS_TTL_S };
   }
 
-  issuePair(userId: string, userAgent?: string): Promise<Pair> {
-    return this.mint(userId, randomUUID(), null, userAgent, this.prisma);
+  issuePair(userId: string, userAgent?: string, ip?: string): Promise<Pair> {
+    return this.mint(userId, randomUUID(), null, userAgent, this.prisma, ip);
   }
 
-  async rotate(refreshToken: string, userAgent?: string): Promise<Pair> {
+  async rotate(refreshToken: string, userAgent?: string, ip?: string): Promise<Pair> {
     const tokenHash = this.hash(refreshToken);
 
     // Consommer le jeton présenté, éventuellement révoquer sa lignée, et
@@ -119,7 +189,7 @@ export class TokenService {
       const row = await tx.refreshToken.findUniqueOrThrow({ where: { tokenHash } });
       if (row.expiresAt.getTime() < Date.now()) return { ok: false, reason: "session_expired" };
 
-      const pair = await this.mint(row.userId, row.familyId, row.id, userAgent, tx);
+      const pair = await this.mint(row.userId, row.familyId, row.id, userAgent, tx, ip);
       return { ok: true, pair };
     });
 

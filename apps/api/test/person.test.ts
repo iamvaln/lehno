@@ -2,9 +2,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import jwt from "jsonwebtoken";
-import { createPersonSchema, type CreatePersonInput } from "@lehno/contracts";
+import { createPersonSchema, champsDeProche, type CreatePersonInput } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { PersonService } from "../src/me/person.service.js";
+import { EventService } from "../src/me/event.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
 import { randomBytes } from "node:crypto";
 import { AppModule } from "../src/app.module.js";
@@ -35,7 +36,8 @@ describe("annuaire des proches", () => {
   afterAll(async () => { await db.close(); });
   beforeEach(async () => {
     await resetDatabase(db.prisma);
-    service = new PersonService(new TenantRepository(db.prisma as never));
+    const depot = new TenantRepository(db.prisma as never);
+    service = new PersonService(depot, new EventService(depot, db.prisma as never));
     awa = await compte();
     bila = await compte();
   });
@@ -63,6 +65,94 @@ describe("annuaire des proches", () => {
     await service.create(awa, { displayName: "Maman" });
     await service.create(awa, { displayName: "Maman" });
     expect(await service.list(awa)).toHaveLength(2);
+  });
+
+  describe("la fiche complète", () => {
+    // Le service ÉNUMÈRE les champs qu'il écrit — c'est ce qui empêche un
+    // userId glissé d'atteindre le dépôt. Mais l'énumération a un prix : un
+    // champ ajouté au contrat et oublié dans le service ne serait jamais
+    // écrit, sans erreur ni avertissement. La fiche paraîtrait vide et
+    // personne ne saurait pourquoi.
+    //
+    // Ce cas dérive la liste attendue du CONTRAT plutôt que de la recopier :
+    // ajouter un champ au contrat le fait rougir tant que le service ne le
+    // porte pas. C'est la seule chose qui relie les deux.
+    it("écrit tous les champs du contrat, sans en oublier un seul", async () => {
+      const complet: CreatePersonInput = {
+        displayName: "Valery Nguemne",
+        birthDate: "1990-03-14",
+        birthYearKnown: true,
+        callingName: "Valo",
+        avatarUrl: "https://exemple.test/photo.jpg",
+        relation: "ami",
+        register: "amical",
+        language: "fr",
+        relationHint: "on a fait la fac ensemble",
+        gender: "unspecified",
+        city: "Douala",
+        country: "CM",
+        preferredChannel: "whatsapp",
+      };
+
+      // Si le contrat gagne un champ, cette ligne échoue à la compilation
+      // tant qu'il n'est pas ajouté ci-dessus — le cas ne peut pas devenir
+      // partiel en silence.
+      const attendus = Object.keys(champsDeProche.shape) as (keyof CreatePersonInput)[];
+      expect(Object.keys(complet).sort()).toEqual([...attendus].sort());
+
+      const p = await service.create(awa, complet);
+      const relu = await service.get(awa, p.id);
+
+      for (const champ of attendus) {
+        expect(relu[champ], `« ${champ} » n'a pas été écrit par le service`).toBe(complet[champ]);
+      }
+    });
+
+    // `relation` et `relationHint` COEXISTENT : l'énumération sert la
+    // génération, le texte libre garde la nuance qu'elle écrase. Poser l'une
+    // ne doit pas effacer l'autre — ce serait perdre « on a fait la fac
+    // ensemble » au profit de « ami ».
+    it("garde le lien en toutes lettres à côté de l'énumération", async () => {
+      const p = await service.create(awa, {
+        displayName: "Celarine",
+        relation: "collegue",
+        relationHint: "on s'est connus sur un chantier à Yaoundé",
+      });
+      expect(p.relation).toBe("collegue");
+      expect(p.relationHint).toBe("on s'est connus sur un chantier à Yaoundé");
+    });
+
+    // Un pays s'écrit en deux lettres : un pays en toutes lettres ne sert à
+    // rien à qui doit le comparer, et « Cameroun » ou « Cameroon » selon la
+    // langue de saisie rendrait toute recherche fausse.
+    it("normalise le pays en deux lettres majuscules", async () => {
+      // On passe par le SCHÉMA, comme le fait le contrôleur via son tuyau de
+      // validation : la normalisation vit là, pas dans le service. Appeler le
+      // service en direct la contournerait, et le cas mesurerait alors autre
+      // chose que ce que traverse une vraie requête.
+      const valide = createPersonSchema.parse({ displayName: "Awa", country: "cm" });
+      const p = await service.create(awa, valide);
+      expect(p.country).toBe("CM");
+
+      // Un pays en toutes lettres ne sert à rien à qui doit le comparer, et
+      // « Cameroun » ou « Cameroon » selon la langue de saisie rendrait toute
+      // recherche fausse. Le schéma le refuse avant le service.
+      expect(createPersonSchema.safeParse({ displayName: "X", country: "Cameroun" }).success)
+        .toBe(false);
+    });
+
+    // Une correction ne touche que ce qu'elle nomme. Sans ça, corriger le
+    // registre effacerait la ville, et l'utilisateur perdrait ce qu'il n'a
+    // pas demandé à changer.
+    it("une correction partielle ne touche pas au reste", async () => {
+      const p = await service.create(awa, {
+        displayName: "Awa", city: "Douala", callingName: "Awa chérie", register: "familier",
+      });
+      const m = await service.update(awa, p.id, { register: "formel" });
+      expect(m.register).toBe("formel");
+      expect(m.city).toBe("Douala");
+      expect(m.callingName).toBe("Awa chérie");
+    });
   });
 
   // Preuve de cloisonnement à l'écriture, en deux cas distincts et
@@ -187,17 +277,6 @@ describe("annuaire des proches", () => {
       else process.env.JWT_SECRET = previousEnv.JWT_SECRET;
       if (previousEnv.LEHNO_MAIL_CONSOLE === undefined) delete process.env.LEHNO_MAIL_CONSOLE;
       else process.env.LEHNO_MAIL_CONSOLE = previousEnv.LEHNO_MAIL_CONSOLE;
-    });
-
-    // La route est gardée par @Feature("me.persons") et la table est vidée
-    // avant chaque test : sans ce rallumage, tout répondrait 404 et les
-    // assertions ci-dessous mesureraient le drapeau, pas la route.
-    beforeEach(async () => {
-      await db.prisma.featureFlag.upsert({
-        where: { key: "me.persons" },
-        update: { enabled: true },
-        create: { key: "me.persons", enabled: true },
-      });
     });
 
     it("refuse un appel sans jeton", async () => {

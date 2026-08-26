@@ -16,3 +16,4 @@ export { Pagination, type PaginationProps, type LibellesPagination } from "./Pag
 export { FilterBar, type FilterBarProps, type FiltreSelect } from "./FilterBar.js";
 export { EmptyState, type EmptyStateProps } from "./EmptyState.js";
 export { StatusPill, type StatusPillProps, type TonPastille } from "./StatusPill.js";
+export { Ressource } from "./Ressource.js";

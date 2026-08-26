@@ -73,6 +73,7 @@ export class AdminTokenService {
     parentId: string | null,
     userAgent: string | undefined,
     tx: TransactionPrisma = this.prisma,
+    ip?: string,
   ): Promise<PaireAdmin> {
     const refreshToken = randomBytes(32).toString("base64url");
     await tx.adminRefreshToken.create({
@@ -83,6 +84,7 @@ export class AdminTokenService {
         tokenHash: this.hash(refreshToken),
         expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
         userAgent: userAgent ?? null,
+        ip: ip ?? null,
       },
     });
     const accessToken = jwt.sign({ sub: adminId, typ: TYPE }, this.secret, {
@@ -91,8 +93,8 @@ export class AdminTokenService {
     return { accessToken, refreshToken, expiresIn: ACCESS_TTL_S };
   }
 
-  async ouvrir(adminId: string, userAgent?: string): Promise<PaireAdmin> {
-    return this.emettre(adminId, randomUUID(), null, userAgent);
+  async ouvrir(adminId: string, userAgent?: string, ip?: string): Promise<PaireAdmin> {
+    return this.emettre(adminId, randomUUID(), null, userAgent, this.prisma, ip);
   }
 
   // Échanger le jeton long contre une paire neuve. Sans cet échange, une
@@ -110,7 +112,7 @@ export class AdminTokenService {
   // trente minutes ; un jeton de rafraîchissement, lui, passe par la base à
   // chaque tour. C'est donc le seul endroit où une révocation de compte peut
   // couper une session en cours plutôt que d'attendre douze heures.
-  async tourner(refreshToken: string, userAgent?: string): Promise<PaireAdmin & { role: string }> {
+  async tourner(refreshToken: string, userAgent?: string, ip?: string): Promise<PaireAdmin & { role: string }> {
     const tokenHash = this.hash(refreshToken);
 
     const issue = await this.prisma.$transaction(async (tx): Promise<Issue> => {
@@ -146,7 +148,7 @@ export class AdminTokenService {
         return { ok: false, raison: "session_expired" };
       }
 
-      const paire = await this.emettre(ligne.adminId, ligne.familyId, ligne.id, userAgent, tx);
+      const paire = await this.emettre(ligne.adminId, ligne.familyId, ligne.id, userAgent, tx, ip);
       return { ok: true, paire: { ...paire, role: admin.role } };
     });
 

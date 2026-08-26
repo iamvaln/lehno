@@ -13,6 +13,10 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   conflict: 409, username_taken: 409, federated_already_linked: 409,
   rate_limited: 429, otp_rate_limited: 429,
   internal_error: 500,
+  // 503 : la ressource existe, elle est momentanément fermée. Voir
+  // maintenance/maintenance.guard.ts — surtout pas 404, qui ferait lire un
+  // arrêt de deux heures comme une suppression.
+  maintenance: 503,
 };
 
 // 422 par défaut : une règle métier non satisfaite, requête pourtant bien formée.

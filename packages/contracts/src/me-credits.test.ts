@@ -74,16 +74,6 @@ describe("le lancement d'un achat", () => {
 });
 
 describe("le solde", () => {
-  /* Chaque mouvement porte sa source. Le schéma est strict : sans ce champ, la
-     réponse du serveur ferait échouer le parsage — et l'écran des crédits
-     resterait vide sans dire pourquoi. */
-  it("exige la source de chaque mouvement", () => {
-    expect(() => creditBalanceSchema.parse({
-      balance: 5,
-      transactions: [{ id: ID, type: "grant", amount: 5, reason: null, createdAt: "2026-08-26T00:00:00.000Z" }],
-    })).toThrow();
-  });
-
   // « Solde = somme des mouvements. Aucune colonne de solde stockée. » Le
   // rendre calculé côté serveur est une chose ; ce qui compte ici est que le
   // client ne le recalcule pas, sous peine de deux vérités qui divergent.
@@ -91,8 +81,8 @@ describe("le solde", () => {
     const solde = creditBalanceSchema.parse({
       balance: 4,
       transactions: [
-        { id: ID, type: "grant", amount: 5, source: "signup_grant", reason: "inscription", createdAt: "2026-08-01T10:00:00.000Z" },
-        { id: "3f2504e0-4f89-11d3-9a0c-0305e82c3302", type: "consumption", amount: -1, source: "consumption", reason: null, createdAt: "2026-08-02T10:00:00.000Z" },
+        { id: ID, type: "grant", reason: "signup", amount: 5, createdAt: "2026-08-01T10:00:00.000Z" },
+        { id: "3f2504e0-4f89-11d3-9a0c-0305e82c3302", type: "consumption", reason: "usage", amount: -1, createdAt: "2026-08-02T10:00:00.000Z" },
       ],
     });
     expect(solde.balance).toBe(4);
@@ -103,7 +93,7 @@ describe("le solde", () => {
   it("accepte un mouvement négatif", () => {
     const solde = creditBalanceSchema.parse({
       balance: 0,
-      transactions: [{ id: ID, type: "consumption", amount: -1, source: "consumption", reason: null, createdAt: "2026-08-02T10:00:00.000Z" }],
+      transactions: [{ id: ID, type: "consumption", reason: "usage", amount: -1, createdAt: "2026-08-02T10:00:00.000Z" }],
     });
     expect(solde.transactions[0]!.amount).toBe(-1);
   });

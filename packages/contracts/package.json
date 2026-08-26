@@ -7,7 +7,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "openapi": "tsx scripts/build-openapi.ts"
+    "openapi": "tsx scripts/build-openapi.ts",
+    "serve-contrat": "tsx scripts/serve-docs.ts"
   },
   "dependencies": {
     "zod": "^3.23.0",

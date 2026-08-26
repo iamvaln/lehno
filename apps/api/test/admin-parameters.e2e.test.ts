@@ -5,6 +5,7 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 import { AdminTokenService } from "../src/admin/admin-token.service.js";
+import { parametresSchema } from "@lehno/contracts";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -61,6 +62,60 @@ describe("administration — les paramètres du système", () => {
       body: JSON.stringify(corps),
     });
 
+  // Le contrat est la seule chose que les deux côtés partagent. Sans ce test,
+  // le serveur a servi une liste plate là où l'outil attendait deux groupes.
+  it("rend les paramètres dans la forme du contrat publié", async () => {
+    const { entete } = await session("admin");
+
+    const corps = await (await fetch(`${baseUrl}/v1/admin/parameters`, { headers: entete })).json();
+
+    const valide = parametresSchema.safeParse(corps);
+    expect(valide.success ? null : valide.error.issues).toBeNull();
+  });
+
+  // « Modifier une valeur, avec rappel de la précédente » (ux-admin §5.6). La
+  // précédente ne vit nulle part dans system_parameter : c'est le journal
+  // d'audit qui la porte, et c'est lui qu'on relit.
+  it("rappelle la valeur précédente, tirée du journal", async () => {
+    const { entete } = await session("admin");
+    await fetch(`${baseUrl}/v1/admin/parameters`, {
+      method: "PATCH",
+      headers: { ...entete, "content-type": "application/json" },
+      body: JSON.stringify({ key: "signup_free_credits", value: "9", reason: "promotion de lancement" }),
+    });
+
+    const corps = (await (await fetch(`${baseUrl}/v1/admin/parameters`, { headers: entete })).json()) as {
+      economie: { cle: string; valeur: string | number; valeurPrecedente: string | number | null }[];
+    };
+
+    const ligne = corps.economie.find((p) => p.cle === "signup_free_credits");
+    expect(ligne?.valeur).toBe("9");
+    expect(ligne?.valeurPrecedente).toBe("5");
+  });
+
+  it("une valeur jamais modifiée n'a pas de précédente", async () => {
+    const { entete } = await session("admin");
+
+    const corps = (await (await fetch(`${baseUrl}/v1/admin/parameters`, { headers: entete })).json()) as {
+      economie: { cle: string; valeurPrecedente: string | number | null }[];
+    };
+
+    expect(corps.economie.find((p) => p.cle === "credit_unit_price")?.valeurPrecedente).toBeNull();
+  });
+
+  // Les types d'occasion sont un enum du code. L'écran doit le savoir pour ne
+  // pas offrir un interrupteur qui n'enregistre rien.
+  it("annonce que les types d'occasion ne sont pas réglables", async () => {
+    const { entete } = await session("admin");
+
+    const corps = (await (await fetch(`${baseUrl}/v1/admin/parameters`, { headers: entete })).json()) as {
+      typesEvenement: { id: string; reglable: boolean }[];
+    };
+
+    expect(corps.typesEvenement.length).toBeGreaterThan(0);
+    for (const type of corps.typesEvenement) expect(type.reglable).toBe(false);
+  });
+
   it("refuse une lecture sans session", async () => {
     const res = await fetch(`${baseUrl}/v1/admin/parameters`);
     expect(res.status).toBe(401);
@@ -70,8 +125,8 @@ describe("administration — les paramètres du système", () => {
     const { entete } = await session("support");
     const res = await fetch(`${baseUrl}/v1/admin/parameters`, { headers: entete });
     expect(res.status).toBe(200);
-    const corps = (await res.json()) as { items: { key: string; value: string }[] };
-    const clefs = corps.items.map((p) => p.key);
+    const corps = (await res.json()) as { economie: { cle: string; valeur: string }[] };
+    const clefs = corps.economie.map((p) => p.cle);
     expect(clefs).toContain("credit_unit_price");
     expect(clefs).toContain("signup_free_credits");
   });

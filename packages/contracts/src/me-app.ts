@@ -1,8 +1,11 @@
 import { z } from "zod";
-import { EVENT_KINDS } from "./me-events.js";
+import { EVENT_KINDS, EVENT_NATURES, SCHEDULE_UNITS } from "./me-events.js";
+import {
+  CATEGORY_CODES, PERSON_RELATIONS, PERSON_REGISTERS, PERSON_GENDERS, CONTACT_CHANNELS,
+} from "./me.js";
 
-/* Le Mur, les notifications, la recherche et les reprises — spec technique
- * §5.5, §5.7 et §5.8.
+/* Le Mur, les notifications, la recherche, les reprises et les métadonnées —
+ * spec technique §5.5, §5.7 et §5.8.
  */
 
 // ── Le Mur ──────────────────────────────────────────────────────────────────
@@ -128,3 +131,35 @@ export const resumableSchema = z.object({
 }).strict();
 
 export type Resumable = z.infer<typeof resumableSchema>;
+
+// ── Les métadonnées ─────────────────────────────────────────────────────────
+
+/* Les valeurs dont les écrans composent leurs listes. La plupart sont des
+ * énumérations FIGÉES qu'un client typé connaît déjà à la compilation — les
+ * servir ici évite seulement d'aller les chercher à deux endroits.
+ *
+ * `categories` est la seule à ne PAS l'être : `Category` vit en base, et
+ * porte `kind` et `isConstraint`. Un client ne peut déduire d'aucune
+ * énumération nue que `dislikes_nogo` est une contrainte ACTIVE — or c'est ce
+ * qui change ce que le produit PROPOSE, pas seulement ce qu'il affiche.
+ *
+ * Aucun libellé ici : ils vivent dans les ressources de traduction de
+ * l'application, indexés par `code`. En rendre depuis le serveur ferait deux
+ * sources de vérité pour un même mot, et l'obligerait à connaître la langue
+ * du demandeur. */
+export const metadataSchema = z.object({
+  categories: z.array(z.object({
+    code: z.enum(CATEGORY_CODES),
+    kind: z.enum(["ponctuelle", "durable"]),
+    isConstraint: z.boolean(),
+  }).strict()),
+  eventKinds: z.array(z.enum(EVENT_KINDS)),
+  eventNatures: z.array(z.enum(EVENT_NATURES)),
+  scheduleUnits: z.array(z.enum(SCHEDULE_UNITS)),
+  personRelations: z.array(z.enum(PERSON_RELATIONS)),
+  personRegisters: z.array(z.enum(PERSON_REGISTERS)),
+  personGenders: z.array(z.enum(PERSON_GENDERS)),
+  contactChannels: z.array(z.enum(CONTACT_CHANNELS)),
+}).strict();
+
+export type Metadata = z.infer<typeof metadataSchema>;

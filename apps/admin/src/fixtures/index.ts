@@ -62,6 +62,7 @@ export const compteDetail: CompteDetail = {
   pseudo: "awa",
   email: "awa@example.cm",
   etat: "actif",
+  suppressionDemandeeLe: null,
   langue: "fr",
   inscritLe: "2026-03-04",
   derniereConnexion: "2026-08-22",
@@ -87,19 +88,19 @@ export const interventions: Page<Intervention> = {
   nextCursor: null,
 };
 
+// Les clés sont celles que la migration sème : une fixture qui inventerait des
+// clés ne dirait rien du produit, et masquerait un libellé manquant.
 export const parametres: Parametres = {
   economie: [
-    { cle: "credit_unit_price", libelle: "Prix du crédit", aide: "Le prix est unique et s'applique à tout nouvel achat.", valeur: 100, valeurPrecedente: 100, unite: "F" },
-    { cle: "signup_free_credits", libelle: "Crédits offerts à l'inscription", aide: null, valeur: 5, valeurPrecedente: 3, unite: "crédits" },
-    { cle: "referral_bonus_sponsor", libelle: "Bonus au parrain", aide: "Versé quand le filleul crée son compte.", valeur: 5, valeurPrecedente: 5, unite: "crédits" },
-    { cle: "referral_bonus_invited", libelle: "Bonus au filleul", aide: "Deux valeurs distinctes : le parrain et le filleul ne reçoivent pas la même chose.", valeur: 3, valeurPrecedente: 3, unite: "crédits" },
-    { cle: "account_grace_period_days", libelle: "Délai de grâce avant effacement", aide: "Un retour en arrière reste possible pendant ce délai.", valeur: 30, valeurPrecedente: 30, unite: "jours" },
+    { cle: "credit_unit_price", valeur: "100", type: "money", valeurPrecedente: "80", misAJourLe: "2026-08-20T09:00:00.000Z" },
+    { cle: "signup_free_credits", valeur: "5", type: "number", valeurPrecedente: null, misAJourLe: "2026-08-20T09:00:00.000Z" },
+    { cle: "account_grace_period_days", valeur: "30", type: "number", valeurPrecedente: null, misAJourLe: "2026-08-20T09:00:00.000Z" },
+    { cle: "reminder_lead_days_default", valeur: "7", type: "number", valeurPrecedente: null, misAJourLe: "2026-08-20T09:00:00.000Z" },
   ],
+  // Un enum du code : montré, pas réglable.
   typesEvenement: [
-    { id: "anniversaire", libelle: "Anniversaire", actif: true, sensible: false },
-    { id: "mariage", libelle: "Mariage", actif: true, sensible: false },
-    { id: "retraite", libelle: "Départ en retraite", actif: true, sensible: false },
-    { id: "deces", libelle: "Anniversaire de décès", actif: true, sensible: true },
+    { id: "birthday", actif: true, sensible: false, reglable: false },
+    { id: "other", actif: true, sensible: false, reglable: false },
   ],
 };
 

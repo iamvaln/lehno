@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { nativeFont, nativeLetterSpacing, nativeSpace, nativeTracking } from "@lehno/tokens";
 import { Banner, Button, TextField, useTheme } from "@lehno/ui-native";
-import { registrationUsernameSchema, sessionSchema } from "@lehno/contracts";
+import { registeredSchema, usernameSchema } from "@lehno/contracts";
 import { useLangue } from "../../lib/langue.js";
 import { appelPublic, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
@@ -42,7 +42,7 @@ export default function Pseudo() {
   const refuse = plafondAtteint === "1";
 
   // La forme se vérifie ici pour éteindre le bouton ; le serveur tranche.
-  const formeValide = registrationUsernameSchema.safeParse(pseudo).success;
+  const formeValide = usernameSchema.safeParse(pseudo).success;
 
   const inscris = async () => {
     setErreur(null);
@@ -58,14 +58,22 @@ export default function Pseudo() {
           ...(parrain.trim() ? { referralCode: parrain.trim() } : {}),
         }),
       });
-      const session = sessionSchema.parse(brut);
+      const session = registeredSchema.parse(brut);
       await poseLesJetons(session);
 
       // Les crédits offerts viennent du serveur : les écrire en dur les ferait
       // mentir dès que le montant change en administration.
       routeur.replace({
         pathname: "/(connexion)/bienvenue",
-        params: { credits: String(session.signupCredits ?? 0) },
+        params: {
+          credits: String(session.signupCredits),
+          /* Le détail, pas un total : le cadeau de bienvenue et le bonus de
+             parrainage sont deux gestes distincts, et l'un des deux se mérite.
+             Les additionner effacerait la raison d'inviter quelqu'un. */
+          bonus: String(session.referral?.bonusCredits ?? 0),
+          parrain: session.referral?.inviterUsername ?? "",
+          issueParrain: session.referral?.outcome ?? "",
+        },
       });
     } catch (e) {
       const enveloppe = e instanceof ErreurDApi ? e.enveloppe : null;

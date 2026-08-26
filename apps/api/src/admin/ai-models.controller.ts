@@ -28,11 +28,16 @@ export class AIModelsService {
     const lignes = await this.prisma.aIModel.findMany({ orderBy: [{ priority: "asc" }, { provider: "asc" }] });
     return {
       items: lignes.map((m) => ({
-        id: m.id, provider: m.provider, modelKey: m.modelKey,
-        priority: m.priority, enabled: m.enabled,
-        costInput: m.costInput === null ? null : Number(m.costInput),
-        costOutput: m.costOutput === null ? null : Number(m.costOutput),
-        updatedAt: m.updatedAt.toISOString(),
+        id: m.id,
+        fournisseur: m.provider,
+        modele: m.modelKey,
+        rang: m.priority,
+        actif: m.enabled,
+        // Nuls quand le modèle n'a pas encore été tarifé — ce n'est pas
+        // « gratuit », c'est « on ne sait pas ce qu'il coûte ».
+        coutEntree: m.costInput === null ? null : Number(m.costInput),
+        coutSortie: m.costOutput === null ? null : Number(m.costOutput),
+        misAJourLe: m.updatedAt.toISOString(),
       })),
     };
   }

@@ -105,14 +105,91 @@ export type Payment = z.infer<typeof paymentSchema>;
 
 export const CREDIT_TRANSACTION_TYPES = ["grant", "purchase", "consumption", "adjustment"] as const;
 
-/* D'où vient le mouvement. Le type dit s'il ajoute ou retire ; la source dit
-   pourquoi, et c'est elle que l'écran des crédits affiche — « offert à
-   l'inscription » ne se lit pas comme « acheté ». */
+/* POURQUOI ce mouvement existe, du point de vue de CELUI QUI LE LIT.
+ *
+ * Ce vocabulaire est celui de l'utilisateur, pas celui de la comptabilité. Les
+ * deux ne coïncident pas : nous distinguons un achat par l'application d'un
+ * virement vérifié à la main, lui a payé dans les deux cas. Servir notre
+ * taxonomie interne lui apprendrait des opérations qu'il n'a pas demandées, et
+ * coupleraient son application à notre plan comptable — le jour où celui-ci
+ * gagne une catégorie, son écran casserait.
+ *
+ * `type` ne suffit pas : un cadeau de bienvenue et un bonus de parrainage sont
+ * tous deux des « grant », tous deux +5, et ce sont pourtant deux nouvelles
+ * différentes — l'une se reçoit, l'autre se mérite.
+ *
+ * Aucun fourre-tout, et c'est délibéré. « Ajustement » disait « on a corrigé
+ * une erreur » là où l'on voulait dire « on vous offre quelque chose » : deux
+ * nouvelles opposées sous un même mot. Elles ont chacune la leur.
+ */
+export const CREDIT_REASONS = [
+  "signup",     // le cadeau de bienvenue, à l'inscription
+  "referral",   // le bonus d'une invitation — la seule qui se mérite
+  "purchase",   // un achat, par l'application ou par virement vérifié
+  "promo",      // un code promotionnel
+  "gift",       // un cadeau : geste commercial, dédommagement
+  "reward",     // une récompense : concours, défi
+  "usage",      // une génération consommée
+  "refund",     // un remboursement : les crédits repris avec l'argent rendu
+  "correction", // une erreur réparée — le seul cas qui dit vraiment « ajustement »
+] as const;
+export type CreditReason = (typeof CREDIT_REASONS)[number];
+
+/* Les libellés à afficher, dans les deux langues.
+ *
+ * Ils vivent ICI et non dans la réponse : le serveur n'a pas à connaître la
+ * langue de celui qui appelle, et un même mot n'a pas à exister à deux
+ * endroits. Le client les recopie dans ses ressources de traduction — c'est la
+ * règle du contrat commun, « le client traduit le code ».
+ *
+ * Ils sont fournis pour qu'aucune équipe n'ait à les inventer : deux clients
+ * qui traduisent « referral » chacun de son côté finissent par dire deux
+ * choses différentes de la même ligne. */
+export const CREDIT_REASON_LABELS: Record<CreditReason, { fr: string; en: string }> = {
+  signup:     { fr: "Cadeau de bienvenue",  en: "Welcome gift" },
+  referral:   { fr: "Bonus de parrainage",  en: "Referral bonus" },
+  purchase:   { fr: "Achat de crédits",     en: "Credit purchase" },
+  promo:      { fr: "Code promotionnel",    en: "Promo code" },
+  gift:       { fr: "Cadeau",               en: "Gift" },
+  reward:     { fr: "Récompense",           en: "Reward" },
+  usage:      { fr: "Génération",           en: "Generation" },
+  refund:     { fr: "Remboursement",        en: "Refund" },
+  correction: { fr: "Correction",           en: "Correction" },
+};
+
+/* Ce que la comptabilité distingue, et que l'utilisateur n'a pas à connaître.
+ * Reste EN BASE, ne franchit jamais une route mobile. */
 export const CREDIT_SOURCES = [
-  "signup_grant", "referral_bonus", "purchase", "manual_topup",
-  "promo_code", "consumption", "admin_adjustment",
+  "signup_grant",
+  "referral_bonus",
+  "purchase",
+  "manual_topup",
+  "promo_code",
+  "gift",
+  "reward",
+  "consumption",
+  "refund",
+  "correction",
 ] as const;
 export type CreditSource = (typeof CREDIT_SOURCES)[number];
+
+/* La traduction de l'un vers l'autre, en UN endroit.
+ *
+ * `manual_topup` est le seul à se fondre : de l'intérieur c'est un virement
+ * vérifié à la main, de l'extérieur c'est un achat — le client a payé, la
+ * façon dont l'argent nous est parvenu ne le regarde pas. */
+export const RAISON_DE_LA_SOURCE: Record<CreditSource, CreditReason> = {
+  signup_grant: "signup",
+  referral_bonus: "referral",
+  purchase: "purchase",
+  manual_topup: "purchase",
+  promo_code: "promo",
+  gift: "gift",
+  reward: "reward",
+  consumption: "usage",
+  refund: "refund",
+  correction: "correction",
+};
 
 export const creditTransactionSchema = z.object({
   id: z.string().uuid(),
@@ -120,8 +197,9 @@ export const creditTransactionSchema = z.object({
   // Signé : + au crédit, − au débit. Un débit noté positif gonflerait le solde
   // au lieu de le réduire.
   amount: z.number().int(),
-  source: z.enum(CREDIT_SOURCES),
-  reason: z.string().nullable(),
+  // La RAISON, dans le vocabulaire de l'utilisateur — jamais la source
+  // comptable. Voir CREDIT_REASON_LABELS pour les libellés des deux langues.
+  reason: z.enum(CREDIT_REASONS),
   createdAt: z.string(),
 }).strict();
 
@@ -137,3 +215,39 @@ export const creditBalanceSchema = z.object({
 
 export type CreditBalance = z.infer<typeof creditBalanceSchema>;
 export type CreditTransaction = z.infer<typeof creditTransactionSchema>;
+
+// ── Le parrainage ───────────────────────────────────────────────────────────
+
+export const REFERRAL_STATUSES = ["invited", "registered", "credited"] as const;
+
+export const referredPersonSchema = z.object({
+  // Le pseudo, jamais l'adresse : un parrain n'a pas à connaître la boîte de
+  // ses filleuls sous prétexte qu'il les a invités.
+  username: z.string(),
+  status: z.enum(REFERRAL_STATUSES),
+  createdAt: z.string(),
+}).strict();
+
+export const referralSummarySchema = z.object({
+  code: z.string(),
+  invited: z.array(referredPersonSchema),
+  // Somme des mouvements rattachés à ses parrainages. Calculée, comme le
+  // solde — un compteur stocké finirait par diverger du registre.
+  creditsEarned: z.number().int().min(0),
+}).strict();
+
+export type ReferralSummary = z.infer<typeof referralSummarySchema>;
+
+// ── La page d'invitation, ouverte sans compte ───────────────────────────────
+
+/* Ce qu'un invité voit avant d'avoir un compte. Le strict minimum pour donner
+   envie et rassurer : qui invite, et ce qu'on y gagne. Aucune donnée du
+   parrain au-delà de son pseudo — un code d'invitation circule, et tout ce
+   qu'on met ici circule avec lui. */
+export const invitationSchema = z.object({
+  code: z.string(),
+  inviterUsername: z.string(),
+  creditsForInvited: z.number().int().min(0),
+}).strict();
+
+export type Invitation = z.infer<typeof invitationSchema>;

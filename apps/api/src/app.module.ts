@@ -1,12 +1,18 @@
 import type { MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { CorrelationMiddleware } from "./common/correlation.middleware.js";
 import { RateLimitService } from "./common/rate-limit.service.js";
 import { PrismaService } from "./prisma/prisma.service.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthGuard } from "./auth/auth.guard.js";
+import { SignupService } from "./onboarding/signup.service.js";
+import {
+  CreditsController, CreditsService, ReferralController, InvitationController,
+} from "./onboarding/credits.controller.js";
 import { FlagsService } from "./flags/flags.service.js";
 import { FeatureGuard } from "./flags/feature.guard.js";
+import { MeFeaturesController, PublicFeaturesController } from "./flags/features.controller.js";
 import { AuthService } from "./auth/auth.service.js";
 import { FederatedService } from "./auth/federated.service.js";
 import { OtpService } from "./auth/otp.service.js";
@@ -18,6 +24,16 @@ import { ProfileController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
 import { PersonController } from "./me/person.controller.js";
 import { PersonService } from "./me/person.service.js";
+import { EventController } from "./me/event.controller.js";
+import { EventService } from "./me/event.service.js";
+import { OccurrenceController } from "./me/occurrence.controller.js";
+import { OccurrenceService } from "./me/occurrence.service.js";
+import { NoteController, NotesController } from "./me/note.controller.js";
+import { NoteService } from "./me/note.service.js";
+import { HomeController } from "./me/home.controller.js";
+import { HomeService } from "./me/home.service.js";
+import { MetadataController } from "./me/metadata.controller.js";
+import { MetadataService } from "./me/metadata.service.js";
 import { TenantRepository } from "./tenancy/tenant.repository.js";
 import { ConfigController, ConfigService } from "./public/config.controller.js";
 import { LegalController, LegalService } from "./public/legal.controller.js";
@@ -32,6 +48,10 @@ import { AdminGuard } from "./admin/admin.guard.js";
 import { RoleGuard } from "./admin/role.guard.js";
 import { AuditService } from "./admin/audit.service.js";
 import { ParametersController, ParametersService } from "./admin/parameters.controller.js";
+import { AdminFeatureFlagsController, AdminFeatureFlagsService } from "./admin/feature-flags.controller.js";
+import { PaymentSettingsController, PaymentSettingsService } from "./admin/payment-settings.controller.js";
+import { AdminPaymentsController, AdminCreditsController, AdminPaymentsService } from "./admin/payments.controller.js";
+import { PaymentListsController, PaymentListsService } from "./admin/payment-lists.controller.js";
 import { AdminUsersController, AdminUsersService } from "./admin/users.controller.js";
 import { DeletionsController, DeletionsService } from "./admin/deletions.controller.js";
 import { LecturesController, LecturesService } from "./admin/lectures.controller.js";
@@ -39,15 +59,27 @@ import { AdminsController, AdminsService } from "./admin/admins.controller.js";
 import { AIModelsController, AIModelsService } from "./admin/ai-models.controller.js";
 import { DashboardController, DashboardService } from "./admin/dashboard.controller.js";
 import { StudioController, StudioService } from "./admin/studio.controller.js";
+import { MaintenanceService } from "./maintenance/maintenance.service.js";
+import { MaintenanceGuard } from "./maintenance/maintenance.guard.js";
+import { MaintenanceController } from "./maintenance/maintenance.controller.js";
 
 @Module({
   controllers: [
-    AuthController, ProfileController, PersonController, ConfigController, LegalController,
+    AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, ConfigController, LegalController,
+    MeFeaturesController, PublicFeaturesController, MaintenanceController,
+    CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
-    AdminAuthController, ParametersController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
   ],
   providers: [
     PrismaService,
+    // Garde GLOBAL, et le premier de tous : un arrêt pour intervention vaut
+    // pour toute l'API, pas surface par surface. Posé ici plutôt que sur
+    // chaque contrôleur — un contrôleur ajouté demain est couvert sans que
+    // personne ait à y penser, et c'est exactement ce qu'on veut d'un
+    // interrupteur d'arrêt. Ses exemptions vivent dans le garde.
+    { provide: APP_GUARD, useClass: MaintenanceGuard },
+    MaintenanceService,
     // useFactory : la valeur se lit à l'INSTANCIATION du provider, pas à
     // l'évaluation du décorateur (qui n'a lieu qu'une fois, au chargement du
     // module). Sans ça, une valeur d'environnement posée ou retirée après
@@ -105,11 +137,18 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     AuthService,
     FederatedService,
     AuthGuard,
+    SignupService,
+    CreditsService,
     FlagsService,
     FeatureGuard,
     ProfileService,
     TenantRepository,
+    EventService,
+    OccurrenceService,
     PersonService,
+    NoteService,
+    HomeService,
+    MetadataService,
     ConfigService,
     LegalService,
     WaitlistService,
@@ -120,6 +159,10 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     RoleGuard,
     AuditService,
     ParametersService,
+    AdminFeatureFlagsService,
+    PaymentSettingsService,
+    AdminPaymentsService,
+    PaymentListsService,
     AdminUsersService,
     DeletionsService,
     LecturesService,

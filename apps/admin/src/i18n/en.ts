@@ -40,10 +40,9 @@ export const en: typeof fr = {
   },
 
   familles: {
-    attention: "Needs a decision",
-    finances: "Finance",
-    gestion: "Management",
-    surveiller: "Monitoring",
+    exploitation: "Operations",
+    economie: "Economy",
+    supervision: "Monitoring",
     outils: "Tools",
   },
 
@@ -55,9 +54,14 @@ export const en: typeof fr = {
     contact: "Contact messages",
     attente: "Waitlist",
     transactions: "Transactions",
-    comptes: "Users",
-    acces: "Administrators",
-    parametres: "Settings",
+    comptes: "Accounts",
+    credits: "Credits and payments",
+    acces: "Administrator access",
+    parametres: "Parameters",
+    fonctionnalites: "Features",
+    modeles: "AI models",
+    studio: "Portrait studio",
+    offres: "Offers and growth",
     metriques: "Metrics",
     audit: "Audit log",
     connexions: "Sign-ins",
@@ -119,6 +123,208 @@ export const en: typeof fr = {
     journal: "The export shows up in the audit log.",
     encours: "Preparing the file…",
     lance: "Export started on {n} rows. The file will arrive by email.",
+  },
+
+  // Voir fr.ts : un écran qui charge et un écran vide ne disent pas la même chose.
+  actions: {
+    chargement: "Loading…",
+    reessayer: "Try again",
+    echecTitre: "Loading did not go through",
+  },
+
+  // Voir fr.ts : une valeur qu'on ne sait pas encore compter n'est pas zéro.
+  nonMesure: {
+    court: "—",
+    explication: "Not measured yet",
+    bloc: "This measure does not exist yet. It will appear here once the feature ships.",
+  },
+
+  // Voir fr.ts : `journal` est la section, `audit` l'historique d'un compte.
+  journal: {
+    titre: "Audit log",
+    sous: "What the team did, and why. Nothing here can be changed or removed.",
+    col: { date: "When", acteur: "Who", action: "What", motif: "Why", cible: "On what" },
+    sansMotif: "User's own action",
+    acteurs: { admin: "Administration", user: "User" },
+    vide: {
+      titre: "No entries in this period",
+      texte: "Every administrative action lands here, with its author, target and reason.",
+    },
+  },
+
+  entrees: {
+    titre: "Sign-ins",
+    sous: "Successful entries and refused attempts. No IP address: it never reaches the database.",
+    col: { date: "When", compte: "Account", adresse: "Address tried", resultat: "Result", appareil: "Device", lieu: "Approximate location" },
+    resultats: { success: "Signed in", failure: "Refused" },
+    inconnu: "—",
+    vide: {
+      titre: "No attempts in this period",
+      texte: "Every entry, successful or not, lands here with its device and approximate location.",
+    },
+  },
+
+  modeles: {
+    titre: "AI models",
+    sous: "The order we try them in, and what each one costs at the provider.",
+    col: { rang: "Try order", fournisseur: "Provider", modele: "Model", etat: "State", entree: "Input cost", sortie: "Output cost" },
+    etats: { actif: "In service", eteint: "Off" },
+    sansCout: "Not priced",
+    unite: "$ / M tokens",
+    eteindre: "Turn this model off",
+    rallumer: "Put back in service",
+    dialogueEteindre: {
+      titre: "Turn off {modele}",
+      consequence: "Work will move to the next model in the try order. If this is the last one in service, the server will refuse.",
+      motifs: [
+        "The model fails too often",
+        "Cost has grown too high",
+        "Replaced by another provider",
+      ],
+    },
+    dialogueRallumer: {
+      titre: "Put {modele} back in service",
+      consequence: "It returns to the try order, at its rank.",
+      motifs: [
+        "The provider incident is over",
+        "Rolling back a trial",
+      ],
+    },
+    manque: "Real spend and what it earned are not shown yet: usage records do not exist in the database. This catalogue says what we try, and in what order.",
+  },
+
+  drapeaux: {
+    titre: "Features",
+    sous: "What ships, and what waits. The core is not listed: it cannot be turned off.",
+    col: { cle: "Key", gouverne: "What it governs", portee: "Where", couverture: "What it covers", etat: "State", parQui: "Last change" },
+    etats: {
+      actif: "In service",
+      eteint: "Off",
+      inerte: "On, no effect",
+    },
+    portees: { app: "App", public: "Public" },
+    requiert: "Needs: {cles}",
+    emporte: "Turning off also takes down",
+    jamais: "Never changed",
+    allumer: "Turn on",
+    eteindre: "Turn off",
+    dialogueEteindre: {
+      titre: "Turn off {cle}",
+      consequence: "The listed screens and entry points stop answering. Anything depending on them goes down too.",
+      motifs: [
+        "Incident under way on this feature",
+        "Not ready for the public yet",
+        "Too costly for now",
+      ],
+    },
+    dialogueAllumer: {
+      titre: "Turn on {cle}",
+      consequence: "The listed screens and entry points start answering. If a prerequisite is off, nothing changes until it is on.",
+      motifs: [
+        "Opening to the public",
+        "The incident is over",
+        "Short trial",
+      ],
+    },
+  },
+
+  // Voir fr.ts : trois faces d'une même section.
+  credits: {
+    titre: "Credits and payments",
+    sous: "What came in, what it produced, and the settings that decide both.",
+    onglets: { paiements: "Payments", mouvements: "Movements", reglages: "Settings" },
+
+    paiements: {
+      col: {
+        utilisateur: "Account", mode: "Route", etat: "State", montant: "Amount",
+        methode: "Method", attendu: "Expected", recu: "Received", ecart: "Gap", quand: "Entered",
+      },
+      modes: { provider: "Provider", semi_manual: "Semi-manual", manual: "Manual" },
+      etats: {
+        pending: "Pending", succeeded: "Confirmed", failed: "Refused",
+        expired: "Expired", refunded: "Refunded",
+      },
+      filtreEtat: "State", filtreMode: "Route", tous: "All",
+      nonConstate: "—",
+      vide: {
+        titre: "No payments in this period",
+        texte: "Entered transfers and those received by the app appear here, with their outcome.",
+      },
+    },
+
+    mouvements: {
+      col: { utilisateur: "Account", type: "Type", source: "Origin", montant: "Credits", quand: "On" },
+      types: { grant: "Grant", purchase: "Purchase", consumption: "Use", adjustment: "Adjustment" },
+      sources: {
+        signup_grant: "Sign-up", referral_bonus: "Referral", purchase: "Purchase",
+        manual_topup: "Manual transfer", promo_code: "Promo code", gift: "Gift",
+        reward: "Reward", consumption: "Use", refund: "Refund",
+        correction: "Correction",
+      },
+      vide: {
+        titre: "No movements in this period",
+        texte: "Every grant, purchase, use and adjustment lands here.",
+      },
+    },
+
+    detail: {
+      titre: "Payment",
+      groupes: { operation: "The operation", montants: "The amounts", histoire: "Its history" },
+      champs: {
+        reference: "Reference", compte: "Collection account", frais: "Fee",
+        montant: "Bundle price", attendu: "Expected on the account", recu: "Observed",
+        ecart: "Gap", motifEchec: "Reason for refusal", credits: "Credits",
+      },
+      histoire: { etat: "State", debut: "Since", duree: "Duration", origine: "Triggered by", parQui: "By", motif: "Reason" },
+      origines: {
+        user: "The user", webhook: "The provider", polling: "A status check",
+        admin: "Administration", system: "A scheduled job",
+      },
+      enCours: "Ongoing",
+      retour: "Back to payments",
+    },
+
+    decision: {
+      confirmer: "Confirm receipt",
+      rejeter: "Refuse",
+      avertissement: "The receipt proves nothing — a forgery is easy. Check the money arrived on the operator account before confirming.",
+      montantRecu: "Amount observed on the account",
+      montantAide: "Fill this in even with no gap: it is what lets you establish there isn't one.",
+      reference: "Transaction reference",
+      dialogueConfirmer: {
+        titre: "Confirm this transfer",
+        consequence: "Credits are granted to the account, once. The client is notified.",
+        motifs: ["Receipt confirmed on the account", "Transfer found after searching"],
+      },
+      dialogueRejeter: {
+        titre: "Refuse this transfer",
+        consequence: "No credits are granted. The reason will show on the payment.",
+        motifs: ["Nothing arrived on the account", "Amount too low", "Receipt not acceptable"],
+      },
+    },
+
+    reglages: {
+      paliers: {
+        titre: "Purchase bundles",
+        sous: "What we offer. No free amounts: the smallest bundle sets the minimum.",
+        col: { montant: "Price", credits: "Credits", remise: "Bonus", position: "Order", etat: "State" },
+      },
+      canaux: {
+        titre: "Channels and fees",
+        sous: "What the service offers, and what the operator takes. A channel is never deleted, only switched off.",
+        col: { libelle: "Channel", pays: "Country", frais: "Fee", portes: "Borne by", etat: "State" },
+        portes: { payer: "The client", payee: "The service" },
+      },
+      comptes: {
+        titre: "Collection accounts",
+        sous: "The accounts clients transfer to.",
+        col: { libelle: "Account", operateur: "Operator", numero: "Number", visible: "In the app", etat: "State" },
+        visible: "Offered", masque: "Hidden",
+      },
+      actif: "In service",
+      inactif: "Withdrawn",
+      aucuneRemise: "—",
+    },
   },
 
   echecs: {
@@ -390,6 +596,27 @@ export const en: typeof fr = {
     rienAEnregistrer: "Nothing has changed since the last save.",
     journal: "The audit log keeps every change and its author.",
     erreurEntier: "A whole number above zero.",
+    // Voir fr.ts : le serveur transporte des clés, l'outil porte les phrases.
+    cles: {
+      reminder_lead_days_default: { libelle: "Reminder lead time", aide: "How many days before the date the reminder goes out, by default.", unite: "days" },
+      wish_window_lead_days: { libelle: "Wish window opens", aide: "How many days before the date the link accepts wishes.", unite: "days" },
+      wish_window_trail_days: { libelle: "Wish window closes", aide: "How many days after the date the link stays open.", unite: "days" },
+      max_accounts_per_device: { libelle: "Accounts per device", aide: "Beyond this, sign-up is refused from that device.", unite: null },
+      account_grace_period_days: { libelle: "Grace period", aide: "The time left before an account is erased for good.", unite: "days" },
+      signup_free_credits: { libelle: "Credits given at sign-up", aide: "What a new account gets to try things out.", unite: "credits" },
+      credit_unit_price: { libelle: "Credit price", aide: "The unit price, in CFA francs.", unite: "FCFA" },
+    },
+    motif: {
+      titre: "Save these settings",
+      question: "Why this change?",
+      consequence: "These values drive the product and take effect right away. The log keeps the reason, your name and the time.",
+      motifs: [
+        "Pricing adjustment",
+        "Correcting a wrong value",
+        "Launch decision",
+      ],
+    },
+    nonReglable: "These types come from the code: their state cannot be set here. They are shown so you know which ones exist.",
     occasions: {
       sous: "What the product offers to celebrate. The order is the one shown at creation.",
       col: {
@@ -464,6 +691,27 @@ export const en: typeof fr = {
     fauxUn: "Code refused. One try left.",
     epuise: "3 codes refused. Ask for a new one to carry on.",
     echec: "We couldn't send the code. Nothing went out to that address. Try again in a moment.",
+  },
+
+  // Le serveur rend un code stable, jamais une phrase (voir fr.ts).
+  codes: {
+    otp_invalid: "Wrong code.",
+    otp_expired: "That code has expired. Request a new one.",
+    otp_too_many_attempts: "Too many wrong codes. Request a new one to continue.",
+    otp_rate_limited: "Too many requests. Wait a moment before trying again.",
+    unauthorized: "Your session has expired. Sign in again.",
+    session_expired: "Your session has expired. Sign in again.",
+    refresh_reused: "Your session was closed as a precaution. Sign in again.",
+    forbidden: "Your role does not allow this action.",
+    not_found: "Not found.",
+    conflict: "Things changed in the meantime. Reload before trying again.",
+    validation_failed: "That request is malformed.",
+    reason_required: "A reason is required, at least six characters.",
+    rate_limited: "Too many requests. Wait a moment.",
+    internal_error: "The service hit an error. Try again in a moment.",
+    account_suspended: "This account is suspended.",
+    reseau_indisponible: "The service is unreachable. Check your connection.",
+    reponse_invalide: "The service answered something unexpected. Try again in a moment.",
   },
 
   gabarits: {

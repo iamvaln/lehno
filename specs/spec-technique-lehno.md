@@ -188,7 +188,9 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | `/me/credits` | GET | Solde et mouvements |
 | `/me/credit-bundles` | GET | Les paliers d'achat proposés, avec leur remise |
 | `/me/payments` | GET, POST | L'historique ; lancer un achat sur un palier |
-| `/me/manual-topups` | GET, POST | Demander une recharge manuelle ; suivre les siennes |
+| `/me/payment-channels` | GET | Les canaux proposés et leurs frais : opérateur, pays, barème |
+| `/me/payments/preview` | POST | Ce qu'un achat coûtera : les frais, et le montant attendu sur le compte |
+| `/me/collection-accounts` | GET | Les comptes sur lesquels verser — ceux que l'administration rend visibles |
 | `/me/payments/{id}` | GET | Suivre une opération, puis son issue |
 | `/me/payment-methods` | GET, POST | Les méthodes enregistrées, la plus récemment utilisée en tête ; en ajouter une |
 | `/me/payment-methods/{id}` | DELETE | En retirer une |
@@ -198,7 +200,22 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 
 **Achat par palier.** Un achat porte **un palier** (`/me/credit-bundles`), jamais un montant libre : le plus petit palier fixe le minimum. Les paliers, leurs crédits et leurs remises se règlent depuis l'administration.
 
-**Recharge manuelle.** Lorsque le paiement dans l'application est indisponible, `/me/manual-topups` ouvre une demande : le palier visé, le montant versé, l'opérateur, et un justificatif. Un administrateur **vérifie la réception sur le compte de l'opérateur** — le justificatif ne prouve rien par lui-même — puis crédite ou rejette avec motif.
+**Le paiement manuel, deux voies.** Tant que l'intégration d'un prestataire n'existe pas, un achat se règle par virement mobile et se confirme à la main. Ce sont des `Payment` ordinaires, distingués par leur `mode` — pas une entité à part, sous peine de tenir deux registres et de laisser une recharge manuelle hors de l'historique des paiements du client.
+
+- **Semi-manuel.** Le client choisit son palier, `/me/collection-accounts` lui rend les comptes sur lesquels verser, il effectue le dépôt, puis `POST /me/payments` porte le palier, le compte visé, **le numéro qu'il a employé** et son reçu. Le paiement naît `pending`.
+- **Manuel.** Un administrateur saisit tout depuis `/admin/payments` : le client, le palier, le compte qui a reçu, la référence, le reçu. Le paiement naît `pending` puis se confirme du même geste.
+
+**L'aperçu avant de payer.** `/me/payments/preview` prend un **montant** (ou un palier), un **canal** et un **pays**, et rend les frais, le total à verser, et le **montant attendu sur le compte**. Le client sait donc combien envoyer avant d'ouvrir son application d'opérateur — et l'administrateur, combien il devrait voir arriver.
+
+**Sur le mobile money, le client paie les frais** : un palier à 1 000 F fait verser **1 020 F**, et il en arrive **1 000**. Le montant attendu sur le compte est donc le prix du palier, et tout manque constaté est un vrai écart — pas le fonctionnement de l'opérateur. La carte se comportera à l'inverse le jour où elle arrivera : le prestataire prélève sa part sur ce qu'il reverse, d'où le champ `fee_borne_by` sur le canal plutôt qu'une règle écrite en dur.
+
+**Les frais annoncés sont figés sur le paiement** (`fee_amount`, `expected_amount`). Le barème d'un canal change ; un paiement passé garde ce qui lui a été annoncé. Lire le taux du jour pour expliquer un paiement d'il y a trois mois donnerait un chiffre faux, sans que personne s'en aperçoive.
+
+**La confirmation appartient à l'administration.** `/admin/payments/{id}/decision` consigne **la référence de la transaction et le montant réellement reçu**, puis confirme ou rejette avec motif. Le montant reçu se renseigne **toujours**, même sans écart : c'est lui qui permet de constater qu'il n'y en a pas. Le reçu ne prouve rien — un montage est facile : c'est la réception **sur le compte de l'opérateur** qui fait foi.
+
+À la confirmation, les crédits sont octroyés **une seule fois** — l'unicité porte sur `credit_transaction.payment_id` — et le client est prévenu par courriel et par poussée. Chaque passage d'état ouvre une ligne d'historique avec `origin = 'admin'`, l'identifiant de l'administrateur et un **motif obligatoire**.
+
+**Les comptes de collecte se gèrent au back-office** : nom affiché, opérateur, numéro, et un état qui décide s'ils paraissent dans l'application. Un compte ne se supprime pas — un paiement passé le référence —, il se désactive.
 
 **Méthode.** La création d'un achat accepte soit l'identifiant d'une méthode enregistrée, soit les éléments d'une **nouvelle méthode à enregistrer au passage** — le cas du premier achat. Sans indication, le serveur retient la méthode utilisée le plus récemment.
 
@@ -284,7 +301,7 @@ Le produit se livre **par morceaux**. Les proches, les notes, les dates et les r
 | `generation.ideas` | Les idées de cadeaux | Écran 3.7 (idées) · `/me/generations` (type idées) |
 | `generation.portrait` | Le studio et le portrait | Écrans 3.22 et le studio · `/me/studio/options`, `/me/generations` (type portrait), `/me/portraits/*` |
 | `credits` | L'achat de crédits dans l'application | Écran 3.9 (achat), 3.25 · `/me/credit-bundles`, `/me/payments`, `/me/payment-methods*` |
-| `topup.manual` | La recharge manuelle, avec justificatif | Écran 3.9 (autre chemin) · `/me/manual-topups*` |
+| `topup.manual` | Le versement manuel : verser sur un compte affiché, puis déposer son reçu | Écran 3.9 (autre chemin) · `/me/collection-accounts`, `/me/payments` en mode semi-manuel |
 | `referral` | Le parrainage et la page d'invitation | Écran 3.9 (inviter), public 3.7 · `/me/referral`, `/public/invitations/{code}` |
 | `launch.live` | Sur la landing : les liens vers les magasins, ou le formulaire de liste d'attente | Public 3.1 · `/public/waitlist` |
 
@@ -343,15 +360,16 @@ Réservée aux comptes d'administration, avec les deux rôles du modèle.
 | `/admin/users` | GET | Rechercher et filtrer les comptes |
 | `/admin/users/{id}` | GET, PATCH | Le détail ; suspendre, rétablir, restaurer |
 | `/admin/users/{id}/credits` | POST | Ajuster un solde, avec motif |
-| `/admin/payments` | GET | Paiements et remboursements |
+| `/admin/payments` | GET, POST | Paiements et remboursements ; **en saisir un de bout en bout** (voie manuelle) |
+| `/admin/payments/{id}/decision` | POST | Confirmer ou rejeter : référence de la transaction, montant constaté, motif |
 | `/admin/payments/{id}/refund` | POST | Déclencher un remboursement |
+| `/admin/collection-accounts` | GET, POST, PATCH | Les comptes de collecte : nom, opérateur, numéro, visibilité dans l'application |
+| `/admin/payment-channels` | GET, POST, PATCH | Les canaux et **leurs barèmes de frais** : part proportionnelle, part fixe, plancher, plafond, qui les supporte |
 | `/admin/moderation` | GET | Les contenus à examiner |
 | `/admin/moderation/{id}/decision` | POST | Masquer, révoquer, désactiver, classer |
 | `/admin/parameters` | GET, PATCH | La configuration globale |
 | `/admin/feature-flags` | GET, PATCH | Allumer et éteindre les fonctionnalités ; la lecture rend **ce que chaque drapeau couvre** — écrans et points d'entrée — d'après le registre |
 | `/admin/credit-bundles` | GET, POST, PATCH | Les paliers d'achat et leurs remises |
-| `/admin/manual-topups` | GET | Les demandes de recharge manuelle à traiter |
-| `/admin/manual-topups/{id}/decision` | POST | Approuver ou rejeter, avec motif |
 | `/admin/ai-models` | GET, PATCH | Catalogue et routage |
 | `/admin/portrait-studio/candidates` | GET | Les valeurs candidates : modèles, orientations, ambiances, motifs, gabarits |
 | `/admin/portrait-studio/config` | GET, PATCH | La configuration en service et le brouillon en cours |
@@ -407,9 +425,11 @@ Les deux rôles du modèle se traduisent chemin par chemin. Le **support** couvr
 | `/admin/users`, `/admin/users/{id}` | Lecture, suspension, rétablissement, restauration pendant la grâce | Idem, plus l'effacement immédiat |
 | `/admin/users/{id}/credits` | — | Ajustement, avec motif |
 | `/admin/users/{id}/device-limit` | Levée, avec motif | Levée, avec motif |
-| `/admin/payments` | Lecture | Lecture |
+| `/admin/payments` | Lecture | Lecture, et **saisie d'un paiement manuel** |
 | `/admin/payments/{id}/retry` | Relance | Relance |
-| `/admin/payments/{id}/confirm` | — | Confirmation manuelle, avec motif |
+| `/admin/payments/{id}/decision` | — | **Confirmation ou rejet**, avec la référence de la transaction, le montant constaté et un motif |
+| `/admin/collection-accounts` | Lecture | Gestion complète : ouvrir, renommer, rendre visible ou non |
+| `/admin/payment-channels` | Lecture | Gestion complète, **barèmes compris** — un taux touche tous les achats à venir |
 | `/admin/payments/{id}/refund` | — | Déclenchement |
 | `/admin/payments/{id}/refund-override` | — | Levée, avec motif |
 | `/admin/moderation`, `/admin/moderation/{id}/decision` | Lecture et décision | Lecture et décision |
@@ -801,7 +821,7 @@ Un tracking plan vaut par les questions qu'il permet de trancher. Celles-ci, d'a
 `collection_link.shared` (nominatif ou public) · `collection_form.opened` · `submission.sent` (champs renseignés) · `submission.reviewed` (validée, corrigée, rejetée ; souhaits retenus et écartés) · `wall.viewed` (visiteur avec ou sans compte) · `wall.wishlist_opened` · `wish_message.sent` · `invitation.opened` · `invitation.converted`.
 
 **Crédits et paiement**
-`credits.exhausted` — le moment où l'on bute sur le solde · `purchase.started` (palier, remise) · `manual_topup.requested` · `manual_topup.resolved` (approuvée ou rejetée, délai de traitement) · `payment_method.added` (nature) · `payment.succeeded` / `.failed` / `.expired` (durée d'attente, voie de résolution) · `referral.completed`.
+`credits.exhausted` — le moment où l'on bute sur le solde · `purchase.started` (palier, remise) · `payment.submitted` (mode, palier — le client a déposé son reçu) · `payment.decided` (mode, issue, délai de traitement, écart éventuel entre le montant annoncé et le montant constaté) · `payment_method.added` (nature) · `payment.succeeded` / `.failed` / `.expired` (durée d'attente, voie de résolution) · `referral.completed`.
 
 **Réglages**
 `notification_preference.changed` (nature, canal) · `wall.enabled` / `.disabled` · `ui_language.changed`.

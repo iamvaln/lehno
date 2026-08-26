@@ -4,8 +4,8 @@ import {
   refreshSchema,
   requestOtpSchema,
   verifyOtpSchema,
-  type RefreshedSession,
-  type SessionHeritee,
+  type Session,
+  registerSchema, type RegisterInput, type Registered, type VerifyOutcome,
 } from "@lehno/contracts";
 import type { IdentityProvider } from "@prisma/client";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -47,7 +47,7 @@ export class AuthController {
   requestOtp(
     @Body(new ZodValidationPipe(requestOtpSchema)) body: RequestOtpBody,
     @Ip() ip: string,
-  ): Promise<{ sent: true }> {
+  ): Promise<{ sent: true; retryAfterSeconds: number }> {
     return this.auth.requestOtp({ ...body, ip });
   }
 
@@ -60,18 +60,27 @@ export class AuthController {
     @Body(new ZodValidationPipe(verifyOtpSchema)) body: VerifyOtpBody,
     @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
-    /* Le serveur déployé rend ici une union discriminée — session ou
-       inscription — et expose /auth/register. Ce code est en retard sur lui, et
-       le type le dit plutôt que de le taire. */
-  ): Promise<SessionHeritee> {
-    // referralCode : accepté par le contrat, câblé au crédit d'invitation dans une tâche à venir.
+  ): Promise<VerifyOutcome> {
     return this.auth.verifyOtp({
       email: body.email,
       code: body.code,
       ip,
       ...(body.deviceId !== undefined ? { deviceId: body.deviceId } : {}),
+      ...(body.referralCode !== undefined ? { referralCode: body.referralCode } : {}),
       ...(userAgent !== undefined ? { userAgent } : {}),
     });
+  }
+
+  // La création du compte. Le jeton d'inscription vient de /otp/verify ou de
+  // /federated ; le pseudo et le code de parrainage viennent de l'écran du
+  // pseudo. Tout se joue ici, en une transaction.
+  @Post("register")
+  @HttpCode(201)
+  register(
+    @Body(new ZodValidationPipe(registerSchema)) body: RegisterInput,
+    @Headers("user-agent") userAgent?: string,
+  ): Promise<Registered> {
+    return this.auth.register({ ...body, ...(userAgent !== undefined ? { userAgent } : {}) });
   }
 
   @Post("federated")
@@ -79,8 +88,7 @@ export class AuthController {
   federated(
     @Body(new ZodValidationPipe(federatedSchema)) body: FederatedBody,
     @Headers("user-agent") userAgent?: string,
-    // Même retard qu'à la vérification du code : voir SessionHeritee.
-  ): Promise<SessionHeritee> {
+  ): Promise<VerifyOutcome> {
     return this.federatedAuth.signIn({
       ...body,
       ...(userAgent !== undefined ? { userAgent } : {}),
@@ -91,14 +99,13 @@ export class AuthController {
   @HttpCode(200)
   async refresh(
     @Body(new ZodValidationPipe(refreshSchema)) body: RefreshBody,
+    @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
-  ): Promise<RefreshedSession> {
-    const pair = await this.tokens.rotate(body.refreshToken, userAgent);
-    /* Un renouvellement ne crée jamais de compte, et n'a qu'une issue : il ne
-       porte donc pas d'`outcome`, contrairement à ce que rendent la
-       vérification du code et la connexion externe. Deux formes de session,
-       c'est une de trop — mais c'est ce que le serveur sert aujourd'hui, et le
-       type dit laquelle plutôt que de les confondre. */
+  ): Promise<Session> {
+    // L'adresse de CE tour, pas celle de l'ouverture : c'est la suite des
+    // adresses d'une lignée qui montre qu'une copie circule ailleurs.
+    const pair = await this.tokens.rotate(body.refreshToken, userAgent, ip);
+    // Un renouvellement ne crée jamais de compte : la forme reste celle d'une session.
     return { ...pair, isNewAccount: false };
   }
 

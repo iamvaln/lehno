@@ -5,6 +5,7 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 import { AdminTokenService } from "../src/admin/admin-token.service.js";
+import { catalogueIaSchema } from "@lehno/contracts";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -53,6 +54,16 @@ describe("administration — les modèles d'IA", () => {
       body: JSON.stringify(corps),
     });
 
+  it("le catalogue suit le contrat publié, au champ près", async () => {
+    await modele("anthropic", 1);
+    const { entete } = await session("admin");
+
+    const corps = await (await fetch(`${baseUrl}/v1/admin/ai-models`, { headers: entete })).json();
+
+    const valide = catalogueIaSchema.safeParse(corps);
+    expect(valide.success ? null : valide.error.issues).toBeNull();
+  });
+
   it("la lecture reste au support, l'écriture non", async () => {
     await modele("anthropic", 1);
     const support = await session("support");
@@ -71,8 +82,8 @@ describe("administration — les modèles d'IA", () => {
     await modele("xai", 2);
     const { entete } = await session("admin");
 
-    const corps = (await (await lire(entete)).json()) as { items: { provider: string }[] };
-    expect(corps.items.map((m) => m.provider)).toEqual(["anthropic", "xai", "deepseek"]);
+    const corps = (await (await lire(entete)).json()) as { items: { fournisseur: string }[] };
+    expect(corps.items.map((m) => m.fournisseur)).toEqual(["anthropic", "xai", "deepseek"]);
   });
 
   it("changer la priorité est journalisé avec la valeur quittée", async () => {

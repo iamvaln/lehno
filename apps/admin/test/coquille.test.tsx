@@ -184,13 +184,16 @@ describe("Topbar", () => {
     expect(menu).toHaveBeenCalledOnce();
   });
 
-  it("le compte est un menu, pas une étiquette", async () => {
+  // Un dépliant, pas une étiquette — et pas un menu non plus : le panneau mêle
+  // un en-tête non interactif, un choix de langue et des actions. Voir
+  // coquille-compte-a11y.test.tsx pour ce que ça implique.
+  it("le compte est un dépliant, pas une étiquette", async () => {
     render(<Topbar t={T} compte="sam@lehno.app" role="support" />);
     const bouton = screen.getByRole("button", { name: /sam@lehno.app/ });
     expect(bouton).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("menu")).toBeNull();
+    expect(screen.queryByRole("group", { name: "sam@lehno.app" })).toBeNull();
     await userEvent.click(bouton);
-    expect(screen.getByRole("menu")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "sam@lehno.app" })).toBeInTheDocument();
     expect(bouton).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(T.roleSupport)).toBeInTheDocument();
   });
