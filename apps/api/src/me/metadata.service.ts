@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { CategoryCode, Metadata } from "@lehno/contracts";
 import {
   EVENT_KINDS, EVENT_NATURES, SCHEDULE_UNITS,
-  PERSON_RELATIONS, PERSON_REGISTERS, PERSON_GENDERS, CONTACT_CHANNELS,
+  PERSON_RELATIONS, PERSON_REGISTERS, CONTACT_CHANNELS,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 
@@ -38,7 +38,6 @@ export class MetadataService {
       scheduleUnits: [...SCHEDULE_UNITS],
       personRelations: [...PERSON_RELATIONS],
       personRegisters: [...PERSON_REGISTERS],
-      personGenders: [...PERSON_GENDERS],
       contactChannels: [...CONTACT_CHANNELS],
     };
   }

@@ -6,6 +6,7 @@ import { createPersonSchema, champsDeProche, type CreatePersonInput } from "@leh
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { PersonService } from "../src/me/person.service.js";
 import { EventService } from "../src/me/event.service.js";
+import { NoteService } from "../src/me/note.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
 import { randomBytes } from "node:crypto";
 import { AppModule } from "../src/app.module.js";
@@ -18,6 +19,8 @@ const SECRET_ADMIN = "Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh";
 describe("annuaire des proches", () => {
   let db: TestDb;
   let service: PersonService;
+  let events: EventService;
+  let notes: NoteService;
   let awa: string;
   let bila: string;
 
@@ -37,7 +40,9 @@ describe("annuaire des proches", () => {
   beforeEach(async () => {
     await resetDatabase(db.prisma);
     const depot = new TenantRepository(db.prisma as never);
-    service = new PersonService(depot, new EventService(depot, db.prisma as never));
+    events = new EventService(depot, db.prisma as never);
+    notes = new NoteService(depot, db.prisma as never);
+    service = new PersonService(depot, events, db.prisma as never);
     awa = await compte();
     bila = await compte();
   });
@@ -57,14 +62,128 @@ describe("annuaire des proches", () => {
     await service.create(bila, { displayName: "Celarine" });
 
     const vus = await service.list(awa);
-    expect(vus.map((p) => p.displayName)).toEqual(["Valery"]);
+    expect(vus.persons.map((p) => p.displayName)).toEqual(["Valery"]);
+  });
+
+  /* Le carnet — ce que le handoff arrête, et qu'il ne faut pas re-trancher :
+     vingt par page, deux tris avec leur direction, et une fiche sans date en
+     fin de liste dans les deux sens. */
+  describe("le carnet se trie et se pagine", () => {
+    // Un carnet dont les dates sont posées à la main : le tri porte sur la
+    // prochaine échéance, il faut donc de vraies échéances à des distances
+    // connues.
+    const avecDate = async (nom: string, dans: number | null): Promise<string> => {
+      const p = await service.create(awa, { displayName: nom, birthDate: "1990-03-14" });
+      if (dans === null) {
+        // Un proche PEUT n'avoir aucune date : l'anniversaire est un événement,
+        // pas une conséquence automatique de la naissance.
+        await db.prisma.event.deleteMany({ where: { personId: p.id } });
+        return p.id;
+      }
+      const e = await events.create(awa, { personId: p.id, kind: "birthday" });
+      const jour = new Date(Date.now() + dans * 86_400_000).toISOString().slice(0, 10);
+      await db.prisma.eventOccurrence.updateMany({
+        where: { eventId: e.id }, data: { occurrenceDate: new Date(`${jour}T00:00:00Z`) },
+      });
+      return p.id;
+    };
+
+    it("compte les notes DURABLES de chaque proche, sans un appel par fiche", async () => {
+      const p = await service.create(awa, { displayName: "Valery" });
+      const q = await service.create(awa, { displayName: "Quentin" });
+      for (const contenu of ["une", "deux", "trois"]) {
+        await notes.createForPerson(awa, p.id, { content: contenu });
+      }
+
+      const { persons } = await service.list(awa);
+      expect(persons.find((x) => x.id === p.id)?.notesCount).toBe(3);
+      // Zéro, pas absent : la ligne affiche « Aucune note » et doit pouvoir le
+      // distinguer d'un décompte qu'on n'aurait pas chargé.
+      expect(persons.find((x) => x.id === q.id)?.notesCount).toBe(0);
+    });
+
+    it("porte la prochaine échéance, et rien quand le proche n'en a pas", async () => {
+      const avec = await avecDate("Avec", 5);
+      const sans = await avecDate("Sans", null);
+
+      const { persons } = await service.list(awa);
+      const a = persons.find((x) => x.id === avec);
+      expect(a?.nextOccurrence?.daysUntil).toBe(5);
+      expect(a?.nextOccurrence?.kind).toBe("birthday");
+      // Nul plutôt qu'absent : la ligne affiche « Compléter » à la place du
+      // décompte, elle est donc OBLIGÉE de traiter le cas.
+      expect(persons.find((x) => x.id === sans)?.nextOccurrence).toBeNull();
+    });
+
+    it("trie par date, au plus proche puis au plus loin", async () => {
+      await avecDate("Loin", 40);
+      await avecDate("Proche", 2);
+      await avecDate("Moyen", 12);
+
+      const asc = await service.list(awa, { sort: "date" });
+      expect(asc.persons.map((p) => p.displayName)).toEqual(["Proche", "Moyen", "Loin"]);
+      const desc = await service.list(awa, { sort: "date", direction: "desc" });
+      expect(desc.persons.map((p) => p.displayName)).toEqual(["Loin", "Moyen", "Proche"]);
+    });
+
+    /* LE cas du handoff : « Une fiche sans date passe en fin de liste dans les
+       deux sens. » Un tri naïf la remonterait en tête dès qu'on l'inverse, et
+       elle occuperait la place de ce qui presse. */
+    it("laisse en FIN de liste, dans les deux sens, une fiche sans date", async () => {
+      await avecDate("Proche", 2);
+      await avecDate("Loin", 40);
+      await avecDate("Sans", null);
+
+      const asc = await service.list(awa, { sort: "date" });
+      expect(asc.persons.at(-1)?.displayName).toBe("Sans");
+      const desc = await service.list(awa, { sort: "date", direction: "desc" });
+      expect(desc.persons.at(-1)?.displayName).toBe("Sans");
+    });
+
+    it("trie alphabétiquement, accents rangés avec leur lettre", async () => {
+      for (const nom of ["Zoé", "Émile", "Awa"]) {
+        await service.create(awa, { displayName: nom });
+      }
+      const az = await service.list(awa, { sort: "alpha" });
+      // « Émile » entre Awa et Zoé, jamais après : c'est ce que la collation
+      // du serveur PostgreSQL ne garantit pas, d'où le collateur explicite.
+      expect(az.persons.map((p) => p.displayName)).toEqual(["Awa", "Émile", "Zoé"]);
+      const za = await service.list(awa, { sort: "alpha", direction: "desc" });
+      expect(za.persons.map((p) => p.displayName)).toEqual(["Zoé", "Émile", "Awa"]);
+    });
+
+    it("pagine par vingt, et rend le total pour « n restants »", async () => {
+      for (let i = 0; i < 23; i += 1) {
+        await service.create(awa, { displayName: `P${String(i).padStart(2, "0")}` });
+      }
+      const page = await service.list(awa, { sort: "alpha" });
+      expect(page.persons).toHaveLength(20);
+      // Le total, non le nombre rendu : « Voir plus · 3 restants » se calcule
+      // avec lui, et un curseur ne saurait pas le donner.
+      expect(page.total).toBe(23);
+
+      const suite = await service.list(awa, { sort: "alpha", offset: 20 });
+      expect(suite.persons).toHaveLength(3);
+      expect(suite.persons[0]?.displayName).toBe("P20");
+    });
+
+    /* Trier PUIS paginer, jamais l'inverse. Si la page se découpait en base
+       avant le tri, la vingt-et-unième fiche pourrait porter la date la plus
+       proche et ne paraîtrait jamais en tête. */
+    it("trie sur tout le carnet avant de découper la page", async () => {
+      for (let i = 0; i < 20; i += 1) await avecDate(`Bourrage${i}`, 300 + i);
+      await avecDate("La plus proche", 1);
+
+      const page = await service.list(awa, { sort: "date" });
+      expect(page.persons[0]?.displayName).toBe("La plus proche");
+    });
   });
 
   // Le nom d'usage n'est pas unique : deux « Maman » sont deux personnes.
   it("accepte deux proches du même nom", async () => {
     await service.create(awa, { displayName: "Maman" });
     await service.create(awa, { displayName: "Maman" });
-    expect(await service.list(awa)).toHaveLength(2);
+    expect((await service.list(awa)).persons).toHaveLength(2);
   });
 
   describe("la fiche complète", () => {
@@ -88,7 +207,6 @@ describe("annuaire des proches", () => {
         register: "amical",
         language: "fr",
         relationHint: "on a fait la fac ensemble",
-        gender: "unspecified",
         city: "Douala",
         country: "CM",
         preferredChannel: "whatsapp",
@@ -186,8 +304,8 @@ describe("annuaire des proches", () => {
 
       const vusAwa = await service.list(awa);
       const vusBila = await service.list(bila);
-      expect(vusAwa.map((p) => p.displayName)).toContain("Otage");
-      expect(vusBila.map((p) => p.displayName)).not.toContain("Otage");
+      expect(vusAwa.persons.map((p) => p.displayName)).toContain("Otage");
+      expect(vusBila.persons.map((p) => p.displayName)).not.toContain("Otage");
     });
   });
 

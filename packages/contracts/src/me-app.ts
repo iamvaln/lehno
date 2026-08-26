@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { EVENT_KINDS, EVENT_NATURES, SCHEDULE_UNITS } from "./me-events.js";
 import {
-  CATEGORY_CODES, PERSON_RELATIONS, PERSON_REGISTERS, PERSON_GENDERS, CONTACT_CHANNELS,
+  CATEGORY_CODES, PERSON_RELATIONS, PERSON_REGISTERS, CONTACT_CHANNELS,
 } from "./me.js";
 
 /* Le Mur, les notifications, la recherche, les reprises et les métadonnées —
@@ -158,7 +158,9 @@ export const metadataSchema = z.object({
   scheduleUnits: z.array(z.enum(SCHEDULE_UNITS)),
   personRelations: z.array(z.enum(PERSON_RELATIONS)),
   personRegisters: z.array(z.enum(PERSON_REGISTERS)),
-  personGenders: z.array(z.enum(PERSON_GENDERS)),
+  // `personGenders` n'y figure pas : il alimenterait un sélecteur que le carnet
+  // ne dessine pas. Servir la liste des valeurs, c'est inviter à poser la
+  // question — voir la note de `personSchema`.
   contactChannels: z.array(z.enum(CONTACT_CHANNELS)),
 }).strict();
 

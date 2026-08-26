@@ -38,7 +38,7 @@ describe("les événements et leur première échéance", () => {
     await resetDatabase(db.prisma);
     const depot = new TenantRepository(db.prisma as never);
     events = new EventService(depot, db.prisma as never);
-    persons = new PersonService(depot, events);
+    persons = new PersonService(depot, events, db.prisma as never);
     awa = await compte();
     bila = await compte();
   });

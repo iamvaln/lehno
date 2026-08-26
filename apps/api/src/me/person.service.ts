@@ -1,7 +1,18 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { CreatePersonInput, Person, UpdatePersonInput } from "@lehno/contracts";
+import type {
+  CreatePersonInput, Person, PersonList, UpdatePersonInput, ListPersonsQuery,
+} from "@lehno/contracts";
+import { PAGE_PROCHES } from "@lehno/contracts";
+import { PrismaService } from "../prisma/prisma.service.js";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
 import { EventService } from "./event.service.js";
+
+// Le tri alphabétique se fait ici et non en base : `ORDER BY` de PostgreSQL
+// suit la collation du serveur, que rien ne garantit être celle d'un lecteur
+// francophone — « Émile » se rangerait après « Zoé ». `sensitivity: "base"`
+// range les accentuées avec leur lettre, ce que le carnet attend. Le français
+// et l'anglais collationnent identiquement sur ce jeu, un seul collateur suffit.
+const COLLATEUR = new Intl.Collator("fr", { sensitivity: "base" });
 
 // L'annuaire et la fiche. Toutes les lectures passent par la portée cloisonnée
 // du dépôt : une requête Prisma directe sur `person` ici serait un défaut, le
@@ -15,11 +26,115 @@ export class PersonService {
     // ci-dessous. Sans cette dépendance, la correction resterait invisible
     // jusqu'au jour dit, personne ne la remarquant avant.
     @Inject(EventService) private readonly events: EventService,
+    // Le décompte des notes et la prochaine échéance ne s'obtiennent pas par la
+    // portée des proches : ils vivent sur d'autres tables. On les lit
+    // directement, mais TOUJOURS restreints à des identifiants déjà rendus par
+    // la portée cloisonnée — le cloisonnement s'hérite alors de la première
+    // requête, comme dans NoteService.
+    @Inject(PrismaService) private readonly prisma: PrismaService,
   ) {}
 
-  async list(userId: string): Promise<Person[]> {
+  private aujourdhui(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  /* Le décompte des notes et la prochaine échéance, pour un lot de proches.
+   *
+   * DEUX requêtes quel que soit le nombre de fiches, jamais une par proche :
+   * la ligne du carnet affiche « 3 notes · 22 août », et l'obtenir fiche par
+   * fiche ferait quarante-trois appels sur le carnet d'essai du handoff. */
+  private async enrichir(
+    ids: string[],
+  ): Promise<Map<string, { notesCount: number; nextOccurrence: Person["nextOccurrence"] }>> {
+    const vide = new Map<string, { notesCount: number; nextOccurrence: Person["nextOccurrence"] }>();
+    for (const id of ids) vide.set(id, { notesCount: 0, nextOccurrence: null });
+    if (ids.length === 0) return vide;
+
+    const depuis = this.aujourdhui();
+    const [comptes, echeances] = await Promise.all([
+      this.prisma.note.groupBy({
+        by: ["personId"],
+        // eventOccurrenceId: null — les notes DURABLES seules, celles que rend
+        // /me/persons/{id}/notes. Compter aussi celles de circonstance ferait
+        // dire « 7 notes » à une fiche qui n'en montre que trois.
+        where: { personId: { in: ids }, eventOccurrenceId: null },
+        _count: { _all: true },
+      }),
+      this.prisma.eventOccurrence.findMany({
+        where: {
+          event: { personId: { in: ids } },
+          occurrenceDate: { gte: new Date(`${depuis}T00:00:00Z`) },
+        },
+        orderBy: { occurrenceDate: "asc" },
+        select: {
+          id: true, occurrenceDate: true,
+          event: { select: { personId: true, kind: true, label: true } },
+        },
+      }),
+    ]);
+
+    for (const c of comptes) {
+      const e = vide.get(c.personId);
+      if (e) e.notesCount = c._count._all;
+    }
+    // Rangées par date croissante : la PREMIÈRE rencontrée pour un proche est
+    // la sienne. Les suivantes se laissent tomber.
+    for (const o of echeances) {
+      const e = vide.get(o.event.personId);
+      if (!e || e.nextOccurrence) continue;
+      const date = o.occurrenceDate.toISOString().slice(0, 10);
+      e.nextOccurrence = {
+        id: o.id,
+        occurrenceDate: date,
+        daysUntil: joursEntre(depuis, date),
+        kind: o.event.kind as "birthday" | "other",
+        label: o.event.label,
+      };
+    }
+    return vide;
+  }
+
+  /* Le carnet : trié, puis paginé — dans cet ordre, et pas l'inverse.
+   *
+   * On charge TOUTES les fiches du demandeur avant de trancher la page. Ça
+   * paraît prodigue et c'est ce qu'il faut : le tri « par date » porte sur la
+   * prochaine échéance, qui ne vit pas sur la table des proches. Paginer en
+   * base d'abord, puis trier les vingt obtenues, rendrait une liste fausse —
+   * la vingt-et-unième fiche pourrait être celle dont la date est la plus
+   * proche, et elle ne paraîtrait jamais en tête.
+   *
+   * Le coût est borné par la taille d'un carnet personnel : quelques centaines
+   * de fiches au plus. Si le produit devait un jour en tenir des milliers, ce
+   * n'est plus ici qu'il faudrait paginer mais dans une requête qui joint
+   * l'échéance — pas en découpant celle-ci en morceaux. */
+  async list(userId: string, query: ListPersonsQuery = {}): Promise<PersonList> {
     const lignes = await this.depot.persons(userId).findMany({});
-    return lignes.map(rendre);
+    const details = await this.enrichir(lignes.map((l) => l.id));
+    const tous = lignes.map((l) => rendre(l, details.get(l.id)));
+
+    const sens = query.direction === "desc" ? -1 : 1;
+    if (query.sort === "alpha") {
+      tous.sort((a, b) => sens * COLLATEUR.compare(a.displayName, b.displayName));
+    } else {
+      // Par défaut, et c'est le tri d'ouverture de l'écran.
+      //
+      // Une fiche SANS date passe en fin de liste dans les DEUX sens, jamais en
+      // tête : le carnet sert à voir qui a une date qui approche, et une fiche
+      // à compléter occuperait la place de ce qui presse. D'où le test avant la
+      // multiplication par le sens — sans quoi l'inversion les remonterait.
+      tous.sort((a, b) => {
+        const da = a.nextOccurrence?.daysUntil;
+        const db = b.nextOccurrence?.daysUntil;
+        if (da === undefined && db === undefined) return 0;
+        if (da === undefined) return 1;
+        if (db === undefined) return -1;
+        return sens * (da - db);
+      });
+    }
+
+    const offset = query.offset ?? 0;
+    const limit = query.limit ?? PAGE_PROCHES;
+    return { persons: tous.slice(offset, offset + limit), total: tous.length };
   }
 
   async create(userId: string, input: CreatePersonInput): Promise<Person> {
@@ -42,7 +157,6 @@ export class PersonService {
       birthDate: input.birthDate ? new Date(`${input.birthDate}T00:00:00Z`) : null,
       birthYearKnown: input.birthYearKnown ?? true,
       city: input.city ?? null,
-      gender: input.gender ?? null,
       country: input.country ?? null,
       preferredChannel: input.preferredChannel ?? null,
     });
@@ -86,9 +200,9 @@ function rendre(p: {
   id: string; displayName: string; callingName: string | null; avatarUrl: string | null;
   isSelf: boolean; relation: string | null; register: string | null; language: string | null;
   relationHint: string | null; birthDate: Date | null; birthYearKnown: boolean;
-  gender: string | null; city: string | null;
+  city: string | null;
   country: string | null; preferredChannel: string | null; createdAt: Date;
-}): Person {
+}, details?: { notesCount: number; nextOccurrence: Person["nextOccurrence"] }): Person {
   return {
     id: p.id,
     displayName: p.displayName,
@@ -101,12 +215,28 @@ function rendre(p: {
     // du contrat : du JSON, pas un objet Date.
     birthDate: p.birthDate ? p.birthDate.toISOString().slice(0, 10) : null,
     birthYearKnown: p.birthYearKnown,
-    gender: p.gender as Person["gender"],
     city: p.city,
     country: p.country,
     register: p.register as Person["register"],
     language: p.language,
     preferredChannel: p.preferredChannel as Person["preferredChannel"],
     createdAt: p.createdAt.toISOString(),
+    // Absents quand l'appelant ne les a pas chargés — une fiche qui vient
+    // d'être créée n'a ni note ni échéance, et le dire coûterait deux requêtes
+    // pour deux valeurs connues d'avance.
+    notesCount: details?.notesCount ?? 0,
+    nextOccurrence: details?.nextOccurrence ?? null,
   };
+}
+
+/* L'écart en jours entre deux dates civiles, sans passer par un objet Date
+   local : `new Date("2026-02-29")` s'interprète en UTC puis se décale du
+   fuseau, ce qui fait basculer un décompte d'un jour selon l'heure qu'il est.
+   Voir me/calendrier.ts, qui tient le même raisonnement. */
+function joursEntre(depuis: string, jusqu: string): number {
+  const jour = (d: string): number => {
+    const [a, m, j] = d.split("-").map(Number) as [number, number, number];
+    return Math.floor(Date.UTC(a, m - 1, j) / 86_400_000);
+  };
+  return jour(jusqu) - jour(depuis);
 }
