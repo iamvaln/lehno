@@ -19,17 +19,15 @@ export class MetadataService {
     // La table est semée par la migration `20260822154334_content` — jamais
     // recopiée en constante, qui finirait par diverger de ce qu'elle écrit
     // réellement.
-    // PREUVE PAR LA PANNE (temporaire) : constante recopiant les sept codes,
-    // au lieu de la lecture en base.
-    const categories: Metadata["categories"] = [
-      { code: "gift_ideas", kind: "ponctuelle", isConstraint: false },
-      { code: "message_ideas", kind: "ponctuelle", isConstraint: false },
-      { code: "facts", kind: "ponctuelle", isConstraint: false },
-      { code: "encouragements", kind: "ponctuelle", isConstraint: false },
-      { code: "challenges", kind: "ponctuelle", isConstraint: false },
-      { code: "interests", kind: "durable", isConstraint: false },
-      { code: "dislikes_nogo", kind: "durable", isConstraint: true },
-    ];
+    const rangees = await this.prisma.category.findMany({
+      orderBy: { code: "asc" },
+      select: { code: true, kind: true, isConstraint: true },
+    });
+    // `code` est un VARCHAR en base — rien n'y garantit à la compilation
+    // qu'elle ne porte que les sept codes du socle. C'est le prix d'une table
+    // éditable en administration plutôt que d'une énumération figée ; la
+    // sélection ci-dessus, elle, est bien exhaustive.
+    const categories = rangees.map((r) => ({ ...r, code: r.code as CategoryCode }));
 
     return {
       categories,
