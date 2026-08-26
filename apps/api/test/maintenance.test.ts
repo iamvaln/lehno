@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import { PARAM_MAINTENANCE, PARAM_MAINTENANCE_RETRY } from "@lehno/contracts";
+import { PARAM_MAINTENANCE, PARAM_MAINTENANCE_RETRY, PARAM_MAINTENANCE_UNTIL } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
@@ -19,10 +19,11 @@ describe("l'arrêt pour intervention", () => {
   let baseUrl: string;
   let precedent: Record<string, string | undefined>;
 
-  const poser = async (valeur: string, retry = "900"): Promise<void> => {
+  const poser = async (valeur: string, retry = "900", until = ""): Promise<void> => {
     for (const [key, value, valueType] of [
       [PARAM_MAINTENANCE, valeur, "boolean"],
       [PARAM_MAINTENANCE_RETRY, retry, "duration"],
+      [PARAM_MAINTENANCE_UNTIL, until, "string"],
     ] as const) {
       await db.prisma.systemParameter.upsert({
         where: { key },
@@ -118,13 +119,54 @@ describe("l'arrêt pour intervention", () => {
     await poser("true", "120");
     const r = await fetch(`${baseUrl}/v1/public/maintenance`);
     expect(r.status).toBe(200);
-    expect(await r.json()).toEqual({ maintenance: true, retryAfterSeconds: 120 });
+    expect(await r.json()).toEqual({ maintenance: true, retryAfterSeconds: 120, until: null });
   });
 
   it("dit hors arrêt qu'il n'y a pas d'arrêt", async () => {
     await poser("false");
     const r = await fetch(`${baseUrl}/v1/public/maintenance`);
-    expect(await r.json()).toEqual({ maintenance: false, retryAfterSeconds: null });
+    expect(await r.json()).toEqual({ maintenance: false, retryAfterSeconds: null, until: null });
+  });
+
+  /* Les deux valeurs sont distinctes, et les confondre était le défaut :
+     l'écran de maintenance a deux états, et tant que le rythme de réessai
+     tenait lieu d'heure de retour, il ne pouvait jamais atteindre le second. */
+  describe("l'heure de retour, distincte du rythme de réessai", () => {
+    it("reste vide quand aucune heure n'est annoncée", async () => {
+      await poser("true", "900");
+      const r = await fetch(`${baseUrl}/v1/public/maintenance`);
+      // Nul, alors qu'un rythme existe : c'est l'état « on ne sait pas quand ».
+      expect(await r.json()).toEqual({ maintenance: true, retryAfterSeconds: 900, until: null });
+    });
+
+    it("rend l'heure posée, sans la déduire du rythme", async () => {
+      await poser("true", "900", "2026-08-27T14:30:00Z");
+      const corps = (await (await fetch(`${baseUrl}/v1/public/maintenance`)).json()) as {
+        retryAfterSeconds: number; until: string;
+      };
+      expect(corps.until).toBe("2026-08-27T14:30:00.000Z");
+      // Le rythme n'a pas bougé : les deux ne se commandent pas.
+      expect(corps.retryAfterSeconds).toBe(900);
+    });
+
+    // Le paramètre se saisit à la main en administration. Une faute de frappe
+    // doit faire disparaître l'annonce, jamais afficher une date inventée.
+    it("ignore une heure illisible plutôt que d'annoncer n'importe quoi", async () => {
+      await poser("true", "900", "demain vers midi");
+      const corps = (await (await fetch(`${baseUrl}/v1/public/maintenance`)).json()) as { until: string | null };
+      expect(corps.until).toBeNull();
+    });
+
+    // Elle voyage AVEC le refus : sans ça le client ferait un second appel
+    // juste pour savoir quoi afficher, au moment où l'on réduit le trafic.
+    it("porte les deux valeurs dans le 503 lui-même", async () => {
+      await poser("true", "600", "2026-08-27T09:00:00Z");
+      const r = await fetch(`${baseUrl}/v1/public/config`);
+      expect(r.status).toBe(503);
+      const corps = (await r.json()) as { details?: { retryAfterSeconds?: number; until?: string } };
+      expect(corps.details?.retryAfterSeconds).toBe(600);
+      expect(corps.details?.until).toBe("2026-08-27T09:00:00.000Z");
+    });
   });
 
   // Le garde ne doit pas se laisser tromper par ce qui RESSEMBLE à une

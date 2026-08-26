@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { Prisma, type IdentityProvider, type User } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { SignupService } from "../onboarding/signup.service.js";
+import { TrackingService } from "../tracking/tracking.service.js";
 import type { VerifyOutcome } from "@lehno/contracts";
 import { TokenService } from "./token.service.js";
 import { AppError } from "../common/errors.js";
@@ -29,6 +30,7 @@ export class FederatedService {
     @Inject(TokenService) private readonly tokens: TokenService,
     @Inject("IDENTITY_VERIFIERS") private readonly verifiers: Record<IdentityProvider, IdentityVerifier>,
     @Inject(SignupService) private readonly signup: SignupService,
+    @Inject(TrackingService) private readonly mesure: TrackingService,
   ) {}
 
   // Revue tour 1, point 3 : un compte suspendu ou en cours de suppression ne
@@ -89,6 +91,9 @@ export class FederatedService {
       });
       const pair = await this.tokens.issuePair(existing.userId, input.userAgent);
       await this.recordAttempt(claims.email, input.userAgent, existing.userId, "success", input.provider, input.ip);
+      // Voir AuthService.verifyOtp : l'identifiant vient d'ici, il ne traverse
+      // pas le contrat.
+      this.mesure.emettre(existing.userId, "signin.completed", { method: input.provider });
       return { outcome: "session" as const, ...pair, isNewAccount: false };
     }
 
@@ -151,6 +156,7 @@ export class FederatedService {
 
     const pair = await this.tokens.issuePair(user.id, input.userAgent);
     await this.recordAttempt(claims.email, input.userAgent, user.id, "success", input.provider, input.ip);
+    this.mesure.emettre(user.id, "signin.completed", { method: input.provider });
     return { outcome: "session" as const, ...pair, isNewAccount: false };
   }
 }

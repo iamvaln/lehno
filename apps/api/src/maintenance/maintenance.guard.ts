@@ -43,6 +43,10 @@ export class MaintenanceGuard implements CanActivate {
     // délai voyage dans les détails — le client l'affiche, il ne l'invente pas.
     throw new AppError("maintenance", "service under maintenance", {
       retryAfterSeconds: etat.retryAfterSeconds,
+      // L'heure annoncée voyage AVEC le refus : sans elle, le client devrait
+      // faire un second appel juste pour savoir quoi afficher, au moment
+      // précis où l'on cherche à réduire le trafic.
+      until: etat.until,
     });
   }
 }
