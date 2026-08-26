@@ -5309,10 +5309,29 @@
     },
     "/me/events": {
       "get": {
-        "summary": "Lister ses événements",
+        "summary": "Lister ses événements, tous ou ceux d'un seul proche",
+        "description": "Sans `personId`, le chemin rend TOUS les événements du compte. Avec, il\nrend ceux du proche visé — c'est ce que montre sa fiche (maquette §3.4).\n\nUn `personId` qui n'est pas au demandeur rend `404`, jamais une liste\nvide : celle-ci laisserait croire que le proche existe et n'a rien.",
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "personId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ]
+            }
           }
         ],
         "responses": {
@@ -6311,7 +6330,7 @@
     "/me/occurrences": {
       "get": {
         "summary": "Lister ses échéances, dans une fenêtre de dates et un plafond",
-        "description": "`from` vaut aujourd'hui par défaut, `limit` vaut 50 à défaut d'une\nvaleur explicite : l'accueil en demande trois, l'écran Dates un mois.\n\n`status` est DÉRIVÉ à la lecture, jamais lu tel quel dans la base :\n`upcoming` avant la fenêtre de vœux, `collecting` dedans, `closed`\naprès. La fenêtre vaut [date − wish_window_lead_days, date +\nwish_window_trail_days], réglable en administration.\n\n`daysUntil` est SIGNÉ — négatif pour une échéance passée.\n\n`age` se calcule depuis la naissance du proche, jamais depuis la date\nde l'échéance. Nul quand l'année de naissance n'est pas connue.\n\nChaque échéance porte `personDisplayName` : le nom du proche voyage\navec elle, sans quoi chaque carte d'une liste demanderait sa fiche.",
+        "description": "`from` vaut aujourd'hui par défaut, `limit` vaut 50 à défaut d'une\nvaleur explicite : l'accueil en demande trois, l'écran Dates un mois.\n\n`status` est DÉRIVÉ à la lecture, jamais lu tel quel dans la base :\n`upcoming` avant la fenêtre de vœux, `collecting` dedans, `closed`\naprès. La fenêtre vaut [date − wish_window_lead_days, date +\nwish_window_trail_days], réglable en administration.\n\n`daysUntil` est SIGNÉ — négatif pour une échéance passée.\n\n`age` se calcule depuis la naissance du proche, jamais depuis la date\nde l'échéance. Nul quand l'année de naissance n'est pas connue.\n\nChaque échéance porte `personDisplayName` : le nom du proche voyage\navec elle, sans quoi chaque carte d'une liste demanderait sa fiche.\n\n`personId` restreint la liste à un proche — les échéances de sa fiche,\net son historique quand `from` remonte dans le passé. Un `personId` qui\nn'est pas au demandeur rend `404`, jamais une liste vide.",
         "security": [
           {
             "bearerAuth": []
@@ -6364,6 +6383,22 @@
                   "exclusiveMinimum": true,
                   "minimum": 0,
                   "maximum": 200
+                }
+              ]
+            }
+          },
+          {
+            "name": "personId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
                 }
               ]
             }

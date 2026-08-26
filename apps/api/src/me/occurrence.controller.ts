@@ -27,11 +27,13 @@ export class OccurrenceController {
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("limit") limit?: string,
+    @Query("personId") personId?: string,
   ): Promise<Occurrence[]> {
     const analyse = listOccurrencesQuerySchema.safeParse({
       ...(from !== undefined ? { from } : {}),
       ...(to !== undefined ? { to } : {}),
       ...(limit !== undefined ? { limit: Number(limit) } : {}),
+      ...(personId !== undefined ? { personId } : {}),
     });
     if (!analyse.success) {
       throw new AppError("validation_failed", "invalid occurrences query", {

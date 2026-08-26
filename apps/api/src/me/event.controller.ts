@@ -1,12 +1,14 @@
 import {
-  Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards,
+  Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Query, Req,
+  UseGuards,
 } from "@nestjs/common";
 import {
-  createEventSchema, updateEventSchema,
+  createEventSchema, updateEventSchema, listEventsQuerySchema,
   type CreateEventInput, type UpdateEventInput, type Event as EventContrat,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
+import { AppError } from "../common/errors.js";
 import { EventService } from "./event.service.js";
 
 type AuthedRequest = { userId: string };
@@ -18,9 +20,22 @@ type AuthedRequest = { userId: string };
 export class EventController {
   constructor(@Inject(EventService) private readonly events: EventService) {}
 
+  // `personId` sert la fiche d'un proche (maquette §3.4) ; sans lui, le chemin
+  // rend l'annuaire complet, comme avant.
   @Get()
-  list(@Req() req: AuthedRequest): Promise<EventContrat[]> {
-    return this.events.list(req.userId);
+  list(
+    @Req() req: AuthedRequest,
+    @Query("personId") personId?: string,
+  ): Promise<EventContrat[]> {
+    const analyse = listEventsQuerySchema.safeParse(
+      personId !== undefined ? { personId } : {},
+    );
+    if (!analyse.success) {
+      throw new AppError("validation_failed", "invalid events query", {
+        query: analyse.error.issues.map((i) => i.message).join(", "),
+      });
+    }
+    return this.events.list(req.userId, analyse.data);
   }
 
   @Post()

@@ -28,7 +28,7 @@ import {
 } from "./me.js";
 import {
   eventSchema, createEventSchema, updateEventSchema,
-  occurrenceSchema, listOccurrencesQuerySchema,
+  occurrenceSchema, listOccurrencesQuerySchema, listEventsQuerySchema,
 } from "./me-events.js";
 import { featuresResponseSchema } from "./flags.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
@@ -426,8 +426,18 @@ const CHEMINS: Chemin[] = [
   {
     chemin: "/me/events",
     methode: "get",
-    resume: "Lister ses événements",
+    resume: "Lister ses événements, tous ou ceux d'un seul proche",
     authentifie: true,
+    note: [
+      "Sans `personId`, le chemin rend TOUS les événements du compte. Avec, il",
+      "rend ceux du proche visé — c'est ce que montre sa fiche (maquette §3.4).",
+      "",
+      "Un `personId` qui n'est pas au demandeur rend `404`, jamais une liste",
+      "vide : celle-ci laisserait croire que le proche existe et n'a rien.",
+    ].join("\n"),
+    parametres: [
+      { nom: "personId", dans: "query", schema: listEventsQuerySchema.shape.personId, requis: false },
+    ],
     reponse: z.array(eventSchema),
   },
   {
@@ -507,11 +517,16 @@ const CHEMINS: Chemin[] = [
       "",
       "Chaque échéance porte `personDisplayName` : le nom du proche voyage",
       "avec elle, sans quoi chaque carte d'une liste demanderait sa fiche.",
+      "",
+      "`personId` restreint la liste à un proche — les échéances de sa fiche,",
+      "et son historique quand `from` remonte dans le passé. Un `personId` qui",
+      "n'est pas au demandeur rend `404`, jamais une liste vide.",
     ].join("\n"),
     parametres: [
       { nom: "from", dans: "query", schema: listOccurrencesQuerySchema.shape.from, requis: false },
       { nom: "to", dans: "query", schema: listOccurrencesQuerySchema.shape.to, requis: false },
       { nom: "limit", dans: "query", schema: listOccurrencesQuerySchema.shape.limit, requis: false },
+      { nom: "personId", dans: "query", schema: listOccurrencesQuerySchema.shape.personId, requis: false },
     ],
     reponse: z.array(occurrenceSchema),
   },

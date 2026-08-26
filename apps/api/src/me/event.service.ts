@@ -1,5 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { CreateEventInput, UpdateEventInput, Event as EventContrat } from "@lehno/contracts";
+import type {
+  CreateEventInput, UpdateEventInput, ListEventsQuery, Event as EventContrat,
+} from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
 import { AppError } from "../common/errors.js";
@@ -25,8 +27,15 @@ export class EventService {
     return new Date().toISOString().slice(0, 10);
   }
 
-  async list(userId: string): Promise<EventContrat[]> {
-    return (await this.depot.events(userId).findMany({})).map(rendre);
+  async list(userId: string, query: ListEventsQuery = {}): Promise<EventContrat[]> {
+    // findOrThrow d'abord quand un proche est visé : une liste vide dirait « ce
+    // proche existe et n'a pas d'événement », alors qu'il peut être à un autre
+    // compte. Le filtre deviendrait un oracle d'identifiants.
+    if (query.personId !== undefined) {
+      await this.depot.persons(userId).findOrThrow(query.personId);
+    }
+    const where = query.personId !== undefined ? { personId: query.personId } : {};
+    return (await this.depot.events(userId).findMany(where)).map(rendre);
   }
 
   async get(userId: string, id: string): Promise<EventContrat> {

@@ -81,6 +81,29 @@ describe("les événements et leur première échéance", () => {
     expect(await db.prisma.event.count()).toBe(0);
   });
 
+  // « La liste des événements du proche » (maquette §3.4) : la fiche montre les
+  // siens, l'annuaire nu les montre tous. Deux vues, un seul chemin.
+  it("filtre les événements sur un proche", async () => {
+    const valery = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+    const quentin = await persons.create(awa, { displayName: "Quentin", birthDate: "1988-07-02" });
+    await events.create(awa, { personId: valery.id, kind: "birthday" });
+    await events.create(awa, { personId: quentin.id, kind: "birthday" });
+
+    expect(await events.list(awa, {})).toHaveLength(2);
+    const siens = await events.list(awa, { personId: valery.id });
+    expect(siens).toHaveLength(1);
+    expect(siens[0]?.personId).toBe(valery.id);
+  });
+
+  // Sans cette garde, le filtre deviendrait un oracle : une liste vide dirait
+  // « ce proche existe et n'a pas d'événement », d'un proche qui est à un autre.
+  it("rend 404 quand le proche filtré n'est pas au demandeur", async () => {
+    const celarine = await persons.create(bila, { displayName: "Celarine" });
+    await expect(events.list(awa, { personId: celarine.id })).rejects.toMatchObject({
+      code: "not_found",
+    });
+  });
+
   it("ne rend pas l'événement d'un autre compte", async () => {
     const p = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
     const e = await events.create(bila, { personId: p.id, kind: "birthday" });

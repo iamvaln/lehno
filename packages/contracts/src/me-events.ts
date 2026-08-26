@@ -216,6 +216,18 @@ export const listOccurrencesQuerySchema = z.object({
   from: dateCivileSchema.optional(),
   to: dateCivileSchema.optional(),
   limit: z.number().int().positive().max(200).optional(),
+  // La fiche d'un proche (maquette §3.4) montre SES échéances et SON
+  // historique. Sans ce filtre, le mobile tire tout et trie chez lui : tenable
+  // à dix proches, plus à cent, et le plafond couperait avant le tri.
+  personId: z.string().uuid().optional(),
 }).strict();
 
 export type ListOccurrencesQuery = z.infer<typeof listOccurrencesQuerySchema>;
+
+/* Même besoin sur les événements : « la liste des événements du proche »
+   (maquette §3.4), à côté de l'annuaire complet que rend le chemin nu. */
+export const listEventsQuerySchema = z.object({
+  personId: z.string().uuid().optional(),
+}).strict();
+
+export type ListEventsQuery = z.infer<typeof listEventsQuerySchema>;

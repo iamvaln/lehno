@@ -62,6 +62,29 @@ describe("les échéances", () => {
     expect(await occurrences.list(awa, {})).toEqual([]);
   });
 
+  // La fiche d'un proche (maquette §3.4) montre SES échéances. Sans ce filtre,
+  // le mobile tire tout et trie chez lui — et le plafond couperait AVANT le
+  // tri, donc un proche discret disparaîtrait de sa propre fiche.
+  it("filtre les échéances sur un proche", async () => {
+    const valery = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+    const quentin = await persons.create(awa, { displayName: "Quentin", birthDate: "1988-07-02" });
+    await events.create(awa, { personId: valery.id, kind: "birthday" });
+    await events.create(awa, { personId: quentin.id, kind: "birthday" });
+
+    const siennes = await occurrences.list(awa, { personId: valery.id });
+    expect(siennes).toHaveLength(1);
+    expect(siennes[0]?.personDisplayName).toBe("Valery");
+  });
+
+  // Le filtre ne doit pas devenir un oracle : une liste vide dirait « ce proche
+  // existe et n'a rien », alors qu'il est à quelqu'un d'autre.
+  it("rend 404 quand le proche filtré n'est pas au demandeur", async () => {
+    const celarine = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
+    await expect(occurrences.list(awa, { personId: celarine.id })).rejects.toMatchObject({
+      code: "not_found",
+    });
+  });
+
   it("respecte la fenêtre et le plafond", async () => {
     const p = await persons.create(awa, { displayName: "Valery" });
     for (const jour of ["01-10", "02-10", "03-10"]) {

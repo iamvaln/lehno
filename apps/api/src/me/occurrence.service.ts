@@ -47,6 +47,12 @@ export class OccurrenceService {
 
   async list(userId: string, query: ListOccurrencesQuery): Promise<Occurrence[]> {
     const depuis = query.from ?? this.aujourdhui();
+    // findOrThrow d'abord quand un proche est visé : sans cette garde, une
+    // liste vide dirait « ce proche existe et n'a rien à venir », d'un proche
+    // qui appartient à un autre compte — le filtre deviendrait un oracle.
+    if (query.personId !== undefined) {
+      await this.depot.persons(userId).findOrThrow(query.personId);
+    }
     // La portée cloisonnée choisit QUOI est visible ; elle ne porte pas de
     // relation, donc les lignes qu'elle rend n'incluent ni l'événement ni le
     // proche. On la consulte d'abord — c'est elle qui garantit le
@@ -57,6 +63,8 @@ export class OccurrenceService {
         gte: new Date(`${depuis}T00:00:00Z`),
         ...(query.to ? { lte: new Date(`${query.to}T00:00:00Z`) } : {}),
       },
+      // L'échéance ne porte pas le proche : elle passe par son événement.
+      ...(query.personId !== undefined ? { event: { personId: query.personId } } : {}),
     });
 
     const jointes = await this.prisma.eventOccurrence.findMany({
