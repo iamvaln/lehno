@@ -15,3 +15,4 @@ export { Drapeaux, type DrapeauxProps } from "./Drapeaux.js";
 export { Credits, type CreditsProps } from "./Credits.js";
 export { SaisiePaiement, type SaisiePaiementProps } from "./SaisiePaiement.js";
 export { Acces, type AccesProps } from "./Acces.js";
+export { Assistance, type AssistanceProps } from "./Assistance.js";

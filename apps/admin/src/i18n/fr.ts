@@ -60,6 +60,7 @@ export const fr = {
     alertes: "Alertes",
     moderation: "Modération",
     suppressions: "Demandes de suppression",
+    assistance: "Assistance",
     contact: "Messages de contact",
     attente: "Liste d'attente",
     transactions: "Transactions",
@@ -494,6 +495,73 @@ export const fr = {
         "Compte compromis",
         "Fin d'une mission temporaire",
       ],
+    },
+  },
+
+  // Les quatre files. Trois se lisent, la quatrième se solde — et c'est la
+  // seule dont le modèle porte un état.
+  assistance: {
+    titre: "Assistance",
+    sous: "Ce que les gens nous écrivent, et ce qui attend une réponse.",
+    onglets: { demandes: "Demandes", contact: "Messages", attente: "Liste d'attente", retours: "Retours" },
+
+    demandes: {
+      col: { utilisateur: "Compte", sujet: "Sujet", corps: "Demande", version: "Version", etat: "État", quand: "Reçue le" },
+      etats: { open: "Ouverte", answered: "Répondue", closed: "Close" },
+      filtreEtat: "État",
+      tous: "Toutes",
+      sansSujet: "—",
+      gestes: { repondre: "Marquer répondue", clore: "Clore", rouvrir: "Rouvrir" },
+      dialogue: {
+        titre: "Changer l'état de cette demande",
+        consequence: "Le changement rejoint le journal d'audit, avec son motif.",
+        motifs: [
+          "Réponse envoyée par courriel",
+          "Question déjà traitée ailleurs",
+          "Sans suite après relance",
+        ],
+      },
+      vide: {
+        titre: "Aucune demande en attente",
+        texte: "Les demandes envoyées depuis l'application apparaissent ici, la plus ancienne d'abord.",
+      },
+    },
+
+    contact: {
+      col: { nom: "Nom", email: "Adresse", sujet: "Sujet", message: "Message", quand: "Reçu le" },
+      // Les six clés du formulaire public. Le serveur transporte la clé, jamais
+      // la phrase : c'est ce qui permet de la dire dans les deux langues.
+      sujets: {
+        question: "Une question",
+        probleme: "Un problème",
+        suggestion: "Une suggestion",
+        partenariat: "Un partenariat",
+        presse: "La presse",
+        autre: "Autre chose",
+      },
+      vide: {
+        titre: "Aucun message",
+        texte: "Les messages du formulaire public apparaissent ici, le plus récent d'abord.",
+      },
+    },
+
+    attente: {
+      col: { email: "Adresse", source: "Venue de", langue: "Langue", quand: "Inscrite le" },
+      sansSource: "—",
+      vide: {
+        titre: "Personne sur la liste",
+        texte: "Les adresses laissées avant l'ouverture apparaissent ici.",
+      },
+    },
+
+    retours: {
+      col: { utilisateur: "Compte", note: "Note", corps: "Retour", version: "Version", quand: "Laissé le" },
+      anonyme: "Compte retiré",
+      sansNote: "—",
+      vide: {
+        titre: "Aucun retour",
+        texte: "Les retours laissés depuis l'application apparaissent ici.",
+      },
     },
   },
 

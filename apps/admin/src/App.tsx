@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -50,6 +50,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 import { useRessource } from "./api/hooks.js";
 import {
   canauxSchema, catalogueIaSchema, comptesAdminSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  pageAssistanceSchema, pageContactSchema, pageAttenteSchema, pageRetoursSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
@@ -240,6 +241,9 @@ export function App(): ReactNode {
   const [tourDrapeaux, setTourDrapeaux] = useState(0);
   const [tourCredits, setTourCredits] = useState(0);
   const [tourAcces, setTourAcces] = useState(0);
+  const [tourAssistance, setTourAssistance] = useState(0);
+  const [ongletAssistance, setOngletAssistance] = useState<"demandes" | "contact" | "attente" | "retours">("demandes");
+  const [filtreAssistance, setFiltreAssistance] = useState("tous");
   const [ongletCredits, setOngletCredits] = useState<"paiements" | "mouvements" | "reglages">("paiements");
   const [filtresPaiements, setFiltresPaiements] = useState<{ etat: string; mode: string }>({ etat: "tous", mode: "tous" });
   const [paiementOuvert, setPaiementOuvert] = useState<string | null>(null);
@@ -463,6 +467,43 @@ export function App(): ReactNode {
     [surCredits, ongletCredits, tourCredits],
   );
 
+  const surAssistance = section === "assistance";
+
+  // Une ressource par onglet plutôt qu'un chargement des quatre : on n'en
+  // regarde qu'une à la fois, et les charger ensemble ferait payer trois
+  // lectures pour une.
+  const etatDemandes = useRessource(
+    () => (surAssistance && ongletAssistance === "demandes"
+      ? api.appeler("/admin/support-requests", {
+        schema: pageAssistanceSchema,
+        requete: filtreAssistance === "tous" ? {} : { etat: filtreAssistance },
+      })
+      : Promise.resolve(null)),
+    [surAssistance, ongletAssistance, filtreAssistance, tourAssistance],
+    { garderAncien: true },
+  );
+
+  const etatContact = useRessource(
+    () => (surAssistance && ongletAssistance === "contact"
+      ? api.appeler("/admin/contact-messages", { schema: pageContactSchema })
+      : Promise.resolve(null)),
+    [surAssistance, ongletAssistance],
+  );
+
+  const etatAttente = useRessource(
+    () => (surAssistance && ongletAssistance === "attente"
+      ? api.appeler("/admin/waitlist", { schema: pageAttenteSchema })
+      : Promise.resolve(null)),
+    [surAssistance, ongletAssistance],
+  );
+
+  const etatRetours = useRessource(
+    () => (surAssistance && ongletAssistance === "retours"
+      ? api.appeler("/admin/feedback", { schema: pageRetoursSchema })
+      : Promise.resolve(null)),
+    [surAssistance, ongletAssistance],
+  );
+
   const etatAcces = useRessource(
     () => (section === "acces"
       ? api.appeler("/admin/admins", { schema: comptesAdminSchema })
@@ -607,6 +648,50 @@ export function App(): ReactNode {
             />
           )}
         />
+      );
+    }
+  } else if (section === "assistance") {
+    const communAssistance = {
+      langue,
+      onglet: ongletAssistance,
+      onOnglet: setOngletAssistance,
+      filtreEtat: filtreAssistance,
+      onFiltre: setFiltreAssistance,
+      onRetour: aller,
+      onSolder: (id: string, etat: "open" | "answered" | "closed", reason: string) => {
+        void (async () => {
+          try {
+            await api.appeler(`/admin/support-requests/${id}`, {
+              methode: "PATCH", corps: { etat, reason },
+            });
+          } catch (echec) {
+            if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+          } finally {
+            setTourAssistance((n) => n + 1);
+          }
+        })();
+      },
+    };
+
+    if (ongletAssistance === "contact") {
+      vue = (
+        <Ressource etat={etatContact} t={t}
+          enfant={(page) => <Assistance {...communAssistance} contact={page?.items ?? []} />} />
+      );
+    } else if (ongletAssistance === "attente") {
+      vue = (
+        <Ressource etat={etatAttente} t={t}
+          enfant={(page) => <Assistance {...communAssistance} attente={page?.items ?? []} />} />
+      );
+    } else if (ongletAssistance === "retours") {
+      vue = (
+        <Ressource etat={etatRetours} t={t}
+          enfant={(page) => <Assistance {...communAssistance} retours={page?.items ?? []} />} />
+      );
+    } else {
+      vue = (
+        <Ressource etat={etatDemandes} t={t}
+          enfant={(page) => <Assistance {...communAssistance} demandes={page?.items ?? []} />} />
       );
     }
   } else if (section === "acces") {

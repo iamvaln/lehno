@@ -51,6 +51,7 @@ export const en: typeof fr = {
     alertes: "Alerts",
     moderation: "Moderation",
     suppressions: "Deletion requests",
+    assistance: "Support",
     contact: "Contact messages",
     attente: "Waitlist",
     transactions: "Transactions",
@@ -442,6 +443,70 @@ export const en: typeof fr = {
         "Account compromised",
         "End of a temporary assignment",
       ],
+    },
+  },
+
+  // Voir fr.ts : three registers to read, one queue to settle.
+  assistance: {
+    titre: "Support",
+    sous: "What people write to us, and what awaits an answer.",
+    onglets: { demandes: "Requests", contact: "Messages", attente: "Waitlist", retours: "Feedback" },
+
+    demandes: {
+      col: { utilisateur: "Account", sujet: "Subject", corps: "Request", version: "Version", etat: "State", quand: "Received" },
+      etats: { open: "Open", answered: "Answered", closed: "Closed" },
+      filtreEtat: "State",
+      tous: "All",
+      sansSujet: "—",
+      gestes: { repondre: "Mark answered", clore: "Close", rouvrir: "Reopen" },
+      dialogue: {
+        titre: "Change this request's state",
+        consequence: "The change lands in the audit log, with its reason.",
+        motifs: [
+          "Answer sent by email",
+          "Already handled elsewhere",
+          "No follow-up after a reminder",
+        ],
+      },
+      vide: {
+        titre: "No requests waiting",
+        texte: "Requests sent from the app appear here, oldest first.",
+      },
+    },
+
+    contact: {
+      col: { nom: "Name", email: "Address", sujet: "Subject", message: "Message", quand: "Received" },
+      sujets: {
+        question: "A question",
+        probleme: "A problem",
+        suggestion: "A suggestion",
+        partenariat: "A partnership",
+        presse: "Press",
+        autre: "Something else",
+      },
+      vide: {
+        titre: "No messages",
+        texte: "Messages from the public form appear here, most recent first.",
+      },
+    },
+
+    attente: {
+      col: { email: "Address", source: "Came from", langue: "Language", quand: "Signed up" },
+      sansSource: "—",
+      vide: {
+        titre: "Nobody on the list",
+        texte: "Addresses left before launch appear here.",
+      },
+    },
+
+    retours: {
+      col: { utilisateur: "Account", note: "Rating", corps: "Feedback", version: "Version", quand: "Left on" },
+      anonyme: "Account removed",
+      sansNote: "—",
+      vide: {
+        titre: "No feedback",
+        texte: "Feedback left from the app appears here.",
+      },
     },
   },
 
