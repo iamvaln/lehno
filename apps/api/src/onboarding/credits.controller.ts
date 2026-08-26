@@ -1,4 +1,5 @@
 import { Controller, Get, Inject, Injectable, Param, Req, UseGuards } from "@nestjs/common";
+import { RAISON_DE_LA_SOURCE } from "@lehno/contracts";
 import type { CreditBalance, ReferralSummary, Invitation } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AuthGuard } from "../auth/auth.guard.js";
@@ -27,11 +28,16 @@ export class CreditsService {
       transactions: mouvements.map((m) => ({
         id: m.id,
         type: m.type,
-        // Le CODE, que le client traduit. `reason` reste une note libre
-        // d'exploitation, jamais affichée à l'utilisateur.
-        source: m.source,
+        // La RAISON, dans le vocabulaire de l'utilisateur — jamais la source
+        // comptable. `manual_topup` et `purchase` lui parviennent tous deux
+        // comme un achat : il a payé, la façon dont l'argent nous est parvenu
+        // ne le regarde pas.
+        //
+        // La note libre `reason` de la base ne sort PAS : elle est écrite en
+        // français pour le journal, et finirait par afficher « erreur de manip
+        // suite ticket 4412 » sur l'écran de quelqu'un.
+        reason: RAISON_DE_LA_SOURCE[m.source],
         amount: m.amount,
-        reason: m.reason,
         createdAt: m.createdAt.toISOString(),
       })),
     };

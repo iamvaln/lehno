@@ -1,8 +1,22 @@
 import { z } from "zod";
 
-// Trois à trente caractères, minuscules, chiffres et tirets bas. Il forme
-// l'adresse du Mur : ce qui n'entre pas dans une URL n'a pas sa place ici.
-export const usernameSchema = z.string().regex(/^[a-z0-9_]{3,30}$/);
+// LE pseudo, déclaré ICI et nulle part ailleurs.
+//
+// Il forme l'adresse du Mur — lehno.app/valentine — donc ce qui n'entre pas
+// dans une URL n'a pas sa place ici : lettres, chiffres, point, tiret, tiret
+// bas. Il commence par une lettre ou un chiffre, pour qu'une adresse ne débute
+// jamais par un séparateur.
+//
+// Une SEULE déclaration, et c'est le point. /auth/register portait sa propre
+// copie de la règle, plus permissive : deux formulaires du même champ
+// acceptaient des pseudos différents, et un compte créé à l'inscription
+// pouvait devenir irrecevable à la première correction de profil.
+export const usernameSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .max(30)
+  .regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/);
 
 export const profileSchema = z.object({
   id: z.string().uuid(),

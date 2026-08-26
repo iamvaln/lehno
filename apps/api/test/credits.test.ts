@@ -50,7 +50,9 @@ describe("crédits, parrainage et invitation", () => {
       expect(s.transactions).toHaveLength(1);
       // Le CODE, pas la phrase : c'est lui que le client traduit, et lui qui
       // permet à l'écran de bienvenue de séparer ses deux lignes.
-      expect(s.transactions[0]).toMatchObject({ type: "grant", source: "signup_grant", amount: 5 });
+      // La RAISON, dans le vocabulaire de l'utilisateur — pas la source
+      // comptable, qui reste en base.
+      expect(s.transactions[0]).toMatchObject({ type: "grant", reason: "signup", amount: 5 });
     });
 
     // Un débit réduit le solde. Le montant est signé : le compter positif le
@@ -69,10 +71,43 @@ describe("crédits, parrainage et invitation", () => {
       const a = await creer();
       const b = await creer();
       await db.prisma.creditTransaction.create({
-        data: { userId: b.id, type: "grant", source: "admin_adjustment", amount: 100, reason: "geste commercial" },
+        data: { userId: b.id, type: "grant", source: "gift", amount: 100, reason: "geste commercial" },
       });
       expect((await credits.solde(a.id)).balance).toBe(5);
       expect((await credits.solde(b.id)).balance).toBe(105);
+    });
+
+    // Ce que le client NE reçoit PAS : notre plan comptable. Un virement
+    // vérifié à la main et un achat par l'application lui parviennent tous
+    // deux comme un achat — il a payé, la façon dont l'argent nous est
+    // parvenu ne le regarde pas. Sans cette fusion, son écran serait couplé à
+    // notre comptabilité et casserait le jour où elle gagne une catégorie.
+    it("deux sources internes, une seule raison pour l'utilisateur", async () => {
+      const u = await creer();
+      await db.prisma.creditTransaction.createMany({
+        data: [
+          { userId: u.id, type: "purchase", source: "purchase", amount: 10 },
+          { userId: u.id, type: "purchase", source: "manual_topup", amount: 10 },
+        ],
+      });
+
+      const s = await credits.solde(u.id);
+      const achats = s.transactions.filter((t) => t.reason === "purchase");
+      expect(achats).toHaveLength(2);
+      // Et la source comptable ne franchit jamais la frontière.
+      expect(JSON.stringify(s)).not.toMatch(/manual_topup|signup_grant|referral_bonus/);
+    });
+
+    // La note libre de la base est écrite en français, pour le journal. La
+    // servir finirait par afficher « erreur de manip suite ticket 4412 » sur
+    // l'écran de quelqu'un.
+    it("la note d'exploitation ne sort pas", async () => {
+      const u = await creer();
+      await db.prisma.creditTransaction.create({
+        data: { userId: u.id, type: "grant", source: "gift", amount: 5, reason: "geste après incident 4412" },
+      });
+      const s = await credits.solde(u.id);
+      expect(JSON.stringify(s)).not.toMatch(/4412|incident/);
     });
   });
 
