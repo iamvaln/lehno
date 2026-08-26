@@ -6,6 +6,7 @@ import {
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { NoteService } from "./note.service.js";
+import { TrackingService } from "../tracking/tracking.service.js";
 
 type AuthedRequest = { userId: string };
 
@@ -14,7 +15,10 @@ type AuthedRequest = { userId: string };
 @Controller("me/persons/:personId/notes")
 @UseGuards(AuthGuard)
 export class NoteController {
-  constructor(@Inject(NoteService) private readonly notes: NoteService) {}
+  constructor(
+    @Inject(NoteService) private readonly notes: NoteService,
+    @Inject(TrackingService) private readonly mesure: TrackingService,
+  ) {}
 
   @Get()
   list(
@@ -32,7 +36,16 @@ export class NoteController {
     @Param("personId", ParseUUIDPipe) personId: string,
     @Body(new ZodValidationPipe(createNoteSchema)) body: CreateNoteInput,
   ): Promise<Note> {
-    return this.notes.createForPerson(req.userId, personId, body);
+    return this.notes.createForPerson(req.userId, personId, body).then((note) => {
+      // On compte les caractères, on ne transporte pas le texte (§16.4).
+      this.mesure.emettre(req.userId, "note.created", {
+        persons: 1,
+        hasOccasion: note.eventOccurrenceId !== null,
+        length: body.content.length,
+        origin: "person",
+      });
+      return note;
+    });
   }
 }
 
@@ -43,13 +56,27 @@ export class NoteController {
 @Controller("me/notes")
 @UseGuards(AuthGuard)
 export class NotesController {
-  constructor(@Inject(NoteService) private readonly notes: NoteService) {}
+  constructor(
+    @Inject(NoteService) private readonly notes: NoteService,
+    @Inject(TrackingService) private readonly mesure: TrackingService,
+  ) {}
 
   @Post()
   create(
     @Req() req: AuthedRequest,
     @Body(new ZodValidationPipe(createNotesSchema)) body: CreateNotesInput,
   ): Promise<Note[]> {
-    return this.notes.createForMany(req.userId, body);
+    return this.notes.createForMany(req.userId, body).then((notes) => {
+      // UN événement pour UN fait (§16.2) : une note prise pour trois proches
+      // est un geste, pas trois. Émettre par proche gonflerait le volume de
+      // capture et ferait croire à une fréquence qui n'existe pas.
+      this.mesure.emettre(req.userId, "note.created", {
+        persons: notes.length,
+        hasOccasion: body.eventOccurrenceId !== undefined,
+        length: body.content.length,
+        origin: "home",
+      });
+      return notes;
+    });
   }
 }

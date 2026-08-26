@@ -10,6 +10,7 @@ import {
 import type { IdentityProvider } from "@prisma/client";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthService } from "./auth.service.js";
+import { TrackingService } from "../tracking/tracking.service.js";
 import { TokenService } from "./token.service.js";
 import { FederatedService } from "./federated.service.js";
 import { AuthGuard } from "./auth.guard.js";
@@ -26,6 +27,7 @@ export class AuthController {
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(TokenService) private readonly tokens: TokenService,
     @Inject(FederatedService) private readonly federatedAuth: FederatedService,
+    @Inject(TrackingService) private readonly mesure: TrackingService,
   ) {}
 
   // Rend toujours { sent: true }, adresse connue ou non : voir AuthService.requestOtp.
@@ -61,14 +63,27 @@ export class AuthController {
     @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
   ): Promise<VerifyOutcome> {
-    return this.auth.verifyOtp({
-      email: body.email,
-      code: body.code,
-      ip,
-      ...(body.deviceId !== undefined ? { deviceId: body.deviceId } : {}),
-      ...(body.referralCode !== undefined ? { referralCode: body.referralCode } : {}),
-      ...(userAgent !== undefined ? { userAgent } : {}),
-    });
+    return this.auth
+      .verifyOtp({
+        email: body.email,
+        code: body.code,
+        ip,
+        ...(body.deviceId !== undefined ? { deviceId: body.deviceId } : {}),
+        ...(body.referralCode !== undefined ? { referralCode: body.referralCode } : {}),
+        ...(userAgent !== undefined ? { userAgent } : {}),
+      })
+      .then((issue) => {
+        // L'issue distingue les deux faits : une session ouverte est une
+        // CONNEXION, un jeton d'inscription est une inscription qui COMMENCE.
+        // Les confondre compterait les revenants comme des nouveaux, et
+        // l'entonnoir d'activation ne voudrait plus rien dire.
+        this.mesure.emettre(
+          null,
+          issue.outcome === "session" ? "signin.completed" : "signup.started",
+          { method: "code" },
+        );
+        return issue;
+      });
   }
 
   // La création du compte. Le jeton d'inscription vient de /otp/verify ou de
@@ -80,6 +95,8 @@ export class AuthController {
     @Body(new ZodValidationPipe(registerSchema)) body: RegisterInput,
     @Headers("user-agent") userAgent?: string,
   ): Promise<Registered> {
+    // signup.completed s'émet dans AuthService.register, où l'identifiant de
+    // compte existe : voir la note là-bas.
     return this.auth.register({ ...body, ...(userAgent !== undefined ? { userAgent } : {}) });
   }
 
@@ -89,10 +106,16 @@ export class AuthController {
     @Body(new ZodValidationPipe(federatedSchema)) body: FederatedBody,
     @Headers("user-agent") userAgent?: string,
   ): Promise<VerifyOutcome> {
-    return this.federatedAuth.signIn({
-      ...body,
-      ...(userAgent !== undefined ? { userAgent } : {}),
-    });
+    return this.federatedAuth
+      .signIn({ ...body, ...(userAgent !== undefined ? { userAgent } : {}) })
+      .then((issue) => {
+        this.mesure.emettre(
+          null,
+          issue.outcome === "session" ? "signin.completed" : "signup.started",
+          { method: body.provider },
+        );
+        return issue;
+      });
   }
 
   @Post("refresh")

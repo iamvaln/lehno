@@ -5,6 +5,7 @@ import type { Locale } from "@lehno/i18n";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { RateLimitService } from "../common/rate-limit.service.js";
+import { TrackingService } from "../tracking/tracking.service.js";
 import { assertUsableEmail, canonicalEmail } from "../common/email.js";
 import { OtpService } from "./otp.service.js";
 import { TokenService } from "./token.service.js";
@@ -36,6 +37,7 @@ export class AuthService {
     @Inject(SignupService) private readonly signup: SignupService,
     @Inject(RateLimitService) private readonly limiter: RateLimitService,
     @Inject("MAIL_PORT") private readonly mail: MailPort,
+    @Inject(TrackingService) private readonly mesure: TrackingService,
   ) {}
 
   // La réponse reste la même pour une adresse inconnue : on émet un code et
@@ -159,6 +161,14 @@ export class AuthService {
       },
     });
     const pair = await this.tokens.issuePair(creation.user.id, input.userAgent, input.ip);
+
+    /* Émis ICI et non au contrôleur : `Registered` ne porte pas l'identifiant
+       de compte — à dessein, il n'a rien à faire côté client. Or c'est
+       l'événement d'activation du produit ; sans identifiant, il ne se recolle
+       à aucun parcours ultérieur et l'entonnoir ne dit plus rien. */
+    this.mesure.emettre(creation.user.id, "signup.completed", {
+      referred: creation.parrainage.etat === "credite",
+    });
 
     // Le DÉTAIL, pas un total : cadeau de bienvenue et bonus de parrainage
     // sont deux gestes distincts, et l'un des deux se mérite. Les confondre

@@ -8,6 +8,7 @@ import { TokenService } from "../src/auth/token.service.js";
 import { RateLimitService } from "../src/common/rate-limit.service.js";
 import type { Mail, MailPort } from "../src/mail/mail.port.js";
 import { AppError } from "../src/common/errors.js";
+import { mesureDeTest } from "./mesure.js";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -78,6 +79,7 @@ describe("authentification", () => {
       db.prisma as never, otp, tokens,
       new SignupService(db.prisma as never, new LegalService()),
       new RateLimitService(db.prisma as never), mailDeTest,
+      mesureDeTest(db.prisma).service,
     );
   });
 
