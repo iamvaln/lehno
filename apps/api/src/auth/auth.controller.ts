@@ -5,6 +5,7 @@ import {
   requestOtpSchema,
   verifyOtpSchema,
   type Session,
+  registerSchema, type RegisterInput, type Registered, type VerifyOutcome,
 } from "@lehno/contracts";
 import type { IdentityProvider } from "@prisma/client";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -46,7 +47,7 @@ export class AuthController {
   requestOtp(
     @Body(new ZodValidationPipe(requestOtpSchema)) body: RequestOtpBody,
     @Ip() ip: string,
-  ): Promise<{ sent: true }> {
+  ): Promise<{ sent: true; retryAfterSeconds: number }> {
     return this.auth.requestOtp({ ...body, ip });
   }
 
@@ -59,7 +60,7 @@ export class AuthController {
     @Body(new ZodValidationPipe(verifyOtpSchema)) body: VerifyOtpBody,
     @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
-  ): Promise<Session> {
+  ): Promise<VerifyOutcome> {
     return this.auth.verifyOtp({
       email: body.email,
       code: body.code,
@@ -70,12 +71,24 @@ export class AuthController {
     });
   }
 
+  // La création du compte. Le jeton d'inscription vient de /otp/verify ou de
+  // /federated ; le pseudo et le code de parrainage viennent de l'écran du
+  // pseudo. Tout se joue ici, en une transaction.
+  @Post("register")
+  @HttpCode(201)
+  register(
+    @Body(new ZodValidationPipe(registerSchema)) body: RegisterInput,
+    @Headers("user-agent") userAgent?: string,
+  ): Promise<Registered> {
+    return this.auth.register({ ...body, ...(userAgent !== undefined ? { userAgent } : {}) });
+  }
+
   @Post("federated")
   @HttpCode(200)
   federated(
     @Body(new ZodValidationPipe(federatedSchema)) body: FederatedBody,
     @Headers("user-agent") userAgent?: string,
-  ): Promise<Session> {
+  ): Promise<VerifyOutcome> {
     return this.federatedAuth.signIn({
       ...body,
       ...(userAgent !== undefined ? { userAgent } : {}),

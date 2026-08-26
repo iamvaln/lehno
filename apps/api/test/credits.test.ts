@@ -15,6 +15,7 @@ describe("crédits, parrainage et invitation", () => {
     const r = await signup.creer({
       email: `${randomBytes(6).toString("hex")}@example.com`,
       emailVerified: true,
+      username: `u${randomBytes(4).toString("hex")}`,
       deviceId: randomBytes(8).toString("hex"),
       ...(referralCode !== undefined ? { referralCode } : {}),
     });

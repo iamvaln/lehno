@@ -81,8 +81,8 @@ describe("le solde", () => {
     const solde = creditBalanceSchema.parse({
       balance: 4,
       transactions: [
-        { id: ID, type: "grant", amount: 5, reason: "inscription", createdAt: "2026-08-01T10:00:00.000Z" },
-        { id: "3f2504e0-4f89-11d3-9a0c-0305e82c3302", type: "consumption", amount: -1, reason: null, createdAt: "2026-08-02T10:00:00.000Z" },
+        { id: ID, type: "grant", source: "signup_grant", amount: 5, reason: null, createdAt: "2026-08-01T10:00:00.000Z" },
+        { id: "3f2504e0-4f89-11d3-9a0c-0305e82c3302", type: "consumption", source: "consumption", amount: -1, reason: null, createdAt: "2026-08-02T10:00:00.000Z" },
       ],
     });
     expect(solde.balance).toBe(4);
@@ -93,7 +93,7 @@ describe("le solde", () => {
   it("accepte un mouvement négatif", () => {
     const solde = creditBalanceSchema.parse({
       balance: 0,
-      transactions: [{ id: ID, type: "consumption", amount: -1, reason: null, createdAt: "2026-08-02T10:00:00.000Z" }],
+      transactions: [{ id: ID, type: "consumption", source: "consumption", amount: -1, reason: null, createdAt: "2026-08-02T10:00:00.000Z" }],
     });
     expect(solde.transactions[0]!.amount).toBe(-1);
   });

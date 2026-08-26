@@ -37,6 +37,21 @@ describe("authentification", () => {
   let db: TestDb;
   let auth: AuthService;
   let otp: OtpService;
+  let tokens: TokenService;
+
+  // Le parcours réel en un appel : vérifier le code, puis s'inscrire. Les deux
+  // étapes sont distinctes DEPUIS que le parrainage doit être atomique avec la
+  // création — la vérification ne crée plus rien.
+  const inscrire = async (email: string, deviceId: string, username?: string) => {
+    const { code } = await otp.issue(email, "login");
+    const r = await auth.verifyOtp({ email, code, deviceId });
+    if (r.outcome !== "registration") throw new Error(`inscription attendue pour ${email}`);
+    return auth.register({
+      registrationToken: r.registrationToken,
+      username: username ?? (email.split("@")[0]!.replace(/[^a-zA-Z0-9]/g, "") || "u"),
+      deviceId,
+    });
+  };
   let envoyés: Mail[];
 
   beforeAll(async () => { db = await withDatabase(); }, 120_000);
@@ -46,8 +61,9 @@ describe("authentification", () => {
     otp = new OtpService(db.prisma as never, PEPPER);
     envoyés = [];
     const mailDeTest: MailPort = { send: async (m) => { envoyés.push(m); } };
+    tokens = new TokenService(db.prisma as never, SECRET);
     auth = new AuthService(
-      db.prisma as never, otp, new TokenService(db.prisma as never, SECRET),
+      db.prisma as never, otp, tokens,
       new SignupService(db.prisma as never, new LegalService()),
       new RateLimitService(db.prisma as never), mailDeTest,
     );
@@ -71,38 +87,117 @@ describe("authentification", () => {
     expect(envoyés, "rien ne doit partir").toHaveLength(0);
   });
 
-  it("la première vérification crée le compte", async () => {
+  // La vérification NE CRÉE PLUS DE COMPTE. Le code de parrainage se saisit à
+  // l'écran du pseudo, donc après elle : créer d'abord et rattacher ensuite
+  // laisserait un compte réclamer un parrainage des mois plus tard. Les deux
+  // opérations doivent être atomiques, elles se font donc ensemble.
+  it("la première vérification n'écrit rien et invite à s'inscrire", async () => {
     const { code } = await otp.issue("awa@example.com", "login");
-    const s = await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
-    expect(s.isNewAccount).toBe(true);
-    const u = await db.prisma.user.findUniqueOrThrow({ where: { email: "awa@example.com" } });
-    expect(u.emailVerified).toBe(true);
-    expect(u.username).toMatch(/^u[0-9a-f]{8}$/); // pseudo provisoire, choisi ensuite
+    const r = await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
+
+    expect(r.outcome).toBe("registration");
+    expect(await db.prisma.user.count(), "aucun compte ne doit exister").toBe(0);
   });
 
-  it("la deuxième connexion retrouve le même compte", async () => {
+  it("le jeton d'inscription n'ouvre aucune session", async () => {
+    const { code } = await otp.issue("awa@example.com", "login");
+    const r = await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
+    if (r.outcome !== "registration") throw new Error("inscription attendue");
+
+    // Il est signé de la même clé que les jetons d'accès : seule sa marque les
+    // distingue. Sans elle, il ouvrirait tout.
+    expect(() => tokens.verifyAccess(r.registrationToken)).toThrow();
+  });
+
+  it("l'inscription crée le compte avec le pseudo choisi", async () => {
+    const { code } = await otp.issue("awa@example.com", "login");
+    const r = await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
+    if (r.outcome !== "registration") throw new Error("inscription attendue");
+
+    const s = await auth.register({
+      registrationToken: r.registrationToken, username: "awa", deviceId: "dev-1",
+    });
+    expect(s.isNewAccount).toBe(true);
+    expect(s.signupCredits).toBe(5);
+    expect(s.referral).toBeNull();
+
+    const u = await db.prisma.user.findUniqueOrThrow({ where: { email: "awa@example.com" } });
+    expect(u.emailVerified).toBe(true);
+    // Le pseudo est CHOISI, plus tiré au sort : il forme l'adresse du Mur.
+    expect(u.username).toBe("awa");
+    expect(u.acceptedTermsVersion).not.toBeNull();
+  });
+
+  it("la deuxième connexion retrouve le même compte, sans repasser par l'inscription", async () => {
     const a = await otp.issue("awa@example.com", "login");
-    await auth.verifyOtp({ email: "awa@example.com", code: a.code, deviceId: "dev-1" });
+    const r = await auth.verifyOtp({ email: "awa@example.com", code: a.code, deviceId: "dev-1" });
+    if (r.outcome !== "registration") throw new Error("inscription attendue");
+    await auth.register({ registrationToken: r.registrationToken, username: "awa", deviceId: "dev-1" });
+
     const b = await otp.issue("awa@example.com", "login");
     const s = await auth.verifyOtp({ email: "awa@example.com", code: b.code, deviceId: "dev-1" });
+    expect(s.outcome).toBe("session");
+    if (s.outcome !== "session") throw new Error("session attendue");
     expect(s.isNewAccount).toBe(false);
     expect(await db.prisma.user.count()).toBe(1);
   });
 
+  // Le jeton dit qu'une adresse a été VÉRIFIÉE, pas qu'elle est libre. Entre
+  // la vérification et l'inscription, la même adresse a pu s'inscrire par une
+  // autre voie — Google, par exemple.
+  it("refuse une inscription sur une adresse devenue occupée", async () => {
+    const { code } = await otp.issue("awa@example.com", "login");
+    const r = await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
+    if (r.outcome !== "registration") throw new Error("inscription attendue");
+
+    await db.prisma.user.create({
+      data: { email: "awa@example.com", username: "quelquun", referralCode: "ZZZ111" },
+    });
+
+    await expect(
+      auth.register({ registrationToken: r.registrationToken, username: "awa", deviceId: "dev-1" }),
+    ).rejects.toMatchObject({ code: "conflict" });
+  });
+
+  it("refuse un pseudo déjà pris, plutôt que d'en inventer un autre", async () => {
+    const premier = await otp.issue("a@example.com", "login");
+    const r1 = await auth.verifyOtp({ email: "a@example.com", code: premier.code, deviceId: "d1" });
+    if (r1.outcome !== "registration") throw new Error("inscription attendue");
+    await auth.register({ registrationToken: r1.registrationToken, username: "valentine", deviceId: "d1" });
+
+    const second = await otp.issue("b@example.com", "login");
+    const r2 = await auth.verifyOtp({ email: "b@example.com", code: second.code, deviceId: "d2" });
+    if (r2.outcome !== "registration") throw new Error("inscription attendue");
+
+    // Le pseudo est un CHOIX : s'il est pris, l'utilisateur doit le savoir.
+    // Retenter en silence avec un autre n'aurait aucun sens — on ne peut pas
+    // deviner celui qu'il voulait.
+    await expect(
+      auth.register({ registrationToken: r2.registrationToken, username: "valentine", deviceId: "d2" }),
+    ).rejects.toMatchObject({ code: "username_taken" });
+  });
+
   it("le plafond par appareil refuse le quatrième compte", async () => {
-    for (const n of [1, 2, 3]) {
-      const { code } = await otp.issue(`u${n}@example.com`, "login");
-      await auth.verifyOtp({ email: `u${n}@example.com`, code, deviceId: "partagé" });
-    }
-    const { code } = await otp.issue("u4@example.com", "login");
-    await expect(auth.verifyOtp({ email: "u4@example.com", code, deviceId: "partagé" }))
+    for (const n of [1, 2, 3]) await inscrire(`u${n}@example.com`, "partagé");
+    await expect(inscrire("u4@example.com", "partagé"))
       .rejects.toMatchObject({ code: "device_limit_reached" });
     expect(await db.prisma.user.count()).toBe(3); // rien n'a été créé
   });
 
+  // Le plafond se signale DÈS la vérification, sans bloquer : à quoi bon
+  // faire choisir un pseudo à quelqu'un dont la création sera refusée au bout.
+  // Il ne fait pas foi pour autant — la décision se prend sous verrou, à la
+  // création, où deux inscriptions simultanées ne peuvent pas se croiser.
+  it("le plafond se signale à la vérification, sans la refuser", async () => {
+    for (const n of [1, 2, 3]) await inscrire(`u${n}@example.com`, "partagé");
+    const { code } = await otp.issue("u4@example.com", "login");
+    const r = await auth.verifyOtp({ email: "u4@example.com", code, deviceId: "partagé" });
+    if (r.outcome !== "registration") throw new Error("inscription attendue");
+    expect(r.deviceLimitReached).toBe(true);
+  });
+
   it("un compte suspendu ne peut pas ouvrir de session", async () => {
-    const { code } = await otp.issue("awa@example.com", "login");
-    await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
+    await inscrire("awa@example.com", "dev-1");
     await db.prisma.user.update({ where: { email: "awa@example.com" }, data: { status: "suspended" } });
     const next = await otp.issue("awa@example.com", "login");
     await expect(auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" }))
@@ -110,11 +205,13 @@ describe("authentification", () => {
   });
 
   it("chaque tentative laisse une trace, réussie comme échouée", async () => {
-    const { code } = await otp.issue("awa@example.com", "login");
-    await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
+    await inscrire("awa@example.com", "dev-1");
     await auth.verifyOtp({ email: "awa@example.com", code: "000000", deviceId: "dev-1" }).catch(() => {});
     const rows = await db.prisma.loginActivity.findMany();
-    expect(rows.map((r) => r.result).sort()).toEqual(["failure", "success"]);
+    // Deux réussites : la vérification du code, puis la création du compte.
+    // Le parcours compte deux étapes depuis que le parrainage doit être
+    // atomique avec la création — chacune laisse sa trace.
+    expect(rows.map((r) => r.result).sort()).toEqual(["failure", "success", "success"]);
   });
 
   it("demander un code pour une adresse inconnue ne le dit pas", async () => {
@@ -178,19 +275,21 @@ describe("authentification", () => {
   // Revue tour 1 : deviceId facultatif dans le schéma de contrat, mais le
   // plafond par appareil se contournerait en l'omettant si le service ne
   // l'exigeait pas lui-même pour CRÉER un compte.
-  it("créer un compte sans identifiant d'appareil est refusé", async () => {
+  // L'identifiant d'appareil est exigé par le CONTRAT de /auth/register, non
+  // plus par la vérification : c'est là que le compte naît, donc là que le
+  // plafond s'applique. Le rendre facultatif rouvrirait le contournement.
+  it("la vérification ne demande pas d'identifiant d'appareil", async () => {
     const { code } = await otp.issue("sans-appareil@example.com", "login");
-    await expect(auth.verifyOtp({ email: "sans-appareil@example.com", code }))
-      .rejects.toMatchObject({ code: "validation_failed" });
-    expect(await db.prisma.user.count()).toBe(0); // rien n'a été créé
+    const r = await auth.verifyOtp({ email: "sans-appareil@example.com", code });
+    expect(r.outcome).toBe("registration");
+    expect(await db.prisma.user.count()).toBe(0); // et rien n'est créé
   });
 
   it("se connecter à un compte existant ne demande pas d'identifiant d'appareil", async () => {
-    const a = await otp.issue("awa@example.com", "login");
-    await auth.verifyOtp({ email: "awa@example.com", code: a.code, deviceId: "dev-1" });
+    await inscrire("awa@example.com", "dev-1");
     const b = await otp.issue("awa@example.com", "login");
     await expect(auth.verifyOtp({ email: "awa@example.com", code: b.code })).resolves.toMatchObject({
-      isNewAccount: false,
+      outcome: "session", isNewAccount: false,
     });
   });
 
@@ -198,53 +297,56 @@ describe("authentification", () => {
   // code réussie — sans trace, un porteur de code valide pourrait buter
   // dessus indéfiniment sans que rien n'en garde le souvenir.
   it("le refus par plafond d'appareil laisse une trace", async () => {
-    for (const n of [1, 2, 3]) {
-      const { code } = await otp.issue(`u${n}@example.com`, "login");
-      await auth.verifyOtp({ email: `u${n}@example.com`, code, deviceId: "partagé" });
-    }
-    const { code } = await otp.issue("u4@example.com", "login");
-    await auth.verifyOtp({ email: "u4@example.com", code, deviceId: "partagé" }).catch(() => {});
+    for (const n of [1, 2, 3]) await inscrire(`u${n}@example.com`, "partagé");
+    await inscrire("u4@example.com", "partagé").catch(() => {});
     const rows = await db.prisma.loginActivity.findMany({ where: { attemptedEmail: "u4@example.com" } });
-    expect(rows.map((r) => r.result)).toEqual(["failure"]);
+    // Deux traces : la vérification a réussi — le code était bon — et la
+    // création a été refusée. Sans la seconde, un porteur de code valide
+    // buterait sur ce mur sans qu'il en reste rien.
+    expect(rows.map((r) => r.result).sort()).toEqual(["failure", "success"]);
   });
 
   it("le refus d'un compte suspendu laisse une trace", async () => {
-    const { code } = await otp.issue("awa@example.com", "login");
-    await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
+    await inscrire("awa@example.com", "dev-1");
     await db.prisma.user.update({ where: { email: "awa@example.com" }, data: { status: "suspended" } });
     const next = await otp.issue("awa@example.com", "login");
     await auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" }).catch(() => {});
     const rows = await db.prisma.loginActivity.findMany({ where: { attemptedEmail: "awa@example.com" } });
-    expect(rows.map((r) => r.result).sort()).toEqual(["failure", "success"]);
+    // Trois traces : la vérification de l'inscription, la création, puis le
+    // refus. Un porteur de code valide qui bute sur ce mur doit laisser une
+    // trace comme un succès l'aurait fait.
+    expect(rows.map((r) => r.result).sort()).toEqual(["failure", "success", "success"]);
   });
 
   it("un compte en attente de suppression ne peut pas ouvrir de session, et le refus laisse une trace", async () => {
-    const { code } = await otp.issue("awa@example.com", "login");
-    await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
+    await inscrire("awa@example.com", "dev-1");
     await db.prisma.user.update({ where: { email: "awa@example.com" }, data: { status: "pending_deletion" } });
     const next = await otp.issue("awa@example.com", "login");
     await expect(auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" }))
       .rejects.toMatchObject({ code: "account_pending_deletion" });
     const rows = await db.prisma.loginActivity.findMany({ where: { attemptedEmail: "awa@example.com" } });
-    expect(rows.map((r) => r.result).sort()).toEqual(["failure", "success"]);
+    expect(rows.map((r) => r.result).sort()).toEqual(["failure", "success", "success"]);
   });
 
-  // Revue tour 1 : une collision du pseudo tiré au hasard (32 bits) ne doit
-  // pas faire échouer tout le parcours après que le code a déjà été
-  // consommé — on retire avec un nouveau tirage plutôt que d'abandonner.
-  it("une collision de pseudo se rattrape par un nouveau tirage", async () => {
+  // Le pseudo n'est plus tiré au sort : il est choisi. La collision qui compte
+  // est donc celle d'un CHOIX déjà pris, éprouvée plus haut par « refuse un
+  // pseudo déjà pris ». Reste la collision du code de parrainage, lui bien
+  // tiré au sort — une malchance, qu'on absorbe par un nouveau tirage.
+  it("une collision de code de parrainage se retire, sans perdre le parcours", async () => {
     await db.prisma.user.create({
-      data: { email: "deja-la@example.com", username: "udeadbeef", referralCode: "AAAAAAAA" },
+      data: { email: "deja-la@example.com", username: "deja", referralCode: "3q2+7w" },
     });
-    // Truque le tout premier tirage à venir (celui du pseudo de la
-    // prochaine création) pour qu'il reproduise "udeadbeef", déjà pris.
-    cryptoOverride.nextRandomBytes = () => Buffer.from("deadbeef", "hex");
+    cryptoOverride.nextRandomBytes = () => Buffer.from("deadbeefcafe", "hex");
 
-    const { code } = await otp.issue("nouveau-pseudo@example.com", "login");
-    const s = await auth.verifyOtp({ email: "nouveau-pseudo@example.com", code, deviceId: "dev-collision" });
+    const { code } = await otp.issue("nouveau@example.com", "login");
+    const r = await auth.verifyOtp({ email: "nouveau@example.com", code, deviceId: "dev-collision" });
+    if (r.outcome !== "registration") throw new Error("inscription attendue");
+
+    const s = await auth.register({
+      registrationToken: r.registrationToken, username: "nouveau", deviceId: "dev-collision",
+    });
     expect(s.isNewAccount).toBe(true);
-    const u = await db.prisma.user.findUniqueOrThrow({ where: { email: "nouveau-pseudo@example.com" } });
-    expect(u.username).not.toBe("udeadbeef");
-    expect(u.username).toMatch(/^u[0-9a-f]{8}$/);
+    const u = await db.prisma.user.findUniqueOrThrow({ where: { email: "nouveau@example.com" } });
+    expect(u.referralCode).not.toBe("3q2+7w");
   });
 });

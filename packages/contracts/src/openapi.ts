@@ -16,6 +16,9 @@ import {
   federatedSchema,
   refreshSchema,
   sessionSchema,
+  verifyOutcomeSchema,
+  registerSchema,
+  registeredSchema,
 } from "./auth.js";
 import { profileSchema, updateProfileSchema, usernameSchema } from "./profile.js";
 import { errorEnvelopeSchema } from "./errors.js";
@@ -147,14 +150,30 @@ const CHEMINS: Chemin[] = [
     methode: "post",
     resume: "Vérifier le code reçu et ouvrir une session",
     corps: verifyOtpSchema,
-    reponse: sessionSchema,
+    reponse: verifyOutcomeSchema,
+  },
+  {
+    // La création du compte. Le jeton d'inscription vient de /otp/verify ou de
+    // /federated ; le pseudo et le code de parrainage viennent de l'écran du
+    // pseudo. Tout se joue ici, en une transaction — le plafond par appareil,
+    // le compte, les crédits et le parrainage.
+    //
+    // Pourquoi pas à la vérification : le code de parrainage se saisit APRÈS
+    // elle. Créer d'abord et rattacher ensuite laisserait un compte réclamer
+    // un parrainage des mois plus tard.
+    chemin: "/auth/register",
+    methode: "post",
+    resume: "Créer le compte : pseudo, appareil, et code de parrainage facultatif",
+    corps: registerSchema,
+    reponse: registeredSchema,
+    statut: 201,
   },
   {
     chemin: "/auth/federated",
     methode: "post",
     resume: "Se connecter via une identité fédérée (Google, Apple)",
     corps: federatedSchema,
-    reponse: sessionSchema,
+    reponse: verifyOutcomeSchema,
   },
   {
     chemin: "/auth/refresh",

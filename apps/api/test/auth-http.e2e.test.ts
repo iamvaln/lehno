@@ -149,16 +149,53 @@ describe("authentification — HTTP de bout en bout", () => {
     expect(body.code).toBe("rate_limited");
   });
 
-  it("POST /otp/verify échange un code valide contre une session et crée le compte", async () => {
+  it("POST /otp/verify rend un jeton d'inscription pour une adresse inconnue", async () => {
     const { code } = await otp.issue("awa@example.com", "login");
     const res = await post("/v1/auth/otp/verify", { email: "awa@example.com", code, deviceId: "dev-http-1" });
 
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body).toMatchObject({ isNewAccount: true });
-    expect(typeof body.accessToken).toBe("string");
-    expect(typeof body.refreshToken).toBe("string");
-    expect(body.expiresIn).toBeGreaterThan(0);
+    expect(body).toMatchObject({ outcome: "registration", email: "awa@example.com" });
+    expect(typeof body.registrationToken).toBe("string");
+    // Aucune session : ni jeton d'accès, ni jeton de renouvellement.
+    expect(body.accessToken).toBeUndefined();
+    expect(body.refreshToken).toBeUndefined();
+  });
+
+  // 201 : la route crée une ressource — un compte — dont le client apprend
+  // l'existence. C'est la convention du contrat commun.
+  it("POST /register crée le compte et rend 201 avec le détail des octrois", async () => {
+    const { code } = await otp.issue("awa@example.com", "login");
+    const verif = await json(await post("/v1/auth/otp/verify", {
+      email: "awa@example.com", code, deviceId: "dev-http-1",
+    }));
+
+    const res = await post("/v1/auth/register", {
+      registrationToken: verif["registrationToken"], username: "awa", deviceId: "dev-http-1",
+    });
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body).toMatchObject({ outcome: "session", isNewAccount: true, signupCredits: 5 });
+    expect(typeof body["accessToken"]).toBe("string");
+    // Aucun code de parrainage donné : la ligne du bonus ne s'affiche pas.
+    expect(body["referral"]).toBeNull();
+  });
+
+  it("POST /register refuse un jeton d'accès à la place du jeton d'inscription", async () => {
+    const { code } = await otp.issue("awa@example.com", "login");
+    const verif = await json(await post("/v1/auth/otp/verify", {
+      email: "awa@example.com", code, deviceId: "dev-http-1",
+    }));
+    const session = await json(await post("/v1/auth/register", {
+      registrationToken: verif["registrationToken"], username: "awa", deviceId: "dev-http-1",
+    }));
+
+    // La séparation vaut dans les deux sens : un jeton d'accès ne crée pas de
+    // compte, pas plus qu'un jeton d'inscription n'ouvre de session.
+    const res = await post("/v1/auth/register", {
+      registrationToken: session["accessToken"], username: "autre", deviceId: "dev-http-9",
+    });
+    expect(res.status).toBe(401);
   });
 
   it("POST /otp/verify refuse un mauvais code avec l'enveloppe d'erreur standard", async () => {
@@ -171,19 +208,30 @@ describe("authentification — HTTP de bout en bout", () => {
     expect(typeof body.message).toBe("string");
   });
 
-  it("POST /otp/verify refuse la création d'un compte sans identifiant d'appareil", async () => {
+  // L'identifiant d'appareil est exigé par /register, non plus par la
+  // vérification : c'est là que le compte naît, donc là que le plafond
+  // s'applique. Le rendre facultatif rouvrirait le contournement.
+  it("POST /register refuse la création sans identifiant d'appareil", async () => {
     const { code } = await otp.issue("sans-appareil@example.com", "login");
-    const res = await post("/v1/auth/otp/verify", { email: "sans-appareil@example.com", code });
+    const verif = await json(await post("/v1/auth/otp/verify", {
+      email: "sans-appareil@example.com", code,
+    }));
 
+    const res = await post("/v1/auth/register", {
+      registrationToken: verif["registrationToken"], username: "quelquun",
+    });
     expect(res.status).toBe(400);
-    const body = await json(res);
-    expect(body.code).toBe("validation_failed");
+    expect((await json(res)).code).toBe("validation_failed");
   });
 
   it("POST /refresh renouvelle la session et invalide l'ancien jeton", async () => {
     const { code } = await otp.issue("awa@example.com", "login");
-    const verifyRes = await post("/v1/auth/otp/verify", { email: "awa@example.com", code, deviceId: "dev-http-2" });
-    const { refreshToken } = await json(verifyRes);
+    const verif = await json(await post("/v1/auth/otp/verify", {
+      email: "awa@example.com", code, deviceId: "dev-http-2",
+    }));
+    const { refreshToken } = await json(await post("/v1/auth/register", {
+      registrationToken: verif["registrationToken"], username: "awa", deviceId: "dev-http-2",
+    }));
 
     const res = await post("/v1/auth/refresh", { refreshToken });
     expect(res.status).toBe(200);
@@ -208,7 +256,12 @@ describe("authentification — HTTP de bout en bout", () => {
 
   it("DELETE /session avec un jeton valide révoque la session", async () => {
     const { code } = await otp.issue("awa@example.com", "login");
-    const verifyRes = await post("/v1/auth/otp/verify", { email: "awa@example.com", code, deviceId: "dev-http-3" });
+    const verifPourSession = await json(await post("/v1/auth/otp/verify", {
+      email: "awa@example.com", code, deviceId: "dev-http-3",
+    }));
+    const verifyRes = await post("/v1/auth/register", {
+      registrationToken: verifPourSession["registrationToken"], username: "awa", deviceId: "dev-http-3",
+    });
     const { accessToken, refreshToken } = await json(verifyRes);
 
     const res = await del("/v1/auth/session", { refreshToken }, { authorization: `Bearer ${accessToken}` });
