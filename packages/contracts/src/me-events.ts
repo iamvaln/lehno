@@ -28,25 +28,72 @@ export const eventSchema = z.object({
   label: z.string().max(120).nullable(),
   kind: z.enum(EVENT_KINDS),
   nature: z.enum(EVENT_NATURES),
+  // Toujours à venir : un événement dit quand la chose SERA.
   referenceDate: dateCivileSchema,
-  yearKnown: z.boolean(),
 }).strict();
 
 export type Event = z.infer<typeof eventSchema>;
 
-export const createEventSchema = z.object({
-  personId: z.string().uuid(),
-  kind: z.enum(EVENT_KINDS),
-  label: z.string().trim().min(1).max(120).optional(),
-  nature: z.enum(EVENT_NATURES).optional(),
-  referenceDate: dateCivileSchema,
-  yearKnown: z.boolean().optional(),
-}).strict().refine(
-  (v) => v.kind !== "other" || Boolean(v.label),
-  { path: ["label"], message: "un événement libre porte son libellé" },
-);
+/* Cent ans en arrière, pas davantage. Une date de naissance plus ancienne est
+   une faute de frappe — un 1825 pour 1925 — et l'accepter ferait paraître un
+   proche de deux siècles sur une fiche, avec un âge que personne ne relira. */
+export const AGE_MAXIMAL_ANNEES = 100;
 
-export type CreateEventInput = z.infer<typeof createEventSchema>;
+function aujourdHuiCivil(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/* Les bornes d'une date de NAISSANCE, appliquées là où l'on voit aussi si
+ * l'année est connue — voir `createPersonSchema`.
+ *
+ * Elle vit sur le proche, pas sur un événement : c'est un fait de son
+ * identité. L'anniversaire n'en est qu'une conséquence — le prochain jour de
+ * l'année portant le même jour et le même mois.
+ *
+ * Les comparaisons se font en chaînes « YYYY-MM-DD », qui s'ordonnent
+ * lexicographiquement : aucun objet Date, donc aucun fuseau qui déciderait
+ * qu'« aujourd'hui » commence ailleurs.
+ */
+export function bornerLaNaissance(
+  valeur: string,
+  anneeConnue: boolean,
+  ctx: z.RefinementCtx,
+  chemin: (string | number)[],
+): void {
+  // Année inconnue : seuls le jour et le mois comptent. L'année stockée n'est
+  // qu'un support, et la borner n'aurait aucun sens — la borne existe pour
+  // attraper une faute de frappe SUR L'ANNÉE, et il n'y en a pas à se tromper.
+  if (!anneeConnue) return;
+
+  const jour = aujourdHuiCivil();
+  if (valeur > jour) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom, path: chemin,
+      message: "une date de naissance ne peut pas être dans le futur",
+    });
+  }
+  const limite = `${Number(jour.slice(0, 4)) - AGE_MAXIMAL_ANNEES}${jour.slice(4)}`;
+  if (valeur < limite) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom, path: chemin,
+      message: `une date de naissance ne remonte pas à plus de ${AGE_MAXIMAL_ANNEES} ans`,
+    });
+  }
+}
+
+/* La date d'un événement : TOUJOURS à venir.
+ *
+ * Un événement dit quand la chose SERA — un mariage, une soutenance, un
+ * départ. La créer dans le passé n'ouvrirait aucune échéance utile, et la
+ * fiche annoncerait une préparation pour une date révolue.
+ *
+ * Un anniversaire n'échappe pas à la règle : sa date d'ancrage est la
+ * PROCHAINE échéance, calculée depuis la naissance du proche — pas la
+ * naissance elle-même. */
+export const dateAVenirSchema = dateCivileSchema.refine(
+  (valeur) => valeur >= aujourdHuiCivil(),
+  { message: "la date d'un événement ne peut pas être dans le passé" },
+);
 
 // ── Récurrences ─────────────────────────────────────────────────────────────
 
@@ -83,6 +130,56 @@ export const scheduleSchema = z.object({
 });
 
 export type Schedule = z.infer<typeof scheduleSchema>;
+
+export const createEventSchema = z.object({
+  personId: z.string().uuid(),
+  kind: z.enum(EVENT_KINDS),
+  label: z.string().trim().min(1).max(120).optional(),
+  nature: z.enum(EVENT_NATURES).optional(),
+  // Facultative pour un anniversaire : elle se CALCULE depuis la naissance du
+  // proche, jamais depuis la saisie. Pour tout autre événement, elle reste
+  // requise — voir le .refine() plus bas, qui porte cette condition, ni
+  // touchée ni assouplie.
+  referenceDate: dateAVenirSchema.optional(),
+  // Les règles se composent au formulaire (§3.6) : « chaque année pour un
+  // anniversaire ; à échéances multiples pour un événement qui en compte
+  // plusieurs — par exemple un mois puis trois mois après une date ». D'où un
+  // TABLEAU : une relation unique rendrait ce cas inexprimable.
+  //
+  // Facultatif : un anniversaire reçoit sa règle annuelle sans qu'on la demande,
+  // et l'utilisateur n'a rien à composer pour le cas ordinaire.
+  schedules: z.array(scheduleSchema).max(6).optional(),
+}).strict().refine(
+  (v) => v.kind !== "other" || Boolean(v.label),
+  { path: ["label"], message: "un événement libre porte son libellé" },
+).refine(
+  (v) => v.kind === "birthday" || v.referenceDate !== undefined,
+  {
+    path: ["referenceDate"],
+    message: "un événement porte sa date à venir, sauf un anniversaire qui la calcule depuis la naissance du proche",
+  },
+);
+
+export type CreateEventInput = z.infer<typeof createEventSchema>;
+
+/* La correction d'un événement. Dérivée de la création plutôt que réécrite —
+   deux déclarations divergeraient, et la validation d'une correction finirait
+   par être plus laxiste que celle d'une création.
+
+   `createEventSchema` porte un `.refine()` et devient un ZodEffects, sur lequel
+   `.partial()` n'existe pas : on repart donc de la forme d'objet, à laquelle on
+   retire `personId`. Un événement ne change pas de proche — le déplacer serait
+   le supprimer et le recréer, pas le corriger. */
+export const updateEventSchema = z.object({
+  kind: z.enum(EVENT_KINDS).optional(),
+  label: z.string().trim().min(1).max(120).optional(),
+  nature: z.enum(EVENT_NATURES).optional(),
+  referenceDate: dateCivileSchema.optional(),
+}).strict().refine((v) => Object.keys(v).length > 0, {
+  message: "au moins un champ doit être fourni",
+});
+
+export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
 // ── Échéances ───────────────────────────────────────────────────────────────
 

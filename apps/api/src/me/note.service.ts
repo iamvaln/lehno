@@ -20,7 +20,11 @@ export class NoteService {
     await this.depot.persons(userId).findOrThrow(personId);
 
     const lignes = await this.prisma.note.findMany({
-      where: { personId },
+      // eventOccurrenceId: null — seules les notes DURABLES. Une note de
+      // circonstance appartient à une occasion, et remonter ici la ferait
+      // ressurgir des années plus tard, hors de son contexte : « lui offrir un
+      // moulin » réapparaîtrait trois anniversaires après celui qu'elle visait.
+      where: { personId, eventOccurrenceId: null },
       // Les plus récentes d'abord : la fiche se lit du haut, et une note
       // fraîche vaut mieux qu'une note d'il y a deux ans.
       orderBy: { createdAt: "desc" },
@@ -30,6 +34,45 @@ export class NoteService {
       include: { categories: { include: { category: true } } },
     });
     return lignes.map(rendre);
+  }
+
+  // Les notes d'une occasion. Le proche s'en déduit : une occurrence appartient
+  // à un événement, qui appartient à un proche — le client n'a pas à le dire,
+  // et le lui faire dire ouvrirait la porte à une incohérence.
+  async listForOccurrence(userId: string, occurrenceId: string): Promise<Note[]> {
+    await this.depot.occurrences(userId).findOrThrow(occurrenceId);
+    const lignes = await this.prisma.note.findMany({
+      where: { eventOccurrenceId: occurrenceId },
+      orderBy: { createdAt: "desc" },
+      include: { categories: { include: { category: true } } },
+    });
+    return lignes.map(rendre);
+  }
+
+  async createForOccurrence(
+    userId: string, occurrenceId: string, input: CreateNoteInput,
+  ): Promise<Note> {
+    await this.depot.occurrences(userId).findOrThrow(occurrenceId);
+    const occurrence = await this.prisma.eventOccurrence.findUniqueOrThrow({
+      where: { id: occurrenceId }, include: { event: true },
+    });
+
+    const codes = classer(input.content);
+    const categories = codes.length
+      ? await this.prisma.category.findMany({ where: { code: { in: codes } } })
+      : [];
+
+    const ligne = await this.prisma.note.create({
+      data: {
+        personId: occurrence.event.personId,
+        authorUserId: userId,
+        content: input.content,
+        eventOccurrenceId: occurrenceId,
+        categories: { create: categories.map((c) => ({ categoryId: c.id })) },
+      },
+      include: { categories: { include: { category: true } } },
+    });
+    return rendre(ligne);
   }
 
   async createForPerson(userId: string, personId: string, input: CreateNoteInput): Promise<Note> {

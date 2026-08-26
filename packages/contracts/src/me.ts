@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { dateCivileSchema, bornerLaNaissance } from "./me-events.js";
 
 // Le registre de langage gouverne le ton de ce que le produit écrira pour ce
 // proche. Ensemble fixe : enum person_register du dictionnaire.
@@ -38,6 +39,13 @@ export const personSchema = z
     // écrase — « on a fait la fac ensemble » ne rentre dans aucune case.
     relation: z.enum(PERSON_RELATIONS).nullable(),
     relationHint: z.string().nullable(),
+    // Sa date de naissance — un fait de son IDENTITÉ. L'anniversaire n'en est
+    // qu'une conséquence : le prochain jour de l'année portant le même jour et
+    // le même mois.
+    birthDate: z.string().nullable(),
+    // Faux quand on connaît le jour et le mois sans l'année : on suit alors
+    // l'anniversaire sans pouvoir annoncer d'âge.
+    birthYearKnown: z.boolean(),
     gender: z.enum(PERSON_GENDERS).nullable(),
     city: z.string().nullable(),
     country: z.string().nullable(),
@@ -53,7 +61,18 @@ export type Person = z.infer<typeof personSchema>;
 // userId n'y figure pas, et c'est délibéré : une colonne d'appartenance ne
 // franchit jamais la frontière. Le serveur sait à qui appartient la fiche, le
 // client n'a pas à le lui rappeler — ni à pouvoir l'écrire.
-export const createPersonSchema = z
+/* La FORME, séparée de ses règles — et EXPORTÉE.
+ *
+ * Elle sort d'ici parce qu'un test s'en sert pour vérifier que le service
+ * écrit bien TOUS les champs du contrat : il dérive la liste attendue de cette
+ * forme plutôt que de la recopier, et rougit donc dès qu'un champ est ajouté
+ * ici sans l'être là-bas.
+ *
+ * `.superRefine()` rend un ZodEffects, sur lequel `.partial()` n'existe pas :
+ * dériver la correction de la création écrirait un code qui ne compile pas.
+ * On garde donc l'objet nu ici, et chacun des deux schémas y ajoute les
+ * règles qui le concernent. */
+export const champsDeProche = z
   .object({
     displayName: z.string().trim().min(1).max(120),
     callingName: z.string().trim().max(80).optional(),
@@ -65,6 +84,10 @@ export const createPersonSchema = z
     language: z.enum(["fr", "en"]).optional(),
     // « ma sœur », « mon voisin » : une aide à la génération, pas une taxonomie.
     relationHint: z.string().trim().max(80).optional(),
+    // Les bornes s'appliquent PLUS BAS, au niveau de l'objet : elles dépendent
+    // de `birthYearKnown`, que ce champ seul ne voit pas.
+    birthDate: dateCivileSchema.optional(),
+    birthYearKnown: z.boolean().optional(),
     gender: z.enum(PERSON_GENDERS).optional(),
     city: z.string().trim().max(120).optional(),
     // ISO 3166-1 alpha-2, en majuscules. Deux lettres exactement : un pays
@@ -74,18 +97,37 @@ export const createPersonSchema = z
   })
   .strict();
 
+/* Les bornes de la naissance se vérifient au niveau de l'OBJET, parce
+   qu'elles dépendent de DEUX champs : la date, et le fait que son année soit
+   connue. Un contrôle posé sur le seul champ de date ne verrait pas le
+   second, et rejetterait l'année sentinelle d'une naissance dont on ne
+   connaît que le jour et le mois. */
+const bornerLaNaissanceDe = (
+  v: { birthDate?: string | undefined; birthYearKnown?: boolean | undefined },
+  ctx: z.RefinementCtx,
+): void => {
+  if (v.birthDate !== undefined) {
+    bornerLaNaissance(v.birthDate, v.birthYearKnown ?? true, ctx, ["birthDate"]);
+  }
+};
+
+export const createPersonSchema = champsDeProche.superRefine(bornerLaNaissanceDe);
+
 export type CreatePersonInput = z.infer<typeof createPersonSchema>;
 
 // Le partiel de la création : mêmes champs, mêmes bornes, tous facultatifs.
 // Dérivé plutôt que réécrit — deux déclarations divergeraient, et la
 // validation d'une correction finirait par être plus laxiste que celle d'une
 // création.
-export const updatePersonSchema = createPersonSchema
+export const updatePersonSchema = champsDeProche
   .partial()
   .strict()
   .refine((v) => Object.keys(v).length > 0, {
     message: "au moins un champ doit être fourni",
-  });
+  })
+  // Les mêmes bornes qu'à la création : une naissance corrigée après coup ne
+  // doit pas pouvoir devenir ce qu'elle n'aurait jamais pu être à la saisie.
+  .superRefine(bornerLaNaissanceDe);
 
 export type UpdatePersonInput = z.infer<typeof updatePersonSchema>;
 

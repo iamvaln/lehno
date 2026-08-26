@@ -417,6 +417,17 @@ model Person {
   gender       PersonGender?   @default(unspecified)
   city         String?
   country      String?         @db.VarChar(2)
+  // Sa date de NAISSANCE, et elle appartient au proche : c'est un fait de son
+  // identité, pas un rendez-vous. L'anniversaire n'en est qu'une conséquence —
+  // le prochain jour de l'année portant le même jour et le même mois.
+  //
+  // La ranger sur un Event obligerait à la corriger à deux endroits le jour où
+  // elle se révèle fausse.
+  birthDate      DateTime?     @map("birth_date") @db.Date
+  // Faux quand on connaît le jour et le mois sans l'année : on suit alors
+  // l'anniversaire sans pouvoir annoncer d'âge. C'est la NAISSANCE dont
+  // l'année est inconnue — l'anniversaire, lui, a toujours celle qui vient.
+  birthYearKnown Boolean       @default(true) @map("birth_year_known")
   register     PersonRegister?
   language     String?         @db.VarChar(10)
   relationHint String?         @map("relation_hint")
@@ -441,8 +452,10 @@ model Event {
   label         String?
   kind          EventKind   @default(other)
   eventNature   EventNature @default(happy) @map("event_nature")
+  // Toujours À VENIR. Un événement dit quand la chose SERA — un mariage, une
+  // soutenance. Pour un anniversaire, c'est la prochaine échéance, calculée
+  // depuis person.birthDate.
   referenceDate DateTime    @map("reference_date") @db.Date
-  yearKnown     Boolean     @default(true) @map("year_known")
   createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz
 
