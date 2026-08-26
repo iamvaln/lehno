@@ -253,6 +253,62 @@ contrainte est une demi-vérité. Elles arriveront avec ce qu'elles référencen
 
 ---
 
+## F. Deux choses qui s'appellent « export » et ne se ressemblent pas
+
+Relevé le 26/08/2026, après avoir livré le premier et constaté que la copie du
+second s'était glissée dans le premier.
+
+### F1. L'export d'administration — **livré**
+
+Le journal d'audit, les connexions et la liste des comptes. Un administrateur
+lit une table filtrée et obtient un fichier **tout de suite**, par
+téléchargement. `POST /admin/audit-log/export` et
+`POST /admin/login-activity/export`, plafonnés à dix mille lignes, journalisés
+avec ce qui a été sorti.
+
+**La copie de cet écran annonçait « le fichier arrive par courriel »** — reprise
+du comportement de l'application, où c'est juste. Elle a été corrigée : il
+n'existe ni file d'attente ni envoi de pièce jointe côté administration, et
+promettre un courriel qui n'arrive jamais est pire qu'un téléchargement.
+
+### F2. L'export de ses données par un utilisateur — **rien n'est construit**
+
+**Ce que la documentation demande**, et les trois sources se recoupent :
+
+- `ux-app-mobile-lehno.md` §3.11 : « *Exporter mes données* → préparation du
+  fichier, envoyé par e-mail quand il est prêt. »
+- `spec-technique-lehno.md` §15 le range dans les traitements programmés :
+  « À la demande — compose le fichier et prévient quand il est prêt. »
+- Le dictionnaire modélise exactement ce cycle : `DataExportRequest` avec
+  `status` (`pending` → `ready` → `failed` → `expired`), `file_url`,
+  `expires_at`, `completed_at`.
+
+**Pourquoi ce choix diffère de F1**, et mérite d'être dit plutôt que subi :
+
+- **Le volume.** Un export d'administration lit une table. Un export personnel
+  rassemble tout ce qu'un compte a produit — proches, notes, occasions,
+  souhaits, paiements, notifications — et compose un fichier. Le tenir dans une
+  requête HTTP bloquerait la connexion et échouerait au premier compte chargé.
+- **La preuve d'accès.** Un lien envoyé à l'adresse du compte prouve que le
+  demandeur y a accès, ce qui rend l'export sûr sans redemander un code.
+- **L'expiration.** `expires_at` existe pour que le fichier ne traîne pas : un
+  export personnel contient tout, et un lien éternel serait une fuite qui dort.
+
+**Ce qui manque, dans l'ordre où il faut le construire :**
+
+1. **Le stockage des fichiers** — R2 n'est pas monté, et `file_url` n'aurait
+   nulle part où pointer.
+2. **La couche de traitements programmés** — elle n'existe pas. Elle bloque
+   aussi les rappels d'échéance, la bascule des occasions, l'ouverture et la
+   fermeture des fenêtres de vœux, la réconciliation et l'expiration des
+   paiements, et les générations en souffrance (§15.2 et §15.3).
+3. Puis seulement : `/me/data-exports`, la composition du fichier, et le
+   courriel qui porte le lien.
+
+C'est un chantier à part entière, pas une tâche — et le point 2 le dépasse
+largement.
+
+
 ## D. Écart entre le dictionnaire et le schéma livré
 
 **Vingt tables du dictionnaire n'existent pas dans `prisma/schema.prisma`.**
