@@ -9,12 +9,17 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
-import { createPersonSchema, updatePersonSchema, type CreatePersonInput, type Person, type UpdatePersonInput } from "@lehno/contracts";
+import {
+  createPersonSchema, updatePersonSchema, listPersonsQuerySchema,
+  type CreatePersonInput, type Person, type PersonList, type UpdatePersonInput,
+} from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
+import { AppError } from "../common/errors.js";
 import { PersonService } from "./person.service.js";
 
 // Posé par AuthGuard : req.userId. Type minimal, comme ProfileController.
@@ -32,9 +37,29 @@ type AuthedRequest = { userId: string };
 export class PersonController {
   constructor(@Inject(PersonService) private readonly persons: PersonService) {}
 
+  // La chaîne de requête ne porte que du texte : `offset` arrive en « 20 », pas
+  // en 20. On convertit AVANT de valider, comme sur /me/occurrences — sinon le
+  // schéma refuse une valeur légitime et le client reçoit un 400 opaque.
   @Get()
-  list(@Req() req: AuthedRequest): Promise<Person[]> {
-    return this.persons.list(req.userId);
+  list(
+    @Req() req: AuthedRequest,
+    @Query("sort") sort?: string,
+    @Query("direction") direction?: string,
+    @Query("offset") offset?: string,
+    @Query("limit") limit?: string,
+  ): Promise<PersonList> {
+    const analyse = listPersonsQuerySchema.safeParse({
+      ...(sort !== undefined ? { sort } : {}),
+      ...(direction !== undefined ? { direction } : {}),
+      ...(offset !== undefined ? { offset: Number(offset) } : {}),
+      ...(limit !== undefined ? { limit: Number(limit) } : {}),
+    });
+    if (!analyse.success) {
+      throw new AppError("validation_failed", "invalid persons query", {
+        query: analyse.error.issues.map((i) => i.message).join(", "),
+      });
+    }
+    return this.persons.list(req.userId, analyse.data);
   }
 
   @Post()

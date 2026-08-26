@@ -42,7 +42,7 @@ describe("l'accueil en un appel", () => {
     await resetDatabase(db.prisma);
     const depot = new TenantRepository(db.prisma as never);
     events = new EventService(depot, db.prisma as never);
-    persons = new PersonService(depot, events);
+    persons = new PersonService(depot, events, db.prisma as never);
     occurrences = new OccurrenceService(depot, db.prisma as never);
     home = new HomeService(db.prisma as never, occurrences);
     awa = await compte({ displayName: "Awa" });

@@ -127,6 +127,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -184,6 +243,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -331,6 +391,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -388,6 +507,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -488,6 +608,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -545,6 +724,157 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/maintenance": {
+      "get": {
+        "summary": "Savoir si l'API est arrêtée pour intervention, et pour combien de temps",
+        "description": "### L'arrêt n'est PAS un drapeau de fonctionnalité\n\nUn drapeau éteint rend `404` — « cette surface n'existe pas » — et le\nclient masque l'écran. Un arrêt rend **`503`**, code `maintenance`, avec\n`details.retryAfterSeconds` : la ressource existe et revient. Le client\nmontre un écran d'attente et réessaie ; **il ne masque rien, il ne\ndéconnecte personne, il ne vide aucun cache local.**\n\n### Où il s'applique\n\nSur TOUS les chemins, sauf deux : `/admin*`, par où l'équipe rouvre, et\ncelui-ci, qui reste joignable pendant l'arrêt — c'est ce qui permet de\nsavoir quand revenir sans marteler un chemin fermé.\n\n### Ce que le client doit faire\n\n**Un arrêt commence au milieu d'une session.** Il n'y a rien à lire au\ndémarrage : le `503` arrive sur n'importe quel appel, à n'importe quel\nmoment. C'est lui le signal.\n\n**Attendre le délai annoncé**, pas un délai à soi. Il vient du serveur\npour que tout le parc applique la même règle, et pour qu'on puisse\nl'allonger si l'intervention dure.\n\n**Puis interroger ce chemin** plutôt que de réessayer l'appel d'origine :\n`maintenance: false` dit que c'est fini.",
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "maintenance": {
+                      "type": "boolean"
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "minimum": 0,
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "maintenance",
+                    "retryAfterSeconds"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -632,6 +962,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -689,6 +1078,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -781,6 +1171,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -838,6 +1287,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -978,6 +1428,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -1035,6 +1544,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -1157,6 +1667,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -1214,6 +1783,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -1318,6 +1888,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -1375,6 +2004,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -1469,6 +2099,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -1526,6 +2215,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -1640,6 +2330,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -1697,6 +2446,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -1875,6 +2625,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -1932,6 +2741,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -2111,6 +2921,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -2168,6 +3037,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -2348,6 +3218,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -2405,6 +3334,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -2522,6 +3452,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -2579,6 +3568,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -2671,6 +3661,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -2728,6 +3777,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -2873,6 +3923,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -2930,6 +4039,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -3121,6 +4231,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -3178,6 +4347,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -3279,6 +4449,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -3336,6 +4565,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -3362,10 +4592,85 @@
     },
     "/me/persons": {
       "get": {
-        "summary": "Lister ses proches",
+        "summary": "Lister ses proches — le carnet, trié et paginé",
+        "description": "### Une enveloppe, non plus un tableau\n\n`{ persons, total }`. Le total sert « Voir plus · n restants » : un\ncurseur ne saurait pas le donner, et à l'échelle d'un carnet personnel le\ndécalage numéroté est exact.\n\n### Le tri, et sa direction\n\n`sort=date` (défaut) range sur la prochaine échéance, `sort=alpha` sur le\nnom. `direction=asc` (défaut) ou `desc` : « par date » ne dit rien tant\nqu'on ne sait pas de quel bout.\n\n**Une fiche sans date passe en FIN de liste dans les DEUX sens.** Jamais\nen tête à l'inversion : le carnet sert à voir qui a une date qui\napproche, et une fiche à compléter y occuperait la place de ce qui presse.\n\n**Changer de tri revient à la première page** — remettre `offset` à zéro.\nLe serveur ne s'en souvient pas, c'est au client de le faire.\n\n### Ce que chaque fiche porte pour sa ligne\n\n`notesCount` — les notes DURABLES seules, celles que rend\n`/me/persons/{id}/notes`. Compter aussi celles de circonstance ferait dire\n« 7 notes » à une fiche qui n'en montre que trois.\n\n`nextOccurrence` — nulle quand le proche n'a aucune date ; la ligne\naffiche alors « Compléter » à la place du décompte. `daysUntil` est signé.\n\nLes deux voyagent AVEC la fiche : les chercher autrement ferait un appel\npar proche, soit quarante-trois sur le carnet d'essai du handoff.\n\n### Le genre n'est pas dans ce contrat\n\nNi en lecture, ni en écriture, ni dans `/me/metadata`. Le carnet ne pose\npas la question ; tant que le champ traversait, la règle ne tenait que par\nla retenue du client. La colonne existe en base — c'est un signal de\ngénération de dernier recours, déduit côté serveur, jamais demandé.",
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "date",
+                    "alpha"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              ]
+            }
           }
         ],
         "responses": {
@@ -3374,117 +4679,161 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "displayName": {
-                        "type": "string"
-                      },
-                      "callingName": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "avatarUrl": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "isSelf": {
-                        "type": "boolean"
-                      },
-                      "relation": {
-                        "type": "string",
-                        "enum": [
-                          "famille_proche",
-                          "famille_etendue",
-                          "ami",
-                          "partenaire",
-                          "collegue",
-                          "relation_pro",
-                          "connaissance"
+                  "type": "object",
+                  "properties": {
+                    "persons": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "callingName": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "avatarUrl": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "isSelf": {
+                            "type": "boolean"
+                          },
+                          "relation": {
+                            "type": "string",
+                            "enum": [
+                              "famille_proche",
+                              "famille_etendue",
+                              "ami",
+                              "partenaire",
+                              "collegue",
+                              "relation_pro",
+                              "connaissance"
+                            ],
+                            "nullable": true
+                          },
+                          "relationHint": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "birthDate": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "birthYearKnown": {
+                            "type": "boolean"
+                          },
+                          "city": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "country": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "register": {
+                            "type": "string",
+                            "enum": [
+                              "familier",
+                              "amical",
+                              "formel"
+                            ],
+                            "nullable": true
+                          },
+                          "language": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "preferredChannel": {
+                            "type": "string",
+                            "enum": [
+                              "whatsapp",
+                              "sms",
+                              "email",
+                              "autre"
+                            ],
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "notesCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "nextOccurrence": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "occurrenceDate": {
+                                "type": "string"
+                              },
+                              "daysUntil": {
+                                "type": "integer"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "birthday",
+                                  "other"
+                                ]
+                              },
+                              "label": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "occurrenceDate",
+                              "daysUntil",
+                              "kind",
+                              "label"
+                            ],
+                            "additionalProperties": false,
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "displayName",
+                          "callingName",
+                          "avatarUrl",
+                          "isSelf",
+                          "relation",
+                          "relationHint",
+                          "birthDate",
+                          "birthYearKnown",
+                          "city",
+                          "country",
+                          "register",
+                          "language",
+                          "preferredChannel",
+                          "createdAt",
+                          "notesCount",
+                          "nextOccurrence"
                         ],
-                        "nullable": true
-                      },
-                      "relationHint": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "birthDate": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "birthYearKnown": {
-                        "type": "boolean"
-                      },
-                      "gender": {
-                        "type": "string",
-                        "enum": [
-                          "female",
-                          "male",
-                          "other",
-                          "unspecified"
-                        ],
-                        "nullable": true
-                      },
-                      "city": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "country": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "register": {
-                        "type": "string",
-                        "enum": [
-                          "familier",
-                          "amical",
-                          "formel"
-                        ],
-                        "nullable": true
-                      },
-                      "language": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "preferredChannel": {
-                        "type": "string",
-                        "enum": [
-                          "whatsapp",
-                          "sms",
-                          "email",
-                          "autre"
-                        ],
-                        "nullable": true
-                      },
-                      "createdAt": {
-                        "type": "string"
+                        "additionalProperties": false
                       }
                     },
-                    "required": [
-                      "id",
-                      "displayName",
-                      "callingName",
-                      "avatarUrl",
-                      "isSelf",
-                      "relation",
-                      "relationHint",
-                      "birthDate",
-                      "birthYearKnown",
-                      "gender",
-                      "city",
-                      "country",
-                      "register",
-                      "language",
-                      "preferredChannel",
-                      "createdAt"
-                    ],
-                    "additionalProperties": false
-                  }
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "persons",
+                    "total"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3525,6 +4874,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -3582,6 +4990,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -3671,15 +5080,6 @@
                   "birthYearKnown": {
                     "type": "boolean"
                   },
-                  "gender": {
-                    "type": "string",
-                    "enum": [
-                      "female",
-                      "male",
-                      "other",
-                      "unspecified"
-                    ]
-                  },
                   "city": {
                     "type": "string",
                     "maxLength": 120
@@ -3758,16 +5158,6 @@
                     "birthYearKnown": {
                       "type": "boolean"
                     },
-                    "gender": {
-                      "type": "string",
-                      "enum": [
-                        "female",
-                        "male",
-                        "other",
-                        "unspecified"
-                      ],
-                      "nullable": true
-                    },
                     "city": {
                       "type": "string",
                       "nullable": true
@@ -3801,6 +5191,45 @@
                     },
                     "createdAt": {
                       "type": "string"
+                    },
+                    "notesCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "nextOccurrence": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "occurrenceDate": {
+                          "type": "string"
+                        },
+                        "daysUntil": {
+                          "type": "integer"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "birthday",
+                            "other"
+                          ]
+                        },
+                        "label": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "occurrenceDate",
+                        "daysUntil",
+                        "kind",
+                        "label"
+                      ],
+                      "additionalProperties": false,
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -3813,13 +5242,14 @@
                     "relationHint",
                     "birthDate",
                     "birthYearKnown",
-                    "gender",
                     "city",
                     "country",
                     "register",
                     "language",
                     "preferredChannel",
-                    "createdAt"
+                    "createdAt",
+                    "notesCount",
+                    "nextOccurrence"
                   ],
                   "additionalProperties": false
                 }
@@ -3862,6 +5292,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -3919,6 +5408,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -4012,16 +5502,6 @@
                     "birthYearKnown": {
                       "type": "boolean"
                     },
-                    "gender": {
-                      "type": "string",
-                      "enum": [
-                        "female",
-                        "male",
-                        "other",
-                        "unspecified"
-                      ],
-                      "nullable": true
-                    },
                     "city": {
                       "type": "string",
                       "nullable": true
@@ -4055,6 +5535,45 @@
                     },
                     "createdAt": {
                       "type": "string"
+                    },
+                    "notesCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "nextOccurrence": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "occurrenceDate": {
+                          "type": "string"
+                        },
+                        "daysUntil": {
+                          "type": "integer"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "birthday",
+                            "other"
+                          ]
+                        },
+                        "label": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "occurrenceDate",
+                        "daysUntil",
+                        "kind",
+                        "label"
+                      ],
+                      "additionalProperties": false,
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -4067,13 +5586,14 @@
                     "relationHint",
                     "birthDate",
                     "birthYearKnown",
-                    "gender",
                     "city",
                     "country",
                     "register",
                     "language",
                     "preferredChannel",
-                    "createdAt"
+                    "createdAt",
+                    "notesCount",
+                    "nextOccurrence"
                   ],
                   "additionalProperties": false
                 }
@@ -4116,6 +5636,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -4173,6 +5752,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -4273,15 +5853,6 @@
                   "birthYearKnown": {
                     "type": "boolean"
                   },
-                  "gender": {
-                    "type": "string",
-                    "enum": [
-                      "female",
-                      "male",
-                      "other",
-                      "unspecified"
-                    ]
-                  },
                   "city": {
                     "type": "string",
                     "maxLength": 120
@@ -4357,16 +5928,6 @@
                     "birthYearKnown": {
                       "type": "boolean"
                     },
-                    "gender": {
-                      "type": "string",
-                      "enum": [
-                        "female",
-                        "male",
-                        "other",
-                        "unspecified"
-                      ],
-                      "nullable": true
-                    },
                     "city": {
                       "type": "string",
                       "nullable": true
@@ -4400,6 +5961,45 @@
                     },
                     "createdAt": {
                       "type": "string"
+                    },
+                    "notesCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "nextOccurrence": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "occurrenceDate": {
+                          "type": "string"
+                        },
+                        "daysUntil": {
+                          "type": "integer"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "birthday",
+                            "other"
+                          ]
+                        },
+                        "label": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "occurrenceDate",
+                        "daysUntil",
+                        "kind",
+                        "label"
+                      ],
+                      "additionalProperties": false,
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -4412,13 +6012,14 @@
                     "relationHint",
                     "birthDate",
                     "birthYearKnown",
-                    "gender",
                     "city",
                     "country",
                     "register",
                     "language",
                     "preferredChannel",
-                    "createdAt"
+                    "createdAt",
+                    "notesCount",
+                    "nextOccurrence"
                   ],
                   "additionalProperties": false
                 }
@@ -4461,6 +6062,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -4518,6 +6178,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -4599,6 +6260,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -4656,6 +6376,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -4818,6 +6539,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -4875,6 +6655,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -5013,6 +6794,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -5070,6 +6910,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -5228,6 +7069,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -5285,6 +7185,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -5428,6 +7329,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -5485,6 +7445,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -5698,6 +7659,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -5755,6 +7775,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -5887,6 +7908,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -5944,6 +8024,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -6110,6 +8191,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -6167,6 +8307,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -6248,6 +8389,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -6305,6 +8505,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -6530,6 +8731,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -6587,6 +8847,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -6751,6 +9012,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -6808,6 +9128,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -6946,6 +9267,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -7003,6 +9383,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -7162,6 +9543,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -7219,6 +9659,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -7355,18 +9796,6 @@
                         ]
                       }
                     },
-                    "personGenders": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": [
-                          "female",
-                          "male",
-                          "other",
-                          "unspecified"
-                        ]
-                      }
-                    },
                     "contactChannels": {
                       "type": "array",
                       "items": {
@@ -7387,7 +9816,6 @@
                     "scheduleUnits",
                     "personRelations",
                     "personRegisters",
-                    "personGenders",
                     "contactChannels"
                   ],
                   "additionalProperties": false
@@ -7431,6 +9859,65 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -7488,6 +9975,7 @@
                         "email_disposable",
                         "waitlist_email_invalid",
                         "waitlist_rejected",
+                        "maintenance",
                         "contact_invalid",
                         "contact_rejected"
                       ]
