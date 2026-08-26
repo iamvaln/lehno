@@ -1356,6 +1356,116 @@ Remplacer les décomptes par une dérivation de la liste rendue — `counts.toda
 
 ---
 
+### Tâche 6 : Les métadonnées
+
+**Fichiers :**
+- Créer : `apps/api/src/me/metadata.controller.ts`
+- Modifier : `packages/contracts/src/me-app.ts` ou un fichier voisin, `apps/api/src/app.module.ts`, `packages/contracts/src/openapi.ts`
+- Tester : `apps/api/test/metadata.test.ts`
+
+**Interfaces :**
+- Produit : `GET /me/metadata`.
+
+**Pourquoi un point d'entrée, et pas seulement des énumérations dans le contrat.** La plupart de ces valeurs sont des énumérations figées — un client typé les connaît à la compilation. Une seule ne l'est pas : `Category` vit **en base**, et porte `kind` (`ponctuelle` / `durable`) et `is_constraint`. Un client ne peut pas déduire d'une énumération nue que `dislikes_nogo` est une **contrainte active** — or c'est ce qui change ce que le produit propose, pas seulement ce qu'il affiche.
+
+Servir le reste avec elle évite au client d'aller chercher la même chose à deux endroits.
+
+**Ce que le point d'entrée ne fait PAS** : rendre des libellés. Le dictionnaire est formel — « les libellés d'affichage proviennent des ressources de traduction de l'application, indexés par `code` ; ils ne sont pas stockés en base ». Rendre du texte ici obligerait le serveur à connaître la langue du demandeur, et ferait deux sources de vérité pour un même mot.
+
+- [ ] **Étape 1 : écrire le test qui échoue**
+
+```ts
+  it("rend les catégories avec leur nature et leur contrainte", async () => {
+    const m = await metadata.get();
+    const nogo = m.categories.find((c) => c.code === "dislikes_nogo");
+
+    // La seule information que le client ne peut PAS déduire d'une
+    // énumération : celle-ci contraint ce que le produit propose, elle
+    // n'organise pas seulement l'affichage.
+    expect(nogo?.isConstraint).toBe(true);
+    expect(nogo?.kind).toBe("durable");
+
+    const faits = m.categories.find((c) => c.code === "facts");
+    expect(faits?.isConstraint).toBe(false);
+    expect(faits?.kind).toBe("ponctuelle");
+  });
+
+  it("rend les sept catégories du socle, et rien d'autre", async () => {
+    const m = await metadata.get();
+    expect(m.categories.map((c) => c.code).sort()).toEqual([
+      "challenges", "dislikes_nogo", "encouragements", "facts",
+      "gift_ideas", "interests", "message_ideas",
+    ]);
+  });
+
+  it("rend les énumérations dont les écrans composent leurs listes", async () => {
+    const m = await metadata.get();
+    expect(m.eventKinds).toEqual(["birthday", "other"]);
+    expect(m.eventNatures).toEqual(["happy", "sensitive"]);
+    expect(m.scheduleUnits).toEqual(["day", "week", "month", "quarter", "year"]);
+    expect(m.personRelations).toContain("famille_proche");
+    expect(m.personRegisters).toEqual(["familier", "amical", "formel"]);
+    expect(m.contactChannels).toContain("whatsapp");
+  });
+
+  // Aucun libellé : ils vivent dans les traductions de l'application, indexés
+  // par code. En rendre ici ferait deux sources de vérité pour un même mot, et
+  // obligerait le serveur à connaître la langue du demandeur.
+  it("ne rend aucun libellé traduit", async () => {
+    const m = await metadata.get();
+    const texte = JSON.stringify(m);
+    expect(texte).not.toMatch(/Anniversaire|Birthday|Idées cadeaux|Gift ideas/);
+  });
+```
+
+- [ ] **Étape 2 : le voir échouer, écrire le contrat et le service**
+
+Le contrat rend les codes seuls, jamais de texte :
+```ts
+export const metadataSchema = z.object({
+  // Lues EN BASE : leur nature et leur contrainte ne se déduisent d'aucune
+  // énumération, et c'est la raison d'être de ce point d'entrée.
+  categories: z.array(z.object({
+    code: z.enum(CATEGORY_CODES),
+    kind: z.enum(["ponctuelle", "durable"]),
+    isConstraint: z.boolean(),
+  })),
+  // Les énumérations figées, servies avec elles pour que le client n'aille pas
+  // chercher la même chose à deux endroits.
+  eventKinds: z.array(z.enum(EVENT_KINDS)),
+  eventNatures: z.array(z.enum(EVENT_NATURES)),
+  scheduleUnits: z.array(z.enum(SCHEDULE_UNITS)),
+  personRelations: z.array(z.enum(PERSON_RELATIONS)),
+  personRegisters: z.array(z.enum(PERSON_REGISTERS)),
+  personGenders: z.array(z.enum(PERSON_GENDERS)),
+  contactChannels: z.array(z.enum(CONTACT_CHANNELS)),
+}).strict();
+```
+
+Le service lit `category` en base — pas une constante recopiée : la table est semée par la migration `20260822154334_content`, et une constante finirait par diverger de ce que le classeur écrit réellement.
+
+- [ ] **Étape 3 : le contrat publié, les tests, le commit**
+
+`GET /me/metadata` sous `AuthGuard`, sans `@Feature` — le socle n'a pas de drapeau. Un chemin dans `CHEMINS`, réengendrer, lancer, commiter.
+
+- [ ] **Étape 4 : preuve par la panne**
+
+Remplacer la lecture en base par une constante recopiant les sept codes, puis retirer une ligne de la table `category`. Attendu : « rend les sept catégories du socle » reste VERT alors que la base n'en porte plus que six — le point d'entrée ment. Rétablir la lecture par l'édition inverse : le cas rougit alors, comme il doit.
+
+---
+
+## Le CRUD d'administration : une question, pas une tâche
+
+La demande d'« versions admin en CRUD » pour ces métadonnées se heurte à la spécification, et le conflit mérite d'être tranché avant d'être codé plutôt qu'après.
+
+**Ce que le dictionnaire dit** : `Category` est un « **ensemble fixe défini par le système** — aucune catégorie personnalisée par l'utilisateur ». `EventKind` compte deux valeurs, `EventNature` deux également.
+
+**Ce qu'un CRUD casserait** : le classeur de notes (`note-classifier.ts`) est typé sur exactement ces sept codes. Un administrateur qui en ajouterait un obtiendrait une catégorie qu'aucune note n'atteindrait jamais — et qui apparaîtrait vide sur toutes les fiches, sans que rien ne l'explique. Une qu'il supprimerait ferait échouer l'écriture de toute note que le classeur y range.
+
+**Ce qui EST déjà administrable**, et qui répond peut-être au besoin : les drapeaux, les paliers de crédits, les canaux de paiement et leurs barèmes, les comptes de collecte, les modèles d'IA, la configuration du studio. Tous ont leurs chemins `/admin/*`.
+
+**À décider avec le porteur du projet** : ouvrir les catégories à l'administration demanderait de délier le classeur de ses codes — un chantier à part, pas une tâche de celui-ci.
+
 ## Ce que ce plan ne fait pas
 
 - **La bascule automatique des occurrences.** À la fermeture d'une fenêtre, l'occurrence de l'année suivante doit s'ouvrir (dictionnaire, `EventOccurrence`). C'est un traitement programmé (§15.2), et rien de cette couche n'existe encore — le statut se dérivant à la lecture, l'absence de bascule ne fausse aucun affichage, elle laisse seulement l'occurrence suivante non matérialisée.
