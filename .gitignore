@@ -9,6 +9,11 @@ dist/
 .env.*
 !.env.example
 *.tsbuildinfo
+
+# L'état du serveur de développement Expo. Le typecheck tient sans lui : la glob
+# de tsconfig ne désigne aucun fichier en particulier. `expo-env.d.ts` est ignoré
+# par apps/mobile/.gitignore, que l'outil engendre et resynchronise lui-même.
+.expo/
 .DS_Store
 
 # ressources locales, hors dépôt
