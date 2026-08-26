@@ -105,13 +105,24 @@ const ICONES: Record<string, string> = {
 
 // Les sections qu'un délai court presse portent un point, jamais un chiffre :
 // la barre latérale ne compte pas, les nombres vivent au tableau de bord.
-const PRESSEES = new Set(["alertes", "moderation", "suppressions", "transactions"]);
+// Seules des entrées de menu peuvent s'allumer : ce jeu n'est consulté que pour
+// elles, et une section absente du menu n'y gagnerait rien.
+const PRESSEES = new Set(["moderation", "suppressions"]);
 
-// Les sections livrées ; les autres annoncent le gabarit qu'elles emploieront.
+/**
+ * Les sections encore à livrer, et le gabarit que chacune emploiera.
+ *
+ * Exactement celles que le menu offre sans qu'un écran les rende : une entrée
+ * de trop y affirmerait qu'une section livrée reste à venir, une entrée
+ * manquante ferait annoncer « Gabarit : » suivi de rien. Les deux se voient
+ * dans `sections-atteignables.test.tsx`, qui ouvre chaque entrée du menu.
+ *
+ * Le gabarit se lit de la spécification, il ne se devine pas : le studio règle
+ * une configuration (§5.9), les offres se listent puis se détaillent (§5.10).
+ */
 const GABARITS: Record<string, string> = {
-  alertes: "liste", moderation: "liste", contact: "liste", attente: "liste",
-  transactions: "liste", acces: "liste", metriques: "tableau", audit: "liste",
-  connexions: "liste", liens: "liste",
+  moderation: "liste", studio: "formulaire", offres: "liste",
+  metriques: "tableau", liens: "liste",
 };
 
 // Le nom de la marque ne se traduit pas et ne se remplace pas par le nom de
@@ -993,10 +1004,16 @@ export function App(): ReactNode {
       />
     );
   } else {
+    // Le repli attrape toute section sans écran, y compris une que le tableau de
+    // bord désignerait sans qu'on l'ait prévue. On n'annonce donc le gabarit que
+    // lorsqu'on le connaît : « Gabarit : » suivi de rien n'est pas une annonce.
+    const nomDuGabarit = t.gabarits[GABARITS[section] as keyof typeof t.gabarits];
     vue = (
       <EmptyState
         titre={t.attente.titre}
-        texte={`${t.attente.texte} ${t.attente.gabarit.replace("{gabarit}", t.gabarits[GABARITS[section] as keyof typeof t.gabarits] ?? "")}`}
+        texte={nomDuGabarit
+          ? `${t.attente.texte} ${t.attente.gabarit.replace("{gabarit}", nomDuGabarit)}`
+          : t.attente.texte}
       />
     );
   }

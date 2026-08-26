@@ -37,10 +37,17 @@ const FERMEES_AU_SUPPORT = new Set<string>([...SECTIONS_ECONOMIE, ...SECTIONS_AD
  * brief-maj-admin §1). Le tableau de bord se pose au-dessus, sans famille :
  * c'est l'accueil, pas une tâche.
  *
- * Quatre sections de l'outil ne figurent pas ici — alertes, suppressions,
- * messages de contact, liste d'attente. La spécification n'en fait pas des
- * sections : ce sont les files du « à traiter » du tableau de bord, qui y mène
- * déjà (§5.2). Elles restent donc atteignables, sans encombrer le menu.
+ * Deux écrans de l'outil ne figurent pas ici, chacun avec son chemin :
+ *
+ * - **Les suppressions** — une file du « à traiter » du tableau de bord, qui y
+ *   mène (§5.2). La spécification n'en fait pas une section.
+ * - **Mon profil** — le menu de compte de la barre haute.
+ *
+ * Les messages de contact et la liste d'attente en ont fait partie ; ce sont
+ * désormais des onglets d'Assistance, et leurs libellés vivent là. Le lien
+ * entre ce menu et les écrans est tenu par `sections-atteignables.test.tsx`,
+ * qui ouvre chaque entrée : aucune ne doit mener nulle part, aucune section
+ * livrée ne doit se présenter comme à venir.
  */
 export const NAVIGATION: { famille: Famille | null; items: readonly string[] }[] = [
   { famille: null, items: ["tableau"] },

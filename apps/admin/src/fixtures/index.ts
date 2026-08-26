@@ -20,7 +20,7 @@ export const dashboard: Dashboard = {
       libelle: "22 % d'échecs — Rédaction longue", notifieA: "14 h",
     },
     {
-      id: "al-2", cause: "paiement_bloque", ton: "danger", section: "transactions",
+      id: "al-2", cause: "paiement_bloque", ton: "danger", section: "credits",
       libelle: "3 paiements bloqués depuis plus de 24 h", notifieA: "9 h",
     },
     {
@@ -30,7 +30,7 @@ export const dashboard: Dashboard = {
   ],
   indicateurs: [
     { id: "actifs", libelle: "Comptes actifs", valeur: "1 284", variation: { texte: "+38 ce mois", sens: "hausse" }, section: "comptes" },
-    { id: "credits", libelle: "Crédits vendus", valeur: "9 420", variation: { texte: "+612 ce mois", sens: "hausse" }, section: "transactions" },
+    { id: "credits", libelle: "Crédits vendus", valeur: "9 420", variation: { texte: "+612 ce mois", sens: "hausse" }, section: "credits" },
     { id: "cout", libelle: "Coût des modèles", valeur: "72 %", variation: { texte: "du revenu des crédits", sens: "neutre" }, section: "metriques" },
     { id: "generations", libelle: "Générations par jour", valeur: "341", variation: { texte: "−4 % sur 7 jours", sens: "baisse" }, section: "metriques" },
     { id: "suppressions", libelle: "Suppressions en cours", valeur: "6", variation: { texte: "dont 2 à effacer aujourd'hui", sens: "neutre" }, section: "suppressions" },

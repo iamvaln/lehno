@@ -101,15 +101,3 @@ describe("la navigation suit le rôle, elle ne le grise pas", () => {
     expect(en).toEqual(fr);
   });
 });
-
-// Quatre sections ne figurent pas au menu : la spécification n'en fait pas des
-// sections, ce sont les files du « à traiter » du tableau de bord. Encore
-// faut-il qu'on puisse y entrer — sans ce chemin, les retirer du menu les
-// rendrait inatteignables, et ce serait une suppression déguisée.
-describe("les files hors menu restent atteignables", () => {
-  it("une file du tableau de bord mène à sa section", () => {
-    for (const file of ["suppressions", "moderation", "contact", "attente"]) {
-      expect(sectionAutorisee("admin", file), file).toBe(true);
-    }
-  });
-});

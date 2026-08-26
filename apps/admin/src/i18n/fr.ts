@@ -57,13 +57,9 @@ export const fr = {
 
   sections: {
     tableau: "Tableau de bord",
-    alertes: "Alertes",
     moderation: "Modération",
     suppressions: "Demandes de suppression",
     assistance: "Assistance",
-    contact: "Messages de contact",
-    attente: "Liste d'attente",
-    transactions: "Transactions",
     comptes: "Comptes",
     credits: "Crédits et paiements",
     acces: "Accès administrateurs",
