@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -49,7 +49,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  canauxSchema, catalogueIaSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  canauxSchema, catalogueIaSchema, comptesAdminSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
@@ -239,6 +239,7 @@ export function App(): ReactNode {
   const [tourModeles, setTourModeles] = useState(0);
   const [tourDrapeaux, setTourDrapeaux] = useState(0);
   const [tourCredits, setTourCredits] = useState(0);
+  const [tourAcces, setTourAcces] = useState(0);
   const [ongletCredits, setOngletCredits] = useState<"paiements" | "mouvements" | "reglages">("paiements");
   const [filtresPaiements, setFiltresPaiements] = useState<{ etat: string; mode: string }>({ etat: "tous", mode: "tous" });
   const [paiementOuvert, setPaiementOuvert] = useState<string | null>(null);
@@ -256,6 +257,22 @@ export function App(): ReactNode {
   // passent par le seul chemin qui en porte un — motif obligatoire, règle de
   // rôle, journal. Un second chemin d'écriture finirait par diverger du
   // premier : l'un journalisant, l'autre non.
+  // Les trois gestes sur un compte d'exploitation passent par le même chemin :
+  // ils partagent la traduction du refus et la relecture qui suit.
+  const ecrireAcces = (chemin: string, methode: "POST" | "PATCH" | "DELETE", corps: unknown): void => {
+    void (async () => {
+      try {
+        await api.appeler(chemin, { methode, corps });
+      } catch (echec) {
+        if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+      } finally {
+        // On relit dans tous les cas : après un refus, la liste affichée est
+        // celle d'avant, et c'est elle qui fait foi.
+        setTourAcces((n) => n + 1);
+      }
+    })();
+  };
+
   const changerEtat = (id: string, statut: string, motif: string): void => {
     void (async () => {
       try {
@@ -446,6 +463,13 @@ export function App(): ReactNode {
     [surCredits, ongletCredits, tourCredits],
   );
 
+  const etatAcces = useRessource(
+    () => (section === "acces"
+      ? api.appeler("/admin/admins", { schema: comptesAdminSchema })
+      : Promise.resolve(null)),
+    [section, tourAcces],
+  );
+
   let vue: ReactNode;
   if (section === "profil") {
     vue = <Profil profil={profil} langue={langue} />;
@@ -585,6 +609,26 @@ export function App(): ReactNode {
         />
       );
     }
+  } else if (section === "acces") {
+    vue = (
+      <Ressource
+        etat={etatAcces}
+        t={t}
+        enfant={(page) => (page ? (
+          <Acces
+            langue={langue}
+            // Le compte de celui qui regarde : on ne touche ni à son rôle ni à
+            // son accès, et le serveur refuse les deux.
+            moiId={page.items.find((a) => a.email === api.session()?.email)?.id ?? ""}
+            comptes={page.items}
+            onInviter={(invitation) => ecrireAcces("/admin/admins", "POST", invitation)}
+            onChangerRole={(id, role, reason) => ecrireAcces(`/admin/admins/${id}`, "PATCH", { role, reason })}
+            onRevoquer={(id, reason) => ecrireAcces(`/admin/admins/${id}`, "DELETE", { reason })}
+            onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
   } else if (section === "fonctionnalites") {
     vue = (
       <Ressource
@@ -898,6 +942,8 @@ export function App(): ReactNode {
                 acces: paire.accessToken,
                 rafraichissement: paire.refreshToken,
                 role: paire.role,
+                // Le serveur ne la rend pas : c'est celle qu'on vient de saisir.
+                email,
               });
               setRole(paire.role);
               return true;

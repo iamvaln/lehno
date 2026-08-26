@@ -645,3 +645,28 @@ export const soldeApresAjustementSchema = z.object({
 }).strict();
 
 export type AjustementCredits = z.infer<typeof ajustementCreditsSchema>;
+
+// ——— Les comptes d'exploitation ———————————————————————————————
+
+/**
+ * Un compte d'administration, tel que la liste le montre.
+ *
+ * Ni condensé de code, ni jeton : cette liste dit **qui a accès**, pas comment
+ * entrer. C'est aussi pourquoi le serveur y fait une sélection explicite plutôt
+ * que de rendre la ligne entière — un champ ajouté demain à la table ne doit
+ * pas sortir sans qu'on l'ait voulu.
+ */
+export const compteAdminSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  displayName: z.string().nullable(),
+  role: adminRoleSchema,
+  /** Un compte révoqué est désactivé, jamais effacé : le journal doit encore
+   *  pouvoir nommer qui a fait quoi. */
+  isActive: z.boolean(),
+  createdAt: z.string(),
+}).strict();
+
+export const comptesAdminSchema = z.object({ items: z.array(compteAdminSchema) }).strict();
+
+export type CompteAdmin = z.infer<typeof compteAdminSchema>;

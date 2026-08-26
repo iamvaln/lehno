@@ -436,6 +436,67 @@ export const fr = {
     },
   },
 
+  // Les comptes d'exploitation. « Gérer les accès des administrateurs » est
+  // réservé au rôle admin (ux-admin §6) — c'est le contrepoids du journal
+  // d'audit : qui peut lire le travail de l'équipe décide aussi qui en fait
+  // partie.
+  acces: {
+    titre: "Accès administrateurs",
+    sous: "Qui entre dans cet outil, et avec quels droits. Un accès se retire, il ne s'efface pas.",
+    col: { email: "Adresse", nom: "Nom", role: "Rôle", etat: "État", depuis: "Depuis" },
+    roles: { admin: "Administrateur", support: "Support" },
+    etats: { actif: "En service", revoque: "Accès retiré" },
+    sansNom: "—",
+    // Le compte de celui qui regarde : ni rôle ni accès ne s'y touchent.
+    soiMeme: "Vous",
+    vide: {
+      titre: "Aucun autre compte",
+      texte: "Les comptes d'exploitation apparaissent ici, avec leur rôle et la date de leur arrivée.",
+    },
+    gestes: {
+      promouvoir: "Passer administrateur",
+      retrograder: "Passer support",
+      revoquer: "Retirer l'accès",
+    },
+    inviter: {
+      ouvrir: "Inviter quelqu'un",
+      titre: "Inviter un compte d'exploitation",
+      sous: "Le compte est créé à l'avance : une adresse inconnue ne reçoit jamais de code.",
+      email: "Adresse e-mail",
+      role: "Rôle",
+      confirmer: "Inviter",
+      annuler: "Annuler",
+      motifs: [
+        "Arrivée dans l'équipe",
+        "Renfort temporaire sur l'assistance",
+        "Remplacement d'un départ",
+      ],
+      dialogue: {
+        titre: "Inviter ce compte",
+        consequence: "Le compte pourra entrer dès sa première demande de code. Le journal garde qui l'a invité.",
+      },
+    },
+    dialogueRole: {
+      titre: "Changer le rôle de {compte}",
+      consequence: "Le rôle administrateur ouvre la famille Économie et le journal d'audit. Le changement prend effet au prochain geste.",
+      motifs: [
+        "Changement de responsabilité",
+        "Besoin d'accès aux leviers d'économie",
+        "Retour à un périmètre d'assistance",
+      ],
+    },
+    dialogueRevocation: {
+      titre: "Retirer l'accès de {compte}",
+      // Ce qui distingue « retirer l'accès » de « le retirer plus tard ».
+      consequence: "Les sessions ouvertes se ferment tout de suite. Le compte est désactivé, jamais effacé : le journal doit encore pouvoir nommer qui a fait quoi.",
+      motifs: [
+        "Départ de l'équipe",
+        "Compte compromis",
+        "Fin d'une mission temporaire",
+      ],
+    },
+  },
+
   echecs: {
     chargement: "On n'a pas réussi à charger cette liste. Rien n'a bougé côté données. Réessayez, ou revenez dans un instant.",
     action: "On n'a pas pu appliquer ce geste. L'état du compte est celui d'avant. Réessayez, ou passez la main à un administrateur.",

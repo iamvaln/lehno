@@ -8,7 +8,23 @@ import { errorEnvelopeSchema, sessionAdminSchema } from "@lehno/contracts";
  * jamais un message venu du serveur.
  */
 
-export type Session = { acces: string; rafraichissement: string; role: AdminRole };
+export type Session = {
+  acces: string;
+  rafraichissement: string;
+  role: AdminRole;
+  /**
+   * L'adresse de qui est entré.
+   *
+   * Elle n'est pas dans le jeton, et le serveur ne la rend ni à la
+   * vérification ni au rafraîchissement : c'est le client qui la connaît, pour
+   * l'avoir saisie. Elle sert à reconnaître son propre compte dans une liste —
+   * on n'agit ni sur son rôle ni sur son accès, et le serveur refuse les deux.
+   *
+   * Facultative : une session ouverte avant que ce champ existe reste valable,
+   * elle ne sait simplement pas se reconnaître.
+   */
+  email?: string | undefined;
+};
 
 /**
  * Le magasin est passé de l'extérieur : le client ne doit connaître ni le
@@ -164,6 +180,9 @@ export function creerClient(
       acces: paire.data.accessToken,
       rafraichissement: paire.data.refreshToken,
       role: paire.data.role,
+      // Reportée : le serveur ne la rend pas au rafraîchissement, et la perdre
+      // au premier tour ferait oublier à la session qui elle est.
+      ...(session.email !== undefined ? { email: session.email } : {}),
     };
     magasin.ecrire(neuve);
     return neuve;

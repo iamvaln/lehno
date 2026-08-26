@@ -389,6 +389,62 @@ export const en: typeof fr = {
     },
   },
 
+  // Voir fr.ts : managing administrator access is admin-only (ux-admin §6).
+  acces: {
+    titre: "Administrator access",
+    sous: "Who gets into this tool, and with what rights. Access is withdrawn, never erased.",
+    col: { email: "Address", nom: "Name", role: "Role", etat: "State", depuis: "Since" },
+    roles: { admin: "Administrator", support: "Support" },
+    etats: { actif: "In service", revoque: "Access withdrawn" },
+    sansNom: "—",
+    soiMeme: "You",
+    vide: {
+      titre: "No other account",
+      texte: "Operations accounts appear here, with their role and when they joined.",
+    },
+    gestes: {
+      promouvoir: "Make administrator",
+      retrograder: "Make support",
+      revoquer: "Withdraw access",
+    },
+    inviter: {
+      ouvrir: "Invite someone",
+      titre: "Invite an operations account",
+      sous: "The account is created ahead of time: an unknown address never receives a code.",
+      email: "Email address",
+      role: "Role",
+      confirmer: "Invite",
+      annuler: "Cancel",
+      motifs: [
+        "Joining the team",
+        "Temporary support cover",
+        "Replacing a leaver",
+      ],
+      dialogue: {
+        titre: "Invite this account",
+        consequence: "The account can sign in from its first code request. The log keeps who invited it.",
+      },
+    },
+    dialogueRole: {
+      titre: "Change {compte}'s role",
+      consequence: "The administrator role opens the Economy family and the audit log. It takes effect on the next action.",
+      motifs: [
+        "Change of responsibility",
+        "Needs access to economy levers",
+        "Back to a support scope",
+      ],
+    },
+    dialogueRevocation: {
+      titre: "Withdraw {compte}'s access",
+      consequence: "Open sessions close immediately. The account is deactivated, never erased: the log must still be able to name who did what.",
+      motifs: [
+        "Left the team",
+        "Account compromised",
+        "End of a temporary assignment",
+      ],
+    },
+  },
+
   echecs: {
     chargement: "We couldn't load this list. Nothing moved on the data side. Try again, or come back in a moment.",
     action: "We couldn't apply that action. The account is exactly as it was. Try again, or hand it to an administrator.",

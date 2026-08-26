@@ -18,6 +18,10 @@ const sessionStockeeSchema = z.object({
   acces: z.string().min(1),
   rafraichissement: z.string().min(1),
   role: adminRoleSchema,
+  // Facultative : une session ouverte avant que ce champ existe reste valable.
+  // La rendre obligatoire déconnecterait tout le monde au déploiement, pour un
+  // confort d'affichage.
+  email: z.string().optional(),
 }).strict();
 
 /**
