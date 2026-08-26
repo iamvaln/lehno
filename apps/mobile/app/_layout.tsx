@@ -5,6 +5,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider, useCouleurs } from "@lehno/ui-native";
 import { LangueProvider } from "../lib/langue.js";
 import { DrapeauxProvider } from "../lib/DrapeauxProvider.js";
+import { ArretProvider, useArret } from "../lib/ArretProvider.js";
+import Maintenance from "./maintenance.js";
 import { POLICES } from "../polices/index.js";
 
 /* La coquille. Trois choses s'y posent, et l'ordre compte : la zone sûre doit
@@ -14,6 +16,14 @@ import { POLICES } from "../polices/index.js";
    Les polices se chargent avant tout rendu. Rendre pendant le chargement
    montrerait un premier écran dans la police système, puis un saut : c'est le
    défaut le plus visible d'une application qui porte une identité. */
+/* L'écran d'attente REMPLACE l'application, il ne s'y superpose pas : ni
+   en-tête, ni barre d'onglets. Et il ne déconnecte personne — un arrêt n'est
+   pas une invalidation de session, on reprend où l'on était. */
+function SousArret() {
+  const { enCours } = useArret();
+  return enCours ? <Maintenance /> : <Coquille />;
+}
+
 function Coquille() {
   const couleurs = useCouleurs();
   return (
@@ -42,9 +52,15 @@ export default function Racine() {
               avant eux montrerait ce que le serveur refuse. Sans session,
               `appel` lève avant tout appel réseau — le fournisseur ne harcèle
               donc pas le serveur pendant la connexion. */}
-          <DrapeauxProvider>
-            <Coquille />
-          </DrapeauxProvider>
+          {/* L'arrêt enveloppe TOUT, drapeaux compris : pendant une
+              intervention, /auth/* et /public/config répondent 503 eux aussi.
+              Un écran d'attente posé seulement après la connexion laisserait
+              quelqu'un devant un formulaire qui échoue sans dire pourquoi. */}
+          <ArretProvider>
+            <DrapeauxProvider>
+              <SousArret />
+            </DrapeauxProvider>
+          </ArretProvider>
         </LangueProvider>
       </ThemeProvider>
     </SafeAreaProvider>

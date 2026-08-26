@@ -31,6 +31,22 @@ function adresseCourante(): string | null {
   return adresseDeLApi(process.env["EXPO_PUBLIC_API_URL"], source);
 }
 
+/* Une couture, et une seule : tout appel qui échoue passe par ici avant de
+   remonter à l'appelant. C'est ainsi qu'un arrêt commencé au milieu d'une
+   séance se découvre — sans que chaque écran ait à y penser, ce qu'aucun
+   écran ne ferait de façon fiable. */
+type Temoin = (erreur: unknown) => void;
+let temoin: Temoin | null = null;
+
+export function surEchec(observateur: Temoin | null): void {
+  temoin = observateur;
+}
+
+function signaleLEchec(erreur: unknown): never {
+  temoin?.(erreur);
+  throw erreur;
+}
+
 export class SansAdresseDApi extends Error {
   constructor() {
     super("Aucune adresse d'API : posez EXPO_PUBLIC_API_URL, ou lancez depuis le serveur de développement.");
@@ -78,7 +94,7 @@ async function envoie(chemin: string, options: RequestInit, jeton?: string): Pro
 /* Appelle une surface publique — pas de jeton, pas de renouvellement. */
 export async function appelPublic<T>(chemin: string, options: RequestInit = {}): Promise<T> {
   const reponse = await envoie(chemin, options);
-  if (!reponse.ok) throw new ErreurDApi(reponse.status, await litLEnveloppe(reponse));
+  if (!reponse.ok) signaleLEchec(new ErreurDApi(reponse.status, await litLEnveloppe(reponse)));
   return reponse.status === 204 ? (undefined as T) : ((await reponse.json()) as T);
 }
 
@@ -98,6 +114,7 @@ async function renouvelle(rafraichissement: string): Promise<boolean> {
    chaque geste sans dire pourquoi. */
 export async function appel<T>(chemin: string, options: RequestInit = {}): Promise<T> {
   const jetons = await litLesJetons();
+  // Pas de session : rien à signaler, ce n'est pas un échec du serveur.
   if (!jetons) throw new ErreurDApi(401, null);
 
   let reponse = await envoie(chemin, options, jetons.acces);
@@ -108,14 +125,14 @@ export async function appel<T>(chemin: string, options: RequestInit = {}): Promi
     if (doitRenouveler(reponse.status, enveloppe?.code ?? null)) {
       if (!(await renouvelle(jetons.rafraichissement))) {
         await effaceLesJetons();
-        throw new ErreurDApi(401, enveloppe);
+        signaleLEchec(new ErreurDApi(401, enveloppe));
       }
       const neufs = await litLesJetons();
       reponse = await envoie(chemin, options, neufs?.acces);
-      if (!reponse.ok) throw new ErreurDApi(reponse.status, await litLEnveloppe(reponse));
+      if (!reponse.ok) signaleLEchec(new ErreurDApi(reponse.status, await litLEnveloppe(reponse)));
     } else {
       if (sortDeLaSession(enveloppe?.code ?? null)) await effaceLesJetons();
-      throw new ErreurDApi(reponse.status, enveloppe);
+      signaleLEchec(new ErreurDApi(reponse.status, enveloppe));
     }
   }
 

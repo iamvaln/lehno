@@ -38,6 +38,12 @@ export const fr = {
      un écran d'aide où renvoyer. */
   plafondAppareil: "Cet appareil a déjà servi à ouvrir le nombre de comptes permis. Écrivez-nous et nous verrons ensemble.",
   parrainFacultatif: "Si vous arrivez par une invitation, le code va ici.",
+  maintTitre: "Lehno revient",
+  maintTexte: "Une mise à jour est en cours.",
+  maintHeure: (h: string) => "De retour vers " + h + ".",
+  maintHeureExemple: "14 h 30",
+  maintReessayer: "Réessayer",
+  maintEtat: "Voir l'état du service",
   pseudoTitre: "Choisissez votre pseudo",
   champPseudo: "Pseudo",
   pseudoAdresse: "lehno.app/valentine",
