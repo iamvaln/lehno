@@ -626,6 +626,15 @@ export type MouvementCredit = z.infer<typeof mouvementCreditSchema>;
  */
 export const ajustementCreditsSchema = z.object({
   montant: z.number().int().refine((n) => n !== 0, "un ajustement de zéro ne dit rien"),
+  /**
+   * Ce que le mouvement **est**, et que le client lira.
+   *
+   * Choisi, jamais deviné. « admin_adjustment » disait « on a corrigé une
+   * erreur » pour annoncer « on vous offre quelque chose » : deux nouvelles
+   * opposées sous un même nom. Quelqu'un dont on reprend cinq crédits par
+   * erreur ne doit pas lire « Cadeau », et l'inverse non plus.
+   */
+  nature: z.enum(["gift", "reward", "correction"]),
   reason: motifSchema,
 }).strict();
 

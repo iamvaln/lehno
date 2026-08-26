@@ -266,7 +266,10 @@ export class AdminPaymentsService {
         data: {
           userId: utilisateurId,
           type: "adjustment",
-          source: "admin_adjustment",
+          // Ce que le client lira. Le choisir plutôt que le deviner est tout
+          // l'intérêt de la scission : un dédommagement, une récompense et une
+          // erreur réparée ne s'annoncent pas de la même façon.
+          source: entree.nature,
           amount: entree.montant,
           reason: entree.reason,
         },
@@ -278,7 +281,7 @@ export class AdminPaymentsService {
         motif: entree.reason,
         cibleType: "user",
         cibleId: utilisateurId,
-        details: { amount: entree.montant, from: avant, to: apres },
+        details: { amount: entree.montant, nature: entree.nature, from: avant, to: apres },
       }, tx);
 
       return { utilisateurId, montant: entree.montant, solde: apres };
