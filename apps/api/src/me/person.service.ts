@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { CreatePersonInput, Person, UpdatePersonInput } from "@lehno/contracts";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
+import { EventService } from "./event.service.js";
 
 // L'annuaire et la fiche. Toutes les lectures passent par la portée cloisonnée
 // du dépôt : une requête Prisma directe sur `person` ici serait un défaut, le
@@ -8,7 +9,13 @@ import { TenantRepository } from "../tenancy/tenant.repository.js";
 @Injectable()
 export class PersonService {
   // @Inject explicite : voir ProfileService, même contrainte esbuild/vitest.
-  constructor(@Inject(TenantRepository) private readonly depot: TenantRepository) {}
+  constructor(
+    @Inject(TenantRepository) private readonly depot: TenantRepository,
+    // La naissance d'un proche recale son anniversaire — voir `update`
+    // ci-dessous. Sans cette dépendance, la correction resterait invisible
+    // jusqu'au jour dit, personne ne la remarquant avant.
+    @Inject(EventService) private readonly events: EventService,
+  ) {}
 
   async list(userId: string): Promise<Person[]> {
     const lignes = await this.depot.persons(userId).findMany({});
@@ -47,10 +54,26 @@ export class PersonService {
   }
 
   async update(userId: string, id: string, input: UpdatePersonInput): Promise<Person> {
+    // La naissance est une chaîne civile dans le contrat, une colonne `@db.Date`
+    // en base : elle se convertit ici, comme à la création — sans quoi Prisma
+    // refuse la valeur (« premature end of input, expected ISO-8601 DateTime »).
+    const data: Record<string, unknown> = { ...input };
+    if (input.birthDate !== undefined) data["birthDate"] = new Date(`${input.birthDate}T00:00:00Z`);
+
     // updateOrThrow refuse les colonnes d'appartenance dans les données et rend
     // un not_found si la ressource n'est pas au demandeur — les deux
     // protections viennent du dépôt, pas d'un contrôle ici.
-    return rendre(await this.depot.persons(userId).updateOrThrow(id, input as never));
+    const ligne = await this.depot.persons(userId).updateOrThrow(id, data as never);
+
+    // La naissance vient de changer : l'anniversaire de ce proche, s'il en a
+    // un, doit suivre. C'est ÉCRIT au cahier — le cas qui se remarque le plus
+    // tard et coûte le plus cher, puisque personne ne relit la fiche avant le
+    // jour dit.
+    if (input.birthDate !== undefined) {
+      await this.events.recalerAnniversaire(userId, id, input.birthDate);
+    }
+
+    return rendre(ligne);
   }
 
   async remove(userId: string, id: string): Promise<void> {

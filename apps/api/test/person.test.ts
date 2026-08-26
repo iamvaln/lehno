@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { createPersonSchema, champsDeProche, type CreatePersonInput } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { PersonService } from "../src/me/person.service.js";
+import { EventService } from "../src/me/event.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
 import { randomBytes } from "node:crypto";
 import { AppModule } from "../src/app.module.js";
@@ -35,7 +36,8 @@ describe("annuaire des proches", () => {
   afterAll(async () => { await db.close(); });
   beforeEach(async () => {
     await resetDatabase(db.prisma);
-    service = new PersonService(new TenantRepository(db.prisma as never));
+    const depot = new TenantRepository(db.prisma as never);
+    service = new PersonService(depot, new EventService(depot, db.prisma as never));
     awa = await compte();
     bila = await compte();
   });

@@ -26,6 +26,7 @@ import {
   personSchema, createPersonSchema, updatePersonSchema,
   noteSchema, createNoteSchema, createNotesSchema,
 } from "./me.js";
+import { eventSchema, createEventSchema, updateEventSchema } from "./me-events.js";
 import { featuresResponseSchema } from "./flags.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
 
@@ -414,6 +415,66 @@ const CHEMINS: Chemin[] = [
     authentifie: true,
     parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
     // 204 comme /auth/session : la suppression ne rend rien à décrire.
+    sansContenu: true,
+    statut: 204,
+  },
+  // ——— me/events (apps/api/src/me) ————————————————————————————————
+  {
+    chemin: "/me/events",
+    methode: "get",
+    resume: "Lister ses événements",
+    authentifie: true,
+    reponse: z.array(eventSchema),
+  },
+  {
+    chemin: "/me/events",
+    methode: "post",
+    resume: "Créer un événement (anniversaire ou événement libre)",
+    authentifie: true,
+    note: [
+      "Un anniversaire NE PORTE PAS `referenceDate` : elle se calcule depuis",
+      "`person.birthDate`, la prochaine échéance à venir — jamais la naissance",
+      "elle-même. La fournir tout de même reste accepté, mais reste soumise à",
+      "la même contrainte qu'un événement libre : une date à venir.",
+      "",
+      "Un proche sans date de naissance ne peut pas recevoir d'anniversaire :",
+      "`validation_failed` (422).",
+      "",
+      "Un proche n'a qu'un seul anniversaire : en créer un second rend",
+      "`conflict` (409), la règle du formulaire (§3.6) tenue au serveur.",
+      "",
+      "`schedules` compose les rappels de l'événement — une ou plusieurs",
+      "règles, récurrentes ou décalées, jamais les deux à la fois sur une même",
+      "règle. Facultatif : un anniversaire reçoit sa règle annuelle sans qu'on",
+      "la demande.",
+    ].join("\n"),
+    corps: createEventSchema,
+    reponse: eventSchema,
+    statut: 201,
+  },
+  {
+    chemin: "/me/events/{id}",
+    methode: "get",
+    resume: "Lire un événement",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    reponse: eventSchema,
+  },
+  {
+    chemin: "/me/events/{id}",
+    methode: "patch",
+    resume: "Corriger un événement",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: updateEventSchema,
+    reponse: eventSchema,
+  },
+  {
+    chemin: "/me/events/{id}",
+    methode: "delete",
+    resume: "Supprimer un événement (emporte ses échéances)",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
     sansContenu: true,
     statut: 204,
   },

@@ -7,6 +7,7 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { noteSchema } from "@lehno/contracts";
 import { NoteService } from "../src/me/note.service.js";
 import { PersonService } from "../src/me/person.service.js";
+import { EventService } from "../src/me/event.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
@@ -34,7 +35,7 @@ describe("les notes d'un proche", () => {
   beforeEach(async () => {
     await resetDatabase(db.prisma);
     const depot = new TenantRepository(db.prisma as never);
-    persons = new PersonService(depot);
+    persons = new PersonService(depot, new EventService(depot, db.prisma as never));
     notes = new NoteService(depot, db.prisma as never);
     awa = await compte();
     bila = await compte();

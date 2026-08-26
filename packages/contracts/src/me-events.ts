@@ -136,14 +136,50 @@ export const createEventSchema = z.object({
   kind: z.enum(EVENT_KINDS),
   label: z.string().trim().min(1).max(120).optional(),
   nature: z.enum(EVENT_NATURES).optional(),
-  referenceDate: dateAVenirSchema,
+  // Facultative pour un anniversaire : elle se CALCULE depuis la naissance du
+  // proche, jamais depuis la saisie. Pour tout autre événement, elle reste
+  // requise — voir le .refine() plus bas, qui porte cette condition, ni
+  // touchée ni assouplie.
+  referenceDate: dateAVenirSchema.optional(),
+  // Les règles se composent au formulaire (§3.6) : « chaque année pour un
+  // anniversaire ; à échéances multiples pour un événement qui en compte
+  // plusieurs — par exemple un mois puis trois mois après une date ». D'où un
+  // TABLEAU : une relation unique rendrait ce cas inexprimable.
+  //
+  // Facultatif : un anniversaire reçoit sa règle annuelle sans qu'on la demande,
+  // et l'utilisateur n'a rien à composer pour le cas ordinaire.
   schedules: z.array(scheduleSchema).max(6).optional(),
 }).strict().refine(
   (v) => v.kind !== "other" || Boolean(v.label),
   { path: ["label"], message: "un événement libre porte son libellé" },
+).refine(
+  (v) => v.kind === "birthday" || v.referenceDate !== undefined,
+  {
+    path: ["referenceDate"],
+    message: "un événement porte sa date à venir, sauf un anniversaire qui la calcule depuis la naissance du proche",
+  },
 );
 
 export type CreateEventInput = z.infer<typeof createEventSchema>;
+
+/* La correction d'un événement. Dérivée de la création plutôt que réécrite —
+   deux déclarations divergeraient, et la validation d'une correction finirait
+   par être plus laxiste que celle d'une création.
+
+   `createEventSchema` porte un `.refine()` et devient un ZodEffects, sur lequel
+   `.partial()` n'existe pas : on repart donc de la forme d'objet, à laquelle on
+   retire `personId`. Un événement ne change pas de proche — le déplacer serait
+   le supprimer et le recréer, pas le corriger. */
+export const updateEventSchema = z.object({
+  kind: z.enum(EVENT_KINDS).optional(),
+  label: z.string().trim().min(1).max(120).optional(),
+  nature: z.enum(EVENT_NATURES).optional(),
+  referenceDate: dateCivileSchema.optional(),
+}).strict().refine((v) => Object.keys(v).length > 0, {
+  message: "au moins un champ doit être fourni",
+});
+
+export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
 // ── Échéances ───────────────────────────────────────────────────────────────
 
