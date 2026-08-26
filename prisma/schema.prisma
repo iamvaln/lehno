@@ -139,8 +139,11 @@ enum CreditSource {
   purchase
   manual_topup
   promo_code
+  gift
+  reward
   consumption
-  admin_adjustment
+  refund
+  correction
 
   @@map("credit_source")
 }

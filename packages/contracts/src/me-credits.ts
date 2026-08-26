@@ -105,27 +105,91 @@ export type Payment = z.infer<typeof paymentSchema>;
 
 export const CREDIT_TRANSACTION_TYPES = ["grant", "purchase", "consumption", "adjustment"] as const;
 
-/* Pourquoi ce mouvement existe, en CODE STABLE — jamais en phrase.
+/* POURQUOI ce mouvement existe, du point de vue de CELUI QUI LE LIT.
  *
- * Le client ne montre pas le texte du serveur : il traduit le code dans la
- * langue de l'utilisateur, exactement comme pour les erreurs et les
- * notifications. L'écran de bienvenue en dépend directement — il affiche deux
- * lignes, « cadeau de bienvenue » et « bonus de parrainage », et sans code il
- * devrait reconnaître des phrases françaises pour les séparer.
+ * Ce vocabulaire est celui de l'utilisateur, pas celui de la comptabilité. Les
+ * deux ne coïncident pas : nous distinguons un achat par l'application d'un
+ * virement vérifié à la main, lui a payé dans les deux cas. Servir notre
+ * taxonomie interne lui apprendrait des opérations qu'il n'a pas demandées, et
+ * coupleraient son application à notre plan comptable — le jour où celui-ci
+ * gagne une catégorie, son écran casserait.
  *
- * `type` ne suffit pas : un « grant » d'inscription et un « grant » de
- * parrainage se ressemblent, et ce sont pourtant deux gestes distincts dont
- * l'un se mérite. Les confondre efface la raison d'inviter quelqu'un. */
+ * `type` ne suffit pas : un cadeau de bienvenue et un bonus de parrainage sont
+ * tous deux des « grant », tous deux +5, et ce sont pourtant deux nouvelles
+ * différentes — l'une se reçoit, l'autre se mérite.
+ *
+ * Aucun fourre-tout, et c'est délibéré. « Ajustement » disait « on a corrigé
+ * une erreur » là où l'on voulait dire « on vous offre quelque chose » : deux
+ * nouvelles opposées sous un même mot. Elles ont chacune la leur.
+ */
+export const CREDIT_REASONS = [
+  "signup",     // le cadeau de bienvenue, à l'inscription
+  "referral",   // le bonus d'une invitation — la seule qui se mérite
+  "purchase",   // un achat, par l'application ou par virement vérifié
+  "promo",      // un code promotionnel
+  "gift",       // un cadeau : geste commercial, dédommagement
+  "reward",     // une récompense : concours, défi
+  "usage",      // une génération consommée
+  "refund",     // un remboursement : les crédits repris avec l'argent rendu
+  "correction", // une erreur réparée — le seul cas qui dit vraiment « ajustement »
+] as const;
+export type CreditReason = (typeof CREDIT_REASONS)[number];
+
+/* Les libellés à afficher, dans les deux langues.
+ *
+ * Ils vivent ICI et non dans la réponse : le serveur n'a pas à connaître la
+ * langue de celui qui appelle, et un même mot n'a pas à exister à deux
+ * endroits. Le client les recopie dans ses ressources de traduction — c'est la
+ * règle du contrat commun, « le client traduit le code ».
+ *
+ * Ils sont fournis pour qu'aucune équipe n'ait à les inventer : deux clients
+ * qui traduisent « referral » chacun de son côté finissent par dire deux
+ * choses différentes de la même ligne. */
+export const CREDIT_REASON_LABELS: Record<CreditReason, { fr: string; en: string }> = {
+  signup:     { fr: "Cadeau de bienvenue",  en: "Welcome gift" },
+  referral:   { fr: "Bonus de parrainage",  en: "Referral bonus" },
+  purchase:   { fr: "Achat de crédits",     en: "Credit purchase" },
+  promo:      { fr: "Code promotionnel",    en: "Promo code" },
+  gift:       { fr: "Cadeau",               en: "Gift" },
+  reward:     { fr: "Récompense",           en: "Reward" },
+  usage:      { fr: "Génération",           en: "Generation" },
+  refund:     { fr: "Remboursement",        en: "Refund" },
+  correction: { fr: "Correction",           en: "Correction" },
+};
+
+/* Ce que la comptabilité distingue, et que l'utilisateur n'a pas à connaître.
+ * Reste EN BASE, ne franchit jamais une route mobile. */
 export const CREDIT_SOURCES = [
   "signup_grant",
   "referral_bonus",
   "purchase",
   "manual_topup",
   "promo_code",
+  "gift",
+  "reward",
   "consumption",
-  "admin_adjustment",
+  "refund",
+  "correction",
 ] as const;
 export type CreditSource = (typeof CREDIT_SOURCES)[number];
+
+/* La traduction de l'un vers l'autre, en UN endroit.
+ *
+ * `manual_topup` est le seul à se fondre : de l'intérieur c'est un virement
+ * vérifié à la main, de l'extérieur c'est un achat — le client a payé, la
+ * façon dont l'argent nous est parvenu ne le regarde pas. */
+export const RAISON_DE_LA_SOURCE: Record<CreditSource, CreditReason> = {
+  signup_grant: "signup",
+  referral_bonus: "referral",
+  purchase: "purchase",
+  manual_topup: "purchase",
+  promo_code: "promo",
+  gift: "gift",
+  reward: "reward",
+  consumption: "usage",
+  refund: "refund",
+  correction: "correction",
+};
 
 export const creditTransactionSchema = z.object({
   id: z.string().uuid(),
@@ -133,11 +197,9 @@ export const creditTransactionSchema = z.object({
   // Signé : + au crédit, − au débit. Un débit noté positif gonflerait le solde
   // au lieu de le réduire.
   amount: z.number().int(),
-  source: z.enum(CREDIT_SOURCES),
-  // Note libre, destinée au journal et à l'administration — un motif de
-  // rejet, une observation. Le client ne l'affiche jamais : elle n'est ni
-  // traduite ni traduisible.
-  reason: z.string().nullable(),
+  // La RAISON, dans le vocabulaire de l'utilisateur — jamais la source
+  // comptable. Voir CREDIT_REASON_LABELS pour les libellés des deux langues.
+  reason: z.enum(CREDIT_REASONS),
   createdAt: z.string(),
 }).strict();
 
