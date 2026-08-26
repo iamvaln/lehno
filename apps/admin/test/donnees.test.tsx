@@ -485,3 +485,37 @@ describe("FilterBar sans recherche", () => {
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
   });
 });
+
+describe("DataTable — une ligne sans geste", () => {
+  // Un menu qui s'ouvre vide promet quelque chose et ne le tient pas. Le cas
+  // arrive dès qu'un droit dépend de la ligne : son propre compte dans la liste
+  // des accès, un compte déjà révoqué.
+  it("n'affiche pas de bouton quand aucune action n'est possible", () => {
+    render(
+      <DataTable
+        colonnes={[{ cle: "nom", titre: "Nom" }]}
+        lignes={[{ id: "1", nom: "Awa" }, { id: "2", nom: "Karim" }]}
+        actions={(l) => (l.id === "1" ? [] : [{ id: "x", label: "Agir" }])}
+        libelles={{ actions: "Actions" }}
+      />,
+    );
+
+    // Une seule des deux lignes porte son bouton.
+    expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
+  });
+
+  it("la colonne garde sa place malgré tout", () => {
+    render(
+      <DataTable
+        colonnes={[{ cle: "nom", titre: "Nom" }]}
+        lignes={[{ id: "1", nom: "Awa" }]}
+        actions={() => []}
+        libelles={{ actions: "Actions" }}
+      />,
+    );
+
+    // Une cellule par colonne, plus celle des actions : sans elle, la ligne
+    // se décalerait sous l'en-tête.
+    expect(screen.getAllByRole("row")[1]?.querySelectorAll("td")).toHaveLength(2);
+  });
+});

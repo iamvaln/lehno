@@ -44,7 +44,13 @@ const FERMEES_AU_SUPPORT = new Set<string>([...SECTIONS_ECONOMIE, ...SECTIONS_AD
  */
 export const NAVIGATION: { famille: Famille | null; items: readonly string[] }[] = [
   { famille: null, items: ["tableau"] },
-  { famille: "exploitation", items: ["comptes", "credits", "moderation"] },
+  // « assistance » ne porte pas de numéro dans la spécification, qui n'énumère
+  // pas les quatre files parmi ses quatorze sections tout en confiant au
+  // support « répondre aux utilisateurs et traiter les cas courants » (§6).
+  // Elle se pose dans Exploitation, où vit son travail courant. Sans elle, les
+  // quatre tables resteraient inatteignables : le « à traiter » du tableau de
+  // bord ne mène qu'aux suppressions et aux connexions. À trancher.
+  { famille: "exploitation", items: ["comptes", "credits", "assistance", "moderation"] },
   { famille: "economie", items: SECTIONS_ECONOMIE },
   // « acces » ne porte pas de numéro dans la spécification, qui ne l'énumère pas
   // parmi ses quatorze sections tout en réservant aux administrateurs le fait de
