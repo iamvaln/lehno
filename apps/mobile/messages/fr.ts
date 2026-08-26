@@ -45,7 +45,7 @@ export const fr = {
   maintEtat: "Voir l'état du service",
   pseudoTitre: "Choisissez votre pseudo",
   champPseudo: "Pseudo",
-  pseudoAdresse: "lehno.app/valentine",
+  pseudoAdresse: (pseudo: string) => "lehno.app/" + pseudo,
   pseudoPris: "Ce pseudo est pris. « valentine2 » est libre.",
   champParrain: "Code de parrainage (facultatif)",
   parrainValide: "Code valide",
@@ -139,4 +139,15 @@ export const fr = {
   canalSms: "SMS",
   canalEmail: "E-mail",
   canalAutre: "Autre",
+
+  /* Les sept catégories de notes. Leurs noms viennent de la doc fonctionnelle
+     §8, qui les définit une à une — pas d'une invention d'ici. Deux réutilisent
+     ce que le kit portait déjà : « Intérêts et goûts » et « À éviter », qui
+     sont les mots de l'écran là où la doc dit « Intérêts / goûts » et
+     « Dislikes / no-go ». */
+  catIdeesCadeaux: "Idées cadeaux",
+  catIdeesMessages: "Idées messages",
+  catFaits: "Faits marquants",
+  catEncouragements: "Encouragements",
+  catChallenges: "Challenges",
 };

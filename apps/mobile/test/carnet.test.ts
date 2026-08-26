@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Note } from "@lehno/contracts";
+import type { TableDesCategories } from "../lib/carnet.js";
 import {
-  PAGE, basculeDeTri, dateCourte, interetsEtNotes, natureDeLaNote, parametresDuCarnet,
-  presseAssezPourSAfficher, resteACharger, sousTitreDuProche,
+  PAGE, basculeDeTri, dateCourte, interetsEtNotes, parametresDuCarnet,
+  categoriesDeLaNote, estUnGardeFou, presseAssezPourSAfficher, resteACharger,
+  sousTitreDuProche,
 } from "../lib/carnet.js";
 
 describe("le tri porte sa direction", () => {
@@ -74,48 +76,112 @@ describe("« Voir plus · n restants »", () => {
   });
 });
 
-describe("ce qu'une note est", () => {
+/* La table que `/me/metadata` sert : sept catégories, chacune avec sa nature
+   et son caractère de contrainte. C'est le SERVEUR qui les porte — aucune
+   énumération ne dit qu'un no-go contraint la génération. */
+const TABLE = [
+  { code: "gift_ideas", kind: "ponctuelle", isConstraint: false },
+  { code: "message_ideas", kind: "ponctuelle", isConstraint: false },
+  { code: "facts", kind: "ponctuelle", isConstraint: false },
+  { code: "encouragements", kind: "ponctuelle", isConstraint: false },
+  { code: "challenges", kind: "ponctuelle", isConstraint: false },
+  { code: "interests", kind: "durable", isConstraint: false },
+  { code: "dislikes_nogo", kind: "durable", isConstraint: true },
+] as const satisfies TableDesCategories;
+
+describe("ce qu'une note annonce", () => {
   const note = (categories: Note["categories"]): Note => ({
     id: "11111111-1111-4111-8111-111111111111",
     personId: "22222222-2222-4222-8222-222222222222",
     content: "vinyles", eventOccurrenceId: null, categories, createdAt: "2026-08-01T00:00:00Z",
   });
 
-  /* Deux natures à l'écran, sept catégories au contrat. « À éviter » se
-     distingue parce que la fiche la dessine autrement — en pointillé, sans
-     fond : c'est un garde-fou, pas une suggestion. Tout le reste est une
-     matière à utiliser. */
-  it("distingue ce qu'il faut éviter du reste", () => {
-    expect(natureDeLaNote(note(["dislikes_nogo"]))).toBe("eviter");
-    expect(natureDeLaNote(note(["gift_ideas"]))).toBe("idee");
+  /* Le défaut vu à l'écran : « Danielle a une allergie aux fruits à coque »,
+     rangée en « Faits marquants », s'affichait « IDÉE ». La fiche pliait sept
+     catégories en deux, et se trompait sur cinq. */
+  it("annonce sa catégorie, pas une de deux", () => {
+    expect(categoriesDeLaNote(note(["facts"]))).toEqual(["facts"]);
+    expect(categoriesDeLaNote(note(["encouragements"]))).toEqual(["encouragements"]);
   });
 
-  // Une note que le système n'a pas su ranger reste une note : le contrat
-  // autorise un tableau vide, et la faire disparaître perdrait la saisie.
-  it("garde une note non rangée", () => {
-    expect(natureDeLaNote(note([]))).toBe("idee");
+  /* Une note peut relever de deux catégories quand elle sert deux usages : ce
+     qu'un proche traverse relève des challenges ET de ce qu'il a besoin
+     d'entendre. N'en montrer qu'une choisirait à sa place. */
+  it("garde ses deux catégories quand elle en porte deux", () => {
+    expect(categoriesDeLaNote(note(["challenges", "encouragements"]))).toHaveLength(2);
   });
 
-  /* Les « intérêts » n'ont pas de champ au contrat : ce sont des notes d'une
-     catégorie. La fiche les montre en étiquettes plutôt qu'en cartes — un mot
-     par ligne de carte gaspillerait l'écran. */
-  it("sort les intérêts des notes pour en faire des étiquettes", () => {
-    const { interets, cartes } = interetsEtNotes([
-      note(["interests"]), note(["dislikes_nogo"]), note(["facts"]),
-    ]);
+  // Vide est un état VALIDE : une note que le système n'a pas su ranger reste
+  // telle quelle, sans repli sur une catégorie fourre-tout.
+  it("n'annonce rien quand elle n'est pas rangée", () => {
+    expect(categoriesDeLaNote(note([]))).toEqual([]);
+  });
+});
+
+describe("le garde-fou", () => {
+  const note = (categories: Note["categories"]): Note => ({
+    id: "11111111-1111-4111-8111-111111111111",
+    personId: "22222222-2222-4222-8222-222222222222",
+    content: "je ne bois pas", eventOccurrenceId: null, categories,
+    createdAt: "2026-08-01T00:00:00Z",
+  });
+
+  /* `isConstraint` vient du SERVEUR. Le déduire du code — « celle qui
+     s'appelle dislikes_nogo » — réécrirait chez nous une règle qui vit
+     là-bas, et la ferait diverger au premier ajout. */
+  it("se lit dans la table, pas dans le nom de la catégorie", () => {
+    expect(estUnGardeFou(note(["dislikes_nogo"]), TABLE)).toBe(true);
+    expect(estUnGardeFou(note(["facts"]), TABLE)).toBe(false);
+  });
+
+  // Une seule contrainte suffit : se tromper là-dessus fait proposer du vin à
+  // quelqu'un qui ne boit pas.
+  it("suffit d'une seule catégorie contraignante", () => {
+    expect(estUnGardeFou(note(["facts", "dislikes_nogo"]), TABLE)).toBe(true);
+  });
+
+  // Une catégorie que cette version ne connaît pas ne contraint rien : elle
+  // n'est pas dans la table, on ne peut rien en dire.
+  it("ne contraint pas sur une catégorie absente de la table", () => {
+    expect(estUnGardeFou(note(["interests"]), [])).toBe(false);
+  });
+});
+
+describe("ce qui va en étiquette", () => {
+  const note = (categories: Note["categories"]): Note => ({
+    id: "11111111-1111-4111-8111-111111111111",
+    personId: "22222222-2222-4222-8222-222222222222",
+    content: "vinyles", eventOccurrenceId: null, categories, createdAt: "2026-08-01T00:00:00Z",
+  });
+
+  /* DURABLE et sans contrainte. Durable, parce qu'un goût vaut d'une année sur
+     l'autre là où un challenge d'il y a deux ans ne vaut plus. Sans contrainte,
+     parce qu'un no-go est durable lui aussi, et le ranger parmi les goûts le
+     ferait lire comme une envie. */
+  it("prend les durables qui ne contraignent pas", () => {
+    const { interets, cartes } = interetsEtNotes(
+      [note(["interests"]), note(["dislikes_nogo"]), note(["facts"])], TABLE,
+    );
     expect(interets).toHaveLength(1);
     expect(cartes).toHaveLength(2);
   });
 
-  // Une note peut porter plusieurs catégories. Rangée en intérêt, elle ne
-  // doit pas reparaître en carte : elle serait lue deux fois.
+  // Une note rangée en étiquette ne reparaît pas plus bas : elle serait lue
+  // deux fois.
   it("ne compte pas deux fois une note à plusieurs catégories", () => {
-    const { interets, cartes } = interetsEtNotes([note(["interests", "facts"])]);
+    const { interets, cartes } = interetsEtNotes([note(["interests", "facts"])], TABLE);
     expect(interets).toHaveLength(1);
     expect(cartes).toHaveLength(0);
   });
-});
 
+  // Sans table — elle n'est pas encore arrivée —, tout reste en carte. Rien ne
+  // monte en étiquette sur une supposition.
+  it("ne devine rien sans la table", () => {
+    const { interets, cartes } = interetsEtNotes([note(["interests"])], []);
+    expect(interets).toHaveLength(0);
+    expect(cartes).toHaveLength(1);
+  });
+});
 
 describe("la date en repère", () => {
   it("se dit dans la langue de lecture", () => {

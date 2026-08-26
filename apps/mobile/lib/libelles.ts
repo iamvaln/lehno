@@ -1,5 +1,5 @@
 import type {
-  ContactChannel, EventKind, PersonRegister, PersonRelation,
+  CategoryCode, ContactChannel, EventKind, PersonRegister, PersonRelation,
 } from "@lehno/contracts";
 import type { Messages } from "../messages/index.js";
 
@@ -42,6 +42,26 @@ const CANAUX: Record<ContactChannel, CleDeTexte> = {
   autre: "canalAutre",
 };
 
+/* Les sept catégories de notes. Elles ne sont PAS deux : la fiche affichait
+   « idée » ou « à éviter » pour tout, et une note rangée en « Faits marquants »
+   — « Danielle a une allergie aux fruits à coque » — s'annonçait comme une
+   idée. Le serveur sert les sept, chacune avec sa nature ; l'écran les dit
+   toutes.
+
+   `interests` et `dislikes_nogo` reprennent des libellés que le kit portait
+   déjà : ce sont les mots de l'écran, là où la doc dit « Intérêts / goûts » et
+   « Dislikes / no-go ». */
+const CATEGORIES: Record<CategoryCode, CleDeTexte> = {
+  gift_ideas: "catIdeesCadeaux",
+  message_ideas: "catIdeesMessages",
+  facts: "catFaits",
+  encouragements: "catEncouragements",
+  challenges: "catChallenges",
+  interests: "ficheInterets",
+  dislikes_nogo: "noteEviter",
+};
+
+export const CLES_DE_CATEGORIE = CATEGORIES;
 export const CLES_DE_RELATION = RELATIONS;
 export const CLES_DE_REGISTRE = REGISTRES;
 export const CLES_DE_CANAL = CANAUX;

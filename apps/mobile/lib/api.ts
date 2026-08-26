@@ -4,6 +4,7 @@ import { errorEnvelopeSchema, type ErrorCode, type ErrorEnvelope, type Session }
 import { adresseDeLApi } from "./adresse-api.js";
 import { doitRenouveler, sortDeLaSession } from "./session.js";
 import { effaceLesJetons, litLesJetons, poseLesJetons } from "./jetons.js";
+import { unSeulALaFois } from "./verrou.js";
 
 /* Le seul endroit qui parle au serveur.
  *
@@ -119,7 +120,29 @@ export async function appelPublic<T>(chemin: string, options: OptionsDAppel = {}
   return reponse.status === 204 ? (undefined as T) : ((await reponse.json()) as T);
 }
 
-async function renouvelle(rafraichissement: string): Promise<boolean> {
+/* UN SEUL RENOUVELLEMENT À LA FOIS, partagé par tous ceux qui l'attendent.
+ *
+ * Le serveur fait TOURNER le jeton de rafraîchissement : chaque usage rend une
+ * paire neuve et brûle l'ancienne. Deux appels lancés ensemble — la fiche d'un
+ * proche en fait deux, la fiche et ses notes — expirent ensemble, et chacun
+ * repartait avec le MÊME jeton. Le second passait alors pour un rejeu :
+ * `refresh_reused`, et la session tombait pour de bon.
+ *
+ * Vu à l'écran : le carnet, qui n'appelle qu'une fois, se rechargeait très
+ * bien ; la fiche échouait systématiquement passé un quart d'heure.
+ *
+ * D'où le verrou : le premier arrivé lance la demande, les autres attendent la
+ * sienne et repartent avec la paire qu'elle a posée.
+ *
+ * Le jeton joué est celui que le trousseau porte au moment où la demande part,
+ * pas celui qu'un appelant avait en main : les retardataires n'apportent que le
+ * leur, déjà brûlé par le premier. */
+const renouvelle = unSeulALaFois(async () => {
+  const jetons = await litLesJetons();
+  return jetons ? demandeUnRenouvellement(jetons.rafraichissement) : false;
+});
+
+async function demandeUnRenouvellement(rafraichissement: string): Promise<boolean> {
   const reponse = await envoie("/auth/refresh", {
     method: "POST",
     body: JSON.stringify({ refreshToken: rafraichissement }),
@@ -145,7 +168,7 @@ export async function appel<T>(chemin: string, options: OptionsDAppel = {}): Pro
     const enveloppe = await litLEnveloppe(reponse);
 
     if (doitRenouveler(reponse.status, enveloppe?.code ?? null)) {
-      if (!(await renouvelle(jetons.rafraichissement))) {
+      if (!(await renouvelle())) {
         await effaceLesJetons();
         signaleLEchec(new ErreurDApi(401, enveloppe));
       }

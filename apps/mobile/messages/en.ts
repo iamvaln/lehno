@@ -41,7 +41,7 @@ export const en = {
   maintEtat: "Service status",
   pseudoTitre: "Pick your handle",
   champPseudo: "Handle",
-  pseudoAdresse: "lehno.app/valentine",
+  pseudoAdresse: (pseudo: string) => "lehno.app/" + pseudo,
   pseudoPris: "That one's taken. \u201Cvalentine2\u201D is free.",
   champParrain: "Referral code (optional)",
   parrainValide: "Valid code",
@@ -135,4 +135,13 @@ export const en = {
   canalSms: "SMS",
   canalEmail: "Email",
   canalAutre: "Other",
+
+  /* Les sept catégories de notes. Leurs noms viennent de la doc fonctionnelle
+     §8, qui les définit une à une — pas d'une invention d'ici. Deux réutilisent
+     ce que le kit portait déjà : « Intérêts et goûts » et « À éviter ». */
+  catIdeesCadeaux: "Gift ideas",
+  catIdeesMessages: "Message ideas",
+  catFaits: "Key facts",
+  catEncouragements: "Encouragements",
+  catChallenges: "Challenges",
 };

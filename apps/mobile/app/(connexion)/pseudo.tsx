@@ -66,6 +66,7 @@ export default function Pseudo() {
       routeur.replace({
         pathname: "/(connexion)/bienvenue",
         params: {
+          pseudo,
           credits: String(session.signupCredits),
           /* Le détail, pas un total : le cadeau de bienvenue et le bonus de
              parrainage sont deux gestes distincts, et l'un des deux se mérite.
@@ -101,7 +102,7 @@ export default function Pseudo() {
           value={pseudo}
           onChangeText={(v) => { setPseudo(v); setPris(false); }}
           invalid={pris}
-          hint={pris ? t.pseudoPris : t.pseudoAdresse}
+          hint={pris ? t.pseudoPris : t.pseudoAdresse(pseudo)}
         />
 
         <View style={{ marginTop: nativeSpace[16] }}>

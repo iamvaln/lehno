@@ -16,16 +16,23 @@ export default function Bienvenue() {
 
   /* Les crédits viennent de la réponse d'inscription, pas d'une constante :
      le montant se règle en administration, et l'écrire en dur le ferait mentir
-     au premier changement. Le prénom viendra du profil, qui n'est pas encore lu. */
-  const { credits } = useLocalSearchParams<{ credits: string }>();
-  const prenom = "";
+     au premier changement.
+
+     Le nom aussi : c'est le pseudo qu'on vient de choisir. Il était laissé
+     vide en attendant le profil, et l'écran saluait « Bienvenue, » — une
+     virgule suivie de rien, qui se lit comme un défaut plutôt que comme un
+     accueil. Le pseudo est là, deux écrans plus tôt ; il suffit de le porter. */
+  const { pseudo, credits, bonus, parrain } = useLocalSearchParams<{
+    pseudo: string; credits: string; bonus: string; parrain: string;
+  }>();
   const offerts = Number(credits ?? 0);
+  const gagnes = Number(bonus ?? 0);
 
   return (
     <View style={[styles.contenu, { paddingTop: insets.top + nativeSpace[32], paddingBottom: insets.bottom + nativeSpace[20] }]}>
       <Illustration name="bienvenue-credits" width={140} />
 
-      <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.bienvenueTitre(prenom)}</Text>
+      <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.bienvenueTitre(pseudo ?? "")}</Text>
       <Text style={[styles.texte, { color: couleurs.textSecondary }]}>{t.bienvenueTexte}</Text>
 
       <View style={[styles.cadeau, { backgroundColor: couleurs.surfacePanel }]}>
@@ -33,7 +40,16 @@ export default function Bienvenue() {
         <Text style={[styles.cadeauTexte, { color: couleurs.textSecondary }]}>{t.bienvenueCadeau}</Text>
       </View>
 
-      <Text style={[styles.parrainage, { color: couleurs.textMention }]}>{t.bienvenueParrainage}</Text>
+      {/* Le parrainage ne paraît QUE s'il a joué. La ligne s'affichait toujours,
+          libellé seul et sans montant : elle annonçait un bonus à qui n'en avait
+          aucun. Le DÉTAIL, pas un total — c'est ce qui garde une raison
+          d'inviter quelqu'un. */}
+      {gagnes > 0 ? (
+        <Text style={[styles.parrainage, { color: couleurs.textMention }]}>
+          {t.bienvenueCredits(gagnes)} · {t.bienvenueParrainage}
+          {parrain ? ` · ${parrain}` : ""}
+        </Text>
+      ) : null}
 
       <View style={styles.sorties}>
         <Button variant="primary" full onPress={() => routeur.replace("/")}>{t.commencer}</Button>

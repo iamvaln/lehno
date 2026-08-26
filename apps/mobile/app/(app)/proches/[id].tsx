@@ -9,17 +9,21 @@ import {
   nativeBorder, nativeFont, nativeRadius, nativeSpace, nativeTouchMin,
 } from "@lehno/tokens";
 import {
-  Avatar, Button, Countdown, Icon, LoadingState, Provenance, Quote,
+  Avatar, Banner, Button, Countdown, Icon, LoadingState, Provenance, Quote,
   SectionLabel, Tag, useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../../../lib/langue.js";
-import { appel } from "../../../lib/api.js";
+import { appel, ErreurDApi } from "../../../lib/api.js";
+import { messageDErreur } from "../../../lib/session.js";
 import { useDrapeaux } from "../../../lib/DrapeauxProvider.js";
+import { useCategories } from "../../../lib/MetadonneesProvider.js";
 import {
-  dateCourte, interetsEtNotes, natureDeLaNote, presseAssezPourSAfficher,
-  sousTitreDuProche,
+  categoriesDeLaNote, dateCourte, estUnGardeFou, interetsEtNotes,
+  presseAssezPourSAfficher, sousTitreDuProche,
 } from "../../../lib/carnet.js";
-import { CLES_DE_REGISTRE, libelleDeLEcheance } from "../../../lib/libelles.js";
+import {
+  CLES_DE_CATEGORIE, CLES_DE_REGISTRE, libelleDeLEcheance,
+} from "../../../lib/libelles.js";
 
 /* La fiche d'un proche.
  *
@@ -58,12 +62,19 @@ export default function Proche() {
   const routeur = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { actives } = useDrapeaux();
+  const categories = useCategories();
 
   const [proche, setProche] = useState<Person | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [tousLesInterets, setTousLesInterets] = useState(false);
+  /* Un chargement qui échoue doit se DIRE. Sans cela, la promesse partait sans
+     personne pour la rattraper et l'écran gardait ses squelettes : rien ne
+     bougeait, rien n'expliquait, aucun geste à faire. C'est ainsi qu'on a
+     découvert que deux appels lancés ensemble se marchaient dessus au
+     renouvellement — voir le verrou dans `lib/api.ts`. */
+  const [echec, setEchec] = useState<string | null>(null);
 
-  const charge = useCallback(async () => {
+  const demande = useCallback(async () => {
     /* Deux appels, en parallèle : la fiche et ses notes durables. Les
        enchaîner ferait attendre deux allers-retours pour un écran qui n'en
        demande qu'un de latence. */
@@ -75,6 +86,15 @@ export default function Proche() {
     setNotes(noteListSchema.parse(durables));
   }, [id]);
 
+  const charge = useCallback(async () => {
+    try {
+      await demande();
+      setEchec(null);
+    } catch (e) {
+      setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
+    }
+  }, [demande, langue]);
+
   useEffect(() => { void charge(); }, [charge]);
 
   if (!proche) {
@@ -82,12 +102,21 @@ export default function Proche() {
       <View style={[styles.attente, {
         backgroundColor: couleurs.surfacePage, paddingTop: insets.top + nativeSpace[24],
       }]}>
-        <LoadingState variant="liste" rows={3} title={t.chargement} />
+        {echec ? (
+          <View style={{ gap: nativeSpace[12] }}>
+            <Banner intent="error">{echec}</Banner>
+            <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
+              {t.maintReessayer}
+            </Button>
+          </View>
+        ) : (
+          <LoadingState variant="liste" rows={3} title={t.chargement} />
+        )}
       </View>
     );
   }
 
-  const { interets, cartes } = interetsEtNotes(notes);
+  const { interets, cartes } = interetsEtNotes(notes, categories);
   const vus = tousLesInterets ? interets : interets.slice(0, INTERETS_VISIBLES);
   const reste = interets.length - vus.length;
   const jours = proche.nextOccurrence?.daysUntil ?? null;
@@ -177,7 +206,8 @@ export default function Proche() {
           <SectionLabel>{t.ficheNotes}</SectionLabel>
           <View style={[styles.cartes]}>
             {cartes.map((n) => {
-              const eviter = natureDeLaNote(n) === "eviter";
+              const eviter = estUnGardeFou(n, categories);
+              const siennes = categoriesDeLaNote(n);
               return (
                 /* « À éviter » se dessine autrement — en pointillé, sans fond :
                    c'est un garde-fou, pas une suggestion. */
@@ -189,17 +219,27 @@ export default function Proche() {
                     backgroundColor: eviter ? "transparent" : couleurs.surfaceCard,
                   }]}
                 >
-                  <View style={[styles.nature]}>
-                    <Icon
-                      name={eviter ? "ban" : "lightbulb"}
-                      size={13}
-                      strokeWidth={2}
-                      color={eviter ? couleurs.textSecondary : couleurs.textAccent}
-                    />
-                    <Text style={[styles.natureTexte, {
-                      color: eviter ? couleurs.textSecondary : couleurs.textAccent,
-                    }]}>{eviter ? t.noteEviter : t.noteIdee}</Text>
-                  </View>
+                  {/* La note dit SES catégories, toutes. Elle en porte parfois
+                      deux — ce qu'un proche traverse relève des challenges et
+                      de ce qu'il a besoin d'entendre —, et n'en montrer qu'une
+                      choisirait à sa place. Aucune n'est aussi un état valide :
+                      une note que le système n'a pas su ranger reste telle
+                      quelle, sans repli sur une catégorie fourre-tout. */}
+                  {siennes.length ? (
+                    <View style={[styles.nature]}>
+                      <Icon
+                        name={eviter ? "ban" : "lightbulb"}
+                        size={13}
+                        strokeWidth={2}
+                        color={eviter ? couleurs.textSecondary : couleurs.textAccent}
+                      />
+                      <Text style={[styles.natureTexte, {
+                        color: eviter ? couleurs.textSecondary : couleurs.textAccent,
+                      }]}>
+                        {siennes.map((code) => t[CLES_DE_CATEGORIE[code]]).join(" · ")}
+                      </Text>
+                    </View>
+                  ) : null}
                   <Quote size={15}>{n.content}</Quote>
                   {/* La provenance ne s'invente pas : tant que le contrat ne
                       dit pas qui a écrit la note ni quand, on n'affiche que la

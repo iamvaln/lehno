@@ -8,10 +8,11 @@ import {
   nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
 import {
-  Avatar, Countdown, EmptyState, Icon, LoadingState, useCouleurs,
+  Avatar, Banner, Button, Countdown, EmptyState, Icon, LoadingState, useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../../../lib/langue.js";
-import { appel } from "../../../lib/api.js";
+import { appel, ErreurDApi } from "../../../lib/api.js";
+import { messageDErreur } from "../../../lib/session.js";
 import {
   PAGE, basculeDeTri, dateCourte, parametresDuCarnet, presseAssezPourSAfficher,
   resteACharger, type Tri,
@@ -43,13 +44,25 @@ export default function Proches() {
   const [proches, setProches] = useState<Person[] | null>(null);
   const [total, setTotal] = useState(0);
   const [encore, setEncore] = useState(false);
+  /* Un chargement qui échoue doit se DIRE. Sans cet état, l'écran gardait ses
+     squelettes indéfiniment : rien ne bougeait, rien n'expliquait, et il n'y
+     avait aucun geste à faire. Le handoff ne dessine que le nominal, le vide et
+     l'attente — mais un réseau qui tombe existe aussi. */
+  const [echec, setEchec] = useState<string | null>(null);
 
-  const charge = useCallback(async (t: Tri, offset: number) => {
-    const brut = await appel<unknown>(`/me/persons${parametresDuCarnet(t, offset)}`);
-    const page = personListSchema.parse(brut);
-    setTotal(page.total);
-    setProches((v) => (offset === 0 || v === null ? page.persons : [...v, ...page.persons]));
-  }, []);
+  const charge = useCallback(async (tri: Tri, offset: number) => {
+    try {
+      const brut = await appel<unknown>(`/me/persons${parametresDuCarnet(tri, offset)}`);
+      const page = personListSchema.parse(brut);
+      setTotal(page.total);
+      setProches((v) => (offset === 0 || v === null ? page.persons : [...v, ...page.persons]));
+      setEchec(null);
+    } catch (e) {
+      /* Le code, traduit — jamais le message du serveur, qui est écrit pour le
+         journal et dans une langue que nous ne choisissons pas. */
+      setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
+    }
+  }, [langue]);
 
   /* Changer de tri revient à la PREMIÈRE page : le serveur ne se souvient pas
      du décalage, et garder cinquante lignes ouvertes sur un ordre qu'on vient
@@ -105,7 +118,14 @@ export default function Proches() {
         <Text style={[styles.rechercheTexte, { color: couleurs.textMention }]}>{t.rechercher}</Text>
       </Pressable>
 
-      {proches === null ? (
+      {echec ? (
+        <View style={{ marginTop: nativeSpace[16], gap: nativeSpace[12] }}>
+          <Banner intent="error">{echec}</Banner>
+          <Button variant="outline" full icon="refresh-cw" onPress={() => void charge(tri, 0)}>
+            {t.maintReessayer}
+          </Button>
+        </View>
+      ) : proches === null ? (
         <View style={{ marginTop: nativeSpace[16] }}>
           <LoadingState variant="liste" rows={4} title={t.chargement} />
         </View>

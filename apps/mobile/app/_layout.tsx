@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider, useCouleurs } from "@lehno/ui-native";
 import { LangueProvider } from "../lib/langue.js";
 import { DrapeauxProvider } from "../lib/DrapeauxProvider.js";
+import { MetadonneesProvider } from "../lib/MetadonneesProvider.js";
 import { ArretProvider, useArret } from "../lib/ArretProvider.js";
 import Maintenance from "./maintenance.js";
 import { POLICES } from "../polices/index.js";
@@ -58,7 +59,11 @@ export default function Racine() {
               quelqu'un devant un formulaire qui échoue sans dire pourquoi. */}
           <ArretProvider>
             <DrapeauxProvider>
-              <SousArret />
+              {/* Les listes de valeurs et leur SENS : ce qu'aucune énumération
+                  ne porte. Elles se lisent une fois, après la connexion. */}
+              <MetadonneesProvider>
+                <SousArret />
+              </MetadonneesProvider>
             </DrapeauxProvider>
           </ArretProvider>
         </LangueProvider>

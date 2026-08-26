@@ -1,4 +1,6 @@
-import type { Note, PersonSort, SortDirection } from "@lehno/contracts";
+import type {
+  CategoryCode, Metadata, Note, PersonSort, SortDirection,
+} from "@lehno/contracts";
 
 /* Les décisions du carnet, séparées de son affichage.
  *
@@ -52,30 +54,64 @@ export function resteACharger(total: number, charges: number): number {
   return Math.max(0, total - charges);
 }
 
-export type NatureDeNote = "idee" | "eviter";
+/* Les catégories viennent du SERVEUR, avec leur sémantique.
+ *
+ * `/me/metadata` rend, pour chacune des sept : sa `kind` — ponctuelle ou
+ * durable — et son `isConstraint`. Aucune énumération ne porte ces deux
+ * choses ; les deviner ici reviendrait à réécrire chez nous une règle qui vit
+ * là-bas, et à la voir diverger au premier ajout.
+ *
+ * C'est ce qui manquait : la fiche rangeait tout en « idée » ou « à éviter »,
+ * et une note de « Faits marquants » s'annonçait comme une idée. */
+export type TableDesCategories = Metadata["categories"];
 
-/* Deux natures à l'écran pour sept catégories au contrat. « À éviter » se
-   distingue parce que la fiche la dessine autrement — en pointillé, sans fond :
-   c'est un garde-fou, pas une suggestion. Tout le reste est une matière à
-   utiliser, y compris une note que le système n'a pas su ranger. */
-export function natureDeLaNote(note: Note): NatureDeNote {
-  return note.categories.includes("dislikes_nogo") ? "eviter" : "idee";
+function categorie(table: TableDesCategories, code: CategoryCode) {
+  return table.find((c) => c.code === code);
+}
+
+/* Un garde-fou, au sens du serveur : `isConstraint`. La fiche le dessine
+   autrement — en pointillé, sans fond — parce qu'il écarte des idées au lieu
+   d'en proposer. Se tromper là-dessus fait proposer du vin à quelqu'un qui ne
+   boit pas ; se tromper ailleurs coûte un rangement approximatif. */
+export function estUnGardeFou(note: Note, table: TableDesCategories): boolean {
+  return note.categories.some((code) => categorie(table, code)?.isConstraint === true);
+}
+
+/* Ce qu'une note annonce : TOUTES ses catégories, pas la première.
+   Une note peut en porter deux quand elle sert deux usages — ce qu'un proche
+   traverse relève des challenges ET de ce qu'il a besoin d'entendre. N'en
+   montrer qu'une choisirait à sa place.
+
+   Vide est un état valide : une note que le système n'a pas su ranger reste
+   telle quelle, sans repli sur une catégorie fourre-tout. */
+export function categoriesDeLaNote(note: Note): readonly CategoryCode[] {
+  return note.categories;
 }
 
 /* Les « intérêts » n'ont pas de champ au contrat — ce sont des notes d'une
-   catégorie. La fiche les montre en étiquettes plutôt qu'en cartes : un mot
-   par carte gaspillerait l'écran, et le handoff les dessine en rangée.
+   catégorie. La fiche les montre en étiquettes plutôt qu'en cartes : un mot par
+   carte gaspillerait l'écran, et le handoff les dessine en rangée.
 
-   Une note rangée en intérêt ne reparaît pas plus bas, même si elle porte une
+   Ce qui va en étiquette se DÉDUIT de la table : une catégorie DURABLE qui
+   n'est pas une contrainte. Durable, parce qu'un goût vaut d'une année sur
+   l'autre là qu'un challenge d'il y a deux ans ne vaut plus. Pas une
+   contrainte, parce qu'un no-go est durable lui aussi, et le ranger parmi les
+   goûts le ferait lire comme une envie.
+
+   Une note rangée en étiquette ne reparaît pas plus bas, même si elle porte une
    seconde catégorie : elle serait lue deux fois. */
-export function interetsEtNotes(notes: readonly Note[]): {
+export function interetsEtNotes(notes: readonly Note[], table: TableDesCategories): {
   interets: Note[];
   cartes: Note[];
 } {
   const interets: Note[] = [];
   const cartes: Note[] = [];
+  const durableEtLibre = (code: CategoryCode): boolean => {
+    const c = categorie(table, code);
+    return c?.kind === "durable" && !c.isConstraint;
+  };
   for (const note of notes) {
-    (note.categories.includes("interests") ? interets : cartes).push(note);
+    (note.categories.some(durableEtLibre) ? interets : cartes).push(note);
   }
   return { interets, cartes };
 }
