@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { nativeFont, nativeLetterSpacing, nativeRadius, nativeSpace, nativeTracking } from "@lehno/tokens";
 import { Button, Illustration, useTheme } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
@@ -14,10 +14,12 @@ export default function Bienvenue() {
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
 
-  // Le prénom et les crédits viendront du profil ; en attendant, l'écran ne
-  // ment pas : il affiche ce que le serveur a réellement octroyé.
+  /* Les crédits viennent de la réponse d'inscription, pas d'une constante :
+     le montant se règle en administration, et l'écrire en dur le ferait mentir
+     au premier changement. Le prénom viendra du profil, qui n'est pas encore lu. */
+  const { credits } = useLocalSearchParams<{ credits: string }>();
   const prenom = "";
-  const credits = 3;
+  const offerts = Number(credits ?? 0);
 
   return (
     <View style={[styles.contenu, { paddingTop: insets.top + nativeSpace[32], paddingBottom: insets.bottom + nativeSpace[20] }]}>
@@ -27,7 +29,7 @@ export default function Bienvenue() {
       <Text style={[styles.texte, { color: couleurs.textSecondary }]}>{t.bienvenueTexte}</Text>
 
       <View style={[styles.cadeau, { backgroundColor: couleurs.surfacePanel }]}>
-        <Text style={[styles.credits, { color: couleurs.textAccent }]}>{t.bienvenueCredits(credits)}</Text>
+        <Text style={[styles.credits, { color: couleurs.textAccent }]}>{t.bienvenueCredits(offerts)}</Text>
         <Text style={[styles.cadeauTexte, { color: couleurs.textSecondary }]}>{t.bienvenueCadeau}</Text>
       </View>
 

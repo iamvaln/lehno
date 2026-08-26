@@ -27,17 +27,32 @@ describe("le nettoyage à la saisie", () => {
   /* Ce que le clavier peut encore laisser passer malgré les réglages : un
      collage, une dictée, un clavier tiers. La nature du champ le rattrape à la
      frappe plutôt qu'à l'envoi. */
-  it("abaisse la casse d'une adresse et d'un pseudo", () => {
+  it("abaisse la casse d'une adresse", () => {
     expect(nettoiePourLaNature("email", "Awa@Exemple.FR")).toBe("awa@exemple.fr");
-    expect(nettoiePourLaNature("pseudo", "Valentine")).toBe("valentine");
   });
 
-  // Le contrat du pseudo est net : minuscules, chiffres et tirets bas. Il forme
-  // l'adresse du Mur — ce qui n'entre pas dans une URL n'a pas sa place.
-  it("écarte du pseudo ce que le contrat refuse", () => {
+  /* Le pseudo garde sa casse : le serveur accepte les majuscules, et l'abaisser
+     changerait ce que la personne a choisi de montrer. C'est son nom sur le
+     Mur, pas une clé de recherche. */
+  it("garde la casse du pseudo", () => {
+    expect(nettoiePourLaNature("pseudo", "Awa.Diop")).toBe("Awa.Diop");
+  });
+
+  /* Le motif du serveur : lettres, chiffres, point, tiret, tiret bas. Il forme
+     l'adresse du Mur — ce qui n'entre pas dans une URL n'a pas sa place. */
+  it("écarte du pseudo ce que le serveur refuse", () => {
     expect(nettoiePourLaNature("pseudo", "awa diop")).toBe("awadiop");
-    expect(nettoiePourLaNature("pseudo", "awa-diop!")).toBe("awadiop");
-    expect(nettoiePourLaNature("pseudo", "awa_diop2")).toBe("awa_diop2");
+    expect(nettoiePourLaNature("pseudo", "awa@diop!")).toBe("awadiop");
+    expect(nettoiePourLaNature("pseudo", "Awa-Diop_2.0")).toBe("Awa-Diop_2.0");
+  });
+
+  /* Un pseudo commence par une lettre ou un chiffre. Retirer les signes de tête
+     à la frappe évite un refus que rien n'expliquerait — on tape « .awa », le
+     point ne s'affiche pas, et la règle se comprend d'elle-même. */
+  it("refuse un signe en tête de pseudo", () => {
+    expect(nettoiePourLaNature("pseudo", ".awa")).toBe("awa");
+    expect(nettoiePourLaNature("pseudo", "--awa")).toBe("awa");
+    expect(nettoiePourLaNature("pseudo", "_")).toBe("");
   });
 
   it("ne garde que des chiffres dans un code", () => {

@@ -72,10 +72,16 @@ export function nettoiePourLaNature(nature: NatureDeChamp, saisie: string): stri
   switch (nature) {
     case "email":
       return saisie.trim().toLowerCase();
-    case "pseudo":
-      // Le pseudo forme l'adresse du Mur : ce qui n'entre pas dans une URL n'a
-      // pas sa place. Retirer vaut mieux que refuser — on voit ce qu'on tape.
-      return saisie.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    case "pseudo": {
+      /* Le motif du serveur : lettres, chiffres, point, tiret, tiret bas, et
+         une lettre ou un chiffre en tête. La casse se garde — c'est le nom que
+         la personne montre sur son Mur, pas une clé de recherche.
+
+         Retirer vaut mieux que refuser : on tape « .awa », le point ne
+         s'affiche pas, et la règle se comprend sans qu'on l'explique. */
+      const garde = saisie.replace(/[^a-zA-Z0-9._-]/g, "");
+      return garde.replace(/^[^a-zA-Z0-9]+/, "");
+    }
     case "code":
       return saisie.replace(/\D/g, "");
     default:

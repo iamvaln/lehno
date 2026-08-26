@@ -32,6 +32,12 @@ export const fr = {
   codeExpire: "Ce code a expiré.",
   renvoyerCode: "Renvoyer un code",
   codeRenvoiAttente: (s: number) => "Nouveau code possible dans " + s + " s",
+  /* Le plafond de comptes sur cet appareil. Le ton reste factuel : ce n'est pas
+     une faute de la personne, et « refusé » sonnerait comme une sanction. La
+     spec veut qu'on donne le moyen de joindre l'assistance — il manque encore
+     un écran d'aide où renvoyer. */
+  plafondAppareil: "Cet appareil a déjà servi à ouvrir le nombre de comptes permis. Écrivez-nous et nous verrons ensemble.",
+  parrainFacultatif: "Si vous arrivez par une invitation, le code va ici.",
   pseudoTitre: "Choisissez votre pseudo",
   champPseudo: "Pseudo",
   pseudoAdresse: "lehno.app/valentine",

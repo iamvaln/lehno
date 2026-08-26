@@ -13,3 +13,4 @@ export * from "./me-generation.js";
 export * from "./me-home.js";
 export * from "./me-studio.js";
 export * from "./me-wishes.js";
+export * from "./me-features.js";

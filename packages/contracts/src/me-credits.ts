@@ -105,12 +105,22 @@ export type Payment = z.infer<typeof paymentSchema>;
 
 export const CREDIT_TRANSACTION_TYPES = ["grant", "purchase", "consumption", "adjustment"] as const;
 
+/* D'où vient le mouvement. Le type dit s'il ajoute ou retire ; la source dit
+   pourquoi, et c'est elle que l'écran des crédits affiche — « offert à
+   l'inscription » ne se lit pas comme « acheté ». */
+export const CREDIT_SOURCES = [
+  "signup_grant", "referral_bonus", "purchase", "manual_topup",
+  "promo_code", "consumption", "admin_adjustment",
+] as const;
+export type CreditSource = (typeof CREDIT_SOURCES)[number];
+
 export const creditTransactionSchema = z.object({
   id: z.string().uuid(),
   type: z.enum(CREDIT_TRANSACTION_TYPES),
   // Signé : + au crédit, − au débit. Un débit noté positif gonflerait le solde
   // au lieu de le réduire.
   amount: z.number().int(),
+  source: z.enum(CREDIT_SOURCES),
   reason: z.string().nullable(),
   createdAt: z.string(),
 }).strict();

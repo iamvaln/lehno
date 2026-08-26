@@ -16,11 +16,21 @@ describe("l'adresse du serveur", () => {
      l'appel part et ne trouve rien, l'écran dit « la connexion n'a pas abouti »,
      et on cherche du côté du serveur alors qu'il écoute très bien. */
   it("déduit l'hôte de celui qui sert le bundle", () => {
-    expect(adresseDeLApi(undefined, "192.168.1.103:8081")).toBe("http://192.168.1.103:3000");
+    expect(adresseDeLApi(undefined, "192.168.1.103:8081")).toBe("http://192.168.1.103:3001");
   });
 
   it("ne garde que l'hôte, pas le port du serveur de développement", () => {
-    expect(adresseDeLApi(undefined, "10.0.2.2:19000")).toBe("http://10.0.2.2:3000");
+    expect(adresseDeLApi(undefined, "10.0.2.2:19000")).toBe("http://10.0.2.2:3001");
+  });
+
+  /* Dans une application native, `hostUri` n'existe pas — c'est une notion
+     d'Expo Go. Ce qui vaut dans les deux cas est l'adresse d'où le bundle a été
+     chargé, que React Native expose telle quelle. */
+  it("accepte l'adresse complète du bundle", () => {
+    expect(adresseDeLApi(undefined, "http://10.0.2.2:8081/index.bundle?platform=android"))
+      .toBe("http://10.0.2.2:3001");
+    expect(adresseDeLApi(undefined, "http://192.168.1.103:8081/node_modules/expo-router/entry.bundle"))
+      .toBe("http://192.168.1.103:3001");
   });
 
   /* Dans une application empaquetée il n'y a pas de serveur de développement,
@@ -32,6 +42,6 @@ describe("l'adresse du serveur", () => {
   });
 
   it("ignore une valeur explicite vide", () => {
-    expect(adresseDeLApi("", "192.168.1.103:8081")).toBe("http://192.168.1.103:3000");
+    expect(adresseDeLApi("", "192.168.1.103:8081")).toBe("http://192.168.1.103:3001");
   });
 });

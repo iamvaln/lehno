@@ -10,7 +10,16 @@
  * un simulateur et un vrai téléphone du même réseau, sans rien régler.
  */
 
-export const PORT_DE_L_API = 3000;
+// Le port du serveur de développement. Il n'a rien d'universel : en recette
+// comme en production, EXPO_PUBLIC_API_URL porte l'adresse entière.
+export const PORT_DE_L_API = 3001;
+
+function extraitLHote(source: string | undefined): string | null {
+  if (!source) return null;
+  const sansSchema = source.replace(/^[a-z]+:\/\//i, "");
+  const hote = sansSchema.split("/")[0]?.split(":")[0];
+  return hote || null;
+}
 
 export function adresseDeLApi(
   explicite: string | undefined,
@@ -20,9 +29,10 @@ export function adresseDeLApi(
   // ou un serveur distant depuis un poste de développement.
   if (explicite) return explicite;
 
-  // `hostUri` porte l'hôte ET le port du serveur de développement — 8081 ou
-  // 19000 selon les versions. Seul l'hôte nous intéresse.
-  const hote = hoteDuBundle?.split(":")[0];
+  /* Deux formes possibles selon d'où vient l'information : « hôte:port », que
+     donne Expo Go, ou l'adresse complète du bundle, que React Native expose et
+     qui vaut aussi dans une application native. Seul l'hôte nous intéresse. */
+  const hote = extraitLHote(hoteDuBundle);
   if (hote) return `http://${hote}:${PORT_DE_L_API}`;
 
   /* Application empaquetée : pas de serveur de développement, donc rien à

@@ -15,11 +15,17 @@ import { useCompact } from "../../lib/compact.js";
 import { appelPublic, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { poseLesJetons } from "../../lib/jetons.js";
-import type { Session } from "@lehno/contracts";
+import { requestOtpResultSchema, verifyOtpResultSchema } from "@lehno/contracts";
+import { identifiantDeLAppareil } from "../../lib/appareil.js";
 
 const LONGUEUR = 6;
 const VALIDITE = 10 * 60;
-const RENVOI = 45;
+
+/* Le délai avant de redemander un code vient du serveur — c'est son limiteur
+   qui le fixe. Cette valeur ne sert qu'au premier affichage, avant que la
+   réponse soit lue : l'écrire plus haut que le vrai délai promettrait un renvoi
+   que le serveur refuserait. */
+const RENVOI_PROVISOIRE = 60;
 
 function horloge(secondes: number): string {
   const m = Math.floor(secondes / 60);
@@ -43,12 +49,12 @@ export default function Code() {
   const insets = useSafeAreaInsets();
   const compact = useCompact();
   const routeur = useRouter();
-  const { email } = useLocalSearchParams<{ email: string }>();
+  const { email, renvoi } = useLocalSearchParams<{ email: string; renvoi: string }>();
 
   const champ = useRef<TextInput>(null);
   const [saisi, setSaisi] = useState("");
   const [reste, setReste] = useState(VALIDITE);
-  const [avantRenvoi, setAvantRenvoi] = useState(RENVOI);
+  const [avantRenvoi, setAvantRenvoi] = useState(Number(renvoi) || RENVOI_PROVISOIRE);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
@@ -66,14 +72,33 @@ export default function Code() {
     setErreur(null);
     setEnvoi(true);
     try {
-      const session = await appelPublic<Session>("/auth/otp/verify", {
+      const appareil = await identifiantDeLAppareil();
+      const brut = await appelPublic<unknown>("/auth/otp/verify", {
         method: "POST",
-        body: JSON.stringify({ email, code: saisi }),
+        body: JSON.stringify({ email, code: saisi, deviceId: appareil }),
       });
-      await poseLesJetons(session);
-      // `isNewAccount` décide de la suite : un compte qui vient de naître passe
-      // par le pseudo, un compte connu retrouve directement son espace.
-      routeur.replace(session.isNewAccount ? "/(connexion)/pseudo" : "/");
+      const issue = verifyOtpResultSchema.parse(brut);
+
+      /* Deux issues, et c'est ici que le parcours se sépare. Une adresse connue
+         ouvre une session : on range les jetons et on entre. Une adresse
+         nouvelle rend un JETON D'INSCRIPTION, qui n'ouvre rien — le ranger
+         comme un jeton de session donnerait une application qui se croit
+         connectée. Il voyage donc jusqu'à l'écran du pseudo, et meurt là. */
+      if (issue.outcome === "session") {
+        await poseLesJetons(issue);
+        routeur.replace("/");
+        return;
+      }
+
+      routeur.replace({
+        pathname: "/(connexion)/pseudo",
+        params: {
+          registrationToken: issue.registrationToken,
+          // Le plafond arrive AVEC le jeton, pas à sa place : l'écran suivant
+          // peut le dire avant qu'on choisisse un pseudo pour rien.
+          plafondAtteint: issue.deviceLimitReached ? "1" : "",
+        },
+      });
     } catch (e) {
       setErreur(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
       setSaisi("");
@@ -85,9 +110,14 @@ export default function Code() {
   const renvoie = async () => {
     setErreur(null);
     try {
-      await appelPublic("/auth/otp", { method: "POST", body: JSON.stringify({ email }) });
+      const brut = await appelPublic<unknown>("/auth/otp", {
+        method: "POST", body: JSON.stringify({ email }),
+      });
+      const { retryAfterSeconds } = requestOtpResultSchema.parse(brut);
       setReste(VALIDITE);
-      setAvantRenvoi(RENVOI);
+      // Le délai du serveur, pas le nôtre : lui seul sait ce que son limiteur
+      // accepte, et le contredire ferait promettre un renvoi qu'il refuserait.
+      setAvantRenvoi(retryAfterSeconds);
     } catch (e) {
       setErreur(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
     }

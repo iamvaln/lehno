@@ -917,6 +917,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "outcome": {
+                      "type": "string",
+                      "enum": [
+                        "session"
+                      ]
+                    },
                     "accessToken": {
                       "type": "string"
                     },
@@ -930,9 +936,18 @@
                     },
                     "isNewAccount": {
                       "type": "boolean"
+                    },
+                    "signupCredits": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "referral": {
+                      "type": "object",
+                      "additionalProperties": {}
                     }
                   },
                   "required": [
+                    "outcome",
                     "accessToken",
                     "refreshToken",
                     "expiresIn",
@@ -1100,6 +1115,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "outcome": {
+                      "type": "string",
+                      "enum": [
+                        "session"
+                      ]
+                    },
                     "accessToken": {
                       "type": "string"
                     },
@@ -1113,9 +1134,18 @@
                     },
                     "isNewAccount": {
                       "type": "boolean"
+                    },
+                    "signupCredits": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "referral": {
+                      "type": "object",
+                      "additionalProperties": {}
                     }
                   },
                   "required": [
+                    "outcome",
                     "accessToken",
                     "refreshToken",
                     "expiresIn",
@@ -1270,6 +1300,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "outcome": {
+                      "type": "string",
+                      "enum": [
+                        "session"
+                      ]
+                    },
                     "accessToken": {
                       "type": "string"
                     },
@@ -1283,9 +1319,18 @@
                     },
                     "isNewAccount": {
                       "type": "boolean"
+                    },
+                    "signupCredits": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "referral": {
+                      "type": "object",
+                      "additionalProperties": {}
                     }
                   },
                   "required": [
+                    "outcome",
                     "accessToken",
                     "refreshToken",
                     "expiresIn",

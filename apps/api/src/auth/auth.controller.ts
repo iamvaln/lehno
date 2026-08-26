@@ -4,7 +4,8 @@ import {
   refreshSchema,
   requestOtpSchema,
   verifyOtpSchema,
-  type Session,
+  type RefreshedSession,
+  type SessionHeritee,
 } from "@lehno/contracts";
 import type { IdentityProvider } from "@prisma/client";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -59,7 +60,10 @@ export class AuthController {
     @Body(new ZodValidationPipe(verifyOtpSchema)) body: VerifyOtpBody,
     @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
-  ): Promise<Session> {
+    /* Le serveur déployé rend ici une union discriminée — session ou
+       inscription — et expose /auth/register. Ce code est en retard sur lui, et
+       le type le dit plutôt que de le taire. */
+  ): Promise<SessionHeritee> {
     // referralCode : accepté par le contrat, câblé au crédit d'invitation dans une tâche à venir.
     return this.auth.verifyOtp({
       email: body.email,
@@ -75,7 +79,8 @@ export class AuthController {
   federated(
     @Body(new ZodValidationPipe(federatedSchema)) body: FederatedBody,
     @Headers("user-agent") userAgent?: string,
-  ): Promise<Session> {
+    // Même retard qu'à la vérification du code : voir SessionHeritee.
+  ): Promise<SessionHeritee> {
     return this.federatedAuth.signIn({
       ...body,
       ...(userAgent !== undefined ? { userAgent } : {}),
@@ -87,9 +92,13 @@ export class AuthController {
   async refresh(
     @Body(new ZodValidationPipe(refreshSchema)) body: RefreshBody,
     @Headers("user-agent") userAgent?: string,
-  ): Promise<Session> {
+  ): Promise<RefreshedSession> {
     const pair = await this.tokens.rotate(body.refreshToken, userAgent);
-    // Un renouvellement ne crée jamais de compte : la forme reste celle d'une session.
+    /* Un renouvellement ne crée jamais de compte, et n'a qu'une issue : il ne
+       porte donc pas d'`outcome`, contrairement à ce que rendent la
+       vérification du code et la connexion externe. Deux formes de session,
+       c'est une de trop — mais c'est ce que le serveur sert aujourd'hui, et le
+       type dit laquelle plutôt que de les confondre. */
     return { ...pair, isNewAccount: false };
   }
 

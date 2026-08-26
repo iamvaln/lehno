@@ -1,4 +1,5 @@
 import Constants from "expo-constants";
+import { NativeModules } from "react-native";
 import { errorEnvelopeSchema, type ErrorCode, type ErrorEnvelope, type Session } from "@lehno/contracts";
 import { adresseDeLApi } from "./adresse-api.js";
 import { doitRenouveler, sortDeLaSession } from "./session.js";
@@ -15,15 +16,26 @@ import { effaceLesJetons, litLesJetons, poseLesJetons } from "./jetons.js";
    donne l'adresse, et c'est le seul moyen qui vaille pour un émulateur, un
    simulateur et un téléphone du même réseau. En production, EXPO_PUBLIC_API_URL
    est obligatoire — sans elle, mieux vaut échouer que s'appeler soi-même. */
-const BASE = adresseDeLApi(
-  process.env["EXPO_PUBLIC_API_URL"],
-  Constants.expoConfig?.hostUri,
-);
+/* D'où vient l'hôte, par ordre de fiabilité. `scriptURL` est l'adresse d'où le
+   bundle a été chargé : elle existe dans une application native comme sous Expo
+   Go. `hostUri` ne vaut que sous Expo Go — le garder en second couvre les cas
+   où le premier manquerait.
 
-if (!BASE) {
-  throw new Error(
-    "Aucune adresse d'API : posez EXPO_PUBLIC_API_URL, ou lancez depuis le serveur de développement.",
-  );
+   La résolution est PARESSEUSE, et c'est délibéré : lever à l'import tuait
+   l'application avant qu'un seul écran s'affiche, et l'erreur ne se voyait que
+   dans un journal. Un défaut de réglage doit se lire à l'écran, comme les
+   autres — le bandeau d'erreur est déjà là pour ça. */
+function adresseCourante(): string | null {
+  const source = (NativeModules["SourceCode"] as { scriptURL?: string } | undefined)?.scriptURL
+    ?? Constants.expoConfig?.hostUri;
+  return adresseDeLApi(process.env["EXPO_PUBLIC_API_URL"], source);
+}
+
+export class SansAdresseDApi extends Error {
+  constructor() {
+    super("Aucune adresse d'API : posez EXPO_PUBLIC_API_URL, ou lancez depuis le serveur de développement.");
+    this.name = "SansAdresseDApi";
+  }
 }
 
 export class ErreurDApi extends Error {
@@ -51,7 +63,9 @@ async function litLEnveloppe(reponse: Response): Promise<ErrorEnvelope | null> {
 }
 
 async function envoie(chemin: string, options: RequestInit, jeton?: string): Promise<Response> {
-  return fetch(`${BASE!}/v1${chemin}`, {
+  const base = adresseCourante();
+  if (!base) throw new SansAdresseDApi();
+  return fetch(`${base}/v1${chemin}`, {
     ...options,
     headers: {
       "content-type": "application/json",

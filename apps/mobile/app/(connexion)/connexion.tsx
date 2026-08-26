@@ -6,6 +6,7 @@ import {
   nativeFont, nativeLetterSpacing, nativeSpace, nativeTracking,
 } from "@lehno/tokens";
 import { Banner, Button, TextField, Wordmark, ressembleAUneAdresse, useTheme } from "@lehno/ui-native";
+import { requestOtpResultSchema } from "@lehno/contracts";
 import { useLangue } from "../../lib/langue.js";
 import { appelPublic, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
@@ -26,8 +27,16 @@ export default function Connexion() {
     setErreur(null);
     setEnvoi(true);
     try {
-      await appelPublic("/auth/otp", { method: "POST", body: JSON.stringify({ email: email.trim() }) });
-      routeur.push({ pathname: "/(connexion)/code", params: { email: email.trim() } });
+      const brut = await appelPublic<unknown>("/auth/otp", {
+        method: "POST", body: JSON.stringify({ email: email.trim() }),
+      });
+      const { retryAfterSeconds } = requestOtpResultSchema.parse(brut);
+      // Le délai voyage avec l'adresse : l'écran du code l'affiche sans avoir à
+      // le redemander, et sans en inventer un.
+      routeur.push({
+        pathname: "/(connexion)/code",
+        params: { email: email.trim(), renvoi: String(retryAfterSeconds) },
+      });
     } catch (e) {
       setErreur(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
     } finally {

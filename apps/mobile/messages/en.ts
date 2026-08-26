@@ -32,6 +32,8 @@ export const en = {
   codeExpire: "This code has expired.",
   renvoyerCode: "Send another code",
   codeRenvoiAttente: (s: number) => "New code in " + s + "s",
+  plafondAppareil: "This device has already opened the number of accounts allowed. Write to us and we will sort it out.",
+  parrainFacultatif: "If you came from an invitation, the code goes here.",
   pseudoTitre: "Pick your handle",
   champPseudo: "Handle",
   pseudoAdresse: "lehno.app/valentine",
