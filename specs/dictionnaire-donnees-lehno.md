@@ -343,6 +343,8 @@ Fiche d'un proche, ou fiche de l'utilisateur lui-même (self-Person).
 | gender | person_gender (enum) | oui | — | 'unspecified' | Facultatif ; sert **uniquement** à orienter des idées de cadeaux faute d'autre matière |
 | city | text | oui | — | — | Ville, pour suggérer des adresses et des sorties |
 | country | varchar(2) | oui | — | — | Code ISO 3166-1 alpha-2 |
+| birth_date | date | oui | — | — | **Sa date de naissance.** Elle appartient au PROCHE, pas à un événement : c'est un fait de son identité, et l'anniversaire n'en est qu'une conséquence |
+| birth_year_known | boolean | non | — | true | false quand on connaît le jour et le mois sans l'année — on suit alors l'anniversaire sans pouvoir dire l'âge |
 | register | person_register (enum) | oui | — | — | Registre de communication |
 | language | varchar(10) | oui | — | — | Langue préférée (code BCP 47, ex. `fr`, `en`) |
 | preferred_channel | contact_channel (enum) | oui | — | — | Par où on lui écrit d'ordinaire ; oriente la longueur du message produit |
@@ -353,6 +355,8 @@ Fiche d'un proche, ou fiche de l'utilisateur lui-même (self-Person).
 - Enum `person_relation` : `famille_proche`, `famille_etendue`, `ami`, `partenaire`, `collegue`, `relation_pro`, `connaissance`.
 - Enum `person_gender` : `female`, `male`, `other`, `unspecified`.
 - Enum `contact_channel` : `whatsapp`, `sms`, `email`, `autre`.
+- **La date de naissance vit ICI, et l'anniversaire s'en déduit.** Un anniversaire n'est pas une donnée de plus : c'est le prochain jour de l'année qui porte le même jour et le même mois que la naissance — celui de cette année s'il est devant nous, celui de l'année prochaine sinon. La porter sur un `Event` reviendrait à ranger un fait d'identité parmi les rendez-vous, et à devoir la corriger à deux endroits le jour où elle se révèle fausse.
+- **`birth_year_known` accompagne la date, pas l'événement.** C'est la naissance dont l'année est inconnue, pas l'anniversaire — celui-ci a toujours une année, celle qui vient. Le champ décide si une fiche peut annoncer un âge.
 - **`relation` et `relation_hint` coexistent** : l'enum sert la génération, le texte libre garde la nuance que l'enum écrase (« on a fait la fac ensemble »). Une réponse de collecte publique peut proposer une `relation`, que le propriétaire confirme.
 - **Le genre est un signal de dernier recours.** Il oriente des idées de cadeaux lorsque rien d'autre n'est disponible ; une seule note bien prise vaut mieux que lui. Il reste facultatif, et `unspecified` est une valeur légitime, jamais un champ à remplir.
 - Contrainte : au plus une `person` avec `is_self = true` par `user_id` (index unique partiel).
@@ -369,8 +373,7 @@ Occasion datée rattachée à une `Person`.
 | label | text | oui | — | — | Libellé libre (ex. « Rencontre », « Mariage ») |
 | kind | event_kind (enum) | non | — | 'other' | Routage UX : `birthday` \| `other` |
 | event_nature | event_nature (enum) | non | — | 'happy' | Tonalité : `happy` \| `sensitive` |
-| reference_date | date | non | — | — | Date d'ancrage |
-| year_known | boolean | non | — | true | false si l'année n'est pas connue (anniversaire sans année) |
+| reference_date | date | non | — | — | Date d'ancrage, **toujours à venir**. Un événement dit quand la chose SERA — un mariage, une soutenance. Pour un anniversaire, elle vaut la prochaine échéance, calculée depuis `person.birth_date` |
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 

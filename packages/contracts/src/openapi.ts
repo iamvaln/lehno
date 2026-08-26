@@ -26,8 +26,13 @@ import {
   personSchema, createPersonSchema, updatePersonSchema,
   noteSchema, createNoteSchema, createNotesSchema,
 } from "./me.js";
+import {
+  eventSchema, createEventSchema, updateEventSchema,
+  occurrenceSchema, listOccurrencesQuerySchema,
+} from "./me-events.js";
 import { featuresResponseSchema } from "./flags.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
+import { metadataSchema } from "./me-app.js";
 
 // Le contrat se CALCULE depuis les schémas Zod, il ne se recopie pas. Une
 // seconde déclaration des mêmes formes — en DTO décoré, par exemple — dériverait
@@ -416,6 +421,152 @@ const CHEMINS: Chemin[] = [
     // 204 comme /auth/session : la suppression ne rend rien à décrire.
     sansContenu: true,
     statut: 204,
+  },
+  // ——— me/events (apps/api/src/me) ————————————————————————————————
+  {
+    chemin: "/me/events",
+    methode: "get",
+    resume: "Lister ses événements",
+    authentifie: true,
+    reponse: z.array(eventSchema),
+  },
+  {
+    chemin: "/me/events",
+    methode: "post",
+    resume: "Créer un événement (anniversaire ou événement libre)",
+    authentifie: true,
+    note: [
+      "Un anniversaire NE PORTE PAS `referenceDate` : elle se calcule depuis",
+      "`person.birthDate`, la prochaine échéance à venir — jamais la naissance",
+      "elle-même. La fournir tout de même reste accepté, mais reste soumise à",
+      "la même contrainte qu'un événement libre : une date à venir.",
+      "",
+      "Un proche sans date de naissance ne peut pas recevoir d'anniversaire :",
+      "`validation_failed` (422).",
+      "",
+      "Un proche n'a qu'un seul anniversaire : en créer un second rend",
+      "`conflict` (409), la règle du formulaire (§3.6) tenue au serveur.",
+      "",
+      "`schedules` compose les rappels de l'événement — une ou plusieurs",
+      "règles, récurrentes ou décalées, jamais les deux à la fois sur une même",
+      "règle. Facultatif : un anniversaire reçoit sa règle annuelle sans qu'on",
+      "la demande.",
+    ].join("\n"),
+    corps: createEventSchema,
+    reponse: eventSchema,
+    statut: 201,
+  },
+  {
+    chemin: "/me/events/{id}",
+    methode: "get",
+    resume: "Lire un événement",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    reponse: eventSchema,
+  },
+  {
+    chemin: "/me/events/{id}",
+    methode: "patch",
+    resume: "Corriger un événement",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: updateEventSchema,
+    reponse: eventSchema,
+  },
+  {
+    chemin: "/me/events/{id}",
+    methode: "delete",
+    resume: "Supprimer un événement (emporte ses échéances)",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    sansContenu: true,
+    statut: 204,
+  },
+  // ——— me/occurrences (apps/api/src/me) ——————————————————————————————
+  {
+    // Le MÊME appel sert l'accueil (trois échéances) et l'écran Dates (un
+    // mois) : c'est la fenêtre et le plafond qui varient, pas le chemin
+    // (spécification §5.2).
+    chemin: "/me/occurrences",
+    methode: "get",
+    resume: "Lister ses échéances, dans une fenêtre de dates et un plafond",
+    authentifie: true,
+    note: [
+      "`from` vaut aujourd'hui par défaut, `limit` vaut 50 à défaut d'une",
+      "valeur explicite : l'accueil en demande trois, l'écran Dates un mois.",
+      "",
+      "`status` est DÉRIVÉ à la lecture, jamais lu tel quel dans la base :",
+      "`upcoming` avant la fenêtre de vœux, `collecting` dedans, `closed`",
+      "après. La fenêtre vaut [date − wish_window_lead_days, date +",
+      "wish_window_trail_days], réglable en administration.",
+      "",
+      "`daysUntil` est SIGNÉ — négatif pour une échéance passée.",
+      "",
+      "`age` se calcule depuis la naissance du proche, jamais depuis la date",
+      "de l'échéance. Nul quand l'année de naissance n'est pas connue.",
+      "",
+      "Chaque échéance porte `personDisplayName` : le nom du proche voyage",
+      "avec elle, sans quoi chaque carte d'une liste demanderait sa fiche.",
+    ].join("\n"),
+    parametres: [
+      { nom: "from", dans: "query", schema: listOccurrencesQuerySchema.shape.from, requis: false },
+      { nom: "to", dans: "query", schema: listOccurrencesQuerySchema.shape.to, requis: false },
+      { nom: "limit", dans: "query", schema: listOccurrencesQuerySchema.shape.limit, requis: false },
+    ],
+    reponse: z.array(occurrenceSchema),
+  },
+  {
+    chemin: "/me/occurrences/{id}",
+    methode: "get",
+    resume: "Lire le détail d'une échéance",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    reponse: occurrenceSchema,
+  },
+  {
+    // Chemin distinct de /me/persons/{id}/notes : celles-ci sont DE
+    // CIRCONSTANCE, propres à cette occasion — une idée de cadeau pour ce
+    // mariage, une tenue à prévoir — jamais rendues par le chemin des
+    // durables (voir la note de `noteSchema.eventOccurrenceId`).
+    chemin: "/me/occurrences/{id}/notes",
+    methode: "get",
+    resume: "Lister les notes de circonstance d'une occasion, de la plus récente à la plus ancienne",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    reponse: z.array(noteSchema),
+  },
+  {
+    chemin: "/me/occurrences/{id}/notes",
+    methode: "post",
+    resume: "Écrire une note de circonstance sur une occasion",
+    authentifie: true,
+    note: [
+      "`personId` se déduit de l'occasion — une occurrence appartient à un",
+      "événement, qui appartient à un proche — le client n'a pas à le fournir.",
+    ].join("\n"),
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: createNoteSchema,
+    reponse: noteSchema,
+    // Une ressource neuve, dont le client apprend l'identifiant.
+    statut: 201,
+  },
+  // ——— me/metadata (apps/api/src/me) ——————————————————————————————
+  {
+    chemin: "/me/metadata",
+    methode: "get",
+    resume: "Lire les valeurs dont les écrans composent leurs listes",
+    note: [
+      "Aucun libellé : ils vivent dans les ressources de traduction de",
+      "l'application, indexés par `code`.",
+      "",
+      "`categories` est la seule valeur lue EN BASE — sa `kind` et son",
+      "`isConstraint` ne se déduisent d'aucune énumération. `dislikes_nogo`",
+      "porte `isConstraint: true` : cela change ce que le produit PROPOSE, pas",
+      "seulement ce qu'il affiche. Le reste est figé, servi avec elle pour",
+      "que le client n'aille pas chercher la même chose à deux endroits.",
+    ].join("\n"),
+    authentifie: true,
+    reponse: metadataSchema,
   },
 ];
 

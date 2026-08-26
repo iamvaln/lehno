@@ -1,108 +1,146 @@
 import { describe, expect, it } from "vitest";
-import {
-  createEventSchema, eventSchema, occurrenceSchema, scheduleSchema,
-} from "./me-events.js";
+import { createEventSchema, AGE_MAXIMAL_ANNEES } from "./me-events.js";
+import { createPersonSchema } from "./me.js";
 
-const ANNIVERSAIRE = {
-  id: "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
-  personId: "3f2504e0-4f89-11d3-9a0c-0305e82c3302",
-  label: null,
-  kind: "birthday" as const,
-  nature: "happy" as const,
-  referenceDate: "1990-08-24",
-  yearKnown: true,
-};
+const PROCHE = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
+const jour = new Date().toISOString().slice(0, 10);
+const decalerAnnees = (n: number): string => `${Number(jour.slice(0, 4)) + n}${jour.slice(4)}`;
+const decalerJours = (n: number): string =>
+  new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
-describe("les événements", () => {
-  it("un anniversaire n'a pas besoin de libellé — il vient des traductions", () => {
-    expect(eventSchema.parse(ANNIVERSAIRE).label).toBeNull();
+// Les bornes de la naissance se vérifient sur le PROCHE : elles dépendent de
+// deux champs, et un contrôle sur la seule date ne verrait pas le second.
+const naissance = (date: string, anneeConnue = true): boolean =>
+  createPersonSchema.safeParse({
+    displayName: "Valery", birthDate: date, birthYearKnown: anneeConnue,
+  }).success;
+
+/* Deux dates, deux règles opposées, et c'est le fond du modèle.
+ *
+ * La NAISSANCE appartient au proche : elle est nécessairement passée, et
+ * bornée à cent ans. L'ÉVÉNEMENT dit quand la chose sera : il est
+ * nécessairement à venir. Un anniversaire n'échappe pas à la règle — sa date
+ * d'ancrage est la PROCHAINE échéance, pas la naissance.
+ *
+ * Confondre les deux était l'ancien modèle : la naissance vivait sur
+ * l'événement, et « date de référence » signifiait tantôt le passé, tantôt le
+ * futur, selon le type. */
+describe("la naissance appartient au proche", () => {
+  it("accepte une naissance passée", () => {
+    expect(naissance("1990-03-14")).toBe(true);
   });
 
-  // Un événement `other` affiche son libellé tel qu'il a été saisi, sans
-  // traduction : c'est du contenu utilisateur. Sans libellé, il n'a rien à
-  // afficher — et la ligne serait vide dans la liste des dates.
-  it("un événement libre exige son libellé", () => {
-    expect(() => createEventSchema.parse({
-      personId: ANNIVERSAIRE.personId, kind: "other", referenceDate: "2026-09-12",
-    })).toThrow();
-    expect(() => createEventSchema.parse({
-      personId: ANNIVERSAIRE.personId, kind: "other", label: "Mariage", referenceDate: "2026-09-12",
-    })).not.toThrow();
+  it("accepte aujourd'hui — un nouveau-né", () => {
+    expect(naissance(jour)).toBe(true);
   });
 
-  // L'année se saisit ou non — « on peut ne pas la connaître » le dit l'écran.
-  // Sans elle, l'âge ne s'affiche pas et la génération ne le mentionne pas.
-  it("accepte un anniversaire dont l'année n'est pas connue", () => {
-    const sansAnnee = { ...ANNIVERSAIRE, yearKnown: false };
-    expect(eventSchema.parse(sansAnnee).yearKnown).toBe(false);
+  // On ne naît pas demain. Sans cette borne, une faute de frappe sur l'année
+  // donnerait un proche à naître, et un âge négatif sur sa fiche.
+  it("refuse une naissance dans le futur", () => {
+    expect(naissance(decalerJours(1))).toBe(false);
   });
 
-  it("refuse un champ que le serveur ne connaît pas", () => {
-    expect(() => eventSchema.parse({ ...ANNIVERSAIRE, couleur: "violet" })).toThrow();
+  // Au-delà de cent ans, c'est une faute de frappe — un 1825 pour 1925 — et
+  // l'accepter ferait paraître un proche de deux siècles.
+  it(`refuse une naissance de plus de ${AGE_MAXIMAL_ANNEES} ans`, () => {
+    expect(naissance(decalerAnnees(-AGE_MAXIMAL_ANNEES - 1))).toBe(false);
+  });
+
+  it("accepte tout juste cent ans", () => {
+    expect(naissance(decalerAnnees(-AGE_MAXIMAL_ANNEES))).toBe(true);
+  });
+
+  // Elle se saisit avec le PROCHE, pas avec un événement : c'est un fait de
+  // son identité, au même titre que sa ville.
+  it("se donne à la création d'un proche", () => {
+    const r = createPersonSchema.safeParse({
+      displayName: "Valery", birthDate: "1990-03-14", birthYearKnown: true,
+    });
+    expect(r.success).toBe(true);
+  });
+
+  // Le jour et le mois sans l'année : on suit l'anniversaire sans pouvoir
+  // annoncer d'âge. C'est la NAISSANCE dont l'année manque — l'anniversaire,
+  // lui, a toujours celle qui vient.
+  it("accepte une naissance dont l'année n'est pas connue", () => {
+    const r = createPersonSchema.safeParse({
+      displayName: "Valery", birthDate: "1900-03-14", birthYearKnown: false,
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("refuse une naissance hors bornes sur un proche", () => {
+    const r = createPersonSchema.safeParse({
+      displayName: "Valery", birthDate: decalerJours(1),
+    });
+    expect(r.success).toBe(false);
   });
 });
 
-// La base impose ces deux règles par une contrainte `check`. Un client qui les
-// ignore construit une requête que le serveur rejette — et l'erreur arrive au
-// bout du réseau plutôt qu'à la saisie.
-describe("les récurrences", () => {
-  it("une règle récurrente exige son unité et son intervalle", () => {
-    expect(() => scheduleSchema.parse({ type: "recurrent", unit: "year", interval: 1 })).not.toThrow();
-    expect(() => scheduleSchema.parse({ type: "recurrent", unit: "year" })).toThrow();
-    expect(() => scheduleSchema.parse({ type: "recurrent", interval: 1 })).toThrow();
+describe("un événement dit quand la chose sera", () => {
+  it("accepte une date à venir", () => {
+    const r = createEventSchema.safeParse({
+      personId: PROCHE, kind: "other", label: "Mariage de Sarah",
+      referenceDate: decalerJours(30),
+    });
+    expect(r.success).toBe(true);
   });
 
-  it("une règle par décalage exige son unité et son décalage", () => {
-    expect(() => scheduleSchema.parse({ type: "offset", offsetUnit: "month", offsetAmount: 1 })).not.toThrow();
-    expect(() => scheduleSchema.parse({ type: "offset", offsetUnit: "month" })).toThrow();
+  it("accepte aujourd'hui", () => {
+    const r = createEventSchema.safeParse({
+      personId: PROCHE, kind: "other", label: "Soutenance", referenceDate: jour,
+    });
+    expect(r.success).toBe(true);
   });
 
-  // « tous les 0 ans » n'est pas une récurrence, c'est une boucle infinie côté
-  // serveur quand il engendre les échéances suivantes.
-  it("refuse un intervalle nul ou négatif", () => {
-    expect(() => scheduleSchema.parse({ type: "recurrent", unit: "year", interval: 0 })).toThrow();
-    expect(() => scheduleSchema.parse({ type: "recurrent", unit: "year", interval: -1 })).toThrow();
+  // Le créer dans le passé n'ouvrirait aucune échéance utile, et la fiche
+  // annoncerait une préparation pour une date révolue.
+  it("refuse une date passée", () => {
+    const r = createEventSchema.safeParse({
+      personId: PROCHE, kind: "other", label: "Mariage de Sarah",
+      referenceDate: decalerJours(-1),
+    });
+    expect(r.success).toBe(false);
   });
 
-  // Les deux formes ne se mélangent pas : une règle est l'une ou l'autre.
-  it("refuse une règle qui serait les deux à la fois", () => {
-    expect(() => scheduleSchema.parse({
-      type: "recurrent", unit: "year", interval: 1, offsetUnit: "month", offsetAmount: 1,
-    })).toThrow();
-  });
-});
-
-describe("les échéances", () => {
-  const ECHEANCE = {
-    id: "3f2504e0-4f89-11d3-9a0c-0305e82c3303",
-    eventId: ANNIVERSAIRE.id,
-    personId: ANNIVERSAIRE.personId,
-    personDisplayName: "Awa Diop",
-    kind: "birthday" as const,
-    nature: "happy" as const,
-    label: null,
-    occurrenceDate: "2026-08-24",
-    occurrenceYear: 2026,
-    status: "collecting" as const,
-    daysUntil: 0,
-    age: 36,
-  };
-
-  it("porte de quoi rendre une carte sans second appel", () => {
-    const rendu = occurrenceSchema.parse(ECHEANCE);
-    expect(rendu.personDisplayName).toBe("Awa Diop");
-    expect(rendu.daysUntil).toBe(0);
+  // LA règle du nouveau modèle : un anniversaire n'est pas une exception. Sa
+  // date d'ancrage est la PROCHAINE échéance, calculée depuis la naissance du
+  // proche — jamais la naissance elle-même. Y glisser une date de naissance
+  // était l'ancien modèle, et c'est ce que ce cas interdit.
+  it("un anniversaire ne porte pas la date de naissance", () => {
+    const r = createEventSchema.safeParse({
+      personId: PROCHE, kind: "birthday", referenceDate: "1990-03-14",
+    });
+    expect(r.success, "une date de naissance n'est pas une date d'événement").toBe(false);
   });
 
-  // L'âge n'existe que si l'année de naissance est connue. Le rendre nullable
-  // plutôt qu'absent oblige l'écran à traiter le cas au lieu de l'oublier.
-  it("laisse l'âge vide quand l'année n'est pas connue", () => {
-    expect(occurrenceSchema.parse({ ...ECHEANCE, age: null }).age).toBeNull();
+  it("un anniversaire porte sa prochaine échéance", () => {
+    const r = createEventSchema.safeParse({
+      personId: PROCHE, kind: "birthday", referenceDate: decalerJours(45),
+    });
+    expect(r.success).toBe(true);
   });
 
-  // Une échéance passée se compte en négatif : l'écran Dates montre le mois
-  // écoulé, et un décompte non signé rendrait « J−3 » pour trois jours après.
-  it("accepte un décompte négatif pour une échéance passée", () => {
-    expect(occurrenceSchema.parse({ ...ECHEANCE, daysUntil: -3 }).daysUntil).toBe(-3);
+  // La règle du libellé demeure : elle vivait dans un .refine() qu'on a
+  // déplacé, et une règle perdue au passage ne se verrait qu'au premier
+  // événement libre sans nom.
+  it("un événement libre porte toujours son libellé", () => {
+    const r = createEventSchema.safeParse({
+      personId: PROCHE, kind: "other", referenceDate: decalerJours(30),
+    });
+    expect(r.success).toBe(false);
+  });
+
+  // Plusieurs règles pour un même événement : « un mois puis trois mois après
+  // une date » (maquette §3.6).
+  it("accepte plusieurs règles de récurrence", () => {
+    const r = createEventSchema.safeParse({
+      personId: PROCHE, kind: "other", label: "Suivi", referenceDate: decalerJours(10),
+      schedules: [
+        { type: "offset", offsetUnit: "month", offsetAmount: 1, leadTimeDays: 3 },
+        { type: "offset", offsetUnit: "month", offsetAmount: 3 },
+      ],
+    });
+    expect(r.success).toBe(true);
   });
 });

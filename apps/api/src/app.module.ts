@@ -23,8 +23,16 @@ import { ProfileController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
 import { PersonController } from "./me/person.controller.js";
 import { PersonService } from "./me/person.service.js";
+import { EventController } from "./me/event.controller.js";
+import { EventService } from "./me/event.service.js";
+import { OccurrenceController } from "./me/occurrence.controller.js";
+import { OccurrenceService } from "./me/occurrence.service.js";
 import { NoteController, NotesController } from "./me/note.controller.js";
 import { NoteService } from "./me/note.service.js";
+import { HomeController } from "./me/home.controller.js";
+import { HomeService } from "./me/home.service.js";
+import { MetadataController } from "./me/metadata.controller.js";
+import { MetadataService } from "./me/metadata.service.js";
 import { TenantRepository } from "./tenancy/tenant.repository.js";
 import { ConfigController, ConfigService } from "./public/config.controller.js";
 import { LegalController, LegalService } from "./public/legal.controller.js";
@@ -53,7 +61,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
 
 @Module({
   controllers: [
-    AuthController, ProfileController, PersonController, NoteController, NotesController, ConfigController, LegalController,
+    AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, ConfigController, LegalController,
     MeFeaturesController, PublicFeaturesController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
@@ -124,8 +132,12 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     FeatureGuard,
     ProfileService,
     TenantRepository,
+    EventService,
+    OccurrenceService,
     PersonService,
     NoteService,
+    HomeService,
+    MetadataService,
     ConfigService,
     LegalService,
     WaitlistService,

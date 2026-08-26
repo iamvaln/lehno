@@ -330,6 +330,15 @@ Lancer les tests. Attendu : « chaque échéance se calcule depuis la référenc
 
 **Ce que le contrat impose déjà** (`me-events.ts`, ne pas le réécrire) : `createEventSchema` exige un `label` quand `kind` vaut `other` — un événement libre porte son libellé, un anniversaire prend le sien dans les traductions. `scheduleSchema` refuse les formes mêlées : une règle est récurrente **ou** décalée.
 
+**LE MODÈLE, corrigé le 26/08 par le porteur du projet.** Lire ceci avant tout le reste — le code des étapes suivantes en découle.
+
+- **La date de naissance appartient au PROCHE** (`person.birthDate`), pas à un événement. C'est un fait de son identité, au même titre que sa ville.
+- **Un événement dit quand la chose SERA.** `event.referenceDate` est donc **toujours à venir**, sans exception. Un anniversaire n'y échappe pas : sa date d'ancrage est la **prochaine échéance**, calculée depuis la naissance du proche — jamais la naissance elle-même.
+- **`event.yearKnown` n'existe plus.** L'information vit sur le proche (`person.birthYearKnown`). La garder à deux endroits en aurait fait une seconde vérité.
+- **L'âge se calcule depuis `person.birthDate`**, et vaut `null` quand `birthYearKnown` est faux.
+
+Ce que cela change concrètement pour cette tâche : créer un anniversaire ne prend **pas** de date. Le proche porte déjà la sienne ; le service calcule la prochaine échéance avec `echeances(naissance, { unite: "year", pas: 1 }, aujourd'hui, 1)` et la pose en `referenceDate`. Un proche **sans** date de naissance ne peut pas avoir d'anniversaire — c'est un refus, pas un événement vide.
+
 **Ce que la maquette impose** (§3.6, lue et non devinée) :
 
 - **Un proche n'a qu'un anniversaire.** « Proche déjà porteur d'un anniversaire : l'application le signale plutôt que d'en créer un second. » La règle se tient au SERVEUR — un client qui l'oublie ne doit pas pouvoir en créer deux. Elle rend `409`, le conflit d'état.
@@ -343,14 +352,18 @@ Le contrat n'a pas encore de forme pour la création d'un événement AVEC ses r
 
 `apps/api/test/event.test.ts` — même montage que `note.test.ts` (base, deux comptes, `TenantRepository`), puis :
 ```ts
-  it("crée un anniversaire et ouvre sa première échéance", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
-    const e = await events.create(awa, {
-      personId: p.id, kind: "birthday", referenceDate: "1990-03-14",
-    });
+  it("crée un anniversaire depuis la naissance du proche", async () => {
+    const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+    // AUCUNE date n'est donnée : le proche porte la sienne, et l'anniversaire
+    // s'en déduit. La demander ici ouvrirait la porte à deux dates de
+    // naissance divergentes pour la même personne.
+    const e = await events.create(awa, { personId: p.id, kind: "birthday" });
 
     expect(e.kind).toBe("birthday");
-    expect(e.referenceDate).toBe("1990-03-14");
+    // La PROCHAINE échéance, jamais la naissance : un événement dit quand la
+    // chose sera.
+    expect(e.referenceDate.slice(5)).toBe("03-14");
+    expect(e.referenceDate >= new Date().toISOString().slice(0, 10)).toBe(true);
 
     // L'occurrence naît AVEC l'événement : sans elle, un anniversaire saisi
     // n'apparaîtrait nulle part avant qu'un traitement programmé ne passe, et
@@ -363,7 +376,8 @@ Le contrat n'a pas encore de forme pour la création d'un événement AVEC ses r
   it("un événement libre porte son libellé", async () => {
     const p = await persons.create(awa, { displayName: "Valery" });
     const e = await events.create(awa, {
-      personId: p.id, kind: "other", label: "Notre rencontre", referenceDate: "2019-07-02",
+      personId: p.id, kind: "other", label: "Notre rencontre",
+      referenceDate: dansTrenteJours,
     });
     expect(e.label).toBe("Notre rencontre");
   });
@@ -371,20 +385,20 @@ Le contrat n'a pas encore de forme pour la création d'un événement AVEC ses r
   it("n'attache pas un événement au proche d'un autre compte", async () => {
     const p = await persons.create(bila, { displayName: "Celarine" });
     await expect(
-      events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" }),
+      events.create(awa, { personId: p.id, kind: "birthday" }),
     ).rejects.toMatchObject({ code: "not_found" });
     expect(await db.prisma.event.count()).toBe(0);
   });
 
   it("ne rend pas l'événement d'un autre compte", async () => {
     const p = await persons.create(bila, { displayName: "Celarine" });
-    const e = await events.create(bila, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const e = await events.create(bila, { personId: p.id, kind: "birthday" });
     await expect(events.get(awa, e.id)).rejects.toMatchObject({ code: "not_found" });
   });
 
   it("ne supprime pas l'événement d'un autre compte", async () => {
     const p = await persons.create(bila, { displayName: "Celarine" });
-    const e = await events.create(bila, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const e = await events.create(bila, { personId: p.id, kind: "birthday" });
     await expect(events.remove(awa, e.id)).rejects.toMatchObject({ code: "not_found" });
     expect(await db.prisma.event.count({ where: { id: e.id } })).toBe(1);
   });
@@ -393,7 +407,7 @@ Le contrat n'a pas encore de forme pour la création d'un événement AVEC ses r
   // au schéma, ce cas la constate plutôt que de la supposer.
   it("supprimer l'événement emporte ses échéances", async () => {
     const p = await persons.create(awa, { displayName: "Valery" });
-    const e = await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const e = await events.create(awa, { personId: p.id, kind: "birthday" });
     await events.remove(awa, e.id);
     expect(await db.prisma.eventOccurrence.count({ where: { eventId: e.id } })).toBe(0);
   });
@@ -403,11 +417,11 @@ Le contrat n'a pas encore de forme pour la création d'un événement AVEC ses r
   // l'oublie ne doit pas pouvoir en créer deux, sinon la fiche affiche deux
   // anniversaires pour la même personne et les rappels partent en double.
   it("refuse un second anniversaire pour le même proche", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
-    await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+    await events.create(awa, { personId: p.id, kind: "birthday" });
 
     await expect(
-      events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1991-05-02" }),
+      events.create(awa, { personId: p.id, kind: "birthday" }),
     ).rejects.toMatchObject({ code: "conflict" });
     expect(await db.prisma.event.count({ where: { personId: p.id } })).toBe(1);
   });
@@ -462,24 +476,43 @@ Le contrat n'a pas encore de forme pour la création d'un événement AVEC ses r
   // le formulaire annonce, et l'utilisateur n'a rien à composer pour cela.
   it("un anniversaire reçoit sa règle annuelle sans qu'on la demande", async () => {
     const p = await persons.create(awa, { displayName: "Valery" });
-    const e = await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const e = await events.create(awa, { personId: p.id, kind: "birthday" });
     const [regle] = await db.prisma.schedule.findMany({ where: { eventId: e.id } });
     expect(regle).toMatchObject({ type: "recurrent", unit: "year", interval: 1 });
   });
 
-  // L'année de naissance peut être inconnue : on note le jour sans l'âge.
-  it("accepte une date dont l'année n'est pas connue", async () => {
+  // Un proche SANS date de naissance ne peut pas avoir d'anniversaire. Créer
+  // un événement vide en attendant donnerait une échéance qui ne tombe jamais,
+  // et une fiche qui annonce une date qu'elle ne connaît pas.
+  it("refuse un anniversaire pour un proche sans date de naissance", async () => {
     const p = await persons.create(awa, { displayName: "Valery" });
-    const e = await events.create(awa, {
-      personId: p.id, kind: "birthday", referenceDate: "1900-03-14", yearKnown: false,
-    });
-    expect(e.yearKnown).toBe(false);
+    await expect(events.create(awa, { personId: p.id, kind: "birthday" }))
+      .rejects.toMatchObject({ code: "validation_failed" });
+    expect(await db.prisma.event.count()).toBe(0);
   });
 
-  it("corriger la date rouvre l'échéance au bon jour", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
-    const e = await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
-    await events.update(awa, e.id, { referenceDate: "1990-08-02" });
+  // L'année de naissance peut être inconnue : on suit l'anniversaire sans
+  // pouvoir annoncer d'âge. L'échéance, elle, a toujours une année — celle
+  // qui vient.
+  it("ouvre l'échéance même sans l'année de naissance", async () => {
+    const p = await persons.create(awa, {
+      displayName: "Valery", birthDate: "1900-03-14", birthYearKnown: false,
+    });
+    const e = await events.create(awa, { personId: p.id, kind: "birthday" });
+    expect(e.referenceDate.slice(5)).toBe("03-14");
+    expect(e.referenceDate >= new Date().toISOString().slice(0, 10)).toBe(true);
+  });
+
+  // Corriger la NAISSANCE du proche doit recaler son anniversaire. Sans cela,
+  // la fiche annoncerait l'ancienne date jusqu'à ce que quelqu'un s'en
+  // aperçoive — et personne ne s'en aperçoit avant le jour dit.
+  it("corriger la naissance recale l'anniversaire", async () => {
+    const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+    const e = await events.create(awa, { personId: p.id, kind: "birthday" });
+    await persons.update(awa, p.id, { birthDate: "1990-08-02" });
+
+    const relu = await events.get(awa, e.id);
+    expect(relu.referenceDate.slice(5)).toBe("08-02");
 
     const ouvertes = await db.prisma.eventOccurrence.findMany({ where: { eventId: e.id } });
     // Une seule, et au nouveau jour : laisser l'ancienne afficherait deux
@@ -536,7 +569,33 @@ export class EventService {
   async create(userId: string, input: CreateEventInput): Promise<EventContrat> {
     // findOrThrow d'abord : rattacher un événement au proche d'un autre doit
     // échouer AVANT toute écriture, et rendre 404 plutôt que 403.
-    await this.depot.persons(userId).findOrThrow(input.personId);
+    const proche = await this.depot.persons(userId).findOrThrow(input.personId);
+
+    // L'ancrage : pour un anniversaire, il se CALCULE depuis la naissance du
+    // proche — la prochaine échéance, jamais la naissance elle-même. Pour tout
+    // autre événement, il vient de la saisie, et le contrat garantit déjà
+    // qu'il est à venir.
+    //
+    // Un proche sans date de naissance ne peut pas avoir d'anniversaire : lui
+    // en créer un donnerait une échéance qui ne tombe jamais, et une fiche qui
+    // annonce une date qu'elle ne connaît pas.
+    let ancrage: string;
+    if (input.kind === "birthday") {
+      const naissance = (proche as { birthDate: Date | null }).birthDate;
+      if (!naissance) {
+        throw new AppError(
+          "validation_failed",
+          "this person has no birth date",
+          { birthDate: "required on the person to create a birthday" },
+        );
+      }
+      const [prochaine] = echeances(
+        naissance.toISOString().slice(0, 10), TOUS_LES_ANS, this.aujourdhui(), 1,
+      );
+      ancrage = prochaine!;
+    } else {
+      ancrage = input.referenceDate!;
+    }
 
     // « Proche déjà porteur d'un anniversaire : l'application le signale plutôt
     // que d'en créer un second » (§3.6). La règle se tient ICI : un client qui
@@ -567,8 +626,7 @@ export class EventService {
         kind: input.kind,
         label: input.label ?? null,
         eventNature: input.nature ?? "happy",
-        referenceDate: new Date(`${input.referenceDate}T00:00:00Z`),
-        yearKnown: input.yearKnown ?? true,
+        referenceDate: new Date(`${ancrage}T00:00:00Z`),
         schedules: {
           create: regles.map((r) => ({
             type: r.type,
@@ -582,7 +640,7 @@ export class EventService {
       },
     });
 
-    await this.ouvrirProchaine(userId, ligne.id, input.referenceDate);
+    await this.ouvrirProchaine(userId, ligne.id, ancrage);
     return rendre(ligne);
   }
 
@@ -592,7 +650,6 @@ export class EventService {
     if (input.label !== undefined) data["label"] = input.label;
     if (input.kind !== undefined) data["kind"] = input.kind;
     if (input.nature !== undefined) data["eventNature"] = input.nature;
-    if (input.yearKnown !== undefined) data["yearKnown"] = input.yearKnown;
     if (input.referenceDate !== undefined)
       data["referenceDate"] = new Date(`${input.referenceDate}T00:00:00Z`);
 
@@ -600,6 +657,11 @@ export class EventService {
 
     // La date a bougé : l'échéance ouverte ne vaut plus. La laisser
     // afficherait deux anniversaires pour la même personne.
+    //
+    // Le même recalage vaut quand c'est la NAISSANCE du proche qui change :
+    // PersonService.update doit alors rouvrir l'anniversaire de ce proche.
+    // Sans cela, la fiche annonce l'ancienne date jusqu'au jour dit — et
+    // personne ne s'en aperçoit avant.
     if (input.referenceDate !== undefined && input.referenceDate !== iso(avant.referenceDate)) {
       await this.prisma.eventOccurrence.deleteMany({ where: { eventId: id, status: "upcoming" } });
       await this.ouvrirProchaine(userId, id, input.referenceDate);
@@ -633,7 +695,7 @@ function iso(d: Date): string {
 
 function rendre(e: {
   id: string; personId: string; label: string | null; kind: string;
-  eventNature: string; referenceDate: Date; yearKnown: boolean;
+  eventNature: string; referenceDate: Date;
 }): EventContrat {
   return {
     id: e.id,
@@ -642,7 +704,6 @@ function rendre(e: {
     kind: e.kind as EventContrat["kind"],
     nature: e.eventNature as EventContrat["nature"],
     referenceDate: iso(e.referenceDate),
-    yearKnown: e.yearKnown,
   };
 }
 ```
@@ -748,7 +809,6 @@ export const updateEventSchema = z.object({
   label: z.string().trim().min(1).max(120).optional(),
   nature: z.enum(EVENT_NATURES).optional(),
   referenceDate: dateCivileSchema.optional(),
-  yearKnown: z.boolean().optional(),
 }).strict().refine((v) => Object.keys(v).length > 0, {
   message: "au moins un champ doit être fourni",
 });
@@ -798,8 +858,8 @@ Le statut se **dérive** de la date et des délais : `upcoming` avant la fenêtr
 `apps/api/test/occurrence.test.ts` :
 ```ts
   it("rend les échéances avec le nom du proche", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
-    await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+    await events.create(awa, { personId: p.id, kind: "birthday" });
 
     const [e] = await occurrences.list(awa, {});
     // Le nom voyage AVEC l'échéance : sans lui, chaque carte d'une liste
@@ -809,8 +869,8 @@ Le statut se **dérive** de la date et des délais : `upcoming` avant la fenêtr
   });
 
   it("ne rend pas les échéances d'un autre compte", async () => {
-    const p = await persons.create(bila, { displayName: "Celarine" });
-    await events.create(bila, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const p = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
+    await events.create(bila, { personId: p.id, kind: "birthday" });
     expect(await occurrences.list(awa, {})).toEqual([]);
   });
 
@@ -831,7 +891,7 @@ Le statut se **dérive** de la date et des délais : `upcoming` avant la fenêtr
   // décompte non signé y rendrait « J−3 » trois jours APRÈS la date.
   it("compte les jours, en signé", async () => {
     const p = await persons.create(awa, { displayName: "Valery" });
-    const e = await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const e = await events.create(awa, { personId: p.id, kind: "birthday" });
     const hier = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
     await db.prisma.eventOccurrence.updateMany({
       where: { eventId: e.id }, data: { occurrenceDate: new Date(`${hier}T00:00:00Z`) },
@@ -845,14 +905,14 @@ Le statut se **dérive** de la date et des délais : `upcoming` avant la fenêtr
   // pas connue. Nullable plutôt qu'absent : l'écran est OBLIGÉ de traiter le
   // cas au lieu de l'oublier et d'afficher « NaN ans ».
   it("rend l'âge, et null quand l'année n'est pas connue", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
-    await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+    await events.create(awa, { personId: p.id, kind: "birthday" });
     const [avec] = await occurrences.list(awa, {});
     expect(avec?.age).toBe(Number(avec?.occurrenceDate.slice(0, 4)) - 1990);
 
     const q = await persons.create(awa, { displayName: "Inconnu" });
     await events.create(awa, {
-      personId: q.id, kind: "birthday", referenceDate: "1900-06-01", yearKnown: false,
+      personId: q.id, kind: "birthday",
     });
     const sans = (await occurrences.list(awa, {})).find((o) => o.personId === q.id);
     expect(sans?.age).toBeNull();
@@ -861,7 +921,7 @@ Le statut se **dérive** de la date et des délais : `upcoming` avant la fenêtr
   describe("le statut se dérive de la date", () => {
     const poser = async (dans: number): Promise<string> => {
       const p = await persons.create(awa, { displayName: `P${dans}` });
-      const e = await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-01-01" });
+      const e = await events.create(awa, { personId: p.id, kind: "birthday" });
       const jour = new Date(Date.now() + dans * 86_400_000).toISOString().slice(0, 10);
       await db.prisma.eventOccurrence.updateMany({
         where: { eventId: e.id }, data: { occurrenceDate: new Date(`${jour}T00:00:00Z`) },
@@ -891,7 +951,7 @@ Le statut se **dérive** de la date et des délais : `upcoming` avant la fenêtr
 
   it("ne rend pas le détail d'une échéance d'un autre compte", async () => {
     const p = await persons.create(bila, { displayName: "Celarine" });
-    const e = await events.create(bila, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const e = await events.create(bila, { personId: p.id, kind: "birthday" });
     const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
     await expect(occurrences.get(awa, o.id)).rejects.toMatchObject({ code: "not_found" });
   });
@@ -923,7 +983,7 @@ type LigneJointe = {
   id: string; eventId: string; occurrenceDate: Date; occurrenceYear: number | null;
   event: {
     kind: string; eventNature: string; label: string | null;
-    referenceDate: Date; yearKnown: boolean;
+    referenceDate: Date;
     person: { id: string; displayName: string };
   };
 };
@@ -1007,8 +1067,12 @@ export class OccurrenceService {
       occurrenceYear: l.occurrenceYear,
       status,
       daysUntil: joursEntre(jour, date),
-      age: l.event.yearKnown
-        ? Number(date.slice(0, 4)) - l.event.referenceDate.getUTCFullYear()
+      // L'âge vient de la NAISSANCE DU PROCHE, jamais de la date d'ancrage de
+      // l'événement — celle-ci est désormais une date à venir, et en tirer un
+      // âge donnerait zéro. Nul quand l'année de naissance n'est pas connue :
+      // l'écran est obligé de traiter le cas au lieu de l'oublier.
+      age: l.event.person.birthDate && l.event.person.birthYearKnown
+        ? Number(date.slice(0, 4)) - l.event.person.birthDate.getUTCFullYear()
         : null,
     };
   }
@@ -1099,7 +1163,7 @@ Remplacer la dérivation du statut par la lecture de la colonne `status` en base
 ```ts
   it("écrit une note de circonstance rattachée à l'occasion", async () => {
     const p = await persons.create(awa, { displayName: "Valery" });
-    const e = await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const e = await events.create(awa, { personId: p.id, kind: "birthday" });
     const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
 
     const n = await notes.createForOccurrence(awa, o.id, { content: "Il a parlé d'un cadeau" });
@@ -1113,7 +1177,7 @@ Remplacer la dérivation du statut par la lecture de la colonne `status` en base
   // trois ans plus tard, hors de son contexte.
   it("ne mêle pas les durables et les notes de circonstance", async () => {
     const p = await persons.create(awa, { displayName: "Valery" });
-    const e = await events.create(awa, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const e = await events.create(awa, { personId: p.id, kind: "birthday" });
     const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
 
     await notes.createForPerson(awa, p.id, { content: "aime le café" });
@@ -1128,7 +1192,7 @@ Remplacer la dérivation du statut par la lecture de la colonne `status` en base
 
   it("n'écrit pas sur l'occasion d'un autre compte", async () => {
     const p = await persons.create(bila, { displayName: "Celarine" });
-    const e = await events.create(bila, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const e = await events.create(bila, { personId: p.id, kind: "birthday" });
     const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
 
     await expect(
@@ -1248,8 +1312,8 @@ Retirer `eventOccurrenceId: null` du `where` de `listForPerson`. Attendu : « ne
   });
 
   it("ne compte que ses propres échéances", async () => {
-    const p = await persons.create(bila, { displayName: "Celarine" });
-    await events.create(bila, { personId: p.id, kind: "birthday", referenceDate: "1990-03-14" });
+    const p = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
+    await events.create(bila, { personId: p.id, kind: "birthday" });
     const accueil = await home.get(awa);
     expect(accueil.occurrences).toEqual([]);
     expect(accueil.counts.thisWeek).toBe(0);
