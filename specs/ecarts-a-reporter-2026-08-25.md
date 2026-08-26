@@ -98,6 +98,27 @@ dictionnaire.**
 citant « spécification technique §9 ». Cette section porte sur les droits
 d'accès et ne dit rien de l'adresse. La citation a été retirée.
 
+### A6. L'index partiel n'est pas ce qui permet plusieurs nuls
+
+**Où** : `dictionnaire-donnees-lehno.md`, `Payment.provider_ref`.
+
+**Ce qui est écrit** : « L'unicité porte donc sur les valeurs présentes (index
+unique partiel) — **sans quoi deux demandes en attente entreraient en collision
+sur une valeur nulle**. »
+
+**Ce qui est vrai** : Postgres traite deux nuls comme **distincts** dans un
+index unique. Un index total sur `provider_ref` admettrait autant de nuls qu'on
+veut. Vérifié en base plutôt que supposé, le 26/08/2026 : deux insertions à nul
+passent sous un `create unique index` ordinaire.
+
+**Ce que ça ne change pas** : l'index partiel reste le bon choix, pour la
+**taille** et pour l'intention. Sur `credit_transaction.payment_id`, la plupart
+des mouvements — octrois d'inscription, bonus de parrainage, consommations,
+ajustements — n'ont pas de paiement, et il n'y a rien à gagner à les indexer.
+N'indexer que les valeurs présentes dit aussi exactement ce qu'on garantit.
+
+**À corriger** : la justification, pas la décision.
+
 ## B. Ce que la documentation ne couvre pas du tout
 
 ### B1. Les drapeaux de fonctionnalité — chapitre entier à écrire

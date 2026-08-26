@@ -109,6 +109,9 @@ model User {
   referralReceived        Referral?                @relation("filleul")
 
   @@map("user")
+  paymentMethods       PaymentMethod[]
+  payments             Payment[]
+  paymentStatusChanges PaymentStatusHistory[]
 }
 
 enum ReferralStatus {
@@ -181,11 +184,17 @@ model CreditTransaction {
   // Signé : positif pour un crédit, négatif pour un débit.
   amount     Int
   referralId String?       @map("referral_id") @db.Uuid
+  // Le paiement qui a produit ce mouvement. L'unicité, posée en migration,
+  // garantit qu'un paiement n'octroie ses crédits qu'une seule fois, quelle que
+  // soit la voie qui a constaté le succès — une vérification en service
+  // perdrait la course à deux appels concurrents.
+  paymentId  String?       @map("payment_id") @db.Uuid
   reason     String?
   createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   referral Referral? @relation(fields: [referralId], references: [id], onDelete: SetNull)
+  payment  Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@map("credit_transaction")
@@ -789,6 +798,7 @@ model Admin {
   featureFlags  FeatureFlag[]
 
   @@map("admin")
+  paymentDecisions PaymentStatusHistory[]
 }
 
 model AdminOtpCode {
@@ -925,4 +935,234 @@ model FeatureFlag {
   updatedBy Admin? @relation(fields: [updatedByAdminId], references: [id], onDelete: SetNull)
 
   @@map("feature_flag")
+}
+
+// ─── Les paiements ───────────────────────────────────────────────────────────
+
+enum PaymentMethodKind {
+  mobile_money
+  card
+
+  @@map("payment_method_kind")
+}
+
+// Par quelle voie un paiement se règle. Les deux voies manuelles ne sont PAS
+// une entité à part : elles ont le même cycle de vie, la même histoire d'états
+// et produisent le même mouvement de crédits. Une table parallèle obligerait à
+// tenir deux registres, et une recharge manuelle n'apparaîtrait pas dans
+// l'historique des paiements du client.
+enum PaymentMode {
+  provider
+  semi_manual
+  manual
+
+  @@map("payment_mode")
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  expired
+  refunded
+
+  @@map("payment_status")
+}
+
+enum PaymentDirection {
+  charge
+  refund
+
+  @@map("payment_direction")
+}
+
+// Qui supporte les frais. Sur le mobile money c'est le client — un palier à
+// 1 000 fait verser 1 020, et il en arrive 1 000. La carte fera l'inverse : le
+// prestataire prélève sa part sur ce qu'il reverse. Coder la règle du mobile
+// money en dur rendrait la carte inexprimable, et le montant attendu serait
+// faux sans que rien ne le signale.
+enum FeeBearer {
+  payer
+  payee
+
+  @@map("fee_bearer")
+}
+
+enum StatusChangeOrigin {
+  user
+  webhook
+  polling
+  admin
+  system
+
+  @@map("status_change_origin")
+}
+
+/// Palier d'achat. Aucune saisie libre : on achète un palier, et le plus petit
+/// fixe le minimum. La remise s'affiche — c'est un argument de vente, pas un
+/// calcul caché.
+model CreditBundle {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  amount       Decimal  @db.Decimal(12, 2)
+  currency     String   @default("XAF") @db.VarChar(3)
+  credits      Int
+  bonusPercent Int?     @map("bonus_percent") @db.SmallInt
+  position     Int      @db.SmallInt
+  isActive     Boolean  @default(true) @map("is_active")
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  payments Payment[]
+
+  @@map("credit_bundle")
+}
+
+/// Ce que le SERVICE propose — un opérateur, un pays, un barème. À ne pas
+/// confondre avec PaymentMethod, qui est ce qu'un CLIENT a enregistré. Les
+/// fondre reviendrait à porter un taux de frais sur le numéro de téléphone de
+/// chaque client, et à devoir tous les corriger le jour où MTN change son
+/// barème.
+model PaymentChannel {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind        PaymentMethodKind
+  operator    String            @db.VarChar(40)
+  // Les frais diffèrent d'un pays à l'autre, même chez le même opérateur.
+  country     String            @db.VarChar(2)
+  label       String            @db.VarChar(80)
+  feePercent  Decimal           @default(0) @map("fee_percent") @db.Decimal(5, 2)
+  feeFixed    Decimal           @default(0) @map("fee_fixed") @db.Decimal(12, 2)
+  feeMin      Decimal?          @map("fee_min") @db.Decimal(12, 2)
+  feeMax      Decimal?          @map("fee_max") @db.Decimal(12, 2)
+  feeBorneBy  FeeBearer         @default(payer) @map("fee_borne_by")
+  currency    String            @default("XAF") @db.VarChar(3)
+  isActive    Boolean           @default(true) @map("is_active")
+  position    Int?              @db.SmallInt
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  payments Payment[]
+
+  // Un opérateur n'a qu'un barème par pays : deux lignes concurrentes
+  // rendraient l'aperçu indéterminé.
+  @@unique([operator, country, kind])
+  @@map("payment_channel")
+}
+
+/// Un compte d'opérateur sur lequel les clients versent. Jamais supprimé,
+/// seulement désactivé : un paiement passé le référence, et l'effacer rendrait
+/// ce paiement inexplicable.
+model CollectionAccount {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  label          String   @db.VarChar(80)
+  operator       String   @db.VarChar(40)
+  number         String   @db.VarChar(32)
+  // Deux choses différentes : le premier décide de ce que le CLIENT voit, le
+  // second de ce qui reste employable. Un compte peut être actif pour
+  // l'administration et invisible dans l'application.
+  isVisibleInApp Boolean  @default(false) @map("is_visible_in_app")
+  isActive       Boolean  @default(true) @map("is_active")
+  position       Int?     @db.SmallInt
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  payments Payment[]
+
+  @@map("collection_account")
+}
+
+/// Ce qu'un CLIENT a enregistré. Le numéro mobile money est chiffré au repos et
+/// masqué partout à l'affichage — seuls l'opérateur et last4 paraissent.
+model PaymentMethod {
+  id                       String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                   String            @map("user_id") @db.Uuid
+  providerRef              String?           @map("provider_ref")
+  msisdn                   String?
+  kind                     PaymentMethodKind
+  brand                    String?           @db.VarChar(40)
+  last4                    String?           @db.VarChar(4)
+  expiresAt                DateTime?         @map("expires_at") @db.Date
+  // Détermine la méthode proposée par défaut à l'achat.
+  lastUsedAt               DateTime?         @map("last_used_at") @db.Timestamptz
+  firstSuccessfulPaymentAt DateTime?         @map("first_successful_payment_at") @db.Timestamptz
+  createdAt                DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([userId, lastUsedAt])
+  @@map("payment_method")
+}
+
+/// Un achat de crédits. Les deux voies manuelles sont des Payment ordinaires.
+model Payment {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String            @map("user_id") @db.Uuid
+  paymentMethodId     String?           @map("payment_method_id") @db.Uuid
+  mode                PaymentMode       @default(provider)
+  creditBundleId      String?           @map("credit_bundle_id") @db.Uuid
+  // Le compte qui a REÇU l'argent, sur les voies manuelles.
+  collectionAccountId String?           @map("collection_account_id") @db.Uuid
+  // Le numéro depuis lequel le client déclare avoir versé — semi-manuel seul.
+  payerMsisdn         String?           @map("payer_msisdn") @db.VarChar(32)
+  // Reçu déposé par le client ou saisi par l'administrateur. S'efface une fois
+  // la demande traitée : le reçu ne prouve rien, c'est la réception sur le
+  // compte de l'opérateur qui fait foi.
+  proofKey            String?           @map("proof_key")
+  // Nulle tant que la référence n'est pas connue. L'unicité est partielle,
+  // posée en migration — pour n'indexer que les valeurs présentes, non pour
+  // admettre plusieurs nuls : Postgres les traite déjà comme distincts.
+  providerRef         String?           @map("provider_ref")
+  paymentChannelId    String?           @map("payment_channel_id") @db.Uuid
+  // Les frais ANNONCÉS à l'aperçu, figés ici. Pas ceux que le canal porte
+  // aujourd'hui : changer un taux ne doit pas fausser rétroactivement la
+  // comptabilité.
+  feeAmount           Decimal?          @map("fee_amount") @db.Decimal(12, 2)
+  // Ce qu'on ATTEND sur le compte, frais appliqués selon feeBorneBy.
+  expectedAmount      Decimal?          @map("expected_amount") @db.Decimal(12, 2)
+  // Ce que l'administrateur a CONSTATÉ. Trois montants, et ils ne disent pas la
+  // même chose : sans le deuxième on ne sait pas si un écart vient du client ou
+  // du barème ; sans le troisième on ne sait pas qu'il y a écart.
+  receivedAmount      Decimal?          @map("received_amount") @db.Decimal(12, 2)
+  direction           PaymentDirection  @default(charge)
+  amount              Decimal           @db.Decimal(12, 2)
+  currency            String            @db.VarChar(3)
+  credits             Int
+  status              PaymentStatus     @default(pending)
+  failureReason       String?           @map("failure_reason")
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentMethod     PaymentMethod?         @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+  creditBundle      CreditBundle?          @relation(fields: [creditBundleId], references: [id], onDelete: SetNull)
+  collectionAccount CollectionAccount?     @relation(fields: [collectionAccountId], references: [id], onDelete: Restrict)
+  paymentChannel    PaymentChannel?        @relation(fields: [paymentChannelId], references: [id], onDelete: Restrict)
+  history           PaymentStatusHistory[]
+  creditTransaction CreditTransaction[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("payment")
+}
+
+/// Comment un paiement est arrivé où il en est. Le champ `status` du paiement
+/// dit OÙ il en est ; cette table dit COMMENT. Les lignes sont définitives.
+model PaymentStatusHistory {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentId          String             @map("payment_id") @db.Uuid
+  status             PaymentStatus
+  startedAt          DateTime           @default(now()) @map("started_at") @db.Timestamptz
+  // Nul pour l'état EN COURS, et lui seul.
+  endedAt            DateTime?          @map("ended_at") @db.Timestamptz
+  changedByUserId    String?            @map("changed_by_user_id") @db.Uuid
+  changedByAdminId   String?            @map("changed_by_admin_id") @db.Uuid
+  origin             StatusChangeOrigin
+  // Obligatoire lorsque origin = 'admin' — la contrainte est posée en base.
+  reason             String?
+  providerPayloadRef String?            @map("provider_payload_ref")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz
+
+  payment        Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  changedByUser  User?   @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+  changedByAdmin Admin?  @relation(fields: [changedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId, startedAt])
+  @@map("payment_status_history")
 }
