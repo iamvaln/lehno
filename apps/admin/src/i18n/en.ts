@@ -51,6 +51,7 @@ export const en: typeof fr = {
     alertes: "Alerts",
     moderation: "Moderation",
     suppressions: "Deletion requests",
+    assistance: "Support",
     contact: "Contact messages",
     attente: "Waitlist",
     transactions: "Transactions",
@@ -386,6 +387,126 @@ export const en: typeof fr = {
       actif: "In service",
       inactif: "Withdrawn",
       aucuneRemise: "—",
+    },
+  },
+
+  // Voir fr.ts : managing administrator access is admin-only (ux-admin §6).
+  acces: {
+    titre: "Administrator access",
+    sous: "Who gets into this tool, and with what rights. Access is withdrawn, never erased.",
+    col: { email: "Address", nom: "Name", role: "Role", etat: "State", depuis: "Since" },
+    roles: { admin: "Administrator", support: "Support" },
+    etats: { actif: "In service", revoque: "Access withdrawn" },
+    sansNom: "—",
+    soiMeme: "You",
+    vide: {
+      titre: "No other account",
+      texte: "Operations accounts appear here, with their role and when they joined.",
+    },
+    gestes: {
+      promouvoir: "Make administrator",
+      retrograder: "Make support",
+      revoquer: "Withdraw access",
+    },
+    inviter: {
+      ouvrir: "Invite someone",
+      titre: "Invite an operations account",
+      sous: "The account is created ahead of time: an unknown address never receives a code.",
+      email: "Email address",
+      role: "Role",
+      confirmer: "Invite",
+      annuler: "Cancel",
+      motifs: [
+        "Joining the team",
+        "Temporary support cover",
+        "Replacing a leaver",
+      ],
+      dialogue: {
+        titre: "Invite this account",
+        consequence: "The account can sign in from its first code request. The log keeps who invited it.",
+      },
+    },
+    dialogueRole: {
+      titre: "Change {compte}'s role",
+      consequence: "The administrator role opens the Economy family and the audit log. It takes effect on the next action.",
+      motifs: [
+        "Change of responsibility",
+        "Needs access to economy levers",
+        "Back to a support scope",
+      ],
+    },
+    dialogueRevocation: {
+      titre: "Withdraw {compte}'s access",
+      consequence: "Open sessions close immediately. The account is deactivated, never erased: the log must still be able to name who did what.",
+      motifs: [
+        "Left the team",
+        "Account compromised",
+        "End of a temporary assignment",
+      ],
+    },
+  },
+
+  // Voir fr.ts : three registers to read, one queue to settle.
+  assistance: {
+    titre: "Support",
+    sous: "What people write to us, and what awaits an answer.",
+    onglets: { demandes: "Requests", contact: "Messages", attente: "Waitlist", retours: "Feedback" },
+
+    demandes: {
+      col: { utilisateur: "Account", sujet: "Subject", corps: "Request", version: "Version", etat: "State", quand: "Received" },
+      etats: { open: "Open", answered: "Answered", closed: "Closed" },
+      filtreEtat: "State",
+      tous: "All",
+      sansSujet: "—",
+      gestes: { repondre: "Mark answered", clore: "Close", rouvrir: "Reopen" },
+      dialogue: {
+        titre: "Change this request's state",
+        consequence: "The change lands in the audit log, with its reason.",
+        motifs: [
+          "Answer sent by email",
+          "Already handled elsewhere",
+          "No follow-up after a reminder",
+        ],
+      },
+      vide: {
+        titre: "No requests waiting",
+        texte: "Requests sent from the app appear here, oldest first.",
+      },
+    },
+
+    contact: {
+      col: { nom: "Name", email: "Address", sujet: "Subject", message: "Message", quand: "Received" },
+      sujets: {
+        question: "A question",
+        probleme: "A problem",
+        suggestion: "A suggestion",
+        partenariat: "A partnership",
+        presse: "Press",
+        autre: "Something else",
+      },
+      vide: {
+        titre: "No messages",
+        texte: "Messages from the public form appear here, most recent first.",
+      },
+    },
+
+    attente: {
+      col: { email: "Address", source: "Came from", langue: "Language", quand: "Signed up" },
+      sansSource: "—",
+      vide: {
+        titre: "Nobody on the list",
+        texte: "Addresses left before launch appear here.",
+      },
+    },
+
+    retours: {
+      col: { utilisateur: "Account", note: "Rating", corps: "Feedback", version: "Version", quand: "Left on" },
+      anonyme: "Account removed",
+      sansNote: "—",
+      vide: {
+        titre: "No feedback",
+        texte: "Feedback left from the app appears here.",
+      },
     },
   },
 

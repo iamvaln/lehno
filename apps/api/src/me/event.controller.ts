@@ -10,6 +10,7 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { AppError } from "../common/errors.js";
 import { EventService } from "./event.service.js";
+import { TrackingService } from "../tracking/tracking.service.js";
 
 type AuthedRequest = { userId: string };
 
@@ -18,7 +19,10 @@ type AuthedRequest = { userId: string };
 @Controller("me/events")
 @UseGuards(AuthGuard)
 export class EventController {
-  constructor(@Inject(EventService) private readonly events: EventService) {}
+  constructor(
+    @Inject(EventService) private readonly events: EventService,
+    @Inject(TrackingService) private readonly mesure: TrackingService,
+  ) {}
 
   // `personId` sert la fiche d'un proche (maquette §3.4) ; sans lui, le chemin
   // rend l'annuaire complet, comme avant.
@@ -43,7 +47,15 @@ export class EventController {
     @Req() req: AuthedRequest,
     @Body(new ZodValidationPipe(createEventSchema)) body: CreateEventInput,
   ): Promise<EventContrat> {
-    return this.events.create(req.userId, body);
+    return this.events.create(req.userId, body).then((e) => {
+      // « jalons multiples ou non » (§16.3) : c'est le nombre de règles qui le
+      // dit, et c'est ce qui distingue un anniversaire d'un suivi à échéances.
+      this.mesure.emettre(req.userId, "event.created", {
+        kind: e.kind,
+        scheduleCount: body.schedules?.length ?? 0,
+      });
+      return e;
+    });
   }
 
   @Get(":id")

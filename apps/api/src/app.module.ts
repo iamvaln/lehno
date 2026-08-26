@@ -53,6 +53,7 @@ import { PaymentSettingsController, PaymentSettingsService } from "./admin/payme
 import { AdminPaymentsController, AdminCreditsController, AdminPaymentsService } from "./admin/payments.controller.js";
 import { PaymentListsController, PaymentListsService } from "./admin/payment-lists.controller.js";
 import { ExportsController, ExportsService } from "./admin/exports.controller.js";
+import { QueuesController, QueuesService } from "./admin/queues.controller.js";
 import { AdminUsersController, AdminUsersService } from "./admin/users.controller.js";
 import { DeletionsController, DeletionsService } from "./admin/deletions.controller.js";
 import { LecturesController, LecturesService } from "./admin/lectures.controller.js";
@@ -63,6 +64,9 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
 import { MaintenanceService } from "./maintenance/maintenance.service.js";
 import { MaintenanceGuard } from "./maintenance/maintenance.guard.js";
 import { MaintenanceController } from "./maintenance/maintenance.controller.js";
+import { TrackingService } from "./tracking/tracking.service.js";
+import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
+import { PostHogAdapter } from "./tracking/posthog.adapter.js";
 
 @Module({
   controllers: [
@@ -70,7 +74,7 @@ import { MaintenanceController } from "./maintenance/maintenance.controller.js";
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
   ],
   providers: [
     PrismaService,
@@ -81,6 +85,22 @@ import { MaintenanceController } from "./maintenance/maintenance.controller.js";
     // interrupteur d'arrêt. Ses exemptions vivent dans le garde.
     { provide: APP_GUARD, useClass: MaintenanceGuard },
     MaintenanceService,
+    // La mesure, derrière son port (§16.5). Sans clé PostHog et sans adhésion
+    // explicite à la console, l'adaptateur ne fait RIEN — contrairement au
+    // courrier, l'absence de mesure n'est pas une raison de refuser de
+    // démarrer : elle ne rend pas le produit faux, seulement aveugle. Et un
+    // développement local ne doit pas exiger un compte chez un tiers.
+    {
+      provide: "TRACKING_PORT",
+      useFactory: () => {
+        const cle = process.env.POSTHOG_API_KEY;
+        const hote = process.env.POSTHOG_HOST ?? "https://eu.i.posthog.com";
+        if (cle) return new PostHogAdapter(cle, hote);
+        if (process.env.LEHNO_TRACKING_CONSOLE === "1") return new ConsoleTrackingAdapter();
+        return { capture: async (): Promise<void> => {} };
+      },
+    },
+    TrackingService,
     // useFactory : la valeur se lit à l'INSTANCIATION du provider, pas à
     // l'évaluation du décorateur (qui n'a lieu qu'une fois, au chargement du
     // module). Sans ça, une valeur d'environnement posée ou retirée après
@@ -165,6 +185,7 @@ import { MaintenanceController } from "./maintenance/maintenance.controller.js";
     AdminPaymentsService,
     PaymentListsService,
     ExportsService,
+    QueuesService,
     AdminUsersService,
     DeletionsService,
     LecturesService,

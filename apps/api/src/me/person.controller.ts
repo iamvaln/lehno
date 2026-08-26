@@ -21,6 +21,7 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { AppError } from "../common/errors.js";
 import { PersonService } from "./person.service.js";
+import { TrackingService } from "../tracking/tracking.service.js";
 
 // Posé par AuthGuard : req.userId. Type minimal, comme ProfileController.
 type AuthedRequest = { userId: string };
@@ -35,7 +36,10 @@ type AuthedRequest = { userId: string };
 // qu'une clé du socle y réapparaisse.
 @UseGuards(AuthGuard)
 export class PersonController {
-  constructor(@Inject(PersonService) private readonly persons: PersonService) {}
+  constructor(
+    @Inject(PersonService) private readonly persons: PersonService,
+    @Inject(TrackingService) private readonly mesure: TrackingService,
+  ) {}
 
   // La chaîne de requête ne porte que du texte : `offset` arrive en « 20 », pas
   // en 20. On convertit AVANT de valider, comme sur /me/occurrences — sinon le
@@ -67,7 +71,22 @@ export class PersonController {
     @Req() req: AuthedRequest,
     @Body(new ZodValidationPipe(createPersonSchema)) body: CreatePersonInput,
   ): Promise<Person> {
-    return this.persons.create(req.userId, body);
+    return this.persons.create(req.userId, body).then((proche) => {
+      this.mesure.emettre(req.userId, "person.created", {
+        origin: "manual",
+        hasBirthDate: proche.birthDate !== null,
+      });
+      // `person.first_created` marque LE passage à l'usage (§16.3). Le total
+      // vient de la liste, qui compte tout le carnet : le premier proche est
+      // celui après lequel le total vaut un. Le déduire du carnet plutôt que
+      // de tenir un drapeau sur le compte évite un état de plus à maintenir.
+      if (proche.notesCount === 0) {
+        void this.persons.list(req.userId, { limit: 1 }).then((carnet) => {
+          if (carnet.total === 1) this.mesure.emettre(req.userId, "person.first_created", {});
+        });
+      }
+      return proche;
+    });
   }
 
   @Get(":id")

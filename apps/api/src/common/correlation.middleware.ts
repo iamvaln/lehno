@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { NestMiddleware } from "@nestjs/common";
 import { Injectable } from "@nestjs/common";
+import { dansLeContexte, lireEntetes } from "../tracking/contexte.js";
 
 // Forme d'UUID stricte : bornée en longueur, jeu de caractères restreint à
 // l'hexadécimal et au tiret. Un en-tête client forgé (retour à la ligne,
@@ -35,6 +36,16 @@ export class CorrelationMiddleware implements NestMiddleware {
     } catch {
       // rien à faire : la requête continue même si l'en-tête n'a pas pu être posé.
     }
-    next();
+
+    // Le contexte de mesure vit pour la DURÉE de la requête, sous le même
+    // raisonnement que ce middleware : il ne doit jamais la faire échouer. Un
+    // en-tête absent ou forgé donne un contexte vide, pas une exception.
+    let contexte;
+    try {
+      contexte = lireEntetes((req?.headers ?? {}) as Record<string, unknown>, id);
+    } catch {
+      contexte = lireEntetes({}, id);
+    }
+    dansLeContexte(contexte, next);
   }
 }

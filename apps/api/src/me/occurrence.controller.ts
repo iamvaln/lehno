@@ -5,6 +5,7 @@ import { AuthGuard } from "../auth/auth.guard.js";
 import { AppError } from "../common/errors.js";
 import { OccurrenceService } from "./occurrence.service.js";
 import { NoteService } from "./note.service.js";
+import { TrackingService } from "../tracking/tracking.service.js";
 
 type AuthedRequest = { userId: string };
 
@@ -16,6 +17,7 @@ export class OccurrenceController {
   constructor(
     @Inject(OccurrenceService) private readonly occurrences: OccurrenceService,
     @Inject(NoteService) private readonly notes: NoteService,
+    @Inject(TrackingService) private readonly mesure: TrackingService,
   ) {}
 
   // La chaîne de requête ne porte que du texte : `limit` arrive en « 3 », pas
@@ -66,6 +68,11 @@ export class OccurrenceController {
     @Param("id", ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(createNoteSchema)) body: CreateNoteInput,
   ): Promise<Note> {
-    return this.notes.createForOccurrence(req.userId, id, body);
+    return this.notes.createForOccurrence(req.userId, id, body).then((note) => {
+      this.mesure.emettre(req.userId, "note.created", {
+        persons: 1, hasOccasion: true, length: body.content.length, origin: "occasion",
+      });
+      return note;
+    });
   }
 }

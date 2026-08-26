@@ -60,6 +60,7 @@ export const fr = {
     alertes: "Alertes",
     moderation: "Modération",
     suppressions: "Demandes de suppression",
+    assistance: "Assistance",
     contact: "Messages de contact",
     attente: "Liste d'attente",
     transactions: "Transactions",
@@ -433,6 +434,134 @@ export const fr = {
       actif: "En service",
       inactif: "Retiré",
       aucuneRemise: "—",
+    },
+  },
+
+  // Les comptes d'exploitation. « Gérer les accès des administrateurs » est
+  // réservé au rôle admin (ux-admin §6) — c'est le contrepoids du journal
+  // d'audit : qui peut lire le travail de l'équipe décide aussi qui en fait
+  // partie.
+  acces: {
+    titre: "Accès administrateurs",
+    sous: "Qui entre dans cet outil, et avec quels droits. Un accès se retire, il ne s'efface pas.",
+    col: { email: "Adresse", nom: "Nom", role: "Rôle", etat: "État", depuis: "Depuis" },
+    roles: { admin: "Administrateur", support: "Support" },
+    etats: { actif: "En service", revoque: "Accès retiré" },
+    sansNom: "—",
+    // Le compte de celui qui regarde : ni rôle ni accès ne s'y touchent.
+    soiMeme: "Vous",
+    vide: {
+      titre: "Aucun autre compte",
+      texte: "Les comptes d'exploitation apparaissent ici, avec leur rôle et la date de leur arrivée.",
+    },
+    gestes: {
+      promouvoir: "Passer administrateur",
+      retrograder: "Passer support",
+      revoquer: "Retirer l'accès",
+    },
+    inviter: {
+      ouvrir: "Inviter quelqu'un",
+      titre: "Inviter un compte d'exploitation",
+      sous: "Le compte est créé à l'avance : une adresse inconnue ne reçoit jamais de code.",
+      email: "Adresse e-mail",
+      role: "Rôle",
+      confirmer: "Inviter",
+      annuler: "Annuler",
+      motifs: [
+        "Arrivée dans l'équipe",
+        "Renfort temporaire sur l'assistance",
+        "Remplacement d'un départ",
+      ],
+      dialogue: {
+        titre: "Inviter ce compte",
+        consequence: "Le compte pourra entrer dès sa première demande de code. Le journal garde qui l'a invité.",
+      },
+    },
+    dialogueRole: {
+      titre: "Changer le rôle de {compte}",
+      consequence: "Le rôle administrateur ouvre la famille Économie et le journal d'audit. Le changement prend effet au prochain geste.",
+      motifs: [
+        "Changement de responsabilité",
+        "Besoin d'accès aux leviers d'économie",
+        "Retour à un périmètre d'assistance",
+      ],
+    },
+    dialogueRevocation: {
+      titre: "Retirer l'accès de {compte}",
+      // Ce qui distingue « retirer l'accès » de « le retirer plus tard ».
+      consequence: "Les sessions ouvertes se ferment tout de suite. Le compte est désactivé, jamais effacé : le journal doit encore pouvoir nommer qui a fait quoi.",
+      motifs: [
+        "Départ de l'équipe",
+        "Compte compromis",
+        "Fin d'une mission temporaire",
+      ],
+    },
+  },
+
+  // Les quatre files. Trois se lisent, la quatrième se solde — et c'est la
+  // seule dont le modèle porte un état.
+  assistance: {
+    titre: "Assistance",
+    sous: "Ce que les gens nous écrivent, et ce qui attend une réponse.",
+    onglets: { demandes: "Demandes", contact: "Messages", attente: "Liste d'attente", retours: "Retours" },
+
+    demandes: {
+      col: { utilisateur: "Compte", sujet: "Sujet", corps: "Demande", version: "Version", etat: "État", quand: "Reçue le" },
+      etats: { open: "Ouverte", answered: "Répondue", closed: "Close" },
+      filtreEtat: "État",
+      tous: "Toutes",
+      sansSujet: "—",
+      gestes: { repondre: "Marquer répondue", clore: "Clore", rouvrir: "Rouvrir" },
+      dialogue: {
+        titre: "Changer l'état de cette demande",
+        consequence: "Le changement rejoint le journal d'audit, avec son motif.",
+        motifs: [
+          "Réponse envoyée par courriel",
+          "Question déjà traitée ailleurs",
+          "Sans suite après relance",
+        ],
+      },
+      vide: {
+        titre: "Aucune demande en attente",
+        texte: "Les demandes envoyées depuis l'application apparaissent ici, la plus ancienne d'abord.",
+      },
+    },
+
+    contact: {
+      col: { nom: "Nom", email: "Adresse", sujet: "Sujet", message: "Message", quand: "Reçu le" },
+      // Les six clés du formulaire public. Le serveur transporte la clé, jamais
+      // la phrase : c'est ce qui permet de la dire dans les deux langues.
+      sujets: {
+        question: "Une question",
+        probleme: "Un problème",
+        suggestion: "Une suggestion",
+        partenariat: "Un partenariat",
+        presse: "La presse",
+        autre: "Autre chose",
+      },
+      vide: {
+        titre: "Aucun message",
+        texte: "Les messages du formulaire public apparaissent ici, le plus récent d'abord.",
+      },
+    },
+
+    attente: {
+      col: { email: "Adresse", source: "Venue de", langue: "Langue", quand: "Inscrite le" },
+      sansSource: "—",
+      vide: {
+        titre: "Personne sur la liste",
+        texte: "Les adresses laissées avant l'ouverture apparaissent ici.",
+      },
+    },
+
+    retours: {
+      col: { utilisateur: "Compte", note: "Note", corps: "Retour", version: "Version", quand: "Laissé le" },
+      anonyme: "Compte retiré",
+      sansNote: "—",
+      vide: {
+        titre: "Aucun retour",
+        texte: "Les retours laissés depuis l'application apparaissent ici.",
+      },
     },
   },
 
