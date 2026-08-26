@@ -42,6 +42,7 @@ import { ParametersController, ParametersService } from "./admin/parameters.cont
 import { AdminFeatureFlagsController, AdminFeatureFlagsService } from "./admin/feature-flags.controller.js";
 import { PaymentSettingsController, PaymentSettingsService } from "./admin/payment-settings.controller.js";
 import { AdminPaymentsController, AdminPaymentsService } from "./admin/payments.controller.js";
+import { PaymentListsController, PaymentListsService } from "./admin/payment-lists.controller.js";
 import { AdminUsersController, AdminUsersService } from "./admin/users.controller.js";
 import { DeletionsController, DeletionsService } from "./admin/deletions.controller.js";
 import { LecturesController, LecturesService } from "./admin/lectures.controller.js";
@@ -56,7 +57,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     MeFeaturesController, PublicFeaturesController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, PaymentListsController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
   ],
   providers: [
     PrismaService,
@@ -138,6 +139,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     AdminFeatureFlagsService,
     PaymentSettingsService,
     AdminPaymentsService,
+    PaymentListsService,
     AdminUsersService,
     DeletionsService,
     LecturesService,

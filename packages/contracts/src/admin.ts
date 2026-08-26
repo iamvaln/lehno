@@ -536,3 +536,80 @@ export const paiementDecideSchema = z.object({
 }).strict();
 
 export type DecisionPaiement = z.infer<typeof decisionPaiementSchema>;
+
+// ——— Les deux listes du §5.4 ——————————————————————————————————
+
+/**
+ * Une ligne de la liste des paiements.
+ *
+ * La méthode n'y paraît que par ses éléments d'identification — opérateur et
+ * derniers chiffres. Le numéro complet d'un compte mobile money demeure masqué,
+ * **y compris pour l'administrateur** : il est chiffré au repos, déchiffré pour
+ * la seule communication avec le prestataire, et n'entre dans aucun journal.
+ *
+ * À ne pas confondre avec le numéro d'un compte de **collecte**, qui est rendu
+ * en entier : celui-là est un compte du service, pas d'un client.
+ */
+export const paiementLigneSchema = z.object({
+  id: z.string(),
+  utilisateur: z.string(),
+  mode: z.enum(["provider", "semi_manual", "manual"]),
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  montant: z.number(),
+  devise: z.string(),
+  credits: z.number().int(),
+  /** « MTN MoMo •••4321 », ou nul quand aucune méthode n'est rattachée. */
+  methode: z.string().nullable(),
+  attenduSurLeCompte: z.number().nullable(),
+  recuSurLeCompte: z.number().nullable(),
+  /** Reçu moins attendu. Nul tant que personne n'a constaté. */
+  ecart: z.number().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+/** Un état traversé, et **combien de temps** il a duré. */
+export const etatTraverseSchema = z.object({
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  debut: z.string(),
+  fin: z.string().nullable(),
+  /** En secondes. Nul pour l'état courant, qui dure encore. */
+  dureeSecondes: z.number().int().nullable(),
+  origine: z.enum(["user", "webhook", "polling", "admin", "system"]),
+  parQui: z.string().nullable(),
+  motif: z.string().nullable(),
+}).strict();
+
+export const paiementDetailSchema = paiementLigneSchema.extend({
+  reference: z.string().nullable(),
+  motifEchec: z.string().nullable(),
+  frais: z.number().nullable(),
+  compteCollecte: z.string().nullable(),
+  histoire: z.array(etatTraverseSchema),
+}).strict();
+
+export const pagePaiementsSchema = z.object({
+  items: z.array(paiementLigneSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+/** Un mouvement de crédits, tel que l'administration le lit. */
+export const mouvementCreditSchema = z.object({
+  id: z.string(),
+  utilisateur: z.string(),
+  type: z.enum(["grant", "purchase", "consumption", "adjustment"]),
+  /** D'où il vient. Le type dit ce qu'il est, la source ce qui l'a produit. */
+  source: z.string(),
+  montant: z.number().int(),
+  paiementId: z.string().nullable(),
+  note: z.string().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+export const pageMouvementsSchema = z.object({
+  items: z.array(mouvementCreditSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+export type PaiementLigne = z.infer<typeof paiementLigneSchema>;
+export type PaiementDetail = z.infer<typeof paiementDetailSchema>;
+export type MouvementCredit = z.infer<typeof mouvementCreditSchema>;
