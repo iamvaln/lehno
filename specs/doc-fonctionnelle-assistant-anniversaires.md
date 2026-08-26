@@ -174,7 +174,14 @@ L'application n'assure pas l'envoi automatique des messages aux destinataires : 
 
 **CreditBundle** — Palier d'achat de crédits, réglé par l'administration : montant, crédits obtenus, remise affichée. On achète un palier, jamais un montant libre.
 
-**ManualTopUp** — Demande de recharge manuelle : l'utilisateur verse sur un numéro affiché et dépose un justificatif, un administrateur vérifie la réception puis crédite. Sert lorsque le paiement dans l'application est indisponible.
+**CollectionAccount** — Un compte d'opérateur sur lequel les clients versent, géré depuis le back-office : son nom affiché, son opérateur, son numéro, et s'il paraît ou non dans l'application.
+
+**Le paiement manuel, deux voies.** Tant que l'intégration d'un prestataire n'existe pas, un achat de crédits se règle par virement mobile et se confirme à la main. Ce sont des `Payment` ordinaires, distingués par leur `mode` :
+
+- **Semi-manuel** — le client choisit son palier dans l'application, voit le numéro sur lequel verser, effectue le dépôt, puis déclare le numéro qu'il a employé et dépose son reçu. La demande paraît alors au back-office. Un administrateur **vérifie que l'argent est bien arrivé sur le compte**, consigne la référence de la transaction et le montant reçu, puis confirme ou rejette avec motif. À la confirmation, les crédits sont octroyés et le client prévenu par courriel et par poussée.
+- **Manuel** — un administrateur saisit tout depuis le back-office : le client, le palier, le compte qui a reçu l'argent, la référence, le reçu. Sert lorsque le client n'est pas passé par l'application.
+
+**Seul un administrateur** confirme ou rejette. Chaque passage d'état est consigné avec son auteur et son motif.
 
 **StudioConfig / StudioProfile / StudioTrial** — La configuration du studio du portrait, les profils de simulation qui servent à l'éprouver, et les essais eux-mêmes. Un brouillon se modifie librement ; une publication le met en service, et se révoque si elle déçoit.
 

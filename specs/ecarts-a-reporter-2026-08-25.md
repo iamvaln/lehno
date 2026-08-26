@@ -148,6 +148,38 @@ et l'identifiant de corrélation que la §12.2 fait déjà voyager de bout en bo
 
 ---
 
+## C3. `CreditTransaction.payment_id` — ajouté au dictionnaire le 25/08
+
+Un paiement et un octroi de crédits sont **deux entités**, et le dictionnaire
+le disait déjà : « un `Payment` réussi produit une `CreditTransaction` de type
+`purchase` ». Mais rien ne les **reliait** — `CreditTransaction` portait
+`action_run_id`, `referral_id` et `promo_code_id`, sans `payment_id`.
+
+Trois conséquences, dont une chère :
+
+- une ligne `purchase` de +20 crédits ne disait pas quel paiement l'avait
+  produite ;
+- l'octroi unique ne pouvait pas se garantir par une contrainte, alors qu'un
+  paiement se résout par **trois voies** — notification, interrogation,
+  confirmation manuelle — dont deux peuvent constater le succès à quelques
+  secondes d'écart ;
+- **un remboursement ne savait pas quoi reprendre** : la ligne d'ajustement
+  n'avait aucun moyen de désigner l'achat qu'elle annule, et un litige se
+  serait réglé à l'estime.
+
+Porté au dictionnaire avec l'**unicité partielle** sur `payment_id` là où
+`type = 'purchase'` — la même logique que `referral.invited_user_id` : la
+règle vit dans le schéma, pas dans le code qui la vérifie. Et un
+`on delete restrict`, parce qu'effacer un paiement ne doit pas faire
+disparaître le crédit qu'il a produit.
+
+**Rien n'est construit** : `Payment` fait partie des tables absentes ci-dessous,
+et la `CreditTransaction` livrée ne porte ni `payment_id`, ni `action_run_id`,
+ni `promo_code_id` — leurs cibles n'existent pas, et une colonne sans sa
+contrainte est une demi-vérité. Elles arriveront avec ce qu'elles référencent.
+
+---
+
 ## D. Écart entre le dictionnaire et le schéma livré
 
 **Vingt tables du dictionnaire n'existent pas dans `prisma/schema.prisma`.**

@@ -4,6 +4,20 @@
 
 Références : `ux-admin-lehno.md`, `spec-technique-lehno.md` (§8 pour les chemins, §9 pour les droits), `spec-portrait-lehno.md`, `design-system-lehno.md`.
 
+
+> **Corrigé le 25/08/2026 — `ManualTopUp` n'existe plus.** Elle a été absorbée
+> par `Payment`, distingué par son `mode` : `provider`, `semi_manual`, `manual`.
+> Une entité séparée aurait obligé à tenir deux registres et deux historiques
+> d'états, et **embrouillerait la comptabilité** — une recharge manuelle
+> n'aurait même pas paru dans l'historique des paiements du client, alors que
+> c'en est un du point de vue de celui qui a versé l'argent.
+>
+> Les chemins deviennent : `/admin/payments` (lecture et **saisie**),
+> `/admin/payments/{id}/decision` (confirmer ou rejeter, avec la référence de
+> la transaction et le montant constaté), et `/admin/collection-accounts` (les
+> comptes sur lesquels les clients versent). Voir le dictionnaire, sections
+> `Payment` et `CollectionAccount`.
+
 ---
 
 ## 1. La navigation s'allonge

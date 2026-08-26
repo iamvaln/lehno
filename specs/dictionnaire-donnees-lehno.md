@@ -120,7 +120,13 @@ Achat de crédits réglé par un `User`. Alimente l'historique des paiements et 
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
 | user_id | uuid | non | — | — | FK → user(id) on delete cascade |
 | payment_method_id | uuid | oui | — | — | FK → payment_method(id) on delete set null ; méthode utilisée |
-| provider_ref | text | non | oui | — | Référence de la transaction chez le prestataire (idempotence) |
+| mode | payment_mode (enum) | non | — | 'provider' | Par quelle voie ce paiement se règle |
+| credit_bundle_id | uuid | oui | — | — | FK → credit_bundle(id) on delete set null ; le palier acheté |
+| collection_account_id | uuid | oui | — | — | FK → collection_account(id) on delete restrict ; le compte qui a REÇU l'argent, sur les voies manuelles |
+| payer_msisdn | varchar(32) | oui | — | — | Le numéro depuis lequel le client déclare avoir versé — semi-manuel seulement |
+| proof_key | text | oui | — | — | Reçu déposé par le client ou saisi par l'administrateur : image ou PDF. Référence sur le stockage |
+| provider_ref | text | oui | oui | — | Référence de la transaction. Chez le prestataire pour `provider` ; **saisie par l'administrateur** sur les voies manuelles, à la confirmation. Nulle tant qu'elle n'est pas connue — d'où l'unicité partielle, sur les valeurs présentes |
+| received_amount | numeric(12,2) | oui | — | — | Ce que l'administrateur a **constaté sur le compte**, distinct du montant annoncé. Un écart se traite, il ne se devine pas |
 | direction | payment_direction (enum) | non | — | 'charge' | `charge` (achat) \| `refund` (remboursement) |
 | amount | numeric(12,2) | non | — | — | Montant réglé |
 | currency | varchar(3) | non | — | — | Code ISO 4217 |
@@ -130,6 +136,13 @@ Achat de crédits réglé par un `User`. Alimente l'historique des paiements et 
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `payment_direction` : `charge`, `refund`.
+- Enum `payment_mode` : `provider` (l'intégration, quand elle existera), `semi_manual` (le client verse puis dépose son reçu), `manual` (un administrateur saisit tout depuis le back-office).
+- **Les deux voies manuelles sont des `Payment`, pas une entité à part.** Elles ont le même cycle de vie, la même histoire d'états, et produisent le même `CreditTransaction` portant `payment_id`. Une table parallèle obligerait à tenir deux registres, deux historiques et deux chemins d'octroi — et une recharge manuelle n'apparaîtrait pas dans l'historique des paiements du client.
+- **`provider_ref` est nulle tant que la référence n'est pas connue.** Sur la voie du prestataire elle arrive avec la notification ; sur les voies manuelles, c'est l'administrateur qui la consigne au moment de confirmer. L'unicité porte donc sur les valeurs présentes (index unique partiel) — sans quoi deux demandes en attente entreraient en collision sur une valeur nulle.
+- **`received_amount` n'est pas `amount`.** Le premier est ce que l'administrateur a vu arriver sur le compte, le second ce que le paiement visait. Les confondre effacerait le cas qui compte : un client qui verse moins que le palier choisi. L'écart se traite — on crédite le palier correspondant, ou on rejette avec motif — mais il ne se devine pas après coup.
+- **Le reçu ne prouve rien.** Un montage est facile : l'administrateur **vérifie la réception sur le compte de l'opérateur** avant de confirmer, et ne se fie pas à l'image. Le fichier suit les règles des fichiers reçus (type vérifié par le contenu, poids borné, métadonnées retirées) et s'efface une fois la demande traitée.
+- **Seul un administrateur confirme ou rejette**, quelle que soit la voie. Chaque passage d'état ouvre une ligne de `PaymentStatusHistory` avec `origin = 'admin'`, `changed_by_admin_id` renseigné et un **motif obligatoire** — c'est ce qui rend le registre lisible le jour d'un litige.
+- **À la confirmation** : les crédits sont octroyés une seule fois (unicité partielle sur `credit_transaction.payment_id`), et le client reçoit une notification par courriel **et** par poussée.
 - Enum `payment_status` : `pending`, `succeeded`, `failed`, `expired`, `refunded`.
 - Chaque changement d'état ouvre une ligne dans `PaymentStatusHistory` et ferme la précédente.
 - Un `pending` se résout par trois voies, dans cet ordre : la **notification du prestataire** ; à défaut, l'**interrogation de son point d'état**, engagée une fois le délai de notification dépassé ; en dernier ressort, la **confirmation manuelle d'un administrateur**, avec motif. Les crédits ne sont octroyés qu'au passage à `succeeded`, une seule fois quelle que soit la voie qui l'a constaté. Sans résolution au terme du délai configuré, l'opération passe à `expired`.
@@ -516,28 +529,56 @@ Palier d'achat de crédits. **Réglé par l'administration** : montant, crédits
 - **La remise s'affiche** — c'est un argument de vente, pas un calcul caché.
 - Valeurs de départ, à ajuster depuis l'administration : 500 F → 5 crédits · 1 000 F → 10 · 2 000 F → 22 (+10 %) · 5 000 F → 57 (+15 %) · 10 000 F → 120 (+20 %).
 
-## ManualTopUp
+## CollectionAccount
 
-Demande de recharge manuelle. Sert lorsque le paiement dans l'application est **indisponible** — fonctionnalité éteinte, intégration en panne, opérateur injoignable, ou utilisateur qui n'y parvient pas.
+Un compte d'opérateur sur lequel les clients versent. **Géré depuis le
+back-office** : on en ouvre un, on le nomme, on décide s'il paraît dans
+l'application.
 
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
-| user_id | uuid | non | — | — | FK → user(id) on delete cascade |
-| credit_bundle_id | uuid | oui | — | — | FK → credit_bundle(id) on delete set null ; le palier visé |
-| declared_amount | numeric(12,2) | non | — | — | Montant que l'utilisateur déclare avoir versé |
-| operator | varchar(40) | oui | — | — | L'opérateur employé |
-| proof_key | text | oui | — | — | Référence du justificatif sur le stockage ; effacé au traitement |
-| status | manual_topup_status (enum) | non | — | 'pending' | `pending` \| `approved` \| `rejected` |
-| reason | text | oui | — | — | Motif du rejet, ou observation ; **obligatoire au rejet** |
-| handled_by_admin_id | uuid | oui | — | — | FK → admin(id) on delete set null |
-| handled_at | timestamptz | oui | — | — | |
+| label | varchar(80) | non | — | — | Nom affiché — « Orange Money principal » |
+| operator | varchar(40) | non | — | — | L'opérateur : `orange_money`, `mtn_momo`, … |
+| number | varchar(32) | non | — | — | Le numéro sur lequel verser |
+| is_visible_in_app | boolean | non | — | false | **Paraît-il dans l'application ?** Un compte peut servir aux saisies d'administration sans être proposé aux clients |
+| is_active | boolean | non | — | true | Un compte fermé cesse d'être proposé, sans disparaître des paiements passés |
+| position | smallint | oui | — | — | Ordre d'affichage |
 | created_at | timestamptz | non | — | now() | |
+| updated_at | timestamptz | non | — | now() | |
 
-- Enum `manual_topup_status` : `pending`, `approved`, `rejected`.
-- **Le justificatif ne prouve rien.** Un montage est facile : l'administrateur **vérifie la réception sur le compte de l'opérateur** avant d'approuver, et ne se fie pas à l'image.
-- Le fichier suit les règles des fichiers reçus (type vérifié par le contenu, poids borné, métadonnées retirées) et **s'efface une fois la demande traitée**.
-- Une approbation crée un `CreditLedger` d'origine manuelle, avec la référence de la demande.
+- **`is_visible_in_app` et `is_active` ne disent pas la même chose.** Le premier
+  décide de ce que le client voit ; le second, de ce qui reste employable. Un
+  compte peut être actif pour l'administration et invisible dans l'application
+  — le temps d'un essai, ou parce qu'il sert d'appoint.
+- **Jamais supprimé, seulement désactivé** : un `Payment` passé le référence, et
+  effacer le compte rendrait ce paiement inexplicable.
+- Sa modification est une action sensible : elle passe au journal d'audit.
+
+## ManualTopUp — **retirée**, absorbée par `Payment`
+
+Cette entité décrivait la demande de recharge manuelle comme une chose à part.
+Elle ne l'est pas : c'est un **paiement**, avec le même cycle de vie et la même
+histoire d'états. Voir `Payment.mode` — `semi_manual` et `manual`.
+
+Ce que la fusion évite : deux registres à tenir, deux historiques d'états, deux
+chemins d'octroi de crédits. Et surtout, une recharge manuelle qui n'aurait pas
+paru dans l'historique des paiements du client — alors que c'est un paiement,
+du point de vue de celui qui a versé l'argent.
+
+La correspondance, pour qui lisait l'ancienne table :
+
+| Ancien champ | Devient |
+|---|---|
+| `user_id` | `payment.user_id` |
+| `credit_bundle_id` | `payment.credit_bundle_id` |
+| `declared_amount` | `payment.amount` — ce que le paiement visait |
+| `operator` | `payment.collection_account_id` → le compte, qui porte son opérateur |
+| `proof_key` | `payment.proof_key` |
+| `status` `pending`/`approved`/`rejected` | `payment.status` `pending`/`succeeded`/`failed` |
+| `reason` | le motif de la ligne `payment_status_history` correspondante |
+| `handled_by_admin_id` | `payment_status_history.changed_by_admin_id` |
+| `handled_at` | `payment_status_history.started_at` de l'état final |
 
 ## GiftGiven
 
@@ -840,12 +881,17 @@ Registre des mouvements de crédits. Le solde d'un `User` en est la somme.
 | amount | integer | non | — | — | Signé (+ crédit, − débit) |
 | action_run_id | uuid | oui | — | — | FK → action_run(id) ; si `consumption` |
 | referral_id | uuid | oui | — | — | FK → referral(id) ; si `grant` de parrainage |
+| payment_id | uuid | oui | — | — | FK → payment(id) on delete restrict ; si `purchase`, et sur l'ajustement qui reprend un remboursement |
 | promo_code_id | uuid | oui | — | — | FK → promo_code(id) ; si `grant` de code promo |
 | reason | text | oui | — | — | Libellé libre (octroi direct, ajustement admin…) |
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `credit_txn_type` : `grant`, `purchase`, `consumption`, `adjustment`.
 - Solde = `sum(amount) where user_id = ?`. Aucune colonne de solde stockée.
+- **Un paiement et un octroi sont deux choses.** Le `Payment` porte l'argent et un cycle de vie qui lui est propre (`pending` → `succeeded` / `failed` / `expired` / `refunded`) ; la `CreditTransaction` porte le mouvement en crédits, et n'existe qu'une fois le paiement abouti. Les fondre en une seule ligne obligerait à écrire un mouvement dès l'initiation, puis à le défaire si l'opérateur refuse — un solde qui monte et redescend au gré d'un paiement en attente.
+- **Chaque ligne dit d'où elle vient.** `payment_id` pour un achat, `referral_id` pour un parrainage, `promo_code_id` pour un code, `action_run_id` pour une consommation. Sans ce pointeur, une ligne de +20 crédits ne se rattache à rien : on ne saurait ni quel paiement l'a produite, ni quoi reprendre lors d'un remboursement — la ligne d'ajustement n'aurait aucun moyen de désigner l'achat qu'elle annule, et un litige se règlerait à l'estime.
+- **Unicité partielle sur `payment_id` là où `type = 'purchase'`.** C'est ce qui rend l'octroi unique STRUCTUREL plutôt que dépendant du code qui le vérifie : un paiement se résout par trois voies — notification, interrogation, confirmation manuelle — et deux d'entre elles peuvent constater le succès à quelques secondes d'écart. Sans la contrainte, le compte est crédité deux fois. Même logique que l'unicité sur `referral.invited_user_id`.
+- **`on delete restrict` et non `cascade`** : effacer un paiement ne doit pas faire disparaître le crédit qu'il a produit. Un solde qui change parce qu'on a nettoyé une table est un solde qu'on ne peut plus expliquer.
 
 ## Referral
 
@@ -1124,6 +1170,7 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | payment_method_kind | mobile_money, card |
 | payment_direction | charge, refund |
 | payment_status | pending, succeeded, failed, expired, refunded |
+| payment_mode | provider, semi_manual, manual |
 | status_change_origin | user, webhook, polling, admin, system |
 | person_register | familier, amical, formel |
 | person_relation | famille_proche, famille_etendue, ami, partenaire, collegue, relation_pro, connaissance |
@@ -1141,7 +1188,6 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | wishlist_status | available, reserved, fulfilled |
 | wishlist_origin | collected, accepted_idea, owner |
 | reservation_status | pending, confirmed, cancelled, expired |
-| manual_topup_status | pending, approved, rejected |
 | collection_link_type | nominatif, public |
 | submission_status | pending, validated, rejected |
 | submitted_wish_review | pending, retained, discarded |

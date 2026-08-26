@@ -113,11 +113,11 @@ export const DRAPEAUX = {
     chemins: ["/me/credit-bundles", "/me/payments", "/me/payment-methods*"],
   },
   "topup.manual": {
-    gouverne: "La recharge manuelle, avec justificatif",
+    gouverne: "Le versement manuel : verser sur un compte affiché, puis déposer son reçu",
     portee: ["app"],
     requiert: [],
     ecrans: ["3.9 (autre chemin)"],
-    chemins: ["/me/manual-topups*"],
+    chemins: ["/me/collection-accounts", "/me/payments (mode semi-manuel)"],
   },
   referral: {
     gouverne: "Le parrainage et la page d'invitation",
