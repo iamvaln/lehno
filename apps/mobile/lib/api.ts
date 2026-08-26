@@ -1,4 +1,6 @@
+import Constants from "expo-constants";
 import { errorEnvelopeSchema, type ErrorCode, type ErrorEnvelope, type Session } from "@lehno/contracts";
+import { adresseDeLApi } from "./adresse-api.js";
 import { doitRenouveler, sortDeLaSession } from "./session.js";
 import { effaceLesJetons, litLesJetons, poseLesJetons } from "./jetons.js";
 
@@ -9,7 +11,20 @@ import { effaceLesJetons, litLesJetons, poseLesJetons } from "./jetons.js";
  * question de session : insister ferait une boucle.
  */
 
-const BASE = process.env["EXPO_PUBLIC_API_URL"] ?? "http://localhost:3000";
+/* En développement, l'API tourne sur la machine qui sert le bundle : Expo en
+   donne l'adresse, et c'est le seul moyen qui vaille pour un émulateur, un
+   simulateur et un téléphone du même réseau. En production, EXPO_PUBLIC_API_URL
+   est obligatoire — sans elle, mieux vaut échouer que s'appeler soi-même. */
+const BASE = adresseDeLApi(
+  process.env["EXPO_PUBLIC_API_URL"],
+  Constants.expoConfig?.hostUri,
+);
+
+if (!BASE) {
+  throw new Error(
+    "Aucune adresse d'API : posez EXPO_PUBLIC_API_URL, ou lancez depuis le serveur de développement.",
+  );
+}
 
 export class ErreurDApi extends Error {
   constructor(
@@ -36,7 +51,7 @@ async function litLEnveloppe(reponse: Response): Promise<ErrorEnvelope | null> {
 }
 
 async function envoie(chemin: string, options: RequestInit, jeton?: string): Promise<Response> {
-  return fetch(`${BASE}/v1${chemin}`, {
+  return fetch(`${BASE!}/v1${chemin}`, {
     ...options,
     headers: {
       "content-type": "application/json",
