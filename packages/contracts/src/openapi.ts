@@ -32,6 +32,7 @@ import {
 } from "./me-events.js";
 import { featuresResponseSchema } from "./flags.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
+import { metadataSchema } from "./me-app.js";
 
 // Le contrat se CALCULE depuis les schémas Zod, il ne se recopie pas. Une
 // seconde déclaration des mêmes formes — en DTO décoré, par exemple — dériverait
@@ -548,6 +549,24 @@ const CHEMINS: Chemin[] = [
     reponse: noteSchema,
     // Une ressource neuve, dont le client apprend l'identifiant.
     statut: 201,
+  },
+  // ——— me/metadata (apps/api/src/me) ——————————————————————————————
+  {
+    chemin: "/me/metadata",
+    methode: "get",
+    resume: "Lire les valeurs dont les écrans composent leurs listes",
+    note: [
+      "Aucun libellé : ils vivent dans les ressources de traduction de",
+      "l'application, indexés par `code`.",
+      "",
+      "`categories` est la seule valeur lue EN BASE — sa `kind` et son",
+      "`isConstraint` ne se déduisent d'aucune énumération. `dislikes_nogo`",
+      "porte `isConstraint: true` : cela change ce que le produit PROPOSE, pas",
+      "seulement ce qu'il affiche. Le reste est figé, servi avec elle pour",
+      "que le client n'aille pas chercher la même chose à deux endroits.",
+    ].join("\n"),
+    authentifie: true,
+    reponse: metadataSchema,
   },
 ];
 

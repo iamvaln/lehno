@@ -31,6 +31,8 @@ import { NoteController, NotesController } from "./me/note.controller.js";
 import { NoteService } from "./me/note.service.js";
 import { HomeController } from "./me/home.controller.js";
 import { HomeService } from "./me/home.service.js";
+import { MetadataController } from "./me/metadata.controller.js";
+import { MetadataService } from "./me/metadata.service.js";
 import { TenantRepository } from "./tenancy/tenant.repository.js";
 import { ConfigController, ConfigService } from "./public/config.controller.js";
 import { LegalController, LegalService } from "./public/legal.controller.js";
@@ -56,7 +58,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
 
 @Module({
   controllers: [
-    AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, ConfigController, LegalController,
+    AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, ConfigController, LegalController,
     MeFeaturesController, PublicFeaturesController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
@@ -132,6 +134,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     PersonService,
     NoteService,
     HomeService,
+    MetadataService,
     ConfigService,
     LegalService,
     WaitlistService,

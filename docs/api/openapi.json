@@ -7065,6 +7065,271 @@
           }
         }
       }
+    },
+    "/me/metadata": {
+      "get": {
+        "summary": "Lire les valeurs dont les écrans composent leurs listes",
+        "description": "Aucun libellé : ils vivent dans les ressources de traduction de\nl'application, indexés par `code`.\n\n`categories` est la seule valeur lue EN BASE — sa `kind` et son\n`isConstraint` ne se déduisent d'aucune énumération. `dislikes_nogo`\nporte `isConstraint: true` : cela change ce que le produit PROPOSE, pas\nseulement ce qu'il affiche. Le reste est figé, servi avec elle pour\nque le client n'aille pas chercher la même chose à deux endroits.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "gift_ideas",
+                              "message_ideas",
+                              "facts",
+                              "encouragements",
+                              "challenges",
+                              "interests",
+                              "dislikes_nogo"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "ponctuelle",
+                              "durable"
+                            ]
+                          },
+                          "isConstraint": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "kind",
+                          "isConstraint"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "eventKinds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "birthday",
+                          "other"
+                        ]
+                      }
+                    },
+                    "eventNatures": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "happy",
+                          "sensitive"
+                        ]
+                      }
+                    },
+                    "scheduleUnits": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "day",
+                          "week",
+                          "month",
+                          "quarter",
+                          "year"
+                        ]
+                      }
+                    },
+                    "personRelations": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "famille_proche",
+                          "famille_etendue",
+                          "ami",
+                          "partenaire",
+                          "collegue",
+                          "relation_pro",
+                          "connaissance"
+                        ]
+                      }
+                    },
+                    "personRegisters": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "familier",
+                          "amical",
+                          "formel"
+                        ]
+                      }
+                    },
+                    "personGenders": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "female",
+                          "male",
+                          "other",
+                          "unspecified"
+                        ]
+                      }
+                    },
+                    "contactChannels": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "whatsapp",
+                          "sms",
+                          "email",
+                          "autre"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "categories",
+                    "eventKinds",
+                    "eventNatures",
+                    "scheduleUnits",
+                    "personRelations",
+                    "personRegisters",
+                    "personGenders",
+                    "contactChannels"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
