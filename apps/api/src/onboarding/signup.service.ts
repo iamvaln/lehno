@@ -46,20 +46,32 @@ export class SignupService {
     return row ? Number(row.value) : defaut;
   }
 
-  private champsDeCompte(email: string, emailVerified: boolean) {
+  private champsDeCompte(email: string, emailVerified: boolean, username: string) {
     return {
       email,
       emailVerified,
-      // Pseudo provisoire : l'écran de première connexion en fait choisir un vrai.
-      username: `u${randomBytes(4).toString("hex")}`,
+      // Choisi par l'utilisateur à l'écran du pseudo — il forme l'adresse de
+      // son Mur, donc il lui appartient.
+      username,
+      // Son propre code de parrainage, tiré au sort : c'est celui qu'il
+      // partagera. Rien à voir avec celui qu'il a éventuellement reçu.
       referralCode: randomBytes(6).toString("base64url").slice(0, 8).toUpperCase(),
     };
+  }
+
+  // Indicatif : le plafond fait foi À LA CRÉATION, sous verrou consultatif.
+  // Cette lecture sert à prévenir tôt, jamais à autoriser — deux inscriptions
+  // simultanées la liraient toutes deux avant qu'aucune n'écrive.
+  async plafondAtteint(deviceId: string): Promise<boolean> {
+    const seuil = await this.param(this.prisma, "max_accounts_per_device", 3);
+    return (await this.prisma.deviceSignup.count({ where: { deviceId } })) >= seuil;
   }
 
   async creer(input: {
     email: string;
     emailVerified: boolean;
     deviceId: string;
+    username: string;
     referralCode?: string | undefined;
   }): Promise<Creation> {
     // La version acceptée se LIT dans le document servi, jamais dans une
@@ -81,7 +93,7 @@ export class SignupService {
 
           const user = await tx.user.create({
             data: {
-              ...this.champsDeCompte(input.email, input.emailVerified),
+              ...this.champsDeCompte(input.email, input.emailVerified, input.username),
               acceptedTermsAt: new Date(),
               acceptedTermsVersion: versionCgu,
             },
@@ -92,8 +104,8 @@ export class SignupService {
           if (creditsOfferts > 0) {
             await tx.creditTransaction.create({
               data: {
-                userId: user.id, type: "grant", amount: creditsOfferts,
-                reason: "inscription",
+                userId: user.id, type: "grant", source: "signup_grant",
+                amount: creditsOfferts,
               },
             });
           }
@@ -108,12 +120,23 @@ export class SignupService {
           };
         });
       } catch (e) {
-        // Le pseudo provisoire tient sur 32 bits : une collision reste
-        // possible. On retire complètement la transaction — verrou compris —
-        // et on retente avec un nouveau tirage, plutôt que d'échouer un
-        // parcours qui a déjà consommé son code à usage unique.
         const collision = e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
-        if (collision && tentative < MAX_TENTATIVES) continue;
+        if (!collision) throw e;
+
+        // Deux collisions possibles, et elles ne se traitent pas pareil.
+        //
+        // Le PSEUDO est un choix de l'utilisateur : s'il est pris, il doit le
+        // savoir et en choisir un autre. Retenter en silence n'aurait aucun
+        // sens — on ne peut pas deviner celui qu'il voulait.
+        //
+        // Le code de parrainage, lui, est TIRÉ AU SORT : une collision est un
+        // coup de malchance, et on retire avec un nouveau tirage plutôt que
+        // d'échouer un parcours qui a déjà consommé son code à usage unique.
+        const cibles = (e.meta?.["target"] ?? []) as string[];
+        if (cibles.includes("username")) {
+          throw new AppError("username_taken", "this username is already taken");
+        }
+        if (tentative < MAX_TENTATIVES) continue;
         throw e;
       }
     }
@@ -155,16 +178,16 @@ export class SignupService {
     if (bonusParrain > 0) {
       await tx.creditTransaction.create({
         data: {
-          userId: parrain.id, type: "grant", amount: bonusParrain,
-          referralId: referral.id, reason: "parrainage — filleul inscrit",
+          userId: parrain.id, type: "grant", source: "referral_bonus",
+          amount: bonusParrain, referralId: referral.id,
         },
       });
     }
     if (bonusFilleul > 0) {
       await tx.creditTransaction.create({
         data: {
-          userId: filleulId, type: "grant", amount: bonusFilleul,
-          referralId: referral.id, reason: "parrainage — arrivé par une invitation",
+          userId: filleulId, type: "grant", source: "referral_bonus",
+          amount: bonusFilleul, referralId: referral.id,
         },
       });
     }

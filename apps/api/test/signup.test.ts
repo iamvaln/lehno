@@ -20,6 +20,7 @@ describe("la création de compte", () => {
   const creer = async (over: Partial<Parameters<SignupService["creer"]>[0]> = {}) =>
     signup.creer({
       email: adresse(), emailVerified: true,
+      username: `u${randomBytes(4).toString("hex")}`,
       deviceId: randomBytes(8).toString("hex"), ...over,
     });
 

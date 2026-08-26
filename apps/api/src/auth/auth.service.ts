@@ -7,9 +7,10 @@ import { AppError } from "../common/errors.js";
 import { RateLimitService } from "../common/rate-limit.service.js";
 import { assertUsableEmail, canonicalEmail } from "../common/email.js";
 import { OtpService } from "./otp.service.js";
-import { TokenService, type Pair } from "./token.service.js";
+import { TokenService } from "./token.service.js";
 import { SignupService } from "../onboarding/signup.service.js";
 import type { MailPort } from "../mail/mail.port.js";
+import type { VerifyOutcome, RegisterInput, Registered } from "@lehno/contracts";
 import { otpEmail } from "../mail/templates.js";
 
 type VerifyInput = {
@@ -40,7 +41,9 @@ export class AuthService {
   // La réponse reste la même pour une adresse inconnue : on émet un code et
   // on envoie, que le compte existe ou non — sinon le point d'entrée énumère
   // les comptes.
-  async requestOtp(input: { email: string; ip?: string }): Promise<{ sent: true }> {
+  async requestOtp(
+    input: { email: string; ip?: string },
+  ): Promise<{ sent: true; retryAfterSeconds: number }> {
     // Par destinataire ET par origine : l'un arrête celui qui vise une personne,
     // l'autre celui qui balaie un annuaire.
     //
@@ -60,7 +63,21 @@ export class AuthService {
     // gardent l'adresse telle qu'elle a été fournie.
     assertUsableEmail(input.email);
     const normalizedEmail = canonicalEmail(input.email);
-    await this.limiter.hit(`otp:email:${normalizedEmail}`, 5, 3_600_000);
+
+    // Trois codes par heure et par boîte, avec un délai croissant entre deux :
+    // cinq secondes, puis vingt-cinq, puis cent vingt-cinq. Le plafond arrête
+    // celui qui insiste ; le délai arrête le geste réflexe de celui qui ne
+    // voit pas le courriel arriver et retape.
+    const { retryAfterSeconds } = await this.limiter.hitWithBackoff(
+      `otp:email:${normalizedEmail}`,
+      { plafond: 3, fenetreMs: 3_600_000, baseSecondes: 5 },
+    );
+
+    // Par origine, en plus : le plafond par boîte arrête celui qui vise une
+    // personne, celui-ci arrête celui qui balaie un annuaire. Pas de délai
+    // croissant ici — plusieurs personnes légitimes partagent une IP de bureau
+    // ou de borne Wi-Fi, et les faire attendre l'une pour l'autre serait une
+    // panne, pas une protection.
     if (input.ip) await this.limiter.hit(`otp:ip:${input.ip}`, 20, 3_600_000);
 
     const { code } = await this.otp.issue(input.email, "login");
@@ -70,7 +87,12 @@ export class AuthService {
     const locale = (user?.uiLanguage === "en" ? "en" : "fr") as Locale;
     const { subject, text } = otpEmail({ code, locale });
     await this.mail.send({ to: input.email, subject, text, locale });
-    return { sent: true };
+
+    // Le délai avant la prochaine demande voyage avec la réponse. L'écran du
+    // code l'affiche en compte à rebours : sans lui, le client devrait coder
+    // la formule de son côté, et deux versions du parc appliqueraient deux
+    // règles différentes — celle du serveur restant la seule qui compte.
+    return { sent: true, retryAfterSeconds };
   }
 
   private async paramNumber(
@@ -92,6 +114,67 @@ export class AuthService {
     };
   }
 
+  // La création du compte, en UN geste. Le jeton d'inscription atteste que
+  // l'adresse a été vérifiée ; le pseudo et le code de parrainage arrivent
+  // avec lui. Plafond, compte, crédits et parrainage se jouent dans la même
+  // transaction — SignupService s'en charge.
+  //
+  // Pourquoi ici et pas à la vérification : le code de parrainage se saisit à
+  // l'écran du pseudo, donc après. Créer d'abord et rattacher ensuite
+  // laisserait un compte réclamer un parrainage des mois plus tard.
+  async register(input: RegisterInput & { userAgent?: string }): Promise<Registered> {
+    const { email } = this.tokens.verifyRegistration(input.registrationToken);
+
+    // Le jeton dit qu'une adresse a été vérifiée, pas qu'elle est libre. Entre
+    // la vérification et cet appel, la même adresse a pu s'inscrire par une
+    // autre voie — Google, par exemple.
+    const deja = await this.prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (deja) throw new AppError("conflict", "an account already exists for this email");
+
+    const creation = await this.signup.creer({
+      email,
+      emailVerified: true,
+      deviceId: input.deviceId,
+      username: input.username,
+      ...(input.referralCode !== undefined ? { referralCode: input.referralCode } : {}),
+    });
+
+    if (creation.plafondAtteint) {
+      await this.prisma.loginActivity.create({
+        data: {
+          userId: null, attemptedEmail: email, result: "failure",
+          userAgent: input.userAgent ?? null,
+        },
+      });
+      throw new AppError("device_limit_reached", "too many accounts from this device");
+    }
+
+    await this.prisma.loginActivity.create({
+      data: {
+        userId: creation.user.id, attemptedEmail: email, result: "success",
+        userAgent: input.userAgent ?? null,
+      },
+    });
+    const pair = await this.tokens.issuePair(creation.user.id, input.userAgent);
+
+    // Le DÉTAIL, pas un total : cadeau de bienvenue et bonus de parrainage
+    // sont deux gestes distincts, et l'un des deux se mérite. Les confondre
+    // dans un solde unique effacerait la raison d'inviter quelqu'un.
+    const p = creation.parrainage;
+    return {
+      outcome: "session" as const,
+      ...pair,
+      isNewAccount: true as const,
+      signupCredits: creation.creditsOfferts,
+      referral: p.etat === "aucun" ? null : {
+        outcome: p.etat === "credite" ? ("credited" as const)
+          : p.etat === "soi_meme" ? ("self" as const) : ("unknown" as const),
+        inviterUsername: p.etat === "credite" ? p.parrain : null,
+        bonusCredits: p.etat === "credite" ? p.bonusFilleul : 0,
+      },
+    };
+  }
+
   private async recordAttempt(
     input: VerifyInput,
     userId: string | null,
@@ -102,7 +185,7 @@ export class AuthService {
     });
   }
 
-  async verifyOtp(input: VerifyInput): Promise<Pair & { isNewAccount: boolean }> {
+  async verifyOtp(input: VerifyInput): Promise<VerifyOutcome> {
     // Revue tour 2, point 5 : par origine seulement, pas par destinataire —
     // OtpService.verify borne déjà les essais SUR UN CODE DONNÉ (cinq, puis
     // il brûle), mais rien n'empêchait jusqu'ici de balayer des milliers
@@ -126,33 +209,38 @@ export class AuthService {
     // reached, account_suspended, account_pending_deletion, et l'identifiant
     // d'appareil manquant ci-dessous).
     let user = await this.prisma.user.findUnique({ where: { email: input.email } });
-    let isNewAccount = false;
+    // Une session ouverte ici est toujours un RETOUR : la première fois passe
+    // par /auth/register, qui rend isNewAccount vrai.
+    const isNewAccount = false;
 
     if (!user) {
-      // deviceId est obligatoire pour CRÉER un compte — inutile pour se
-      // connecter à un compte existant, qui n'écrit aucune ligne d'appareil.
-      // Sans cette exigence, le plafond par appareil se contournerait en
-      // omettant simplement ce champ, facultatif dans le contrat de transport.
-      const deviceId = input.deviceId;
-      if (!deviceId) {
-        await this.recordAttempt(input, null, "failure");
-        throw new AppError("validation_failed", "deviceId is required to create an account", {
-          deviceId: "required to create an account",
-        });
-      }
+      // AUCUN COMPTE N'EST CRÉÉ ICI, et c'est le point de tout ce chemin.
+      //
+      // Le code de parrainage se saisit à l'écran du pseudo, donc APRÈS cette
+      // vérification. Créer le compte maintenant et rattacher le parrainage
+      // ensuite ouvrirait un chemin pour le réclamer plus tard, sur un compte
+      // de six mois — l'unicité sur invited_user_id empêcherait le rejeu, pas
+      // l'antériorité. Les deux opérations doivent être atomiques : elles se
+      // font donc ensemble, à /auth/register, ou pas du tout.
+      //
+      // On rend un jeton d'inscription : il atteste que cette adresse a été
+      // vérifiée, et rien d'autre. Il n'ouvre aucune ressource.
+      await this.recordAttempt(input, null, "success");
+      const jeton = this.tokens.issueRegistration(input.email);
 
-      const creation = await this.signup.creer({
+      // Indicatif, et volontairement non bloquant : le plafond fait foi à la
+      // création, sous verrou. Le rendre dès maintenant évite de faire choisir
+      // un pseudo à quelqu'un dont la création sera refusée au bout.
+      const deviceLimitReached = input.deviceId
+        ? await this.signup.plafondAtteint(input.deviceId)
+        : false;
+
+      return {
+        outcome: "registration" as const,
+        ...jeton,
         email: input.email,
-        emailVerified: true,
-        deviceId,
-        referralCode: input.referralCode,
-      });
-      if (creation.plafondAtteint) {
-        await this.recordAttempt(input, null, "failure");
-        throw new AppError("device_limit_reached", "too many accounts from this device");
-      }
-      user = await this.prisma.user.findUniqueOrThrow({ where: { id: creation.user.id } });
-      isNewAccount = true;
+        deviceLimitReached,
+      };
     } else if (!user.emailVerified) {
       user = await this.prisma.user.update({ where: { id: user.id }, data: { emailVerified: true } });
     }
@@ -168,6 +256,6 @@ export class AuthService {
 
     await this.recordAttempt(input, user.id, "success");
     const pair = await this.tokens.issuePair(user.id, input.userAgent);
-    return { ...pair, isNewAccount };
+    return { outcome: "session" as const, ...pair, isNewAccount };
   }
 }

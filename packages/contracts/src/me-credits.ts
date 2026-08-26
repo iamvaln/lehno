@@ -105,12 +105,38 @@ export type Payment = z.infer<typeof paymentSchema>;
 
 export const CREDIT_TRANSACTION_TYPES = ["grant", "purchase", "consumption", "adjustment"] as const;
 
+/* Pourquoi ce mouvement existe, en CODE STABLE — jamais en phrase.
+ *
+ * Le client ne montre pas le texte du serveur : il traduit le code dans la
+ * langue de l'utilisateur, exactement comme pour les erreurs et les
+ * notifications. L'écran de bienvenue en dépend directement — il affiche deux
+ * lignes, « cadeau de bienvenue » et « bonus de parrainage », et sans code il
+ * devrait reconnaître des phrases françaises pour les séparer.
+ *
+ * `type` ne suffit pas : un « grant » d'inscription et un « grant » de
+ * parrainage se ressemblent, et ce sont pourtant deux gestes distincts dont
+ * l'un se mérite. Les confondre efface la raison d'inviter quelqu'un. */
+export const CREDIT_SOURCES = [
+  "signup_grant",
+  "referral_bonus",
+  "purchase",
+  "manual_topup",
+  "promo_code",
+  "consumption",
+  "admin_adjustment",
+] as const;
+export type CreditSource = (typeof CREDIT_SOURCES)[number];
+
 export const creditTransactionSchema = z.object({
   id: z.string().uuid(),
   type: z.enum(CREDIT_TRANSACTION_TYPES),
   // Signé : + au crédit, − au débit. Un débit noté positif gonflerait le solde
   // au lieu de le réduire.
   amount: z.number().int(),
+  source: z.enum(CREDIT_SOURCES),
+  // Note libre, destinée au journal et à l'administration — un motif de
+  // rejet, une observation. Le client ne l'affiche jamais : elle n'est ni
+  // traduite ni traduisible.
   reason: z.string().nullable(),
   createdAt: z.string(),
 }).strict();

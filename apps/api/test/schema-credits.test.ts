@@ -91,9 +91,9 @@ describe("schéma — parrainage et crédits", () => {
       const u = await compte();
       await db.prisma.creditTransaction.createMany({
         data: [
-          { userId: u, type: "grant", amount: 5, reason: "inscription" },
-          { userId: u, type: "grant", amount: 5, reason: "parrainage" },
-          { userId: u, type: "consumption", amount: -3, reason: "portrait" },
+          { userId: u, type: "grant", source: "signup_grant", amount: 5 },
+          { userId: u, type: "grant", source: "referral_bonus", amount: 5 },
+          { userId: u, type: "consumption", source: "consumption", amount: -3 },
         ],
       });
 
@@ -115,7 +115,7 @@ describe("schéma — parrainage et crédits", () => {
     it("un débit est un montant négatif", async () => {
       const u = await compte();
       await db.prisma.creditTransaction.create({
-        data: { userId: u, type: "consumption", amount: -3 },
+        data: { userId: u, type: "consumption", source: "consumption", amount: -3 },
       });
       const somme = await db.prisma.creditTransaction.aggregate({
         where: { userId: u }, _sum: { amount: true },

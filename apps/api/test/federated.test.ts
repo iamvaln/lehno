@@ -32,6 +32,8 @@ describe("identités externes", () => {
   it("rattache au compte existant quand l'adresse vérifiée correspond", async () => {
     const svc = build(verifier({ providerUserId: "g-1", email: "awa@example.com", emailVerified: true }));
     const s = await svc.signIn({ provider: "google", idToken: "x" });
+    expect(s.outcome).toBe("session");
+    if (s.outcome !== "session") throw new Error("session attendue");
     expect(s.isNewAccount).toBe(false);
     expect(await db.prisma.user.count()).toBe(1);
     expect(await db.prisma.federatedIdentity.count()).toBe(1);
@@ -43,6 +45,8 @@ describe("identités externes", () => {
     });
     const svc = build(verifier({ providerUserId: "a-1", email: "relais@privaterelay.example", emailVerified: true }));
     const s = await svc.signIn({ provider: "apple", idToken: "x" });
+    expect(s.outcome).toBe("session");
+    if (s.outcome !== "session") throw new Error("session attendue");
     expect(s.isNewAccount).toBe(false);
     expect(await db.prisma.user.count()).toBe(1);
   });
@@ -53,11 +57,17 @@ describe("identités externes", () => {
       .rejects.toMatchObject({ code: "federated_token_invalid" });
   });
 
-  it("crée un compte quand rien ne correspond", async () => {
+  // La première connexion fédérée NE CRÉE PAS DE COMPTE non plus. La §3.1 veut
+  // le choix du pseudo « à la première connexion, QUELLE QUE SOIT LA VOIE
+  // empruntée » : si Google créait le compte tout de suite, le parcours
+  // divergerait selon la porte, et le code de parrainage — saisi à l'écran du
+  // pseudo — n'aurait nulle part où aller.
+  it("une adresse inconnue invite à s'inscrire, sans rien écrire", async () => {
     const svc = build(verifier({ providerUserId: "g-2", email: "karim@example.com", emailVerified: true }));
     const s = await svc.signIn({ provider: "google", idToken: "x", deviceId: "dev-1" });
-    expect(s.isNewAccount).toBe(true);
-    expect(await db.prisma.user.count()).toBe(2);
+    expect(s.outcome).toBe("registration");
+    // Le compte existant du montage reste seul : aucun second n'est né.
+    expect(await db.prisma.user.count()).toBe(1);
   });
 
   // Revue tour 1, point 3 : la branche qui reconnaît une identité déjà liée

@@ -15,6 +15,7 @@ describe("crédits, parrainage et invitation", () => {
     const r = await signup.creer({
       email: `${randomBytes(6).toString("hex")}@example.com`,
       emailVerified: true,
+      username: `u${randomBytes(4).toString("hex")}`,
       deviceId: randomBytes(8).toString("hex"),
       ...(referralCode !== undefined ? { referralCode } : {}),
     });
@@ -47,7 +48,9 @@ describe("crédits, parrainage et invitation", () => {
       expect(creditBalanceSchema.safeParse(s).success).toBe(true);
       expect(s.balance).toBe(5);
       expect(s.transactions).toHaveLength(1);
-      expect(s.transactions[0]).toMatchObject({ type: "grant", amount: 5, reason: "inscription" });
+      // Le CODE, pas la phrase : c'est lui que le client traduit, et lui qui
+      // permet à l'écran de bienvenue de séparer ses deux lignes.
+      expect(s.transactions[0]).toMatchObject({ type: "grant", source: "signup_grant", amount: 5 });
     });
 
     // Un débit réduit le solde. Le montant est signé : le compter positif le
@@ -55,7 +58,7 @@ describe("crédits, parrainage et invitation", () => {
     it("un débit réduit le solde", async () => {
       const u = await creer();
       await db.prisma.creditTransaction.create({
-        data: { userId: u.id, type: "consumption", amount: -3, reason: "portrait" },
+        data: { userId: u.id, type: "consumption", source: "consumption", amount: -3 },
       });
       expect((await credits.solde(u.id)).balance).toBe(2);
     });
@@ -66,7 +69,7 @@ describe("crédits, parrainage et invitation", () => {
       const a = await creer();
       const b = await creer();
       await db.prisma.creditTransaction.create({
-        data: { userId: b.id, type: "grant", amount: 100, reason: "geste" },
+        data: { userId: b.id, type: "grant", source: "admin_adjustment", amount: 100, reason: "geste commercial" },
       });
       expect((await credits.solde(a.id)).balance).toBe(5);
       expect((await credits.solde(b.id)).balance).toBe(105);

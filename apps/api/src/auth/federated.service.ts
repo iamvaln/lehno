@@ -2,7 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import { Prisma, type IdentityProvider, type User } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { SignupService } from "../onboarding/signup.service.js";
-import { TokenService, type Pair } from "./token.service.js";
+import type { VerifyOutcome } from "@lehno/contracts";
+import { TokenService } from "./token.service.js";
 import { AppError } from "../common/errors.js";
 
 export interface IdentityVerifier {
@@ -50,7 +51,7 @@ export class FederatedService {
     });
   }
 
-  async signIn(input: SignInInput): Promise<Pair & { isNewAccount: boolean }> {
+  async signIn(input: SignInInput): Promise<VerifyOutcome> {
     let claims: { providerUserId: string; email: string | null; emailVerified: boolean };
     try {
       claims = await this.verifiers[input.provider].verify(input.idToken);
@@ -79,7 +80,7 @@ export class FederatedService {
       });
       const pair = await this.tokens.issuePair(existing.userId, input.userAgent);
       await this.recordAttempt(claims.email, input.userAgent, existing.userId, "success");
-      return { ...pair, isNewAccount: false };
+      return { outcome: "session" as const, ...pair, isNewAccount: false };
     }
 
     // Ensuite l'adresse, mais seulement si le fournisseur la dit vérifiée :
@@ -89,36 +90,31 @@ export class FederatedService {
       throw new AppError("federated_token_invalid", "provider did not supply a verified email");
     }
 
-    let user = await this.prisma.user.findUnique({ where: { email: claims.email } });
-    let isNewAccount = false;
+    const user = await this.prisma.user.findUnique({ where: { email: claims.email } });
     if (!user) {
-      // Le MÊME chemin que la voie par code — et c'est le correctif. Cette
-      // branche créait le compte de son côté, puis écrivait la ligne
-      // d'appareil sans jamais lire le plafond : il suffisait donc de
-      // s'inscrire par Google ou Apple pour le contourner. Une protection
-      // posée sur une seule porte n'en est pas une.
+      // AUCUN COMPTE N'EST CRÉÉ ICI, comme sur la voie du courriel. La §3.1
+      // veut le choix du pseudo « à la première connexion, QUELLE QUE SOIT LA
+      // VOIE empruntée » : si Google créait le compte tout de suite, le
+      // parcours divergerait selon la porte, et le code de parrainage — saisi
+      // à l'écran du pseudo — n'aurait nulle part où aller.
       //
-      // deviceId devient obligatoire ici aussi. Sans lui, le plafond se
-      // contournerait en omettant simplement un champ facultatif.
-      if (!input.deviceId) {
-        await this.recordAttempt(claims.email, input.userAgent, null, "failure");
-        throw new AppError("validation_failed", "deviceId is required to create an account", {
-          deviceId: "required to create an account",
-        });
-      }
-      const creation = await this.signup.creer({
+      // Le fournisseur a vérifié l'adresse ; on atteste cette vérification par
+      // un jeton d'inscription, et /auth/register fera le reste en une
+      // transaction.
+      await this.recordAttempt(claims.email, input.userAgent, null, "success");
+      const jeton = this.tokens.issueRegistration(claims.email);
+      const deviceLimitReached = input.deviceId
+        ? await this.signup.plafondAtteint(input.deviceId)
+        : false;
+
+      return {
+        outcome: "registration" as const,
+        ...jeton,
         email: claims.email,
-        emailVerified: true,
-        deviceId: input.deviceId,
-        referralCode: input.referralCode,
-      });
-      if (creation.plafondAtteint) {
-        await this.recordAttempt(claims.email, input.userAgent, null, "failure");
-        throw new AppError("device_limit_reached", "too many accounts from this device");
-      }
-      user = await this.prisma.user.findUniqueOrThrow({ where: { id: creation.user.id } });
-      isNewAccount = true;
+        deviceLimitReached,
+      };
     }
+
     try {
       this.assertActive(user);
     } catch (e) {
@@ -146,6 +142,6 @@ export class FederatedService {
 
     const pair = await this.tokens.issuePair(user.id, input.userAgent);
     await this.recordAttempt(claims.email, input.userAgent, user.id, "success");
-    return { ...pair, isNewAccount };
+    return { outcome: "session" as const, ...pair, isNewAccount: false };
   }
 }
