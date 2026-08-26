@@ -93,9 +93,9 @@ describe("administration — les comptes", () => {
     const u = await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
     await db.prisma.creditTransaction.createMany({
       data: [
-        { userId: u.id, type: "grant", amount: 5 },
-        { userId: u.id, type: "purchase", amount: 20 },
-        { userId: u.id, type: "consumption", amount: -3 },
+        { userId: u.id, type: "grant", source: "signup_grant", amount: 5 },
+        { userId: u.id, type: "purchase", source: "purchase", amount: 20 },
+        { userId: u.id, type: "consumption", source: "consumption", amount: -3 },
       ],
     });
     const { entete } = await session("support");
@@ -103,6 +103,52 @@ describe("administration — les comptes", () => {
     const corps = (await (await lister(entete)).json()) as { items: { credits: number | null }[] };
 
     expect(corps.items[0]?.credits).toBe(22);
+  });
+
+  // `type` dit ce que le mouvement est, `source` d'où il vient. Un octroi
+  // d'inscription et un bonus de parrainage sont tous deux des « grant » et se
+  // ressemblent — « ce sont pourtant deux gestes distincts dont l'un se
+  // mérite ». La fiche les compte ensemble dans « offerts », parce que la
+  // question qu'elle pose est « ce compte a-t-il payé ou a-t-il reçu ». Ce
+  // test fixe ce choix : sans lui, il n'est qu'une conséquence non dite du
+  // calcul, et la première personne qui voudra le nuancer ne saura pas s'il
+  // était voulu.
+  it("compte l'inscription et le parrainage ensemble dans les crédits offerts", async () => {
+    const u = await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
+    await db.prisma.creditTransaction.createMany({
+      data: [
+        { userId: u.id, type: "grant", source: "signup_grant", amount: 5 },
+        { userId: u.id, type: "grant", source: "referral_bonus", amount: 3 },
+      ],
+    });
+    const { entete } = await session("support");
+
+    const corps = (await (await fetch(`${baseUrl}/v1/admin/users/${u.id}`, { headers: entete })).json()) as {
+      credits: { solde: number; achetes: number; offerts: number };
+    };
+
+    expect(corps.credits).toEqual({ solde: 8, achetes: 0, offerts: 8 });
+  });
+
+  // La source ne change pas le solde, et c'est ce qu'on veut vérifier : une
+  // recharge manuelle et un achat par l'application sont deux chemins vers le
+  // même crédit, et le solde ne doit pas dépendre de celui qu'on a pris.
+  it("le solde ne dépend pas du chemin par lequel le crédit est arrivé", async () => {
+    const u = await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
+    await db.prisma.creditTransaction.createMany({
+      data: [
+        { userId: u.id, type: "purchase", source: "purchase", amount: 10 },
+        { userId: u.id, type: "purchase", source: "manual_topup", amount: 10 },
+      ],
+    });
+    const { entete } = await session("support");
+
+    const corps = (await (await fetch(`${baseUrl}/v1/admin/users/${u.id}`, { headers: entete })).json()) as {
+      credits: { solde: number; achetes: number };
+    };
+
+    expect(corps.credits.solde).toBe(20);
+    expect(corps.credits.achetes).toBe(20);
   });
 
   it("un compte sans mouvement a zéro, pas « inconnu »", async () => {
@@ -120,9 +166,9 @@ describe("administration — les comptes", () => {
     const u = await creerUtilisateur(1, { username: "awa", email: "awa@exemple.cm" });
     await db.prisma.creditTransaction.createMany({
       data: [
-        { userId: u.id, type: "grant", amount: 5 },
-        { userId: u.id, type: "purchase", amount: 20 },
-        { userId: u.id, type: "consumption", amount: -3 },
+        { userId: u.id, type: "grant", source: "signup_grant", amount: 5 },
+        { userId: u.id, type: "purchase", source: "purchase", amount: 20 },
+        { userId: u.id, type: "consumption", source: "consumption", amount: -3 },
       ],
     });
     const { entete } = await session("support");
