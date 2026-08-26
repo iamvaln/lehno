@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { TableauDeBord, Liste, Detail, Edition, Lecture, Modeles, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { TableauDeBord, Liste, Detail, Drapeaux, Edition, Lecture, Modeles, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -25,7 +25,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  catalogueIaSchema, compteDetailSchema, dashboardSchema, pageAuditSchema, pageComptesSchema,
+  catalogueIaSchema, compteDetailSchema, dashboardSchema, drapeauxAdminSchema, pageAuditSchema, pageComptesSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
@@ -207,6 +207,7 @@ export function App(): ReactNode {
   const [tourParametres, setTourParametres] = useState(0);
   const [tourSuppressions, setTourSuppressions] = useState(0);
   const [tourModeles, setTourModeles] = useState(0);
+  const [tourDrapeaux, setTourDrapeaux] = useState(0);
   // Le refus d'une écriture se dit à l'écran, traduit depuis son code.
   const [avis, setAvis] = useState<CleCode | null>(null);
   const [curseursLecture, setCurseursLecture] = useState<(string | null)[]>([null]);
@@ -300,6 +301,13 @@ export function App(): ReactNode {
     [section, tourModeles],
   );
 
+  const etatDrapeaux = useRessource(
+    () => (section === "fonctionnalites"
+      ? api.appeler("/admin/feature-flags", { schema: drapeauxAdminSchema })
+      : Promise.resolve(null)),
+    [section, tourDrapeaux],
+  );
+
   let vue: ReactNode;
   if (section === "profil") {
     vue = <Profil profil={profil} langue={langue} />;
@@ -315,6 +323,37 @@ export function App(): ReactNode {
             compte={compte}
             interventions={interventions.items}
             onRetour={() => setOuvert(null)}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "fonctionnalites") {
+    vue = (
+      <Ressource
+        etat={etatDrapeaux}
+        t={t}
+        enfant={(registre) => (registre ? (
+          <Drapeaux
+            role={role}
+            langue={langue}
+            drapeaux={registre.items}
+            onBasculer={(drapeau, actif, motif) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/feature-flags", {
+                    methode: "PATCH",
+                    corps: { cle: drapeau.cle, actif, reason: motif },
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  // On relit dans tous les cas : après un refus, l'état affiché
+                  // est celui d'avant, et c'est lui qui fait foi.
+                  setTourDrapeaux((n) => n + 1);
+                }
+              })();
+            }}
+            onRetour={aller}
           />
         ) : null)}
       />

@@ -193,6 +193,41 @@ export const en: typeof fr = {
     manque: "Real spend and what it earned are not shown yet: usage records do not exist in the database. This catalogue says what we try, and in what order.",
   },
 
+  drapeaux: {
+    titre: "Features",
+    sous: "What ships, and what waits. The core is not listed: it cannot be turned off.",
+    col: { cle: "Key", gouverne: "What it governs", portee: "Where", couverture: "What it covers", etat: "State", parQui: "Last change" },
+    etats: {
+      actif: "In service",
+      eteint: "Off",
+      inerte: "On, no effect",
+    },
+    portees: { app: "App", public: "Public" },
+    requiert: "Needs: {cles}",
+    emporte: "Turning off also takes down",
+    jamais: "Never changed",
+    allumer: "Turn on",
+    eteindre: "Turn off",
+    dialogueEteindre: {
+      titre: "Turn off {cle}",
+      consequence: "The listed screens and entry points stop answering. Anything depending on them goes down too.",
+      motifs: [
+        "Incident under way on this feature",
+        "Not ready for the public yet",
+        "Too costly for now",
+      ],
+    },
+    dialogueAllumer: {
+      titre: "Turn on {cle}",
+      consequence: "The listed screens and entry points start answering. If a prerequisite is off, nothing changes until it is on.",
+      motifs: [
+        "Opening to the public",
+        "The incident is over",
+        "Short trial",
+      ],
+    },
+  },
+
   echecs: {
     chargement: "We couldn't load this list. Nothing moved on the data side. Try again, or come back in a moment.",
     action: "We couldn't apply that action. The account is exactly as it was. Try again, or hand it to an administrator.",
