@@ -188,6 +188,8 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | `/me/credits` | GET | Solde et mouvements |
 | `/me/credit-bundles` | GET | Les paliers d'achat proposés, avec leur remise |
 | `/me/payments` | GET, POST | L'historique ; lancer un achat sur un palier |
+| `/me/payment-channels` | GET | Les canaux proposés et leurs frais : opérateur, pays, barème |
+| `/me/payments/preview` | POST | Ce qu'un achat coûtera : les frais, et le montant attendu sur le compte |
 | `/me/collection-accounts` | GET | Les comptes sur lesquels verser — ceux que l'administration rend visibles |
 | `/me/payments/{id}` | GET | Suivre une opération, puis son issue |
 | `/me/payment-methods` | GET, POST | Les méthodes enregistrées, la plus récemment utilisée en tête ; en ajouter une |
@@ -203,7 +205,13 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 - **Semi-manuel.** Le client choisit son palier, `/me/collection-accounts` lui rend les comptes sur lesquels verser, il effectue le dépôt, puis `POST /me/payments` porte le palier, le compte visé, **le numéro qu'il a employé** et son reçu. Le paiement naît `pending`.
 - **Manuel.** Un administrateur saisit tout depuis `/admin/payments` : le client, le palier, le compte qui a reçu, la référence, le reçu. Le paiement naît `pending` puis se confirme du même geste.
 
-**La confirmation appartient à l'administration.** `/admin/payments/{id}/decision` consigne **la référence de la transaction et le montant constaté**, puis confirme ou rejette avec motif. Le reçu ne prouve rien — un montage est facile : c'est la réception **sur le compte de l'opérateur** qui fait foi.
+**L'aperçu avant de payer.** `/me/payments/preview` prend un **montant** (ou un palier), un **canal** et un **pays**, et rend les frais, le total à verser, et le **montant attendu sur le compte**. Le client sait donc combien envoyer avant d'ouvrir son application d'opérateur — et l'administrateur, combien il devrait voir arriver.
+
+**Sur le mobile money, le client paie les frais** : un palier à 1 000 F fait verser **1 020 F**, et il en arrive **1 000**. Le montant attendu sur le compte est donc le prix du palier, et tout manque constaté est un vrai écart — pas le fonctionnement de l'opérateur. La carte se comportera à l'inverse le jour où elle arrivera : le prestataire prélève sa part sur ce qu'il reverse, d'où le champ `fee_borne_by` sur le canal plutôt qu'une règle écrite en dur.
+
+**Les frais annoncés sont figés sur le paiement** (`fee_amount`, `expected_amount`). Le barème d'un canal change ; un paiement passé garde ce qui lui a été annoncé. Lire le taux du jour pour expliquer un paiement d'il y a trois mois donnerait un chiffre faux, sans que personne s'en aperçoive.
+
+**La confirmation appartient à l'administration.** `/admin/payments/{id}/decision` consigne **la référence de la transaction et le montant réellement reçu**, puis confirme ou rejette avec motif. Le montant reçu se renseigne **toujours**, même sans écart : c'est lui qui permet de constater qu'il n'y en a pas. Le reçu ne prouve rien — un montage est facile : c'est la réception **sur le compte de l'opérateur** qui fait foi.
 
 À la confirmation, les crédits sont octroyés **une seule fois** — l'unicité porte sur `credit_transaction.payment_id` — et le client est prévenu par courriel et par poussée. Chaque passage d'état ouvre une ligne d'historique avec `origin = 'admin'`, l'identifiant de l'administrateur et un **motif obligatoire**.
 
@@ -356,6 +364,7 @@ Réservée aux comptes d'administration, avec les deux rôles du modèle.
 | `/admin/payments/{id}/decision` | POST | Confirmer ou rejeter : référence de la transaction, montant constaté, motif |
 | `/admin/payments/{id}/refund` | POST | Déclencher un remboursement |
 | `/admin/collection-accounts` | GET, POST, PATCH | Les comptes de collecte : nom, opérateur, numéro, visibilité dans l'application |
+| `/admin/payment-channels` | GET, POST, PATCH | Les canaux et **leurs barèmes de frais** : part proportionnelle, part fixe, plancher, plafond, qui les supporte |
 | `/admin/moderation` | GET | Les contenus à examiner |
 | `/admin/moderation/{id}/decision` | POST | Masquer, révoquer, désactiver, classer |
 | `/admin/parameters` | GET, PATCH | La configuration globale |
@@ -420,6 +429,7 @@ Les deux rôles du modèle se traduisent chemin par chemin. Le **support** couvr
 | `/admin/payments/{id}/retry` | Relance | Relance |
 | `/admin/payments/{id}/decision` | — | **Confirmation ou rejet**, avec la référence de la transaction, le montant constaté et un motif |
 | `/admin/collection-accounts` | Lecture | Gestion complète : ouvrir, renommer, rendre visible ou non |
+| `/admin/payment-channels` | Lecture | Gestion complète, **barèmes compris** — un taux touche tous les achats à venir |
 | `/admin/payments/{id}/refund` | — | Déclenchement |
 | `/admin/payments/{id}/refund-override` | — | Levée, avec motif |
 | `/admin/moderation`, `/admin/moderation/{id}/decision` | Lecture et décision | Lecture et décision |

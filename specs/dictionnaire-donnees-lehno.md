@@ -126,7 +126,10 @@ Achat de crédits réglé par un `User`. Alimente l'historique des paiements et 
 | payer_msisdn | varchar(32) | oui | — | — | Le numéro depuis lequel le client déclare avoir versé — semi-manuel seulement |
 | proof_key | text | oui | — | — | Reçu déposé par le client ou saisi par l'administrateur : image ou PDF. Référence sur le stockage |
 | provider_ref | text | oui | oui | — | Référence de la transaction. Chez le prestataire pour `provider` ; **saisie par l'administrateur** sur les voies manuelles, à la confirmation. Nulle tant qu'elle n'est pas connue — d'où l'unicité partielle, sur les valeurs présentes |
-| received_amount | numeric(12,2) | oui | — | — | Ce que l'administrateur a **constaté sur le compte**, distinct du montant annoncé. Un écart se traite, il ne se devine pas |
+| payment_channel_id | uuid | oui | — | — | FK → payment_channel(id) on delete restrict ; le canal employé, et son barème |
+| fee_amount | numeric(12,2) | oui | — | — | Les frais **annoncés à l'aperçu**, figés ici. Pas ceux que le canal porte aujourd'hui : changer un taux ne doit pas fausser rétroactivement la comptabilité |
+| expected_amount | numeric(12,2) | oui | — | — | Ce qu'on **attend sur le compte**, calculé à l'aperçu depuis le montant, les frais et `fee_borne_by` |
+| received_amount | numeric(12,2) | oui | — | — | Ce que l'administrateur a **constaté sur le compte**. Comparé à `expected_amount` : un écart se traite, il ne se devine pas |
 | direction | payment_direction (enum) | non | — | 'charge' | `charge` (achat) \| `refund` (remboursement) |
 | amount | numeric(12,2) | non | — | — | Montant réglé |
 | currency | varchar(3) | non | — | — | Code ISO 4217 |
@@ -139,6 +142,8 @@ Achat de crédits réglé par un `User`. Alimente l'historique des paiements et 
 - Enum `payment_mode` : `provider` (l'intégration, quand elle existera), `semi_manual` (le client verse puis dépose son reçu), `manual` (un administrateur saisit tout depuis le back-office).
 - **Les deux voies manuelles sont des `Payment`, pas une entité à part.** Elles ont le même cycle de vie, la même histoire d'états, et produisent le même `CreditTransaction` portant `payment_id`. Une table parallèle obligerait à tenir deux registres, deux historiques et deux chemins d'octroi — et une recharge manuelle n'apparaîtrait pas dans l'historique des paiements du client.
 - **`provider_ref` est nulle tant que la référence n'est pas connue.** Sur la voie du prestataire elle arrive avec la notification ; sur les voies manuelles, c'est l'administrateur qui la consigne au moment de confirmer. L'unicité porte donc sur les valeurs présentes (index unique partiel) — sans quoi deux demandes en attente entreraient en collision sur une valeur nulle.
+- **Trois montants, et ils ne disent pas la même chose.** `amount` est le prix du palier ; `expected_amount` ce qu'on attend sur le compte une fois les frais appliqués selon `fee_borne_by` ; `received_amount` ce qui est réellement arrivé. Un seul champ ne suffirait pas : sans `expected_amount`, on ne saurait pas si un écart vient du client ou du barème ; sans `received_amount`, on ne saurait pas qu'il y a écart.
+- **`fee_amount` est figé au moment de l'aperçu.** Le barème d'un canal change ; un paiement passé garde les frais qui lui ont été annoncés. Lire le taux du jour pour expliquer un paiement d'il y a trois mois donnerait un chiffre faux, et personne ne s'en apercevrait.
 - **`received_amount` n'est pas `amount`.** Le premier est ce que l'administrateur a vu arriver sur le compte, le second ce que le paiement visait. Les confondre effacerait le cas qui compte : un client qui verse moins que le palier choisi. L'écart se traite — on crédite le palier correspondant, ou on rejette avec motif — mais il ne se devine pas après coup.
 - **Le reçu ne prouve rien.** Un montage est facile : l'administrateur **vérifie la réception sur le compte de l'opérateur** avant de confirmer, et ne se fie pas à l'image. Le fichier suit les règles des fichiers reçus (type vérifié par le contenu, poids borné, métadonnées retirées) et s'efface une fois la demande traitée.
 - **Seul un administrateur confirme ou rejette**, quelle que soit la voie. Chaque passage d'état ouvre une ligne de `PaymentStatusHistory` avec `origin = 'admin'`, `changed_by_admin_id` renseigné et un **motif obligatoire** — c'est ce qui rend le registre lisible le jour d'un litige.
@@ -528,6 +533,64 @@ Palier d'achat de crédits. **Réglé par l'administration** : montant, crédits
 - **Aucune saisie libre d'un montant** : on achète un palier, et rien d'autre. Le plus petit palier fixe le minimum d'achat.
 - **La remise s'affiche** — c'est un argument de vente, pas un calcul caché.
 - Valeurs de départ, à ajuster depuis l'administration : 500 F → 5 crédits · 1 000 F → 10 · 2 000 F → 22 (+10 %) · 5 000 F → 57 (+15 %) · 10 000 F → 120 (+20 %).
+
+## PaymentChannel
+
+Un **canal de paiement** offert par le service, et ses frais : « MTN MoMo au
+Cameroun, 2 % ». Réglé depuis le back-office.
+
+**À ne pas confondre avec `PaymentMethod`**, et c'est la distinction qui évite
+d'embrouiller la comptabilité :
+
+- `PaymentChannel` est ce que **le service propose** — un opérateur, un pays, un
+  barème. Il en existe une poignée, réglés par l'administration.
+- `PaymentMethod` est ce qu'**un client a enregistré** — son numéro, sa carte.
+  Il y en a autant que de clients.
+
+Les fondre reviendrait à porter un taux de frais sur le numéro de téléphone de
+chaque client, et à devoir tous les corriger le jour où MTN change son barème.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| kind | payment_method_kind (enum) | non | — | — | `mobile_money` \| `card` |
+| operator | varchar(40) | non | — | — | `mtn_momo`, `orange_money`, … |
+| country | varchar(2) | non | — | — | Code ISO 3166-1 alpha-2 : **les frais diffèrent d'un pays à l'autre**, même chez le même opérateur |
+| label | varchar(80) | non | — | — | Nom affiché — « MTN Mobile Money » |
+| fee_percent | numeric(5,2) | non | — | 0 | Part proportionnelle, en pourcentage |
+| fee_fixed | numeric(12,2) | non | — | 0 | Part fixe, dans la devise du canal. Certains opérateurs prennent les deux |
+| fee_min | numeric(12,2) | oui | — | — | Plancher éventuel des frais |
+| fee_max | numeric(12,2) | oui | — | — | Plafond éventuel |
+| fee_borne_by | fee_bearer (enum) | non | — | 'payer' | Qui supporte les frais |
+| currency | varchar(3) | non | — | 'XAF' | Devise du barème |
+| is_active | boolean | non | — | true | |
+| position | smallint | oui | — | — | Ordre d'affichage |
+| updated_at | timestamptz | non | — | now() | |
+
+- Enum `fee_bearer` : `payer` (le client verse le montant **plus** les frais, et
+  le service reçoit le montant plein) ; `payee` (les frais sont **prélevés** sur
+  le versement, et le service reçoit moins que ce que le client a envoyé).
+- **Sur le mobile money, c'est le client qui paie les frais** — tranché le
+  25/08/2026. Un palier à 1 000 F fait verser **1 020 F**, et il en arrive
+  **1 000**. `fee_borne_by = 'payer'`, et l'écart attendu sur le compte est
+  nul : tout manque est donc un vrai écart, pas le fonctionnement de
+  l'opérateur.
+- **Le champ demeure malgré tout, parce que la carte se comporte à l'inverse.**
+  Un prestataire de carte prélève sa part sur ce qu'il reverse : le client est
+  débité de 1 000 et le service en reçoit 980 (`fee_borne_by = 'payee'`). Coder
+  la règle du mobile money en dur rendrait la carte inexprimable le jour où
+  elle arrivera, et le montant attendu serait alors faux sans que rien ne le
+  signale.
+- **Unicité logique sur (`operator`, `country`, `kind`)** : un même opérateur
+  n'a qu'un barème par pays. Deux lignes concurrentes rendraient l'aperçu
+  indéterminé.
+- **Jamais supprimé, seulement désactivé** : un `Payment` passé le référence, et
+  son barème explique le montant qui a été versé ce jour-là.
+- **Le barème du jour ne réécrit pas le passé.** Un `Payment` conserve les frais
+  qui lui ont été annoncés (`fee_amount`), et non ceux que le canal porte
+  aujourd'hui. Sans cela, changer un taux fausserait rétroactivement toute la
+  comptabilité.
+- Sa modification est une action sensible : elle passe au journal d'audit.
 
 ## CollectionAccount
 
@@ -1171,6 +1234,7 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | payment_direction | charge, refund |
 | payment_status | pending, succeeded, failed, expired, refunded |
 | payment_mode | provider, semi_manual, manual |
+| fee_bearer | payer, payee |
 | status_change_origin | user, webhook, polling, admin, system |
 | person_register | familier, amical, formel |
 | person_relation | famille_proche, famille_etendue, ami, partenaire, collegue, relation_pro, connaissance |
