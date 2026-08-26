@@ -67,7 +67,7 @@ describe("le journal d'audit", () => {
   });
 
   it("lit les traces auprès du serveur", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur(ROUTES);
     await aller(utilisateur, t.sections.audit);
 
@@ -78,7 +78,7 @@ describe("le journal d'audit", () => {
   // Une trace qui fait foi ne se modifie ni ne s'efface. Un menu d'actions ici
   // serait une promesse que le serveur ne tient pas — et ne doit pas tenir.
   it("n'offre aucun geste sur une trace", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur(ROUTES);
     await aller(utilisateur, t.sections.audit);
     await screen.findByText("Compte signalé trois fois");
@@ -90,7 +90,7 @@ describe("le journal d'audit", () => {
   // si. L'absence de motif se dit, elle ne se rend pas par une case vide qu'on
   // prendrait pour un oubli.
   it("dit l'absence de motif au lieu de laisser une case vide", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur(ROUTES);
     await aller(utilisateur, t.sections.audit);
     await screen.findByText("Compte signalé trois fois");
@@ -99,7 +99,7 @@ describe("le journal d'audit", () => {
   });
 
   it("suit le curseur du serveur", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
       "/admin/audit-log": (url) => reponse(200, url.includes("cursor=a-2")
         ? { items: [{ ...JOURNAL.items[0], id: "a-3", motif: "Deuxième page" }], nextCursor: null }
@@ -123,7 +123,7 @@ describe("les connexions", () => {
   });
 
   it("lit les tentatives auprès du serveur", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur(ROUTES);
     await aller(utilisateur, t.sections.connexions);
 
@@ -135,7 +135,7 @@ describe("les connexions", () => {
   // La masquer parce qu'aucun compte n'y correspond reviendrait à cacher
   // exactement ce qu'on vient regarder.
   it("montre l'adresse tentée même sans compte derrière", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur(ROUTES);
     await aller(utilisateur, t.sections.connexions);
 
@@ -145,7 +145,7 @@ describe("les connexions", () => {
   // La spécification technique §9 dit que l'adresse IP ne descend pas en base.
   // Le paquet de passation en annonçait une : ce test tient la décision.
   it("n'affiche aucune colonne d'adresse IP", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur(ROUTES);
     await aller(utilisateur, t.sections.connexions);
     await screen.findByText("Douala, CM");

@@ -76,7 +76,7 @@ describe("la navigation suit le rôle, elle ne le grise pas", () => {
   });
 
   it("naviguer depuis le menu ouvre bien la section", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const nav = ouvrir("support");
     // Scopé au menu : le nom d'une section paraît aussi dans le fil d'Ariane et
     // le titre de page une fois ouverte.

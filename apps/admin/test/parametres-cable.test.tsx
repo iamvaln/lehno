@@ -49,7 +49,7 @@ describe("les paramètres, sur le serveur", () => {
   });
 
   it("lit les réglages auprès du serveur", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur({ "/admin/parameters": () => reponse(200, REGLAGES) });
     await ouvrirParametres(utilisateur);
 
@@ -60,7 +60,7 @@ describe("les paramètres, sur le serveur", () => {
   // s'affiche telle quelle : ça se voit et ça se corrige, là où une ligne vide
   // passerait pour une place libre.
   it("une clé inconnue du dictionnaire s'affiche telle quelle", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur({
       "/admin/parameters": () => reponse(200, {
         ...REGLAGES,
@@ -73,7 +73,7 @@ describe("les paramètres, sur le serveur", () => {
   });
 
   it("rappelle la valeur précédente quand il y en a une", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur({ "/admin/parameters": () => reponse(200, REGLAGES) });
     await ouvrirParametres(utilisateur);
     await screen.findByText(t.parametres.cles.credit_unit_price.libelle);
@@ -87,7 +87,7 @@ describe("les paramètres, sur le serveur", () => {
   // contrainte est posée en base. L'écran doit le demander avant d'appeler,
   // plutôt que d'essuyer un refus qu'il ne saurait pas expliquer.
   it("enregistrer demande un motif, et l'envoie", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({ "/admin/parameters": () => reponse(200, REGLAGES) });
     await ouvrirParametres(utilisateur);
     const champ = await screen.findByLabelText(t.parametres.cles.signup_free_credits.libelle);
@@ -111,7 +111,7 @@ describe("les paramètres, sur le serveur", () => {
   });
 
   it("un motif trop court ne laisse pas confirmer", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({ "/admin/parameters": () => reponse(200, REGLAGES) });
     await ouvrirParametres(utilisateur);
     const champ = await screen.findByLabelText(t.parametres.cles.signup_free_credits.libelle);
@@ -134,7 +134,7 @@ describe("les paramètres, sur le serveur", () => {
   // Un interrupteur qui n'enregistre rien est pire que pas d'interrupteur :
   // l'administrateur croit avoir réglé quelque chose.
   it("les types d'occasion se montrent sans se régler", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur({ "/admin/parameters": () => reponse(200, REGLAGES) });
     await ouvrirParametres(utilisateur);
     await screen.findByText(t.parametres.cles.signup_free_credits.libelle);

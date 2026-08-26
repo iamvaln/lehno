@@ -55,7 +55,7 @@ describe("les comptes, sur les données du serveur", () => {
   });
 
   it("lit la première page auprès du serveur", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
       "/admin/users": () => reponse(200, { items: [ligne(1), ligne(2)], nextCursor: null }),
     });
@@ -68,7 +68,7 @@ describe("les comptes, sur les données du serveur", () => {
   // Le serveur pagine par curseur et ne rend aucun total (spec technique §3).
   // L'écran ne doit donc pas en inventer un.
   it("suit le curseur du serveur, sans afficher de total", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
       "/admin/users": (url) => reponse(200, url.includes("cursor=u-2")
         ? { items: [ligne(3)], nextCursor: null }
@@ -87,7 +87,7 @@ describe("les comptes, sur les données du serveur", () => {
   // qui vit à la page trois resterait introuvable, et l'écran dirait « aucun
   // résultat » avec aplomb.
   it("la recherche part au serveur, elle ne trie pas la page en place", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
       "/admin/users": () => reponse(200, { items: [ligne(1)], nextCursor: null }),
     });
@@ -100,7 +100,7 @@ describe("les comptes, sur les données du serveur", () => {
   });
 
   it("le filtre d'état part au serveur", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
       "/admin/users": () => reponse(200, { items: [ligne(1)], nextCursor: null }),
     });
@@ -122,7 +122,7 @@ describe("les comptes, sur les données du serveur", () => {
   // liste qui refiltrerait ce qu'il vient de retenir n'afficherait rien, et
   // annoncerait « aucun résultat » sur une réponse qui en contenait.
   it("affiche ce que le serveur a retenu, sans le refiltrer", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur({
       // La recherche « awa » ramène un compte dont ni le pseudo ni l'adresse ne
       // portent ces trois lettres — le serveur a trouvé autrement.
@@ -142,7 +142,7 @@ describe("les comptes, sur les données du serveur", () => {
   // Sinon on chercherait « awa » à partir du centième compte, et les premiers
   // résultats resteraient invisibles.
   it("une nouvelle question repart de la première page", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
       "/admin/users": (url) => reponse(200, url.includes("cursor=")
         ? { items: [ligne(3)], nextCursor: null }
@@ -163,7 +163,7 @@ describe("les comptes, sur les données du serveur", () => {
   });
 
   it("ouvrir une fiche la demande au serveur", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
       "/admin/users/u-1": () => reponse(200, FICHE),
       "/admin/users": () => reponse(200, { items: [ligne(1)], nextCursor: null }),
@@ -176,7 +176,7 @@ describe("les comptes, sur les données du serveur", () => {
   });
 
   it("un échec de chargement se voit, la liste ne paraît pas vide", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur({
       "/admin/users": () => reponse(500, { code: "internal_error", message: "boom" }),
     });

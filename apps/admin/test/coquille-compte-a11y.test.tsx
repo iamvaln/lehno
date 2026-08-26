@@ -23,7 +23,7 @@ describe("le panneau de compte se dit pour ce qu'il est", () => {
   // dépliant. Le dire menu promettait à un lecteur d'écran un comportement que
   // l'outil n'a jamais eu.
   it("n'est pas annoncé comme un menu", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     monter();
     await utilisateur.click(screen.getByRole("button", { name: ADRESSE }));
 
@@ -32,7 +32,7 @@ describe("le panneau de compte se dit pour ce qu'il est", () => {
   });
 
   it("le déclencheur dit ce qu'il ouvre, et le panneau existe vraiment", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     monter();
     const declencheur = screen.getByRole("button", { name: ADRESSE });
     expect(declencheur).toHaveAttribute("aria-expanded", "false");
@@ -46,7 +46,7 @@ describe("le panneau de compte se dit pour ce qu'il est", () => {
   });
 
   it("le panneau porte un nom, pour qu'on sache où l'on est entré", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     monter();
     await utilisateur.click(screen.getByRole("button", { name: ADRESSE }));
 
@@ -56,7 +56,7 @@ describe("le panneau de compte se dit pour ce qu'il est", () => {
   // Sans ça, ouvrir au clavier ne mène nulle part : le panneau paraît, et la
   // tabulation suivante continue dans la page derrière lui.
   it("ouvrir place le focus sur la première commande du panneau", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     monter();
     await utilisateur.click(screen.getByRole("button", { name: ADRESSE }));
 
@@ -67,7 +67,7 @@ describe("le panneau de compte se dit pour ce qu'il est", () => {
   // Et l'inverse : refermer sans rendre le focus laisse le clavier au début du
   // document, très loin d'où l'on était.
   it("échap referme et rend le focus au déclencheur", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     monter();
     const declencheur = screen.getByRole("button", { name: ADRESSE });
     await utilisateur.click(declencheur);
@@ -79,7 +79,7 @@ describe("le panneau de compte se dit pour ce qu'il est", () => {
   });
 
   it("le choix de langue est un groupe nommé, à deux boutons à état", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     monter();
     await utilisateur.click(screen.getByRole("button", { name: ADRESSE }));
 
@@ -93,7 +93,7 @@ describe("le panneau de compte se dit pour ce qu'il est", () => {
 describe("les vrais menus le restent", () => {
   // Non-régression : ceux-là ne portent que des actions, le motif menu leur va.
   it("le menu de ligne d'un tableau n'a que des menuitem pour enfants", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     render(
       <DataTable
         colonnes={[{ cle: "nom", titre: "Nom" }]}
@@ -114,7 +114,7 @@ describe("les vrais menus le restent", () => {
   });
 
   it("le menu d'export n'a que des menuitem pour enfants", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     render(
       <ExportButton
         formats={["csv", "json"]}

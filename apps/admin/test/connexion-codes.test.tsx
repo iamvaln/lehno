@@ -24,7 +24,7 @@ describe("la connexion traduit le refus, elle ne le devine pas", () => {
   // ça, l'écran dirait « code refusé » à quelqu'un dont le code a simplement
   // expiré — et lui ferait perdre une tentative pour rien.
   it("un code expiré dit qu'il a expiré, et ne coûte pas de tentative", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     render(<Connexion onVerifierCode={() => "otp_expired"} />);
     await jusquAuCode(utilisateur);
     await saisirCode(utilisateur);
@@ -35,7 +35,7 @@ describe("la connexion traduit le refus, elle ne le devine pas", () => {
   });
 
   it("un code faux garde le décompte des tentatives", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     render(<Connexion onVerifierCode={() => "otp_invalid"} />);
     await jusquAuCode(utilisateur);
     await saisirCode(utilisateur);
@@ -46,7 +46,7 @@ describe("la connexion traduit le refus, elle ne le devine pas", () => {
   // Le serveur tient son propre compte, et il est plus fiable que celui de
   // l'écran : un rechargement de page remet le compteur local à trois.
   it("un refus pour trop de tentatives ferme la saisie tout de suite", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     render(<Connexion onVerifierCode={() => "otp_too_many_attempts"} />);
     await jusquAuCode(utilisateur);
     await saisirCode(utilisateur);
@@ -56,7 +56,7 @@ describe("la connexion traduit le refus, elle ne le devine pas", () => {
   });
 
   it("une panne de réseau ne se confond pas avec un code refusé", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     render(<Connexion onVerifierCode={() => "reseau_indisponible"} />);
     await jusquAuCode(utilisateur);
     await saisirCode(utilisateur);
@@ -65,7 +65,7 @@ describe("la connexion traduit le refus, elle ne le devine pas", () => {
   });
 
   it("un booléen reste admis, pour l'aperçu qui n'a pas de serveur", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const onEntre = vi.fn();
     render(<Connexion onEntre={onEntre} onVerifierCode={() => true} />);
     await jusquAuCode(utilisateur);

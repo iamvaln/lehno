@@ -87,7 +87,7 @@ describe("le tableau de bord sur ses vraies données", () => {
   });
 
   it("réessayer relance l'appel", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur([
       reponse(500, { code: "internal_error", message: "boom" }),
       reponse(200, ETAT),
@@ -102,7 +102,7 @@ describe("le tableau de bord sur ses vraies données", () => {
   });
 
   it("une alerte mène à sa section", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur([reponse(200, ETAT)]);
     ouvrir();
     await screen.findByText("Trois paiements bloqués");

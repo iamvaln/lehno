@@ -48,7 +48,7 @@ describe("les modèles d'IA", () => {
   });
 
   it("lit le catalogue auprès du serveur", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({ "/admin/ai-models": () => reponse(200, CATALOGUE) });
     await ouvrir(utilisateur);
 
@@ -59,7 +59,7 @@ describe("les modèles d'IA", () => {
   // Le rang est l'ordre dans lequel on essaie. L'afficher sans le dire
   // laisserait croire à une note ou à une préférence.
   it("montre l'ordre de repli, du premier essayé au dernier", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur({ "/admin/ai-models": () => reponse(200, CATALOGUE) });
     await ouvrir(utilisateur);
     await screen.findByText("claude-opus-5");
@@ -73,7 +73,7 @@ describe("les modèles d'IA", () => {
   // tarifé. Afficher « 0 » le ferait passer pour gratuit dans un calcul de
   // marge.
   it("dit qu'un coût manque au lieu d'afficher zéro", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur({ "/admin/ai-models": () => reponse(200, CATALOGUE) });
     await ouvrir(utilisateur);
     await screen.findByText("deepseek-chat");
@@ -84,7 +84,7 @@ describe("les modèles d'IA", () => {
   });
 
   it("éteindre un modèle demande un motif, et l'envoie", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
       "/admin/ai-models": (_url, init) => (init?.method === "PATCH"
         ? reponse(200, { id: "m-1", enabled: false })
@@ -112,7 +112,7 @@ describe("les modèles d'IA", () => {
   // génération sans que rien ne le dise avant la première panne. L'écran doit
   // traduire ce refus, pas afficher « erreur interne ».
   it("traduit le refus d'éteindre le dernier modèle actif", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur({
       "/admin/ai-models": (_url, init) => (init?.method === "PATCH"
         ? reponse(422, { code: "validation_failed", message: "last enabled model" })

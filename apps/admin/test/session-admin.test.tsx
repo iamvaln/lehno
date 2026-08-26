@@ -57,7 +57,7 @@ describe("la session d'administration, du serveur à l'écran", () => {
 
   it("demander un code appelle le serveur avec l'adresse saisie", async () => {
     const appels = serveur({ "/admin/auth/otp": reponse(200, { envoye: true }) });
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     render(<App />);
 
     await utilisateur.type(screen.getByLabelText(t.connexion.adresse), ADRESSE);
@@ -77,7 +77,7 @@ describe("la session d'administration, du serveur à l'écran", () => {
       "/admin/auth/otp/verify": reponse(200, PAIRE),
       "/admin/auth/otp": reponse(200, { envoye: true }),
     });
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     render(<App />);
 
     await entrer(utilisateur);
@@ -106,7 +106,7 @@ describe("la session d'administration, du serveur à l'écran", () => {
   it("se déconnecter ferme la session côté serveur et vide le magasin", async () => {
     magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role: "admin" });
     const appels = serveur({ "/admin/auth/session": reponse(204) });
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     render(<App />);
 
     // La déconnexion vit dans le menu de compte : c'est la seule sortie de

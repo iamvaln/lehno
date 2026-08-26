@@ -51,7 +51,7 @@ describe("les demandes de suppression, sur le serveur", () => {
   });
 
   it("lit la file auprès du serveur", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
       "/admin/dashboard": () => reponse(200, {
         alertes: [], indicateurs: [],
@@ -70,7 +70,7 @@ describe("les demandes de suppression, sur le serveur", () => {
   // tout changement d'état de compte : un second finirait par diverger, l'un
   // journalisant et l'autre non.
   it("effacer sans attendre passe par le changement d'état, avec son motif", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
       "/admin/dashboard": () => reponse(200, {
         alertes: [], indicateurs: [],
@@ -102,7 +102,7 @@ describe("les demandes de suppression, sur le serveur", () => {
   });
 
   it("restaurer remet le compte en service", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
       "/admin/dashboard": () => reponse(200, {
         alertes: [], indicateurs: [],
@@ -130,7 +130,7 @@ describe("les demandes de suppression, sur le serveur", () => {
   });
 
   it("un échec de chargement se voit", async () => {
-    const utilisateur = userEvent.setup();
+    const utilisateur = userEvent.setup({ delay: null });
     serveur({
       "/admin/dashboard": () => reponse(200, {
         alertes: [], indicateurs: [],
