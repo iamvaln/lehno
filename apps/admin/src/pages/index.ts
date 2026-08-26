@@ -11,3 +11,4 @@ export { Connexion } from "./Connexion.js";
 export { Profil } from "./Profil.js";
 export { Lecture, type LectureProps } from "./Lecture.js";
 export { Modeles, type ModelesProps } from "./Modeles.js";
+export { Drapeaux, type DrapeauxProps } from "./Drapeaux.js";

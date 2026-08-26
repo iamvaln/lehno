@@ -221,6 +221,43 @@ export const fr = {
     manque: "La dépense réelle et ce qu'elle a rapporté n'apparaissent pas encore : les relevés d'usage n'existent pas en base. Ce catalogue dit ce qu'on essaie et dans quel ordre.",
   },
 
+  drapeaux: {
+    titre: "Fonctionnalités",
+    sous: "Ce qu'on livre, et ce qui attend. Le socle n'y figure pas : il n'est pas extinguible.",
+    col: { cle: "Clé", gouverne: "Ce que ça gouverne", portee: "Où", couverture: "Ce que ça couvre", etat: "État", parQui: "Dernière bascule" },
+    etats: {
+      actif: "En service",
+      eteint: "Éteint",
+      // Allumé, mais un prérequis est éteint : la fonctionnalité ne tourne pas.
+      // Le dire évite de croire qu'elle marche alors que personne ne la voit.
+      inerte: "Allumé, sans effet",
+    },
+    portees: { app: "Application", public: "Public" },
+    requiert: "Demande : {cles}",
+    emporte: "Éteindre emporte aussi",
+    jamais: "Jamais basculé",
+    allumer: "Allumer",
+    eteindre: "Éteindre",
+    dialogueEteindre: {
+      titre: "Éteindre {cle}",
+      consequence: "Les écrans et points d'entrée listés cessent de répondre. Ceux qui en dépendent s'éteignent avec.",
+      motifs: [
+        "Incident en cours sur cette fonctionnalité",
+        "Pas encore prête pour le public",
+        "Coût trop élevé pour l'instant",
+      ],
+    },
+    dialogueAllumer: {
+      titre: "Allumer {cle}",
+      consequence: "Les écrans et points d'entrée listés se mettent à répondre. Si un prérequis est éteint, rien ne changera tant qu'il le reste.",
+      motifs: [
+        "Ouverture au public",
+        "L'incident est clos",
+        "Essai sur une durée courte",
+      ],
+    },
+  },
+
   echecs: {
     chargement: "On n'a pas réussi à charger cette liste. Rien n'a bougé côté données. Réessayez, ou revenez dans un instant.",
     action: "On n'a pas pu appliquer ce geste. L'état du compte est celui d'avant. Réessayez, ou passez la main à un administrateur.",
