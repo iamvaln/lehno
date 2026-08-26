@@ -497,3 +497,42 @@ export const paiementCreeSchema = z.object({
 
 export type SaisiePaiement = z.infer<typeof saisiePaiementSchema>;
 export type PaiementCree = z.infer<typeof paiementCreeSchema>;
+
+// ——— La décision sur un paiement —————————————————————————————
+
+/**
+ * Confirmer ou rejeter un paiement en attente.
+ *
+ * **Le montant reçu se renseigne toujours**, même sans écart : c'est lui qui
+ * permet de constater qu'il n'y en a pas. Sans ce champ, on ne saurait jamais
+ * si le silence vaut « rien à signaler » ou « personne n'a regardé ».
+ *
+ * Le reçu ne prouve rien — un montage est facile. C'est la réception **sur le
+ * compte de l'opérateur** qui fait foi, et c'est ce que l'administrateur
+ * consigne ici.
+ */
+export const decisionPaiementSchema = z.discriminatedUnion("decision", [
+  z.object({
+    decision: z.literal("confirmer"),
+    montantRecu: z.number().nonnegative(),
+    /** La référence chez l'opérateur, consignée au moment de confirmer. */
+    reference: z.string().min(1).max(200),
+    reason: motifSchema,
+  }).strict(),
+  z.object({
+    decision: z.literal("rejeter"),
+    /** Renseigné quand on a regardé et constaté un manque ; nul sinon. */
+    montantRecu: z.number().nonnegative().nullable().optional(),
+    reason: motifSchema,
+  }).strict(),
+]);
+
+export const paiementDecideSchema = z.object({
+  id: z.string(),
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  creditsOctroyes: z.number().int(),
+  /** L'écart constaté : reçu moins attendu. Négatif quand il manque. */
+  ecart: z.number().nullable(),
+}).strict();
+
+export type DecisionPaiement = z.infer<typeof decisionPaiementSchema>;

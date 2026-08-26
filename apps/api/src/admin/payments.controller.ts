@@ -1,6 +1,6 @@
-import { Body, Controller, Inject, Injectable, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpCode, Inject, Injectable, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
-import { saisiePaiementSchema } from "@lehno/contracts";
+import { decisionPaiementSchema, saisiePaiementSchema } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -120,6 +120,113 @@ export class AdminPaymentsService {
       };
     });
   }
+
+  /**
+   * Confirmer ou rejeter un paiement en attente.
+   *
+   * Trois écritures qui tiennent ensemble ou pas du tout : l'état du paiement,
+   * son histoire, et — à la confirmation — l'octroi des crédits. Une
+   * transaction les enveloppe, et un refus à n'importe quel bout défait le
+   * reste.
+   *
+   * **L'octroi une seule fois ne tient pas à une vérification.** Deux
+   * confirmations concurrentes liraient toutes deux « aucun octroi » avant que
+   * l'une n'écrive, et le compte serait crédité deux fois. C'est l'index unique
+   * sur `credit_transaction.payment_id` qui tranche : le perdant échoue à
+   * l'écriture, sa transaction est défaite, et on lui rend un conflit.
+   */
+  async decider(auteurId: string, id: string, entree: z.infer<typeof decisionPaiementSchema>) {
+    const paiement = await this.prisma.payment.findUnique({ where: { id } });
+    if (!paiement) throw new AppError("not_found", "unknown payment");
+    // Un paiement tranché ne se retranche pas : son histoire est définitive, et
+    // le rouvrir laisserait deux vérités sur le même versement.
+    if (paiement.status !== "pending") throw new AppError("conflict", "payment is already settled");
+
+    const confirme = entree.decision === "confirmer";
+    const attendu = paiement.expectedAmount === null ? null : Number(paiement.expectedAmount);
+    const recu = entree.montantRecu ?? null;
+    // L'écart : reçu moins attendu. Négatif quand il manque. Nul — et non zéro —
+    // quand on n'a pas regardé, ce qui ne peut arriver qu'au rejet.
+    const ecart = recu === null || attendu === null ? null : recu - attendu;
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        // L'état courant se ferme, le nouveau s'ouvre. La base n'en tolère
+        // qu'un seul ouvert : c'est ce qui rend la durée de chacun lisible.
+        await tx.paymentStatusHistory.updateMany({
+          where: { paymentId: id, endedAt: null },
+          data: { endedAt: new Date() },
+        });
+
+        const etat = confirme ? "succeeded" as const : "failed" as const;
+        await tx.payment.update({
+          where: { id },
+          data: {
+            status: etat,
+            ...(recu !== null ? { receivedAmount: recu } : {}),
+            ...(confirme ? { providerRef: entree.reference } : { failureReason: entree.reason }),
+            // Le reçu s'efface une fois la demande traitée : une photo de
+            // justificatif n'a aucune raison de rester une fois qu'elle a
+            // servi, et elle ne prouvait rien de toute façon.
+            proofKey: null,
+          },
+        });
+
+        await tx.paymentStatusHistory.create({
+          data: {
+            paymentId: id, status: etat, origin: "admin",
+            changedByAdminId: auteurId, reason: entree.reason,
+          },
+        });
+
+        let creditsOctroyes = 0;
+        if (confirme) {
+          await tx.creditTransaction.create({
+            data: {
+              userId: paiement.userId,
+              type: "purchase",
+              source: "purchase",
+              amount: paiement.credits,
+              paymentId: id,
+            },
+          });
+          creditsOctroyes = paiement.credits;
+
+          // Le premier paiement réussi d'une méthode renseigne sa date, et
+          // c'est elle qui décide de son éligibilité à un remboursement.
+          if (paiement.paymentMethodId) {
+            await tx.paymentMethod.updateMany({
+              where: { id: paiement.paymentMethodId, firstSuccessfulPaymentAt: null },
+              data: { firstSuccessfulPaymentAt: new Date() },
+            });
+          }
+        }
+
+        await this.journal.consigner({
+          auteurId,
+          action: "payment_decision",
+          motif: entree.reason,
+          cibleType: "payment",
+          cibleId: id,
+          details: { decision: entree.decision, expected: attendu, received: recu, gap: ecart },
+        }, tx);
+
+        return { id, etat, creditsOctroyes, ecart };
+      });
+    } catch (echec) {
+      // Le perdant de la course : l'index unique a refusé son octroi, et sa
+      // transaction entière est défaite. Le paiement reste celui qu'a écrit le
+      // gagnant, et on rend un conflit plutôt qu'une erreur interne.
+      if (estCollisionUnique(echec)) throw new AppError("conflict", "payment already settled concurrently");
+      throw echec;
+    }
+  }
+}
+
+/** P2002 : violation d'une contrainte d'unicité. */
+function estCollisionUnique(echec: unknown): boolean {
+  return typeof echec === "object" && echec !== null && "code" in echec
+    && (echec as { code?: unknown }).code === "P2002";
 }
 
 // Saisir un paiement fait entrer de l'argent dans le registre : c'est un levier
@@ -136,5 +243,17 @@ export class AdminPaymentsController {
     @Req() requete: { admin?: { id: string } },
   ) {
     return this.service.saisir(requete.admin?.id ?? "", corps);
+  }
+
+  // 200, pas 201 : une décision ne crée aucune ressource, elle change un état
+  // (contrat commun §1). Le 201 apprendrait un identifiant qui existait déjà.
+  @Post(":id/decision")
+  @HttpCode(200)
+  decider(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(decisionPaiementSchema)) corps: z.infer<typeof decisionPaiementSchema>,
+    @Req() requete: { admin?: { id: string } },
+  ) {
+    return this.service.decider(requete.admin?.id ?? "", id, corps);
   }
 }
