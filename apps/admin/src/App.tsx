@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { TableauDeBord, Liste, Detail, Drapeaux, Edition, Lecture, Modeles, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -25,7 +25,9 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  catalogueIaSchema, compteDetailSchema, dashboardSchema, drapeauxAdminSchema, pageAuditSchema, pageComptesSchema,
+  canauxSchema, catalogueIaSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
+  paiementDetailSchema, paliersSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
@@ -168,6 +170,9 @@ export function App(): ReactNode {
     // journal en ouvrant les connexions demanderait au serveur une page qui
     // n'existe pas dans cette table.
     setCurseursLecture([null]);
+    // Changer de section referme le paiement ouvert : y revenir plus tard
+    // rouvrirait une fiche qu'on n'a pas demandée.
+    setPaiementOuvert(null);
     // Cacher l'entrée ne suffit pas : un raccourci du tableau de bord, une
     // adresse gardée en mémoire ou un retour arrière y mèneraient encore. Une
     // section hors des droits ramène au tableau de bord (ux-admin §5.1).
@@ -208,6 +213,10 @@ export function App(): ReactNode {
   const [tourSuppressions, setTourSuppressions] = useState(0);
   const [tourModeles, setTourModeles] = useState(0);
   const [tourDrapeaux, setTourDrapeaux] = useState(0);
+  const [tourCredits, setTourCredits] = useState(0);
+  const [ongletCredits, setOngletCredits] = useState<"paiements" | "mouvements" | "reglages">("paiements");
+  const [filtresPaiements, setFiltresPaiements] = useState<{ etat: string; mode: string }>({ etat: "tous", mode: "tous" });
+  const [paiementOuvert, setPaiementOuvert] = useState<string | null>(null);
   // Le refus d'une écriture se dit à l'écran, traduit depuis son code.
   const [avis, setAvis] = useState<CleCode | null>(null);
   const [curseursLecture, setCurseursLecture] = useState<(string | null)[]>([null]);
@@ -308,6 +317,47 @@ export function App(): ReactNode {
     [section, tourDrapeaux],
   );
 
+  const surCredits = section === "credits";
+  const requetePaiements = {
+    ...(filtresPaiements.etat !== "tous" ? { etat: filtresPaiements.etat } : {}),
+    ...(filtresPaiements.mode !== "tous" ? { mode: filtresPaiements.mode } : {}),
+  };
+
+  const etatPaiements = useRessource(
+    () => (surCredits && ongletCredits === "paiements" && !paiementOuvert
+      ? api.appeler("/admin/payments", { schema: pagePaiementsSchema, requete: requetePaiements })
+      : Promise.resolve(null)),
+    [surCredits, ongletCredits, paiementOuvert, filtresPaiements.etat, filtresPaiements.mode, tourCredits],
+    { garderAncien: true },
+  );
+
+  const etatPaiement = useRessource(
+    () => (surCredits && paiementOuvert
+      ? api.appeler(`/admin/payments/${paiementOuvert}`, { schema: paiementDetailSchema })
+      : Promise.resolve(null)),
+    [surCredits, paiementOuvert, tourCredits],
+  );
+
+  const etatMouvements = useRessource(
+    () => (surCredits && ongletCredits === "mouvements"
+      ? api.appeler("/admin/credit-transactions", { schema: pageMouvementsSchema })
+      : Promise.resolve(null)),
+    [surCredits, ongletCredits, tourCredits],
+  );
+
+  // Les trois tables se lisent ensemble : l'onglet des réglages les montre
+  // côte à côte, et les séparer ferait trois états d'attente sur un seul écran.
+  const etatReglages = useRessource(
+    async () => (surCredits && ongletCredits === "reglages"
+      ? {
+        paliers: await api.appeler("/admin/credit-bundles", { schema: paliersSchema }),
+        canaux: await api.appeler("/admin/payment-channels", { schema: canauxSchema }),
+        comptes: await api.appeler("/admin/collection-accounts", { schema: comptesCollecteSchema }),
+      }
+      : null),
+    [surCredits, ongletCredits, tourCredits],
+  );
+
   let vue: ReactNode;
   if (section === "profil") {
     vue = <Profil profil={profil} langue={langue} />;
@@ -327,6 +377,93 @@ export function App(): ReactNode {
         ) : null)}
       />
     );
+  } else if (section === "credits" && paiementOuvert) {
+    vue = (
+      <Ressource
+        etat={etatPaiement}
+        t={t}
+        enfant={(detail) => (detail ? (
+          <Credits
+            role={role}
+            langue={langue}
+            paiement={detail}
+            onRetour={(id) => {
+              setPaiementOuvert(null);
+              if (id !== "credits") aller(id);
+            }}
+            onDecider={(decision) => {
+              void (async () => {
+                try {
+                  await api.appeler(`/admin/payments/${paiementOuvert}/decision`, {
+                    methode: "POST", corps: decision,
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  // On relit dans tous les cas : après un refus, l'état affiché
+                  // est celui d'avant, et c'est lui qui fait foi.
+                  setTourCredits((n) => n + 1);
+                }
+              })();
+            }}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "credits") {
+    // Une enveloppe par onglet plutôt qu'une union : les trois ressources n'ont
+    // pas la même forme, et les faire passer par un seul canal obligerait à
+    // deviner laquelle on tient à chaque lecture.
+    const commun = {
+      role,
+      langue,
+      onglet: ongletCredits,
+      onOnglet: setOngletCredits,
+      filtreEtat: filtresPaiements.etat,
+      filtreMode: filtresPaiements.mode,
+      onFiltre: (f: { etat?: string; mode?: string }) =>
+        setFiltresPaiements((courant) => ({ ...courant, ...f })),
+      onRetour: aller,
+    };
+
+    if (ongletCredits === "mouvements") {
+      vue = (
+        <Ressource
+          etat={etatMouvements}
+          t={t}
+          enfant={(page) => <Credits {...commun} mouvements={page?.items ?? []} />}
+        />
+      );
+    } else if (ongletCredits === "reglages") {
+      vue = (
+        <Ressource
+          etat={etatReglages}
+          t={t}
+          enfant={(tables) => (
+            <Credits
+              {...commun}
+              paliers={tables?.paliers.items ?? []}
+              canaux={tables?.canaux.items ?? []}
+              comptes={tables?.comptes.items ?? []}
+            />
+          )}
+        />
+      );
+    } else {
+      vue = (
+        <Ressource
+          etat={etatPaiements}
+          t={t}
+          enfant={(page) => (
+            <Credits
+              {...commun}
+              paiements={page?.items ?? []}
+              onOuvrir={(p) => setPaiementOuvert(p.id)}
+            />
+          )}
+        />
+      );
+    }
   } else if (section === "fonctionnalites") {
     vue = (
       <Ressource

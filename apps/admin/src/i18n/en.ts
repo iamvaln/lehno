@@ -228,6 +228,105 @@ export const en: typeof fr = {
     },
   },
 
+  // Voir fr.ts : trois faces d'une même section.
+  credits: {
+    titre: "Credits and payments",
+    sous: "What came in, what it produced, and the settings that decide both.",
+    onglets: { paiements: "Payments", mouvements: "Movements", reglages: "Settings" },
+
+    paiements: {
+      col: {
+        utilisateur: "Account", mode: "Route", etat: "State", montant: "Amount",
+        methode: "Method", attendu: "Expected", recu: "Received", ecart: "Gap", quand: "Entered",
+      },
+      modes: { provider: "Provider", semi_manual: "Semi-manual", manual: "Manual" },
+      etats: {
+        pending: "Pending", succeeded: "Confirmed", failed: "Refused",
+        expired: "Expired", refunded: "Refunded",
+      },
+      filtreEtat: "State", filtreMode: "Route", tous: "All",
+      nonConstate: "—",
+      vide: {
+        titre: "No payments in this period",
+        texte: "Entered transfers and those received by the app appear here, with their outcome.",
+      },
+    },
+
+    mouvements: {
+      col: { utilisateur: "Account", type: "Type", source: "Origin", montant: "Credits", quand: "On" },
+      types: { grant: "Grant", purchase: "Purchase", consumption: "Use", adjustment: "Adjustment" },
+      sources: {
+        signup_grant: "Sign-up", referral_bonus: "Referral", purchase: "Purchase",
+        manual_topup: "Manual transfer", promo_code: "Promo code", gift: "Gift",
+        reward: "Reward", consumption: "Use", refund: "Refund",
+        correction: "Correction",
+      },
+      vide: {
+        titre: "No movements in this period",
+        texte: "Every grant, purchase, use and adjustment lands here.",
+      },
+    },
+
+    detail: {
+      titre: "Payment",
+      groupes: { operation: "The operation", montants: "The amounts", histoire: "Its history" },
+      champs: {
+        reference: "Reference", compte: "Collection account", frais: "Fee",
+        montant: "Bundle price", attendu: "Expected on the account", recu: "Observed",
+        ecart: "Gap", motifEchec: "Reason for refusal", credits: "Credits",
+      },
+      histoire: { etat: "State", debut: "Since", duree: "Duration", origine: "Triggered by", parQui: "By", motif: "Reason" },
+      origines: {
+        user: "The user", webhook: "The provider", polling: "A status check",
+        admin: "Administration", system: "A scheduled job",
+      },
+      enCours: "Ongoing",
+      retour: "Back to payments",
+    },
+
+    decision: {
+      confirmer: "Confirm receipt",
+      rejeter: "Refuse",
+      avertissement: "The receipt proves nothing — a forgery is easy. Check the money arrived on the operator account before confirming.",
+      montantRecu: "Amount observed on the account",
+      montantAide: "Fill this in even with no gap: it is what lets you establish there isn't one.",
+      reference: "Transaction reference",
+      dialogueConfirmer: {
+        titre: "Confirm this transfer",
+        consequence: "Credits are granted to the account, once. The client is notified.",
+        motifs: ["Receipt confirmed on the account", "Transfer found after searching"],
+      },
+      dialogueRejeter: {
+        titre: "Refuse this transfer",
+        consequence: "No credits are granted. The reason will show on the payment.",
+        motifs: ["Nothing arrived on the account", "Amount too low", "Receipt not acceptable"],
+      },
+    },
+
+    reglages: {
+      paliers: {
+        titre: "Purchase bundles",
+        sous: "What we offer. No free amounts: the smallest bundle sets the minimum.",
+        col: { montant: "Price", credits: "Credits", remise: "Bonus", position: "Order", etat: "State" },
+      },
+      canaux: {
+        titre: "Channels and fees",
+        sous: "What the service offers, and what the operator takes. A channel is never deleted, only switched off.",
+        col: { libelle: "Channel", pays: "Country", frais: "Fee", portes: "Borne by", etat: "State" },
+        portes: { payer: "The client", payee: "The service" },
+      },
+      comptes: {
+        titre: "Collection accounts",
+        sous: "The accounts clients transfer to.",
+        col: { libelle: "Account", operateur: "Operator", numero: "Number", visible: "In the app", etat: "State" },
+        visible: "Offered", masque: "Hidden",
+      },
+      actif: "In service",
+      inactif: "Withdrawn",
+      aucuneRemise: "—",
+    },
+  },
+
   echecs: {
     chargement: "We couldn't load this list. Nothing moved on the data side. Try again, or come back in a moment.",
     action: "We couldn't apply that action. The account is exactly as it was. Try again, or hand it to an administrator.",
