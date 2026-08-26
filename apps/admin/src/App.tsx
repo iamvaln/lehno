@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -197,6 +197,7 @@ export function App(): ReactNode {
     // Changer de section referme le paiement ouvert : y revenir plus tard
     // rouvrirait une fiche qu'on n'a pas demandée.
     setPaiementOuvert(null);
+    setSaisieOuverte(false);
     // Cacher l'entrée ne suffit pas : un raccourci du tableau de bord, une
     // adresse gardée en mémoire ou un retour arrière y mèneraient encore. Une
     // section hors des droits ramène au tableau de bord (ux-admin §5.1).
@@ -241,6 +242,7 @@ export function App(): ReactNode {
   const [ongletCredits, setOngletCredits] = useState<"paiements" | "mouvements" | "reglages">("paiements");
   const [filtresPaiements, setFiltresPaiements] = useState<{ etat: string; mode: string }>({ etat: "tous", mode: "tous" });
   const [paiementOuvert, setPaiementOuvert] = useState<string | null>(null);
+  const [saisieOuverte, setSaisieOuverte] = useState(false);
   // Le refus d'une écriture se dit à l'écran, traduit depuis son code.
   const [avis, setAvis] = useState<CleCode | null>(null);
   const [avisExport, setAvisExport] = useState<string | null>(null);
@@ -410,6 +412,20 @@ export function App(): ReactNode {
     [surCredits, paiementOuvert, tourCredits],
   );
 
+  // Quatre listes pour un seul formulaire : les charger ensemble évite quatre
+  // états d'attente sur un écran qui n'en montre qu'un.
+  const etatSaisie = useRessource(
+    async () => (surCredits && saisieOuverte
+      ? {
+        comptes: await api.appeler("/admin/users", { schema: pageComptesSchema, requete: { limit: "200" } }),
+        paliers: await api.appeler("/admin/credit-bundles", { schema: paliersSchema }),
+        canaux: await api.appeler("/admin/payment-channels", { schema: canauxSchema }),
+        collecte: await api.appeler("/admin/collection-accounts", { schema: comptesCollecteSchema }),
+      }
+      : null),
+    [surCredits, saisieOuverte],
+  );
+
   const etatMouvements = useRessource(
     () => (surCredits && ongletCredits === "mouvements"
       ? api.appeler("/admin/credit-transactions", { schema: pageMouvementsSchema })
@@ -445,6 +461,38 @@ export function App(): ReactNode {
             compte={compte}
             interventions={interventions.items}
             onRetour={() => setOuvert(null)}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "credits" && saisieOuverte) {
+    vue = (
+      <Ressource
+        etat={etatSaisie}
+        t={t}
+        enfant={(donnees) => (donnees ? (
+          <SaisiePaiement
+            langue={langue}
+            comptes={donnees.comptes.items}
+            paliers={donnees.paliers.items}
+            canaux={donnees.canaux.items}
+            comptesCollecte={donnees.collecte.items}
+            onAnnuler={() => setSaisieOuverte(false)}
+            onEnregistrer={(saisie) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/payments", { methode: "POST", corps: saisie });
+                  setSaisieOuverte(false);
+                  setAvisExport(t.credits.saisie.enregistre);
+                } catch (echec) {
+                  // Un palier devenu inactif entre-temps, par exemple : le
+                  // refus se traduit plutôt que de laisser croire à une panne.
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourCredits((n) => n + 1);
+                }
+              })();
+            }}
           />
         ) : null)}
       />
@@ -531,6 +579,7 @@ export function App(): ReactNode {
               {...commun}
               paiements={page?.items ?? []}
               onOuvrir={(p) => setPaiementOuvert(p.id)}
+              {...(role === "admin" ? { onSaisir: () => setSaisieOuverte(true) } : {})}
             />
           )}
         />

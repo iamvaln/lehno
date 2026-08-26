@@ -374,6 +374,44 @@ export const fr = {
       },
     },
 
+    // Enregistrer un versement constaté. Le montant et les crédits viennent du
+    // palier : « on achète un palier, jamais un montant libre », et l'écran
+    // n'offre donc aucun champ de montant.
+    saisie: {
+      ouvrir: "Saisir un versement",
+      titre: "Saisir un versement reçu",
+      sous: "Le versement a déjà été fait. On l'enregistre ici, puis on le confirme après avoir vérifié la réception.",
+      champs: {
+        compteClient: "Compte crédité",
+        palier: "Palier acheté",
+        canal: "Canal employé",
+        compte: "Compte qui a reçu",
+        numeroPayeur: "Numéro du payeur",
+        reference: "Référence de la transaction",
+      },
+      apercu: {
+        titre: "Ce que le client verse, et ce qu'on doit voir arriver",
+        aVerser: "Le client verse",
+        attendu: "On doit voir arriver",
+        credits: "Crédits octroyés à la confirmation",
+      },
+      choisir: "Choisir…",
+      enregistrer: "Enregistrer le versement",
+      annuler: "Annuler",
+      // Le paiement naît en attente : il reste à confirmer une fois la
+      // réception vérifiée sur le compte de l'opérateur.
+      enregistre: "Versement enregistré, en attente de confirmation.",
+      motifs: [
+        "Versement constaté sur le compte",
+        "Recharge demandée par téléphone",
+        "Régularisation d'un versement ancien",
+      ],
+      dialogue: {
+        titre: "Enregistrer ce versement",
+        consequence: "Le paiement naît en attente. Aucun crédit n'est octroyé tant que la réception n'est pas confirmée.",
+      },
+    },
+
     reglages: {
       paliers: {
         titre: "Paliers d'achat",
@@ -789,6 +827,10 @@ export const fr = {
     conflict: "L'état a changé entre-temps. Rechargez avant de réessayer.",
     validation_failed: "La demande est mal formée.",
     reason_required: "Un motif est nécessaire, d'au moins six caractères.",
+    // Un palier retiré, un canal fermé, un compte de collecte désactivé : la
+    // demande est bien formée, c'est ce qu'elle vise qui ne se propose plus.
+    resource_inactive: "Ce choix n'est plus proposé. Rechargez pour voir ce qui reste disponible.",
+    insufficient_credits: "Il n'y a pas assez de crédits pour ce geste.",
     rate_limited: "Trop de demandes. Patientez un instant.",
     internal_error: "Le service a rencontré une erreur. Réessayez dans un instant.",
     account_suspended: "Ce compte est suspendu.",

@@ -331,6 +331,40 @@ export const en: typeof fr = {
       },
     },
 
+    // Voir fr.ts : no free amount field — the bundle decides.
+    saisie: {
+      ouvrir: "Enter a transfer",
+      titre: "Enter a received transfer",
+      sous: "The transfer already happened. Record it here, then confirm once you have checked it arrived.",
+      champs: {
+        compteClient: "Account to credit",
+        palier: "Bundle bought",
+        canal: "Channel used",
+        compte: "Account that received",
+        numeroPayeur: "Payer's number",
+        reference: "Transaction reference",
+      },
+      apercu: {
+        titre: "What the client sends, and what should arrive",
+        aVerser: "The client sends",
+        attendu: "We should see",
+        credits: "Credits granted on confirmation",
+      },
+      choisir: "Choose…",
+      enregistrer: "Record the transfer",
+      annuler: "Cancel",
+      enregistre: "Transfer recorded, awaiting confirmation.",
+      motifs: [
+        "Transfer seen on the account",
+        "Top-up requested by phone",
+        "Settling an older transfer",
+      ],
+      dialogue: {
+        titre: "Record this transfer",
+        consequence: "The payment starts pending. No credits are granted until receipt is confirmed.",
+      },
+    },
+
     reglages: {
       paliers: {
         titre: "Purchase bundles",
@@ -735,6 +769,9 @@ export const en: typeof fr = {
     conflict: "Things changed in the meantime. Reload before trying again.",
     validation_failed: "That request is malformed.",
     reason_required: "A reason is required, at least six characters.",
+    // Voir fr.ts : the request is fine, what it points at is no longer offered.
+    resource_inactive: "That option is no longer offered. Reload to see what remains.",
+    insufficient_credits: "There aren't enough credits for that.",
     rate_limited: "Too many requests. Wait a moment.",
     internal_error: "The service hit an error. Try again in a moment.",
     account_suspended: "This account is suspended.",
