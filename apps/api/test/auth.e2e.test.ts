@@ -39,6 +39,18 @@ describe("authentification", () => {
   let otp: OtpService;
   let tokens: TokenService;
 
+  // Le limiteur impose un délai CROISSANT entre deux demandes de code — 5 s,
+  // puis 25 s. Les cas qui éprouvent le PLAFOND doivent donc franchir ces
+  // marches sans attendre réellement : on recule les frappes dans le temps.
+  const franchirLaMarche = async (): Promise<void> => {
+    const frappes = await db.prisma.rateLimitHit.findMany();
+    for (const f of frappes) {
+      await db.prisma.rateLimitHit.update({
+        where: { id: f.id }, data: { createdAt: new Date(f.createdAt.getTime() - 200_000) },
+      });
+    }
+  };
+
   // Le parcours réel en un appel : vérifier le code, puis s'inscrire. Les deux
   // étapes sont distinctes DEPUIS que le parrainage doit être atomique avec la
   // création — la vérification ne crée plus rien.
@@ -74,8 +86,12 @@ describe("authentification", () => {
   // l'étiquette après le « + » : cinq courriers par heure et par variante,
   // toutes livrées au même endroit.
   it("plafonne le code de connexion sur la boîte, pas sur la saisie", async () => {
-    for (let i = 0; i < 5; i += 1) {
+    // Trois demandes suffisent maintenant à atteindre le plafond horaire.
+    // Elles visent des SAISIES différentes — étiquette après le « + », points
+    // — qui désignent toutes la même boîte réelle.
+    for (let i = 0; i < 3; i += 1) {
       await auth.requestOtp({ email: `awa+${i}@gmail.com` });
+      await franchirLaMarche();
     }
     await expect(auth.requestOtp({ email: "a.w.a@gmail.com" })).rejects.toBeInstanceOf(AppError);
   });
@@ -217,7 +233,9 @@ describe("authentification", () => {
   it("demander un code pour une adresse inconnue ne le dit pas", async () => {
     const connue = await auth.requestOtp({ email: "awa@example.com" });
     const inconnue = await auth.requestOtp({ email: "personne@example.com" });
-    expect(connue).toEqual(inconnue); // même forme, aucun indice
+    // Même forme, aucun indice — le délai annoncé compris, qui ne dépend que
+    // du compteur de la boîte visée et non de l'existence d'un compte.
+    expect(connue).toEqual(inconnue);
   });
 
   // Le limiteur et l'envoi sont désormais dans le chemin de requestOtp :
@@ -229,8 +247,11 @@ describe("authentification", () => {
     });
     const connue = await auth.requestOtp({ email: "awa@example.com" });
     const inconnue = await auth.requestOtp({ email: "personne-inconnue@example.com" });
-    expect(connue).toEqual({ sent: true });
-    expect(inconnue).toEqual({ sent: true });
+    // Le délai annoncé en fait partie : il ne dépend que du compteur de la
+    // boîte visée, jamais de l'existence d'un compte. Un délai qui différerait
+    // entre les deux dirait lesquelles sont connues.
+    expect(connue).toEqual({ sent: true, retryAfterSeconds: 5 });
+    expect(inconnue).toEqual({ sent: true, retryAfterSeconds: 5 });
     expect(connue).toEqual(inconnue);
   });
 
@@ -250,7 +271,10 @@ describe("authentification", () => {
   });
 
   it("borne les demandes par adresse destinataire", async () => {
-    for (let i = 0; i < 5; i++) await auth.requestOtp({ email: "bombardée@example.com" });
+    for (let i = 0; i < 3; i++) {
+      await auth.requestOtp({ email: "bombardée@example.com" });
+      await franchirLaMarche();
+    }
     await expect(auth.requestOtp({ email: "bombardée@example.com" }))
       .rejects.toMatchObject({ code: "rate_limited" });
   });
@@ -261,12 +285,18 @@ describe("authentification", () => {
   // ouvriraient trois compteurs distincts pour la même boîte réelle,
   // c'est-à-dire aucun plafond du tout.
   it("le plafond par adresse résiste à un changement de casse", async () => {
-    for (let i = 0; i < 5; i++) await auth.requestOtp({ email: "casse@example.com" });
+    for (let i = 0; i < 3; i++) {
+      await auth.requestOtp({ email: "casse@example.com" });
+      await franchirLaMarche();
+    }
     await expect(auth.requestOtp({ email: "CASSE@EXAMPLE.COM" }))
       .rejects.toMatchObject({ code: "rate_limited" });
   });
 
   it("borne les demandes par origine, tous destinataires confondus", async () => {
+    // Vingt adresses DIFFÉRENTES : chacune a son propre compteur, donc aucune
+    // ne bute sur le délai croissant. C'est bien le plafond par origine qui
+    // arrête le vingt-et-unième — celui qui balaie un annuaire.
     for (let i = 0; i < 20; i++) await auth.requestOtp({ email: `cible-${i}@example.com`, ip: "203.0.113.9" });
     await expect(auth.requestOtp({ email: "cible-encore@example.com", ip: "203.0.113.9" }))
       .rejects.toMatchObject({ code: "rate_limited" });

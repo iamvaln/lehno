@@ -7,7 +7,7 @@ import { AppError } from "../common/errors.js";
 import { RateLimitService } from "../common/rate-limit.service.js";
 import { assertUsableEmail, canonicalEmail } from "../common/email.js";
 import { OtpService } from "./otp.service.js";
-import { TokenService, type Pair } from "./token.service.js";
+import { TokenService } from "./token.service.js";
 import { SignupService } from "../onboarding/signup.service.js";
 import type { MailPort } from "../mail/mail.port.js";
 import type { VerifyOutcome, RegisterInput, Registered } from "@lehno/contracts";

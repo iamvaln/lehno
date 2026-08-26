@@ -38,13 +38,30 @@ const schema = (s: ZodTypeAny): object => zodToJsonSchema(s, { target: "openApi3
 // ne décrivent ni la liste d'attente, ni le contact, ni un profil, seulement
 // l'accusé d'un point d'entrée d'authentification ou de disponibilité. Elles
 // sont définies une fois, ici, plutôt que recopiées à chaque chemin qui les sert.
-const sentResponseSchema = z.object({ sent: z.literal(true) }).strict();
+/* L'accusé d'une demande de code, et le délai avant la suivante.
+ *
+ * Ce délai est CROISSANT — cinq secondes, puis vingt-cinq, puis cent
+ * vingt-cinq — et il vient donc du serveur. Le client l'affiche en compte à
+ * rebours ; s'il codait la formule de son côté, deux versions du parc
+ * appliqueraient deux règles différentes, celle du serveur restant la seule
+ * qui compte. Un refus porte le même champ dans ses détails. */
+const sentResponseSchema = z
+  .object({ sent: z.literal(true), retryAfterSeconds: z.number().int().positive() })
+  .strict();
 const usernameAvailableResponseSchema = z.object({ available: z.boolean() }).strict();
 
 type Chemin = {
   chemin: string;
   methode: "get" | "post" | "patch" | "delete";
   resume: string;
+  // Ce qu'un intégrateur ne peut PAS déduire des schémas : une règle de
+  // séquence, une contrainte que le serveur applique sans que la forme la
+  // dise, un piège.
+  //
+  // Ces notes vivaient en commentaires du code — invisibles pour l'équipe
+  // mobile, qui ne lit que le contrat publié. Un commentaire que seul son
+  // auteur voit ne documente rien.
+  note?: string;
   authentifie?: boolean;
   // Paramètres de chemin ou de requête, chacun tiré d'un schéma déjà exporté
   // — jamais retapé en une forme parallèle qui pourrait diverger.
@@ -109,6 +126,20 @@ const CHEMINS: Chemin[] = [
     chemin: "/me/credits",
     methode: "get",
     resume: "Lire son solde de crédits et ses derniers mouvements",
+    note: [
+      "Le solde est la SOMME des mouvements, calculée à chaque appel. Aucune",
+      "colonne de solde n'existe : le client ne refait pas ce calcul, sous",
+      "peine de deux vérités qui divergent dès qu'un mouvement arrive hors de",
+      "la page.",
+      "",
+      "Chaque mouvement porte `source`, un CODE STABLE que le client traduit —",
+      "`signup_grant`, `referral_bonus`, `purchase`… Le champ `reason` est une",
+      "note libre d'exploitation, en français, jamais destinée à l'affichage.",
+      "",
+      "`type` ne suffit pas à distinguer : un `grant` d'inscription et un",
+      "`grant` de parrainage se ressemblent, et ce sont deux gestes distincts",
+      "dont l'un se mérite.",
+    ].join("\n"),
     authentifie: true,
     reponse: creditBalanceSchema,
   },
@@ -124,6 +155,15 @@ const CHEMINS: Chemin[] = [
     chemin: "/public/invitations/{code}",
     methode: "get",
     resume: "Lire une invitation : qui invite, et ce que l'invité y gagne",
+    note: [
+      "Ouverte SANS compte. Sert aussi à valider un code de parrainage à la",
+      "saisie, avant de le soumettre à /auth/register : un code inconnu rend",
+      "404.",
+      "",
+      "Ne porte que le pseudo de celui qui invite. Un code d'invitation",
+      "circule par message et par réseau, et tout ce qu'on met ici circule",
+      "avec lui.",
+    ].join("\n"),
     parametres: [{ nom: "code", dans: "path", schema: z.string().max(16), requis: true }],
     reponse: invitationSchema,
   },
@@ -142,13 +182,56 @@ const CHEMINS: Chemin[] = [
     chemin: "/auth/otp",
     methode: "post",
     resume: "Demander un code de connexion à usage unique par courriel",
+    note: [
+      "Le code vaut DIX MINUTES. C'est la première des deux horloges du parcours.",
+      "",
+      "La seconde est le délai avant de pouvoir en redemander un, et il CROÎT :",
+      "5 secondes après la première demande, 25 après la deuxième, 125 après la",
+      "troisième. Le client ne calcule pas cette formule — il lit",
+      "`retryAfterSeconds` dans la réponse et l'affiche en compte à rebours.",
+      "S'il la codait de son côté, deux versions du parc appliqueraient deux",
+      "règles différentes, celle du serveur restant la seule qui compte.",
+      "",
+      "Un refus `rate_limited` porte le même champ dans ses `details`.",
+      "",
+      "Plafond : trois codes par heure et par boîte. Il GLISSE — le refus dit",
+      "quand la plus ancienne demande sortira de la fenêtre, pas « dans une",
+      "heure ».",
+      "",
+      "La réponse est identique pour une adresse connue et une adresse",
+      "inconnue, délai compris : ce point d'entrée n'énumère pas les comptes.",
+    ].join("\n"),
     corps: requestOtpSchema,
     reponse: sentResponseSchema,
   },
   {
     chemin: "/auth/otp/verify",
     methode: "post",
-    resume: "Vérifier le code reçu et ouvrir une session",
+    resume: "Vérifier le code reçu : une session, ou une invitation à s'inscrire",
+    note: [
+      "DEUX ISSUES, distinguées par le champ `outcome` :",
+      "",
+      "- `session` — l'adresse a déjà un compte. On va droit à l'accueil.",
+      "- `registration` — l'adresse est inconnue. AUCUN COMPTE N'EST CRÉÉ. La",
+      "  réponse porte un jeton d'inscription ; l'écran du pseudo suit, et le",
+      "  compte naît à POST /auth/register.",
+      "",
+      "Tester la présence d'`accessToken` pour deviner l'issue est une erreur :",
+      "lire `outcome`, qui existe pour cela.",
+      "",
+      "Pourquoi le compte n'est pas créé ici : le code de parrainage se saisit",
+      "à l'écran du pseudo, donc APRÈS. Créer d'abord et rattacher ensuite",
+      "ouvrirait un chemin pour réclamer un parrainage des mois plus tard. Les",
+      "deux opérations sont atomiques.",
+      "",
+      "Le jeton d'inscription n'est PAS une session : il n'ouvre aucune",
+      "ressource, vaut quinze minutes, et le présenter en en-tête",
+      "d'autorisation ne donne accès à rien.",
+      "",
+      "`deviceLimitReached` est INDICATIF — il évite de faire choisir un pseudo",
+      "à quelqu'un dont la création sera refusée. Le plafond fait foi à la",
+      "création, sous verrou.",
+    ].join("\n"),
     corps: verifyOtpSchema,
     reponse: verifyOutcomeSchema,
   },
@@ -164,6 +247,33 @@ const CHEMINS: Chemin[] = [
     chemin: "/auth/register",
     methode: "post",
     resume: "Créer le compte : pseudo, appareil, et code de parrainage facultatif",
+    note: [
+      "TOUT SE JOUE ICI, en une transaction : le plafond par appareil, le",
+      "compte, les crédits d'inscription et le parrainage. Rien n'est",
+      "rattachable après coup.",
+      "",
+      "`deviceId` est OBLIGATOIRE, sur les trois voies d'entrée. Il l'est ici",
+      "et non à la vérification, parce que c'est ici que le compte naît — donc",
+      "ici que le plafond par appareil s'applique. Le rendre facultatif",
+      "rouvrirait son contournement.",
+      "",
+      "Le pseudo est CHOISI par l'utilisateur : il forme l'adresse de son Mur.",
+      "Un pseudo déjà pris rend `username_taken` (409) — le serveur n'en",
+      "invente pas un autre, il ne peut pas deviner celui qu'on voulait.",
+      "",
+      "Un code de parrainage invalide NE CASSE PAS l'inscription. Le champ",
+      "`referral` de la réponse porte son issue : `credited`, `unknown` ou",
+      "`self`. Un code inconnu, expiré ou à soi-même se signale, et le compte",
+      "se crée quand même.",
+      "",
+      "La réponse porte le DÉTAIL des octrois — `signupCredits` et",
+      "`referral.bonusCredits` — et non un total. L'écran de bienvenue affiche",
+      "deux lignes : cadeau de bienvenue et bonus de parrainage sont deux",
+      "gestes distincts, dont l'un se mérite.",
+      "",
+      "Valider un code de parrainage AVANT de le soumettre : GET",
+      "/public/invitations/{code}.",
+    ].join("\n"),
     corps: registerSchema,
     reponse: registeredSchema,
     statut: 201,
@@ -171,7 +281,17 @@ const CHEMINS: Chemin[] = [
   {
     chemin: "/auth/federated",
     methode: "post",
-    resume: "Se connecter via une identité fédérée (Google, Apple)",
+    resume: "Se connecter via Google ou Apple : une session, ou une invitation à s'inscrire",
+    note: [
+      "MÊMES DEUX ISSUES que /auth/otp/verify, et pour la même raison : le",
+      "choix du pseudo appartient à la première connexion, quelle que soit la",
+      "voie empruntée. Une première connexion Google ou Apple rend donc un",
+      "jeton d'inscription, pas une session.",
+      "",
+      "`referralCode` est accepté ici pour le cas d'une arrivée par lien",
+      "d'invitation, où le code est connu d'avance — mais il ne s'applique",
+      "qu'à la création : c'est /auth/register qui le traite.",
+    ].join("\n"),
     corps: federatedSchema,
     reponse: verifyOutcomeSchema,
   },
@@ -307,6 +427,7 @@ export function construireOpenApi(): object {
     const typeContenu = c.typeContenuReponse ?? "application/json";
     paths[c.chemin]![c.methode] = {
       summary: c.resume,
+      ...(c.note ? { description: c.note } : {}),
       ...(c.authentifie ? { security: [{ bearerAuth: [] }] } : {}),
       ...(c.parametres
         ? {

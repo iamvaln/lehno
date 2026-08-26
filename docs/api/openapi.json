@@ -843,6 +843,7 @@
     "/me/credits": {
       "get": {
         "summary": "Lire son solde de crédits et ses derniers mouvements",
+        "description": "Le solde est la SOMME des mouvements, calculée à chaque appel. Aucune\ncolonne de solde n'existe : le client ne refait pas ce calcul, sous\npeine de deux vérités qui divergent dès qu'un mouvement arrive hors de\nla page.\n\nChaque mouvement porte `source`, un CODE STABLE que le client traduit —\n`signup_grant`, `referral_bonus`, `purchase`… Le champ `reason` est une\nnote libre d'exploitation, en français, jamais destinée à l'affichage.\n\n`type` ne suffit pas à distinguer : un `grant` d'inscription et un\n`grant` de parrainage se ressemblent, et ce sont deux gestes distincts\ndont l'un se mérite.",
         "security": [
           {
             "bearerAuth": []
@@ -1213,6 +1214,7 @@
     "/public/invitations/{code}": {
       "get": {
         "summary": "Lire une invitation : qui invite, et ce que l'invité y gagne",
+        "description": "Ouverte SANS compte. Sert aussi à valider un code de parrainage à la\nsaisie, avant de le soumettre à /auth/register : un code inconnu rend\n404.\n\nNe porte que le pseudo de celui qui invite. Un code d'invitation\ncircule par message et par réseau, et tout ce qu'on met ici circule\navec lui.",
         "parameters": [
           {
             "name": "code",
@@ -1516,6 +1518,7 @@
     "/auth/otp": {
       "post": {
         "summary": "Demander un code de connexion à usage unique par courriel",
+        "description": "Le code vaut DIX MINUTES. C'est la première des deux horloges du parcours.\n\nLa seconde est le délai avant de pouvoir en redemander un, et il CROÎT :\n5 secondes après la première demande, 25 après la deuxième, 125 après la\ntroisième. Le client ne calcule pas cette formule — il lit\n`retryAfterSeconds` dans la réponse et l'affiche en compte à rebours.\nS'il la codait de son côté, deux versions du parc appliqueraient deux\nrègles différentes, celle du serveur restant la seule qui compte.\n\nUn refus `rate_limited` porte le même champ dans ses `details`.\n\nPlafond : trois codes par heure et par boîte. Il GLISSE — le refus dit\nquand la plus ancienne demande sortira de la fenêtre, pas « dans une\nheure ».\n\nLa réponse est identique pour une adresse connue et une adresse\ninconnue, délai compris : ce point d'entrée n'énumère pas les comptes.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1550,10 +1553,16 @@
                       "enum": [
                         true
                       ]
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "minimum": 0
                     }
                   },
                   "required": [
-                    "sent"
+                    "sent",
+                    "retryAfterSeconds"
                   ],
                   "additionalProperties": false
                 }
@@ -1675,7 +1684,8 @@
     },
     "/auth/otp/verify": {
       "post": {
-        "summary": "Vérifier le code reçu et ouvrir une session",
+        "summary": "Vérifier le code reçu : une session, ou une invitation à s'inscrire",
+        "description": "DEUX ISSUES, distinguées par le champ `outcome` :\n\n- `session` — l'adresse a déjà un compte. On va droit à l'accueil.\n- `registration` — l'adresse est inconnue. AUCUN COMPTE N'EST CRÉÉ. La\n  réponse porte un jeton d'inscription ; l'écran du pseudo suit, et le\n  compte naît à POST /auth/register.\n\nTester la présence d'`accessToken` pour deviner l'issue est une erreur :\nlire `outcome`, qui existe pour cela.\n\nPourquoi le compte n'est pas créé ici : le code de parrainage se saisit\nà l'écran du pseudo, donc APRÈS. Créer d'abord et rattacher ensuite\nouvrirait un chemin pour réclamer un parrainage des mois plus tard. Les\ndeux opérations sont atomiques.\n\nLe jeton d'inscription n'est PAS une session : il n'ouvre aucune\nressource, vaut quinze minutes, et le présenter en en-tête\nd'autorisation ne donne accès à rien.\n\n`deviceLimitReached` est INDICATIF — il évite de faire choisir un pseudo\nà quelqu'un dont la création sera refusée. Le plafond fait foi à la\ncréation, sous verrou.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1906,6 +1916,7 @@
     "/auth/register": {
       "post": {
         "summary": "Créer le compte : pseudo, appareil, et code de parrainage facultatif",
+        "description": "TOUT SE JOUE ICI, en une transaction : le plafond par appareil, le\ncompte, les crédits d'inscription et le parrainage. Rien n'est\nrattachable après coup.\n\n`deviceId` est OBLIGATOIRE, sur les trois voies d'entrée. Il l'est ici\net non à la vérification, parce que c'est ici que le compte naît — donc\nici que le plafond par appareil s'applique. Le rendre facultatif\nrouvrirait son contournement.\n\nLe pseudo est CHOISI par l'utilisateur : il forme l'adresse de son Mur.\nUn pseudo déjà pris rend `username_taken` (409) — le serveur n'en\ninvente pas un autre, il ne peut pas deviner celui qu'on voulait.\n\nUn code de parrainage invalide NE CASSE PAS l'inscription. Le champ\n`referral` de la réponse porte son issue : `credited`, `unknown` ou\n`self`. Un code inconnu, expiré ou à soi-même se signale, et le compte\nse crée quand même.\n\nLa réponse porte le DÉTAIL des octrois — `signupCredits` et\n`referral.bonusCredits` — et non un total. L'écran de bienvenue affiche\ndeux lignes : cadeau de bienvenue et bonus de parrainage sont deux\ngestes distincts, dont l'un se mérite.\n\nValider un code de parrainage AVANT de le soumettre : GET\n/public/invitations/{code}.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2136,7 +2147,8 @@
     },
     "/auth/federated": {
       "post": {
-        "summary": "Se connecter via une identité fédérée (Google, Apple)",
+        "summary": "Se connecter via Google ou Apple : une session, ou une invitation à s'inscrire",
+        "description": "MÊMES DEUX ISSUES que /auth/otp/verify, et pour la même raison : le\nchoix du pseudo appartient à la première connexion, quelle que soit la\nvoie empruntée. Une première connexion Google ou Apple rend donc un\njeton d'inscription, pas une session.\n\n`referralCode` est accepté ici pour le cas d'une arrivée par lien\nd'invitation, où le code est connu d'avance — mais il ne s'applique\nqu'à la création : c'est /auth/register qui le traite.",
         "requestBody": {
           "required": true,
           "content": {

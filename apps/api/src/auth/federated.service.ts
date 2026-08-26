@@ -3,7 +3,7 @@ import { Prisma, type IdentityProvider, type User } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { SignupService } from "../onboarding/signup.service.js";
 import type { VerifyOutcome } from "@lehno/contracts";
-import { TokenService, type Pair } from "./token.service.js";
+import { TokenService } from "./token.service.js";
 import { AppError } from "../common/errors.js";
 
 export interface IdentityVerifier {
@@ -90,8 +90,7 @@ export class FederatedService {
       throw new AppError("federated_token_invalid", "provider did not supply a verified email");
     }
 
-    let user = await this.prisma.user.findUnique({ where: { email: claims.email } });
-    let isNewAccount = false;
+    const user = await this.prisma.user.findUnique({ where: { email: claims.email } });
     if (!user) {
       // AUCUN COMPTE N'EST CRÉÉ ICI, comme sur la voie du courriel. La §3.1
       // veut le choix du pseudo « à la première connexion, QUELLE QUE SOIT LA
