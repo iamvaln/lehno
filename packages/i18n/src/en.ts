@@ -29,5 +29,6 @@ export const en = {
     waitlist_rejected: "That didn't go through. Try again in a moment.",
     contact_invalid: "This form isn't valid. Check the fields and try again.",
     contact_rejected: "That didn't go through. Try again in a moment.",
+    maintenance: "Lehno is briefly closed for maintenance. Try again in a moment.",
   },
 } as const;

@@ -31,6 +31,7 @@ import {
   occurrenceSchema, listOccurrencesQuerySchema, listEventsQuerySchema,
 } from "./me-events.js";
 import { featuresResponseSchema, DRAPEAUX, CLES_DRAPEAUX, type CleDrapeau } from "./flags.js";
+import { maintenanceStatusSchema } from "./maintenance.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
 import { metadataSchema } from "./me-app.js";
 
@@ -62,6 +63,17 @@ const usernameAvailableResponseSchema = z.object({ available: z.boolean() }).str
  * n'existe plus, ou de laisser paraître un écran que le serveur ferme. Le
  * registre est la référence commune des deux équipes (§6.1) ; le contrat le
  * rend, il ne le redit pas. */
+/* Les chemins que le garde d'arrêt laisse passer — mêmes préfixes que
+ * apps/api/src/maintenance/maintenance.guard.ts. Deux listes, et c'est le
+ * défaut connu de ce montage : le contrat vit dans un paquet que le serveur
+ * importe, jamais l'inverse. Un test d'API constate la correspondance sur les
+ * deux chemins qui comptent, plutôt que de la supposer. */
+const CHEMINS_SANS_ARRET = ["/admin", "/public/maintenance"];
+
+function exemptDArret(chemin: string): boolean {
+  return CHEMINS_SANS_ARRET.some((o) => chemin === o || chemin.startsWith(`${o}/`));
+}
+
 function couvertureDesDrapeaux(): string {
   const cellule = (v: readonly string[]): string => (v.length === 0 ? "—" : v.map((x) => `\`${x}\``).join(", "));
   const lignes = CLES_DRAPEAUX.map((cle: CleDrapeau) => {
@@ -129,6 +141,40 @@ const CHEMINS: Chemin[] = [
     methode: "get",
     resume: "Lire la configuration publique (prix, crédits offerts, devise)",
     reponse: publicConfigSchema,
+  },
+  {
+    chemin: "/public/maintenance",
+    methode: "get",
+    resume: "Savoir si l'API est arrêtée pour intervention, et pour combien de temps",
+    note: [
+      "### L'arrêt n'est PAS un drapeau de fonctionnalité",
+      "",
+      "Un drapeau éteint rend `404` — « cette surface n'existe pas » — et le",
+      "client masque l'écran. Un arrêt rend **`503`**, code `maintenance`, avec",
+      "`details.retryAfterSeconds` : la ressource existe et revient. Le client",
+      "montre un écran d'attente et réessaie ; **il ne masque rien, il ne",
+      "déconnecte personne, il ne vide aucun cache local.**",
+      "",
+      "### Où il s'applique",
+      "",
+      "Sur TOUS les chemins, sauf deux : `/admin*`, par où l'équipe rouvre, et",
+      "celui-ci, qui reste joignable pendant l'arrêt — c'est ce qui permet de",
+      "savoir quand revenir sans marteler un chemin fermé.",
+      "",
+      "### Ce que le client doit faire",
+      "",
+      "**Un arrêt commence au milieu d'une session.** Il n'y a rien à lire au",
+      "démarrage : le `503` arrive sur n'importe quel appel, à n'importe quel",
+      "moment. C'est lui le signal.",
+      "",
+      "**Attendre le délai annoncé**, pas un délai à soi. Il vient du serveur",
+      "pour que tout le parc applique la même règle, et pour qu'on puisse",
+      "l'allonger si l'intervention dure.",
+      "",
+      "**Puis interroger ce chemin** plutôt que de réessayer l'appel d'origine :",
+      "`maintenance: false` dit que c'est fini.",
+    ].join("\n"),
+    reponse: maintenanceStatusSchema,
   },
   {
     // Ce qui est ACTIF pour un visiteur sans compte, dépendances déjà
@@ -711,6 +757,24 @@ export function construireOpenApi(): object {
           description: "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
           content: { "application/json": { schema: schema(errorEnvelopeSchema) } },
         },
+        // Atteignable depuis n'importe quel chemin que le garde d'arrêt
+        // couvre — c'est-à-dire tous, sauf ceux qu'il exempte. Documenté pour
+        // la même raison que le 500 : un client qui ne l'attend pas traiterait
+        // un arrêt de deux heures comme une panne définitive.
+        //
+        // Et surtout PAS documenté sur les chemins exemptés : annoncer un 503
+        // sur /admin ferait croire qu'un arrêt ferme la porte par laquelle on
+        // le lève. La liste vient du garde, elle ne se devine pas.
+        ...(exemptDArret(c.chemin)
+          ? {}
+          : {
+            "503": {
+              description:
+                "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. " +
+                "La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+              content: { "application/json": { schema: schema(errorEnvelopeSchema) } },
+            },
+          }),
       },
     };
   }

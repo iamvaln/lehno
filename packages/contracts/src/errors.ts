@@ -38,6 +38,11 @@ export const ERROR_CODES = [
   // de soumission invraisemblable. Dire lequel a mordu apprendrait au robot
   // comment s'ajuster.
   "waitlist_rejected",
+  // L'API est arrêtée pour intervention. 503, JAMAIS 404 : un 404 dirait au
+  // client que la ressource n'existe plus, et le contrat lui demande alors de
+  // relire ses drapeaux et de masquer l'écran — une fenêtre de deux heures se
+  // lirait comme une suppression. 503 dit « reviens », et porte le délai.
+  "maintenance",
   // formulaire de contact
   "contact_invalid",
   // Même raisonnement que waitlist_rejected, pour les deux mêmes filtres :

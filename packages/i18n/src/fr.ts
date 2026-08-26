@@ -30,5 +30,6 @@ export const fr = {
     waitlist_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
     contact_invalid: "Ce formulaire n'est pas valide. Vérifiez les champs et réessayez.",
     contact_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
+    maintenance: "Lehno est momentanément fermé pour une intervention. Réessayez dans un instant.",
   },
 } as const;

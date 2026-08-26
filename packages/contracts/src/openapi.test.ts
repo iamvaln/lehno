@@ -57,6 +57,35 @@ describe("contrat publié", () => {
     }
   });
 
+  // Le garde d'arrêt est global : tout chemin peut rendre 503, et un client
+  // qui ne l'attend pas traitera une fenêtre d'intervention comme une panne
+  // définitive — ou pire, masquera la surface comme sur un 404.
+  it("documente le 503 d'arrêt sur chaque chemin que le garde couvre", () => {
+    const paths = (construireOpenApi() as { paths: Record<string, Record<string, { responses: Record<string, unknown> }>> }).paths;
+    for (const [chemin, operations] of Object.entries(paths)) {
+      if (chemin.startsWith("/admin") || chemin === "/public/maintenance") continue;
+      for (const [methode, operation] of Object.entries(operations)) {
+        expect(operation.responses, `${methode.toUpperCase()} ${chemin}`).toHaveProperty("503");
+      }
+    }
+  });
+
+  // L'inverse, qui compte autant : annoncer un 503 sur /admin ferait croire
+  // qu'un arrêt ferme la porte par laquelle on le lève. Ces chemins-là
+  // répondent pendant l'arrêt, et le contrat doit le dire en ne le disant pas.
+  it("ne promet PAS de 503 sur les chemins que l'arrêt épargne", () => {
+    const paths = (construireOpenApi() as { paths: Record<string, Record<string, { responses: Record<string, unknown> }>> }).paths;
+    const exemptes = Object.keys(paths).filter(
+      (c) => c.startsWith("/admin") || c === "/public/maintenance",
+    );
+    expect(exemptes.length, "aucun chemin exempté dans le contrat : le test ne prouverait rien").toBeGreaterThan(0);
+    for (const chemin of exemptes) {
+      for (const [methode, operation] of Object.entries(paths[chemin] ?? {})) {
+        expect(operation.responses, `${methode.toUpperCase()} ${chemin}`).not.toHaveProperty("503");
+      }
+    }
+  });
+
   // Le mobile décide ce qu'il masque d'après cette table. Recopiée à la main,
   // elle vieillirait sans bruit : un drapeau ajouté au registre resterait
   // absent du contrat, donc jamais masqué — l'écran paraîtrait, et le serveur

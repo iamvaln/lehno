@@ -1,5 +1,6 @@
 import type { MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { CorrelationMiddleware } from "./common/correlation.middleware.js";
 import { RateLimitService } from "./common/rate-limit.service.js";
 import { PrismaService } from "./prisma/prisma.service.js";
@@ -58,17 +59,27 @@ import { AdminsController, AdminsService } from "./admin/admins.controller.js";
 import { AIModelsController, AIModelsService } from "./admin/ai-models.controller.js";
 import { DashboardController, DashboardService } from "./admin/dashboard.controller.js";
 import { StudioController, StudioService } from "./admin/studio.controller.js";
+import { MaintenanceService } from "./maintenance/maintenance.service.js";
+import { MaintenanceGuard } from "./maintenance/maintenance.guard.js";
+import { MaintenanceController } from "./maintenance/maintenance.controller.js";
 
 @Module({
   controllers: [
     AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, ConfigController, LegalController,
-    MeFeaturesController, PublicFeaturesController,
+    MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
     AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
   ],
   providers: [
     PrismaService,
+    // Garde GLOBAL, et le premier de tous : un arrêt pour intervention vaut
+    // pour toute l'API, pas surface par surface. Posé ici plutôt que sur
+    // chaque contrôleur — un contrôleur ajouté demain est couvert sans que
+    // personne ait à y penser, et c'est exactement ce qu'on veut d'un
+    // interrupteur d'arrêt. Ses exemptions vivent dans le garde.
+    { provide: APP_GUARD, useClass: MaintenanceGuard },
+    MaintenanceService,
     // useFactory : la valeur se lit à l'INSTANCIATION du provider, pas à
     // l'évaluation du décorateur (qui n'a lieu qu'une fois, au chargement du
     // module). Sans ça, une valeur d'environnement posée ou retirée après
