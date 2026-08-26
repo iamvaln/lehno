@@ -459,3 +459,29 @@ describe("adhérence des composants de données", () => {
     expect(CSS).toMatch(/min-width:\s*900px/);
   });
 });
+
+describe("FilterBar sans recherche", () => {
+  // Toutes les listes ne s'interrogent pas par du texte libre. Une boîte de
+  // recherche qui ne cherche rien promet un geste que la page ne sait pas
+  // faire.
+  it("n'affiche pas de boîte de recherche quand on n'en fournit pas", () => {
+    render(
+      <FilterBar
+        filtres={[{
+          cle: "etat", label: "État", valeur: "tous",
+          onChange: () => {},
+          options: [{ value: "tous", label: "Tous" }],
+        }]}
+      />,
+    );
+
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("État")).toBeInTheDocument();
+  });
+
+  it("l'affiche dès qu'on la fournit", () => {
+    render(<FilterBar recherche="" onRecherche={() => {}} placeholder="Chercher" />);
+
+    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+  });
+});

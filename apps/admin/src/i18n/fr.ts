@@ -258,6 +258,112 @@ export const fr = {
     },
   },
 
+  // La section §5.4. Trois faces d'une même chose : ce qui est entré, ce que
+  // ça a produit en crédits, et les réglages qui décident de l'un et de
+  // l'autre.
+  credits: {
+    titre: "Crédits et paiements",
+    sous: "Ce qui est entré, ce que ça a produit, et les réglages qui en décident.",
+    onglets: { paiements: "Paiements", mouvements: "Mouvements", reglages: "Réglages" },
+
+    paiements: {
+      col: {
+        utilisateur: "Compte", mode: "Voie", etat: "État", montant: "Montant",
+        methode: "Méthode", attendu: "Attendu", recu: "Reçu", ecart: "Écart", quand: "Saisi le",
+      },
+      modes: { provider: "Prestataire", semi_manual: "Semi-manuel", manual: "Manuel" },
+      etats: {
+        pending: "En attente", succeeded: "Confirmé", failed: "Refusé",
+        expired: "Expiré", refunded: "Remboursé",
+      },
+      filtreEtat: "État", filtreMode: "Voie", tous: "Tous",
+      // Ce qu'on ne connaît pas ne s'écrit pas zéro : un écart nul et un écart
+      // non constaté ne disent pas la même chose.
+      nonConstate: "—",
+      vide: {
+        titre: "Aucun paiement sur cette période",
+        texte: "Les versements saisis et ceux reçus par l'application apparaissent ici, avec leur issue.",
+      },
+    },
+
+    mouvements: {
+      col: { utilisateur: "Compte", type: "Type", source: "Origine", montant: "Crédits", quand: "Le" },
+      types: { grant: "Octroi", purchase: "Achat", consumption: "Consommation", adjustment: "Ajustement" },
+      sources: {
+        signup_grant: "Inscription", referral_bonus: "Parrainage", purchase: "Achat",
+        manual_topup: "Versement manuel", promo_code: "Code promo", gift: "Cadeau",
+        reward: "Récompense", consumption: "Consommation", refund: "Remboursement",
+        correction: "Correction",
+      },
+      vide: {
+        titre: "Aucun mouvement sur cette période",
+        texte: "Chaque octroi, achat, consommation et ajustement s'inscrit ici.",
+      },
+    },
+
+    detail: {
+      titre: "Paiement",
+      groupes: { operation: "L'opération", montants: "Les montants", histoire: "Son histoire" },
+      champs: {
+        reference: "Référence", compte: "Compte de collecte", frais: "Frais",
+        montant: "Prix du palier", attendu: "Attendu sur le compte", recu: "Constaté",
+        ecart: "Écart", motifEchec: "Motif du refus", credits: "Crédits",
+      },
+      histoire: { etat: "État", debut: "Depuis", duree: "Durée", origine: "Provoqué par", parQui: "Par", motif: "Motif" },
+      origines: {
+        user: "L'utilisateur", webhook: "Le prestataire", polling: "Une interrogation",
+        admin: "L'administration", system: "Un traitement programmé",
+      },
+      // L'état courant dure encore : lui donner une durée figerait une mesure
+      // qui bouge.
+      enCours: "En cours",
+      retour: "Retour aux paiements",
+    },
+
+    decision: {
+      confirmer: "Confirmer la réception",
+      rejeter: "Rejeter",
+      // Le rappel qui évite l'approbation machinale. Il ne s'efface pas.
+      avertissement: "Le reçu ne prouve rien : un montage est facile. Vérifiez la réception sur le compte de l'opérateur avant de confirmer.",
+      montantRecu: "Montant constaté sur le compte",
+      montantAide: "À renseigner même sans écart : c'est lui qui permet de constater qu'il n'y en a pas.",
+      reference: "Référence de la transaction",
+      dialogueConfirmer: {
+        titre: "Confirmer ce versement",
+        consequence: "Les crédits sont octroyés au compte, une seule fois. Le client en est prévenu.",
+        motifs: ["Réception constatée sur le compte", "Versement retrouvé après recherche"],
+      },
+      dialogueRejeter: {
+        titre: "Rejeter ce versement",
+        consequence: "Aucun crédit n'est octroyé. Le motif sera visible sur le paiement.",
+        motifs: ["Aucune réception sur le compte", "Montant insuffisant", "Reçu non conforme"],
+      },
+    },
+
+    reglages: {
+      paliers: {
+        titre: "Paliers d'achat",
+        sous: "Ce qu'on propose à l'achat. Aucune saisie libre : le plus petit palier fixe le minimum.",
+        col: { montant: "Prix", credits: "Crédits", remise: "Remise", position: "Ordre", etat: "État" },
+      },
+      canaux: {
+        titre: "Canaux et barèmes",
+        sous: "Ce que le service propose, et ce que l'opérateur prend. Un canal ne se supprime pas, il se désactive.",
+        col: { libelle: "Canal", pays: "Pays", frais: "Frais", portes: "À la charge de", etat: "État" },
+        portes: { payer: "Du client", payee: "Du service" },
+      },
+      comptes: {
+        titre: "Comptes de collecte",
+        sous: "Les comptes sur lesquels les clients versent.",
+        col: { libelle: "Compte", operateur: "Opérateur", numero: "Numéro", visible: "Dans l'application", etat: "État" },
+        visible: "Proposé", masque: "Masqué",
+      },
+      actif: "En service",
+      inactif: "Retiré",
+      aucuneRemise: "—",
+    },
+  },
+
   echecs: {
     chargement: "On n'a pas réussi à charger cette liste. Rien n'a bougé côté données. Réessayez, ou revenez dans un instant.",
     action: "On n'a pas pu appliquer ce geste. L'état du compte est celui d'avant. Réessayez, ou passez la main à un administrateur.",
