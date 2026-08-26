@@ -68,6 +68,15 @@ export type Options<T> = {
 
 export type Client = {
   appeler<T = undefined>(chemin: string, options?: Options<T>): Promise<T>;
+  /**
+   * Le même appel, mais qui rend le corps tel quel.
+   *
+   * Un export rend un fichier, pas du JSON : il n'y a pas de schéma à lui
+   * appliquer, et le valider n'aurait pas de sens. Le reste — jeton,
+   * rafraîchissement, traduction du refus en code — est identique, et c'est
+   * pour ça que ce n'est pas un second client.
+   */
+  appelerTexte(chemin: string, options?: Omit<Options<never>, "schema">): Promise<string>;
   session(): Session | null;
   ouvrir(session: Session): void;
   fermer(): void;
@@ -160,25 +169,36 @@ export function creerClient(
     return neuve;
   };
 
+  // Le corps d'une réponse ne se lit qu'une fois : les deux chemins partagent
+  // donc l'envoi et la reprise, et se séparent au moment de lire.
+  const executer = async (chemin: string, options: Options<unknown>): Promise<Response> => {
+    const session = magasin.lire();
+    let reponse = await envoyer(chemin, options, session?.acces ?? null);
+
+    if (reponse.status === 401 && session) {
+      const neuve = await rafraichir(session);
+      reponse = await envoyer(chemin, options, neuve.acces);
+      if (reponse.status === 401) {
+        magasin.effacer();
+        throw await lireEchec(reponse);
+      }
+    }
+
+    if (!reponse.ok) throw await lireEchec(reponse);
+    return reponse;
+  };
+
   return {
     session: () => magasin.lire(),
     ouvrir: (session) => magasin.ecrire(session),
     fermer: () => magasin.effacer(),
 
+    async appelerTexte(chemin: string, options: Omit<Options<never>, "schema"> = {}): Promise<string> {
+      return (await executer(chemin, options)).text();
+    },
+
     async appeler<T>(chemin: string, options: Options<T> = {}): Promise<T> {
-      const session = magasin.lire();
-      let reponse = await envoyer(chemin, options, session?.acces ?? null);
-
-      if (reponse.status === 401 && session) {
-        const neuve = await rafraichir(session);
-        reponse = await envoyer(chemin, options, neuve.acces);
-        if (reponse.status === 401) {
-          magasin.effacer();
-          throw await lireEchec(reponse);
-        }
-      }
-
-      if (!reponse.ok) throw await lireEchec(reponse);
+      const reponse = await executer(chemin, options);
 
       // Rien à lire derrière un 204, et rien à lire non plus si l'appelant
       // n'attend pas de forme : un corps qu'on ne sait pas valider ne doit pas

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Breadcrumb, PageHeader } from "../composants/page/index.js";
-import { DataTable, EmptyState, Pagination, type Colonne } from "../composants/donnees/index.js";
+import { DataTable, EmptyState, FilterBar, Pagination, type Colonne, type FiltreSelect } from "../composants/donnees/index.js";
+import { ExportButton } from "../composants/actions/index.js";
 import { messages, type Langue } from "../i18n/index.js";
 
 /**
@@ -28,6 +29,16 @@ export interface LectureProps<L extends { id: string }> {
   onPagePrecedente?: () => void;
   onPageSuivante?: () => void;
   onRetour?: (id: string) => void;
+
+  /** Les sélecteurs de la barre. Absents, la barre ne paraît pas. */
+  filtres?: FiltreSelect[];
+  /** N'apparaît qu'une fois un filtre posé : un filtre oublié fait lire une
+   *  liste partielle en la croyant complète. */
+  onReinitialiser?: (() => void) | undefined;
+  /** Absent, aucun bouton d'export — c'est ainsi qu'une section fermée à un
+   *  rôle n'offre pas un geste que le serveur refuserait. */
+  onExporter?: (() => void) | undefined;
+  exportEnCours?: boolean;
 }
 
 export function Lecture<L extends { id: string }>({
@@ -42,6 +53,10 @@ export function Lecture<L extends { id: string }>({
   onPagePrecedente,
   onPageSuivante,
   onRetour,
+  filtres,
+  onReinitialiser,
+  onExporter,
+  exportEnCours = false,
 }: LectureProps<L>): ReactNode {
   const t = messages(langue);
 
@@ -53,7 +68,36 @@ export function Lecture<L extends { id: string }>({
         libelle={t.fil.libelle}
         onNavigate={() => onRetour?.("tableau")}
       />
-      <PageHeader titre={titre} sous={sous} />
+      <PageHeader
+        titre={titre}
+        sous={sous}
+        {...(onExporter
+          ? {
+            actions: (
+              <ExportButton
+                formats={["csv"]}
+                onExport={() => onExporter()}
+                {...(exportEnCours ? { etat: "encours" as const } : {})}
+                libelles={{
+                  exporter: t.exporter.bouton,
+                  encours: t.exporter.encours,
+                  formats: { csv: t.exporter.formatCsv },
+                  journal: t.exporter.journal,
+                }}
+              />
+            ),
+          }
+          : {})}
+      />
+
+      {filtres && filtres.length > 0 ? (
+        <FilterBar
+          filtres={filtres}
+          {...(onReinitialiser
+            ? { onReinitialiser, reinitialiser: t.table.reinitialiser }
+            : {})}
+        />
+      ) : null}
 
       <DataTable
         colonnes={colonnes}

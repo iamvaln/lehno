@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -15,6 +15,30 @@ function quand(iso: string, langue: Langue): string {
   return new Intl.DateTimeFormat(langue === "en" ? "en-GB" : "fr-FR", {
     day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   }).format(new Date(iso));
+}
+
+/**
+ * Le sélecteur de période, identique pour les deux lectures.
+ *
+ * Les bornes sont des jours et non des dates : une date figée en état
+ * cesserait de vouloir dire « les sept derniers jours » passé minuit.
+ */
+function periodeFiltre(
+  label: string, toutes: string, valeur: string, onChoix: (jours: string) => void,
+) {
+  return {
+    cle: "periode",
+    label,
+    valeur,
+    onChange: (e: { target: { value: string } }) => onChoix(e.target.value),
+    options: [
+      { value: "0", label: toutes },
+      { value: "1", label: "24 h" },
+      { value: "7", label: "7 j" },
+      { value: "30", label: "30 j" },
+      { value: "90", label: "90 j" },
+    ],
+  };
 }
 
 const ETAT_SERVEUR: Record<string, string> = {
@@ -173,6 +197,7 @@ export function App(): ReactNode {
     // Changer de section referme le paiement ouvert : y revenir plus tard
     // rouvrirait une fiche qu'on n'a pas demandée.
     setPaiementOuvert(null);
+    setSaisieOuverte(false);
     // Cacher l'entrée ne suffit pas : un raccourci du tableau de bord, une
     // adresse gardée en mémoire ou un retour arrière y mèneraient encore. Une
     // section hors des droits ramène au tableau de bord (ux-admin §5.1).
@@ -217,9 +242,14 @@ export function App(): ReactNode {
   const [ongletCredits, setOngletCredits] = useState<"paiements" | "mouvements" | "reglages">("paiements");
   const [filtresPaiements, setFiltresPaiements] = useState<{ etat: string; mode: string }>({ etat: "tous", mode: "tous" });
   const [paiementOuvert, setPaiementOuvert] = useState<string | null>(null);
+  const [saisieOuverte, setSaisieOuverte] = useState(false);
   // Le refus d'une écriture se dit à l'écran, traduit depuis son code.
   const [avis, setAvis] = useState<CleCode | null>(null);
+  const [avisExport, setAvisExport] = useState<string | null>(null);
   const [curseursLecture, setCurseursLecture] = useState<(string | null)[]>([null]);
+  const [filtresJournal, setFiltresJournal] = useState<{ action: string; jours: string }>({ action: "toutes", jours: "0" });
+  const [filtresEntrees, setFiltresEntrees] = useState<{ resultat: string; jours: string }>({ resultat: "tous", jours: "0" });
+  const [exportEnCours, setExportEnCours] = useState(false);
   const curseurLecture = curseursLecture.at(-1) ?? null;
 
   // Les deux gestes du délai de grâce sont des changements d'état de compte, et
@@ -283,24 +313,68 @@ export function App(): ReactNode {
 
   // Les deux lectures partagent leur pile de curseurs : on n'en regarde qu'une
   // à la fois, et changer de section en repart de la première page.
+  // Une période se dit en jours, et se traduit en date au dernier moment :
+  // garder une date en état la figerait au chargement de la page, et « les sept
+  // derniers jours » cesserait de vouloir dire ça passé minuit.
+  const depuis = (jours: string): Record<string, string> =>
+    jours === "0" ? {} : { since: new Date(Date.now() - Number(jours) * 86_400_000).toISOString() };
+
+  const requeteJournal = {
+    ...(filtresJournal.action !== "toutes" ? { action: filtresJournal.action } : {}),
+    ...depuis(filtresJournal.jours),
+  };
+  const requeteEntrees = {
+    ...(filtresEntrees.resultat !== "tous" ? { result: filtresEntrees.resultat } : {}),
+    ...depuis(filtresEntrees.jours),
+  };
+
+  /**
+   * Sortir un fichier et le remettre au navigateur.
+   *
+   * Le contenu passe par le client d'API pour porter le jeton : un lien nu ne
+   * peut pas l'emporter, et c'est pour ça que l'export est un appel plutôt
+   * qu'une adresse qu'on ouvre.
+   */
+  const exporter = (chemin: string, requete: Record<string, string>, fichier: string): void => {
+    void (async () => {
+      setExportEnCours(true);
+      try {
+        const csv = await api.appelerTexte(chemin, { methode: "POST", requete });
+        const lien = document.createElement("a");
+        lien.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+        lien.download = fichier;
+        lien.click();
+        URL.revokeObjectURL(lien.href);
+        setAvisExport(t.exporter.telecharge);
+      } catch (echec) {
+        // Un export refusé se dit : sans ça, on croirait le fichier parti.
+        if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+      } finally {
+        setExportEnCours(false);
+      }
+    })();
+  };
+
   const etatAudit = useRessource(
     () => (section === "audit"
       ? api.appeler("/admin/audit-log", {
         schema: pageAuditSchema,
-        ...(curseurLecture ? { requete: { cursor: curseurLecture } } : {}),
+        requete: { ...requeteJournal, ...(curseurLecture ? { cursor: curseurLecture } : {}) },
       })
       : Promise.resolve(null)),
-    [section, curseurLecture],
+    [section, curseurLecture, filtresJournal.action, filtresJournal.jours],
+    { garderAncien: true },
   );
 
   const etatConnexions = useRessource(
     () => (section === "connexions"
       ? api.appeler("/admin/login-activity", {
         schema: pageConnexionsSchema,
-        ...(curseurLecture ? { requete: { cursor: curseurLecture } } : {}),
+        requete: { ...requeteEntrees, ...(curseurLecture ? { cursor: curseurLecture } : {}) },
       })
       : Promise.resolve(null)),
-    [section, curseurLecture],
+    [section, curseurLecture, filtresEntrees.resultat, filtresEntrees.jours],
+    { garderAncien: true },
   );
 
   const etatModeles = useRessource(
@@ -338,6 +412,20 @@ export function App(): ReactNode {
     [surCredits, paiementOuvert, tourCredits],
   );
 
+  // Quatre listes pour un seul formulaire : les charger ensemble évite quatre
+  // états d'attente sur un écran qui n'en montre qu'un.
+  const etatSaisie = useRessource(
+    async () => (surCredits && saisieOuverte
+      ? {
+        comptes: await api.appeler("/admin/users", { schema: pageComptesSchema, requete: { limit: "200" } }),
+        paliers: await api.appeler("/admin/credit-bundles", { schema: paliersSchema }),
+        canaux: await api.appeler("/admin/payment-channels", { schema: canauxSchema }),
+        collecte: await api.appeler("/admin/collection-accounts", { schema: comptesCollecteSchema }),
+      }
+      : null),
+    [surCredits, saisieOuverte],
+  );
+
   const etatMouvements = useRessource(
     () => (surCredits && ongletCredits === "mouvements"
       ? api.appeler("/admin/credit-transactions", { schema: pageMouvementsSchema })
@@ -373,6 +461,38 @@ export function App(): ReactNode {
             compte={compte}
             interventions={interventions.items}
             onRetour={() => setOuvert(null)}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "credits" && saisieOuverte) {
+    vue = (
+      <Ressource
+        etat={etatSaisie}
+        t={t}
+        enfant={(donnees) => (donnees ? (
+          <SaisiePaiement
+            langue={langue}
+            comptes={donnees.comptes.items}
+            paliers={donnees.paliers.items}
+            canaux={donnees.canaux.items}
+            comptesCollecte={donnees.collecte.items}
+            onAnnuler={() => setSaisieOuverte(false)}
+            onEnregistrer={(saisie) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/payments", { methode: "POST", corps: saisie });
+                  setSaisieOuverte(false);
+                  setAvisExport(t.credits.saisie.enregistre);
+                } catch (echec) {
+                  // Un palier devenu inactif entre-temps, par exemple : le
+                  // refus se traduit plutôt que de laisser croire à une panne.
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourCredits((n) => n + 1);
+                }
+              })();
+            }}
           />
         ) : null)}
       />
@@ -459,6 +579,7 @@ export function App(): ReactNode {
               {...commun}
               paiements={page?.items ?? []}
               onOuvrir={(p) => setPaiementOuvert(p.id)}
+              {...(role === "admin" ? { onSaisir: () => setSaisieOuverte(true) } : {})}
             />
           )}
         />
@@ -561,6 +682,36 @@ export function App(): ReactNode {
             }}
             onPagePrecedente={() => setCurseursLecture((c) => (c.length > 1 ? c.slice(0, -1) : c))}
             onRetour={aller}
+            filtres={[
+              {
+                cle: "action",
+                label: t.journal.filtres.action,
+                valeur: filtresJournal.action,
+                onChange: (e) => {
+                  setFiltresJournal((f) => ({ ...f, action: e.target.value }));
+                  // Toute nouvelle question repart de la première page.
+                  setCurseursLecture([null]);
+                },
+                options: [
+                  { value: "toutes", label: t.journal.filtres.toutes },
+                  ...Object.entries(t.journal.filtres.actions).map(([value, label]) => ({ value, label })),
+                ],
+              },
+              periodeFiltre(t.journal.filtres.periode, t.journal.filtres.touteLaPeriode, filtresJournal.jours, (jours) => {
+                setFiltresJournal((f) => ({ ...f, jours }));
+                setCurseursLecture([null]);
+              }),
+            ]}
+            {...(filtresJournal.action !== "toutes" || filtresJournal.jours !== "0"
+              ? {
+                onReinitialiser: () => {
+                  setFiltresJournal({ action: "toutes", jours: "0" });
+                  setCurseursLecture([null]);
+                },
+              }
+              : {})}
+            onExporter={() => exporter("/admin/audit-log/export", requeteJournal, "journal-audit.csv")}
+            exportEnCours={exportEnCours}
           />
         ) : null)}
       />
@@ -594,6 +745,36 @@ export function App(): ReactNode {
             }}
             onPagePrecedente={() => setCurseursLecture((c) => (c.length > 1 ? c.slice(0, -1) : c))}
             onRetour={aller}
+            filtres={[
+              {
+                cle: "resultat",
+                label: t.entrees.filtres.resultat,
+                valeur: filtresEntrees.resultat,
+                onChange: (e) => {
+                  setFiltresEntrees((f) => ({ ...f, resultat: e.target.value }));
+                  setCurseursLecture([null]);
+                },
+                options: [
+                  { value: "tous", label: t.entrees.filtres.tous },
+                  { value: "success", label: t.entrees.resultats.success },
+                  { value: "failure", label: t.entrees.resultats.failure },
+                ],
+              },
+              periodeFiltre(t.entrees.filtres.periode, t.entrees.filtres.touteLaPeriode, filtresEntrees.jours, (jours) => {
+                setFiltresEntrees((f) => ({ ...f, jours }));
+                setCurseursLecture([null]);
+              }),
+            ]}
+            {...(filtresEntrees.resultat !== "tous" || filtresEntrees.jours !== "0"
+              ? {
+                onReinitialiser: () => {
+                  setFiltresEntrees({ resultat: "tous", jours: "0" });
+                  setCurseursLecture([null]);
+                },
+              }
+              : {})}
+            onExporter={() => exporter("/admin/login-activity/export", requeteEntrees, "connexions.csv")}
+            exportEnCours={exportEnCours}
           />
         ) : null)}
       />
@@ -742,6 +923,12 @@ export function App(): ReactNode {
       {avis ? (
         <Toast libelleFermer={t.commun.fermer} onDismiss={() => setAvis(null)}>
           {t.codes[avis]}
+        </Toast>
+      ) : null}
+
+      {avisExport ? (
+        <Toast libelleFermer={t.commun.fermer} onDismiss={() => setAvisExport(null)}>
+          {avisExport}
         </Toast>
       ) : null}
 

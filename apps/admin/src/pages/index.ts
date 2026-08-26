@@ -13,3 +13,4 @@ export { Lecture, type LectureProps } from "./Lecture.js";
 export { Modeles, type ModelesProps } from "./Modeles.js";
 export { Drapeaux, type DrapeauxProps } from "./Drapeaux.js";
 export { Credits, type CreditsProps } from "./Credits.js";
+export { SaisiePaiement, type SaisiePaiementProps } from "./SaisiePaiement.js";
