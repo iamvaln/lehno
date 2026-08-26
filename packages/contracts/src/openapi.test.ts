@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { construireOpenApi } from "./openapi.js";
+import { CLES_DRAPEAUX, DRAPEAUX } from "./flags.js";
 
 describe("contrat publié", () => {
   it("porte les métadonnées du service", () => {
@@ -54,6 +55,37 @@ describe("contrat publié", () => {
         expect(operation.responses, `${methode.toUpperCase()} ${chemin}`).toHaveProperty("4XX");
       }
     }
+  });
+
+  // Le mobile décide ce qu'il masque d'après cette table. Recopiée à la main,
+  // elle vieillirait sans bruit : un drapeau ajouté au registre resterait
+  // absent du contrat, donc jamais masqué — l'écran paraîtrait, et le serveur
+  // rendrait 404 dessus. C'est exactement l'écart que la couverture existe
+  // pour empêcher (spécification §6.1).
+  it("publie la couverture de CHAQUE drapeau du registre", () => {
+    const paths = (construireOpenApi() as {
+      paths: Record<string, Record<string, { description?: string }>>;
+    }).paths;
+    const doc = paths["/me/features"]?.get?.description ?? "";
+
+    for (const cle of CLES_DRAPEAUX) {
+      expect(doc, `le drapeau ${cle} manque à la couverture publiée`).toContain(`\`${cle}\``);
+      for (const chemin of DRAPEAUX[cle].chemins) {
+        expect(doc, `${cle} : le chemin ${chemin} manque à la couverture publiée`).toContain(chemin);
+      }
+    }
+  });
+
+  // Le cas que le mobile doit pouvoir livrer : une version sans les listes de
+  // souhaits. Il ne peut le faire que si le contrat lui dit que `reservation`
+  // s'éteint AVEC `wishlist.own`, sans qu'il ait à le déduire.
+  it("annonce la dépendance qui éteint la réservation avec les listes", () => {
+    const paths = (construireOpenApi() as {
+      paths: Record<string, Record<string, { description?: string }>>;
+    }).paths;
+    const doc = paths["/me/features"]?.get?.description ?? "";
+    expect(DRAPEAUX.reservation.requiert).toContain("wishlist.own");
+    expect(doc).toContain("`reservation` requiert `wishlist.own`");
   });
 
   // LE test qui compte. Un fichier engendré que rien ne vérifie pourrit : il

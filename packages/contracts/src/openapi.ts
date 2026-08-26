@@ -30,7 +30,7 @@ import {
   eventSchema, createEventSchema, updateEventSchema,
   occurrenceSchema, listOccurrencesQuerySchema, listEventsQuerySchema,
 } from "./me-events.js";
-import { featuresResponseSchema } from "./flags.js";
+import { featuresResponseSchema, DRAPEAUX, CLES_DRAPEAUX, type CleDrapeau } from "./flags.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
 import { metadataSchema } from "./me-app.js";
 
@@ -54,6 +54,26 @@ const sentResponseSchema = z
   .object({ sent: z.literal(true), retryAfterSeconds: z.number().int().positive() })
   .strict();
 const usernameAvailableResponseSchema = z.object({ available: z.boolean() }).strict();
+
+/* La couverture des drapeaux, ENGENDRÉE depuis le registre.
+ *
+ * Recopier ce tableau à la main le condamnerait : un drapeau ajouté ou un
+ * chemin déplacé, et la documentation dirait au client de masquer un écran qui
+ * n'existe plus, ou de laisser paraître un écran que le serveur ferme. Le
+ * registre est la référence commune des deux équipes (§6.1) ; le contrat le
+ * rend, il ne le redit pas. */
+function couvertureDesDrapeaux(): string {
+  const cellule = (v: readonly string[]): string => (v.length === 0 ? "—" : v.map((x) => `\`${x}\``).join(", "));
+  const lignes = CLES_DRAPEAUX.map((cle: CleDrapeau) => {
+    const d = DRAPEAUX[cle];
+    return `| \`${cle}\` | ${d.gouverne} | ${d.portee.join(", ")} | ${cellule(d.requiert)} | ${cellule(d.ecrans)} | ${cellule(d.chemins)} |`;
+  });
+  return [
+    "| Clé | Ce qu'elle gouverne | Portée | Requiert | Écrans | Chemins |",
+    "|---|---|---|---|---|---|",
+    ...lignes,
+  ].join("\n");
+}
 
 type Chemin = {
   chemin: string;
@@ -118,6 +138,14 @@ const CHEMINS: Chemin[] = [
     chemin: "/public/features",
     methode: "get",
     resume: "Lister les fonctionnalités actives sur les surfaces sans compte",
+    note: [
+      "Les surfaces SANS COMPTE uniquement : page publique du Mur, liste",
+      "partagée, dépôt de vœux, page d'invitation, landing. Un client qui n'a",
+      "pas encore de session lit celle-ci ; dès qu'il en a une, il lit",
+      "`/me/features`, qui la remplace — jamais les deux à la fois.",
+      "",
+      "Mêmes règles de lecture que `/me/features` : voir sa description.",
+    ].join("\n"),
     reponse: featuresResponseSchema,
   },
   {
@@ -125,6 +153,60 @@ const CHEMINS: Chemin[] = [
     methode: "get",
     resume: "Lister les fonctionnalités actives pour le demandeur",
     authentifie: true,
+    note: [
+      "### Ce que le client doit faire de cette liste",
+      "",
+      "**Elle porte ce qui est ACTIF, dépendances déjà résolues.** Jamais",
+      "l'état brut des drapeaux. Le jour où l'activation deviendra sélective —",
+      "par compte, par pays, par version —, rien ne changera côté client.",
+      "",
+      "**Ce qui n'y figure pas est éteint.** Une clé absente et une clé inconnue",
+      "se traitent pareil : éteinte. C'est ce qui permet de livrer un drapeau",
+      "nouveau sans attendre que tout le parc se mette à jour.",
+      "",
+      "**Le client ne décide de rien.** Aucune règle de dépendance ne se code",
+      "côté client : le serveur les a déjà appliquées. Un client qui déduirait",
+      "lui-même « `wall` est là, donc `wishes` aussi » se tromperait le jour où",
+      "une des deux s'éteint seule.",
+      "",
+      "**Quand lire.** Au démarrage, et après chaque connexion ou changement de",
+      "compte. La liste n'est pas immuable : un drapeau peut s'éteindre pendant",
+      "qu'une session est ouverte.",
+      "",
+      "**Ce que fait un chemin gouverné par un drapeau éteint.** Il rend `404`,",
+      "jamais `403` — un `403` confirmerait que la fonctionnalité existe. Le",
+      "client qui reçoit `404` sur un chemin qu'il croyait ouvert relit cette",
+      "liste plutôt que d'afficher une erreur : c'est le signe que le drapeau a",
+      "changé sous lui.",
+      "",
+      "### Livrer une version sans une fonctionnalité",
+      "",
+      "C'est le cas prévu : le socle — proches, notes, dates, occasions,",
+      "rappels, compte — N'A PAS de drapeau et ne s'éteint pas. Tout le reste",
+      "peut manquer d'une livraison à l'autre.",
+      "",
+      "Exemple, une version sans les listes de souhaits : `wishlist` et",
+      "`wishlist.own` restent éteints. Le client masque les écrans de leur",
+      "ligne du tableau ci-dessous, et n'appelle pas leurs chemins.",
+      "",
+      "**Le piège de ce cas précis** : `reservation` requiert `wishlist.own`.",
+      "Elle disparaîtra donc de la liste, même si son propre interrupteur est",
+      "allumé — la résolution se fait côté serveur. Le client n'a rien à en",
+      "déduire : il ne la voit pas, il la masque, un point c'est tout.",
+      "",
+      "**Le piège inverse, à ne pas reproduire** : `credits` éteint n'éteint",
+      "PAS les générations. Elles restent disponibles et gratuites si leur",
+      "propre drapeau est allumé. Fermer le paiement ne doit pas fermer le",
+      "produit.",
+      "",
+      "### La couverture de chaque drapeau",
+      "",
+      "Ce que le client masque et ce que le serveur ferme doivent désigner la",
+      "même chose. Ce tableau est la référence commune, engendrée depuis le",
+      "registre du serveur.",
+      "",
+      couvertureDesDrapeaux(),
+    ].join("\n"),
     reponse: featuresResponseSchema,
   },
   {
