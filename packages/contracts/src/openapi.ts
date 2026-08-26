@@ -522,6 +522,33 @@ const CHEMINS: Chemin[] = [
     parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
     reponse: occurrenceSchema,
   },
+  {
+    // Chemin distinct de /me/persons/{id}/notes : celles-ci sont DE
+    // CIRCONSTANCE, propres à cette occasion — une idée de cadeau pour ce
+    // mariage, une tenue à prévoir — jamais rendues par le chemin des
+    // durables (voir la note de `noteSchema.eventOccurrenceId`).
+    chemin: "/me/occurrences/{id}/notes",
+    methode: "get",
+    resume: "Lister les notes de circonstance d'une occasion, de la plus récente à la plus ancienne",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    reponse: z.array(noteSchema),
+  },
+  {
+    chemin: "/me/occurrences/{id}/notes",
+    methode: "post",
+    resume: "Écrire une note de circonstance sur une occasion",
+    authentifie: true,
+    note: [
+      "`personId` se déduit de l'occasion — une occurrence appartient à un",
+      "événement, qui appartient à un proche — le client n'a pas à le fournir.",
+    ].join("\n"),
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: createNoteSchema,
+    reponse: noteSchema,
+    // Une ressource neuve, dont le client apprend l'identifiant.
+    statut: 201,
+  },
 ];
 
 export function construireOpenApi(): object {

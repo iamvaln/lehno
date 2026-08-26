@@ -7,6 +7,7 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { EventService } from "../src/me/event.service.js";
 import { PersonService } from "../src/me/person.service.js";
 import { OccurrenceService } from "../src/me/occurrence.service.js";
+import { NoteService } from "../src/me/note.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
@@ -16,6 +17,7 @@ describe("les échéances", () => {
   let events: EventService;
   let persons: PersonService;
   let occurrences: OccurrenceService;
+  let notes: NoteService;
   let awa: string;
   let bila: string;
 
@@ -38,6 +40,7 @@ describe("les échéances", () => {
     events = new EventService(depot, db.prisma as never);
     persons = new PersonService(depot, events);
     occurrences = new OccurrenceService(depot, db.prisma as never);
+    notes = new NoteService(depot, db.prisma as never);
     awa = await compte();
     bila = await compte();
   });
@@ -158,6 +161,48 @@ describe("les échéances", () => {
     expect(detail.id).toBe(o.id);
   });
 
+  describe("les notes de circonstance", () => {
+    it("écrit une note de circonstance rattachée à l'occasion", async () => {
+      const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+      const e = await events.create(awa, { personId: p.id, kind: "birthday" });
+      const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
+
+      const n = await notes.createForOccurrence(awa, o.id, { content: "Il a parlé d'un cadeau" });
+      expect(n.eventOccurrenceId).toBe(o.id);
+      expect(n.personId).toBe(p.id);
+    });
+
+    // Les deux natures ne se mélangent pas : la fiche montre les durables, la
+    // page de l'occasion montre les siennes. Une note de circonstance qui
+    // remonterait dans les durables ferait ressurgir « il a parlé d'un moulin »
+    // trois ans plus tard, hors de son contexte.
+    it("ne mêle pas les durables et les notes de circonstance", async () => {
+      const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+      const e = await events.create(awa, { personId: p.id, kind: "birthday" });
+      const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
+
+      await notes.createForPerson(awa, p.id, { content: "aime le café" });
+      await notes.createForOccurrence(awa, o.id, { content: "lui offrir un moulin" });
+
+      const durables = await notes.listForPerson(awa, p.id);
+      expect(durables.map((n) => n.content)).toEqual(["aime le café"]);
+
+      const circonstance = await notes.listForOccurrence(awa, o.id);
+      expect(circonstance.map((n) => n.content)).toEqual(["lui offrir un moulin"]);
+    });
+
+    it("n'écrit pas sur l'occasion d'un autre compte", async () => {
+      const p = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
+      const e = await events.create(bila, { personId: p.id, kind: "birthday" });
+      const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
+
+      await expect(
+        notes.createForOccurrence(awa, o.id, { content: "essai" }),
+      ).rejects.toMatchObject({ code: "not_found" });
+      expect(await db.prisma.note.count()).toBe(0);
+    });
+  });
+
   describe("HTTP de bout en bout", () => {
     const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
     const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -250,6 +295,46 @@ describe("les échéances", () => {
         headers: { authorization: `Bearer ${jeton(awa)}` },
       });
       expect(r.status).toBe(400);
+    });
+
+    it("écrit une note de circonstance via HTTP et rend 201", async () => {
+      const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+      const e = await events.create(awa, { personId: p.id, kind: "birthday" });
+      const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
+
+      const r = await fetch(`${baseUrl}/v1/me/occurrences/${o.id}/notes`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${jeton(awa)}` },
+        body: JSON.stringify({ content: "Il a parlé d'un cadeau" }),
+      });
+      expect(r.status).toBe(201);
+      const corps = (await r.json()) as { eventOccurrenceId: string };
+      expect(corps.eventOccurrenceId).toBe(o.id);
+    });
+
+    it("liste les notes d'une occasion via HTTP", async () => {
+      const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+      const e = await events.create(awa, { personId: p.id, kind: "birthday" });
+      const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
+      await notes.createForOccurrence(awa, o.id, { content: "lui offrir un moulin" });
+
+      const r = await fetch(`${baseUrl}/v1/me/occurrences/${o.id}/notes`, {
+        headers: { authorization: `Bearer ${jeton(awa)}` },
+      });
+      expect(r.status).toBe(200);
+      const corps = (await r.json()) as { content: string }[];
+      expect(corps.map((n) => n.content)).toEqual(["lui offrir un moulin"]);
+    });
+
+    it("rend 404 sur les notes de l'occasion d'un autre compte", async () => {
+      const p = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
+      const e = await events.create(bila, { personId: p.id, kind: "birthday" });
+      const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
+
+      const r = await fetch(`${baseUrl}/v1/me/occurrences/${o.id}/notes`, {
+        headers: { authorization: `Bearer ${jeton(awa)}` },
+      });
+      expect(r.status).toBe(404);
     });
   });
 });
