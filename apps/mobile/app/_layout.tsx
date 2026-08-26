@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider, useCouleurs } from "@lehno/ui-native";
 import { LangueProvider } from "../lib/langue.js";
+import { DrapeauxProvider } from "../lib/DrapeauxProvider.js";
 import { POLICES } from "../polices/index.js";
 
 /* La coquille. Trois choses s'y posent, et l'ordre compte : la zone sûre doit
@@ -37,7 +38,13 @@ export default function Racine() {
         {/* La langue enveloppe la navigation : un écran qui se monte avant elle
             afficherait « undefined » à chaque libellé. */}
         <LangueProvider>
-          <Coquille />
+          {/* Les drapeaux enveloppent la navigation : un écran qui se monte
+              avant eux montrerait ce que le serveur refuse. Sans session,
+              `appel` lève avant tout appel réseau — le fournisseur ne harcèle
+              donc pas le serveur pendant la connexion. */}
+          <DrapeauxProvider>
+            <Coquille />
+          </DrapeauxProvider>
         </LangueProvider>
       </ThemeProvider>
     </SafeAreaProvider>
