@@ -459,3 +459,41 @@ export const comptesCollecteSchema = z.object({ items: z.array(compteCollecteSch
 export type Palier = z.infer<typeof palierSchema>;
 export type Canal = z.infer<typeof canalSchema>;
 export type CompteCollecte = z.infer<typeof compteCollecteSchema>;
+
+// ——— La saisie manuelle d'un paiement —————————————————————————
+
+/**
+ * Ce qu'un administrateur saisit pour enregistrer un versement reçu.
+ *
+ * Le paiement naît `pending`. La spécification dit qu'il « se confirme du même
+ * geste » : c'est l'écran qui enchaîne les deux appels, pas le serveur qui les
+ * fond. Séparer garde une seule porte de décision — celle qui exige le montant
+ * réellement constaté et journalise son motif.
+ */
+export const saisiePaiementSchema = z.object({
+  utilisateurId: z.string().uuid(),
+  palierId: z.string().uuid(),
+  compteCollecteId: z.string().uuid(),
+  canalId: z.string().uuid(),
+  /** Le numéro depuis lequel le client déclare avoir versé. */
+  numeroPayeur: z.string().max(32).optional(),
+  /** La référence de la transaction chez l'opérateur, si elle est déjà connue. */
+  reference: z.string().max(200).optional(),
+  /** Le reçu déposé. Il ne prouve rien — la réception sur le compte fait foi. */
+  recu: z.string().max(500).optional(),
+  reason: motifSchema,
+}).strict();
+
+export const paiementCreeSchema = z.object({
+  id: z.string(),
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  montant: z.number(),
+  frais: z.number(),
+  /** Ce qu'on doit voir arriver sur le compte, frais appliqués. */
+  attenduSurLeCompte: z.number(),
+  credits: z.number().int(),
+  devise: z.string(),
+}).strict();
+
+export type SaisiePaiement = z.infer<typeof saisiePaiementSchema>;
+export type PaiementCree = z.infer<typeof paiementCreeSchema>;
