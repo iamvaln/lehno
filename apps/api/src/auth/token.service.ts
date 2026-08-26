@@ -115,11 +115,15 @@ export class TokenService {
     parentId: string | null,
     userAgent: string | undefined,
     client: Prisma.TransactionClient | PrismaService,
+    ip?: string,
   ): Promise<Pair> {
     const refreshToken = randomBytes(32).toString("base64url");
     await client.refreshToken.create({
       data: {
         userId, familyId, parentId, tokenHash: this.hash(refreshToken),
+        // Nulle quand on ne la connaît pas — une trace absente vaut mieux
+        // qu'une trace inventée.
+        ip: ip ?? null,
         expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
         userAgent: userAgent ?? null,
       },
@@ -128,11 +132,11 @@ export class TokenService {
     return { accessToken, refreshToken, expiresIn: ACCESS_TTL_S };
   }
 
-  issuePair(userId: string, userAgent?: string): Promise<Pair> {
-    return this.mint(userId, randomUUID(), null, userAgent, this.prisma);
+  issuePair(userId: string, userAgent?: string, ip?: string): Promise<Pair> {
+    return this.mint(userId, randomUUID(), null, userAgent, this.prisma, ip);
   }
 
-  async rotate(refreshToken: string, userAgent?: string): Promise<Pair> {
+  async rotate(refreshToken: string, userAgent?: string, ip?: string): Promise<Pair> {
     const tokenHash = this.hash(refreshToken);
 
     // Consommer le jeton présenté, éventuellement révoquer sa lignée, et
@@ -185,7 +189,7 @@ export class TokenService {
       const row = await tx.refreshToken.findUniqueOrThrow({ where: { tokenHash } });
       if (row.expiresAt.getTime() < Date.now()) return { ok: false, reason: "session_expired" };
 
-      const pair = await this.mint(row.userId, row.familyId, row.id, userAgent, tx);
+      const pair = await this.mint(row.userId, row.familyId, row.id, userAgent, tx, ip);
       return { ok: true, pair };
     });
 

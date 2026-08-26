@@ -77,7 +77,17 @@ qu'une absence — `/admin/login-activity` ne la rend pas, et le contrat publié
 n'a aucun champ pour la recevoir. Ce que l'écran montre reste le lieu
 approximatif.
 
-**Reste à faire** : `refresh_token.ip` n'est toujours pas modélisée ni écrite.
+**Fait depuis** (26/08/2026) : `refresh_token.ip` est modélisée et écrite, à
+l'ouverture comme à chaque rotation. C'est l'adresse de **ce tour-là**, pas
+celle de l'ouverture : rejouer un jeton consommé révoque toute la lignée — le
+signe qu'une copie circule — mais ça ne dit pas d'où. C'est la suite des
+adresses d'une lignée qui le montre.
+
+**Et un écart de plus, corrigé au passage** : `admin_refresh_token`, créée après
+la migration d'identité, n'avait aucune colonne d'adresse. Une session
+d'exploitation ouvre pourtant sur les comptes des autres, et sa durée est plus
+courte pour cette raison précise — elle traçait donc moins qu'une session
+ordinaire. **À reporter au dictionnaire**, qui ne décrit pas cette table.
 
 ### A5. La voie d'entrée manquait au dictionnaire
 

@@ -99,9 +99,12 @@ export class AuthController {
   @HttpCode(200)
   async refresh(
     @Body(new ZodValidationPipe(refreshSchema)) body: RefreshBody,
+    @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
   ): Promise<Session> {
-    const pair = await this.tokens.rotate(body.refreshToken, userAgent);
+    // L'adresse de CE tour, pas celle de l'ouverture : c'est la suite des
+    // adresses d'une lignée qui montre qu'une copie circule ailleurs.
+    const pair = await this.tokens.rotate(body.refreshToken, userAgent, ip);
     // Un renouvellement ne crée jamais de compte : la forme reste celle d'une session.
     return { ...pair, isNewAccount: false };
   }

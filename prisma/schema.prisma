@@ -246,6 +246,11 @@ model RefreshToken {
   consumedAt DateTime? @map("consumed_at") @db.Timestamptz
   revokedAt  DateTime? @map("revoked_at") @db.Timestamptz
   userAgent  String?   @map("user_agent")
+  // L'adresse d'où ce jeton a été émis. Elle sert aux investigations, pas à
+  // l'affichage : rejouer un jeton consommé révoque toute la lignée — c'est le
+  // signe qu'une copie circule — mais ça ne dit pas d'où. Sans elle, on ne peut
+  // ni dater ni situer le vol.
+  ip         String?   @db.Inet
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -848,6 +853,9 @@ model AdminRefreshToken {
   consumedAt DateTime? @map("consumed_at") @db.Timestamptz
   revokedAt  DateTime? @map("revoked_at") @db.Timestamptz
   userAgent  String?   @map("user_agent")
+  // Une session d'exploitation ouvre sur les comptes des autres. Elle devrait
+  // au moins tracer autant qu'une session ordinaire, pas moins.
+  ip         String?   @db.Inet
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
