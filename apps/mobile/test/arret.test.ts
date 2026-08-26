@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  DELAI_MINIMAL, delaiDAttente, estUnArret, exigeDeRelireLesDrapeaux,
+  DELAI_MINIMAL, SECONDES_POUR_ANNONCER_UNE_HEURE, delaiDAttente, estUnArret,
+  exigeDeRelireLesDrapeaux, heureDeRetour,
 } from "../lib/arret.js";
 
 describe("reconnaître un arrêt", () => {
@@ -61,5 +62,33 @@ describe("un 404 sur une surface gouvernée", () => {
   it("ne s'applique à aucun autre statut", () => {
     expect(exigeDeRelireLesDrapeaux(403, "forbidden")).toBe(false);
     expect(exigeDeRelireLesDrapeaux(500, "internal_error")).toBe(false);
+  });
+});
+
+describe("l'heure de retour", () => {
+  const MIDI = Date.UTC(2026, 7, 26, 12, 0, 0);
+
+  /* Elle se CALCULE depuis le délai du serveur. Le kit donnait « 14 h 30 » en
+     exemple ; l'afficher tel quel annonçait une heure inventée, et quelqu'un
+     serait revenu à 14 h 30 pour trouver la même page. */
+  it("suit le délai annoncé, pas un exemple", () => {
+    const dans2h = heureDeRetour(2 * 3600, MIDI, "fr");
+    const dans3h = heureDeRetour(3 * 3600, MIDI, "fr");
+    expect(dans2h).not.toBeNull();
+    expect(dans2h).not.toEqual(dans3h);
+  });
+
+  /* Sous un quart d'heure, on ne donne pas d'heure : « de retour vers 12 h 01 »
+     quand il reste quarante secondes se lit comme une panne, pas comme une
+     minute à patienter. L'écran dit alors seulement qu'une mise à jour est en
+     cours. */
+  it("se tait quand l'attente est courte", () => {
+    expect(heureDeRetour(45, MIDI, "fr")).toBeNull();
+    expect(heureDeRetour(SECONDES_POUR_ANNONCER_UNE_HEURE - 1, MIDI, "fr")).toBeNull();
+    expect(heureDeRetour(SECONDES_POUR_ANNONCER_UNE_HEURE, MIDI, "fr")).not.toBeNull();
+  });
+
+  it("ne dit rien sans délai du tout", () => {
+    expect(heureDeRetour(null, MIDI, "fr")).toBeNull();
   });
 });

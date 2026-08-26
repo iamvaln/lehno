@@ -47,3 +47,26 @@ export function exigeDeRelireLesDrapeaux(
   const { gouvernee = true } = options;
   return gouvernee && statut === 404 && code === "not_found";
 }
+
+/* L'heure de retour, calculée depuis le délai que le SERVEUR annonce.
+ *
+ * Le kit donnait « 14 h 30 » en exemple, et l'afficher tel quel annonçait une
+ * heure inventée : quelqu'un serait revenu à 14 h 30 pour trouver la même page.
+ * Une page d'attente qui ment sur l'attente est pire qu'une page qui se tait.
+ *
+ * En dessous d'un quart d'heure on ne donne pas d'heure du tout : « de retour
+ * vers 14 h 30 » quand il reste quarante secondes se lit comme une panne, pas
+ * comme une minute à patienter.
+ */
+export const SECONDES_POUR_ANNONCER_UNE_HEURE = 15 * 60;
+
+export function heureDeRetour(
+  secondes: number | null,
+  maintenant: number,
+  langue: string,
+): string | null {
+  if (secondes === null || secondes < SECONDES_POUR_ANNONCER_UNE_HEURE) return null;
+  return new Intl.DateTimeFormat(langue, {
+    hour: "numeric", minute: "2-digit",
+  }).format(new Date(maintenant + secondes * 1000));
+}

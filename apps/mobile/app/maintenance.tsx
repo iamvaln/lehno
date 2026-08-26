@@ -7,6 +7,7 @@ import {
 import { Button, Wordmark, useTheme } from "@lehno/ui-native";
 import { useLangue } from "../lib/langue.js";
 import { useArret } from "../lib/ArretProvider.js";
+import { heureDeRetour } from "../lib/arret.js";
 
 /* L'arrêt pour intervention.
  *
@@ -33,10 +34,15 @@ const BOUCLE = 4600;
 const PAS = 180;
 
 export default function Maintenance() {
-  const { t } = useLangue();
+  const { t, langue } = useLangue();
   const { theme, couleurs } = useTheme();
   const insets = useSafeAreaInsets();
   const { secondes, reessaie } = useArret();
+  /* MAINTENANT plus LE RESTE, à chaque rendu. La somme ne bouge pas — le
+     décompte perd une seconde pendant que l'horloge en gagne une —, et l'heure
+     annoncée tient. Figer l'instant de départ l'aurait fait reculer d'une
+     seconde par seconde sous les yeux de qui attend. */
+  const heure = heureDeRetour(secondes, Date.now(), langue);
 
   const [sansMouvement, setSansMouvement] = useState<boolean | null>(null);
   /* Une horloge par case, décalée à son propre retard. J'avais d'abord voulu
@@ -123,9 +129,10 @@ export default function Maintenance() {
 
       <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.maintTitre}</Text>
       <Text style={[styles.texte, { color: couleurs.textSecondary }]}>
-        {/* L'heure de retour est facultative : sans elle, on dit seulement qu'une
-            mise à jour est en cours. Pas de « bientôt », pas d'estimation inventée. */}
-        {secondes !== null && secondes > 0 ? t.maintHeure(t.maintHeureExemple) : t.maintTexte}
+        {/* L'heure se CALCULE depuis le délai du serveur, et ne paraît qu'au-delà
+            d'un quart d'heure. Sans elle, on dit seulement qu'une mise à jour est
+            en cours : pas de « bientôt », pas d'estimation inventée. */}
+        {heure ? t.maintHeure(heure) : t.maintTexte}
       </Text>
 
       <View style={styles.sorties}>

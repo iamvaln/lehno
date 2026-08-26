@@ -37,7 +37,6 @@ export const en = {
   maintTitre: "Lehno will be right back",
   maintTexte: "An update is under way.",
   maintHeure: (h: string) => "Back around " + h + ".",
-  maintHeureExemple: "2:30 pm",
   maintReessayer: "Try again",
   maintEtat: "Service status",
   pseudoTitre: "Pick your handle",

@@ -41,7 +41,6 @@ export const fr = {
   maintTitre: "Lehno revient",
   maintTexte: "Une mise à jour est en cours.",
   maintHeure: (h: string) => "De retour vers " + h + ".",
-  maintHeureExemple: "14 h 30",
   maintReessayer: "Réessayer",
   maintEtat: "Voir l'état du service",
   pseudoTitre: "Choisissez votre pseudo",
