@@ -42,6 +42,34 @@ describe("les métadonnées", () => {
     ]);
   });
 
+  // LE cas qui distingue une lecture en base d'une constante recopiée — et
+  // aucun des deux précédents ne le fait : ils rendraient sept catégories dans
+  // les deux mondes.
+  //
+  // On retire une catégorie de la table, et le point d'entrée doit le refléter.
+  // Une constante continuerait d'annoncer les sept, et le client afficherait un
+  // rangement qu'aucune note ne peut atteindre — vide sur toutes les fiches,
+  // sans que rien ne l'explique.
+  //
+  // Ce n'est pas théorique : un commit de cette branche a figé cette constante
+  // par accident, et les six autres cas sont restés verts.
+  it("suit la table, pas une constante recopiée", async () => {
+    await db.prisma.noteCategory.deleteMany({});
+    await db.prisma.category.deleteMany({ where: { code: "challenges" } });
+
+    const m = await metadata.get();
+    expect(m.categories.map((c) => c.code)).not.toContain("challenges");
+    expect(m.categories).toHaveLength(6);
+
+    // On la remet : resetDatabase PRÉSERVE la table `category`, semée par la
+    // migration 20260822154334_content. Sans ce rétablissement, la suppression
+    // déborderait sur tous les cas suivants, et l'ordre d'exécution
+    // deviendrait une dépendance invisible.
+    await db.prisma.category.create({
+      data: { code: "challenges", kind: "ponctuelle", isConstraint: false },
+    });
+  });
+
   it("rend les énumérations dont les écrans composent leurs listes", async () => {
     const m = await metadata.get();
     expect(m.eventKinds).toEqual(["birthday", "other"]);
