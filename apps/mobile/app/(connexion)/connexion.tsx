@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import {
   nativeFont, nativeLetterSpacing, nativeSpace, nativeTracking,
 } from "@lehno/tokens";
-import { Banner, Button, TextField, Wordmark, useTheme } from "@lehno/ui-native";
+import { Banner, Button, TextField, Wordmark, ressembleAUneAdresse, useTheme } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appelPublic, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
@@ -66,13 +66,17 @@ export default function Connexion() {
         <TextField
           label={t.champEmail}
           placeholder={t.champEmailEx}
+          nature="email"
           value={email}
           onChangeText={setEmail}
         />
         <Button
           variant="primary"
           full
-          disabled={envoi || email.trim().length === 0}
+          /* Une saisie manifestement incomplète coûterait un aller-retour et
+             une erreur à lire ; le bouton reste éteint. Le serveur tranche
+             quand même — lui seul sait si l'adresse existe. */
+          disabled={envoi || !ressembleAUneAdresse(email)}
           onPress={demandeLeCode}
           style={{ marginTop: nativeSpace[12] }}
         >

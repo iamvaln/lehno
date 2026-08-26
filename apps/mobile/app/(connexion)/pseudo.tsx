@@ -71,6 +71,7 @@ export default function Pseudo() {
 
         <TextField
           label={t.champPseudo}
+          nature="pseudo"
           value={pseudo}
           onChangeText={setPseudo}
           invalid={pris}

@@ -7,7 +7,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   nativeFont, nativeLetterSpacing, nativeRadius, nativeSpace, nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
-import { Banner, Button, Icon, Illustration, useTheme } from "@lehno/ui-native";
+import {
+  Banner, Button, Icon, Illustration, nettoiePourLaNature, reglagesDeSaisie, useTheme,
+} from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { useCompact } from "../../lib/compact.js";
 import { appelPublic, ErreurDApi } from "../../lib/api.js";
@@ -146,12 +148,11 @@ export default function Code() {
         <TextInput
           ref={champ}
           value={saisi}
-          onChangeText={(v) => setSaisi(v.replace(/\D/g, "").slice(0, LONGUEUR))}
-          keyboardType="number-pad"
-          // Le système propose le code reçu au-dessus du clavier : c'est la
-          // façon dont la plupart des gens le saisiront.
-          textContentType="oneTimeCode"
-          autoComplete="sms-otp"
+          onChangeText={(v) => setSaisi(nettoiePourLaNature("code", v).slice(0, LONGUEUR))}
+          // Les réglages viennent de la nature du champ, comme partout ailleurs :
+          // le clavier numérique, et la proposition du code reçu au-dessus du
+          // clavier — la façon dont la plupart des gens le saisiront.
+          {...reglagesDeSaisie("code")}
           autoFocus
           maxLength={LONGUEUR}
           style={styles.invisible}
