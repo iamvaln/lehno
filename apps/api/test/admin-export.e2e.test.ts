@@ -196,6 +196,55 @@ describe("administration — l'export des lectures", () => {
     expect(corps.items[0]?.compte).toBe("awa");
   });
 
+  // ─── L'injection de formule ────────────────────────────────────────────────
+
+  // Le chemin complet, et il n'exige aucun compte : l'agent utilisateur d'une
+  // requête n'est ni validé ni contraint, il suffit de le remplir d'une formule
+  // pour qu'elle atterrisse dans la table, puis dans le fichier qu'un
+  // administrateur ouvrira dans son tableur.
+  it("un agent utilisateur piégé n'exécute rien à l'ouverture", async () => {
+    const { entete } = await session("admin");
+    await db.prisma.loginActivity.create({
+      data: {
+        result: "failure", attemptedEmail: "awa@exemple.cm", method: "otp",
+        userAgent: '=HYPERLINK("http://exemple","clic")',
+      },
+    });
+
+    const texte = await (await exporter("login-activity", entete)).text();
+
+    // Neutralisé par l'apostrophe : le tableur lit du texte, pas un calcul.
+    expect(texte).toContain(`"'=HYPERLINK`);
+    // Et surtout : aucune cellule ne commence par « = » sans elle.
+    for (const cellule of texte.split("\n").slice(1).flatMap((l) => l.split('","'))) {
+      expect(cellule.replace(/^"/, "")).not.toMatch(/^[=+@]/);
+    }
+  });
+
+  // L'adresse tentée d'un code à usage unique suit le même chemin, et se
+  // remplit sans compte elle aussi.
+  it("une adresse tentée piégée est neutralisée", async () => {
+    const { entete } = await session("admin");
+    await db.prisma.loginActivity.create({
+      data: { result: "failure", attemptedEmail: "=1+1", method: "otp" },
+    });
+
+    const texte = await (await exporter("login-activity", entete)).text();
+
+    expect(texte).toContain(`"'=1+1"`);
+  });
+
+  // Un motif d'administration est du texte libre, écrit par quelqu'un de
+  // l'équipe — moins hostile, mais rien ne l'empêche de commencer par un tiret.
+  it("un motif du journal est neutralisé de la même façon", async () => {
+    const { compte, entete } = await session("admin");
+    await tracer(compte.id, "user_status_update", { reason: "-5 crédits repris" });
+
+    const texte = await (await exporter("audit-log", entete)).text();
+
+    expect(texte).toContain(`"'-5 crédits repris"`);
+  });
+
   // ─── Les droits ────────────────────────────────────────────────────────────
 
   // Le journal est réservé aux administrateurs : son export l'est aussi, sans

@@ -15,11 +15,36 @@ export function ligneCsv(valeurs: (string | null)[]): string {
   return valeurs.map(cellule).join(",");
 }
 
+/**
+ * Ce qu'un tableur prend pour une formule, et qu'il exécute à l'ouverture.
+ *
+ * Excel et Sheets lisent `=`, `+`, `-` et `@` en tête de cellule comme le début
+ * d'un calcul — et `=HYPERLINK(...)`, `=cmd|...` ou une formule qui appelle une
+ * adresse distante s'exécutent sans que personne ait cliqué. Les guillemets de
+ * RFC 4180 n'y changent rien : ils protègent le découpage du fichier, pas son
+ * interprétation.
+ *
+ * Le chemin est court et n'exige aucun compte. L'agent utilisateur d'une
+ * requête n'est ni validé ni contraint : il suffit d'un `User-Agent: =…` sur
+ * une tentative de connexion pour que la chaîne atterrisse dans la table, puis
+ * dans le fichier qu'un administrateur ouvrira. L'adresse tentée d'un code à
+ * usage unique suit le même chemin.
+ */
+const DEBUTS_DE_FORMULE = /^[=+\-@\t\r]/;
+
 function cellule(valeur: string | null): string {
   if (valeur === null) return '""';
+
+  // Une apostrophe en tête : le tableur la lit comme « ce qui suit est du
+  // texte », et ne l'affiche pas. C'est la neutralisation d'usage, et elle
+  // coûte un caractère visible à qui lit le fichier en clair — le prix est
+  // faible devant une formule qui part toute seule.
+  const sain = DEBUTS_DE_FORMULE.test(valeur) ? `'${valeur}` : valeur;
+
   // Un guillemet se double : c'est ainsi que RFC 4180 le veut, et tout tableur
-  // le lit.
-  return `"${valeur.replace(/"/g, '""')}"`;
+  // le lit. Cela protège le DÉCOUPAGE ; la ligne au-dessus protège de
+  // l'INTERPRÉTATION. Les deux sont nécessaires, et aucune ne remplace l'autre.
+  return `"${sain.replace(/"/g, '""')}"`;
 }
 
 /** Le document entier : l'entête, puis les lignes. */
