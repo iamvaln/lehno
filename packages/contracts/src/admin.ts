@@ -670,3 +670,78 @@ export const compteAdminSchema = z.object({
 export const comptesAdminSchema = z.object({ items: z.array(compteAdminSchema) }).strict();
 
 export type CompteAdmin = z.infer<typeof compteAdminSchema>;
+
+// ——— Les files d'assistance ———————————————————————————————————
+
+/**
+ * Une demande d'assistance, envoyée depuis l'application par quelqu'un qui a
+ * un compte.
+ *
+ * C'est la seule des quatre files qui porte un **état** : les trois autres sont
+ * des registres qu'on lit, celle-ci est un travail qu'on solde.
+ */
+export const demandeAssistanceSchema = z.object({
+  id: z.string(),
+  utilisateur: z.string(),
+  sujet: z.string().nullable(),
+  corps: z.string(),
+  version: z.string().nullable(),
+  plateforme: z.string().nullable(),
+  etat: z.enum(["open", "answered", "closed"]),
+  creeLe: z.string(),
+}).strict();
+
+/**
+ * Un message du formulaire public. Rien d'autre ne le porte : il est écrit
+ * avant toute tentative d'envoi, pour qu'une panne de courriel ne le perde pas.
+ *
+ * Le sujet est l'une des six clés du contrat, jamais un texte libre venu du
+ * client — c'est ce qui permet de le traduire plutôt que de l'afficher tel quel.
+ */
+export const messageContactSchema = z.object({
+  id: z.string(),
+  nom: z.string(),
+  email: z.string(),
+  sujet: z.string(),
+  message: z.string(),
+  langue: z.string().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+/** Une inscription à la liste d'attente. */
+export const inscriptionAttenteSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  langue: z.string().nullable(),
+  source: z.string().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+/** Un retour laissé depuis l'application. */
+export const retourSchema = z.object({
+  id: z.string(),
+  utilisateur: z.string().nullable(),
+  note: z.number().int().nullable(),
+  corps: z.string().nullable(),
+  version: z.string().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+const page = <T extends z.ZodTypeAny>(item: T) =>
+  z.object({ items: z.array(item), nextCursor: z.string().nullable() }).strict();
+
+export const pageAssistanceSchema = page(demandeAssistanceSchema);
+export const pageContactSchema = page(messageContactSchema);
+export const pageAttenteSchema = page(inscriptionAttenteSchema);
+export const pageRetoursSchema = page(retourSchema);
+
+/** Solder une demande d'assistance. Le motif accompagne, comme partout. */
+export const etatAssistanceSchema = z.object({
+  etat: z.enum(["open", "answered", "closed"]),
+  reason: motifSchema,
+}).strict();
+
+export type DemandeAssistance = z.infer<typeof demandeAssistanceSchema>;
+export type MessageContact = z.infer<typeof messageContactSchema>;
+export type InscriptionAttente = z.infer<typeof inscriptionAttenteSchema>;
+export type Retour = z.infer<typeof retourSchema>;
