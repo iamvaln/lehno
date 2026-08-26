@@ -333,3 +333,37 @@ l'API la rend.
 Trois issues : une vue « toutes les notes » ; un bloc « à ranger » que
 l'utilisateur vide d'un geste ; ou accepter qu'une note non classée n'apparaisse
 pas tant qu'elle ne l'est pas. Décision d'interface, pas d'implémentation.
+
+---
+
+## G. §5.14 énumère une pile que le dépôt ne branche pas encore
+
+La section « Liens externes » nomme une quinzaine d'outils : Sentry, PostHog,
+VPS et base, Cloudflare R2, MTN MoMo, Orange Money, Anthropic, DeepSeek, Grok,
+Mailgun, OneSignal, magasins d'applications.
+
+Ce que le code appelle réellement, aujourd'hui :
+
+| Outil | État |
+|---|---|
+| PostHog | branché — `tracking/posthog.adapter.ts`, `POSTHOG_API_KEY` |
+| Resend | branché — `mail/resend.adapter.ts`, `RESEND_API_KEY` |
+| Google, Apple | branchés — `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID` |
+| Sentry | **déclaré, jamais lu** — `SENTRY_DSN` est dans `.env.example` et aucun fichier de source ne le lit |
+| Mailgun | **déclaré, jamais lu** — `MAILGUN_API_KEY` et `MAILGUN_DOMAIN` idem ; c'est Resend qui envoie |
+| R2, MoMo, Orange, Anthropic, DeepSeek, Grok, OneSignal, magasins | absents du code |
+
+**Ce que l'écran fait de cet écart.** Il ne liste que ce qui sert. La
+spécification le prévoit — « la liste s'entretient à mesure que la pile
+technique évolue » — et annoncer une console pour un outil que rien n'appelle
+donnerait à lire une pile qui n'existe pas.
+
+**Deux choses à trancher.**
+
+1. **Mailgun dans `.env.example`.** Deux variables qu'aucune source ne lit,
+   pour un fournisseur que Resend a remplacé. Soit la migration est finie et
+   elles s'en vont, soit elle ne l'est pas et il manque un adaptateur. Je ne
+   les ai pas retirées : la configuration d'envoi n'est pas ma voie.
+2. **L'hébergement n'a pas d'entrée.** Le VPS et la base sont bien réels, mais
+   rien dans le dépôt ne nomme le fournisseur ni l'adresse de sa console. Une
+   adresse inventée serait pire qu'une absence. À donner.

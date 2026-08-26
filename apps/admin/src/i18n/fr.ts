@@ -963,6 +963,26 @@ export const fr = {
     reponse_invalide: "Le service a répondu quelque chose d'inattendu. Réessayez dans un instant.",
   },
 
+  liens: {
+    titre: "Liens externes",
+    sous: "Les consoles des plateformes sur lesquelles Lehno s'appuie, rassemblées ici plutôt que cherchées ailleurs.",
+    groupes: {
+      mesure: "Mesure et supervision",
+      messages: "Envoi de messages",
+      identite: "Identité et connexion",
+      code: "Code et livraison",
+    },
+    usages: {
+      posthog: "La mesure d'usage : ce que les gens font dans l'application, et ce qu'ils n'y font pas.",
+      resend: "L'envoi des e-mails transactionnels — codes de connexion, confirmations, avis.",
+      google: "Les identifiants de la connexion Google, et leur validité.",
+      apple: "Les identifiants de la connexion Apple, et les certificats de l'application.",
+      github: "Le dépôt, les revues et les livraisons.",
+    },
+    ouvrir: "Ouvre {nom} dans un nouvel onglet",
+    horsOutil: "Chaque plateforme garde sa propre authentification : ces liens ne donnent aucun accès par eux-mêmes.",
+  },
+
   gabarits: {
     tableau: "Tableau de bord",
     liste: "Liste filtrable, puis détail",

@@ -896,6 +896,26 @@ export const en: typeof fr = {
     reponse_invalide: "The service answered something unexpected. Try again in a moment.",
   },
 
+  liens: {
+    titre: "External links",
+    sous: "Consoles for the platforms Lehno relies on, gathered here rather than looked up elsewhere.",
+    groupes: {
+      mesure: "Analytics and monitoring",
+      messages: "Message delivery",
+      identite: "Identity and sign-in",
+      code: "Code and releases",
+    },
+    usages: {
+      posthog: "Usage analytics: what people do in the app, and what they don't.",
+      resend: "Transactional email delivery — sign-in codes, confirmations, notices.",
+      google: "Google sign-in credentials, and their validity.",
+      apple: "Apple sign-in credentials, and the app's certificates.",
+      github: "The repository, reviews and releases.",
+    },
+    ouvrir: "Opens {nom} in a new tab",
+    horsOutil: "Each platform keeps its own authentication: these links grant no access by themselves.",
+  },
+
   gabarits: {
     tableau: "Dashboard",
     liste: "Filterable list, then detail",

@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -122,7 +122,7 @@ const PRESSEES = new Set(["moderation", "suppressions"]);
  */
 const GABARITS: Record<string, string> = {
   moderation: "liste", studio: "formulaire", offres: "liste",
-  metriques: "tableau", liens: "liste",
+  metriques: "tableau",
 };
 
 // Le nom de la marque ne se traduit pas et ne se remplace pas par le nom de
@@ -705,6 +705,10 @@ export function App(): ReactNode {
           enfant={(page) => <Assistance {...communAssistance} demandes={page?.items ?? []} />} />
       );
     }
+  } else if (section === "liens") {
+    // Aucun appel : la page rend un registre du code. Pas d'état de chargement
+    // à tenir, donc pas de `Ressource` — l'envelopper en inventerait un.
+    vue = <Liens langue={langue} onRetour={aller} />;
   } else if (section === "acces") {
     vue = (
       <Ressource
