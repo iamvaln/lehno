@@ -32,6 +32,8 @@ export class PersonService {
       register: input.register ?? null,
       language: input.language ?? null,
       relationHint: input.relationHint ?? null,
+      birthDate: input.birthDate ? new Date(`${input.birthDate}T00:00:00Z`) : null,
+      birthYearKnown: input.birthYearKnown ?? true,
       city: input.city ?? null,
       gender: input.gender ?? null,
       country: input.country ?? null,
@@ -60,7 +62,8 @@ export class PersonService {
 function rendre(p: {
   id: string; displayName: string; callingName: string | null; avatarUrl: string | null;
   isSelf: boolean; relation: string | null; register: string | null; language: string | null;
-  relationHint: string | null; gender: string | null; city: string | null;
+  relationHint: string | null; birthDate: Date | null; birthYearKnown: boolean;
+  gender: string | null; city: string | null;
   country: string | null; preferredChannel: string | null; createdAt: Date;
 }): Person {
   return {
@@ -71,6 +74,10 @@ function rendre(p: {
     isSelf: p.isSelf,
     relation: p.relation as Person["relation"],
     relationHint: p.relationHint,
+    // La date de naissance se rend en chaîne civile, comme toutes les dates
+    // du contrat : du JSON, pas un objet Date.
+    birthDate: p.birthDate ? p.birthDate.toISOString().slice(0, 10) : null,
+    birthYearKnown: p.birthYearKnown,
     gender: p.gender as Person["gender"],
     city: p.city,
     country: p.country,

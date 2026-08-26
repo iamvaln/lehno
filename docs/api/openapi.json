@@ -3339,6 +3339,13 @@
                         "type": "string",
                         "nullable": true
                       },
+                      "birthDate": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "birthYearKnown": {
+                        "type": "boolean"
+                      },
                       "gender": {
                         "type": "string",
                         "enum": [
@@ -3392,6 +3399,8 @@
                       "isSelf",
                       "relation",
                       "relationHint",
+                      "birthDate",
+                      "birthYearKnown",
                       "gender",
                       "city",
                       "country",
@@ -3577,6 +3586,13 @@
                     "type": "string",
                     "maxLength": 80
                   },
+                  "birthDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "birthYearKnown": {
+                    "type": "boolean"
+                  },
                   "gender": {
                     "type": "string",
                     "enum": [
@@ -3657,6 +3673,13 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "birthDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "birthYearKnown": {
+                      "type": "boolean"
+                    },
                     "gender": {
                       "type": "string",
                       "enum": [
@@ -3710,6 +3733,8 @@
                     "isSelf",
                     "relation",
                     "relationHint",
+                    "birthDate",
+                    "birthYearKnown",
                     "gender",
                     "city",
                     "country",
@@ -3898,6 +3923,13 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "birthDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "birthYearKnown": {
+                      "type": "boolean"
+                    },
                     "gender": {
                       "type": "string",
                       "enum": [
@@ -3951,6 +3983,8 @@
                     "isSelf",
                     "relation",
                     "relationHint",
+                    "birthDate",
+                    "birthYearKnown",
                     "gender",
                     "city",
                     "country",
@@ -4146,6 +4180,13 @@
                     "type": "string",
                     "maxLength": 80
                   },
+                  "birthDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "birthYearKnown": {
+                    "type": "boolean"
+                  },
                   "gender": {
                     "type": "string",
                     "enum": [
@@ -4223,6 +4264,13 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "birthDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "birthYearKnown": {
+                      "type": "boolean"
+                    },
                     "gender": {
                       "type": "string",
                       "enum": [
@@ -4276,6 +4324,8 @@
                     "isSelf",
                     "relation",
                     "relationHint",
+                    "birthDate",
+                    "birthYearKnown",
                     "gender",
                     "city",
                     "country",

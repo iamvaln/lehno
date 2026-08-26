@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import jwt from "jsonwebtoken";
-import { createPersonSchema, type CreatePersonInput } from "@lehno/contracts";
+import { createPersonSchema, champsDeProche, type CreatePersonInput } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { PersonService } from "../src/me/person.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
@@ -78,6 +78,8 @@ describe("annuaire des proches", () => {
     it("écrit tous les champs du contrat, sans en oublier un seul", async () => {
       const complet: CreatePersonInput = {
         displayName: "Valery Nguemne",
+        birthDate: "1990-03-14",
+        birthYearKnown: true,
         callingName: "Valo",
         avatarUrl: "https://exemple.test/photo.jpg",
         relation: "ami",
@@ -93,7 +95,7 @@ describe("annuaire des proches", () => {
       // Si le contrat gagne un champ, cette ligne échoue à la compilation
       // tant qu'il n'est pas ajouté ci-dessus — le cas ne peut pas devenir
       // partiel en silence.
-      const attendus = Object.keys(createPersonSchema.shape) as (keyof CreatePersonInput)[];
+      const attendus = Object.keys(champsDeProche.shape) as (keyof CreatePersonInput)[];
       expect(Object.keys(complet).sort()).toEqual([...attendus].sort());
 
       const p = await service.create(awa, complet);
