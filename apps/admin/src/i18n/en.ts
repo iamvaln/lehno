@@ -48,13 +48,9 @@ export const en: typeof fr = {
 
   sections: {
     tableau: "Dashboard",
-    alertes: "Alerts",
     moderation: "Moderation",
     suppressions: "Deletion requests",
     assistance: "Support",
-    contact: "Contact messages",
-    attente: "Waitlist",
-    transactions: "Transactions",
     comptes: "Accounts",
     credits: "Credits and payments",
     acces: "Administrator access",

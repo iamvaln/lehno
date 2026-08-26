@@ -118,7 +118,7 @@ describe("les cartes d'indicateurs", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /Crédits vendus/ }));
 
-    expect(onAller).toHaveBeenCalledWith("transactions");
+    expect(onAller).toHaveBeenCalledWith("credits");
   });
 
   // Un chiffre qui ne mène nulle part n'est pas une commande : il ne s'atteint
