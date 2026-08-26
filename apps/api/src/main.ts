@@ -4,6 +4,7 @@ import "./env.js";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { nombreDeRelaisDeConfiance } from "./common/trust-proxy.js";
+import { portDecoute } from "./common/port.js";
 import { originsAutorisees } from "./common/cors.js";
 import { AppModule } from "./app.module.js";
 import { AppExceptionFilter } from "./common/errors.js";
@@ -38,7 +39,7 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix("v1");
   app.useGlobalFilters(new AppExceptionFilter());
   app.enableShutdownHooks();
-  await app.listen(Number(process.env.PORT ?? 3000));
+  await app.listen(portDecoute(process.env.PORT));
 }
 bootstrap().catch((err: unknown) => {
   console.error(err);
