@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { usernameSchema } from "./profile.js";
 
 export const requestOtpSchema = z.object({ email: z.string().email().max(254) }).strict();
 
@@ -61,10 +62,10 @@ export type VerifyOutcome = z.infer<typeof verifyOutcomeSchema>;
  * crédits d'inscription et le parrainage. */
 export const registerSchema = z.object({
   registrationToken: z.string().min(1),
-  // Le pseudo forme l'adresse du Mur : il ne porte que des lettres, des
-  // chiffres, un tiret ou un point, sans quoi l'adresse devrait être échappée
-  // pour être partageable.
-  username: z.string().trim().min(3).max(30).regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/),
+  // Le MÊME schéma que partout ailleurs — voir profile.ts. Le recopier ici
+  // avait fait diverger les deux règles, et un pseudo accepté à l'inscription
+  // pouvait être refusé à la première correction de profil.
+  username: usernameSchema,
   deviceId: z.string().min(1).max(128),
   referralCode: z.string().max(16).optional(),
 }).strict();

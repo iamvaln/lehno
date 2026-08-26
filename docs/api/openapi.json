@@ -2715,7 +2715,9 @@
                     },
                     "username": {
                       "type": "string",
-                      "pattern": "^[a-z0-9_]{3,30}$"
+                      "minLength": 3,
+                      "maxLength": 30,
+                      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
                     },
                     "displayName": {
                       "type": "string",
@@ -2904,7 +2906,9 @@
                 "properties": {
                   "username": {
                     "type": "string",
-                    "pattern": "^[a-z0-9_]{3,30}$"
+                    "minLength": 3,
+                    "maxLength": 30,
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
                   },
                   "displayName": {
                     "type": "string",
@@ -2955,7 +2959,9 @@
                     },
                     "username": {
                       "type": "string",
-                      "pattern": "^[a-z0-9_]{3,30}$"
+                      "minLength": 3,
+                      "maxLength": 30,
+                      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
                     },
                     "displayName": {
                       "type": "string",
@@ -3144,7 +3150,9 @@
             "required": true,
             "schema": {
               "type": "string",
-              "pattern": "^[a-z0-9_]{3,30}$"
+              "minLength": 3,
+              "maxLength": 30,
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
             }
           }
         ],
