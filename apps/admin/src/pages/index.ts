@@ -16,3 +16,6 @@ export { Credits, type CreditsProps } from "./Credits.js";
 export { SaisiePaiement, type SaisiePaiementProps } from "./SaisiePaiement.js";
 export { Acces, type AccesProps } from "./Acces.js";
 export { Assistance, type AssistanceProps } from "./Assistance.js";
+
+// La seule page qui n'appelle personne : un registre tenu dans le code.
+export { Liens, type LiensProps } from "./Liens.js";

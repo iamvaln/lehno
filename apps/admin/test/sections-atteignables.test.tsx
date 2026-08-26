@@ -54,7 +54,7 @@ describe("ce que le menu promet, l'écran le tient", () => {
     const utilisateur = userEvent.setup({ delay: null });
     const nav = ouvrir("admin");
 
-    for (const section of ["comptes", "credits", "assistance", "acces", "audit", "connexions", "parametres", "fonctionnalites", "modeles"]) {
+    for (const section of ["comptes", "credits", "assistance", "acces", "audit", "connexions", "parametres", "fonctionnalites", "modeles", "liens"]) {
       await utilisateur.click(within(nav).getByText(t.sections[section as keyof typeof t.sections]));
       expect(
         screen.getByRole("main").textContent ?? "",
