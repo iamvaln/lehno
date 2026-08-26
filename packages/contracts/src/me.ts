@@ -46,17 +46,83 @@ export const personSchema = z
     // Faux quand on connaît le jour et le mois sans l'année : on suit alors
     // l'anniversaire sans pouvoir annoncer d'âge.
     birthYearKnown: z.boolean(),
-    gender: z.enum(PERSON_GENDERS).nullable(),
+    // `gender` NE FIGURE PAS ici, et c'est le point : le carnet ne pose pas la
+    // question (handoff proches, « Le genre n'a pas de champ »). Tant qu'il
+    // traversait jusqu'au client, la règle ne tenait que par la retenue de
+    // celui-ci — rien n'empêchait un écran de l'afficher un jour. Retiré du
+    // contrat, il devient inécrivable, pas seulement non demandé. La colonne
+    // reste en base : c'est un signal de génération, déduit côté serveur.
     city: z.string().nullable(),
     country: z.string().nullable(),
     register: z.enum(PERSON_REGISTERS).nullable(),
     language: z.string().nullable(),
     preferredChannel: z.enum(CONTACT_CHANNELS).nullable(),
     createdAt: z.string(),
+    // Le décompte des notes DURABLES. Il paraît sur chaque ligne du carnet
+    // (« 3 notes »), et l'obtenir autrement demanderait un appel par proche —
+    // quarante-trois sur le carnet d'essai du handoff.
+    notesCount: z.number().int().nonnegative(),
+    // La prochaine échéance de ce proche, ou rien s'il n'a aucune date. La
+    // ligne l'affiche en repère, le décompte s'y calcule, et c'est sur elle que
+    // porte le tri « par date » : sans elle côté serveur, ce tri ne peut pas
+    // être servi. Un proche sans date passe en FIN de liste dans les deux sens
+    // — jamais en tête, où il occuperait la place de ce qui presse.
+    nextOccurrence: z
+      .object({
+        id: z.string().uuid(),
+        occurrenceDate: z.string(),
+        // Signé : négatif si l'échéance est passée, comme sur /me/occurrences.
+        daysUntil: z.number().int(),
+        kind: z.enum(["birthday", "other"]),
+        label: z.string().nullable(),
+      })
+      .strict()
+      .nullable(),
   })
   .strict();
 
 export type Person = z.infer<typeof personSchema>;
+
+/* Le carnet se pagine et se trie — les deux sont arrêtés par le handoff, pas à
+   re-trancher : vingt par page, « Voir plus · n restants », et changer de tri
+   revient à la première page.
+   
+   Deux critères seulement, chacun avec sa direction : « par date » ne dit rien
+   tant qu'on ne sait pas de quel bout. */
+export const PERSON_SORTS = ["date", "alpha"] as const;
+export type PersonSort = (typeof PERSON_SORTS)[number];
+
+export const SORT_DIRECTIONS = ["asc", "desc"] as const;
+export type SortDirection = (typeof SORT_DIRECTIONS)[number];
+
+// Vingt : la page du handoff. Écrite ici plutôt que dans le service, pour que
+// le client puisse omettre le paramètre et obtenir la page que l'écran attend.
+export const PAGE_PROCHES = 20;
+
+export const listPersonsQuerySchema = z
+  .object({
+    sort: z.enum(PERSON_SORTS).optional(),
+    direction: z.enum(SORT_DIRECTIONS).optional(),
+    offset: z.number().int().nonnegative().optional(),
+    limit: z.number().int().positive().max(100).optional(),
+  })
+  .strict();
+
+export type ListPersonsQuery = z.infer<typeof listPersonsQuerySchema>;
+
+/* Une enveloppe, non plus un tableau nu : « Voir plus · n restants » a besoin
+   du total, et un curseur ne sait pas le donner. À l'échelle d'un carnet
+   personnel — quelques centaines de fiches au plus — le décalage numéroté est
+   exact et suffit ; il faudrait un curseur si la liste pouvait changer sous le
+   lecteur entre deux pages, ce qui n'est pas le cas ici : c'est son carnet. */
+export const personListSchema = z
+  .object({
+    persons: z.array(personSchema),
+    total: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export type PersonList = z.infer<typeof personListSchema>;
 
 // userId n'y figure pas, et c'est délibéré : une colonne d'appartenance ne
 // franchit jamais la frontière. Le serveur sait à qui appartient la fiche, le
@@ -88,7 +154,6 @@ export const champsDeProche = z
     // de `birthYearKnown`, que ce champ seul ne voit pas.
     birthDate: dateCivileSchema.optional(),
     birthYearKnown: z.boolean().optional(),
-    gender: z.enum(PERSON_GENDERS).optional(),
     city: z.string().trim().max(120).optional(),
     // ISO 3166-1 alpha-2, en majuscules. Deux lettres exactement : un pays
     // écrit en toutes lettres ne sert à rien à qui doit le comparer.

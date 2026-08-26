@@ -35,7 +35,7 @@ describe("les notes d'un proche", () => {
   beforeEach(async () => {
     await resetDatabase(db.prisma);
     const depot = new TenantRepository(db.prisma as never);
-    persons = new PersonService(depot, new EventService(depot, db.prisma as never));
+    persons = new PersonService(depot, new EventService(depot, db.prisma as never), db.prisma as never);
     notes = new NoteService(depot, db.prisma as never);
     awa = await compte();
     bila = await compte();

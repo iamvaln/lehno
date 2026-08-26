@@ -138,7 +138,10 @@ export const fr = {
     formatJson: "JSON — données brutes",
     journal: "L'export apparaît au journal d'audit.",
     encours: "Préparation du fichier…",
-    lance: "Export lancé sur {n} lignes. Le fichier arrive par courriel.",
+    // Le fichier arrive tout de suite. La formule précédente annonçait un
+    // courriel : il n'existe ni file d'attente ni envoi de pièce jointe, et
+    // promettre un courriel qui n'arrive jamais est pire qu'un téléchargement.
+    telecharge: "Le fichier est prêt : il vient d'être téléchargé.",
   },
 
   // Trois temps, dans cet ordre : ce qui s'est passé, ce qu'on a fait, ce qu'on
@@ -175,6 +178,31 @@ export const fr = {
       titre: "Aucune trace sur cette période",
       texte: "Chaque geste d'administration s'inscrit ici, avec son auteur, sa cible et son motif.",
     },
+    filtres: {
+      action: "Nature du geste",
+      periode: "Période",
+      toutes: "Toutes",
+      touteLaPeriode: "Depuis toujours",
+      // Les natures que le journal porte aujourd'hui. La liste vient du code
+      // parce qu'elle vient des gestes qu'on a écrits — la déduire des traces
+      // existantes ferait disparaître un filtre le jour où personne n'a encore
+      // posé ce geste.
+      actions: {
+        user_status_update: "Changement d'état d'un compte",
+        parameter_update: "Modification d'un paramètre",
+        feature_flag_update: "Bascule d'une fonctionnalité",
+        credit_bundle_update: "Modification d'un palier",
+        payment_channel_create: "Ouverture d'un canal",
+        payment_channel_update: "Modification d'un barème",
+        collection_account_create: "Ouverture d'un compte de collecte",
+        collection_account_update: "Modification d'un compte de collecte",
+        payment_manual_create: "Saisie d'un paiement",
+        payment_decision: "Décision sur un paiement",
+        credit_adjustment: "Ajustement d'un solde",
+        audit_log_export: "Export du journal",
+        login_activity_export: "Export des connexions",
+      },
+    },
   },
 
   entrees: {
@@ -183,6 +211,12 @@ export const fr = {
     col: { date: "Quand", compte: "Compte", adresse: "Adresse tentée", resultat: "Résultat", appareil: "Appareil", lieu: "Lieu approximatif" },
     resultats: { success: "Entrée", failure: "Refusée" },
     inconnu: "—",
+    filtres: {
+      resultat: "Résultat",
+      periode: "Période",
+      tous: "Tous",
+      touteLaPeriode: "Depuis toujours",
+    },
     vide: {
       titre: "Aucune tentative sur cette période",
       texte: "Chaque entrée, réussie ou non, s'inscrit ici avec son appareil et son lieu approximatif.",
@@ -337,6 +371,44 @@ export const fr = {
         titre: "Rejeter ce versement",
         consequence: "Aucun crédit n'est octroyé. Le motif sera visible sur le paiement.",
         motifs: ["Aucune réception sur le compte", "Montant insuffisant", "Reçu non conforme"],
+      },
+    },
+
+    // Enregistrer un versement constaté. Le montant et les crédits viennent du
+    // palier : « on achète un palier, jamais un montant libre », et l'écran
+    // n'offre donc aucun champ de montant.
+    saisie: {
+      ouvrir: "Saisir un versement",
+      titre: "Saisir un versement reçu",
+      sous: "Le versement a déjà été fait. On l'enregistre ici, puis on le confirme après avoir vérifié la réception.",
+      champs: {
+        compteClient: "Compte crédité",
+        palier: "Palier acheté",
+        canal: "Canal employé",
+        compte: "Compte qui a reçu",
+        numeroPayeur: "Numéro du payeur",
+        reference: "Référence de la transaction",
+      },
+      apercu: {
+        titre: "Ce que le client verse, et ce qu'on doit voir arriver",
+        aVerser: "Le client verse",
+        attendu: "On doit voir arriver",
+        credits: "Crédits octroyés à la confirmation",
+      },
+      choisir: "Choisir…",
+      enregistrer: "Enregistrer le versement",
+      annuler: "Annuler",
+      // Le paiement naît en attente : il reste à confirmer une fois la
+      // réception vérifiée sur le compte de l'opérateur.
+      enregistre: "Versement enregistré, en attente de confirmation.",
+      motifs: [
+        "Versement constaté sur le compte",
+        "Recharge demandée par téléphone",
+        "Régularisation d'un versement ancien",
+      ],
+      dialogue: {
+        titre: "Enregistrer ce versement",
+        consequence: "Le paiement naît en attente. Aucun crédit n'est octroyé tant que la réception n'est pas confirmée.",
       },
     },
 
@@ -755,6 +827,10 @@ export const fr = {
     conflict: "L'état a changé entre-temps. Rechargez avant de réessayer.",
     validation_failed: "La demande est mal formée.",
     reason_required: "Un motif est nécessaire, d'au moins six caractères.",
+    // Un palier retiré, un canal fermé, un compte de collecte désactivé : la
+    // demande est bien formée, c'est ce qu'elle vise qui ne se propose plus.
+    resource_inactive: "Ce choix n'est plus proposé. Rechargez pour voir ce qui reste disponible.",
+    insufficient_credits: "Il n'y a pas assez de crédits pour ce geste.",
     rate_limited: "Trop de demandes. Patientez un instant.",
     internal_error: "Le service a rencontré une erreur. Réessayez dans un instant.",
     account_suspended: "Ce compte est suspendu.",

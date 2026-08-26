@@ -4592,10 +4592,85 @@
     },
     "/me/persons": {
       "get": {
-        "summary": "Lister ses proches",
+        "summary": "Lister ses proches — le carnet, trié et paginé",
+        "description": "### Une enveloppe, non plus un tableau\n\n`{ persons, total }`. Le total sert « Voir plus · n restants » : un\ncurseur ne saurait pas le donner, et à l'échelle d'un carnet personnel le\ndécalage numéroté est exact.\n\n### Le tri, et sa direction\n\n`sort=date` (défaut) range sur la prochaine échéance, `sort=alpha` sur le\nnom. `direction=asc` (défaut) ou `desc` : « par date » ne dit rien tant\nqu'on ne sait pas de quel bout.\n\n**Une fiche sans date passe en FIN de liste dans les DEUX sens.** Jamais\nen tête à l'inversion : le carnet sert à voir qui a une date qui\napproche, et une fiche à compléter y occuperait la place de ce qui presse.\n\n**Changer de tri revient à la première page** — remettre `offset` à zéro.\nLe serveur ne s'en souvient pas, c'est au client de le faire.\n\n### Ce que chaque fiche porte pour sa ligne\n\n`notesCount` — les notes DURABLES seules, celles que rend\n`/me/persons/{id}/notes`. Compter aussi celles de circonstance ferait dire\n« 7 notes » à une fiche qui n'en montre que trois.\n\n`nextOccurrence` — nulle quand le proche n'a aucune date ; la ligne\naffiche alors « Compléter » à la place du décompte. `daysUntil` est signé.\n\nLes deux voyagent AVEC la fiche : les chercher autrement ferait un appel\npar proche, soit quarante-trois sur le carnet d'essai du handoff.\n\n### Le genre n'est pas dans ce contrat\n\nNi en lecture, ni en écriture, ni dans `/me/metadata`. Le carnet ne pose\npas la question ; tant que le champ traversait, la règle ne tenait que par\nla retenue du client. La colonne existe en base — c'est un signal de\ngénération de dernier recours, déduit côté serveur, jamais demandé.",
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "date",
+                    "alpha"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              ]
+            }
           }
         ],
         "responses": {
@@ -4604,117 +4679,161 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "displayName": {
-                        "type": "string"
-                      },
-                      "callingName": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "avatarUrl": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "isSelf": {
-                        "type": "boolean"
-                      },
-                      "relation": {
-                        "type": "string",
-                        "enum": [
-                          "famille_proche",
-                          "famille_etendue",
-                          "ami",
-                          "partenaire",
-                          "collegue",
-                          "relation_pro",
-                          "connaissance"
+                  "type": "object",
+                  "properties": {
+                    "persons": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "callingName": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "avatarUrl": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "isSelf": {
+                            "type": "boolean"
+                          },
+                          "relation": {
+                            "type": "string",
+                            "enum": [
+                              "famille_proche",
+                              "famille_etendue",
+                              "ami",
+                              "partenaire",
+                              "collegue",
+                              "relation_pro",
+                              "connaissance"
+                            ],
+                            "nullable": true
+                          },
+                          "relationHint": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "birthDate": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "birthYearKnown": {
+                            "type": "boolean"
+                          },
+                          "city": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "country": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "register": {
+                            "type": "string",
+                            "enum": [
+                              "familier",
+                              "amical",
+                              "formel"
+                            ],
+                            "nullable": true
+                          },
+                          "language": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "preferredChannel": {
+                            "type": "string",
+                            "enum": [
+                              "whatsapp",
+                              "sms",
+                              "email",
+                              "autre"
+                            ],
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "notesCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "nextOccurrence": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "occurrenceDate": {
+                                "type": "string"
+                              },
+                              "daysUntil": {
+                                "type": "integer"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "birthday",
+                                  "other"
+                                ]
+                              },
+                              "label": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "occurrenceDate",
+                              "daysUntil",
+                              "kind",
+                              "label"
+                            ],
+                            "additionalProperties": false,
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "displayName",
+                          "callingName",
+                          "avatarUrl",
+                          "isSelf",
+                          "relation",
+                          "relationHint",
+                          "birthDate",
+                          "birthYearKnown",
+                          "city",
+                          "country",
+                          "register",
+                          "language",
+                          "preferredChannel",
+                          "createdAt",
+                          "notesCount",
+                          "nextOccurrence"
                         ],
-                        "nullable": true
-                      },
-                      "relationHint": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "birthDate": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "birthYearKnown": {
-                        "type": "boolean"
-                      },
-                      "gender": {
-                        "type": "string",
-                        "enum": [
-                          "female",
-                          "male",
-                          "other",
-                          "unspecified"
-                        ],
-                        "nullable": true
-                      },
-                      "city": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "country": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "register": {
-                        "type": "string",
-                        "enum": [
-                          "familier",
-                          "amical",
-                          "formel"
-                        ],
-                        "nullable": true
-                      },
-                      "language": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "preferredChannel": {
-                        "type": "string",
-                        "enum": [
-                          "whatsapp",
-                          "sms",
-                          "email",
-                          "autre"
-                        ],
-                        "nullable": true
-                      },
-                      "createdAt": {
-                        "type": "string"
+                        "additionalProperties": false
                       }
                     },
-                    "required": [
-                      "id",
-                      "displayName",
-                      "callingName",
-                      "avatarUrl",
-                      "isSelf",
-                      "relation",
-                      "relationHint",
-                      "birthDate",
-                      "birthYearKnown",
-                      "gender",
-                      "city",
-                      "country",
-                      "register",
-                      "language",
-                      "preferredChannel",
-                      "createdAt"
-                    ],
-                    "additionalProperties": false
-                  }
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "persons",
+                    "total"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4961,15 +5080,6 @@
                   "birthYearKnown": {
                     "type": "boolean"
                   },
-                  "gender": {
-                    "type": "string",
-                    "enum": [
-                      "female",
-                      "male",
-                      "other",
-                      "unspecified"
-                    ]
-                  },
                   "city": {
                     "type": "string",
                     "maxLength": 120
@@ -5048,16 +5158,6 @@
                     "birthYearKnown": {
                       "type": "boolean"
                     },
-                    "gender": {
-                      "type": "string",
-                      "enum": [
-                        "female",
-                        "male",
-                        "other",
-                        "unspecified"
-                      ],
-                      "nullable": true
-                    },
                     "city": {
                       "type": "string",
                       "nullable": true
@@ -5091,6 +5191,45 @@
                     },
                     "createdAt": {
                       "type": "string"
+                    },
+                    "notesCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "nextOccurrence": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "occurrenceDate": {
+                          "type": "string"
+                        },
+                        "daysUntil": {
+                          "type": "integer"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "birthday",
+                            "other"
+                          ]
+                        },
+                        "label": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "occurrenceDate",
+                        "daysUntil",
+                        "kind",
+                        "label"
+                      ],
+                      "additionalProperties": false,
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -5103,13 +5242,14 @@
                     "relationHint",
                     "birthDate",
                     "birthYearKnown",
-                    "gender",
                     "city",
                     "country",
                     "register",
                     "language",
                     "preferredChannel",
-                    "createdAt"
+                    "createdAt",
+                    "notesCount",
+                    "nextOccurrence"
                   ],
                   "additionalProperties": false
                 }
@@ -5362,16 +5502,6 @@
                     "birthYearKnown": {
                       "type": "boolean"
                     },
-                    "gender": {
-                      "type": "string",
-                      "enum": [
-                        "female",
-                        "male",
-                        "other",
-                        "unspecified"
-                      ],
-                      "nullable": true
-                    },
                     "city": {
                       "type": "string",
                       "nullable": true
@@ -5405,6 +5535,45 @@
                     },
                     "createdAt": {
                       "type": "string"
+                    },
+                    "notesCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "nextOccurrence": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "occurrenceDate": {
+                          "type": "string"
+                        },
+                        "daysUntil": {
+                          "type": "integer"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "birthday",
+                            "other"
+                          ]
+                        },
+                        "label": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "occurrenceDate",
+                        "daysUntil",
+                        "kind",
+                        "label"
+                      ],
+                      "additionalProperties": false,
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -5417,13 +5586,14 @@
                     "relationHint",
                     "birthDate",
                     "birthYearKnown",
-                    "gender",
                     "city",
                     "country",
                     "register",
                     "language",
                     "preferredChannel",
-                    "createdAt"
+                    "createdAt",
+                    "notesCount",
+                    "nextOccurrence"
                   ],
                   "additionalProperties": false
                 }
@@ -5683,15 +5853,6 @@
                   "birthYearKnown": {
                     "type": "boolean"
                   },
-                  "gender": {
-                    "type": "string",
-                    "enum": [
-                      "female",
-                      "male",
-                      "other",
-                      "unspecified"
-                    ]
-                  },
                   "city": {
                     "type": "string",
                     "maxLength": 120
@@ -5767,16 +5928,6 @@
                     "birthYearKnown": {
                       "type": "boolean"
                     },
-                    "gender": {
-                      "type": "string",
-                      "enum": [
-                        "female",
-                        "male",
-                        "other",
-                        "unspecified"
-                      ],
-                      "nullable": true
-                    },
                     "city": {
                       "type": "string",
                       "nullable": true
@@ -5810,6 +5961,45 @@
                     },
                     "createdAt": {
                       "type": "string"
+                    },
+                    "notesCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "nextOccurrence": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "occurrenceDate": {
+                          "type": "string"
+                        },
+                        "daysUntil": {
+                          "type": "integer"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "birthday",
+                            "other"
+                          ]
+                        },
+                        "label": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "occurrenceDate",
+                        "daysUntil",
+                        "kind",
+                        "label"
+                      ],
+                      "additionalProperties": false,
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -5822,13 +6012,14 @@
                     "relationHint",
                     "birthDate",
                     "birthYearKnown",
-                    "gender",
                     "city",
                     "country",
                     "register",
                     "language",
                     "preferredChannel",
-                    "createdAt"
+                    "createdAt",
+                    "notesCount",
+                    "nextOccurrence"
                   ],
                   "additionalProperties": false
                 }
@@ -9605,18 +9796,6 @@
                         ]
                       }
                     },
-                    "personGenders": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": [
-                          "female",
-                          "male",
-                          "other",
-                          "unspecified"
-                        ]
-                      }
-                    },
                     "contactChannels": {
                       "type": "array",
                       "items": {
@@ -9637,7 +9816,6 @@
                     "scheduleUnits",
                     "personRelations",
                     "personRegisters",
-                    "personGenders",
                     "contactChannels"
                   ],
                   "additionalProperties": false

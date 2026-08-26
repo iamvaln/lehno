@@ -261,7 +261,7 @@ export function Liste({
               }}
               onExport={(format) => {
                 onExporter?.(format);
-                setAccuse(t.exporter.lance.replace("{n}", String(trouves.length)));
+                setAccuse(t.exporter.telecharge);
               }}
             />
           </RoleGate>

@@ -122,7 +122,8 @@ export const en: typeof fr = {
     formatJson: "JSON — raw data",
     journal: "The export shows up in the audit log.",
     encours: "Preparing the file…",
-    lance: "Export started on {n} rows. The file will arrive by email.",
+    // Voir fr.ts : the file downloads now, no email queue exists.
+    telecharge: "The file is ready: it has just been downloaded.",
   },
 
   // Voir fr.ts : un écran qui charge et un écran vide ne disent pas la même chose.
@@ -150,6 +151,27 @@ export const en: typeof fr = {
       titre: "No entries in this period",
       texte: "Every administrative action lands here, with its author, target and reason.",
     },
+    filtres: {
+      action: "Kind of action",
+      periode: "Period",
+      toutes: "All",
+      touteLaPeriode: "All time",
+      actions: {
+        user_status_update: "Account state change",
+        parameter_update: "Parameter change",
+        feature_flag_update: "Feature toggle",
+        credit_bundle_update: "Bundle change",
+        payment_channel_create: "Channel opened",
+        payment_channel_update: "Fee change",
+        collection_account_create: "Collection account opened",
+        collection_account_update: "Collection account change",
+        payment_manual_create: "Payment entered",
+        payment_decision: "Payment decision",
+        credit_adjustment: "Balance adjustment",
+        audit_log_export: "Audit log export",
+        login_activity_export: "Sign-ins export",
+      },
+    },
   },
 
   entrees: {
@@ -158,6 +180,12 @@ export const en: typeof fr = {
     col: { date: "When", compte: "Account", adresse: "Address tried", resultat: "Result", appareil: "Device", lieu: "Approximate location" },
     resultats: { success: "Signed in", failure: "Refused" },
     inconnu: "—",
+    filtres: {
+      resultat: "Result",
+      periode: "Period",
+      tous: "All",
+      touteLaPeriode: "All time",
+    },
     vide: {
       titre: "No attempts in this period",
       texte: "Every entry, successful or not, lands here with its device and approximate location.",
@@ -300,6 +328,40 @@ export const en: typeof fr = {
         titre: "Refuse this transfer",
         consequence: "No credits are granted. The reason will show on the payment.",
         motifs: ["Nothing arrived on the account", "Amount too low", "Receipt not acceptable"],
+      },
+    },
+
+    // Voir fr.ts : no free amount field — the bundle decides.
+    saisie: {
+      ouvrir: "Enter a transfer",
+      titre: "Enter a received transfer",
+      sous: "The transfer already happened. Record it here, then confirm once you have checked it arrived.",
+      champs: {
+        compteClient: "Account to credit",
+        palier: "Bundle bought",
+        canal: "Channel used",
+        compte: "Account that received",
+        numeroPayeur: "Payer's number",
+        reference: "Transaction reference",
+      },
+      apercu: {
+        titre: "What the client sends, and what should arrive",
+        aVerser: "The client sends",
+        attendu: "We should see",
+        credits: "Credits granted on confirmation",
+      },
+      choisir: "Choose…",
+      enregistrer: "Record the transfer",
+      annuler: "Cancel",
+      enregistre: "Transfer recorded, awaiting confirmation.",
+      motifs: [
+        "Transfer seen on the account",
+        "Top-up requested by phone",
+        "Settling an older transfer",
+      ],
+      dialogue: {
+        titre: "Record this transfer",
+        consequence: "The payment starts pending. No credits are granted until receipt is confirmed.",
       },
     },
 
@@ -707,6 +769,9 @@ export const en: typeof fr = {
     conflict: "Things changed in the meantime. Reload before trying again.",
     validation_failed: "That request is malformed.",
     reason_required: "A reason is required, at least six characters.",
+    // Voir fr.ts : the request is fine, what it points at is no longer offered.
+    resource_inactive: "That option is no longer offered. Reload to see what remains.",
+    insufficient_credits: "There aren't enough credits for that.",
     rate_limited: "Too many requests. Wait a moment.",
     internal_error: "The service hit an error. Try again in a moment.",
     account_suspended: "This account is suspended.",

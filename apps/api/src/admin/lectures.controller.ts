@@ -20,6 +20,10 @@ const connexionsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(LIMITE_MAX).optional(),
   cursor: z.string().uuid().optional(),
   result: z.enum(["success", "failure"]).optional(),
+  // « Filtres par utilisateur, par résultat, par période » (ux-admin §5.13).
+  // Le premier manquait : sans lui, documenter un incident sur un compte
+  // demandait de lire toute la table à l'œil.
+  utilisateurId: z.string().uuid().optional(),
   since: z.coerce.date().optional(),
 }).strict();
 
@@ -66,6 +70,7 @@ export class LecturesService {
     const lignes = await this.prisma.loginActivity.findMany({
       where: {
         ...(requete.result ? { result: requete.result } : {}),
+        ...(requete.utilisateurId ? { userId: requete.utilisateurId } : {}),
         ...(requete.since ? { createdAt: { gte: requete.since } } : {}),
       },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],

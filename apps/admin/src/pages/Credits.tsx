@@ -39,6 +39,9 @@ export interface CreditsProps {
   onFiltre?: (filtres: { etat?: string; mode?: string }) => void;
   onOuvrir?: (paiement: PaiementLigne) => void;
   onRetour?: (id: string) => void;
+  /** Ouvrir la saisie d'un versement. Absent, le geste n'est pas proposé —
+   *  c'est ainsi que le support ne voit pas ce que le serveur lui refuse. */
+  onSaisir?: (() => void) | undefined;
   onDecider?: (decision: {
     decision: "confirmer" | "rejeter";
     montantRecu?: number;
@@ -62,7 +65,7 @@ function duree(secondes: number): string {
 export function Credits({
   role, langue = "fr", onglet = "paiements", onOnglet,
   paiements = [], paiement = null, mouvements = [], paliers = [], canaux = [], comptes = [],
-  filtreEtat = "tous", filtreMode = "tous", onFiltre, onOuvrir, onRetour, onDecider,
+  filtreEtat = "tous", filtreMode = "tous", onFiltre, onOuvrir, onRetour, onSaisir, onDecider,
 }: CreditsProps): ReactNode {
   const t = messages(langue);
   const [montantRecu, setMontantRecu] = useState("");
@@ -305,7 +308,13 @@ export function Credits({
         libelle={t.fil.libelle}
         onNavigate={() => onRetour?.("tableau")}
       />
-      <PageHeader titre={t.credits.titre} sous={t.credits.sous} />
+      <PageHeader
+        titre={t.credits.titre}
+        sous={t.credits.sous}
+        {...(onSaisir && onglet === "paiements"
+          ? { actions: <Button onClick={onSaisir}>{t.credits.saisie.ouvrir}</Button> }
+          : {})}
+      />
 
       <PageTabs actif={onglet} onSelect={(id) => onOnglet?.(id as Onglet)} onglets={onglets} />
 

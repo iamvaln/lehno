@@ -58,6 +58,30 @@ GET /me/occurrences?personId={id}&from=2020-01-01
 
 ---
 
+## 3 bis. Le carnet : décompte, échéance, tri, pagination — nouveau
+
+`GET /me/persons` rend désormais une **enveloppe**, non plus un tableau :
+
+```json
+{ "persons": [ … ], "total": 43 }
+```
+
+Le total sert « Voir plus · n restants ». Un curseur ne saurait pas le donner, et à l'échelle d'un carnet personnel le décalage numéroté est exact.
+
+**Chaque fiche porte ce que sa ligne affiche** : `notesCount` — les notes durables seules, celles que rend `/me/persons/{id}/notes` —, et `nextOccurrence` (`id`, `occurrenceDate`, `daysUntil` signé, `kind`, `label`), **nulle** quand le proche n'a aucune date. La ligne affiche alors « Compléter » à la place du décompte.
+
+**Le tri et sa direction** : `?sort=date` (défaut) ou `alpha`, `?direction=asc` (défaut) ou `desc`. **Une fiche sans date passe en fin de liste dans les deux sens** — c'est fait côté serveur, rien à rejouer.
+
+**Changer de tri revient à la première page** : remettre `offset` à zéro. Le serveur ne s'en souvient pas.
+
+**La pagination** : `?offset=` et `?limit=`, vingt par défaut.
+
+### Le genre n'est plus dans le contrat
+
+Retiré de la lecture, de l'écriture, et de la liste de valeurs de `/me/metadata`. Le carnet ne pose pas la question ; tant que le champ traversait, la règle ne tenait que par la retenue du client. La colonne reste en base — signal de génération de dernier recours, déduit côté serveur, jamais demandé.
+
+---
+
 ## 4. Les drapeaux — ce que vous en faites
 
 La note complète est dans le contrat, sur `GET /me/features`, avec **la table de couverture des treize drapeaux** : écrans et chemins, engendrée depuis le registre du serveur. C'est la référence commune — ce que vous masquez et ce que le serveur ferme doivent désigner la même chose.
@@ -120,9 +144,11 @@ Chacun attend une table absente du schéma. Ne construisez pas de repli : les ch
 |---|---|
 | `GET /me/persons/{id}/portraits` | `GeneratedProfile` |
 | `GET` `POST /me/persons/{id}/gifts`, `PATCH` `DELETE /me/gifts/{id}` | `GiftGiven` |
-| `GET` `POST /me/occurrences/{id}/wishes`, `PATCH` `DELETE /me/wishes/{id}` | `WishlistItem` |
+| `GET` `POST /me/occurrences/{id}/wishes`, `PATCH` `DELETE /me/wishes/{id}` | rien — `WishlistItem` existe, à migrer vers `is_shortlisted` |
 | `/me/wishlists*`, `/me/owner-wishes/{id}` | `OwnerWish` |
 | `/me/account`, `/me/sessions`, `/me/identities` | rien — à construire |
+
+**Les souhaits de proches sont les plus proches d'arriver** : la table existe, elle porte encore `is_public` là où le modèle demande `is_shortlisted` — un repère personnel, invisible aux tiers, qui n'est pas une réservation. C'est une migration, pas une table à créer.
 
 **Celui qui pèse le plus est `GiftGiven`** : la maquette dit que la génération d'idées lit cette liste et écarte ce qui a déjà servi. Tant qu'elle manque, la première version des idées cadeaux reproposera le cadeau de l'an dernier. À prévoir dans le calendrier, pas dans le code.
 

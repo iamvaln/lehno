@@ -38,7 +38,7 @@ describe("les échéances", () => {
     await resetDatabase(db.prisma);
     const depot = new TenantRepository(db.prisma as never);
     events = new EventService(depot, db.prisma as never);
-    persons = new PersonService(depot, events);
+    persons = new PersonService(depot, events, db.prisma as never);
     occurrences = new OccurrenceService(depot, db.prisma as never);
     notes = new NoteService(depot, db.prisma as never);
     awa = await compte();
