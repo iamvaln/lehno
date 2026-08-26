@@ -25,6 +25,8 @@ import { PersonController } from "./me/person.controller.js";
 import { PersonService } from "./me/person.service.js";
 import { EventController } from "./me/event.controller.js";
 import { EventService } from "./me/event.service.js";
+import { OccurrenceController } from "./me/occurrence.controller.js";
+import { OccurrenceService } from "./me/occurrence.service.js";
 import { NoteController, NotesController } from "./me/note.controller.js";
 import { NoteService } from "./me/note.service.js";
 import { TenantRepository } from "./tenancy/tenant.repository.js";
@@ -52,7 +54,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
 
 @Module({
   controllers: [
-    AuthController, ProfileController, PersonController, EventController, NoteController, NotesController, ConfigController, LegalController,
+    AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, ConfigController, LegalController,
     MeFeaturesController, PublicFeaturesController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
@@ -124,6 +126,7 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
     ProfileService,
     TenantRepository,
     EventService,
+    OccurrenceService,
     PersonService,
     NoteService,
     ConfigService,

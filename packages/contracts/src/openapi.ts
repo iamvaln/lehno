@@ -26,7 +26,10 @@ import {
   personSchema, createPersonSchema, updatePersonSchema,
   noteSchema, createNoteSchema, createNotesSchema,
 } from "./me.js";
-import { eventSchema, createEventSchema, updateEventSchema } from "./me-events.js";
+import {
+  eventSchema, createEventSchema, updateEventSchema,
+  occurrenceSchema, listOccurrencesQuerySchema,
+} from "./me-events.js";
 import { featuresResponseSchema } from "./flags.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
 
@@ -477,6 +480,47 @@ const CHEMINS: Chemin[] = [
     parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
     sansContenu: true,
     statut: 204,
+  },
+  // ——— me/occurrences (apps/api/src/me) ——————————————————————————————
+  {
+    // Le MÊME appel sert l'accueil (trois échéances) et l'écran Dates (un
+    // mois) : c'est la fenêtre et le plafond qui varient, pas le chemin
+    // (spécification §5.2).
+    chemin: "/me/occurrences",
+    methode: "get",
+    resume: "Lister ses échéances, dans une fenêtre de dates et un plafond",
+    authentifie: true,
+    note: [
+      "`from` vaut aujourd'hui par défaut, `limit` vaut 50 à défaut d'une",
+      "valeur explicite : l'accueil en demande trois, l'écran Dates un mois.",
+      "",
+      "`status` est DÉRIVÉ à la lecture, jamais lu tel quel dans la base :",
+      "`upcoming` avant la fenêtre de vœux, `collecting` dedans, `closed`",
+      "après. La fenêtre vaut [date − wish_window_lead_days, date +",
+      "wish_window_trail_days], réglable en administration.",
+      "",
+      "`daysUntil` est SIGNÉ — négatif pour une échéance passée.",
+      "",
+      "`age` se calcule depuis la naissance du proche, jamais depuis la date",
+      "de l'échéance. Nul quand l'année de naissance n'est pas connue.",
+      "",
+      "Chaque échéance porte `personDisplayName` : le nom du proche voyage",
+      "avec elle, sans quoi chaque carte d'une liste demanderait sa fiche.",
+    ].join("\n"),
+    parametres: [
+      { nom: "from", dans: "query", schema: listOccurrencesQuerySchema.shape.from, requis: false },
+      { nom: "to", dans: "query", schema: listOccurrencesQuerySchema.shape.to, requis: false },
+      { nom: "limit", dans: "query", schema: listOccurrencesQuerySchema.shape.limit, requis: false },
+    ],
+    reponse: z.array(occurrenceSchema),
+  },
+  {
+    chemin: "/me/occurrences/{id}",
+    methode: "get",
+    resume: "Lire le détail d'une échéance",
+    authentifie: true,
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    reponse: occurrenceSchema,
   },
 ];
 
