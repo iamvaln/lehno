@@ -15,6 +15,7 @@ export const en = {
     reason_required: "This action needs a reason — the audit log keeps it.",
     // Voir fr.ts : the request is fine, what it points at is no longer offered.
     resource_inactive: "That option is no longer offered. Reload to see what remains available.",
+    insufficient_credits: "There aren't enough credits for that.",
     otp_rate_limited: "You've already asked for several codes. Give it a moment before requesting another.",
     username_taken: "That username is already taken.",
     username_invalid: "That username doesn't work.",

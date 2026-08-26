@@ -1,6 +1,6 @@
 import { Body, Controller, HttpCode, Inject, Injectable, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
-import { decisionPaiementSchema, saisiePaiementSchema } from "@lehno/contracts";
+import { ajustementCreditsSchema, decisionPaiementSchema, saisiePaiementSchema } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -221,6 +221,69 @@ export class AdminPaymentsService {
       throw echec;
     }
   }
+
+  /**
+   * Ajuster à la main le solde d'un compte.
+   *
+   * Le montant est **signé** : positif pour créditer, négatif pour reprendre.
+   * Un champ « sens » séparé se désynchroniserait du signe au premier oubli, et
+   * le mouvement écrit ne dirait plus ce qu'on a voulu faire.
+   *
+   * Le motif se garde **sur le mouvement** autant qu'au journal. Le journal
+   * porte la vue transverse des gestes d'administration ; la note sur le
+   * mouvement explique cette ligne-là, à qui lit l'historique d'un compte sans
+   * ouvrir le journal.
+   */
+  async ajuster(auteurId: string, utilisateurId: string, entree: z.infer<typeof ajustementCreditsSchema>) {
+    const client = await this.prisma.user.findUnique({
+      where: { id: utilisateurId }, select: { id: true },
+    });
+    if (!client) throw new AppError("not_found", "unknown user");
+
+    return this.prisma.$transaction(async (tx) => {
+      // Verrou consultatif sur le compte, comme pour le plafond d'appareil.
+      //
+      // Lire le solde dans la transaction ne suffit pas : sous READ COMMITTED,
+      // deux reprises concurrentes le liraient toutes deux suffisant avant
+      // qu'aucune n'écrive, et le compte finirait négatif. Aucune contrainte de
+      // base ne peut l'empêcher — « la somme des mouvements reste positive »
+      // n'est pas exprimable en CHECK.
+      await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${utilisateurId}))`;
+
+      // Le solde est la somme des mouvements : aucune colonne ne le stocke,
+      // donc aucune ne peut se désynchroniser.
+      const somme = await tx.creditTransaction.aggregate({
+        where: { userId: utilisateurId }, _sum: { amount: true },
+      });
+      const avant = somme._sum.amount ?? 0;
+      const apres = avant + entree.montant;
+
+      // Un solde négatif signifierait qu'une action payante s'est lancée sans
+      // provision : c'est un défaut du serveur, pas un état à écrire.
+      if (apres < 0) throw new AppError("insufficient_credits", "adjustment would leave a negative balance");
+
+      await tx.creditTransaction.create({
+        data: {
+          userId: utilisateurId,
+          type: "adjustment",
+          source: "admin_adjustment",
+          amount: entree.montant,
+          reason: entree.reason,
+        },
+      });
+
+      await this.journal.consigner({
+        auteurId,
+        action: "credit_adjustment",
+        motif: entree.reason,
+        cibleType: "user",
+        cibleId: utilisateurId,
+        details: { amount: entree.montant, from: avant, to: apres },
+      }, tx);
+
+      return { utilisateurId, montant: entree.montant, solde: apres };
+    });
+  }
 }
 
 /** P2002 : violation d'une contrainte d'unicité. */
@@ -255,5 +318,29 @@ export class AdminPaymentsController {
     @Req() requete: { admin?: { id: string } },
   ) {
     return this.service.decider(requete.admin?.id ?? "", id, corps);
+  }
+}
+
+/**
+ * L'ajustement d'un solde vit sous le compte qu'il touche, pas sous les
+ * paiements : c'est un geste sur un compte, et c'est là qu'on le cherche.
+ *
+ * « Ajuster manuellement un solde de crédits » figure parmi ce que le support
+ * ne fait pas (ux-admin §6).
+ */
+@Controller("admin/users")
+@UseGuards(AdminGuard, RoleGuard)
+@Role("admin")
+export class AdminCreditsController {
+  constructor(@Inject(AdminPaymentsService) private readonly service: AdminPaymentsService) {}
+
+  @Post(":id/credits")
+  @HttpCode(200)
+  ajuster(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(ajustementCreditsSchema)) corps: z.infer<typeof ajustementCreditsSchema>,
+    @Req() requete: { admin?: { id: string } },
+  ) {
+    return this.service.ajuster(requete.admin?.id ?? "", id, corps);
   }
 }

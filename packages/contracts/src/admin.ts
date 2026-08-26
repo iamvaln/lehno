@@ -613,3 +613,26 @@ export const pageMouvementsSchema = z.object({
 export type PaiementLigne = z.infer<typeof paiementLigneSchema>;
 export type PaiementDetail = z.infer<typeof paiementDetailSchema>;
 export type MouvementCredit = z.infer<typeof mouvementCreditSchema>;
+
+// ——— L'ajustement manuel d'un solde ——————————————————————————
+
+/**
+ * « Ajuster manuellement le solde d'un utilisateur, avec motif obligatoire »
+ * (ux-admin §5.4).
+ *
+ * Le montant est **signé** : positif pour créditer, négatif pour reprendre. Un
+ * champ « sens » séparé se désynchroniserait du signe au premier oubli, et le
+ * mouvement écrit ne dirait plus ce qu'on a voulu faire.
+ */
+export const ajustementCreditsSchema = z.object({
+  montant: z.number().int().refine((n) => n !== 0, "un ajustement de zéro ne dit rien"),
+  reason: motifSchema,
+}).strict();
+
+export const soldeApresAjustementSchema = z.object({
+  utilisateurId: z.string(),
+  montant: z.number().int(),
+  solde: z.number().int().nonnegative(),
+}).strict();
+
+export type AjustementCredits = z.infer<typeof ajustementCreditsSchema>;

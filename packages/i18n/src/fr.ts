@@ -16,6 +16,7 @@ export const fr = {
     // Un palier retiré, un canal fermé, un compte de collecte désactivé : la
     // demande est bien formée, c'est ce qu'elle vise qui ne se propose plus.
     resource_inactive: "Ce choix n'est plus proposé. Rechargez la page pour voir ce qui reste disponible.",
+    insufficient_credits: "Il n'y a pas assez de crédits pour ce geste.",
     otp_rate_limited: "Vous avez demandé plusieurs codes. Patientez un instant.",
     username_taken: "Ce pseudo est déjà pris.",
     username_invalid: "Ce pseudo ne convient pas.",
