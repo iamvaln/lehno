@@ -82,7 +82,7 @@ Le lot `mobile app.zip`, plus récent, annonce dans ses corrections :
 
 Cet état n'est dessiné nulle part.
 
-**Le serveur fait déjà exactement ce que le lot récent décrit** : la vérification du code répond soit « session ouverte » pour un compte existant — donc droit à l'accueil —, soit « à inscrire » pour un nouveau, qui seul passe par le pseudo. Il n'y a rien à changer côté API ; il manque un état d'écran.
+Le serveur distingue déjà les deux cas : un compte existant ouvre une session — donc droit à l'accueil —, un compte nouveau passe par le pseudo. Il manque l'état d'écran qui le montre.
 
 **À reprendre** : le quatrième état de `CodeScreen`, et le mot du README qui dit que le pseudo n'est plus sur le chemin de tout le monde.
 
@@ -129,10 +129,9 @@ Le lot `mobile app.zip` les nomme dans son README, ils sont repris ici pour mém
 
 L'écran est juste — l'attente est un mois qui se remplit plutôt qu'un sablier, le mouvement se coupe sans casser la mise en page, « Réessayer » reste en contour parce que le résultat ne dépend pas de l'utilisateur. Et il ne se confond pas avec l'absence de réseau, ce qui est précisément le piège.
 
-Deux points :
+Un seul point : **« Voir l'état du service » ne mène nulle part.** Il n'y a pas de page d'état. Soit on en ouvre une, soit le lien disparaît — un lien mort sur l'écran qui annonce que le service est en panne est le pire endroit possible.
 
-- **« Voir l'état du service » ne mène nulle part.** Il n'y a pas de page d'état. Soit on en ouvre une, soit le lien disparaît — un lien mort sur l'écran qui dit « le service est en panne » est le pire endroit possible.
-- **L'heure de retour** : côté serveur, je ne sais aujourd'hui rendre qu'un délai avant de réessayer, jamais une heure annoncée. **C'est mon travail, pas le vôtre** — l'écran a raison de prévoir les deux états, et je pose le champ qui manque. Gardez « sans heure de retour » : « pas de "bientôt", pas d'estimation inventée » est la bonne règle.
+Les deux états — avec et sans heure de retour — sont à garder tels quels. « Pas de "bientôt", pas d'estimation inventée » est la bonne règle.
 
 ---
 
@@ -164,7 +163,7 @@ Ces points divergent de la spécification, **et c'est le dessin qui a raison**. 
 
 À signaler parce que ça n'arrive pas tout seul.
 
-- **Le contrôle du genre est mécanique**, pas humain — « la règle s'est fait contourner trois fois de suite par de la relecture ». Les cinq lots ne contiennent le mot que dans le commentaire qui l'interdit. Le serveur a pris la même décision de son côté, sans concertation : le champ est sorti du contrat, il n'est plus seulement « non demandé », il est inécrivable.
-- **Aucune chaîne hors du dictionnaire, et aucun repli français** — « un appel qui oublie `t` plante au lieu de s'afficher dans la mauvaise langue ». C'est le pendant exact de la règle serveur : des codes d'erreur, jamais des phrases.
+- **Le contrôle du genre est mécanique**, pas humain — « la règle s'est fait contourner trois fois de suite par de la relecture ». Les cinq lots ne contiennent le mot que dans le commentaire qui l'interdit.
+- **Aucune chaîne hors du dictionnaire, et aucun repli français** — « un appel qui oublie `t` plante au lieu de s'afficher dans la mauvaise langue ».
 - **L'expiration d'un paiement** est dessinée. C'est l'état que tout le monde oublie, et sans lui une somme reste inexpliquée.
 - **Le lien de vœux porte son état fermé.** Hors fenêtre, il n'accepte plus de messages, et l'écran le dit.
