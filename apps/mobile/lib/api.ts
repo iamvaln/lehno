@@ -34,16 +34,22 @@ function adresseCourante(): string | null {
 /* Une couture, et une seule : tout appel qui échoue passe par ici avant de
    remonter à l'appelant. C'est ainsi qu'un arrêt commencé au milieu d'une
    séance se découvre — sans que chaque écran ait à y penser, ce qu'aucun
-   écran ne ferait de façon fiable. */
-type Temoin = (erreur: unknown) => void;
-let temoin: Temoin | null = null;
+   écran ne ferait de façon fiable. Il suffirait d'un oubli pour qu'une
+   surface reste seule devant un mur.
 
-export function surEchec(observateur: Temoin | null): void {
-  temoin = observateur;
+   Plusieurs abonnés : l'arrêt et les drapeaux lisent les mêmes échecs pour
+   des raisons différentes. Un abonné unique ferait que le second inscrit
+   déloge le premier, en silence. */
+type Temoin = (erreur: unknown) => void;
+const temoins = new Set<Temoin>();
+
+export function surEchec(observateur: Temoin): () => void {
+  temoins.add(observateur);
+  return () => { temoins.delete(observateur); };
 }
 
 function signaleLEchec(erreur: unknown): never {
-  temoin?.(erreur);
+  for (const temoin of temoins) temoin(erreur);
   throw erreur;
 }
 
@@ -54,10 +60,24 @@ export class SansAdresseDApi extends Error {
   }
 }
 
+/* Ce que le client ne peut pas deviner seul : la surface visée était-elle
+   gouvernée par un drapeau. Sur une surface gouvernée, un `404 not_found`
+   ne dit pas « cette chose n'existe pas » mais « cette fonctionnalité vous
+   a été retirée depuis votre dernière lecture ». Sur le socle, c'est
+   l'inverse — un proche supprimé rend le même code, et relire les drapeaux
+   à chaque fois ferait un rappel serveur pour rien.
+
+   D'où le défaut : NON gouvernée. Le socle est la majorité des appels, et
+   les rares surfaces sous drapeau le déclarent. */
+export interface OptionsDAppel extends RequestInit {
+  gouvernee?: boolean;
+}
+
 export class ErreurDApi extends Error {
   constructor(
     readonly statut: number,
     readonly enveloppe: ErrorEnvelope | null,
+    readonly gouvernee = false,
   ) {
     super(enveloppe?.message ?? `HTTP ${statut}`);
     this.name = "ErreurDApi";
@@ -92,9 +112,10 @@ async function envoie(chemin: string, options: RequestInit, jeton?: string): Pro
 }
 
 /* Appelle une surface publique — pas de jeton, pas de renouvellement. */
-export async function appelPublic<T>(chemin: string, options: RequestInit = {}): Promise<T> {
-  const reponse = await envoie(chemin, options);
-  if (!reponse.ok) signaleLEchec(new ErreurDApi(reponse.status, await litLEnveloppe(reponse)));
+export async function appelPublic<T>(chemin: string, options: OptionsDAppel = {}): Promise<T> {
+  const { gouvernee = false, ...requete } = options;
+  const reponse = await envoie(chemin, requete);
+  if (!reponse.ok) signaleLEchec(new ErreurDApi(reponse.status, await litLEnveloppe(reponse), gouvernee));
   return reponse.status === 204 ? (undefined as T) : ((await reponse.json()) as T);
 }
 
@@ -112,12 +133,13 @@ async function renouvelle(rafraichissement: string): Promise<boolean> {
    rejoue. Efface la session quand le serveur dit qu'elle n'a plus lieu d'être —
    rester connecté sur un compte suspendu donnerait une application qui échoue à
    chaque geste sans dire pourquoi. */
-export async function appel<T>(chemin: string, options: RequestInit = {}): Promise<T> {
+export async function appel<T>(chemin: string, options: OptionsDAppel = {}): Promise<T> {
+  const { gouvernee = false, ...requete } = options;
   const jetons = await litLesJetons();
   // Pas de session : rien à signaler, ce n'est pas un échec du serveur.
   if (!jetons) throw new ErreurDApi(401, null);
 
-  let reponse = await envoie(chemin, options, jetons.acces);
+  let reponse = await envoie(chemin, requete, jetons.acces);
 
   if (!reponse.ok) {
     const enveloppe = await litLEnveloppe(reponse);
@@ -128,11 +150,11 @@ export async function appel<T>(chemin: string, options: RequestInit = {}): Promi
         signaleLEchec(new ErreurDApi(401, enveloppe));
       }
       const neufs = await litLesJetons();
-      reponse = await envoie(chemin, options, neufs?.acces);
-      if (!reponse.ok) signaleLEchec(new ErreurDApi(reponse.status, await litLEnveloppe(reponse)));
+      reponse = await envoie(chemin, requete, neufs?.acces);
+      if (!reponse.ok) signaleLEchec(new ErreurDApi(reponse.status, await litLEnveloppe(reponse), gouvernee));
     } else {
       if (sortDeLaSession(enveloppe?.code ?? null)) await effaceLesJetons();
-      signaleLEchec(new ErreurDApi(reponse.status, enveloppe));
+      signaleLEchec(new ErreurDApi(reponse.status, enveloppe, gouvernee));
     }
   }
 

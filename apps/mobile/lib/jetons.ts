@@ -21,9 +21,29 @@ export interface Jetons {
   rafraichissement: string;
 }
 
+/* Qui change de session le dit ici. Les drapeaux en dépendent : la liste
+   résolue est celle DU COMPTE, et rester sur la liste publique après une
+   connexion masquerait des écrans auxquels la personne a droit.
+
+   L'annonce vit avec la pose, pas dans les écrans. Il y a deux entrées
+   aujourd'hui — la connexion et l'inscription — et il y en aura d'autres ;
+   celle qu'on ajouterait sans y penser serait précisément celle qui casse. */
+type Temoin = () => void;
+const temoins = new Set<Temoin>();
+
+export function surChangementDeSession(observateur: Temoin): () => void {
+  temoins.add(observateur);
+  return () => { temoins.delete(observateur); };
+}
+
+function annonce(): void {
+  for (const temoin of temoins) temoin();
+}
+
 export async function poseLesJetons(session: Session): Promise<void> {
   await SecureStore.setItemAsync(ACCES, session.accessToken);
   await SecureStore.setItemAsync(RAFRAICHISSEMENT, session.refreshToken);
+  annonce();
 }
 
 export async function litLesJetons(): Promise<Jetons | null> {
@@ -42,4 +62,5 @@ export async function effaceLesJetons(): Promise<void> {
     SecureStore.deleteItemAsync(ACCES),
     SecureStore.deleteItemAsync(RAFRAICHISSEMENT),
   ]);
+  annonce();
 }

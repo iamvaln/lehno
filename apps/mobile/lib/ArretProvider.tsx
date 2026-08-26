@@ -69,8 +69,7 @@ export function ArretProvider({ children }: { children: ReactNode }) {
   // Le client signale tout échec ici : un arrêt se découvre sur n'importe quel
   // appel, pas seulement au démarrage.
   useEffect(() => {
-    surEchec(signale);
-    return () => surEchec(null);
+    return surEchec(signale);
   }, [signale]);
 
   // Le décompte, puis une interrogation quand il tombe à zéro. Pas de rappel

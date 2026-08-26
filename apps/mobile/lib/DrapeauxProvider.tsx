@@ -1,7 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 import { estActive, featuresSchema } from "@lehno/contracts";
-import { appel } from "./api.js";
+import { appel, appelPublic, ErreurDApi, surEchec } from "./api.js";
+import { litLesJetons, surChangementDeSession } from "./jetons.js";
+import { exigeDeRelireLesDrapeaux } from "./arret.js";
 import { doitRecharger, etatDeRepli } from "./drapeaux.js";
 
 /* Ce que le produit propose en ce moment.
@@ -11,6 +13,16 @@ import { doitRecharger, etatDeRepli } from "./drapeaux.js";
  * refuse un appel visant une fonctionnalité éteinte. Le client masque, et ne
  * décide de rien : le jour où l'activation deviendra sélective, rien ne changera
  * ici.
+ *
+ * DEUX CHEMINS, jamais les deux ensemble. Connecté, `/me/features` rend la
+ * liste résolue POUR CE COMPTE. Déconnecté, `/public/features` rend ce que
+ * l'application propose à tout le monde — sans quoi l'écran de connexion
+ * appellerait un chemin authentifié et recevrait un `401` à chaque démarrage.
+ *
+ * Elle se recharge aussi sur un `404` reçu d'une surface gouvernée : entre
+ * notre lecture et cet appel, la fonctionnalité a été éteinte. Relire vaut
+ * mieux qu'afficher une erreur — l'écran disparaît alors de lui-même, ce qui
+ * est la vérité, au lieu de rester là en échouant.
  *
  * La liste se recharge au retour au premier plan, avec un délai de grâce : une
  * fonctionnalité éteinte en administration atteint ainsi un téléphone resté
@@ -34,7 +46,10 @@ export function DrapeauxProvider({ children }: { children: ReactNode }) {
     if (!force && !doitRecharger(dernierAppel.current, Date.now())) return;
     dernierAppel.current = Date.now();
     try {
-      const brut = await appel<unknown>("/me/features");
+      const connecte = (await litLesJetons()) !== null;
+      const brut = connecte
+        ? await appel<unknown>("/me/features")
+        : await appelPublic<unknown>("/public/features");
       setActives(featuresSchema.parse(brut).features);
     } catch {
       /* Un échec n'efface pas ce qu'on savait : garder la liste précédente vaut
@@ -45,6 +60,20 @@ export function DrapeauxProvider({ children }: { children: ReactNode }) {
       setCharge(true);
     }
   }, []);
+
+  /* Le `404` d'une surface gouvernée est un désaccord entre notre liste et
+     celle du serveur. C'est le serveur qui a raison : on relit, sans forcer,
+     pour qu'une rafale de `404` ne devienne pas une rafale d'appels. */
+  useEffect(() => surEchec((erreur) => {
+    if (!(erreur instanceof ErreurDApi)) return;
+    if (!exigeDeRelireLesDrapeaux(erreur.statut, erreur.code, { gouvernee: erreur.gouvernee })) return;
+    void demande();
+  }), [demande]);
+
+  // Connexion, inscription, déconnexion : la liste résolue change avec le
+  // compte. On force — le délai de grâce protège des rafales, pas d'un
+  // changement d'identité, qui n'arrive pas deux fois par minute.
+  useEffect(() => surChangementDeSession(() => { void demande(true); }), [demande]);
 
   useEffect(() => {
     void demande(true);
