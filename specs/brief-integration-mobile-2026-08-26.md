@@ -120,9 +120,11 @@ Chacun attend une table absente du schéma. Ne construisez pas de repli : les ch
 |---|---|
 | `GET /me/persons/{id}/portraits` | `GeneratedProfile` |
 | `GET` `POST /me/persons/{id}/gifts`, `PATCH` `DELETE /me/gifts/{id}` | `GiftGiven` |
-| `GET` `POST /me/occurrences/{id}/wishes`, `PATCH` `DELETE /me/wishes/{id}` | `WishlistItem` |
+| `GET` `POST /me/occurrences/{id}/wishes`, `PATCH` `DELETE /me/wishes/{id}` | rien — `WishlistItem` existe, à migrer vers `is_shortlisted` |
 | `/me/wishlists*`, `/me/owner-wishes/{id}` | `OwnerWish` |
 | `/me/account`, `/me/sessions`, `/me/identities` | rien — à construire |
+
+**Les souhaits de proches sont les plus proches d'arriver** : la table existe, elle porte encore `is_public` là où le modèle demande `is_shortlisted` — un repère personnel, invisible aux tiers, qui n'est pas une réservation. C'est une migration, pas une table à créer.
 
 **Celui qui pèse le plus est `GiftGiven`** : la maquette dit que la génération d'idées lit cette liste et écarte ce qui a déjà servi. Tant qu'elle manque, la première version des idées cadeaux reproposera le cadeau de l'an dernier. À prévoir dans le calendrier, pas dans le code.
 
