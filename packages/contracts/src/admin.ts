@@ -341,3 +341,51 @@ export const catalogueIaSchema = z.object({
 
 export type ModeleIa = z.infer<typeof modeleIaSchema>;
 export type CatalogueIa = z.infer<typeof catalogueIaSchema>;
+
+// ——— Drapeaux de fonctionnalité ————————————————————————————————
+
+/**
+ * Un drapeau, avec ce qu'il gouverne et ce qu'il emporte.
+ *
+ * Deux états, et la distinction n'est pas un détail. `actif` est ce que
+ * l'interrupteur dit ; `effectif` est ce qui se produit vraiment, dépendances
+ * résolues. Un drapeau allumé dont un prérequis est éteint reste inerte : ne
+ * montrer que le premier laisserait croire qu'une fonctionnalité tourne alors
+ * que personne ne la voit.
+ *
+ * `emporte` est l'inverse de `requiert`, calculé de proche en proche : ce que
+ * l'extinction de ce drapeau éteindra en cascade. C'est ce que le §5.7 demande
+ * d'annoncer **avant** la bascule, plutôt que de le laisser découvrir.
+ *
+ * Couverture, dépendances et portée viennent du registre — il est en code, et
+ * c'est le serveur qui le lit. Le back-office ne duplique rien.
+ */
+export const drapeauAdminSchema = z.object({
+  cle: z.string(),
+  gouverne: z.string(),
+  portee: z.array(z.enum(["app", "public"])),
+  requiert: z.array(z.string()),
+  /** Ce que l'éteindre éteindra aussi, transitivement. */
+  emporte: z.array(z.string()),
+  ecrans: z.array(z.string()),
+  chemins: z.array(z.string()),
+  actif: z.boolean(),
+  effectif: z.boolean(),
+  misAJourLe: z.string(),
+  /** Qui a basculé en dernier. Nul tant que personne n'y a touché. */
+  parQui: z.string().nullable(),
+}).strict();
+
+export const drapeauxAdminSchema = z.object({
+  items: z.array(drapeauAdminSchema),
+}).strict();
+
+/** La bascule. Le motif est obligatoire : chaque changement est journalisé. */
+export const basculeDrapeauSchema = z.object({
+  cle: z.string().min(1).max(64),
+  actif: z.boolean(),
+  reason: motifSchema,
+}).strict();
+
+export type DrapeauAdmin = z.infer<typeof drapeauAdminSchema>;
+export type DrapeauxAdmin = z.infer<typeof drapeauxAdminSchema>;
