@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Headers, HttpCode, Inject, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Headers, HttpCode, Inject, Ip, Post } from "@nestjs/common";
 import { z } from "zod";
 import { AdminOtpService } from "./admin-otp.service.js";
 import { AdminTokenService } from "./admin-token.service.js";
@@ -46,10 +46,11 @@ export class AdminAuthController {
   @HttpCode(200)
   async verifier(
     @Body(new ZodValidationPipe(verificationSchema)) corps: z.infer<typeof verificationSchema>,
+    @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
   ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number; role: string }> {
     const admin = await this.otp.verifier(corps.email, corps.code);
-    const paire = await this.jetons.ouvrir(admin.id, userAgent);
+    const paire = await this.jetons.ouvrir(admin.id, userAgent, ip);
     return { ...paire, role: admin.role };
   }
 
@@ -61,9 +62,10 @@ export class AdminAuthController {
   @HttpCode(200)
   async rafraichir(
     @Body(new ZodValidationPipe(rafraichissementSchema)) corps: { refreshToken: string },
+    @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
   ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number; role: string }> {
-    return this.jetons.tourner(corps.refreshToken, userAgent);
+    return this.jetons.tourner(corps.refreshToken, userAgent, ip);
   }
 
   @Delete("session")

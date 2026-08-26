@@ -158,7 +158,7 @@ export class AuthService {
         userAgent: input.userAgent ?? null,
       },
     });
-    const pair = await this.tokens.issuePair(creation.user.id, input.userAgent);
+    const pair = await this.tokens.issuePair(creation.user.id, input.userAgent, input.ip);
 
     // Le DÉTAIL, pas un total : cadeau de bienvenue et bonus de parrainage
     // sont deux gestes distincts, et l'un des deux se mérite. Les confondre
@@ -262,7 +262,7 @@ export class AuthService {
     }
 
     await this.recordAttempt(input, user.id, "success");
-    const pair = await this.tokens.issuePair(user.id, input.userAgent);
+    const pair = await this.tokens.issuePair(user.id, input.userAgent, input.ip);
     return { outcome: "session" as const, ...pair, isNewAccount };
   }
 }
