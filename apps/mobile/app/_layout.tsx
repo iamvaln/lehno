@@ -49,9 +49,9 @@ export default function Racine() {
             afficherait « undefined » à chaque libellé. */}
         <LangueProvider>
           {/* Les drapeaux enveloppent la navigation : un écran qui se monte
-              avant eux montrerait ce que le serveur refuse. Sans session,
-              `appel` lève avant tout appel réseau — le fournisseur ne harcèle
-              donc pas le serveur pendant la connexion. */}
+              avant eux montrerait ce que le serveur refuse. Sans session, la
+              liste vient de `/public/features` : le parcours d'entrée a la
+              sienne, il n'appelle pas un chemin authentifié pour rien. */}
           {/* L'arrêt enveloppe TOUT, drapeaux compris : pendant une
               intervention, /auth/* et /public/config répondent 503 eux aussi.
               Un écran d'attente posé seulement après la connexion laisserait
