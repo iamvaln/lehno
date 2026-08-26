@@ -56,6 +56,69 @@ l'affichage, une contraint ce que le produit propose.** Se tromper sur
 
 ---
 
+### A4. Les adresses IP étaient en base, et vides
+
+**Où** : `dictionnaire-donnees-lehno.md`, `LoginActivity` et `DeviceSignup` ·
+`ux-admin-lehno.md` §5.13.
+
+**Ce qui était** : la migration d'identité crée trois colonnes `ip` —
+`login_activity`, `device_signup`, `refresh_token` — avec ce commentaire :
+« conservées pour investigation, **jamais lues par le client Prisma** ».
+L'intention protégeait de l'exposition accidentelle, en ne les modélisant pas.
+
+**L'effet qu'on n'avait pas prévu** : Prisma ne peut pas écrire une colonne
+qu'il ne modélise pas. Les trois sont donc restées **vides depuis le premier
+jour**. Une trace d'investigation qui ne contient rien ne protège de rien.
+
+**Ce qui a été décidé** (26/08/2026, porteur du projet) : l'adresse sert, elle
+s'enregistre. Le modèle porte désormais `login_activity.ip` et
+`device_signup.ip`, et la garde contre l'exposition devient un test plutôt
+qu'une absence — `/admin/login-activity` ne la rend pas, et le contrat publié
+n'a aucun champ pour la recevoir. Ce que l'écran montre reste le lieu
+approximatif.
+
+**Reste à faire** : `refresh_token.ip` n'est toujours pas modélisée ni écrite.
+
+### A5. La voie d'entrée manquait au dictionnaire
+
+**Où** : `ux-admin-lehno.md` §5.13 contre `dictionnaire-donnees-lehno.md`,
+`LoginActivity`.
+
+**Le conflit** : la section d'administration demande « leur **voie** (code,
+Google, Apple) ». Le dictionnaire ne prévoit pas ce champ, et le schéma ne
+l'avait pas. Sans lui, une série d'échecs par code ne se distingue pas d'une
+série par fournisseur externe — or c'est l'usage que la section annonce.
+
+**Ce qui a été fait** : `login_method` (`otp` | `google` | `apple`) et
+`login_activity.method`, renseignée aux deux points d'écriture. **À reporter au
+dictionnaire.**
+
+**Une citation inventée, au passage** : un commentaire de
+`apps/api/src/admin/lectures.controller.ts` justifiait l'absence d'adresse en
+citant « spécification technique §9 ». Cette section porte sur les droits
+d'accès et ne dit rien de l'adresse. La citation a été retirée.
+
+### A6. L'index partiel n'est pas ce qui permet plusieurs nuls
+
+**Où** : `dictionnaire-donnees-lehno.md`, `Payment.provider_ref`.
+
+**Ce qui est écrit** : « L'unicité porte donc sur les valeurs présentes (index
+unique partiel) — **sans quoi deux demandes en attente entreraient en collision
+sur une valeur nulle**. »
+
+**Ce qui est vrai** : Postgres traite deux nuls comme **distincts** dans un
+index unique. Un index total sur `provider_ref` admettrait autant de nuls qu'on
+veut. Vérifié en base plutôt que supposé, le 26/08/2026 : deux insertions à nul
+passent sous un `create unique index` ordinaire.
+
+**Ce que ça ne change pas** : l'index partiel reste le bon choix, pour la
+**taille** et pour l'intention. Sur `credit_transaction.payment_id`, la plupart
+des mouvements — octrois d'inscription, bonus de parrainage, consommations,
+ajustements — n'ont pas de paiement, et il n'y a rien à gagner à les indexer.
+N'indexer que les valeurs présentes dit aussi exactement ce qu'on garantit.
+
+**À corriger** : la justification, pas la décision.
+
 ## B. Ce que la documentation ne couvre pas du tout
 
 ### B1. Les drapeaux de fonctionnalité — chapitre entier à écrire

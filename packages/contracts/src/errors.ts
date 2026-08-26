@@ -11,6 +11,15 @@ export const ERROR_CODES = [
   // Un code à part plutôt que validation_failed — l'interface doit pouvoir dire
   // « il manque le motif » et non « la requête est mal formée ».
   "reason_required",
+  // Un palier retiré, un canal fermé, un compte de collecte désactivé : la
+  // requête est bien formée, la règle ne l'est pas. 422, pas 400 — et un code
+  // à part de validation_failed, pour que l'écran puisse dire « ce palier n'est
+  // plus proposé » au lieu de « la demande est mal formée ».
+  "resource_inactive",
+  // Une action payante lancée sans provision, ou une reprise qui creuserait le
+  // solde. 422 : la demande est bien formée, c'est l'état du compte qui ne s'y
+  // prête pas. Le contrat commun le cite comme l'exemple même d'un code stable.
+  "insufficient_credits",
   // compte
   "username_taken", "username_invalid", "device_limit_reached",
   "account_suspended", "account_pending_deletion",

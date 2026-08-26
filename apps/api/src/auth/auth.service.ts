@@ -122,7 +122,7 @@ export class AuthService {
   // Pourquoi ici et pas à la vérification : le code de parrainage se saisit à
   // l'écran du pseudo, donc après. Créer d'abord et rattacher ensuite
   // laisserait un compte réclamer un parrainage des mois plus tard.
-  async register(input: RegisterInput & { userAgent?: string }): Promise<Registered> {
+  async register(input: RegisterInput & { userAgent?: string; ip?: string }): Promise<Registered> {
     const { email } = this.tokens.verifyRegistration(input.registrationToken);
 
     // Le jeton dit qu'une adresse a été vérifiée, pas qu'elle est libre. Entre
@@ -137,12 +137,14 @@ export class AuthService {
       deviceId: input.deviceId,
       username: input.username,
       ...(input.referralCode !== undefined ? { referralCode: input.referralCode } : {}),
+      ...(input.ip !== undefined ? { ip: input.ip } : {}),
     });
 
     if (creation.plafondAtteint) {
       await this.prisma.loginActivity.create({
         data: {
           userId: null, attemptedEmail: email, result: "failure",
+          method: "otp", ip: input.ip ?? null,
           userAgent: input.userAgent ?? null,
         },
       });
@@ -152,6 +154,7 @@ export class AuthService {
     await this.prisma.loginActivity.create({
       data: {
         userId: creation.user.id, attemptedEmail: email, result: "success",
+        method: "otp", ip: input.ip ?? null,
         userAgent: input.userAgent ?? null,
       },
     });
@@ -181,7 +184,11 @@ export class AuthService {
     result: "success" | "failure",
   ): Promise<void> {
     await this.prisma.loginActivity.create({
-      data: { userId, attemptedEmail: input.email, result, userAgent: input.userAgent ?? null },
+      data: {
+        userId, attemptedEmail: input.email, result,
+        method: "otp", ip: input.ip ?? null,
+        userAgent: input.userAgent ?? null,
+      },
     });
   }
 

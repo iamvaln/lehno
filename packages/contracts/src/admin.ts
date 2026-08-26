@@ -389,3 +389,259 @@ export const basculeDrapeauSchema = z.object({
 
 export type DrapeauAdmin = z.infer<typeof drapeauAdminSchema>;
 export type DrapeauxAdmin = z.infer<typeof drapeauxAdminSchema>;
+
+// ——— Les réglages du paiement ————————————————————————————————
+
+/**
+ * Un palier d'achat. Aucune saisie libre d'un montant : on achète un palier,
+ * et le plus petit fixe le minimum. La remise s'affiche — c'est un argument de
+ * vente, pas un calcul caché.
+ */
+export const palierSchema = z.object({
+  id: z.string(),
+  montant: z.number(),
+  devise: z.string(),
+  credits: z.number().int().positive(),
+  remisePourcent: z.number().int().nullable(),
+  position: z.number().int(),
+  actif: z.boolean(),
+}).strict();
+
+/**
+ * Ce que le **service** propose : un opérateur, un pays, un barème.
+ *
+ * À ne pas confondre avec la méthode qu'un **client** a enregistrée. Les fondre
+ * reviendrait à porter un taux de frais sur le numéro de téléphone de chaque
+ * client, et à devoir tous les corriger le jour où un opérateur change son
+ * barème.
+ */
+export const canalSchema = z.object({
+  id: z.string(),
+  nature: z.enum(["mobile_money", "card"]),
+  operateur: z.string(),
+  /** Les frais diffèrent d'un pays à l'autre, même chez le même opérateur. */
+  pays: z.string(),
+  libelle: z.string(),
+  fraisPourcent: z.number(),
+  fraisFixe: z.number(),
+  fraisMin: z.number().nullable(),
+  fraisMax: z.number().nullable(),
+  /** `payer` : le client verse en plus. `payee` : c'est prélevé sur le versement. */
+  fraisPortesPar: z.enum(["payer", "payee"]),
+  devise: z.string(),
+  actif: z.boolean(),
+  position: z.number().int().nullable(),
+}).strict();
+
+/**
+ * Un compte d'opérateur sur lequel les clients versent.
+ *
+ * Le numéro est rendu **en entier** à l'administration : c'est celui qu'on
+ * dicte à un client au téléphone, et qu'on va lire sur l'application de
+ * l'opérateur pour vérifier une réception. Ce n'est pas une donnée de client,
+ * c'est un compte du service.
+ */
+export const compteCollecteSchema = z.object({
+  id: z.string(),
+  libelle: z.string(),
+  operateur: z.string(),
+  numero: z.string(),
+  /** Ce que le client voit. Distinct de `actif`, qui dit ce qui reste employable. */
+  visibleDansApp: z.boolean(),
+  actif: z.boolean(),
+  position: z.number().int().nullable(),
+}).strict();
+
+export const paliersSchema = z.object({ items: z.array(palierSchema) }).strict();
+export const canauxSchema = z.object({ items: z.array(canalSchema) }).strict();
+export const comptesCollecteSchema = z.object({ items: z.array(compteCollecteSchema) }).strict();
+
+export type Palier = z.infer<typeof palierSchema>;
+export type Canal = z.infer<typeof canalSchema>;
+export type CompteCollecte = z.infer<typeof compteCollecteSchema>;
+
+// ——— La saisie manuelle d'un paiement —————————————————————————
+
+/**
+ * Ce qu'un administrateur saisit pour enregistrer un versement reçu.
+ *
+ * Le paiement naît `pending`. La spécification dit qu'il « se confirme du même
+ * geste » : c'est l'écran qui enchaîne les deux appels, pas le serveur qui les
+ * fond. Séparer garde une seule porte de décision — celle qui exige le montant
+ * réellement constaté et journalise son motif.
+ */
+export const saisiePaiementSchema = z.object({
+  utilisateurId: z.string().uuid(),
+  palierId: z.string().uuid(),
+  compteCollecteId: z.string().uuid(),
+  canalId: z.string().uuid(),
+  /** Le numéro depuis lequel le client déclare avoir versé. */
+  numeroPayeur: z.string().max(32).optional(),
+  /** La référence de la transaction chez l'opérateur, si elle est déjà connue. */
+  reference: z.string().max(200).optional(),
+  /** Le reçu déposé. Il ne prouve rien — la réception sur le compte fait foi. */
+  recu: z.string().max(500).optional(),
+  reason: motifSchema,
+}).strict();
+
+export const paiementCreeSchema = z.object({
+  id: z.string(),
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  montant: z.number(),
+  frais: z.number(),
+  /** Ce qu'on doit voir arriver sur le compte, frais appliqués. */
+  attenduSurLeCompte: z.number(),
+  credits: z.number().int(),
+  devise: z.string(),
+}).strict();
+
+export type SaisiePaiement = z.infer<typeof saisiePaiementSchema>;
+export type PaiementCree = z.infer<typeof paiementCreeSchema>;
+
+// ——— La décision sur un paiement —————————————————————————————
+
+/**
+ * Confirmer ou rejeter un paiement en attente.
+ *
+ * **Le montant reçu se renseigne toujours**, même sans écart : c'est lui qui
+ * permet de constater qu'il n'y en a pas. Sans ce champ, on ne saurait jamais
+ * si le silence vaut « rien à signaler » ou « personne n'a regardé ».
+ *
+ * Le reçu ne prouve rien — un montage est facile. C'est la réception **sur le
+ * compte de l'opérateur** qui fait foi, et c'est ce que l'administrateur
+ * consigne ici.
+ */
+export const decisionPaiementSchema = z.discriminatedUnion("decision", [
+  z.object({
+    decision: z.literal("confirmer"),
+    montantRecu: z.number().nonnegative(),
+    /** La référence chez l'opérateur, consignée au moment de confirmer. */
+    reference: z.string().min(1).max(200),
+    reason: motifSchema,
+  }).strict(),
+  z.object({
+    decision: z.literal("rejeter"),
+    /** Renseigné quand on a regardé et constaté un manque ; nul sinon. */
+    montantRecu: z.number().nonnegative().nullable().optional(),
+    reason: motifSchema,
+  }).strict(),
+]);
+
+export const paiementDecideSchema = z.object({
+  id: z.string(),
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  creditsOctroyes: z.number().int(),
+  /** L'écart constaté : reçu moins attendu. Négatif quand il manque. */
+  ecart: z.number().nullable(),
+}).strict();
+
+export type DecisionPaiement = z.infer<typeof decisionPaiementSchema>;
+
+// ——— Les deux listes du §5.4 ——————————————————————————————————
+
+/**
+ * Une ligne de la liste des paiements.
+ *
+ * La méthode n'y paraît que par ses éléments d'identification — opérateur et
+ * derniers chiffres. Le numéro complet d'un compte mobile money demeure masqué,
+ * **y compris pour l'administrateur** : il est chiffré au repos, déchiffré pour
+ * la seule communication avec le prestataire, et n'entre dans aucun journal.
+ *
+ * À ne pas confondre avec le numéro d'un compte de **collecte**, qui est rendu
+ * en entier : celui-là est un compte du service, pas d'un client.
+ */
+export const paiementLigneSchema = z.object({
+  id: z.string(),
+  utilisateur: z.string(),
+  mode: z.enum(["provider", "semi_manual", "manual"]),
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  montant: z.number(),
+  devise: z.string(),
+  credits: z.number().int(),
+  /** « MTN MoMo •••4321 », ou nul quand aucune méthode n'est rattachée. */
+  methode: z.string().nullable(),
+  attenduSurLeCompte: z.number().nullable(),
+  recuSurLeCompte: z.number().nullable(),
+  /** Reçu moins attendu. Nul tant que personne n'a constaté. */
+  ecart: z.number().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+/** Un état traversé, et **combien de temps** il a duré. */
+export const etatTraverseSchema = z.object({
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  debut: z.string(),
+  fin: z.string().nullable(),
+  /** En secondes. Nul pour l'état courant, qui dure encore. */
+  dureeSecondes: z.number().int().nullable(),
+  origine: z.enum(["user", "webhook", "polling", "admin", "system"]),
+  parQui: z.string().nullable(),
+  motif: z.string().nullable(),
+}).strict();
+
+export const paiementDetailSchema = paiementLigneSchema.extend({
+  reference: z.string().nullable(),
+  motifEchec: z.string().nullable(),
+  frais: z.number().nullable(),
+  compteCollecte: z.string().nullable(),
+  histoire: z.array(etatTraverseSchema),
+}).strict();
+
+export const pagePaiementsSchema = z.object({
+  items: z.array(paiementLigneSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+/** Un mouvement de crédits, tel que l'administration le lit. */
+export const mouvementCreditSchema = z.object({
+  id: z.string(),
+  utilisateur: z.string(),
+  type: z.enum(["grant", "purchase", "consumption", "adjustment"]),
+  /** D'où il vient. Le type dit ce qu'il est, la source ce qui l'a produit. */
+  source: z.string(),
+  montant: z.number().int(),
+  paiementId: z.string().nullable(),
+  note: z.string().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+export const pageMouvementsSchema = z.object({
+  items: z.array(mouvementCreditSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+export type PaiementLigne = z.infer<typeof paiementLigneSchema>;
+export type PaiementDetail = z.infer<typeof paiementDetailSchema>;
+export type MouvementCredit = z.infer<typeof mouvementCreditSchema>;
+
+// ——— L'ajustement manuel d'un solde ——————————————————————————
+
+/**
+ * « Ajuster manuellement le solde d'un utilisateur, avec motif obligatoire »
+ * (ux-admin §5.4).
+ *
+ * Le montant est **signé** : positif pour créditer, négatif pour reprendre. Un
+ * champ « sens » séparé se désynchroniserait du signe au premier oubli, et le
+ * mouvement écrit ne dirait plus ce qu'on a voulu faire.
+ */
+export const ajustementCreditsSchema = z.object({
+  montant: z.number().int().refine((n) => n !== 0, "un ajustement de zéro ne dit rien"),
+  /**
+   * Ce que le mouvement **est**, et que le client lira.
+   *
+   * Choisi, jamais deviné. « admin_adjustment » disait « on a corrigé une
+   * erreur » pour annoncer « on vous offre quelque chose » : deux nouvelles
+   * opposées sous un même nom. Quelqu'un dont on reprend cinq crédits par
+   * erreur ne doit pas lire « Cadeau », et l'inverse non plus.
+   */
+  nature: z.enum(["gift", "reward", "correction"]),
+  reason: motifSchema,
+}).strict();
+
+export const soldeApresAjustementSchema = z.object({
+  utilisateurId: z.string(),
+  montant: z.number().int(),
+  solde: z.number().int().nonnegative(),
+}).strict();
+
+export type AjustementCredits = z.infer<typeof ajustementCreditsSchema>;

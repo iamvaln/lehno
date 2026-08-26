@@ -73,6 +73,8 @@ export class SignupService {
     deviceId: string;
     username: string;
     referralCode?: string | undefined;
+    /** L'adresse au moment de la création, pour la trace de l'appareil. */
+    ip?: string | undefined;
   }): Promise<Creation> {
     // La version acceptée se LIT dans le document servi, jamais dans une
     // constante : une constante finirait par mentir le jour où quelqu'un met à
@@ -98,7 +100,9 @@ export class SignupService {
               acceptedTermsVersion: versionCgu,
             },
           });
-          await tx.deviceSignup.create({ data: { deviceId: input.deviceId, userId: user.id } });
+          await tx.deviceSignup.create({
+            data: { deviceId: input.deviceId, userId: user.id, ip: input.ip ?? null },
+          });
 
           const creditsOfferts = await this.param(tx, "signup_free_credits", 5);
           if (creditsOfferts > 0) {
