@@ -127,7 +127,19 @@ export class RechargeService {
 
     const f = fraisDe(this.bareme(canal), Number(palier.amount));
 
-    const ligne = await this.prisma.payment.create({
+    /* Deux déclarations ne peuvent pas citer le même versement.
+     *
+     * La garantie vient de l'index unique partiel sur `provider_ref`, pas d'une
+     * lecture préalable : entre un « existe-t-il déjà ? » et l'écriture, deux
+     * requêtes simultanées passeraient toutes les deux. On écrit, et on traduit
+     * le refus de la base.
+     *
+     * Ce que ça empêche concrètement : réclamer deux fois les crédits d'un seul
+     * transfert. Un reçu en image n'aurait rien empêché — une image ne se
+     * compare à rien. */
+    let ligne;
+    try {
+      ligne = await this.prisma.payment.create({
       data: {
         userId,
         mode: "semi_manual",
@@ -139,7 +151,7 @@ export class RechargeService {
         paymentChannelId: canal.id,
         collectionAccountId: compte.id,
         payerMsisdn: entree.payerMsisdn,
-        ...(entree.providerRef === undefined ? {} : { providerRef: entree.providerRef }),
+        providerRef: entree.providerRef,
         /* Les frais ANNONCÉS, figés ici. Un barème change ; ce paiement garde ce
            qui lui a été dit. Relire le taux du jour pour expliquer un paiement
            d'il y a trois mois donnerait un chiffre faux, et c'est en litige
@@ -149,7 +161,12 @@ export class RechargeService {
         status: "pending",
       },
       include: { collectionAccount: true },
-    });
+      });
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === "P2002")
+        throw new AppError("conflict", "this transaction reference is already declared");
+      throw err;
+    }
 
     return this.rendre(ligne);
   }

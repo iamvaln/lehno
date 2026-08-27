@@ -226,11 +226,19 @@ export type PaymentPreview = z.infer<typeof paymentPreviewSchema>;
  * Le paiement naît donc `pending`, et c'est l'administration qui constate la
  * réception sur le compte.
  *
- * **Aucun reçu n'est demandé**, et c'est une décision. La spec le dit :
- * « le reçu ne prouve rien — un montage est facile ; c'est la réception sur le
- * compte de l'opérateur qui fait foi ». Ce qui le remplace est plus utile :
- * `payerMsisdn`, le numéro depuis lequel le versement a été fait, qui permet de
- * retrouver la transaction sur le relevé.
+ * **Aucun fichier n'est déposé.** La référence de transaction le remplace — le
+ * code que l'opérateur envoie par SMS juste après le versement.
+ *
+ * Ce n'est pas un pis-aller. Une capture d'écran ne prouve rien : la spec le
+ * dit — « un montage est facile ; c'est la réception sur le compte de
+ * l'opérateur qui fait foi » —, et l'administration l'efface une fois la
+ * demande traitée. La référence, elle, **retrouve la transaction sur le
+ * relevé**, ce qu'aucune image ne fait.
+ *
+ * Et elle apporte ce que le fichier n'apportait pas : **elle est unique**. Deux
+ * déclarations ne peuvent pas citer le même versement, donc personne ne peut
+ * réclamer deux fois les crédits d'un seul transfert. Une image ne se compare à
+ * rien.
  */
 export const declarePaymentSchema = z.object({
   bundleId: z.string().uuid(),
@@ -238,8 +246,19 @@ export const declarePaymentSchema = z.object({
   collectionAccountId: z.string().uuid(),
   /** Le numéro employé pour verser. Format libre : les opérateurs diffèrent. */
   payerMsisdn: z.string().min(6).max(32),
-  /** La référence rendue par l'opérateur, si le client l'a sous les yeux. */
-  providerRef: z.string().max(120).optional(),
+  /**
+   * La référence de la transaction, telle que l'opérateur l'a envoyée.
+   *
+   * **Obligatoire.** Sans elle, l'administration doit rapprocher sur le montant,
+   * le numéro et l'heure — le rapprochement ambigu qui fait approuver le mauvais
+   * versement. Avec elle, la correspondance est exacte.
+   *
+   * Format libre : les opérateurs ne s'accordent sur rien. On vérifie qu'il y a
+   * quelque chose, pas qu'il ressemble à ce qu'on croit connaître d'un
+   * opérateur — une règle de forme trop stricte rejetterait le jour où l'un
+   * d'eux change la sienne, et personne ne saurait pourquoi.
+   */
+  providerRef: z.string().trim().min(4).max(120),
 }).strict();
 
 export type DeclarePaymentInput = z.infer<typeof declarePaymentSchema>;

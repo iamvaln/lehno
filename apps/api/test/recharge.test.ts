@@ -41,6 +41,10 @@ describe("la recharge", () => {
       },
     });
 
+  // Chaque déclaration cite un versement distinct : la base refuse deux fois la
+  // même référence, et c'est exactement ce qu'on veut.
+  const reference = (): string => `TX-${randomBytes(5).toString("hex").toUpperCase()}`;
+
   const compteDeCollecte = (visible = true, actif = true) =>
     db.prisma.collectionAccount.create({
       data: {
@@ -143,7 +147,7 @@ describe("la recharge", () => {
       const k = await compteDeCollecte();
       return recharge.declarer(awa, {
         bundleId: p.id, channelId: c.id, collectionAccountId: k.id,
-        payerMsisdn: "670111222", ...over,
+        payerMsisdn: "670111222", providerRef: reference(), ...over,
       });
     };
 
@@ -162,7 +166,7 @@ describe("la recharge", () => {
       const k = await compteDeCollecte();
 
       const r = await recharge.declarer(awa, {
-        bundleId: p.id, channelId: c.id, collectionAccountId: k.id, payerMsisdn: "670111222",
+        bundleId: p.id, channelId: c.id, collectionAccountId: k.id, payerMsisdn: "670111222", providerRef: reference(),
       });
       expect(r.fee).toBe(20);
 
@@ -222,8 +226,8 @@ describe("la recharge", () => {
       const c = await canal();
       const k = await compteDeCollecte();
       const un = { bundleId: p.id, channelId: c.id, collectionAccountId: k.id, payerMsisdn: "670111222" };
-      const a = await recharge.declarer(awa, un);
-      const b = await recharge.declarer(awa, un);
+      const a = await recharge.declarer(awa, { ...un, providerRef: reference() });
+      const b = await recharge.declarer(awa, { ...un, providerRef: reference() });
 
       expect((await recharge.lister(awa)).map((x) => x.id)).toEqual([b.id, a.id]);
     });
@@ -235,7 +239,7 @@ describe("la recharge", () => {
       const c = await canal();
       const k = await compteDeCollecte();
       const r = await recharge.declarer(awa, {
-        bundleId: p.id, channelId: c.id, collectionAccountId: k.id, payerMsisdn: "670111222",
+        bundleId: p.id, channelId: c.id, collectionAccountId: k.id, payerMsisdn: "670111222", providerRef: reference(),
       });
       const bila = await compte();
 
@@ -247,9 +251,49 @@ describe("la recharge", () => {
       const c = await canal();
       const k = await compteDeCollecte();
       const r = await recharge.declarer(awa, {
-        bundleId: p.id, channelId: c.id, collectionAccountId: k.id, payerMsisdn: "670111222",
+        bundleId: p.id, channelId: c.id, collectionAccountId: k.id, payerMsisdn: "670111222", providerRef: reference(),
       });
       expect(r.collectionAccount).toMatchObject({ number: "670000000" });
+    });
+  });
+
+  /* Ce que la référence apporte et qu'un reçu en image n'apportait pas : elle
+     est UNIQUE. Personne ne peut réclamer deux fois les crédits d'un seul
+     transfert — une image ne se compare à rien. */
+  describe("un versement ne se déclare qu'une fois", () => {
+    it("refuse une référence déjà déclarée", async () => {
+      const p = await palier(1_000, 10);
+      const c = await canal();
+      const k = await compteDeCollecte();
+      const meme = { bundleId: p.id, channelId: c.id, collectionAccountId: k.id, payerMsisdn: "670111222", providerRef: "TX-DOUBLON" };
+
+      await recharge.declarer(awa, meme);
+      await expect(recharge.declarer(awa, meme)).rejects.toMatchObject({ code: "conflict" });
+    });
+
+    /* Y compris depuis un AUTRE compte. Sans ça, il suffirait de deux comptes
+       pour transformer un versement en deux recharges. */
+    it("refuse la même référence depuis un autre compte", async () => {
+      const p = await palier(1_000, 10);
+      const c = await canal();
+      const k = await compteDeCollecte();
+      const bila = await compte();
+      const meme = { bundleId: p.id, channelId: c.id, collectionAccountId: k.id, payerMsisdn: "670111222", providerRef: "TX-PARTAGE" };
+
+      await recharge.declarer(awa, meme);
+      await expect(recharge.declarer(bila, meme)).rejects.toMatchObject({ code: "conflict" });
+    });
+
+    // Et le second refus ne laisse rien derrière lui : un seul paiement existe.
+    it("ne laisse pas de paiement derrière un refus", async () => {
+      const p = await palier(1_000, 10);
+      const c = await canal();
+      const k = await compteDeCollecte();
+      const meme = { bundleId: p.id, channelId: c.id, collectionAccountId: k.id, payerMsisdn: "670111222", providerRef: "TX-UNIQUE" };
+
+      await recharge.declarer(awa, meme);
+      await recharge.declarer(awa, meme).catch(() => {});
+      expect(await db.prisma.payment.count()).toBe(1);
     });
   });
 });
