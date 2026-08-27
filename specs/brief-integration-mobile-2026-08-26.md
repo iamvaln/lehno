@@ -84,7 +84,7 @@ Retiré de la lecture, de l'écriture, et de la liste de valeurs de `/me/metadat
 
 ## 4. Les drapeaux — ce que vous en faites
 
-La note complète est dans le contrat, sur `GET /me/features`, avec **la table de couverture des treize drapeaux** : écrans et chemins, engendrée depuis le registre du serveur. C'est la référence commune — ce que vous masquez et ce que le serveur ferme doivent désigner la même chose.
+La note complète est dans le contrat, sur `GET /me/features`, avec **la table de couverture des quinze drapeaux** : écrans et chemins, engendrée depuis le registre du serveur. C'est la référence commune — ce que vous masquez et ce que le serveur ferme doivent désigner la même chose.
 
 Les cinq règles, en bref :
 
@@ -95,6 +95,40 @@ Les cinq règles, en bref :
 5. **Un chemin gouverné par un drapeau éteint rend `404`.** Le recevoir là où vous attendiez une réponse veut dire « relis la liste », pas « affiche une erreur ».
 
 **Sans compte : `/public/features`. Avec : `/me/features`.** Jamais les deux.
+
+### Deux drapeaux qui ne ferment pas un écran — nouveaux
+
+Le registre passe à **quinze clés**. Les deux dernières ne se comportent pas comme les treize autres, et c'est ce qu'il faut lire avant de les câbler.
+
+#### `events.other` — les événements autres qu'un anniversaire
+
+Il gouverne une **valeur**, pas un chemin : `kind: "other"` sur `/me/events`, que les anniversaires empruntent aussi. Il n'y a donc **pas de `404`** — le chemin existe, et il n'y a rien à cacher.
+
+**Ce que vous lisez : `eventKinds` de `/me/metadata`.** Éteint, la liste rend `["birthday"]`, et le choix « autre type » du formulaire (§3.6) disparaît de lui-même. **Ne testez pas le drapeau** : vous referiez le raisonnement du serveur, et vous vous en écarteriez le jour où il change.
+
+**Ce que vous recevez si vous passez outre** : `422`, code `resource_inactive`, avec le type refusé dans `details.kind`. Ce n'est pas une erreur à afficher — c'est le filet qui attrape une version installée n'ayant pas relu ses métadonnées. Un client à jour ne devrait jamais le voir.
+
+**Il garde la création, jamais l'existant.** Un événement libre créé avant l'extinction reste lisible par `GET`, **modifiable** par `PATCH`, et ses échéances continuent de tomber. **Ne le masquez pas** : éteindre une fonctionnalité ne doit pas effacer ce que les gens ont écrit.
+
+#### `topup.provider` — le canal de paiement automatique
+
+`credits` disait jusqu'ici deux choses à la fois : « les crédits existent » et « on paie par opérateur ». C'est scindé.
+
+| Drapeau | Ce qu'il gouverne | Chemins |
+|---|---|---|
+| `credits` | Les crédits existent et s'achètent par paliers | `/me/credit-bundles`, `/me/payments` |
+| `topup.provider` | Le canal **automatique** : méthodes enregistrées, sollicitation sur le téléphone | `/me/payment-methods*`, `/me/payments` en mode `provider` |
+| `topup.manual` | Le versement **manuel** : verser sur un compte affiché, déposer son reçu | `/me/collection-accounts`, `/me/payments` en mode `semi_manual` |
+
+**Les deux canaux requièrent `credits`** — ils achètent les mêmes paliers. Résolu côté serveur : si `credits` s'éteint, les deux disparaissent de votre liste sans que vous ayez à le déduire.
+
+**Le premier lancement se fera en versement manuel seul** : `credits` allumé, `topup.manual` allumé, **`topup.provider` éteint**. Concrètement, l'écran des méthodes de paiement (§3.25) et l'attente opérateur de §3.9 n'ont pas lieu d'être — c'est le chemin « verser puis déposer son reçu » qui sert.
+
+### Les deux états valent d'être éprouvés
+
+En développement, **les quinze drapeaux sont allumés** : vous pouvez toucher chaque surface. Ce n'est pas l'état du lancement.
+
+Un drapeau **naît éteint** : sur un déploiement neuf, `events.other` et `topup.provider` seront fermés sans que personne n'ait rien basculé. Éprouvez donc les deux états, pas seulement celui où tout marche — le handoff le dit déjà de son côté : « le trou doit rester habitable », la carte à deux actions qui n'en garde qu'une, le renvoi qui disparaît plutôt que de mener à un écran vide.
 
 ### Livrer sans les listes de souhaits
 

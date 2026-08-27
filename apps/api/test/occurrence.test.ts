@@ -11,6 +11,7 @@ import { NoteService } from "../src/me/note.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
+import { FlagsService } from "../src/flags/flags.service.js";
 
 describe("les échéances", () => {
   let db: TestDb;
@@ -36,8 +37,14 @@ describe("les échéances", () => {
   afterAll(async () => { await db.close(); });
   beforeEach(async () => {
     await resetDatabase(db.prisma);
+    // `events.other` allumé : ces cas éprouvent les événements libres, pas le
+    // lancement resserré. Un drapeau naît ÉTEINT — c'est voulu, et c'est
+    // précisément l'état d'un déploiement neuf.
+    const drapeaux = new FlagsService(db.prisma as never);
+    await drapeaux.reconcilier();
+    await db.prisma.featureFlag.update({ where: { key: "events.other" }, data: { enabled: true } });
     const depot = new TenantRepository(db.prisma as never);
-    events = new EventService(depot, db.prisma as never);
+    events = new EventService(depot, db.prisma as never, new FlagsService(db.prisma as never));
     persons = new PersonService(depot, events, db.prisma as never);
     occurrences = new OccurrenceService(depot, db.prisma as never);
     notes = new NoteService(depot, db.prisma as never);

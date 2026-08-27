@@ -7,12 +7,41 @@ describe("registre des drapeaux", () => {
   // La liste de la spécification technique §6.3, à la clé près. Un drapeau
   // ajouté au code sans l'être à la spécification — ou l'inverse — casse la
   // référence commune entre le serveur, le mobile et le back-office.
-  it("porte les treize clés de la spécification, et rien d'autre", () => {
+  it("porte les quinze clés de la spécification, et rien d'autre", () => {
     expect([...CLES_DRAPEAUX].sort()).toEqual([
-      "collect", "credits", "generation.ideas", "generation.message",
-      "generation.portrait", "launch.live", "referral", "reservation",
-      "topup.manual", "wall", "wishes", "wishlist", "wishlist.own",
+      "collect", "credits", "events.other", "generation.ideas",
+      "generation.message", "generation.portrait", "launch.live", "referral",
+      "reservation", "topup.manual", "topup.provider", "wall", "wishes",
+      "wishlist", "wishlist.own",
     ]);
+  });
+
+  /* `events.other` gouverne une VALEUR, non un chemin — `kind: "other"` sur
+     /me/events, que les anniversaires empruntent aussi. Il rend donc 422 et
+     non 404, et ce cas épingle la seule chose qui le distingue vraiment : sa
+     couverture nomme le type, pas le chemin nu. Sans ça, quelqu'un le
+     brancherait un jour sur @Feature et fermerait les anniversaires avec. */
+  it("dit que les autres types d'événement se gouvernent PAR LA VALEUR", () => {
+    const chemins = DRAPEAUX["events.other"].chemins.join(" ");
+    expect(chemins).toContain("kind: other");
+    expect(chemins).toContain("eventKinds");
+    // Le chemin nu n'y figure pas : le fermer emporterait les anniversaires,
+    // qui relèvent du socle et ne s'éteignent jamais.
+    expect(DRAPEAUX["events.other"].chemins).not.toContain("/me/events");
+  });
+
+  /* Le lancement en versement manuel seul doit être EXPRIMABLE. Il ne l'était
+     pas : `credits` mêlait « les crédits existent » et « on paie par
+     opérateur », donc l'éteindre emportait les paliers — que le versement
+     manuel achète pourtant lui aussi (contrat commun §5). */
+  it("sépare le fait que les crédits existent des canaux qui les achètent", () => {
+    expect(DRAPEAUX["topup.provider"].requiert).toContain("credits");
+    expect(DRAPEAUX["topup.manual"].requiert).toContain("credits");
+    // Les paliers appartiennent à `credits`, jamais à un canal : sinon fermer
+    // un canal fermerait l'achat pour l'autre.
+    expect(DRAPEAUX.credits.chemins).toContain("/me/credit-bundles");
+    expect(DRAPEAUX["topup.provider"].chemins.join(" ")).not.toContain("credit-bundles");
+    expect(DRAPEAUX["topup.manual"].chemins.join(" ")).not.toContain("credit-bundles");
   });
 
   // Le socle — proches, notes, dates, occasions, rappels, compte — n'a PAS de

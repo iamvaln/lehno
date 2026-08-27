@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { randomBytes } from "node:crypto";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { MetadataService } from "../src/me/metadata.service.js";
+import { FlagsService } from "../src/flags/flags.service.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 
@@ -16,7 +17,37 @@ describe("les métadonnées", () => {
   afterAll(async () => { await db.close(); });
   beforeEach(async () => {
     await resetDatabase(db.prisma);
-    metadata = new MetadataService(db.prisma as never);
+    metadata = new MetadataService(db.prisma as never, new FlagsService(db.prisma as never));
+  });
+
+  /* Ce qui dispense le client de connaître le drapeau : il lit la liste, pas
+     l'interrupteur. L'écran de §3.6 propose ce qu'elle contient, et le choix
+     « autre type » disparaît de lui-même. */
+  describe("les types d'événement suivent le drapeau", () => {
+    const poser = async (actif: boolean): Promise<void> => {
+      const f = new FlagsService(db.prisma as never);
+      await f.reconcilier();
+      await db.prisma.featureFlag.update({ where: { key: "events.other" }, data: { enabled: actif } });
+    };
+
+    it("n'annonce que l'anniversaire quand les autres types sont fermés", async () => {
+      await poser(false);
+      expect((await metadata.get()).eventKinds).toEqual(["birthday"]);
+    });
+
+    it("annonce les deux quand ils sont ouverts", async () => {
+      await poser(true);
+      expect((await metadata.get()).eventKinds).toEqual(expect.arrayContaining(["birthday", "other"]));
+    });
+
+    // L'anniversaire relève du socle : il ne s'éteint jamais, sans quoi il n'y
+    // a plus de produit.
+    it("garde l'anniversaire dans tous les cas", async () => {
+      for (const actif of [true, false]) {
+        await poser(actif);
+        expect((await metadata.get()).eventKinds).toContain("birthday");
+      }
+    });
   });
 
   it("rend les catégories avec leur nature et leur contrainte", async () => {
@@ -71,6 +102,12 @@ describe("les métadonnées", () => {
   });
 
   it("rend les énumérations dont les écrans composent leurs listes", async () => {
+    // `eventKinds` est la seule liste que le drapeau resserre : on l'ouvre ici,
+    // ce cas éprouvant que les énumérations sont servies, pas leur filtrage.
+    const f = new FlagsService(db.prisma as never);
+    await f.reconcilier();
+    await db.prisma.featureFlag.update({ where: { key: "events.other" }, data: { enabled: true } });
+
     const m = await metadata.get();
     expect(m.eventKinds).toEqual(["birthday", "other"]);
     expect(m.eventNatures).toEqual(["happy", "sensitive"]);
@@ -136,6 +173,12 @@ describe("les métadonnées", () => {
     });
 
     it("rend les métadonnées via HTTP", async () => {
+      // Même raison qu'au cas des énumérations : ici on éprouve le chemin, pas
+      // le resserrement du lancement.
+      const f = new FlagsService(db.prisma as never);
+      await f.reconcilier();
+      await db.prisma.featureFlag.update({ where: { key: "events.other" }, data: { enabled: true } });
+
       const u = await db.prisma.user.create({
         data: {
           email: `${randomBytes(6).toString("hex")}@example.com`,

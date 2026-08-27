@@ -4,6 +4,7 @@ import type {
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
+import { FlagsService } from "../flags/flags.service.js";
 import { AppError } from "../common/errors.js";
 import { echeances, type Regle } from "./calendrier.js";
 
@@ -18,6 +19,7 @@ export class EventService {
   constructor(
     @Inject(TenantRepository) private readonly depot: TenantRepository,
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(FlagsService) private readonly flags: FlagsService,
   ) {}
 
   // « Aujourd'hui » en date civile. Le fuseau de l'utilisateur affinera ce
@@ -43,7 +45,25 @@ export class EventService {
   }
 
   async create(userId: string, input: CreateEventInput): Promise<EventContrat> {
-    // findOrThrow d'abord : rattacher un événement au proche d'un autre doit
+    /* Le drapeau garde la CRÉATION d'un type autre qu'anniversaire.
+     *
+     * 422 et non 404 : les autres drapeaux ferment des CHEMINS, et un 404 y
+     * cache l'existence de la surface. Ici le chemin existe — les
+     * anniversaires l'empruntent —, donc rien n'est à cacher. La requête est
+     * bien formée, c'est la règle qui ne l'est pas.
+     *
+     * Et c'est bien le SERVEUR qui refuse, pas seulement `/me/metadata` qui
+     * omet le type : un client d'une version antérieure, ou qui n'a pas relu
+     * ses métadonnées, ne doit pas pouvoir créer ce qu'on a fermé. */
+    if (input.kind !== "birthday" && !(await this.flags.estActif("events.other"))) {
+      throw new AppError(
+        "resource_inactive",
+        "other event kinds are closed",
+        { kind: input.kind },
+      );
+    }
+
+    // findOrThrow ensuite : rattacher un événement au proche d'un autre doit
     // échouer AVANT toute écriture, et rendre 404 plutôt que 403.
     const proche = await this.depot.persons(userId).findOrThrow(input.personId);
 
