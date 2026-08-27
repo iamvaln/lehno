@@ -30,8 +30,7 @@ export default function Porte() {
   if (session === null) return <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }} />;
   if (!session) return <Redirect href="/(connexion)" />;
 
-  /* Le carnet, en attendant l'accueil : c'est la première surface du produit
-     qui existe pour de bon. L'écran de contrôle reste joignable à la main,
-     il ne se met plus sur le chemin. */
-  return <Redirect href="/(app)/proches" />;
+  // La coquille, et l'accueil qui l'ouvre. La porte ne connaît qu'elle : quels
+  // onglets s'y montrent est une affaire de drapeaux, décidée là-bas.
+  return <Redirect href="/(app)/accueil" />;
 }
