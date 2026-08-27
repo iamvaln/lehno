@@ -1577,6 +1577,7 @@
     "/me/referral": {
       "get": {
         "summary": "Lire son code de parrainage, ses filleuls et ses gains",
+        "description": "`bonusParInvitation` dit ce que le parrainage rapporte **aujourd'hui**,\nou **rien** — il est nul quand les crédits sont éteints.\n\n**Lisez cette valeur, pas les drapeaux.** `referral` ne dépend pas de\n`credits` : l'éteindre tuerait l'acquisition avec la monétisation, ce\nque §6.4 interdit. Mais dans cet état les crédits n'achètent rien et les\ngénérations sont gratuites — annoncer « cinq crédits » y serait faux.\n\n**Nul n'est pas zéro.** Nul, l'écran présente le parrainage sans\npromesse chiffrée ; il n'annonce pas « zéro crédit ».",
         "security": [
           {
             "bearerAuth": []
@@ -1624,12 +1625,19 @@
                     "creditsEarned": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "bonusParInvitation": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "minimum": 0,
+                      "nullable": true
                     }
                   },
                   "required": [
                     "code",
                     "invited",
-                    "creditsEarned"
+                    "creditsEarned",
+                    "bonusParInvitation"
                   ],
                   "additionalProperties": false
                 }
