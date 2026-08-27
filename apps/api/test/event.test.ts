@@ -10,6 +10,7 @@ import { TenantRepository } from "../src/tenancy/tenant.repository.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 import { FlagsService } from "../src/flags/flags.service.js";
+import { echeances } from "../src/me/calendrier.js";
 
 // Trente jours devant nous : une date d'événement libre valable, sans dépendre
 // de la date du jour où le test tourne.
@@ -251,6 +252,128 @@ describe("les événements et leur première échéance", () => {
     expect(regles).toHaveLength(2);
     expect(regles.map((r) => r.offsetAmount).sort()).toEqual([1, 3]);
     expect(regles.find((r) => r.offsetAmount === 1)?.leadTimeDays).toBe(3);
+  });
+
+  // C'est TOUT l'intérêt d'une règle `offset` : « un mois puis trois mois
+  // après une date » (§3.6) ouvre bien DEUX échéances distinctes, pas une
+  // série ni une seule. `ouvrirProchaine` ouvre une échéance PAR RÈGLE, à la
+  // date que chacune promet.
+  it("une règle offset ouvre autant d'échéances que de règles, aux bonnes dates", async () => {
+    const p = await persons.create(awa, { displayName: "Valery" });
+    const e = await events.create(awa, {
+      personId: p.id, kind: "other", label: "Suivi", referenceDate: "2999-01-15",
+      schedules: [
+        { type: "offset", offsetUnit: "month", offsetAmount: 1 },
+        { type: "offset", offsetUnit: "month", offsetAmount: 3 },
+      ],
+    });
+
+    const ouvertes = await db.prisma.eventOccurrence.findMany({ where: { eventId: e.id } });
+    expect(ouvertes).toHaveLength(2);
+    const dates = ouvertes.map((o) => o.occurrenceDate.toISOString().slice(0, 10)).sort();
+    expect(dates).toEqual(["2999-02-15", "2999-04-15"]);
+  });
+
+  // Sans aucune règle, la référence elle-même tient lieu d'unique échéance —
+  // rien à composer pour l'événement libre le plus simple (§3.6).
+  it("un événement sans règle ouvre son échéance à la date de référence", async () => {
+    const p = await persons.create(awa, { displayName: "Valery" });
+    const e = await events.create(awa, {
+      personId: p.id, kind: "other", label: "Mariage", referenceDate: dansTrenteJours,
+    });
+    const ouvertes = await db.prisma.eventOccurrence.findMany({ where: { eventId: e.id } });
+    expect(ouvertes).toHaveLength(1);
+    expect(ouvertes[0]?.occurrenceDate.toISOString().slice(0, 10)).toBe(dansTrenteJours);
+  });
+
+  // LE défaut d'origine : `ouvrirProchaine` calculait avec une constante
+  // annuelle EN DUR, quelle que soit la règle enregistrée. Tant que la
+  // référence reste à venir, une règle annuelle et une règle trimestrielle
+  // donnent la MÊME première échéance (la référence elle-même) : le test doit
+  // donc placer la référence dans le PASSÉ pour que les deux pas divergent —
+  // seule une correction qui LIT la règle peut alors retomber sur la bonne
+  // date. `update` s'y prête : lui seul, contrairement à `create`, accepte une
+  // `referenceDate` déjà passée (voir `updateEventSchema`).
+  it("une règle recurrent non annuelle ouvre l'échéance à son propre pas", async () => {
+    const p = await persons.create(awa, { displayName: "Valery" });
+    const e = await events.create(awa, {
+      personId: p.id, kind: "other", label: "Suivi", referenceDate: dansTrenteJours,
+      schedules: [{ type: "recurrent", unit: "month", interval: 3 }],
+    });
+
+    const passee = "2020-01-15";
+    const depuis = new Date().toISOString().slice(0, 10);
+    // Oracle indépendant : le même noyau de calcul que le service, mais
+    // appelé directement — si le service divergeait (règle ignorée, pas
+    // recopié de travers), les deux dates ne colleraient plus.
+    const [attendue] = echeances(passee, { unite: "month", pas: 3 }, depuis, 1);
+
+    await events.update(awa, e.id, { referenceDate: passee });
+    const ouvertes = await db.prisma.eventOccurrence.findMany({ where: { eventId: e.id } });
+    expect(ouvertes).toHaveLength(1);
+    expect(ouvertes[0]?.occurrenceDate.toISOString().slice(0, 10)).toBe(attendue);
+  });
+
+  // Rouvrir un événement pour le modifier (§3.6) doit montrer ce qui a été
+  // saisi : sans cette relecture, la répétition s'écrirait et ne se
+  // relirait jamais.
+  it("les schedules enregistrées se relisent sur l'événement", async () => {
+    const p = await persons.create(awa, { displayName: "Valery" });
+    const e = await events.create(awa, {
+      personId: p.id, kind: "other", label: "Suivi", referenceDate: "2999-01-15",
+      schedules: [
+        { type: "offset", offsetUnit: "month", offsetAmount: 1, leadTimeDays: 3 },
+        { type: "offset", offsetUnit: "month", offsetAmount: 3 },
+      ],
+    });
+    expect(e.schedules).toHaveLength(2);
+    expect(e.schedules.find((r) => r.offsetAmount === 1)).toMatchObject({
+      type: "offset", offsetUnit: "month", offsetAmount: 1, leadTimeDays: 3,
+    });
+    // Champs absents, jamais nuls : le contrat n'a que des `.optional()`.
+    expect(e.schedules.find((r) => r.offsetAmount === 3)?.leadTimeDays).toBeUndefined();
+
+    // Et une relecture par `get` — après le `create` — montre la même chose.
+    const relu = await events.get(awa, e.id);
+    expect(relu.schedules).toHaveLength(2);
+  });
+
+  // `schedules`, fourni à la correction, REMPLACE le jeu en entier — jamais un
+  // patch règle par règle (voir `updateEventSchema`). Ce test constate le
+  // remplacement ET son effet sur les échéances déjà ouvertes.
+  it("corriger schedules remplace le jeu de règles et recalcule les échéances", async () => {
+    const p = await persons.create(awa, { displayName: "Valery" });
+    const e = await events.create(awa, {
+      personId: p.id, kind: "other", label: "Suivi", referenceDate: "2999-01-15",
+      schedules: [
+        { type: "offset", offsetUnit: "month", offsetAmount: 1 },
+        { type: "offset", offsetUnit: "month", offsetAmount: 3 },
+      ],
+    });
+    expect(await db.prisma.eventOccurrence.count({ where: { eventId: e.id } })).toBe(2);
+
+    const modifie = await events.update(awa, e.id, {
+      schedules: [{ type: "offset", offsetUnit: "day", offsetAmount: 10 }],
+    });
+    expect(modifie.schedules).toEqual([{ type: "offset", offsetUnit: "day", offsetAmount: 10 }]);
+
+    const regles = await db.prisma.schedule.findMany({ where: { eventId: e.id } });
+    expect(regles).toHaveLength(1);
+
+    // Les deux anciennes échéances ont disparu, remplacées par la seule que
+    // le nouveau jeu explique — sinon la fiche afficherait une échéance
+    // qu'aucune règle actuelle ne justifie plus.
+    const ouvertes = await db.prisma.eventOccurrence.findMany({ where: { eventId: e.id } });
+    expect(ouvertes).toHaveLength(1);
+    expect(ouvertes[0]?.occurrenceDate.toISOString().slice(0, 10)).toBe("2999-01-25");
+
+    // Un tableau vide retire toute règle, et l'événement retombe sur sa seule
+    // date de référence.
+    const vide = await events.update(awa, e.id, { schedules: [] });
+    expect(vide.schedules).toEqual([]);
+    const apresVidage = await db.prisma.eventOccurrence.findMany({ where: { eventId: e.id } });
+    expect(apresVidage).toHaveLength(1);
+    expect(apresVidage[0]?.occurrenceDate.toISOString().slice(0, 10)).toBe("2999-01-15");
   });
 
   // Un anniversaire sans règle explicite se répète chaque année : c'est ce que
