@@ -92,11 +92,24 @@ describe("les échéances", () => {
     });
   });
 
+  /* Des dates À VENIR, et non plus 2020. Ce cas éprouve la fenêtre et le
+     plafond, pas la récurrence : il comptait jusqu'ici sur un défaut pour
+     avoir des échéances. `ouvrirProchaine` appliquait une récurrence annuelle
+     EN DUR à tout événement, donc un jalon de 2020 se voyait attribuer une
+     échéance cette année. Depuis qu'il respecte les règles enregistrées, un
+     événement libre SANS règle n'a qu'une occurrence — à sa date, et une date
+     passée n'en ouvre aucune à venir. C'est le comportement juste : un mariage
+     ne se répète pas tous les ans.
+
+     Au passage, la date d'origine n'était pas réaliste : `dateAVenirSchema`
+     refuse une date passée à la création. Seul un appel direct au service,
+     comme ici, pouvait la produire. */
   it("respecte la fenêtre et le plafond", async () => {
     const p = await persons.create(awa, { displayName: "Valery" });
-    for (const jour of ["01-10", "02-10", "03-10"]) {
+    for (const dans of [30, 60, 90]) {
+      const jour = new Date(Date.now() + dans * 86_400_000).toISOString().slice(0, 10);
       await events.create(awa, {
-        personId: p.id, kind: "other", label: `Jalon ${jour}`, referenceDate: `2020-${jour}`,
+        personId: p.id, kind: "other", label: `Jalon ${jour}`, referenceDate: jour,
       });
     }
     const deux = await occurrences.list(awa, { limit: 2 });

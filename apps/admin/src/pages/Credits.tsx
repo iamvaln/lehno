@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Breadcrumb, PageHeader, PageTabs, FormRow } from "../composants/page/index.js";
 import { DataTable, EmptyState, FilterBar, StatusPill, type Colonne, type TonPastille } from "../composants/donnees/index.js";
-import { ConfirmWithReason, RoleGate } from "../composants/actions/index.js";
+import { ConfirmWithReason, ExportButton, RoleGate } from "../composants/actions/index.js";
 import { Button } from "../composants/base/index.js";
 import { messages, type Langue } from "../i18n/index.js";
 import type { AdminRole, PaiementLigne, PaiementDetail, MouvementCredit, Palier, Canal, CompteCollecte } from "@lehno/contracts";
@@ -42,6 +42,15 @@ export interface CreditsProps {
   /** Ouvrir la saisie d'un versement. Absent, le geste n'est pas proposé —
    *  c'est ainsi que le support ne voit pas ce que le serveur lui refuse. */
   onSaisir?: (() => void) | undefined;
+  /**
+   * Sortir la liste de l'onglet courant. Absent, aucun bouton — même règle que
+   * ci-dessus : on ne montre pas un geste que le serveur refuserait.
+   *
+   * L'onglet des réglages n'en a pas : ce sont des paramètres, pas une liste
+   * qu'on analyse ou qu'on produit pour la conformité.
+   */
+  onExporter?: (() => void) | undefined;
+  exportEnCours?: boolean;
   onDecider?: (decision: {
     decision: "confirmer" | "rejeter";
     montantRecu?: number;
@@ -66,6 +75,7 @@ export function Credits({
   role, langue = "fr", onglet = "paiements", onOnglet,
   paiements = [], paiement = null, mouvements = [], paliers = [], canaux = [], comptes = [],
   filtreEtat = "tous", filtreMode = "tous", onFiltre, onOuvrir, onRetour, onSaisir, onDecider,
+  onExporter, exportEnCours = false,
 }: CreditsProps): ReactNode {
   const t = messages(langue);
   const [montantRecu, setMontantRecu] = useState("");
@@ -300,6 +310,33 @@ export function Credits({
     ...(role === "admin" ? [{ id: "reglages", label: t.credits.onglets.reglages }] : []),
   ];
 
+  // Une seule action pleine, comme partout : la saisie fait avancer, l'export
+  // accompagne et reste en retrait. Les deux tiennent côte à côte sans qu'on
+  // hésite sur celui qui compte.
+  const boutonExport = onExporter && onglet !== "reglages"
+    ? (
+      <ExportButton
+        formats={["csv"]}
+        portee={t.credits.onglets[onglet]}
+        libelles={{
+          exporter: t.exporter.bouton,
+          avecPortee: t.exporter.avecPortee,
+          encours: t.exporter.encours,
+          formats: { csv: t.exporter.formatCsv },
+          journal: t.exporter.journal,
+        }}
+        {...(exportEnCours ? { etat: "encours" as const } : {})}
+        onExport={() => onExporter()}
+      />
+    )
+    : null;
+  const boutonSaisie = onSaisir && onglet === "paiements"
+    ? <Button onClick={onSaisir}>{t.credits.saisie.ouvrir}</Button>
+    : null;
+  const actions = boutonExport || boutonSaisie
+    ? <>{boutonExport}{boutonSaisie}</>
+    : null;
+
   return (
     <>
       <Breadcrumb
@@ -311,9 +348,7 @@ export function Credits({
       <PageHeader
         titre={t.credits.titre}
         sous={t.credits.sous}
-        {...(onSaisir && onglet === "paiements"
-          ? { actions: <Button onClick={onSaisir}>{t.credits.saisie.ouvrir}</Button> }
-          : {})}
+        {...(actions ? { actions } : {})}
       />
 
       <PageTabs actif={onglet} onSelect={(id) => onOnglet?.(id as Onglet)} onglets={onglets} />
