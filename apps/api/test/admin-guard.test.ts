@@ -10,7 +10,13 @@ import { AppError } from "../src/common/errors.js";
 
 const SECRET_ADMIN = "Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh";
 
-type Requete = { headers: Record<string, string>; admin?: { id: string; role: string } };
+/* Ce que le GARDE pose sur la requête, pas moins : il écrit désormais la
+   lignée du jeton en plus de l'identité. Un type de test en retard sur le code
+   qu'il éprouve ne compile pas — c'est ce qui a rendu la vérification rouge. */
+type Requete = {
+  headers: Record<string, string>;
+  admin?: { id: string; role: string; familyId: string | null };
+};
 
 function contexte(entete?: string): { ctx: ExecutionContext; req: Requete } {
   const req: Requete = { headers: entete === undefined ? {} : { authorization: entete } };
@@ -64,7 +70,8 @@ describe("AdminGuard", () => {
     await garde.canActivate(ctxUne);
     await garde.canActivate(ctxAutre);
 
-    expect(reqUne.admin.familyId).not.toBe(reqAutre.admin.familyId);
+    expect(reqUne.admin?.familyId).toEqual(expect.any(String));
+    expect(reqUne.admin?.familyId).not.toBe(reqAutre.admin?.familyId);
   });
 
   // Un jeton signé avant que la lignée voyage dans la charge reste valide : on
@@ -78,7 +85,7 @@ describe("AdminGuard", () => {
     const { ctx, req } = contexte(`Bearer ${ancien}`);
 
     await expect(garde.canActivate(ctx)).resolves.toBe(true);
-    expect(req.admin.familyId).toBeNull();
+    expect(req.admin?.familyId).toBeNull();
   });
 
   // Le jeton reste valide trente minutes. Désactiver un compte doit le couper
@@ -109,7 +116,10 @@ describe("RoleGuard", () => {
   const garde = new RoleGuard(reflector);
 
   function contexteAvecRole(role: string, requis?: string): ExecutionContext {
-    const req: Requete = { headers: {}, admin: { id: "x", role } };
+    // Ce cas n'éprouve que le rôle : la lignée n'y joue aucun rôle, mais le
+    // type l'exige — c'est lui qui garantit qu'on n'oublie pas de la poser
+    // là où elle compte.
+    const req: Requete = { headers: {}, admin: { id: "x", role, familyId: null } };
     const handler = () => undefined;
     if (requis) Reflect.defineMetadata(ROLE_REQUIS, requis, handler);
     return {

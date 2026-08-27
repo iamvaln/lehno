@@ -193,7 +193,7 @@ describe("administration — mon profil", () => {
       // 401 et non 422 : la réponse dit au client d'échanger son jeton, et
       // l'échange lui en remettra un qui porte sa lignée. C'est le remède.
       expect(res.status).toBe(401);
-      expect((await res.json()).code).toBe("session_expired");
+      expect(((await res.json()) as { code: string }).code).toBe("session_expired");
 
       // Et surtout : le refus n'a rien fermé. Une garde qui refuse à moitié
       // serait pire que pas de garde du tout.
