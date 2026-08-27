@@ -588,7 +588,25 @@ d'un remboursement », et `refunded` est déjà un état lisible que rien ne pos
 
 ---
 
-## K. Qui a le droit d'exporter une liste ?
+## K. Qui a le droit d'exporter une liste ? — **tranché**
+
+**Décision du porteur du projet, 27/08/2026 : aucun export pour le support.**
+La règle vaut pour les cinq listes. L'export des connexions, seul ouvert
+jusque-là, est fermé avec les autres — c'était l'incohérence relevée ci-dessous,
+et elle est levée dans le sens du plus fermé.
+
+**Ce que ça pose comme principe** : voir une liste et pouvoir la sortir sont
+deux choses. La première est une lecture bornée par l'écran ; la seconde produit
+un fichier qui quitte l'outil, circule par courriel et s'ouvre dans un tableur.
+C'est le geste qu'on borne, pas la lecture — le support garde l'accès à tout ce
+que §6 lui accorde.
+
+**À reporter** dans `ux-admin-lehno.md` : §7 dit « les listes filtrées
+s'exportent » sans nommer de rôle, et §6 n'en parle pas. La restriction doit y
+figurer, sans quoi la lecture naturelle des deux sections dit l'inverse de ce
+qui est construit.
+
+Le relevé d'origine, pour mémoire :
 
 Relevé le 27/08/2026 en livrant l'export des trois listes d'exploitation.
 
@@ -610,18 +628,15 @@ fichier sort de l'outil et circule — par courriel, dans un tableur, sur un
 poste. Restreindre se défait d'une ligne ; élargir laisse sortir des données
 qu'on ne rattrape pas.
 
-**Ce que ça rend incohérent, et qu'il faut voir.** L'export des connexions,
-livré plus tôt, est **ouvert au support** parce que sa liste l'est. Le principe
-« l'export suit la visibilité de sa liste » vaut donc pour les connexions et
-pas pour les comptes. L'un des deux est à aligner :
+**Ce que ça rendait incohérent.** L'export des connexions, livré plus tôt,
+était **ouvert au support** parce que sa liste l'est. Le principe « l'export
+suit la visibilité de sa liste » valait donc pour les connexions et pas pour les
+comptes. Deux issues se présentaient : ouvrir les trois, ou fermer aussi les
+connexions.
 
-1. **Ouvrir les trois au support** — cohérent avec §6, §7 et les connexions ;
-   demande de retirer la `RoleGate` de `Liste.tsx`, donc d'élargir un accès.
-2. **Fermer aussi l'export des connexions** — cohérent avec le choix fait ici ;
-   demande d'admettre qu'un support voit une liste sans pouvoir la sortir.
-
-La première a ma préférence, mais élargir un accès n'est pas une décision
-d'implémentation.
+**C'est la seconde qui a été retenue** (voir en tête). Ma préférence allait à la
+première ; élargir un accès n'était pas une décision d'implémentation, et elle
+ne m'appartenait pas.
 
 **Un détail qui n'en est pas un.** Le bouton d'export des comptes proposait
 « csv » **et « json »** ; le serveur ne rend que du CSV. Choisir JSON aurait

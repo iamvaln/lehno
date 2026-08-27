@@ -143,14 +143,41 @@ describe("l'export emporte la sélection affichée", () => {
     await waitFor(() => expect(sorties(appels, "/admin/credit-transactions/export")).toHaveLength(1));
   });
 
-  // On ne montre pas un geste que le serveur refuserait : le support n'a pas de
-  // bouton d'export sur ces listes, et le serveur le lui refuse par ailleurs.
-  it("n'offre pas l'export au support", async () => {
+  // On ne montre pas un geste que le serveur refuserait. « Aucun export pour le
+  // support » vaut pour les cinq listes — décision du 27/08 : voir une liste et
+  // pouvoir la sortir sont deux choses.
+  it("n'offre pas l'export des comptes au support", async () => {
     serveur();
     await ouvrir("comptes", "support");
     await screen.findByText("compte1");
 
     expect(screen.queryByRole("button", { name: new RegExp(t.exporter.bouton, "i") })).toBeNull();
+  });
+
+  it("n'offre pas l'export des crédits au support", async () => {
+    serveur();
+    await ouvrir("credits", "support");
+    await screen.findByText("awa");
+
+    expect(screen.queryByRole("button", { name: new RegExp(t.exporter.bouton, "i") })).toBeNull();
+  });
+
+  // Les connexions étaient le seul export ouvert au support, au motif que sa
+  // liste l'est. C'était l'incohérence, et elle est levée.
+  it("n'offre pas l'export des connexions au support", async () => {
+    serveur({ "/admin/login-activity": () => reponse(200, { items: [], nextCursor: null }) });
+    await ouvrir("connexions", "support");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: new RegExp(t.exporter.bouton, "i") })).toBeNull();
+    });
+  });
+
+  it("l'offre encore à l'administrateur", async () => {
+    serveur({ "/admin/login-activity": () => reponse(200, { items: [], nextCursor: null }) });
+    await ouvrir("connexions", "admin");
+
+    expect(await screen.findByRole("button", { name: new RegExp(t.exporter.bouton, "i") })).toBeInTheDocument();
   });
 
   it("dit le code du serveur quand l'export échoue", async () => {

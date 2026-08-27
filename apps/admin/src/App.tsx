@@ -1074,7 +1074,13 @@ export function App(): ReactNode {
                 },
               }
               : {})}
-            onExporter={() => exporter("/admin/login-activity/export", requeteEntrees, "connexions.csv")}
+            // Le support voit les connexions mais ne les sort pas : on ne
+            // montre pas un geste que le serveur refuserait (décision du
+            // 27/08, voir K). Le journal d'audit n'a pas besoin de la même
+            // garde — sa section entière lui est fermée.
+            {...(role === "admin"
+              ? { onExporter: () => exporter("/admin/login-activity/export", requeteEntrees, "connexions.csv") }
+              : {})}
             exportEnCours={exportEnCours}
           />
         ) : null)}

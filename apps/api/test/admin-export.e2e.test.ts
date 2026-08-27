@@ -256,10 +256,23 @@ describe("administration — l'export des lectures", () => {
     expect((await exporter("audit-log", entete)).status).toBe(403);
   });
 
-  it("l'export des connexions est ouvert au support", async () => {
+  /**
+   * **Aucun export pour le support** — décision du porteur du projet, le
+   * 27/08/2026, et elle vaut pour les cinq.
+   *
+   * Celui-ci était le seul ouvert, parce que sa liste l'est : le principe
+   * « l'export suit la visibilité de sa liste » tenait pour les connexions et
+   * pas pour les comptes, dont l'écran fermait déjà le bouton. C'était
+   * l'incohérence, et c'est elle qu'on lève.
+   *
+   * Voir une liste et pouvoir la sortir sont deux choses : la seconde produit
+   * un fichier qui quitte l'outil, circule par courriel et s'ouvre dans un
+   * tableur. C'est le geste qu'on borne, pas la lecture.
+   */
+  it("l'export des connexions est fermé au support, comme les quatre autres", async () => {
     const { entete } = await session("support");
 
-    expect((await exporter("login-activity", entete)).status).toBe(200);
+    expect((await exporter("login-activity", entete)).status).toBe(403);
   });
 
   it("rien ne sort sans session", async () => {

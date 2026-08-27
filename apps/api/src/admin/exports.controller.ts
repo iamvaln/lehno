@@ -292,7 +292,11 @@ export class ExportsController {
     return this.service.journalDAudit(req.admin?.id ?? "", requete);
   }
 
+  // Fermé au support comme les quatre autres — décision du 27/08/2026. Il était
+  // le seul ouvert, au motif que sa liste l'est ; voir une liste et pouvoir la
+  // sortir sont deux choses. Voir K du fichier d'écarts.
   @Post("login-activity/export")
+  @Role("admin")
   @HttpCode(200)
   @Header("content-type", "text/csv; charset=utf-8")
   @Header("content-disposition", 'attachment; filename="connexions.csv"')
@@ -304,19 +308,17 @@ export class ExportsController {
   }
 
   /**
-   * Les trois listes d'exploitation, **réservées aux administrateurs**.
+   * Les trois listes d'exploitation, **réservées aux administrateurs** comme
+   * les deux lectures ci-dessus.
    *
-   * Ce n'est pas ce que la spécification dicte, et il faut le dire : §6 accorde
-   * au support « consulter les comptes » et « consulter les paiements et les
-   * mouvements de crédits », §7 n'assortit l'export d'aucun rôle. Les deux
-   * ensemble le lui ouvriraient — comme l'export des connexions, ouvert
-   * ci-dessus parce que sa liste l'est.
+   * §6 accorde au support la consultation des comptes, des paiements et des
+   * mouvements ; §7 n'assortit l'export d'aucun rôle. Les deux ensemble
+   * l'ouvriraient. **Le porteur du projet a tranché le 27/08/2026 : aucun
+   * export pour le support**, et la règle vaut pour les cinq.
    *
-   * Mais l'écran des comptes réserve **déjà** son bouton d'export aux
-   * administrateurs, et c'est une décision livrée. Devant ce désaccord on prend
-   * la lecture la plus fermée : un fichier sort de l'outil et circule ;
-   * restreindre se défait d'une ligne, élargir laisse sortir des données.
-   * À trancher — voir K du fichier d'écarts.
+   * Voir une liste et pouvoir la sortir sont deux choses. La seconde produit un
+   * fichier qui quitte l'outil, circule par courriel et s'ouvre dans un
+   * tableur : c'est le geste qu'on borne, pas la lecture.
    */
   @Post("users/export")
   @Role("admin")
