@@ -34,6 +34,7 @@ import { featuresResponseSchema, DRAPEAUX, CLES_DRAPEAUX, type CleDrapeau } from
 import { maintenanceStatusSchema } from "./maintenance.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
 import { metadataSchema } from "./me-app.js";
+import { sessionsListSchema, identitiesListSchema } from "./me-security.js";
 
 // Le contrat se CALCULE depuis les schémas Zod, il ne se recopie pas. Une
 // seconde déclaration des mêmes formes — en DTO décoré, par exemple — dériverait
@@ -866,6 +867,81 @@ const CHEMINS: Chemin[] = [
     ].join("\n"),
     authentifie: true,
     reponse: metadataSchema,
+  },
+  // ——— me/sessions, me/identities (apps/api/src/me/security.controller.ts) ——
+  // Écran « Sécurité et connexions », maquette §3.24. La suppression du
+  // compte (§3.24, en trois temps) n'a PAS de chemin ici : chantier à part,
+  // design encore en cours.
+  {
+    chemin: "/me/sessions",
+    methode: "get",
+    resume: "Lister les connexions récentes",
+    authentifie: true,
+    note: [
+      "### Une session est une LIGNÉE, pas un jeton",
+      "",
+      "`RefreshToken` crée un jeton enfant à chaque renouvellement, dans la",
+      "même lignée : lister les jetons montrerait vingt lignes pour un seul",
+      "téléphone resté ouvert deux mois. `id` est celui de la lignée,",
+      "`createdAt` la date de son premier jeton (l'ouverture), `lastActiveAt`",
+      "celle de son plus récent (la dernière fois qu'elle a servi).",
+      "",
+      "### Pas de lieu approximatif",
+      "",
+      "La maquette en demande un ; ce chemin n'en rend pas. `RefreshToken.ip`",
+      "sert aux investigations, pas à l'affichage (voir son commentaire dans",
+      "`prisma/schema.prisma`), et aucun service de géolocalisation ne la",
+      "traduit aujourd'hui en lieu. Plutôt qu'une adresse brute affichée comme",
+      "un lieu, le champ est absent — il rejoindra ce contrat le jour où un",
+      "service peut le produire honnêtement.",
+      "",
+      "### Pas de champ « appareil courant » non plus",
+      "",
+      "Ce chemin ne reçoit qu'un jeton d'accès, qui ne dit pas de quelle",
+      "lignée il descend. Le client sait déjà quel appareil est le sien ; ce",
+      "n'est pas au serveur de le lui redire.",
+    ].join("\n"),
+    reponse: sessionsListSchema,
+  },
+  {
+    chemin: "/me/sessions",
+    methode: "delete",
+    resume: "Se déconnecter de partout",
+    authentifie: true,
+    note: [
+      "### Révoque TOUTES les lignées du compte, y compris celle-ci",
+      "",
+      "Ce chemin ne reçoit qu'un jeton d'accès : rien n'y distingue « cet",
+      "appareil » des autres pour l'épargner. Plutôt qu'épargner une lignée au",
+      "hasard, cet appel révoque tout, sans exception. **Le client doit donc",
+      "traiter cet appel comme SA PROPRE déconnexion aussi** : effacer ses",
+      "jetons locaux et revenir à l'écran de connexion, sans attendre un signal",
+      "du serveur pour le faire.",
+      "",
+      "### L'effet n'est pas instantané",
+      "",
+      "Le jeton d'accès est autoportant, valable quinze minutes, et sa",
+      "validité ne se vérifie jamais en base : révoquer les lignées ici ne",
+      "l'invalide pas rétroactivement. Un appareil qui vient d'obtenir un",
+      "jeton d'accès peut continuer à l'utiliser jusqu'à quinze minutes après",
+      "cet appel ; c'est à son prochain RENOUVELLEMENT (`/auth/refresh`) que la",
+      "déconnexion se fait sentir, avec `session_expired`.",
+    ].join("\n"),
+    sansContenu: true,
+    statut: 204,
+  },
+  {
+    chemin: "/me/identities",
+    methode: "get",
+    resume: "Lister les moyens de connexion externes rattachés",
+    authentifie: true,
+    note: [
+      "Les moyens EXTERNES seulement — Google, Apple. La connexion par e-mail",
+      "et code n'apparaît pas ici : elle est toujours active, ne se détache",
+      "jamais (elle reste l'accès de secours, maquette §3.24), et l'écran",
+      "l'affiche sans avoir besoin de ce chemin pour le savoir.",
+    ].join("\n"),
+    reponse: identitiesListSchema,
   },
 ];
 
