@@ -248,6 +248,26 @@ describe("administration — l'export des lectures", () => {
 
   // ─── Les droits ────────────────────────────────────────────────────────────
 
+  /**
+   * Le sixième, et le premier où la distinction se voit à l'œil nu : §6 ouvre
+   * la LECTURE des métriques au support — « consulter le tableau de bord, les
+   * métriques, les connexions ». Sa sortie, elle, reste fermée comme les cinq
+   * autres. Voir une liste et pouvoir la sortir sont deux choses.
+   */
+  it("l'export des métriques est fermé au support, dont la lecture est ouverte", async () => {
+    const { entete } = await session("support");
+
+    expect((await exporter("metrics", entete)).status).toBe(403);
+  });
+
+  it("l'administrateur sort les cohortes de rétention", async () => {
+    const { entete } = await session("admin");
+
+    const reponse = await exporter("metrics", entete, "?periode=90j");
+    expect(reponse.status).toBe(200);
+    expect(await reponse.text()).toContain("mois");
+  });
+
   // Le journal est réservé aux administrateurs : son export l'est aussi, sans
   // quoi le support en obtiendrait par la sortie ce qu'on lui refuse à l'écran.
   it("l'export du journal est fermé au support", async () => {
