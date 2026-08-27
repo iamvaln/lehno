@@ -157,6 +157,10 @@ model Referral {
 enum CreditSource {
   signup_grant
   referral_bonus
+  // Le cadeau réservé à qui attendait sur la liste. À part de `gift`, qui est
+  // discrétionnaire : celui-ci est systématique et se compte — sans la
+  // distinction, on ne saurait pas ce que la liste d'attente a rapporté.
+  waitlist_bonus
   purchase
   manual_topup
   promo_code
@@ -320,6 +324,24 @@ model WaitlistSignup {
   source         String?  @db.VarChar(64)
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
 
+  /// Quand le courrier d'ouverture est parti. Il ne part QU'UNE FOIS : c'est
+  /// cette colonne qui le garantit, et non un drapeau global — celui-ci ne
+  /// dirait rien de qui a déjà reçu, et une hésitation sur la bascule
+  /// enverrait deux fois à tout le monde.
+  invitedAt      DateTime? @map("invited_at") @db.Timestamptz
+
+  /// Le compte né de cette attente, et le cadeau qui va avec.
+  ///
+  /// UNIQUE, et c'est là que vit l'anti-double-crédit — pas dans du code.
+  /// Sans cette contrainte, supprimer son compte et recommencer suffirait à
+  /// toucher le cadeau autant de fois qu'on veut. Même parade que Referral,
+  /// dont `invitedUserId` est unique pour la même raison.
+  convertedUserId String?  @unique @map("converted_user_id") @db.Uuid
+  convertedAt     DateTime? @map("converted_at") @db.Timestamptz
+
+  /// L'index qui sert au courrier d'ouverture : « ceux qui n'ont pas encore
+  /// été prévenus ». Sans lui, chaque envoi balaierait toute la table.
+  @@index([invitedAt])
   @@map("waitlist_signup")
 }
 
