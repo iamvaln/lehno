@@ -96,4 +96,27 @@ describe("sessions", () => {
     await tokens.revokeFamily(pair.refreshToken);
     await expect(tokens.rotate(pair.refreshToken)).rejects.toThrow();
   });
+
+  describe("se déconnecter de partout (revokeAllForUser)", () => {
+    it("révoque toutes les lignées du compte, pas seulement la première", async () => {
+      const a = await tokens.issuePair(userId, "Chrome — macOS");
+      const b = await tokens.issuePair(userId, "Safari — iOS");
+
+      await tokens.revokeAllForUser(userId);
+
+      await expect(tokens.rotate(a.refreshToken)).rejects.toThrow();
+      await expect(tokens.rotate(b.refreshToken)).rejects.toThrow();
+    });
+
+    it("épargne les lignées des autres comptes", async () => {
+      const autre = await db.prisma.user.create({
+        data: { email: "karim@example.com", username: "karim", referralCode: "KAR1" },
+      });
+      const paireAutre = await tokens.issuePair(autre.id);
+
+      await tokens.revokeAllForUser(userId);
+
+      await expect(tokens.rotate(paireAutre.refreshToken)).resolves.toBeDefined();
+    });
+  });
 });
