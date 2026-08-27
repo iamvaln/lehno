@@ -48,7 +48,6 @@ export const en = {
   parrainInvalide: "Invalid code",
   continuer: "Continue",
   bienvenueTitre: (prenom: string) => "Welcome, " + prenom,
-  bienvenueTexte: "Your notebook is open. Enough to prepare your first celebrations: a portrait, gift ideas, the right words.",
   bienvenueCredits: (n: number) => n + (n === 1 ? " credit" : " credits"),
   bienvenueCadeau: "Welcome gift",
   bienvenueParrainage: "Referral bonus",
@@ -144,4 +143,15 @@ export const en = {
   catFaits: "Key facts",
   catEncouragements: "Encouragements",
   catChallenges: "Challenges",
+
+  /* La bienvenue ÉNUMÈRE ce qui est ouvert, elle ne récite pas le produit.
+     Dire « un portrait » quand `generation.portrait` est fermé promettrait ce
+     qu'on ne livre pas ; au lancement, la phrase ne cite que le message. Aucune
+     nature ouverte, elle s'arrête au carnet — d'où deux clés et non une.
+     `bienvenueTexte`, la phrase figée, s'en va avec. */
+  bienvenueDeQuoi: (liste: string) => "Your notebook is open. Enough to prepare your first celebrations: " + liste + ".",
+  bienvenueOuvre: "Your notebook is open.",
+  bienvenueNatureMessage: "the right words",
+  bienvenueNatureIdees: "gift ideas",
+  bienvenueNaturePortrait: "a portrait",
 };

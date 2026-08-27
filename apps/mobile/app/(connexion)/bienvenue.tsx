@@ -3,13 +3,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { nativeFont, nativeLetterSpacing, nativeRadius, nativeSpace, nativeTracking } from "@lehno/tokens";
 import { Button, Illustration, useTheme } from "@lehno/ui-native";
+import { estActive } from "@lehno/contracts";
 import { useLangue } from "../../lib/langue.js";
+import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
+import { phraseDeBienvenue } from "../../lib/bienvenue.js";
 
 /* Le dernier écran du parcours : ce qu'on reçoit en arrivant, et une seule
    porte de sortie. « Inviter un ami » renvoie au parrainage — il n'existe pas
    encore, et le bouton mène pour l'instant à l'accueil plutôt qu'au vide. */
 export default function Bienvenue() {
   const { t } = useLangue();
+  const { actives } = useDrapeaux();
   const { couleurs } = useTheme();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
@@ -26,6 +30,9 @@ export default function Bienvenue() {
     pseudo: string; credits: string; bonus: string; parrain: string;
   }>();
   const offerts = Number(credits ?? 0);
+  /* Le bonus et l'invitation suivent le même drapeau : promettre un bonus
+     puis ne pas offrir d'inviter serait une porte qui manque. */
+  const parrainageOuvert = estActive(actives, "referral");
   const gagnes = Number(bonus ?? 0);
 
   return (
@@ -33,7 +40,13 @@ export default function Bienvenue() {
       <Illustration name="bienvenue-credits" width={140} />
 
       <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.bienvenueTitre(pseudo ?? "")}</Text>
-      <Text style={[styles.texte, { color: couleurs.textSecondary }]}>{t.bienvenueTexte}</Text>
+      {/* La phrase ÉNUMÈRE ce qui est ouvert. Elle disait le produit entier —
+          « un portrait, des idées de cadeau, un mot juste » — quelle que soit la
+          configuration : au lancement, elle promettait deux choses sur trois que
+          personne ne pourrait faire. */}
+      <Text style={[styles.texte, { color: couleurs.textSecondary }]}>
+        {phraseDeBienvenue(actives, t)}
+      </Text>
 
       <View style={[styles.cadeau, { backgroundColor: couleurs.surfacePanel }]}>
         <Text style={[styles.credits, { color: couleurs.textAccent }]}>{t.bienvenueCredits(offerts)}</Text>
@@ -44,7 +57,7 @@ export default function Bienvenue() {
           libellé seul et sans montant : elle annonçait un bonus à qui n'en avait
           aucun. Le DÉTAIL, pas un total — c'est ce qui garde une raison
           d'inviter quelqu'un. */}
-      {gagnes > 0 ? (
+      {parrainageOuvert && gagnes > 0 ? (
         <Text style={[styles.parrainage, { color: couleurs.textMention }]}>
           {t.bienvenueCredits(gagnes)} · {t.bienvenueParrainage}
           {parrain ? ` · ${parrain}` : ""}
@@ -53,7 +66,9 @@ export default function Bienvenue() {
 
       <View style={styles.sorties}>
         <Button variant="primary" full onPress={() => routeur.replace("/")}>{t.commencer}</Button>
-        <Button variant="text" full onPress={() => routeur.replace("/")}>{t.inviterAmi}</Button>
+        {parrainageOuvert ? (
+          <Button variant="text" full onPress={() => routeur.replace("/")}>{t.inviterAmi}</Button>
+        ) : null}
       </View>
     </View>
   );

@@ -7,7 +7,11 @@ export const SEMANTIC_ROLES = [
   "textBody", "textSecondary", "textMention", "textAccent", "textOnAccent",
   "action", "actionHover", "actionPress", "actionEdge", "actionQuietBg",
   "borderHairline", "borderObject", "focusRing",
-  "celebrate", "onCelebrate",
+  /* La fête a deux emplois. `celebrate` est la PASTILLE — le point du jour même,
+     qui ne porte pas de texte. `celebrateFill` est l'APLAT — un bouton, un
+     bandeau — et il est plus soutenu, parce qu'un texte s'y pose. Les confondre
+     donnait un libellé illisible sur son propre fond. */
+  "celebrate", "onCelebrate", "celebrateFill", "onCelebrateFill",
   // Les illustrations nomment leurs propres rôles plutôt que d'emprunter ceux
   // de l'action. En thème clair la masse tombe sur le même violet ; les
   // confondre ferait repeindre vingt-six illustrations le jour où la couleur
@@ -31,6 +35,7 @@ export const semantic: Record<Theme, Record<SemanticRole, PrimitiveName>> = {
     actionEdge: "violet", actionQuietBg: "lilac",
     borderHairline: "rule", borderObject: "ruleStrong", focusRing: "violet",
     celebrate: "apricot", onCelebrate: "onApricot",
+    celebrateFill: "apricotDeep", onCelebrateFill: "ink",
     illusMass: "violet", illusForm: "lilac", illusWarm: "apricot",
     feedbackInfo: "info", feedbackInfoBg: "infoBg",
     feedbackSuccess: "success", feedbackSuccessBg: "successBg",
@@ -46,6 +51,7 @@ export const semantic: Record<Theme, Record<SemanticRole, PrimitiveName>> = {
     actionEdge: "edge", actionQuietBg: "lilac",
     borderHairline: "rule", borderObject: "ruleStrong", focusRing: "violet",
     celebrate: "apricot", onCelebrate: "onApricot",
+    celebrateFill: "apricotDeep", onCelebrateFill: "ink",
     illusMass: "violet", illusForm: "lilac", illusWarm: "apricot",
     feedbackInfo: "info", feedbackInfoBg: "infoBg",
     feedbackSuccess: "success", feedbackSuccessBg: "successBg",

@@ -14,8 +14,9 @@ La configuration décidée pour la première version :
 > **et le message généré**. Tout le reste éteint.
 
 **`generation.message` est allumé, et c'est ce qui donne un sens aux crédits.**
-Sans lui, ils ne paieraient rien. Le profil « Lancement » du prototype le porte
-encore à `false` — voir §6, c'est à corriger côté planche.
+Sans lui, ils ne paieraient rien. *Corrigé dans la version du 27 au soir : le
+profil « Lancement » du prototype le porte désormais allumé, et un cinquième
+profil — « Idées seules » — éprouve la combinaison inverse.*
 
 Ce n'est pas un détail de paramétrage, c'est **l'ordre de construction**. Le
 prototype calcule lui-même ce qui sort de la navigation (`ecranEteint`,
@@ -196,14 +197,9 @@ les découvrant écran par écran.
 
 ## 6. Ce qu'il faut dire au designer, vite
 
-**Le profil « Lancement » du prototype est faux sur un point.** Il porte
-`generation.message: false`, alors que le message est allumé au lancement — sans
-lui les crédits ne paient rien. Tant qu'il n'est pas corrigé, la planche montre
-la fiche **sans « Préparer »**, l'occasion sans son bloc, et la carte d'échéance
-avec une seule action. Ce sont trois états qui ne seront jamais vus. Et le cas
-« une nature sur deux » — le message seul, les idées fermées — devient le cas
-NOMINAL du lancement, pas une variante : c'est lui qu'il faut dessiner en
-premier.
+*Le profil « Lancement » a été corrigé dans la version du 27 au soir : le
+message est allumé, un cinquième profil éprouve les idées seules, et la clé
+`wishlistOwn` — que le serveur n'envoie pas — est redevenue `wishlist.own`.*
 
 **Ne pas répliquer le port React Native.** Le `A-COMPLETER.md` propose de
 convertir mécaniquement 50+ fichiers — « 274 `<div>`, 51 grilles, 62
