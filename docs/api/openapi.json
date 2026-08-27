@@ -10839,6 +10839,321 @@
         }
       }
     },
+    "/me/home": {
+      "get": {
+        "summary": "L'accueil en un appel : la phrase d'état et les trois échéances les plus proches",
+        "description": "L'écran d'ouverture de l'application (§3.2 de la maquette, §5.8 du\ntechnique). Tout y tient en un seul aller-retour, à dessein : c'est le\npremier appel après la connexion, et c'est là qu'un chargement en\ncascade se voit le plus.\n\n### `counts` ne se déduit PAS de `occurrences`\n\nLa liste est plafonnée à **trois** cartes. Trois échéances rendues ne\ndisent pas combien il y en a cette semaine : `counts.today` et\n`counts.thisWeek` sont comptés séparément, en base, sur la table\nentière. Un client qui compterait les éléments de `occurrences` pour\ncomposer sa phrase se tromperait dès la quatrième échéance — et il se\ntromperait **par défaut**, en annonçant moins qu'il n'y en a.\n\nLa semaine, ce sont les **sept prochains jours, aujourd'hui compris**.\n\n### Les deux états vides ne se ressemblent pas\n\n`hasPersons` distingue « le carnet est vide » de « le carnet est plein\nmais rien n'approche ». Au premier lancement, le bouton principal\ndevient « Ajouter un anniversaire » — il n'y a personne à propos de qui\nécrire. Ensuite, « Laisser une note » demeure.\n\n**Le client ne peut pas trancher depuis une liste vide** : les deux cas\nrendent `occurrences: []`. Ce drapeau lui évite d'appeler `/me/persons`\nrien que pour choisir un libellé de bouton.\n\n### La pastille de la cloche voyage avec\n\n`unreadNotifications` accompagne la réponse parce que l'en-tête\nl'affiche dès l'ouverture. La demander à part ferait clignoter la\npastille — apparue vide, puis remplie une fraction de seconde plus tard.\n\n### Ce chemin n'a pas de drapeau\n\nLes dates relèvent du **socle**, qui ne s'éteint pas (§6.3). Il répond\ntoujours, y compris à un compte qui n'a encore rien saisi.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "occurrences": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "eventId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "personId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "personDisplayName": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "birthday",
+                              "other"
+                            ]
+                          },
+                          "nature": {
+                            "type": "string",
+                            "enum": [
+                              "happy",
+                              "sensitive"
+                            ]
+                          },
+                          "label": {
+                            "type": "string",
+                            "maxLength": 120,
+                            "nullable": true
+                          },
+                          "occurrenceDate": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "occurrenceYear": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "upcoming",
+                              "collecting",
+                              "closed"
+                            ]
+                          },
+                          "daysUntil": {
+                            "type": "integer"
+                          },
+                          "age": {
+                            "type": "integer",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "eventId",
+                          "personId",
+                          "personDisplayName",
+                          "kind",
+                          "nature",
+                          "label",
+                          "occurrenceDate",
+                          "occurrenceYear",
+                          "status",
+                          "daysUntil",
+                          "age"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "counts": {
+                      "type": "object",
+                      "properties": {
+                        "today": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "thisWeek": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "today",
+                        "thisWeek"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "unreadNotifications": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "hasPersons": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "firstName",
+                    "occurrences",
+                    "counts",
+                    "unreadNotifications",
+                    "hasPersons"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/sessions": {
       "get": {
         "summary": "Lister les connexions récentes",
