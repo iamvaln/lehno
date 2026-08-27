@@ -68,11 +68,15 @@ export default function Pseudo() {
         params: {
           pseudo,
           credits: String(session.signupCredits),
-          /* Le détail, pas un total : le cadeau de bienvenue et le bonus de
-             parrainage sont deux gestes distincts, et l'un des deux se mérite.
-             Les additionner effacerait la raison d'inviter quelqu'un. */
+          /* Le cadeau de lancement — celui qui récompense l'attente. Le
+             contrat ne porte pas encore `waitlistBonus` : tant qu'il ne le
+             rend pas, la ligne ne paraît pas, plutôt que d'annoncer un geste
+             qu'on n'a pas fait. Signalé au backend. */
+          attente: "0",
+          /* L'issue voyage avec le bonus : sans elle, un code introuvable et
+             un code absent se ressembleraient, et l'écran se tairait là où il
+             doit constater. */
           bonus: String(session.referral?.bonusCredits ?? 0),
-          parrain: session.referral?.inviterUsername ?? "",
           issueParrain: session.referral?.outcome ?? "",
         },
       });

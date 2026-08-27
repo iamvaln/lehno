@@ -1,12 +1,17 @@
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { nativeFont, nativeLetterSpacing, nativeRadius, nativeSpace, nativeTracking } from "@lehno/tokens";
+import {
+  nativeBorder, nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin,
+  nativeTracking,
+} from "@lehno/tokens";
 import { Button, Illustration, useTheme } from "@lehno/ui-native";
 import { estActive } from "@lehno/contracts";
 import { useLangue } from "../../lib/langue.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
-import { phraseDeBienvenue } from "../../lib/bienvenue.js";
+import {
+  expliqueLeBonusManque, lignesDeBienvenue, phraseDeBienvenue,
+} from "../../lib/bienvenue.js";
 
 /* Le dernier écran du parcours : ce qu'on reçoit en arrivant, et une seule
    porte de sortie. « Inviter un ami » renvoie au parrainage — il n'existe pas
@@ -26,14 +31,24 @@ export default function Bienvenue() {
      vide en attendant le profil, et l'écran saluait « Bienvenue, » — une
      virgule suivie de rien, qui se lit comme un défaut plutôt que comme un
      accueil. Le pseudo est là, deux écrans plus tôt ; il suffit de le porter. */
-  const { pseudo, credits, bonus, parrain } = useLocalSearchParams<{
-    pseudo: string; credits: string; bonus: string; parrain: string;
+  const { pseudo, credits, attente, bonus, issueParrain } = useLocalSearchParams<{
+    pseudo: string; credits: string; attente: string; bonus: string; issueParrain: string;
   }>();
-  const offerts = Number(credits ?? 0);
+
+  /* UNE LIGNE PAR GESTE, jamais un total. Le cadeau vient à tout le monde, la
+     liste d'attente se méritait, le parrainage se mérite autrement — et le cas
+     du lancement en porte deux : ceux qui recevront le courrier d'ouverture
+     attendaient. */
+  const lignes = lignesDeBienvenue({
+    cadeau: Number(credits ?? 0),
+    attente: Number(attente ?? 0),
+    parrainage: issueParrain
+      ? { outcome: issueParrain as "credited" | "unknown" | "self", bonusCredits: Number(bonus ?? 0) }
+      : null,
+  }, actives, t);
   /* Le bonus et l'invitation suivent le même drapeau : promettre un bonus
      puis ne pas offrir d'inviter serait une porte qui manque. */
   const parrainageOuvert = estActive(actives, "referral");
-  const gagnes = Number(bonus ?? 0);
 
   return (
     <View style={[styles.contenu, { paddingTop: insets.top + nativeSpace[32], paddingBottom: insets.bottom + nativeSpace[20] }]}>
@@ -48,19 +63,28 @@ export default function Bienvenue() {
         {phraseDeBienvenue(actives, t)}
       </Text>
 
-      <View style={[styles.cadeau, { backgroundColor: couleurs.surfacePanel }]}>
-        <Text style={[styles.credits, { color: couleurs.textAccent }]}>{t.bienvenueCredits(offerts)}</Text>
-        <Text style={[styles.cadeauTexte, { color: couleurs.textSecondary }]}>{t.bienvenueCadeau}</Text>
-      </View>
+      {lignes.map((ligne) => (
+        <View
+          key={ligne.cle}
+          style={[styles.ligne, { borderTopColor: couleurs.borderHairline }]}
+        >
+          <Text style={[styles.ligneLibelle, { color: couleurs.textSecondary }]}>
+            {ligne.libelle}
+          </Text>
+          <Text style={[styles.ligneValeur, {
+            color: ligne.sourd ? couleurs.textMention
+              : ligne.accent ? couleurs.textAccent : couleurs.textBody,
+          }]}>{ligne.valeur}</Text>
+        </View>
+      ))}
 
-      {/* Le parrainage ne paraît QUE s'il a joué. La ligne s'affichait toujours,
-          libellé seul et sans montant : elle annonçait un bonus à qui n'en avait
-          aucun. Le DÉTAIL, pas un total — c'est ce qui garde une raison
-          d'inviter quelqu'un. */}
-      {parrainageOuvert && gagnes > 0 ? (
-        <Text style={[styles.parrainage, { color: couleurs.textMention }]}>
-          {t.bienvenueCredits(gagnes)} · {t.bienvenueParrainage}
-          {parrain ? ` · ${parrain}` : ""}
+      {/* La phrase n'accompagne QUE le bonus manqué. Pas de bandeau d'erreur
+          pour un bonus qui n'arrive pas : alarmer quelqu'un sur un compte qui
+          vient de se créer serait lui apprendre à s'inquiéter de ce qui a
+          marché. */}
+      {expliqueLeBonusManque(lignes) ? (
+        <Text style={[styles.aide, { color: couleurs.textMention }]}>
+          {t.bienvenueParrainageAide}
         </Text>
       ) : null}
 
@@ -84,9 +108,20 @@ const styles = StyleSheet.create({
     fontFamily: nativeFont.bodyRegular, fontSize: 14.5, textAlign: "center",
     lineHeight: 22, marginTop: nativeSpace[8],
   },
-  cadeau: { alignSelf: "stretch", alignItems: "center", padding: nativeSpace[20], borderRadius: nativeRadius.xl, marginTop: nativeSpace[24] },
-  credits: { fontFamily: nativeFont.displayMedium, fontSize: 28 },
-  cadeauTexte: { fontFamily: nativeFont.bodyRegular, fontSize: 13.5, textAlign: "center", marginTop: nativeSpace[4] },
-  parrainage: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, textAlign: "center", marginTop: nativeSpace[16], lineHeight: 18 },
+  /* Une ligne par geste : le libellé à gauche, la valeur à droite, un filet
+     entre. La première porte le sien aussi — elle se détache de la phrase
+     au-dessus, qui n'est pas du même ordre. */
+  ligne: {
+    alignSelf: "stretch", flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between", gap: nativeSpace[12],
+    minHeight: nativeTouchMin, paddingVertical: nativeSpace[8],
+    borderTopWidth: nativeBorder.width,
+  },
+  ligneLibelle: { fontFamily: nativeFont.bodyRegular, fontSize: 14.5, flexShrink: 1 },
+  ligneValeur: { fontFamily: nativeFont.displayMedium, fontSize: 17 },
+  aide: {
+    alignSelf: "stretch", fontFamily: nativeFont.bodyRegular, fontSize: 12.5,
+    lineHeight: 18, marginTop: nativeSpace[8],
+  },
   sorties: { alignSelf: "stretch", gap: nativeSpace[6], marginTop: "auto" },
 });

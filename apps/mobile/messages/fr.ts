@@ -860,4 +860,16 @@ export const fr = {
   occVoeuxRecus: "Vœux reçus",
   occAucunVoeu: "Aucun mot pour cette occasion.",
   sensibleApproche: "Le 14 mars approche.",
+
+  /* La liste d'attente. UNE LIGNE PAR GESTE, jamais un total : le cadeau vient
+     à tout le monde, la liste d'attente se méritait — il fallait s'y inscrire —
+     et le parrainage se mérite autrement. Les additionner effacerait la raison
+     de chacun. Les trois libellés sont des groupes NOMINAUX : ils nomment un
+     geste, ils ne s'adressent pas à la personne. */
+  bienvenueAttente: "Cadeau de lancement",
+  bienvenueParrainageInconnu: "Code de parrainage",
+  bienvenueParrainageInconnuVal: "introuvable",
+  bienvenueParrainageSoi: "Code de parrainage",
+  bienvenueParrainageSoiVal: "le vôtre",
+  bienvenueParrainageAide: "Le compte est créé, sans le bonus.",
 };
