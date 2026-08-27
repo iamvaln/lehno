@@ -220,15 +220,31 @@ describe("les filtres et l'export des deux lectures", () => {
     ).toBeGreaterThan(0));
   });
 
-  // Le journal est réservé aux administrateurs : son export l'est aussi, et
-  // l'écran ne doit pas proposer un geste que le serveur refusera.
-  it("le support ne voit pas le bouton d'export du journal", async () => {
+  /**
+   * **Aucun export pour le support** — décision du 27/08/2026, valable pour les
+   * cinq listes. Les connexions étaient la seule qu'il pouvait sortir, au motif
+   * que sa liste lui est ouverte ; voir une liste et pouvoir la sortir sont
+   * deux choses, et c'est la seconde qu'on borne.
+   *
+   * Le nom de ce test annonçait « le journal » quand son corps regardait les
+   * connexions, et il vérifiait la présence du bouton là où son intitulé
+   * promettait son absence. Les deux se rejoignent.
+   */
+  it("le support ne voit pas le bouton d'export des connexions", async () => {
     const utilisateur = userEvent.setup({ delay: null });
     serveur();
     await aller(utilisateur, t.sections.connexions, "support");
     await screen.findByText("Douala, CM");
 
-    // Les connexions lui sont ouvertes : le bouton y est.
+    expect(screen.queryByRole("button", { name: new RegExp(t.exporter.bouton) })).toBeNull();
+  });
+
+  it("l'administrateur le voit", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await aller(utilisateur, t.sections.connexions, "admin");
+    await screen.findByText("Douala, CM");
+
     expect(screen.getByRole("button", { name: new RegExp(t.exporter.bouton) })).toBeInTheDocument();
   });
 });
