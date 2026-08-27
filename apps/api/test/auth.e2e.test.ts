@@ -66,6 +66,10 @@ describe("authentification", () => {
     });
   };
   let envoyés: Mail[];
+  // Retenue plutôt que jetée : c'est elle qui prouve que les événements
+  // partent avec l'identifiant de compte, et non depuis un point d'appel qui
+  // ne l'a pas.
+  let mesure: ReturnType<typeof mesureDeTest>;
 
   beforeAll(async () => { db = await withDatabase(); }, 120_000);
   afterAll(async () => { await db.close(); });
@@ -74,13 +78,40 @@ describe("authentification", () => {
     otp = new OtpService(db.prisma as never, PEPPER);
     envoyés = [];
     const mailDeTest: MailPort = { send: async (m) => { envoyés.push(m); } };
+    mesure = mesureDeTest(db.prisma);
     tokens = new TokenService(db.prisma as never, SECRET);
     auth = new AuthService(
       db.prisma as never, otp, tokens,
       new SignupService(db.prisma as never, new LegalService()),
       new RateLimitService(db.prisma as never), mailDeTest,
-      mesureDeTest(db.prisma).service,
+      mesure.service,
     );
+  });
+
+  /* Le défaut du 26/08, constaté en intégration : signin.completed partait avec
+     userId à null. Il s'émettait au contrôleur, là où VerifyOutcome ne porte pas
+     l'identifiant — et n'a pas à le porter, il n'a rien à faire côté client.
+
+     Le test précédent vérifiait que le service de mesure attache l'identifiant
+     qu'on lui donne. Il ne prouvait pas qu'AuthService le lui donne : la sonde
+     est passée au travers. Celui-ci part du parcours réel. */
+  it("émet la connexion AVEC l'identifiant du compte, pas un vide", async () => {
+    const compte = await inscrire("awa@example.com", "dev-1");
+    expect(compte.outcome).toBe("session");
+
+    // Une seconde entrée sur le même compte : cette fois c'est une CONNEXION.
+    const { code } = await otp.issue("awa@example.com", "login");
+    const retour = await auth.verifyOtp({ email: "awa@example.com", code, deviceId: "dev-1" });
+    expect(retour.outcome).toBe("session");
+    await mesure.attendre(2);
+
+    const connexion = mesure.emis.find((e) => e.name === "signin.completed");
+    expect(connexion, "aucune connexion mesurée").toBeDefined();
+    // LE point : sans identifiant, une connexion ne se rattache à aucun
+    // parcours, et la rétention à sept, trente et quatre-vingt-dix jours
+    // (§16.1) devient incalculable.
+    expect(connexion?.common["userId"]).toEqual(expect.any(String));
+    expect(connexion?.common["userId"]).not.toBeNull();
   });
 
   // Le plafond du code de connexion se comptait sur la casse abaissée
