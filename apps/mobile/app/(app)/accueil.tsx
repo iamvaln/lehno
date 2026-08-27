@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { homeSchema, type Home, type Occurrence } from "@lehno/contracts";
 import {
   nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin, nativeTracking,
@@ -39,7 +39,6 @@ export default function Accueil() {
   const { t, langue } = useLangue();
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
-  const routeur = useRouter();
   const { actives } = useDrapeaux();
 
   const [home, setHome] = useState<Home | null>(null);
@@ -89,7 +88,7 @@ export default function Accueil() {
   }
 
   const etat = etatDeLAccueil(home);
-  const { cartes, rangs, reste } = composeLAccueil(home.occurrences, remplissage);
+  const { cartes, rangs } = composeLAccueil(home.occurrences, remplissage);
   const preparer = preparationOuverte(actives);
 
   /* Le carnet neuf ne poursuit qu'UN BUT : conduire au premier ajout.
@@ -133,13 +132,10 @@ export default function Accueil() {
         <>
           <View style={styles.entete}>
             <SectionLabel>{t.ceQuiApproche}</SectionLabel>
-            <Text
-              accessibilityRole="button"
-              onPress={() => routeur.push("/(app)/proches")}
-              style={[styles.voir, { color: couleurs.textAccent }]}
-            >
-              {reste ? t.voirPlus : t.voirTout}
-            </Text>
+            {/* « Voir tout » mène à Dates, qui appartient au lot B. Le pointer
+                vers Proches en attendant serait mentir sur sa destination : ce
+                n'est pas la même liste, et le lien porte le mot « tout ». Il
+                revient avec son écran. */}
           </View>
 
           {/* La zone mesurée. `onLayout` donne la hauteur disponible,
