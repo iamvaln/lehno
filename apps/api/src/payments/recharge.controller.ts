@@ -12,15 +12,18 @@ import { RechargeService } from "./recharge.service.js";
 
 type AuthedRequest = { userId: string };
 
-/* Les paliers sont gouvernés par `credits`, pas par `topup.manual`.
+/* Les paliers n'ont AUCUN drapeau, et ce n'est pas un oubli.
  *
- * Ils disent que les crédits s'achètent ; la façon de payer est une autre
- * question. Les mettre sous le drapeau du versement manuel cacherait l'offre le
- * jour où l'on bascule sur le canal automatique, alors que rien n'aurait changé
- * pour l'utilisateur. */
+ * Ils disent ce que valent les crédits ; la façon de payer est une autre
+ * question, et c'est elle qui s'ouvre et se ferme. Les mettre sous le drapeau
+ * d'un canal cacherait l'offre le jour où l'on bascule sur l'autre, alors que
+ * rien n'aurait changé pour l'utilisateur.
+ *
+ * Et il n'y a plus de drapeau sur les crédits eux-mêmes : les actions payantes
+ * en consomment toujours (§6.4). Ce qui reste réglable l'est par un
+ * paramètre — le prix du crédit —, pas par un interrupteur. */
 @Controller("me/credit-bundles")
-@UseGuards(FeatureGuard, AuthGuard)
-@Feature("credits")
+@UseGuards(AuthGuard)
 export class CreditBundlesController {
   constructor(@Inject(RechargeService) private readonly recharge: RechargeService) {}
 
