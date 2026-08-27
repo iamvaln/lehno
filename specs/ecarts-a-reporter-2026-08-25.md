@@ -9,6 +9,48 @@ projet, sauf mention contraire.
 
 ---
 
+## Point au 27 août 2026 — relecture des spécifications
+
+Chaque point ci-dessous a été relu contre les documents à leur état du jour.
+
+### Réglé, à retirer de ce fichier
+
+| Point | Où c'est désormais écrit |
+|---|---|
+| **A1** classement en arrière-plan, échec silencieux | doc fonctionnelle L476, L478 |
+| **A2** une note peut n'appartenir à aucune catégorie | doc fonctionnelle L480, L482 |
+| **A3** six catégories organisent, une contraint | doc fonctionnelle L486, L526 |
+| **B1** les drapeaux de fonctionnalité | spec technique, quatorze passages : registre, 404 avant l'authentification, le back-office lit le registre |
+| **B2** `launch.live` se lit à l'exécution | spec technique L312 — le geste d'administration, les cinq minutes, le repli en pré-lancement |
+| **B3** conventions de statuts HTTP | spec technique L79 |
+| **B4** `openapi.json` fait autorité | spec technique L60 |
+| **E** la note sans catégorie à l'écran | tranché : le bloc « à ranger » (ux-app-mobile L189, L226) |
+
+### Toujours ouvert
+
+- **A4** — `admin_refresh_token` n'apparaît nulle part au dictionnaire. Les
+  colonnes `ip` des autres tables y sont bien.
+- **A5** — `login_method` et `login_activity.method` restent absents du
+  dictionnaire, dont la table `LoginActivity` (L308) ne porte pas la voie.
+- **A6** — la justification fausse tient toujours, dictionnaire L144 :
+  « sans quoi deux demandes en attente entreraient en collision sur une valeur
+  nulle ». La décision est bonne, le motif est faux.
+- **B5** — origines autorisées et relais de confiance : rien dans aucune
+  spécification, alors que `TRUST_PROXY_HOPS` est lu par le code.
+- **C2** — `AIUsage.origin` : la table elle-même n'existe pas.
+- **G**, **H**, **I**, **J** — ci-dessous.
+
+### Partiellement réglé
+
+- **C3** — `Payment` et `CreditTransaction.payment_id` **sont construits**
+  depuis le chantier des paiements. Le paragraphe « rien n'est construit » ne
+  vaut plus. Deux divergences subsistent, en **J**.
+- **D** — six des vingt-et-une tables sont désormais livrées :
+  `CreditTransaction`, `Payment`, `PaymentMethod`, `PaymentStatusHistory`,
+  `AIModel`, `Referral`. Quinze restent absentes.
+
+---
+
 ## A. Ce qui contredit la documentation actuelle
 
 ### A1. Le classement des notes n'est pas synchrone
@@ -418,26 +460,37 @@ des publications et le retour arrière. Le serveur les servait déjà, sans écr
 est en service par couple (genre, clé) — tenue par un index unique partiel, en
 base et non dans le service.
 
-**Bloquée — « composition ».** §5.9 promet un brouillon : « on y travaille
-librement, **rien ne change pour les utilisateurs tant qu'on n'a pas publié** ».
-Le modèle de données n'a pas de brouillon : `POST` crée une version **et la met
-en service au même geste**. Un onglet « composition » bâti dessus publierait à
-chaque enregistrement — l'inverse exact de sa promesse.
+### Correction du 27/08 : ce n'est pas une décision à prendre, c'est trois tables à construire
 
-C'est une décision à prendre, pas un oubli à combler : ajouter un état brouillon
-change ce que `POST` veut dire, et l'index unique partiel qui garantit
-aujourd'hui « une seule active » devra distinguer « publiée » de « en cours ».
+**J'ai d'abord écrit que le modèle n'avait pas de brouillon et que c'était « une
+décision à prendre ». C'est faux.** Le dictionnaire de données spécifie le
+studio en entier, et depuis avant ce chantier :
 
-**Bloqué — « banc d'essai ».** Il appelle un modèle et se paie en argent réel.
-Aucun fournisseur d'IA n'est branché dans le dépôt (voir G), `AIUsage` n'existe
-pas, et `/me/studio/options` — le catalogue que l'application consomme — n'est
-servi par aucun contrôleur. Ni l'essai, ni son coût, ni le plafond quotidien,
-ni les profils de simulation n'ont où se poser.
+| Table | Ce qu'elle porte | Livrée |
+|---|---|---|
+| `StudioConfig` (L1068) | `state` : `draft` \| `published` \| `superseded` ; `settings` jsonb — orientations actives et leur ordre, ambiances, motif, modèle par production, gabarits retenus ; `published_at`, `published_by_admin_id`, `note` | **non** |
+| `StudioProfile` (L1088) | Le profil de simulation, qui ne correspond à aucun compte réel | **non** |
+| `StudioTrial` (L1102) | L'essai : sa sortie, son **coût réel**, son statut ; le plafond quotidien vit en `SystemParameter` `studio_trial_daily_cap` | **non** |
+| `PromptTemplate` (L1120) | Les gabarits versionnés | oui |
 
-**Absents du modèle.** Les **orientations** (libellés dans les deux langues,
-ordre, activation), les **ambiances**, le **motif identitaire** : aucune table.
-`PromptTemplate.key` en tient lieu implicitement, sans libellé ni ordre ni
-activation propres.
+Le dictionnaire écrit déjà, mot pour mot, ce que §5.9 promet : « **Un brouillon
+se modifie librement ; une publication met en service.** Sans cette séparation,
+chaque frappe partirait en production. » Il pose l'index unique partiel là où
+`state` vaut `published`, le retour arrière qui republie sans reconstruire, et
+la règle « **rien ne se publie sans essai** : au moins une `StudioTrial` doit
+exister sur le brouillon ».
+
+**Il n'y a donc rien à trancher.** Les orientations, les ambiances et le motif
+identitaire ne sont pas « absents du modèle » : ils vivent dans
+`StudioConfig.settings`, qui n'est pas construite. Ce qui manque est un chantier
+de trois tables, entièrement spécifié.
+
+**Bloqué pour de bon — le banc d'essai.** Celui-là ne tient pas au schéma : il
+appelle un modèle et se paie en argent réel. Aucun fournisseur d'IA n'est
+branché dans le dépôt (voir G), `AIUsage` n'existe pas, et
+`/me/studio/options` — le catalogue que l'application consomme — n'est servi par
+aucun contrôleur. Construire `StudioTrial` sans rien pour la remplir donnerait
+une table vide et un écran qui ment.
 
 **Ce que la section devait montrer** — volume produit, taux de régénération,
 coût moyen, taux d'échec par orientation — suppose les mêmes données que les
@@ -459,3 +512,56 @@ est nette ; ce n'est pas à moi de choisir entre les deux. En pratique la
 divergence est invisible : le menu ne montre pas la section au support, qui n'a
 donc aucun chemin pour l'atteindre. Elle deviendra visible le jour où un
 raccourci y mènera.
+
+
+---
+
+## J. Deux divergences entre le dictionnaire et le schéma des paiements
+
+Relevées le 27/08/2026 en relisant, sur `credit_transaction.payment_id` — le
+lien ajouté en C3, désormais construit.
+
+### J1. `on delete restrict` au dictionnaire, `SET NULL` en base
+
+Le dictionnaire (L950) écrit : « FK → payment(id) **on delete restrict** ». Le
+motif est donné en C3 : « effacer un paiement ne doit pas faire disparaître le
+crédit qu'il a produit ».
+
+La migration livre l'inverse :
+
+```sql
+-- prisma/migrations/20260826070000_paiements/migration.sql:200
+FOREIGN KEY ("payment_id") REFERENCES "payment"("id") ON DELETE SET NULL;
+```
+
+Effacer un paiement ne serait donc pas **refusé** : il passerait, et la ligne de
+crédit resterait sans savoir d'où elle vient. C'est précisément le litige que
+C3 voulait rendre impossible à régler à l'estime.
+
+Rien n'efface un paiement aujourd'hui — aucun chemin ne le propose. La
+divergence est dormante, pas inoffensive.
+
+### J2. L'index couvre plus que ce que le dictionnaire prévoit
+
+Le dictionnaire (L950) porte `payment_id` « **si `purchase`**, et sur
+l'ajustement qui reprend un remboursement ». Deux mouvements peuvent donc
+désigner le même paiement : l'achat, et l'ajustement qui l'annule.
+
+L'index livré ne l'admet pas :
+
+```sql
+CREATE UNIQUE INDEX "credit_transaction_un_octroi_par_paiement"
+    ON "credit_transaction"("payment_id") WHERE "payment_id" IS NOT NULL;
+```
+
+Un seul mouvement par paiement, quel qu'en soit le type. **Le jour où un
+remboursement voudra désigner l'achat qu'il annule, il entrera en collision avec
+lui** — et le service rendra un conflit là où il devrait écrire.
+
+L'index tient bien la garantie pour laquelle il a été posé : deux confirmations
+concurrentes ne créditent pas deux fois. C'est sa portée qui déborde. Le
+dictionnaire dit comment la resserrer : `WHERE type = 'purchase'`.
+
+C'est à corriger **avant** le chantier des remboursements, pas pendant — §6
+demande de « déclencher un remboursement » et de « lever le blocage anti-fraude
+d'un remboursement », et `refunded` est déjà un état lisible que rien ne pose.
