@@ -20,6 +20,46 @@ export type EventNature = (typeof EVENT_NATURES)[number];
 // l'endroit, et le calcul se fait dans le fuseau de l'utilisateur.
 export const dateCivileSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+// ── Récurrences ─────────────────────────────────────────────────────────────
+//
+// Définies AVANT `eventSchema`, qui les lit pour rendre les `schedules` d'un
+// événement : une const ne peut pas se référer à une autre déclarée plus loin
+// dans le fichier.
+
+export const SCHEDULE_TYPES = ["recurrent", "offset"] as const;
+export const SCHEDULE_UNITS = ["day", "week", "month", "quarter", "year"] as const;
+export const OFFSET_UNITS = ["day", "month"] as const;
+
+/* La base impose ces règles par une contrainte `check`. Les porter ici les fait
+   valoir à la saisie plutôt qu'au bout du réseau — et le refus des deux formes
+   mêlées vient de la même contrainte : une règle est récurrente ou décalée. */
+export const scheduleSchema = z.object({
+  type: z.enum(SCHEDULE_TYPES),
+  unit: z.enum(SCHEDULE_UNITS).optional(),
+  // « tous les 0 ans » n'est pas une récurrence : c'est une boucle sans fin
+  // quand le serveur engendre les échéances suivantes.
+  interval: z.number().int().positive().optional(),
+  offsetUnit: z.enum(OFFSET_UNITS).optional(),
+  offsetAmount: z.number().int().optional(),
+  leadTimeDays: z.number().int().min(0).optional(),
+}).strict().superRefine((v, ctx) => {
+  const recurrente = v.unit !== undefined || v.interval !== undefined;
+  const decalee = v.offsetUnit !== undefined || v.offsetAmount !== undefined;
+
+  if (recurrente && decalee) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "une règle est récurrente ou décalée, pas les deux" });
+    return;
+  }
+  if (v.type === "recurrent" && (v.unit === undefined || v.interval === undefined)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "une règle récurrente porte son unité et son intervalle" });
+  }
+  if (v.type === "offset" && (v.offsetUnit === undefined || v.offsetAmount === undefined)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "une règle décalée porte son unité et son décalage" });
+  }
+});
+
+export type Schedule = z.infer<typeof scheduleSchema>;
+
 export const eventSchema = z.object({
   id: z.string().uuid(),
   personId: z.string().uuid(),
@@ -30,6 +70,12 @@ export const eventSchema = z.object({
   nature: z.enum(EVENT_NATURES),
   // Toujours à venir : un événement dit quand la chose SERA.
   referenceDate: dateCivileSchema,
+  // Les règles enregistrées, TOUJOURS rendues — vide plutôt qu'absent, pour
+  // qu'un tableau vide et une omission ne puissent pas se confondre. Sans ce
+  // champ, rouvrir un événement pour le modifier (§3.6) ne pourrait pas
+  // montrer ce qui a été saisi : la répétition s'écrirait et ne se relirait
+  // jamais.
+  schedules: z.array(scheduleSchema).max(6),
 }).strict();
 
 export type Event = z.infer<typeof eventSchema>;
@@ -95,42 +141,6 @@ export const dateAVenirSchema = dateCivileSchema.refine(
   { message: "la date d'un événement ne peut pas être dans le passé" },
 );
 
-// ── Récurrences ─────────────────────────────────────────────────────────────
-
-export const SCHEDULE_TYPES = ["recurrent", "offset"] as const;
-export const SCHEDULE_UNITS = ["day", "week", "month", "quarter", "year"] as const;
-export const OFFSET_UNITS = ["day", "month"] as const;
-
-/* La base impose ces règles par une contrainte `check`. Les porter ici les fait
-   valoir à la saisie plutôt qu'au bout du réseau — et le refus des deux formes
-   mêlées vient de la même contrainte : une règle est récurrente ou décalée. */
-export const scheduleSchema = z.object({
-  type: z.enum(SCHEDULE_TYPES),
-  unit: z.enum(SCHEDULE_UNITS).optional(),
-  // « tous les 0 ans » n'est pas une récurrence : c'est une boucle sans fin
-  // quand le serveur engendre les échéances suivantes.
-  interval: z.number().int().positive().optional(),
-  offsetUnit: z.enum(OFFSET_UNITS).optional(),
-  offsetAmount: z.number().int().optional(),
-  leadTimeDays: z.number().int().min(0).optional(),
-}).strict().superRefine((v, ctx) => {
-  const recurrente = v.unit !== undefined || v.interval !== undefined;
-  const decalee = v.offsetUnit !== undefined || v.offsetAmount !== undefined;
-
-  if (recurrente && decalee) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "une règle est récurrente ou décalée, pas les deux" });
-    return;
-  }
-  if (v.type === "recurrent" && (v.unit === undefined || v.interval === undefined)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "une règle récurrente porte son unité et son intervalle" });
-  }
-  if (v.type === "offset" && (v.offsetUnit === undefined || v.offsetAmount === undefined)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "une règle décalée porte son unité et son décalage" });
-  }
-});
-
-export type Schedule = z.infer<typeof scheduleSchema>;
-
 export const createEventSchema = z.object({
   personId: z.string().uuid(),
   kind: z.enum(EVENT_KINDS),
@@ -169,12 +179,33 @@ export type CreateEventInput = z.infer<typeof createEventSchema>;
    `createEventSchema` porte un `.refine()` et devient un ZodEffects, sur lequel
    `.partial()` n'existe pas : on repart donc de la forme d'objet, à laquelle on
    retire `personId`. Un événement ne change pas de proche — le déplacer serait
-   le supprimer et le recréer, pas le corriger. */
+   le supprimer et le recréer, pas le corriger.
+
+   `schedules`, fourni, REMPLACE le jeu de règles en entier — il ne se fusionne
+   pas règle par règle. Trois raisons :
+   - Le formulaire (§3.6) COMPOSE un jeu entier à l'écran, comme à la création ;
+     l'utilisateur n'y édite jamais « la troisième règle », il voit et corrige
+     l'ensemble. Le client a donc déjà le jeu complet en main au moment
+     d'enregistrer — l'envoyer en entier ne lui coûte rien de plus.
+   - Un remplacement règle par règle demanderait à chaque règle un identifiant
+     stable que le client doit suivre entre deux ouvertures du formulaire, pour
+     un objet que personne ne manipule un par un : beaucoup de surface pour un
+     besoin qui n'existe pas.
+   - C'est la panne la plus facile à faire sans s'en apercevoir qui tranche :
+     un patch partiel qui oublierait de supprimer une règle retirée à l'écran
+     la laisserait vivre EN SILENCE à côté des nouvelles — la fiche montre le
+     nouveau jeu, le serveur continue d'exécuter l'ancien avec. Un remplacement
+     entier rend ça structurellement impossible : ce qui reste après un
+     enregistrement est TOUJOURS exactement, et seulement, ce qui a été soumis.
+   Un tableau vide y est valide et remet l'événement sans aucune règle — voir
+   `EventService.update`, qui alors n'ouvre plus que l'échéance de la date de
+   référence elle-même. */
 export const updateEventSchema = z.object({
   kind: z.enum(EVENT_KINDS).optional(),
   label: z.string().trim().min(1).max(120).optional(),
   nature: z.enum(EVENT_NATURES).optional(),
   referenceDate: dateCivileSchema.optional(),
+  schedules: z.array(scheduleSchema).max(6).optional(),
 }).strict().refine((v) => Object.keys(v).length > 0, {
   message: "au moins un champ doit être fourni",
 });
