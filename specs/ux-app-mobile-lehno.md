@@ -81,6 +81,8 @@ L'application vise le **minimalisme élégant** : peu d'éléments, chacun à sa
 
 **Le produit se livre par morceaux.** Les proches, les notes, les dates et les rappels forment le socle ; le reste s'allume quand il est prêt. Chaque écran d'une fonctionnalité extinguible **se rend derrière son drapeau** : si elle est éteinte, il n'existe pas.
 
+**L'arrêt pour intervention se distingue d'une fonctionnalité éteinte.** Une fonctionnalité éteinte n'existe pas : son écran disparaît. Un arrêt est passager : **rien ne se masque**, un écran d'attente s'affiche, avec le délai que le serveur annonce. Il peut tomber au milieu d'une session, et **avant même l'entrée dans l'application** — l'écran d'attente doit donc exister dès le lancement, pas seulement une fois connecté. Aucune déconnexion, aucun cache vidé.
+
 **Un trou doit rester habitable.** Une fonctionnalité éteinte laisse une place vide, et l'écran doit tenir sans elle : la barre d'onglets vit à trois comme à quatre, une carte prévue pour deux actions n'en paraît pas amputée avec une seule, et les renvois vers une fonctionnalité éteinte **disparaissent** plutôt que de mener nulle part.
 
 **Le calme est une réponse.** Un écran sans rien à traiter le dit sereinement, plutôt que de se remplir. L'absence d'échéance est une bonne nouvelle, pas un vide à combler.
@@ -245,7 +247,7 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 **Parcours d'ajout.**
 1. **Type** — anniversaire (mis en avant) ou autre événement (chemin secondaire).
 2. **Pour qui** — chercher un proche existant, ou **en créer un** au passage : son nom suffit, la fiche s'enrichira ensuite.
-3. **La date** — jour et mois ; pour un anniversaire, l'année reste facultative, l'écran indiquant qu'elle permet de proposer des cadeaux qui vont avec l'âge. Pour un autre événement, un intitulé libre le nomme (« Mariage de Sarah »).
+3. **La date** — pour un anniversaire, c'est la **date de naissance** du proche : jour et mois, l'année restant facultative, l'écran indiquant qu'elle permet de proposer des cadeaux qui vont avec l'âge. La date appartient au proche, et l'anniversaire s'en déduit. Pour un autre événement, un intitulé libre le nomme (« Mariage de Sarah »).
 4. **Détails**, repliés par défaut — nature, répétition, délai d'anticipation du rappel (voir ci-dessous).
 5. **Enregistrer** — l'occasion à venir est créée, et l'application ouvre sa page (3.21), d'où l'on enchaîne : ajouter un souhait, une note, préparer.
 6. **Proposition de partage** — lorsque l'étape 2 a créé une nouvelle fiche, l'application propose dans la foulée d'envoyer à ce proche son lien de collecte, pour qu'il la complète lui-même (3.20). Cette proposition se décline d'un geste.
@@ -253,7 +255,7 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 **Contenu du formulaire.**
 - **Type** : anniversaire (mis en avant) ou autre événement (chemin secondaire).
 - **Proche concerné** : une fiche existante, ou une nouvelle créée à la volée.
-- **Date de référence** ; si l'année de naissance est inconnue, l'indiquer (un anniversaire peut être suivi sans connaître l'année).
+- **Date de référence** de l'événement. Pour un anniversaire, elle se déduit de la date de naissance portée par la fiche du proche (3.18) — on ne la saisit pas deux fois.
 - **Nature** : joyeux ou sensible. La nature sensible est proposée automatiquement lorsqu'elle est détectée, et reste corrigeable ; elle adapte le ton et concentre la préparation sur le message.
 - **Répétition** : chaque année pour un anniversaire ; à échéances multiples pour un événement qui en compte plusieurs (par exemple un mois puis trois mois après une date). Les réglages avancés sont repliés par défaut.
 - **Délai d'anticipation du rappel**, si l'utilisateur souhaite le personnaliser.
@@ -285,6 +287,8 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 - **L'image** — une **illustration**, une **photo traitée**, ou **aucune**. Une seule voie à la fois : deux images sur un portrait le surchargent.
 - **Le détail de l'image** — pour une illustration, la famille (nature, animal, abstrait) et quelques mots libres sur ce qu'il faut savoir du proche pour le dessiner ; pour une photo, le style parmi ceux que propose la marque. Une photo n'est jamais laissée telle quelle.
 - **La matière** — la plage de notes retenue : tout l'historique (par défaut), les douze derniers mois, depuis le dernier portrait, ou des dates fixées.
+
+**Une question posée une fois.** À la première génération pour un proche, l'écran demande de quoi **accorder le texte** — « pour écrire correctement : fier ou fière ? » — pour lui et pour soi. En français, on n'écrit pas à quelqu'un sans le savoir. La question se pose là où elle sert, jamais dans le carnet, et se passe d'un geste : sans réponse, le texte emploie des tournures qui s'en dispensent.
 
 **Ce que la composition porte.** Le **nom** du proche, le **message** produit selon l'orientation, une **note de l'expéditeur** courte et discrète (« Fait avec soin par Valentine »), et un **pied de marque** — lehno.app et les identifiants sociaux — assez discret pour ne pas voler la place, assez présent pour faire connaître l'application. Le tout dans une bande basse lorsqu'il y a une image ; sur toute la surface lorsqu'il n'y en a pas.
 
@@ -353,7 +357,11 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 - **Méthodes de paiement** — celles qui sont enregistrées, la plus récemment utilisée en tête (3.25).
 - **Inviter un ami** — le parrainage, avec ce que chacun y gagne.
 
-**Quand le paiement dans l'application est indisponible.** Un autre chemin s'ouvre : l'écran affiche **les numéros et les noms** sur lesquels verser, l'utilisateur fait son dépôt depuis son application d'opérateur, puis revient **déposer le justificatif** avec le palier visé. L'écran annonce le délai de vérification, et la demande reste visible avec son état jusqu'au crédit. Ce chemin sert aussi lorsqu'un opérateur est injoignable ou qu'un paiement échoue à répétition.
+**Quand le paiement dans l'application est indisponible.** Un autre chemin s'ouvre, et c'est **un paiement comme les autres** — il figure dans l'historique avec son état.
+
+L'écran affiche **les comptes sur lesquels verser** (nom et numéro), le **montant à envoyer** — frais compris s'ils sont à la charge du client —, puis l'utilisateur fait son dépôt depuis son application d'opérateur et revient **déposer son reçu**. L'écran annonce le délai de vérification, et le paiement reste visible jusqu'au crédit.
+
+Ce chemin sert aussi lorsqu'un opérateur est injoignable ou qu'un paiement échoue à répétition.
 
 **Quand la recharge est proposée.** Au moment où le besoin se fait sentir (solde à zéro alors qu'une génération est demandée, ou échéance qui approche sans crédits disponibles), et de façon anticipée (une alerte discrète avant de se retrouver à court). Le rechargement reste toujours une action volontaire de l'utilisateur.
 
@@ -363,6 +371,7 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 
 **Parcours d'achat.**
 1. **Choisir un palier** — quelques montants proposés, chacun avec le nombre de crédits obtenus et, sur les plus grands, **la remise annoncée en clair** (« +20 % offerts »). Aucune saisie libre : le plus petit palier fixe le minimum. Le solde après achat est annoncé.
+   *Lorsque des frais d'opérateur sont à la charge du client, le montant à verser les inclut et l'écran le dit — personne ne doit découvrir un écart au moment de payer.*
 2. **Méthode de paiement** — le comportement dépend de ce qui est déjà connu.
    - **Premier achat**, aucune méthode enregistrée : l'écran d'ajout s'ouvre dans la foulée (opérateur et numéro, ou carte — voir 3.25). La méthode est **enregistrée au passage** et l'achat se poursuit sans revenir en arrière.
    - **Achats suivants** : la méthode **utilisée le plus récemment** est proposée d'emblée. Un geste permet d'en **choisir une autre** parmi celles enregistrées, ou d'en **ajouter une nouvelle** — auquel cas elle est enregistrée et devient celle qui sera proposée la fois suivante.
@@ -542,11 +551,11 @@ Le contenu et le comportement de ces surfaces sont décrits dans la spécificati
 
 **Contenu du formulaire.** Deux groupes, l'essentiel d'abord.
 
-*Qui c'est* — photo ou initiale · nom affiché · **nom d'usage**, la façon dont on l'appelle dans un message (« Karim », « Maman », « mon vieux ») · **lien** avec ce proche (famille proche, famille étendue, ami, partenaire, collègue, relation professionnelle, connaissance) · un éventuel indice de relation en toutes lettres (« on se connaît d'où »).
+*Qui c'est* — photo ou initiale · nom affiché · **date de naissance**, dont l'année est facultative et dont l'anniversaire se déduit · **nom d'usage**, la façon dont on l'appelle dans un message (« Karim », « Maman », « mon vieux ») · **lien** avec ce proche (famille proche, famille étendue, ami, partenaire, collègue, relation professionnelle, connaissance) · un éventuel indice de relation en toutes lettres (« on se connaît d'où »).
 
 *Ce qui oriente la préparation* — registre de communication (familier, amical, formel) · langue de communication · ville et pays, qui permettent de suggérer des adresses et des sorties · **canal habituel** par lequel on lui écrit, qui oriente la longueur du message produit.
 
-**Le genre, en dernier et facultatif.** Il vient après tout le reste, avec une option « je préfère ne pas préciser » retenue par défaut. L'écran dit à quoi il sert : orienter des idées de cadeaux **lorsqu'on ne sait encore presque rien** du proche. Une seule note bien prise vaut mieux que lui.
+**Le carnet ne demande pas le genre.** Le champ ne figure sur aucun écran, et il ne traverse pas l'interface : tant qu'il circulait, la règle ne tenait que par la retenue de celui qui l'affichait. Il reste au modèle comme **signal de génération de dernier recours**, déduit côté serveur lorsqu'il n'y a rien d'autre — jamais demandé, jamais montré.
 
 **Ce qui sert à la génération.** Le nom d'usage, le lien, le registre et la langue en sont les valeurs par défaut (3.7) ; la ville nourrit les suggestions de lieux ; le canal règle la longueur.
 

@@ -112,9 +112,9 @@ L'application n'assure pas l'envoi automatique des messages aux destinataires : 
 
 **LoginActivity** — Trace de toutes les tentatives de connexion (succès et échecs, IP, appareil), consultable par l'`Admin` ; sécurité et diagnostic.
 
-**Person** — Un proche pour lequel l'utilisateur tient une fiche. L'utilisateur possède aussi sa propre `Person` (self-Person), support de son `Wall`.
+**Person** — Un proche pour lequel l'utilisateur tient une fiche. L'utilisateur possède aussi sa propre `Person` (self-Person), support de son `Wall`. Elle porte la **date de naissance** du proche : celle-ci appartient à la personne, non à un événement, et **l'anniversaire s'en déduit**. C'est aussi elle qui donne l'âge, employé pour orienter les idées de cadeaux.
 
-**Event** — Une occasion datée rattachée à une `Person`, qui déclenche des rappels. L'anniversaire en est une configuration particulière (récurrence annuelle, tonalité `happy`).
+**Event** — Une occasion datée rattachée à une `Person`, qui déclenche des rappels. L'anniversaire en est une configuration particulière (récurrence annuelle, tonalité `happy`) : sa date d'ancrage se **déduit de la date de naissance** portée par la fiche, elle ne se saisit pas deux fois.
 
 **Anniversaire (birthday)** — `Event` de `kind = birthday` : récurrence annuelle. Cas central autour duquel l'expérience est conçue.
 
@@ -125,6 +125,8 @@ L'application n'assure pas l'envoi automatique des messages aux destinataires : 
 **EventOccurrence** — Instance datée d'un `Event` pour une année donnée (l'anniversaire 2026 vs 2027) ; ancrage de tout le contenu millésimé (wishlist, générations, vœux reçus, rappels).
 
 **eventNature** — Tonalité d'un `Event` : `happy` ou `sensitive`. `sensitive` (détecté automatiquement) supprime les idées cadeaux et ajuste le registre du message. Indépendante de la structure temporelle.
+
+**PersonAttribute** — Trait caractéristique d'un proche, **extrait des notes** par la passe de classement : couleur, animal, plat, taille, métier, loisir, ce qu'il faut éviter. Il ne se saisit jamais dans un formulaire. C'est ce qui donne, en tête de fiche, le topo d'une personne en un regard — le plus récent l'emportant, avec la note d'où il vient.
 
 **Note** — Unité d'information libre saisie au sujet d'une `Person`, classée automatiquement dans une ou plusieurs `Category`.
 
