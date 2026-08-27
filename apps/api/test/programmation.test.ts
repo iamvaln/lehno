@@ -191,5 +191,12 @@ describe("la programmation des rappels", () => {
     });
     expect(n!.titleKey).toBe("notification.event_reminder");
     expect(n!.bodyParams).toMatchObject({ days: 3 });
+    /* Le nom voyage AVEC la notification. Sans lui, la ligne dirait « une date
+       approche » sans dire de qui — et on la lit souvent hors connexion, donc
+       la résoudre côté client depuis personId ne suffirait pas. */
+    expect(n!.bodyParams).toMatchObject({ person: "Valery" });
+    // La nature suit : un « bonne fête » sur un anniversaire de décès est
+    // impardonnable, et le client ne doit pas avoir à aller la chercher.
+    expect(n!.bodyParams).toMatchObject({ nature: "happy" });
   });
 });

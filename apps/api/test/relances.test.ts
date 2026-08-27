@@ -112,6 +112,13 @@ describe("les relances", () => {
       await echeance(awa, p, 10);
       await relances.enrichissementParPersonne();
       expect(await filesDe("enrichment_nudge_person")).toBeGreaterThan(0);
+
+      // Sans le nom, ce message ne veut rien dire : il parle d'une personne
+      // précise dont on n'a rien noté.
+      const n = await db.prisma.notification.findFirst({
+        where: { type: "enrichment_nudge_person" }, select: { bodyParams: true },
+      });
+      expect(n!.bodyParams).toMatchObject({ person: "Valery" });
     });
 
     /* Le déclencheur est DOUBLE. Une échéance seule est déjà couverte par le

@@ -139,7 +139,10 @@ export class RelancesService {
         },
         event: { person: { notes: { none: { createdAt: { gte: seuil } } } } },
       },
-      select: { id: true, userId: true, event: { select: { personId: true } } },
+      select: {
+        id: true, userId: true,
+        event: { select: { personId: true, person: { select: { displayName: true } } } },
+      },
     });
 
     let posees = 0;
@@ -148,7 +151,9 @@ export class RelancesService {
         occurrenceId: e.id,
         personId: e.event.personId,
         titleKey: "notification.enrichment_nudge_person",
-        params: {},
+        // Sans le nom, ce message ne veut rien dire : il parle d'une personne
+        // précise dont on n'a rien noté.
+        params: { person: e.event.person.displayName },
         route: `/persons/${e.event.personId}`,
         // Une seule fois par échéance : la suivante relancera d'elle-même.
         cle: `matiere:${e.id}`,

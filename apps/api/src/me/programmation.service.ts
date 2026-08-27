@@ -71,6 +71,8 @@ export class ProgrammationService {
         event: {
           select: {
             personId: true,
+            eventNature: true,
+            person: { select: { displayName: true } },
             schedules: { select: { leadTimeDays: true } },
           },
         },
@@ -95,7 +97,15 @@ export class ProgrammationService {
           personId: e.event.personId,
           quand: this.reculer(date, jours),
           titleKey: "notification.event_reminder",
-          params: { days: jours, date },
+          /* Le nom voyage AVEC la notification, il ne se résout pas côté
+             client depuis personId : une notification est ce qu'on lit en
+             premier, souvent hors connexion, et une ligne qui dirait « une
+             date approche » sans dire de qui ne vaudrait rien.
+             
+             La nature suit pour la même raison : un « bonne fête » sur un
+             anniversaire de décès est impardonnable, et le client ne doit pas
+             avoir à aller la chercher pour choisir son ton. */
+          params: { days: jours, date, person: e.event.person.displayName, nature: e.event.eventNature },
           route: `/occurrences/${e.id}`,
           // Le délai entre dans la clé : deux rappels à J-7 et J-1 sont deux
           // faits distincts, pas un doublon.
@@ -109,7 +119,7 @@ export class ProgrammationService {
         personId: e.event.personId,
         quand: date,
         titleKey: "notification.event_day_of",
-        params: { date },
+        params: { date, person: e.event.person.displayName, nature: e.event.eventNature },
         route: `/occurrences/${e.id}`,
         cle: `jour:${e.id}`,
       });
