@@ -22,7 +22,7 @@ const reponse = (statut: number, corps?: unknown): Response =>
   });
 
 function serveur(arret: { maintenance: boolean; retryAfterSeconds: number | null; until: string | null }) {
-  const appels = vi.fn((url: string) => {
+  const appels = vi.fn((url: string, _init?: RequestInit) => {
     if (String(url).includes("/admin/maintenance")) return Promise.resolve(reponse(200, arret));
     if (String(url).includes("/admin/parameters")) return Promise.resolve(reponse(200, PARAMETRES));
     return Promise.resolve(reponse(200, { alertes: [], indicateurs: [], aTraiter: [] }));

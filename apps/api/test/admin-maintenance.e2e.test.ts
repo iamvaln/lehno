@@ -60,21 +60,20 @@ describe("administration — l'arrêt pour intervention", () => {
     return { compte, entete: { authorization: `Bearer ${accessToken}` } };
   };
 
-  const arret = (entete: Record<string, string>) =>
-    `${baseUrl}/v1/admin/maintenance`;
+  const arret = (): string => `${baseUrl}/v1/admin/maintenance`;
 
   const lire = (entete: Record<string, string>) =>
-    fetch(arret(entete), { headers: entete });
+    fetch(arret(), { headers: entete });
 
   const declencher = (entete: Record<string, string>, corps: unknown) =>
-    fetch(arret(entete), {
+    fetch(arret(), {
       method: "POST",
       headers: { ...entete, "content-type": "application/json" },
       body: JSON.stringify(corps),
     });
 
   const lever = (entete: Record<string, string>, corps: unknown) =>
-    fetch(arret(entete), {
+    fetch(arret(), {
       method: "DELETE",
       headers: { ...entete, "content-type": "application/json" },
       body: JSON.stringify(corps),
