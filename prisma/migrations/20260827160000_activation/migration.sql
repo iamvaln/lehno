@@ -6,11 +6,11 @@
 -- Bornées dans le temps et plafonnées à deux envois, elles ne sont pas réglables
 -- dans l'application — la fenêtre se refermerait avant que quiconque n'ouvre les
 -- réglages. Le lien du courrier les coupe toutes d'un clic, sans connexion.
-ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS 'activation_first_person';
-ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS 'activation_first_note';
-ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS 'activation_unused_credits';
-ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS 'activation_collect_link';
-ALTER TYPE "notification_type" ADD VALUE IF NOT EXISTS 'activation_invite';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'activation_first_person';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'activation_first_note';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'activation_unused_credits';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'activation_collect_link';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'activation_invite';
 
 -- Le désabonnement vit sur le COMPTE et non dans les préférences : celles-ci se
 -- règlent nature par nature dans l'application, et l'activation n'y figure pas.
