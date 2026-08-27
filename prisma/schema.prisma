@@ -89,6 +89,19 @@ model User {
   acceptedTermsAt          DateTime?       @map("accepted_terms_at") @db.Timestamptz
   acceptedTermsVersion     String?         @map("accepted_terms_version") @db.VarChar(32)
 
+  /**
+   * Le genre de l'utilisateur, pour l'ACCORD GRAMMATICAL de ce qu'il signe :
+   * « je suis fier » ou « fière ». Ce n'est pas un signal, c'est de la
+   * grammaire — et il en faut deux, celui du proche ne suffit pas : « je suis
+   * fière de toi » dépend de qui écrit, pas de qui reçoit.
+   * Demandé au studio, à la première génération, là où il sert — jamais à
+   * l'inscription. Un champ posé sans raison paraît intrusif ; posé à l'endroit
+   * où il sert, il ne l'est pas. `unspecified` reste légitime : la génération
+   * emploie alors des tournures qui s'en passent, jamais un accord au hasard ni
+   * une double forme entre parenthèses.
+   */
+  gender PersonGender? @default(unspecified)
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -109,6 +122,7 @@ model User {
   devices                 Device[]
   supportRequests         SupportRequest[]
   aiUsages                AIUsage[]
+  actionRuns              ActionRun[]
   feedbacks               Feedback[]
   dataExportRequests      DataExportRequest[]
   creditTransactions      CreditTransaction[]
@@ -503,9 +517,10 @@ model Person {
   createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   events        Event[]
   notes         Note[]
+  attributes    PersonAttribute[]
   notifications Notification[]
 
   @@index([userId])
@@ -567,6 +582,7 @@ model EventOccurrence {
   notes         Note[]
   wishes        WishlistItem[]
   notifications Notification[]
+  actionRuns    ActionRun[]
 
   @@unique([eventId, occurrenceDate])
   @@index([userId, occurrenceDate])
@@ -583,11 +599,12 @@ model Note {
   origin            ContentOrigin @default(owner)
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
-  person     Person           @relation(fields: [personId], references: [id], onDelete: Cascade)
-  event      Event?           @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  occurrence EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
-  author     User?            @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  person     Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+  event      Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  occurrence EventOccurrence?  @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  author     User?             @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
   categories NoteCategory[]
+  attributes PersonAttribute[]
 
   @@index([personId, createdAt])
   @@map("note")
@@ -602,6 +619,68 @@ model Category {
   notes NoteCategory[]
 
   @@map("category")
+}
+
+/**
+ * Les onze natures de ce qu'une note apprend d'une personne.
+ * `avoid` recoupe la catégorie `dislikes_nogo` sans faire double emploi :
+ * l'attribut porte la valeur précise (« alcool »), la catégorie porte la note
+ * entière. L'un sert le topo, l'autre le filtrage des idées.
+ */
+enum AttributeKind {
+  color
+  animal
+  food
+  drink
+  clothing_size
+  shoe_size
+  fragrance
+  style
+  hobby
+  occupation
+  avoid
+
+  @@map("attribute_kind")
+}
+
+/**
+ * Le topo d'un proche : ce que les notes ont appris de lui, en un regard.
+ * EXTRAIT, jamais saisi. Aucun formulaire ne le demande — corriger, c'est
+ * écrire une note nouvelle. La capture reste libre, la structure vient après.
+ * C'est ce qui distingue ce bloc du résumé qu'on avait écarté pour l'accueil :
+ * là il fallait COMPOSER un texte, ici il n'y a qu'à EXTRAIRE.
+ */
+model PersonAttribute {
+  id       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  personId String        @map("person_id") @db.Uuid
+  kind     AttributeKind
+  value    String
+
+  /**
+   * La provenance voyage avec la valeur. Sans elle, un attribut est une
+   * affirmation sans source : on ne peut ni la vérifier, ni remonter à ce qui a
+   * été écrit, ni décider laquelle de deux valeurs est la plus fraîche.
+   */
+  noteId     String?  @map("note_id") @db.Uuid
+  observedAt DateTime @map("observed_at") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  note   Note?  @relation(fields: [noteId], references: [id], onDelete: SetNull)
+
+  /**
+   * Une seule valeur par nature : le plus récent l'emporte. Quelqu'un aime le
+   * bleu en mars et le vert en septembre — c'est le vert qu'on retient.
+   * Le comparatif est `observedAt`, la date de la NOTE, jamais l'ordre
+   * d'écriture : au premier rattrapage d'un arriéré, les notes ne se traitent
+   * pas dans l'ordre où elles ont été écrites, et une valeur de mars écraserait
+   * celle de septembre sans que rien ne le signale.
+   */
+  @@unique([personId, kind])
+  @@index([personId])
+  @@map("person_attribute")
 }
 
 model NoteCategory {
@@ -1056,10 +1135,97 @@ enum AIUsageStatus {
    * Un refus du modèle, ou une réponse inexploitable. À part de `error` parce
    * que ça ne se replie PAS : le modèle suivant refusera la même demande, et on
    * aura payé deux fois pour le même non.
+   * ÉCART ASSUMÉ AVEC LE DICTIONNAIRE, qui n'en prévoit que trois. Sans cette
+   * quatrième valeur, un refus se range en panne et déclenche un repli qui
+   * refait payer le même non à chaque rang de la chaîne.
    */
   refused
 
   @@map("ai_usage_status")
+}
+
+/**
+ * Ce qui a déclenché un appel. Le coût, seul, ne les distingue pas.
+ * Sans elle, on voit la dépense monter sans savoir quelle passe l'a causée — et
+ * surtout, la facture des essais d'administration se confond avec celle de la
+ * production. On ne peut alors répondre ni à « combien nous coûtent les
+ * réglages », ni à « combien nous coûtent les utilisateurs ».
+ */
+enum AIOrigin {
+  user_action
+  scheduled_job
+  // Une reprise après échec. À part du premier essai : une chaîne qui se
+  // reprend souvent coûte le double, et le cumul seul ne le dit pas.
+  retry
+  studio_trial
+
+  @@map("ai_origin")
+}
+
+enum ActionRunStatus {
+  success
+  failure
+
+  @@map("action_run_status")
+}
+
+/**
+ * Le catalogue des actions qui consomment des crédits.
+ * Les codes sont ceux du dictionnaire, et ils ne recouvrent PAS les valeurs
+ * d'AITask — à dessein. Ici c'est ce que l'utilisateur ACHÈTE ; là c'est ce
+ * qu'un appel de modèle a SERVI. Un portrait est une seule action payante et
+ * plusieurs appels : le texte, puis l'image. Les fondre ferait disparaître
+ * l'un des deux comptages.
+ */
+model PremiumAction {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code       String  @unique @db.VarChar(40)
+  label      String
+  // Piloté par la donnée, pas par le code : le prix se règle en administration.
+  creditCost Int     @default(1) @map("credit_cost")
+  enabled    Boolean @default(true)
+
+  runs ActionRun[]
+
+  @@map("premium_action")
+}
+
+/**
+ * Une exécution d'action payante — ce qui a été facturé au demandeur.
+ * Face à AIUsage, qui porte ce qu'elle a coûté en argent réel. Les deux
+ * ensemble donnent la marge ; l'une sans l'autre ne donne rien.
+ */
+model ActionRun {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String          @map("user_id") @db.Uuid
+  premiumActionId   String          @map("premium_action_id") @db.Uuid
+  eventOccurrenceId String?         @map("event_occurrence_id") @db.Uuid
+  /**
+   * La version EXACTE du gabarit qui a produit ce contenu. Sans elle,
+   * comprendre pourquoi les productions d'une semaine valaient mieux que celles
+   * de la suivante devient impossible — et c'est précisément la question qu'on
+   * pose après une publication ratée.
+   */
+  promptTemplateId  String?         @map("prompt_template_id") @db.Uuid
+  // Recopié à l'exécution : le prix change, l'historique ne bouge pas.
+  creditsSpent      Int             @map("credits_spent")
+  status            ActionRunStatus
+  /**
+   * Le coût réel, agrégat des `ai_usage` rattachés. Interne, jamais facturé, et
+   * jamais montré au demandeur : c'est notre marge, pas son prix.
+   */
+  internalCost      Decimal?        @map("internal_cost") @db.Decimal(12, 6)
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  premiumAction  PremiumAction    @relation(fields: [premiumActionId], references: [id], onDelete: Restrict)
+  occurrence     EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
+  promptTemplate PromptTemplate?  @relation(fields: [promptTemplateId], references: [id], onDelete: SetNull)
+  usages         AIUsage[]
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("action_run")
 }
 
 /**
@@ -1068,12 +1234,32 @@ enum AIUsageStatus {
  * c'est précisément la paire qu'on veut pouvoir lire. Sans elle, une chaîne qui
  * se replie systématiquement coûte le double en silence, et on l'apprend sur la
  * facture du mois.
+ * Elle couvre TOUS les appels, y compris ceux qui ne produisent rien de
+ * visible. Le classement d'une note et la détection d'un événement sensible ne
+ * coûtent aucun crédit à l'utilisateur mais se paient en argent réel : les
+ * omettre fausserait la marge dans le sens flatteur.
  */
 model AIUsage {
-  id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  /**
+   * Nul pour un appel sans production visible — une passe d'arrière-plan, un
+   * essai d'administration. C'est le cas le plus fréquent, pas l'exception.
+   */
+  actionRunId String? @map("action_run_id") @db.Uuid
   // Nul pour ce qui ne se rattache à personne (une passe de maintenance).
-  userId String? @map("user_id") @db.Uuid
-  task   AITask
+  userId      String? @map("user_id") @db.Uuid
+
+  // Ce à quoi l'appel a servi. Le nom vient du dictionnaire ; le type est
+  // celui du routage, pour que les deux ne puissent pas diverger.
+  purpose       AITask
+  origin        AIOrigin @default(user_action)
+  /**
+   * Le même identifiant que celui des journaux techniques. C'est ce qui permet
+   * de retrouver, à partir d'une ligne de dépense, la trace complète de la
+   * requête qui l'a causée — et l'inverse.
+   */
+  correlationId String?  @map("correlation_id") @db.VarChar(64)
 
   /**
    * Le modèle est référencé ET recopié. La référence sert aux jointures ;
@@ -1089,23 +1275,28 @@ model AIUsage {
   attempt Int
   status  AIUsageStatus
 
-  inputTokens  Int?     @map("input_tokens")
-  outputTokens Int?     @map("output_tokens")
-  // Estimé depuis le tarif du catalogue AU MOMENT de l'appel. Nul quand le
-  // modèle n'était pas tarifé — « on ne sait pas », jamais « gratuit ».
-  costEstimate Decimal? @map("cost_estimate") @db.Decimal(12, 6)
-  latencyMs    Int?     @map("latency_ms")
-  errorCode    String?  @map("error_code") @db.VarChar(80)
+  tokensIn  Int?     @map("tokens_in")
+  tokensOut Int?     @map("tokens_out")
+  /**
+   * Le coût, au tarif du catalogue AU MOMENT de l'appel. Nul quand le modèle
+   * n'était pas tarifé — « on ne sait pas », jamais « gratuit ».
+   */
+  cost      Decimal? @db.Decimal(12, 6)
+  latencyMs Int?     @map("latency_ms")
+  errorCode String?  @map("error_code") @db.VarChar(80)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  model AIModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
-  user  User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  actionRun ActionRun? @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  model     AIModel?   @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
-  @@index([task, createdAt])
+  @@index([purpose, createdAt])
+  @@index([origin, createdAt])
   @@index([modelId, createdAt])
   @@index([userId, createdAt])
+  @@index([actionRunId])
   @@map("ai_usage")
 }
 
@@ -1124,16 +1315,17 @@ enum PromptKind {
 // modifient pas — ajuster crée une version nouvelle, l'ancienne demeure, ce qui
 // permet d'y revenir et de comprendre un écart de qualité.
 model PromptTemplate {
-  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   kind             PromptKind
-  key              String     @db.VarChar(60)
-  version          Int        @default(1)
+  key              String      @db.VarChar(60)
+  version          Int         @default(1)
   body             String
   guardrails       Json?
-  aiModelId        String?    @map("ai_model_id") @db.Uuid
-  isActive         Boolean    @default(false) @map("is_active")
-  createdByAdminId String?    @map("created_by_admin_id") @db.Uuid
-  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  aiModelId        String?     @map("ai_model_id") @db.Uuid
+  isActive         Boolean     @default(false) @map("is_active")
+  createdByAdminId String?     @map("created_by_admin_id") @db.Uuid
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  actionRuns       ActionRun[]
 
   @@unique([kind, key, version])
   @@index([kind, key])

@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { randomBytes } from "node:crypto";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import {
   RouteurIAService, PanneFournisseur, RefusModele,
@@ -59,6 +60,27 @@ describe("le routeur d'IA", () => {
 
   const usages = () =>
     db.prisma.aIUsage.findMany({ orderBy: { attempt: "asc" } });
+
+  // Une exécution payante, à laquelle rattacher la dépense.
+  const execution = async (): Promise<{ userId: string; actionRunId: string }> => {
+    const u = await db.prisma.user.create({
+      data: {
+        email: `${randomBytes(6).toString("hex")}@example.com`,
+        username: `u${randomBytes(4).toString("hex")}`,
+        referralCode: randomBytes(4).toString("hex").toUpperCase(),
+      },
+      select: { id: true },
+    });
+    const action = await db.prisma.premiumAction.create({
+      data: { code: `essai-${randomBytes(4).toString("hex")}`, label: "Essai" },
+      select: { id: true },
+    });
+    const run = await db.prisma.actionRun.create({
+      data: { userId: u.id, premiumActionId: action.id, creditsSpent: 1, status: "success" },
+      select: { id: true },
+    });
+    return { userId: u.id, actionRunId: run.id };
+  };
 
   beforeAll(async () => { db = await withDatabase(); }, 120_000);
   afterAll(async () => { await db.close(); });
@@ -312,7 +334,7 @@ describe("le routeur d'IA", () => {
 
       const l = (await usages())[0]!;
       // 1 M × 3 + 0,1 M × 15 = 4,5
-      expect(Number(l.costEstimate)).toBeCloseTo(4.5, 6);
+      expect(Number(l.cost)).toBeCloseTo(4.5, 6);
     });
 
     /* Non tarifé veut dire « on ne sait pas », jamais « gratuit ». Écrire zéro
@@ -322,7 +344,7 @@ describe("le routeur d'IA", () => {
       const a = await modele("anthropic");
       await ranger([a.id]);
       await routeur.executer("message", DEMANDE, { anthropic: repond("ok", 100, 50) });
-      expect((await usages())[0]!.costEstimate).toBeNull();
+      expect((await usages())[0]!.cost).toBeNull();
     });
 
     it("recopie le fournisseur et la clé, pour survivre au catalogue", async () => {
@@ -336,6 +358,89 @@ describe("le routeur d'IA", () => {
       expect(l.modelId).toBeNull();
       expect(l.provider).toBe("anthropic");
       expect(l.modelKey).toBe("anthropic-1");
+    });
+  });
+
+  /* Le rattachement d'une dépense à sa cause.
+   *
+   * C'est la raison d'être de ces quatre champs, et la seule qui ne se rattrape
+   * pas : on peut recalculer un coût, on ne peut pas deviner après coup à quoi
+   * un appel servait. */
+  describe("à quoi la dépense se rattache", () => {
+    it("retient qui, pourquoi, ce qui a déclenché, et où retrouver la trace", async () => {
+      const a = await modele("anthropic");
+      await ranger([a.id]);
+      const { userId, actionRunId } = await execution();
+
+      await routeur.executer("message", DEMANDE, { anthropic: repond() }, {
+        userId, actionRunId, origine: "user_action", correlationId: "corr-42",
+      });
+
+      const l = (await usages())[0]!;
+      expect(l.userId).toBe(userId);
+      expect(l.actionRunId).toBe(actionRunId);
+      expect(l.origin).toBe("user_action");
+      expect(l.correlationId).toBe("corr-42");
+      expect(l.purpose).toBe("message");
+    });
+
+    /* L'origine sépare ce que le coût ne distingue pas. Sans elle, la facture
+       des essais d'administration se confond avec celle de la production, et on
+       ne peut répondre ni à « combien coûtent les réglages » ni à « combien
+       coûtent les utilisateurs ». */
+    it("distingue un essai d'administration d'une production réelle", async () => {
+      const a = await modele("anthropic");
+      await ranger([a.id]);
+
+      await routeur.executer("message", DEMANDE, { anthropic: repond() }, { origine: "studio_trial" });
+      await routeur.executer("message", DEMANDE, { anthropic: repond() }, { origine: "scheduled_job" });
+
+      const parOrigine = await db.prisma.aIUsage.groupBy({
+        by: ["origin"], _count: { _all: true },
+      });
+      const table = new Map(parOrigine.map((o) => [o.origin, o._count._all]));
+      expect(table.get("studio_trial")).toBe(1);
+      expect(table.get("scheduled_job")).toBe(1);
+    });
+
+    /* Un appel sans contexte reste `user_action` : c'est la valeur la plus
+       coûteuse à confondre, donc celle qu'on veut voir en trop plutôt qu'en
+       moins. Une passe de fond mal étiquetée gonfle la facture « utilisateur »
+       et se remarque ; l'inverse passerait inaperçu. */
+    it("retombe sur user_action quand rien n'est dit", async () => {
+      const a = await modele("anthropic");
+      await ranger([a.id]);
+      await routeur.executer("message", DEMANDE, { anthropic: repond() });
+      expect((await usages())[0]!.origin).toBe("user_action");
+    });
+
+    // Le repli laisse DEUX lignes, toutes deux rattachées à la même exécution :
+    // c'est ainsi que le coût réel d'une production se somme.
+    it("rattache toutes les tentatives d'un repli à la même exécution", async () => {
+      const a = await modele("anthropic");
+      const b = await modele("deepseek");
+      await ranger([a.id, b.id]);
+      const { userId, actionRunId } = await execution();
+
+      await routeur.executer("message", DEMANDE, { anthropic: tombe(), deepseek: repond() },
+        { userId, actionRunId });
+
+      const lignes = await usages();
+      expect(lignes).toHaveLength(2);
+      for (const l of lignes) expect(l.actionRunId).toBe(actionRunId);
+    });
+
+    /* Effacer une exécution emporte ses lignes de dépense — `on delete cascade`.
+       Les garder orphelines donnerait un coût qu'on ne saurait plus imputer, et
+       qui fausserait la marge sans qu'on puisse dire d'où il vient. */
+    it("emporte les dépenses avec l'exécution qu'on efface", async () => {
+      const a = await modele("anthropic");
+      await ranger([a.id]);
+      const { userId, actionRunId } = await execution();
+      await routeur.executer("message", DEMANDE, { anthropic: repond() }, { userId, actionRunId });
+
+      await db.prisma.actionRun.delete({ where: { id: actionRunId } });
+      expect(await db.prisma.aIUsage.count()).toBe(0);
     });
   });
 });

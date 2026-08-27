@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { CatalogueIAService } from "../src/ia/catalogue.service.js";
-import { CHAINES_PAR_DEFAUT, CLES_MODELES, MODELES_IA, TACHES_IA } from "@lehno/contracts";
+import { CHAINES_PAR_DEFAUT, CLES_MODELES, CODES_ACTIONS_PAYANTES, MODELES_IA, TACHES_IA } from "@lehno/contracts";
 
 /* Le catalogue au démarrage.
  *
@@ -131,5 +131,22 @@ describe("le catalogue des modèles d'IA", () => {
     for (const tache of TACHES_IA)
       for (const cle of CHAINES_PAR_DEFAUT[tache])
         expect(MODELES_IA[cle], `${tache} cite ${cle}`).toBeDefined();
+  });
+
+  /* Sans ce semis, aucune génération n'est facturable : ActionRun exige une
+     action existante, et rien ne la créerait. */
+  it("sème les actions payantes", async () => {
+    await catalogue.reconcilier();
+    expect(await db.prisma.premiumAction.count()).toBe(CODES_ACTIONS_PAYANTES.length);
+  });
+
+  it("ne touche pas un prix réglé à la main", async () => {
+    await catalogue.reconcilier();
+    const une = await db.prisma.premiumAction.findFirstOrThrow();
+    await db.prisma.premiumAction.update({ where: { id: une.id }, data: { creditCost: 7 } });
+
+    await catalogue.reconcilier();
+
+    expect((await db.prisma.premiumAction.findUniqueOrThrow({ where: { id: une.id } })).creditCost).toBe(7);
   });
 });

@@ -129,3 +129,23 @@ export const DUREE_PANNE_MS = 5 * 60 * 1000;
    deux fournisseurs seulement en produisent — et transformerait un jugement
    d'exploitation en interdit. */
 export const RANGS_RECOMMANDES = 3;
+
+/* Les actions qui consomment des crédits.
+ *
+ * Les codes viennent du dictionnaire et ne recouvrent PAS les valeurs de
+ * `TACHES_IA`, à dessein : ici c'est ce que l'utilisateur ACHÈTE, là c'est ce
+ * qu'un appel de modèle a SERVI. Un portrait est **une** action payante et
+ * **plusieurs** appels — le texte, puis l'image. Les fondre ferait disparaître
+ * l'un des deux comptages, et c'est justement leur écart qui donne la marge.
+ *
+ * Le prix vit en base, jamais ici : il se règle en administration sans
+ * livraison. Ce registre ne pose que l'existence et un prix de départ. */
+export const ACTIONS_PAYANTES: Record<string, { readonly libelle: string; readonly cout: number }> = {
+  gift_ideas: { libelle: "Des idées de cadeaux", cout: 1 },
+  portrait: { libelle: "Un portrait", cout: 1 },
+  // Le message de vœux. Le dictionnaire le nomme ainsi ; `PromptKind` l'appelle
+  // `message`. Ce sont deux axes différents, et le nom suit celui de son axe.
+  wish_message: { libelle: "Un message", cout: 1 },
+};
+
+export const CODES_ACTIONS_PAYANTES = Object.keys(ACTIONS_PAYANTES);
