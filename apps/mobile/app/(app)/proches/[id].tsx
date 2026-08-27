@@ -21,9 +21,7 @@ import {
   categoriesDeLaNote, dateCourte, estUnGardeFou, interetsEtNotes,
   presseAssezPourSAfficher, sousTitreDuProche,
 } from "../../../lib/carnet.js";
-import {
-  CLES_DE_CATEGORIE, CLES_DE_REGISTRE, libelleDeLEcheance,
-} from "../../../lib/libelles.js";
+import { CLES_DE_CATEGORIE, libelleDeLEcheance } from "../../../lib/libelles.js";
 
 /* La fiche d'un proche.
  *
@@ -121,14 +119,15 @@ export default function Proche() {
   const reste = interets.length - vus.length;
   const jours = proche.nextOccurrence?.daysUntil ?? null;
 
-  /* Le sous-titre se COMPOSE : la nature de la prochaine échéance, sa date, le
-     registre. Ce que la fiche ne sait pas disparaît, séparateurs compris. */
+  /* Le sous-titre se COMPOSE : la nature de la prochaine échéance, et sa date.
+     Deux parties, comme le kit les compose — j'y mettais aussi le registre, qui
+     n'y est pas. Sans échéance, il n'y a pas de sous-titre du tout, et c'est
+     cohérent : pas de titre de section sans contenu. */
   const sousTitre = sousTitreDuProche([
     proche.nextOccurrence
       ? libelleDeLEcheance(proche.nextOccurrence.kind, proche.nextOccurrence.label, t)
       : null,
     proche.nextOccurrence ? dateCourte(proche.nextOccurrence.occurrenceDate, langue) : null,
-    proche.register ? t[CLES_DE_REGISTRE[proche.register]] : null,
   ]);
 
   const TOUTES: Sortie[] = [
