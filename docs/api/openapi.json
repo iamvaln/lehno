@@ -11327,6 +11327,10 @@
                     },
                     "hasPersons": {
                       "type": "boolean"
+                    },
+                    "remainingOccurrences": {
+                      "type": "integer",
+                      "minimum": 0
                     }
                   },
                   "required": [
@@ -11334,7 +11338,8 @@
                     "occurrences",
                     "counts",
                     "unreadNotifications",
-                    "hasPersons"
+                    "hasPersons",
+                    "remainingOccurrences"
                   ],
                   "additionalProperties": false
                 }

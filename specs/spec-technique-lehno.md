@@ -57,6 +57,10 @@ Trois surfaces distinctes, aux règles différentes. Elles partagent le même se
 
 **Style.** Interface REST orientée ressources : un chemin désigne une chose, la méthode dit ce qu'on en fait. Les identifiants sont des UUID. Les dates sont en ISO 8601 avec fuseau. Les corps de requête et de réponse sont en JSON.
 
+**Le contrat publié fait autorité.** `docs/api/openapi.json` est **engendré depuis les schémas de validation**, jamais écrit à la main, et un test échoue s'il est périmé. C'est l'artefact de référence des intégrateurs : en cas d'écart avec ce document, il l'emporte, puisque lui vient du code.
+
+**Le préfixe `/v1` vit dans les serveurs**, non dans les chemins du contrat.
+
 **Versionnement.** Le préfixe `/v1` fige le contrat. Une évolution compatible (champ ajouté, valeur d'énumération nouvelle) reste dans `v1` ; une rupture ouvre `v2`, les deux coexistant le temps que le parc se renouvelle. Les clients ignorent les champs qu'ils ne connaissent pas.
 
 ## 4. Conventions communes
@@ -72,7 +76,7 @@ Trois surfaces distinctes, aux règles différentes. Elles partagent le même se
 
 Le client n'affiche jamais le message brut : il traduit le code dans la langue de l'utilisateur. C'est ce qui rend l'application bilingue sans dépendre du serveur.
 
-**Statuts.** `200` succès · **`201`** création rendant une ressource nouvelle, le client apprenant son identifiant · **`204`** suppression, rien à rendre · `400` requête mal formée · `401` identification manquante ou invalide · `403` droit refusé · `404` ressource absente, hors de son périmètre, **ou gouvernée par un drapeau éteint** · `409` conflit d'état · `422` règle métier non satisfaite · `429` trop de requêtes · `5xx` incident serveur.
+**Statuts.** `200` succès · **`201`** création rendant une ressource nouvelle, le client apprenant son identifiant · **`204`** suppression, rien à rendre · `400` requête mal formée · `401` identification manquante ou invalide · `403` droit refusé · `404` ressource absente, hors de son périmètre, **ou gouvernée par un drapeau éteint** · `409` conflit d'état · `422` règle métier non satisfaite · `429` trop de requêtes · **`503`** arrêt pour intervention, avec `retryAfterSeconds` · `5xx` incident serveur.
 
 **Les `POST` qui ne créent rien gardent `200`** : `/auth/otp` envoie un code, `/public/waitlist` est idempotent à dessein, une décision de validation modifie un état.
 
@@ -108,6 +112,7 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | `/me/notes` | POST | Créer une note pour un ou plusieurs proches, avec une occasion facultative |
 | `/me/persons/{id}/notes` | GET, POST | Les notes durables du proche |
 | `/me/persons/{id}/portraits` | GET | Sa collection de portraits |
+| `/me/persons/{id}/attributes` | GET | Ce que les notes ont appris du proche : couleur, animal, métier, taille… |
 | `/me/persons/{id}/gifts` | GET, POST | Ce qui lui a été offert, année par année ; en ajouter |
 | `/me/gifts/{id}` | PATCH, DELETE | Corriger ou retirer une entrée |
 | `/me/events` | GET, POST | Les événements ; création (anniversaire ou autre) |
@@ -125,6 +130,8 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 **Listes d'échéances.** `/me/occurrences` accepte une fenêtre de dates et un plafond : l'accueil en demande trois, l'écran Dates un mois. C'est le même appel, paramétré — les deux surfaces ne divergent pas.
 
 **Classement des notes.** La création rend la note **aussitôt enregistrée**, sans attendre son classement : celui-ci se fait **en arrière-plan**. Le client n'attend pas, et **un échec de classement n'est ni montré ni bloquant** — la note existe et sert. Il n'est silencieux que pour l'utilisateur : journaux et alertes le rapportent.
+
+**La même passe extrait les attributs.** En classant une note, le serveur en tire au passage ce qui caractérise le proche — couleur, animal, plat, taille, métier, loisir, ce qu'il faut éviter. **Aucun appel de plus** : les mêmes valeurs de sortie, quelques champs supplémentaires. Le plus récent remplace l'ancien, et chaque attribut garde la note d'où il vient.
 
 **Une note peut n'avoir aucune catégorie.** Aucun repli sur une catégorie fourre-tout : `NoteCategory` est une association, et zéro ligne est un état valide. La génération lit le **contenu** des notes, rangées ou non.
 
@@ -161,7 +168,7 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 
 **Paramètres de la demande.** Le lancement porte la cible, le type de contenu, et les paramètres effectifs — ton, langue, plage de notes, mots d'orientation. Ceux qui sont absents prennent la valeur de la fiche. Un **portrait** porte en plus ce que le studio a réglé : l'orientation, la voie d'image, la famille d'illustration ou le style de photo, et la note de l'expéditeur (voir `spec-portrait-lehno.md`).
 
-**Ce que le serveur ajoute.** Il complète la demande avec ce que la fiche sait du proche : nom d'usage, lien, ville, âge lorsque l'année de naissance est connue, canal habituel, et **la liste des cadeaux déjà offerts**, que les idées écartent. Le client n'a pas à les transmettre — ils appartiennent au serveur, qui les tient à jour.
+**Ce que le serveur ajoute.** Il complète la demande avec ce que la fiche sait du proche : nom d'usage, lien, ville, âge lorsque l'année de naissance est connue, **le genre du proche et celui de l'utilisateur** — l'accord grammatical en dépend —, les **attributs extraits** des notes, canal habituel, et **la liste des cadeaux déjà offerts**, que les idées écartent. Le client n'a pas à les transmettre — ils appartiennent au serveur, qui les tient à jour.
 
 **Ce que le studio charge.** L'écran de production s'ouvre déjà réglé : `/me/studio/options` rend les orientations et les ambiances **actives** — celles que la configuration en service expose —, leurs valeurs par défaut, et le **prix**. Le client n'a rien à deviner, et une orientation désactivée disparaît de l'application sans livraison.
 
@@ -248,7 +255,9 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | `/me/search` | GET | Recherche par nom de proche, au fil de la frappe |
 | `/me/resumables` | GET | Les reprises : brouillons de message et portraits à finir, classés par urgence |
 
-**Un appel pour l'accueil.** L'accueil tient en deux éléments — une phrase qui donne l'état des lieux, et les trois échéances les plus proches (voir 3.2 de la spécification mobile). Les échéances viennent de `/me/occurrences`, mais la phrase demande des **décomptes** que cette liste plafonnée ne donne pas : combien de dates aujourd'hui, combien dans la semaine. `/me/home` rend les deux ensemble, ce qui évite un aller-retour au démarrage et laisse le serveur composer la phrase à partir de ses propres chiffres.
+**Un appel pour l'accueil.** L'accueil tient en deux éléments — une phrase qui donne l'état des lieux, et les **sept** échéances les plus proches (voir 3.2 de la spécification mobile : trois cartes, puis quatre rangs). *Ce document disait trois ; le kit en demande sept, et le design tranche. À trois, il n'y a jamais de rang, jamais de reste, et l'état « Voir plus » est inatteignable.* Les échéances viennent de `/me/occurrences`, mais la phrase demande des **décomptes** que cette liste plafonnée ne donne pas : combien de dates aujourd'hui, combien dans la semaine. `/me/home` rend les deux ensemble, ce qui évite un aller-retour au démarrage et laisse le serveur composer la phrase à partir de ses propres chiffres.
+
+Il rend aussi **`remainingOccurrences`**, le « n restants » du bouton « Voir plus ». Le client ne peut pas le calculer : la liste s'arrête à sept, et les décomptes s'arrêtent à la semaine. Il porte sur **douze mois** — sans borne, il compterait les échéances déroulées d'avance (l'ordonnanceur en ouvre trois par événement) et dirait la profondeur de déroulement, un détail interne, plutôt que ce qu'une personne reconnaît de son année.
 
 **Ce qu'il ne porte plus.** Les contributions en attente et les reprises ont quitté l'accueil : les premières se comptent dans la cloche, les secondes se retrouvent depuis l'occasion concernée. Le décompte de la cloche accompagne néanmoins la réponse, puisque l'en-tête l'affiche dès l'ouverture.
 
@@ -305,6 +314,8 @@ Le produit se livre **par morceaux**. Les proches, les notes, les dates et les r
 | `referral` | Le parrainage et la page d'invitation | Écran 3.9 (inviter), public 3.7 · `/me/referral`, `/public/invitations/{code}` |
 | `launch.live` | Sur la landing : les liens vers les magasins, ou le formulaire de liste d'attente | Public 3.1 · `/public/waitlist` |
 
+**`launch.live` se lit à l'exécution**, par `/public/config` — ce n'était autrefois qu'une variable de construction cuite dans l'image. Trois conséquences : basculer est un **geste d'administration**, plus un redéploiement ; la bascule met jusqu'à **cinq minutes** à paraître, le temps du cache de page ; et **une API injoignable ou incomplète vaut pré-lancement**. C'est une décision : mieux vaut afficher la capture d'adresse que promettre une application indisponible.
+
 **Cette couverture vit dans le registre**, et le back-office l'affiche : un administrateur doit voir **ce qu'il éteint** avant de basculer, sans lire le code.
 
 ### 6.4 Les dépendances
@@ -315,7 +326,29 @@ Certaines extinctions en emportent d'autres. Le serveur les résout **avant** de
 - `wishlist.own` éteint emporte `reservation` — il n'y a plus de liste partagée à réserver.
 - `credits` éteint : les générations restent **disponibles et gratuites** si leur propre drapeau est allumé. Éteindre l'achat ne doit pas éteindre le produit ; c'est `topup.manual` qui prend le relais pour les recharges.
 
-### 6.5 Ce que l'extinction demande au dessin
+### 6.5 L'arrêt pour intervention n'est pas un drapeau
+
+**Les confondre casserait l'application.**
+
+| | Drapeau éteint | Arrêt pour intervention |
+|---|---|---|
+| Statut | `404` | **`503`**, code `maintenance` |
+| Ce que ça dit | « cette surface n'existe pas » | « reviens, voici le délai » |
+| Ce que le client fait | masque l'écran | **écran d'attente, ne masque rien** |
+| Portée | une surface | toutes |
+| Quand | lu au démarrage | tombe au milieu d'une session |
+
+Un arrêt traité comme un drapeau ferait lire une fenêtre de deux heures comme une suppression définitive : l'écran disparaîtrait, et ne reviendrait qu'à la réinstallation.
+
+**Le `503` porte `details.retryAfterSeconds`.** Le client attend **ce délai-là**, jamais un délai à lui : il vient du serveur pour que tout le parc applique la même règle, et pour qu'on puisse l'allonger si l'intervention dure.
+
+**Puis il interroge `/public/maintenance`** plutôt que de rejouer l'appel d'origine.
+
+**Aucune déconnexion, aucun cache vidé.** Un arrêt n'est pas une invalidation de session.
+
+**Deux chemins répondent pendant un arrêt** : `/v1/admin*` et `/public/maintenance`. Tous les autres rendent `503`, **y compris `/public/config` et `/auth/*`** — l'écran d'attente doit donc exister **avant** l'entrée dans l'application, pas seulement après.
+
+### 6.6 Ce que l'extinction demande au dessin
 
 Une fonctionnalité éteinte laisse un trou, et **le trou doit rester habitable**. Trois endroits l'exigent :
 
@@ -338,6 +371,7 @@ Ces appels se font **sans compte**. L'autorisation tient au **jeton porté par l
 | `/public/wishes/{token}` | GET, POST | Le dépôt de vœux d'une occasion |
 | `/public/invitations/{code}` | GET | Une invitation au parrainage : qui invite, ce que l'invité y gagne |
 | `/public/features` | GET | Les fonctionnalités actives sur les surfaces sans compte |
+| `/public/maintenance` | GET | L'état d'un arrêt pour intervention, et le délai avant de réessayer |
 | `/public/config` | GET | Les valeurs publiques d'affichage : crédits offerts à l'inscription, bonus d'invitation, prix du crédit |
 | `/public/legal/{document}` | GET | Conditions d'utilisation, politique de confidentialité, mentions légales |
 | `/public/waitlist` | POST | Déposer son adresse sur la liste d'attente, tant que la landing est en pré-lancement |
@@ -369,6 +403,7 @@ Réservée aux comptes d'administration, avec les deux rôles du modèle.
 | `/admin/moderation/{id}/decision` | POST | Masquer, révoquer, désactiver, classer |
 | `/admin/parameters` | GET, PATCH | La configuration globale |
 | `/admin/feature-flags` | GET, PATCH | Allumer et éteindre les fonctionnalités ; la lecture rend **ce que chaque drapeau couvre** — écrans et points d'entrée — d'après le registre |
+| `/admin/maintenance` | GET, POST, DELETE | Déclencher un arrêt pour intervention avec sa durée, le prolonger, le lever |
 | `/admin/credit-bundles` | GET, POST, PATCH | Les paliers d'achat et leurs remises |
 | `/admin/ai-models` | GET, PATCH | Catalogue et routage |
 | `/admin/portrait-studio/candidates` | GET | Les valeurs candidates : modèles, orientations, ambiances, motifs, gabarits |
@@ -462,6 +497,7 @@ Un rôle insuffisant rend **`403`** — ici, l'existence du chemin est déjà co
 - Conservé **haché**, jamais en clair, avec une durée de vie courte. Le hachage est un **HMAC-SHA-256 sous clé tenue dans l'environnement** : un code à six chiffres ne compte qu'un million de valeurs, qu'une lecture de la base suffirait à énumérer si le condensé se calculait sans secret. La comparaison se fait en temps constant. Aucun mot de passe n'existe dans le produit — l'entrée repose sur le code et les fournisseurs d'identité —, donc aucune fonction de hachage lente (bcrypt, argon2, scrypt) n'a d'emploi ici : elle n'ajouterait rien à la défense et offrirait un levier de saturation sur un point d'entrée ouvert sans compte.
 - **Nombre de tentatives borné** par code ; au-delà, il est brûlé.
 - **Fréquence de demande limitée par adresse destinataire** autant que par origine : un point d'entrée qui envoie un courrier à une adresse fournie par l'appelant sert autrement à arroser un tiers.
+- **Le délai entre deux demandes croît** — cinq secondes, puis vingt-cinq, puis cent vingt-cinq. Il est **rendu par le serveur** dans `retryAfterSeconds` : le client l'attend sans le recalculer, faute de quoi deux versions du parc appliqueraient deux règles et celle du serveur resterait la seule qui compte.
 - **Réponse uniforme** : demander un code pour une adresse inconnue rend la même réponse que pour une adresse connue. La liste des comptes reste ainsi hors de portée.
 
 ### 9.3 Cloisonnement
@@ -785,7 +821,7 @@ La **génération** et le **paiement** se lancent à la demande, et chacun se r�
 
 ## 16. Tracking plan
 
-### 15.1 Ce à quoi il doit répondre
+### 16.1 Ce à quoi il doit répondre
 
 Un tracking plan vaut par les questions qu'il permet de trancher. Celles-ci, d'abord :
 
@@ -795,15 +831,19 @@ Un tracking plan vaut par les questions qu'il permet de trancher. Celles-ci, d'a
 - **Où s'arrête-t-on ?** Dans la création de compte, dans le premier ajout de proche, dans l'achat de crédits.
 - **Les défauts tiennent-ils ?** Le ton, la langue, la plage de notes, le champ occasion vide : les gens les changent-ils, et à quelle fréquence ?
 - **Qu'est-ce qui fait revenir ?** Rétention à sept, trente, quatre-vingt-dix jours, et ce qui distingue ceux qui restent.
+- **La boucle se referme-t-elle ?** Une liste partagée fait-elle entrer des gens, et combien en font une à leur tour ? C'est la mécanique de croissance du produit.
+- **Le studio sert-il tout ce qu'il propose ?** Quelles orientations sont choisies, quelle voie d'image, quel style — et lesquelles ne servent jamais.
+- **Le classement automatique est-il juste ?** Quelle part des notes reste sans catégorie, et quelle part se corrige à la main.
 
-### 15.2 Conventions
+### 16.2 Conventions
 
 - **Nom** : `domaine.objet_action`, au passé, en minuscules — `note.created`, `payment.succeeded`.
 - **Un événement par fait**, jamais par écran affiché : les vues ne s'instrumentent qu'aux étapes d'un parcours qu'on cherche à mesurer.
-- **Propriétés communes** à tout événement : identifiant de compte (jamais l'adresse e-mail), surface (application, web public, back-office), version de l'application, langue de l'interface, horodatage, identifiant de session.
+- **Propriétés communes** à tout événement : identifiant de compte (jamais l'adresse e-mail), surface (application, web public, back-office), version de l'application, langue de l'interface, thème, horodatage, identifiant de session.
+- **Les drapeaux actifs accompagnent chaque événement.** Une mesure prise pendant qu'une fonctionnalité était éteinte ne se compare pas à une mesure prise après son allumage : sans cette propriété, une courbe qui monte le jour d'une bascule reste inexplicable.
 - **Les propriétés sont des faits, jamais du contenu** : on compte les caractères d'une note, on ne transporte pas son texte.
 
-### 15.3 Les événements
+### 16.3 Les événements
 
 **Entrée**
 `signup.started` (voie : code, Google, Apple) · `signup.completed` (parrainé ou non) · `signin.completed` · `onboarding.username_set` · `person.first_created` — le premier proche, le vrai passage à l'usage.
@@ -815,24 +855,38 @@ Un tracking plan vaut par les questions qu'il permet de trancher. Celles-ci, d'a
 `reminder.sent` (nature, canal, délai d'anticipation) · `reminder.opened` · `reminder.led_to_preparation` · `occasion.prepared` · `message.marked_sent`. Cette suite mesure la promesse du produit de bout en bout.
 
 **Génération**
-`generation.started` (type, paramètres modifiés par rapport aux défauts : ton, langue, plage ; pour un portrait : orientation, voie d'image, famille ou style) · `generation.succeeded` (durée, fournisseur retenu, coût) · `generation.failed` (raison) · `generation.regenerated` (ce qui a été changé) · `portrait.approved` · `portrait.shared` (destination) · `idea.retained`.
+`generation.started` (type, paramètres modifiés par rapport aux défauts : ton, langue, plage ; pour un portrait : orientation, voie d'image, famille ou style) · `generation.succeeded` (durée, fournisseur retenu, coût) · `generation.failed` (raison) · `generation.regenerated` (ce qui a été changé) · `portrait.approved` · `portrait.shared` (destination) · `idea.retained` · `gift.recorded` (origine : souhait marqué offert, idée retenue, saisie libre).
 
 **Collecte et surfaces publiques**
-`collection_link.shared` (nominatif ou public) · `collection_form.opened` · `submission.sent` (champs renseignés) · `submission.reviewed` (validée, corrigée, rejetée ; souhaits retenus et écartés) · `wall.viewed` (visiteur avec ou sans compte) · `wall.wishlist_opened` · `wish_message.sent` · `invitation.opened` · `invitation.converted`.
+`collection_link.shared` (nominatif ou public) · `collection_form.opened` · `submission.sent` (champs renseignés) · `submission.reviewed` (validée, corrigée, rejetée ; souhaits retenus et écartés) · `wall.viewed` (visiteur avec ou sans compte) · `wish_message.sent` · `invitation.opened` · `invitation.converted`.
 
 **Crédits et paiement**
 `credits.exhausted` — le moment où l'on bute sur le solde · `purchase.started` (palier, remise) · `payment.submitted` (mode, palier — le client a déposé son reçu) · `payment.decided` (mode, issue, délai de traitement, écart éventuel entre le montant annoncé et le montant constaté) · `payment_method.added` (nature) · `payment.succeeded` / `.failed` / `.expired` (durée d'attente, voie de résolution) · `referral.completed`.
 
-**Réglages**
-`notification_preference.changed` (nature, canal) · `wall.enabled` / `.disabled` · `ui_language.changed`.
+**Mes listes — la boucle virale**
+`wishlist.created` (occasion) · `wishlist.wish_added` (avec photo ou non, prix renseigné ou non) · `wishlist.shared` (destination) · `shared_list.viewed` (visiteur avec ou sans compte, provenance) · `reservation.started` · `reservation.confirmed` (délai entre les deux, identité révélée ou non) · `reservation.abandoned` (à quelle étape) · `make_mine.clicked` — **le geste qui referme la boucle**.
 
-### 15.4 Ce qui reste hors du tracking
+Cette suite se lit d'un bout à l'autre : combien de vues par liste partagée, combien de réservations par vue, combien d'installations par réservation.
+
+**Le studio du portrait**
+`studio.opened` · `studio.setting_changed` (quel réglage, quelle valeur) · `studio.summary_viewed` · `studio.confirmed` (orientation, voie d'image, famille ou style, texte libre renseigné ou non) · `studio.abandoned` (à quelle étape). Avec le `generation.regenerated` existant, c'est ce qui dira si douze orientations servent ou si trois suffisent.
+
+**Le classement des notes**
+`note.classified` (catégories attribuées, ou aucune) · `note.classification_failed` · `note.filed_manually` (depuis le bloc « à ranger », catégorie choisie). La part de notes qui restent sans catégorie mesure la qualité du classement mieux qu'un taux de succès technique.
+
+**Réglages**
+`notification_preference.changed` (nature, canal) · `wall.enabled` / `.disabled` · `ui_language.changed` · `theme.changed`.
+
+**Administration**
+`feature_flag.toggled` (clé, nouvel état) · `studio_config.published` (ce qui change) · `studio_trial.run` (coût). Ces trois-là expliquent les ruptures de courbe que rien d'autre n'explique.
+
+### 16.4 Ce qui reste hors du tracking
 
 Le contenu des notes, des souhaits, des messages et des portraits ; les noms des proches ; les adresses e-mail et les numéros de téléphone ; le contenu des contributions reçues. Un événement décrit **ce qui s'est passé**, en laissant de côté ce qui a été écrit.
 
 Les surfaces publiques ne suivent que l'usage strictement nécessaire, sans traceur publicitaire ni traceur tiers — ce qui vaut aussi de ne rien avoir à demander au visiteur.
 
-### 15.5 Collecte
+### 16.5 Collecte
 
 Les événements partent du **serveur** dès lors que le fait s'y produit — une note créée, un paiement abouti, une génération terminée : la mesure est ainsi fidèle même si le client se ferme. Le **client** n'émet que ce que le serveur ignore : l'ouverture d'un rappel, l'abandon d'un parcours, l'écran atteint.
 
@@ -840,9 +894,11 @@ Les événements partent du **serveur** dès lors que le fait s'y produit — un
 
 L'envoi passe par une **couche d'abstraction interne**, comme les autres services tiers : le code émet un événement nommé, l'adaptateur s'occupe du reste. Changer d'outil, ou rapatrier PostHog sur le VPS le jour où le volume le justifie, se limite alors à cet adaptateur.
 
-### 15.6 Ce que le back-office en montre
+### 16.6 Ce que le back-office en montre
 
 La section Métriques s'appuie sur ces événements pour rendre les vues promises : usage par fonctionnalité, exécutions des actions payantes et leur issue, rétention, conversion vers l'achat, volumes de contributions.
+
+S'y ajoutent deux vues que les événements nouveaux permettent : **la boucle des listes** — vues par liste partagée, réservations par vue, installations par réservation — et **l'emploi du studio**, orientation par orientation, avec le taux de régénération de chacune.
 
 ## 17. Couverture des écrans
 

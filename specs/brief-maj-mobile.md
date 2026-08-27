@@ -31,6 +31,12 @@ Le serveur rend la liste résolue ; l'application masque. **Mais un écran masqu
 
 **Un repli est nécessaire** : si l'appel des drapeaux échoue au démarrage, l'application s'ouvre sur le **socle** — proches, notes, dates, rappels — plutôt que vide.
 
+**L'arrêt pour intervention n'est pas un drapeau, et les confondre casserait l'application.** Une fonctionnalité éteinte rend `404` et son écran disparaît. Un arrêt rend **`503`** avec `retryAfterSeconds` : **rien ne se masque**, un écran d'attente s'affiche, et le délai vient du serveur — ne le recalculez pas.
+
+Puis interrogez `/public/maintenance` plutôt que de rejouer l'appel d'origine. **Aucune déconnexion, aucun cache vidé.**
+
+L'arrêt couvre `/public/config` et `/auth/*` : **l'écran d'attente doit exister avant l'entrée dans l'application**, pas seulement une fois connecté.
+
 **Un drapeau inconnu vaut éteint** : une version installée ignore une clé créée après elle.
 
 ---
@@ -79,7 +85,17 @@ Le **marquage** n'engage à rien et n'a aucun effet sur la disponibilité : il r
 
 ---
 
-## 6. Les notes — classement asynchrone (§3.5, §3.4)
+## 6. Le topo d'un proche, en tête de fiche
+
+La fiche affiche ce que les notes ont appris : couleur, animal, plat, taille, métier, loisirs, ce qu'il faut éviter. Ces valeurs viennent de `/me/persons/{id}/attributes`.
+
+**Le client n'a aucune logique à tenir.** Il affiche ce qui vient ; une valeur absente ne paraît pas, et une fiche neuve n'affiche aucun bloc plutôt qu'une liste de cases vides.
+
+**Aucun formulaire ne les demande.** Ils sont extraits des notes. Corriger, c'est écrire une note nouvelle — le plus récent l'emporte.
+
+Chaque attribut porte sa **ligne de provenance**, et un appui ramène à la note d'où il vient.
+
+## 7. Les notes — classement asynchrone (§3.5, §3.4)
 
 **La saisie se confirme aussitôt**, sans attendre le classement.
 
@@ -96,15 +112,17 @@ Et **`dislikes_nogo` ne pèse pas comme les autres** : six catégories organisen
 
 ---
 
-## 7. Le paiement (§3.9)
+## 8. Le paiement (§3.9)
 
 **Les paliers remplacent la saisie libre.** Chacun affiche ses crédits et, sur les plus grands, **la remise en clair** (« +20 % offerts ») — c'est un argument de vente. Le plus petit palier fixe le minimum. Les valeurs viennent du serveur.
 
-**Un autre chemin quand le paiement est indisponible** : l'écran affiche les **numéros et les noms** sur lesquels verser, l'utilisateur dépose ensuite son **justificatif** avec le palier visé. L'écran annonce le délai de vérification, et la demande reste visible avec son état.
+**Un autre chemin quand le paiement est indisponible**, et c'est **un paiement comme les autres** — il figure dans l'historique avec son état. L'écran affiche les **comptes sur lesquels verser** (nom et numéro), le **montant à envoyer** — frais compris s'ils sont à la charge du client —, puis l'utilisateur dépose son **reçu**. L'écran annonce le délai de vérification.
+
+**Les frais se disent avant.** Personne ne doit découvrir un écart au moment de payer : si le client supporte les frais de l'opérateur, le montant affiché les inclut et l'écran l'explique.
 
 ---
 
-## 8. Les liens universels
+## 9. Les liens universels
 
 L'application déclare les chemins qu'elle prend en charge. **Trois cas** :
 
@@ -118,7 +136,15 @@ L'application déclare les chemins qu'elle prend en charge. **Trois cas** :
 
 ---
 
-## 9. Copy et thèmes
+## 10. Deux changements sur le contrat
+
+**Le genre revient, mais au studio.** Il sert **l'accord grammatical** du texte produit — *fier ou fière* —, pour le proche comme pour celui qui signe. La question se pose **à la première génération**, là où elle sert, jamais dans le carnet. Elle se passe d'un geste.
+
+**La date de naissance a changé de place.** Elle vit sur la fiche du proche (`birth_date`, `birth_year_known`), plus sur le planning de l'événement : **l'anniversaire s'en déduit**, et elle ne se saisit qu'une fois — dans le formulaire d'identité (§3.18).
+
+**Le délai entre deux demandes de code croît** — 5 s, 25, 125 — et il vient du serveur dans `retryAfterSeconds`. Ne le recalculez pas : deux versions du parc appliqueraient deux règles.
+
+## 11. Copy et thèmes
 
 **Aucune chaîne dans un composant.** Le relevé du port en a trouvé neuf, `aria-label` compris — ceux-ci restent en français pour quelqu'un qui a mis l'application en anglais.
 
@@ -132,3 +158,20 @@ L'application déclare les chemins qu'elle prend en charge. **Trois cas** :
 **Le décompte** — `J−3` en français, `3 days` en anglais. **La notation n'est pas arrêtée** : elle sera éprouvée par un test utilisateur, avec l'hypothèse d'une forme valable dans les deux langues. Un composant qui la fabrique fige une décision qui n'est pas prise.
 
 **Deux points relevés par le port**, à porter aussi côté kit web : les **guillemets sont de la copy** (`« … »` ne sont pas ceux de l'anglais), et la couleur d'icône ne s'hérite pas en React Native.
+
+---
+
+## L'accueil, et ce qui arrive quand une génération échoue
+
+**`/me/home` figure enfin au contrat.** Il était servi depuis le début sans y être déclaré. Rien ne change côté serveur ; ce qui change, c'est que vous pouvez le lire dans `openapi.json` au lieu de le deviner.
+
+Deux pièges y sont écrits, et tous deux se trompent en silence :
+
+- **`counts` ne se déduit pas de `occurrences`.** La liste est plafonnée à **trois** cartes ; les décomptes sont faits séparément, sur la table entière. Compter les éléments rendus annoncerait **moins** d'échéances qu'il n'y en a — une erreur qui va toujours dans le même sens, et qu'on ne remarque pas.
+- **`hasPersons` distingue les deux états vides.** « Le carnet est vide » et « le carnet est plein mais rien n'approche » rendent tous deux `occurrences: []`. Le libellé du bouton principal en dépend.
+
+**Un code d'erreur nouveau : `generation_unavailable`, en `503`.** Aucun modèle ne peut répondre pour cette tâche.
+
+**Ne masquez rien.** Ce n'est pas `maintenance` : l'API va bien, seul un fournisseur tiers ne répond pas, et le reste de l'application fonctionne. Proposez de réessayer, et **dites que les crédits n'ont pas été débités** — c'est la première question de qui vient de voir échouer ce qu'il a payé.
+
+Jamais « une erreur est survenue » : rien n'a échoué du côté de l'utilisateur.

@@ -76,7 +76,7 @@ Le logotype ne suffit pas partout : il faut un signe qui tienne dans un carré, 
 
 **Les contextes.** Écran d'accueil d'un téléphone, parmi d'autres icônes · notification poussée · onglet de navigateur · photo de profil **ronde** sur les réseaux · pied des portraits partagés, qui circulent hors de l'application · écran de lancement.
 
-**Les fonds.** Blanc, lilas, encre sombre, et une photographie quelconque (le portrait partagé).
+**Les fonds.** Blanc, lilas, encre sombre, et l'image d'un portrait (où le pied de marque s'inscrit).
 
 **Les contraintes techniques.** Tracé vectoriel, sans dégradé ni ombre. Lisible en une seule couleur. Zone de protection définie. Les magasins d'applications recadrent l'icône : prévoir la marge, et le rendu en masque circulaire.
 
