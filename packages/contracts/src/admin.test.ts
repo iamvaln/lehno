@@ -92,7 +92,7 @@ const metriques = {
   },
   conversion: {
     comptes: 100, acheteurs: 12, delaiMedianJours: 3.5,
-    parPalier: [{ palier: "1 000 crédits", achats: 7 }],
+    parPalier: [{ credits: 1000, achats: 7 }],
   },
   consommation: { credits: 4200, mouvements: 310 },
   manques: ["usage_par_fonctionnalite"],
@@ -148,5 +148,12 @@ describe("les métriques", () => {
 
   it("refuse un champ de trop", () => {
     expect(metriquesSchema.safeParse({ ...metriques, total: 3 }).success).toBe(false);
+  });
+});
+
+describe("les paliers d'une conversion", () => {
+  it("se désignent par leur nombre de crédits, pas par une phrase", () => {
+    const enMots = { ...metriques.conversion, parPalier: [{ palier: "1 000 crédits", achats: 7 }] };
+    expect(conversionSchema.safeParse(enMots).success).toBe(false);
   });
 });

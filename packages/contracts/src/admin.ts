@@ -855,8 +855,12 @@ export const conversionSchema = z.object({
    *
    *  Nul quand personne n'a encore acheté — `0` dirait « le jour même ». */
   delaiMedianJours: z.number().nonnegative().nullable(),
+  /** Le palier se désigne par son **nombre de crédits**, jamais par une phrase.
+   *  `CreditBundle` n'a pas de libellé : le serveur devrait en fabriquer un, et
+   *  il le ferait dans une seule langue. La mise en forme — séparateur de
+   *  milliers, mot « crédits » — appartient à l'écran, qui sait laquelle. */
   parPalier: z.array(z.object({
-    palier: z.string(),
+    credits: z.number().int().positive(),
     achats: z.number().int().nonnegative(),
   }).strict()),
 }).strict()
