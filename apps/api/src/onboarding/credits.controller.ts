@@ -2,6 +2,7 @@ import { Controller, Get, Inject, Injectable, Param, Req, UseGuards } from "@nes
 import { RAISON_DE_LA_SOURCE } from "@lehno/contracts";
 import type { CreditBalance, ReferralSummary, Invitation } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { FlagsService } from "../flags/flags.service.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { AppError } from "../common/errors.js";
 
@@ -10,7 +11,10 @@ type AuthedRequest = { userId: string };
 @Injectable()
 export class CreditsService {
   // @Inject explicite : voir ProfileService, même contrainte esbuild/vitest.
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(FlagsService) private readonly flags: FlagsService,
+  ) {}
 
   // Le solde est la SOMME des mouvements, calculée à chaque appel. Aucune
   // colonne de solde n'existe, donc aucune ne peut diverger du registre qui
@@ -72,7 +76,28 @@ export class CreditsService {
           createdAt: r.createdAt.toISOString(),
         })),
       creditsEarned: gagnes._sum.amount ?? 0,
+      bonusParInvitation: await this.bonusParInvitation(),
     };
+  }
+
+  /* Ce que le parrainage rapporte AUJOURD'HUI, ou rien.
+   *
+   * Nul quand `credits` est éteint. Le drapeau `referral` ne dépend pas de
+   * `credits` — l'éteindre tuerait l'acquisition avec la monétisation, ce que
+   * §6.4 interdit nommément — mais le parrainage n'a alors plus de crédits à
+   * promettre : ils n'achètent rien, et les générations sont gratuites. Un
+   * écran qui annoncerait « cinq crédits » dans cet état mentirait.
+   *
+   * C'est le serveur qui tranche, jamais le client. Croiser `referral` et
+   * `credits` côté client reviendrait à y refaire ce raisonnement — et à s'en
+   * écarter le jour où il change. */
+  private async bonusParInvitation(): Promise<number | null> {
+    if (!(await this.flags.estActif("credits"))) return null;
+    const l = await this.prisma.systemParameter.findUnique({
+      where: { key: "referral_bonus_invited" },
+    });
+    const n = l ? Number(l.value) : NaN;
+    return Number.isInteger(n) && n > 0 ? n : null;
   }
 
   // Ouverte SANS compte : un code d'invitation circule par message, par
