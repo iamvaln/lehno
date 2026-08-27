@@ -37,12 +37,11 @@ export default function Maintenance() {
   const { t, langue } = useLangue();
   const { theme, couleurs } = useTheme();
   const insets = useSafeAreaInsets();
-  const { secondes, reessaie } = useArret();
-  /* MAINTENANT plus LE RESTE, à chaque rendu. La somme ne bouge pas — le
-     décompte perd une seconde pendant que l'horloge en gagne une —, et l'heure
-     annoncée tient. Figer l'instant de départ l'aurait fait reculer d'une
-     seconde par seconde sous les yeux de qui attend. */
-  const heure = heureDeRetour(secondes, Date.now(), langue);
+  const { until, reessaie } = useArret();
+  /* L'heure que le SERVEUR annonce, mise à l'heure du téléphone. Je la
+     calculais depuis le rythme de réessai — deux choses distinctes, et les
+     confondre annonçait un retour que personne n'avait promis. */
+  const heure = heureDeRetour(until, langue);
 
   const [sansMouvement, setSansMouvement] = useState<boolean | null>(null);
   /* Une horloge par case, décalée à son propre retard. J'avais d'abord voulu

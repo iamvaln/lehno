@@ -1,4 +1,4 @@
-import type { ErrorCode, MaintenanceStatus } from "@lehno/contracts";
+import type { ErrorCode } from "@lehno/contracts";
 
 /* L'arrêt pour intervention, et ce qui le distingue d'un drapeau éteint.
  *
@@ -23,10 +23,16 @@ export function estUnArret(statut: number, code: ErrorCode | null): boolean {
    ferait revenir mille téléphones à la même seconde. */
 export const DELAI_MINIMAL = 15;
 
-export function delaiDAttente(etat: MaintenanceStatus): number {
-  // Sans délai annoncé on attend quand même, mais peu : personne ne doit rester
-  // devant un écran figé si l'intervention s'achève tout de suite.
-  return Math.max(DELAI_MINIMAL, etat.retryAfterSeconds ?? 0);
+/* LE RYTHME de réessai, et lui seul.
+ *
+ * Il ne prend que `retryAfterSeconds`, pas l'état entier : c'est ce qui
+ * l'empêche de reprendre un jour l'heure annoncée pour en déduire un délai.
+ * Les deux ont vécu ensemble ici, et j'ai confondu l'une avec l'autre.
+ *
+ * Sans rythme annoncé on attend quand même, mais peu : personne ne doit rester
+ * devant un écran figé si l'intervention s'achève tout de suite. */
+export function delaiDAttente(retryAfterSeconds: number | null): number {
+  return Math.max(DELAI_MINIMAL, retryAfterSeconds ?? 0);
 }
 
 /* « Un chemin gouverné par un drapeau éteint rend 404. Le recevoir là où vous
@@ -48,27 +54,29 @@ export function exigeDeRelireLesDrapeaux(
   return gouvernee && statut === 404 && code === "not_found";
 }
 
-/* L'heure de retour, calculée depuis le délai que le SERVEUR annonce.
+/* L'HEURE DE RETOUR ANNONCÉE — celle du serveur, jamais un calcul.
  *
- * Le kit donnait « 14 h 30 » en exemple, et l'afficher tel quel annonçait une
- * heure inventée : quelqu'un serait revenu à 14 h 30 pour trouver la même page.
- * Une page d'attente qui ment sur l'attente est pire qu'une page qui se tait.
+ * Je l'avais dérivée de `retryAfterSeconds`, et le contrat le corrige sans
+ * détour : ce sont DEUX choses. `retryAfterSeconds` est le RYTHME de réessai,
+ * qui existe toujours pendant une intervention ; `until` est l'heure de retour,
+ * et elle est facultative. « Un rythme de quinze minutes ne dit pas que le
+ * service revient dans quinze minutes. » Dériver l'une de l'autre, c'était
+ * annoncer un retour que personne n'avait promis.
  *
- * En dessous d'un quart d'heure on ne donne pas d'heure du tout : « de retour
- * vers 14 h 30 » quand il reste quarante secondes se lit comme une panne, pas
- * comme une minute à patienter.
+ * D'où deux états, et deux seulement : avec `until`, l'écran dit quand revenir ;
+ * sans elle, il dit qu'une mise à jour est en cours. Pas de « bientôt », pas
+ * d'estimation inventée — et plus de seuil de mon cru pour compenser un calcul
+ * qui n'avait pas lieu d'être.
+ *
+ * L'horodatage arrive en UTC ; c'est le téléphone qui le met à son heure, et le
+ * format appartient à son dictionnaire. Une chaîne que `Date` ne sait pas lire
+ * ne rend rien : mieux vaut se taire qu'afficher « Invalid Date ».
  */
-export const SECONDES_POUR_ANNONCER_UNE_HEURE = 15 * 60;
-
-export function heureDeRetour(
-  secondes: number | null,
-  maintenant: number,
-  langue: string,
-): string | null {
-  if (secondes === null || secondes < SECONDES_POUR_ANNONCER_UNE_HEURE) return null;
-  return new Intl.DateTimeFormat(langue, {
-    hour: "numeric", minute: "2-digit",
-  }).format(new Date(maintenant + secondes * 1000));
+export function heureDeRetour(until: string | null, langue: string): string | null {
+  if (!until) return null;
+  const quand = new Date(until);
+  if (Number.isNaN(quand.getTime())) return null;
+  return new Intl.DateTimeFormat(langue, { hour: "numeric", minute: "2-digit" }).format(quand);
 }
 
 /* Le FILET du serveur, à ne jamais montrer à l'utilisateur.

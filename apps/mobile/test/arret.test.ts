@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  DELAI_MINIMAL, SECONDES_POUR_ANNONCER_UNE_HEURE, delaiDAttente, estUnArret,
+  DELAI_MINIMAL, delaiDAttente, estUnArret,
   exigeDeRelireLesDrapeaux, exigeDeRelireLesMetadonnees, heureDeRetour,
 } from "../lib/arret.js";
 
@@ -30,17 +30,17 @@ describe("le délai avant de réessayer", () => {
      puisse l'allonger si l'intervention dure. Le recalculer de son côté ferait
      revenir mille téléphones à la même seconde. */
   it("prend celui que le serveur annonce", () => {
-    expect(delaiDAttente({ maintenance: true, retryAfterSeconds: 120 })).toBe(120);
+    expect(delaiDAttente(120 )).toBe(120);
   });
 
   // Sans délai annoncé, on attend quand même — mais peu, pour ne pas laisser
   // quelqu'un devant un écran figé si l'intervention s'achève tout de suite.
   it("retombe sur un plancher quand le serveur se tait", () => {
-    expect(delaiDAttente({ maintenance: true, retryAfterSeconds: null })).toBe(DELAI_MINIMAL);
+    expect(delaiDAttente(null )).toBe(DELAI_MINIMAL);
   });
 
   it("ne descend jamais sous le plancher", () => {
-    expect(delaiDAttente({ maintenance: true, retryAfterSeconds: 1 })).toBe(DELAI_MINIMAL);
+    expect(delaiDAttente(1 )).toBe(DELAI_MINIMAL);
   });
 });
 
@@ -66,30 +66,35 @@ describe("un 404 sur une surface gouvernée", () => {
 });
 
 describe("l'heure de retour", () => {
-  const MIDI = Date.UTC(2026, 7, 26, 12, 0, 0);
-
-  /* Elle se CALCULE depuis le délai du serveur. Le kit donnait « 14 h 30 » en
-     exemple ; l'afficher tel quel annonçait une heure inventée, et quelqu'un
-     serait revenu à 14 h 30 pour trouver la même page. */
-  it("suit le délai annoncé, pas un exemple", () => {
-    const dans2h = heureDeRetour(2 * 3600, MIDI, "fr");
-    const dans3h = heureDeRetour(3 * 3600, MIDI, "fr");
-    expect(dans2h).not.toBeNull();
-    expect(dans2h).not.toEqual(dans3h);
+  /* Elle vient de `until`, PAS de `retryAfterSeconds`. Je dérivais l'une de
+     l'autre ; le contrat le corrige : le rythme de réessai n'annonce pas un
+     retour. Un rythme de quinze minutes ne dit pas que le service revient
+     dans quinze minutes. */
+  it("se lit dans l'heure annoncée", () => {
+    const midi = heureDeRetour("2026-08-27T12:00:00Z", "fr");
+    const quatorze = heureDeRetour("2026-08-27T14:00:00Z", "fr");
+    expect(midi).not.toBeNull();
+    expect(midi).not.toEqual(quatorze);
   });
 
-  /* Sous un quart d'heure, on ne donne pas d'heure : « de retour vers 12 h 01 »
-     quand il reste quarante secondes se lit comme une panne, pas comme une
-     minute à patienter. L'écran dit alors seulement qu'une mise à jour est en
-     cours. */
-  it("se tait quand l'attente est courte", () => {
-    expect(heureDeRetour(45, MIDI, "fr")).toBeNull();
-    expect(heureDeRetour(SECONDES_POUR_ANNONCER_UNE_HEURE - 1, MIDI, "fr")).toBeNull();
-    expect(heureDeRetour(SECONDES_POUR_ANNONCER_UNE_HEURE, MIDI, "fr")).not.toBeNull();
+  /* Facultative : on ne connaît pas toujours l'heure de retour. L'écran a
+     alors raison de dire seulement qu'une mise à jour est en cours — pas de
+     « bientôt », pas d'estimation inventée. */
+  it("ne dit rien quand le serveur ne l'annonce pas", () => {
+    expect(heureDeRetour(null, "fr")).toBeNull();
   });
 
-  it("ne dit rien sans délai du tout", () => {
-    expect(heureDeRetour(null, MIDI, "fr")).toBeNull();
+  // Une chaîne illisible ne rend rien : mieux vaut se taire qu'afficher
+  // « Invalid Date » à quelqu'un qui attend.
+  it("se tait sur un horodatage illisible", () => {
+    expect(heureDeRetour("bientôt", "fr")).toBeNull();
+  });
+
+  // L'heure se dit dans la langue de lecture, et à l'heure du téléphone : le
+  // serveur envoie de l'UTC, il ne connaît pas le fuseau du demandeur.
+  it("se dit dans la langue de lecture", () => {
+    expect(heureDeRetour("2026-08-27T12:00:00Z", "fr"))
+      .not.toEqual(heureDeRetour("2026-08-27T12:00:00Z", "en"));
   });
 });
 

@@ -24,6 +24,10 @@ interface Arret {
      il ne l'invente pas, sans quoi deux versions du parc appliqueraient deux
      règles — et mille téléphones reviendraient à la même seconde. */
   secondes: number | null;
+  /* L'heure de retour ANNONCÉE, telle que le serveur la donne — jamais dérivée
+     du rythme de réessai. Nulle quand il ne l'annonce pas : l'écran dit alors
+     seulement qu'une mise à jour est en cours. */
+  until: string | null;
   signale: (erreur: unknown) => void;
   reessaie: () => void;
 }
@@ -33,6 +37,7 @@ const Contexte = createContext<Arret | null>(null);
 export function ArretProvider({ children }: { children: ReactNode }) {
   const [enCours, setEnCours] = useState(false);
   const [secondes, setSecondes] = useState<number | null>(null);
+  const [until, setUntil] = useState<string | null>(null);
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const interroge = useCallback(async () => {
@@ -42,10 +47,12 @@ export function ArretProvider({ children }: { children: ReactNode }) {
       if (!etat.maintenance) {
         setEnCours(false);
         setSecondes(null);
+        setUntil(null);
         return;
       }
       setEnCours(true);
-      setSecondes(delaiDAttente(etat));
+      setSecondes(delaiDAttente(etat.retryAfterSeconds));
+      setUntil(etat.until);
     } catch {
       /* Le chemin d'état lui-même ne répond pas. On reste sur l'écran
          d'attente : disparaître pour retomber sur une application qui échoue
@@ -59,11 +66,12 @@ export function ArretProvider({ children }: { children: ReactNode }) {
   const signale = useCallback((erreur: unknown) => {
     if (!(erreur instanceof ErreurDApi)) return;
     if (!estUnArret(erreur.statut, erreur.code)) return;
+    /* Les deux voyagent AVEC le refus : sans elles, il faudrait un second
+       appel juste pour savoir quoi afficher, au moment précis où l'on cherche
+       à réduire le trafic. */
     setEnCours(true);
-    setSecondes(delaiDAttente({
-      maintenance: true,
-      retryAfterSeconds: lireLeDelai(erreur),
-    }));
+    setSecondes(delaiDAttente(lireLeDelai(erreur)));
+    setUntil(lireLHeure(erreur));
   }, []);
 
   // Le client signale tout échec ici : un arrêt se découvre sur n'importe quel
@@ -82,7 +90,7 @@ export function ArretProvider({ children }: { children: ReactNode }) {
   }, [enCours, secondes, interroge]);
 
   return (
-    <Contexte.Provider value={{ enCours, secondes, signale, reessaie: () => void interroge() }}>
+    <Contexte.Provider value={{ enCours, secondes, until, signale, reessaie: () => void interroge() }}>
       {children}
     </Contexte.Provider>
   );
@@ -93,6 +101,13 @@ export function ArretProvider({ children }: { children: ReactNode }) {
 function lireLeDelai(erreur: ErreurDApi): number | null {
   const brut = erreur.enveloppe?.details?.["retryAfterSeconds"];
   return typeof brut === "number" && brut > 0 ? brut : null;
+}
+
+/* L'heure annoncée voyage dans les mêmes détails. Elle est facultative : on ne
+   la connaît pas toujours, et l'inventer serait promettre un retour. */
+function lireLHeure(erreur: ErreurDApi): string | null {
+  const brut = erreur.enveloppe?.details?.["until"];
+  return typeof brut === "string" ? brut : null;
 }
 
 export function useArret(): Arret {
