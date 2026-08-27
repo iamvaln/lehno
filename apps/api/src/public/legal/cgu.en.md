@@ -74,7 +74,11 @@ of a credit pack, the number of credits it holds, any discount that comes with
 it, the number of credits given at sign-up, and the credit cost of each action. A
 pack may also stop being offered.
 
-Three things protect you from these changes:
+**You are told beforehand.** A price change is announced to you by email
+**before** it takes effect, not discovered afterwards. You therefore have time to
+buy on the terms you knew.
+
+Three things also protect you:
 
 - **Credits you already hold keep their value.** A price change never reduces
   them, never takes them back, and never makes them expire.
