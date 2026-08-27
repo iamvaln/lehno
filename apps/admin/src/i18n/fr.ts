@@ -972,6 +972,46 @@ export const fr = {
     reponse_invalide: "Le service a répondu quelque chose d'inattendu. Réessayez dans un instant.",
   },
 
+  studio: {
+    titre: "Studio du portrait",
+    sous: "Les gabarits de production en service, et ce qui les a précédés.",
+    portee: "Cette entrée montre les réglages en service. La composition d'un brouillon et le banc d'essai ne sont pas encore possibles : le modèle de données ne porte pas de brouillon, et aucun fournisseur d'IA n'est branché.",
+    col: {
+      genre: "Production",
+      cle: "Gabarit",
+      version: "En service",
+      modele: "Modèle appelé",
+      parQui: "Publié par",
+      corps: "Consigne",
+    },
+    genres: {
+      message: "Message",
+      illustration: "Illustration",
+      photo_style: "Style de photo",
+      note_classification: "Classement des notes",
+      sensitive_detection: "Détection des cas sensibles",
+    },
+    version: "Version {n}",
+    aucune: "Aucune",
+    parPriorite: "Au routage par priorité",
+    parMigration: "Posé à l'installation",
+    historique: "Historique de « {cle} »",
+    revenir: "Remettre en service",
+    dialogue: {
+      titre: "Remettre la version {n} en service",
+      consequence: "La version en service se range, celle-ci reprend la main. Rien n'est reconstruit, et le changement rejoint le journal d'audit avec son motif.",
+      motifs: [
+        "Les productions se sont dégradées depuis la publication",
+        "La version en service ne tient pas ses garde-fous",
+        "Retour arrière après un essai non concluant",
+      ],
+    },
+    vide: {
+      titre: "Aucun gabarit",
+      texte: "Les gabarits de production s'inscrivent ici dès qu'une première version est publiée.",
+    },
+  },
+
   liens: {
     titre: "Liens externes",
     sous: "Les consoles des plateformes sur lesquelles Lehno s'appuie, rassemblées ici plutôt que cherchées ailleurs.",

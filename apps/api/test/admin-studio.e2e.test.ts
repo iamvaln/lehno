@@ -5,6 +5,7 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 import { AdminTokenService } from "../src/admin/admin-token.service.js";
+import { catalogueGabaritsSchema, gabaritStudioSchema } from "@lehno/contracts";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -55,6 +56,58 @@ describe("administration — les gabarits du studio", () => {
     ...over,
   });
 
+  // Le contrat est la seule chose que les deux côtés partagent. Sans ce test,
+  // le serveur peut renommer un champ sans que rien ne s'en aperçoive avant
+  // l'écran — et l'écran du studio se construit maintenant dessus.
+  it("suit le contrat publié, au champ près", async () => {
+    const { entete } = await session("admin");
+    await appeler("POST", "", entete, gabarit());
+
+    const res = await appeler("GET", "", entete);
+    expect(res.status).toBe(200);
+    const page = catalogueGabaritsSchema.parse(await res.json());
+    expect(page.items[0]?.cle).toBe("gratitude");
+    expect(page.items[0]?.genre).toBe("message");
+    expect(page.items[0]?.actif).toBe(true);
+  });
+
+  // Un identifiant de modèle ne se reconnaît pas ; le fournisseur et la clé se
+  // lisent. On résout à la lecture — sans clé étrangère depuis le journal, mais
+  // ici la relation existe et rien n'oblige l'écran à faire un second appel.
+  it("nomme le modèle appelé, plutôt que son identifiant", async () => {
+    const { entete } = await session("admin");
+    const modele = await db.prisma.aIModel.create({
+      data: { provider: "anthropic", modelKey: "claude-opus-5", priority: 1 },
+    });
+    await appeler("POST", "", entete, gabarit({ aiModelId: modele.id }));
+
+    const page = catalogueGabaritsSchema.parse(await (await appeler("GET", "", entete)).json());
+    expect(page.items[0]?.modele).toEqual({
+      id: modele.id, fournisseur: "anthropic", cle: "claude-opus-5",
+    });
+  });
+
+  // Un gabarit qui s'en remet au routage par priorité n'en nomme aucun. Nul se
+  // dit ; inventer un modèle laisserait croire qu'il est arrêté.
+  it("rend un modèle nul quand le gabarit n'en nomme aucun", async () => {
+    const { entete } = await session("admin");
+    await appeler("POST", "", entete, gabarit());
+
+    const page = catalogueGabaritsSchema.parse(await (await appeler("GET", "", entete)).json());
+    expect(page.items[0]?.modele).toBeNull();
+  });
+
+  // Qui a publié se lit à son adresse, non à son identifiant. Nul pour un
+  // gabarit posé par une migration — et non « inconnu », qui laisserait croire
+  // qu'on a perdu le nom.
+  it("nomme qui a publié, ou dit que personne ne l'a fait", async () => {
+    const { compte, entete } = await session("admin");
+    await appeler("POST", "", entete, gabarit());
+
+    const page = catalogueGabaritsSchema.parse(await (await appeler("GET", "", entete)).json());
+    expect(page.items[0]?.parQui).toBe(compte.email);
+  });
+
   it("le support consulte, il ne règle pas", async () => {
     const { entete } = await session("support");
     expect((await appeler("GET", "", entete)).status).toBe(200);
@@ -66,9 +119,9 @@ describe("administration — les gabarits du studio", () => {
 
     const res = await appeler("POST", "", entete, gabarit());
     expect(res.status).toBe(201);
-    const cree = (await res.json()) as { id: string; version: number; isActive: boolean };
+    const cree = gabaritStudioSchema.parse(await res.json());
     expect(cree.version).toBe(1);
-    expect(cree.isActive).toBe(true);
+    expect(cree.actif).toBe(true);
 
     const trace = await db.prisma.auditLog.findFirstOrThrow({ where: { action: "prompt_template_create" } });
     expect(trace.actorId).toBe(compte.id);
@@ -80,18 +133,18 @@ describe("administration — les gabarits du studio", () => {
   // mieux » n'a pas de réponse.
   it("ajuster crée une version, sans toucher à la précédente", async () => {
     const { entete } = await session("admin");
-    const premier = (await (await appeler("POST", "", entete, gabarit())).json()) as { id: string; body: string };
+    const premier = gabaritStudioSchema.parse(await (await appeler("POST", "", entete, gabarit())).json());
 
-    const second = (await (await appeler("POST", "", entete, gabarit({
+    const second = gabaritStudioSchema.parse(await (await appeler("POST", "", entete, gabarit({
       body: "Écris trois phrases, et bannis les formules de carte de vœux.",
       reason: "Les résultats partaient dans la carte de vœux",
-    }))).json()) as { id: string; version: number; isActive: boolean };
+    }))).json());
 
     expect(second.version).toBe(2);
     expect(second.id).not.toBe(premier.id);
 
     const ancien = await db.prisma.promptTemplate.findUniqueOrThrow({ where: { id: premier.id } });
-    expect(ancien.body).toBe(premier.body);
+    expect(ancien.body).toBe(premier.corps);
     // Une seule version active : la nouvelle prend la main, l'ancienne se range.
     expect(ancien.isActive).toBe(false);
   });
