@@ -8,15 +8,19 @@ prendre avant d'écrire une ligne.
 
 ## 1. Le lancement est le plan
 
-Le handoff donne la configuration décidée pour la première version :
+La configuration décidée pour la première version :
 
-> anniversaires seuls, versement manuel, collecte et parrainage ouverts.
-> **Tout le reste éteint.**
+> anniversaires seuls, versement manuel, collecte et parrainage ouverts,
+> **et le message généré**. Tout le reste éteint.
+
+**`generation.message` est allumé, et c'est ce qui donne un sens aux crédits.**
+Sans lui, ils ne paieraient rien. Le profil « Lancement » du prototype le porte
+encore à `false` — voir §6, c'est à corriger côté planche.
 
 Ce n'est pas un détail de paramétrage, c'est **l'ordre de construction**. Le
 prototype calcule lui-même ce qui sort de la navigation (`ecranEteint`,
 `moiVisible`). En appliquant le profil « Lancement » aux quarante écrans du
-rail, la moitié disparaît.
+rail, neuf disparaissent — et l'onglet qui menait à quatre d'entre eux avec.
 
 **Construire dans l'ordre du rail serait construire à moitié ce que personne ne
 verra.** L'ordre ci-dessous suit ce que le lancement ouvre.
@@ -24,15 +28,29 @@ verra.** L'ordre ci-dessous suit ce que le lancement ouvre.
 ### Ce que le lancement retire — donc ce qui attend
 
 `souhait` (3.19) · `listes` (3.29) · `monmur` (3.10) · `reservations` (3.27) ·
-`preparation` et `generation` (3.7) · `cadrage` (3.7) · `portrait` (3.22) ·
-`studio` (3.7) · `reprises` (3.16) · `paiement` (3.25) · **`moi` (3.17)**
+`cadrage` (3.7) · `portrait` (3.22) · `studio` (3.7) · `paiement` (3.25) ·
+**`moi` (3.17)**
 
-Treize écrans. **La barre passe à quatre onglets**, et l'identité — nom,
-adresse publique, accès au profil — remonte en tête des Réglages.
+Neuf écrans. **La barre passe à quatre onglets**, et l'identité — nom, adresse
+publique, accès au profil — remonte en tête des Réglages.
+
+### Ce que `generation.message` rallume, par cascade
+
+Le prototype calcule `prep = generation.message || generation.ideas`. Une seule
+des deux suffit, et trois écrans reviennent :
+
+- **`preparation` (3.7)** et **`generation` (3.7)** — avec la seule piste du
+  message ; §3.7 « s'ouvre dès qu'une des deux natures qu'il propose tient, et
+  chaque piste paraît pour son compte ».
+- **`reprises` (3.16)** — qui « ne garde que les natures allumées ».
+
+Et ce qui en dépend ailleurs : la fiche **garde « Préparer »**, la carte
+d'échéance **garde ses deux actions**, l'occasion **garde son bloc**.
+`cadrage` reste dehors — il suit `generation.ideas`, éteint.
 
 ### Ce qui reste à bâtir pour le lancement
 
-Seize écrans, listés au §3.
+Dix-neuf écrans, listés au §3.
 
 ---
 
@@ -82,32 +100,49 @@ accroche.
    dans `/me/metadata`, déjà filtrée — jamais le drapeau. C'est déjà branché.
 7. **Saisie d'une note (3.5)**, et le bloc « à ranger » sur la fiche pour la
    note que le classement n'a pas su ranger. Ton neutre : elle sert déjà.
-8. **Une occasion (3.21)**, sans son bloc de préparation — les générations sont
-   éteintes au lancement — et son geste en pied.
+8. **Une occasion (3.21)**, avec son bloc de préparation — le message est
+   allumé — et la seule piste qui tient.
 
 À la fin de ce lot, **trois des cinq sorties de la fiche mènent quelque part**.
 
-### Lot C — ce que le lancement ouvre
+### Lot C — la promesse : préparer, et ce que Lehno écrit
 
-9. **Réglages (3.28)** avec l'identité remontée en tête, **Profil (3.23)**,
+C'est ce que les crédits paient. Le mettre après les Réglages reviendrait à
+livrer la plomberie avant l'eau.
+
+9. **Préparer (3.7)** — la piste du message seule, chaque piste paraissant pour
+   son compte.
+10. **Ce que Lehno a écrit (3.7)** — et ce qui est produit se relit.
+11. **Reprises en cours (3.16)**, réduit aux natures allumées ; son état vide si
+    aucune ne l'est.
+12. **`PaidActionSheet`** arrive ici, et pas avant : *rien ne se paie en silence
+    et rien ne se repaie*. Le coût s'annonce sur place, passe par la feuille de
+    confirmation. C'est le premier lot où quelque chose se paie.
+
+La fiche récupère « Préparer » : **quatre des cinq sorties mènent quelque part**.
+
+### Lot D — ce que le lancement ouvre
+
+13. **Réglages (3.28)** avec l'identité remontée en tête, **Profil (3.23)**,
    **Rappels (3.11)**, **Sécurité (3.24)**, **Aide (3.26)**, **Mes données
    (3.31)**, **Compte fermé**.
-10. **Notifications (3.13)** — la cloche à trois natures sur cinq, `collect`
+14. **Notifications (3.13)** — la cloche à trois natures sur cinq, `collect`
     ouvert. Pas d'écran de détail : une notification est un chemin, pas une
     destination.
-11. **Recharger (3.9)** dans son état de lancement : **le solde, les mouvements,
+15. **Recharger (3.9)** dans son état de lancement : **le solde, les mouvements,
     le versement manuel**. Pas de paliers, pas de moyens de paiement, pas
     d'attente opérateur.
-12. **Parrainage (3.9)** — la ligne vit à deux endroits et suit le drapeau aux
+16. **Parrainage (3.9)** — la ligne vit à deux endroits et suit le drapeau aux
     deux.
-13. **À valider (3.8)**, **Lien de collecte (3.20)**, **Un lien public (3.12)** —
+17. **À valider (3.8)**, **Lien de collecte (3.20)**, **Un lien public (3.12)** —
     `collect` est ouvert au lancement.
 
-### Lot D — après le lancement
+### Lot E — après le lancement
 
-Les treize écrans du §1, dans l'ordre où leurs drapeaux s'allumeront. Le studio
-en six temps et le paiement par paliers sont les plus gros ; ils n'ont aucune
-urgence.
+Les neuf écrans du §1, dans l'ordre où leurs drapeaux s'allumeront. Le studio en
+six temps et le paiement par paliers sont les plus gros ; ils n'ont aucune
+urgence. `cadrage` (3.7) suit `generation.ideas` et rejoindra §3.7 déjà bâti —
+une piste de plus, pas un écran de plus.
 
 ---
 
@@ -120,10 +155,10 @@ arrive avec le lot qui l'emploie.
 |---|---|---|
 | `Toast` | A | *Aucun geste muet* : chaque bouton mène à un écran ou pose un accusé |
 | `ConfirmSheet` | B | La suppression, la fermeture de compte |
-| `PaidActionSheet` | D | *Rien ne se paie en silence* — mais rien ne se paie au lancement |
-| `BrandMark` | C | Les surfaces publiques |
-| `SocialGlyph` | C | idem |
-| `PortraitComposition` | D | Le portrait canonique, deux écrans l'importent |
+| `PaidActionSheet` | **C** | *Rien ne se paie en silence*, et le message généré se paie |
+| `BrandMark` | D | Les surfaces publiques |
+| `SocialGlyph` | D | idem |
+| `PortraitComposition` | E | Le portrait canonique, deux écrans l'importent |
 
 Les vingt-deux existantes se **relisent** contre les `.d.ts` du nouveau kit
 avant d'être réputées bonnes. Vérification faite sur cinq d'entre elles
@@ -150,8 +185,9 @@ autres attendent.
 **Le tirer-pour-rafraîchir.** Le pilote du handoff dit : oui sur l'accueil, non
 sur les formulaires. À confirmer pour Dates et le carnet.
 
-**L'attente de génération** — « quitter sans perdre » est un comportement. Sans
-objet au lancement, à trancher avant le lot D.
+**L'attente de génération** — « quitter sans perdre » est un comportement, pas
+une image. Le message étant allumé au lancement, ce n'est plus un choix qu'on
+peut repousser : il conditionne le lot C.
 
 Je propose de les arrêter en un document court, comme le reste, plutôt qu'en
 les découvrant écran par écran.
@@ -159,6 +195,15 @@ les découvrant écran par écran.
 ---
 
 ## 6. Ce qu'il faut dire au designer, vite
+
+**Le profil « Lancement » du prototype est faux sur un point.** Il porte
+`generation.message: false`, alors que le message est allumé au lancement — sans
+lui les crédits ne paient rien. Tant qu'il n'est pas corrigé, la planche montre
+la fiche **sans « Préparer »**, l'occasion sans son bloc, et la carte d'échéance
+avec une seule action. Ce sont trois états qui ne seront jamais vus. Et le cas
+« une nature sur deux » — le message seul, les idées fermées — devient le cas
+NOMINAL du lancement, pas une variante : c'est lui qu'il faut dessiner en
+premier.
 
 **Ne pas répliquer le port React Native.** Le `A-COMPLETER.md` propose de
 convertir mécaniquement 50+ fichiers — « 274 `<div>`, 51 grilles, 62
