@@ -315,6 +315,18 @@ const CHEMINS: Chemin[] = [
     methode: "get",
     resume: "Lire son code de parrainage, ses filleuls et ses gains",
     authentifie: true,
+        note: [
+      "`bonusParInvitation` dit ce que le parrainage rapporte **aujourd'hui**,",
+      "ou **rien** — il est nul quand les crédits sont éteints.",
+      "",
+      "**Lisez cette valeur, pas les drapeaux.** `referral` ne dépend pas de",
+      "`credits` : l'éteindre tuerait l'acquisition avec la monétisation, ce",
+      "que §6.4 interdit. Mais dans cet état les crédits n'achètent rien et les",
+      "générations sont gratuites — annoncer « cinq crédits » y serait faux.",
+      "",
+      "**Nul n'est pas zéro.** Nul, l'écran présente le parrainage sans",
+      "promesse chiffrée ; il n'annonce pas « zéro crédit ».",
+    ].join("\n"),
     reponse: referralSummarySchema,
   },
   {
