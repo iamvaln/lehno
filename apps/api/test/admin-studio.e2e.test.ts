@@ -127,6 +127,41 @@ describe("administration — les gabarits du studio", () => {
     expect(trace.actorId).toBe(compte.id);
   });
 
+  /**
+   * « Sur chaque objet, l'historique des interventions est consultable depuis
+   * son détail » (ux-admin §7). Encore faut-il que la trace **désigne** l'objet.
+   *
+   * La création journalisait avant d'écrire la ligne : elle n'avait donc pas
+   * encore d'identifiant à inscrire, et la cible restait nulle. L'historique
+   * d'un gabarit ne montrait que ses remises en service, jamais sa naissance —
+   * et le filtre par cible ne pouvait pas la ramener.
+   *
+   * Trouvé en appelant le vrai serveur : les tests d'alors vérifiaient qu'une
+   * trace existe, pas qu'elle désigne quelque chose.
+   */
+  it("la trace de création désigne le gabarit créé", async () => {
+    const { entete } = await session("admin");
+
+    const cree = gabaritStudioSchema.parse(await (await appeler("POST", "", entete, gabarit())).json());
+
+    const trace = await db.prisma.auditLog.findFirstOrThrow({ where: { action: "prompt_template_create" } });
+    expect(trace.targetType).toBe("prompt_template");
+    expect(trace.targetId).toBe(cree.id);
+  });
+
+  // Le corollaire, celui qui compte pour l'écran : le journal filtré sur un
+  // gabarit ramène sa naissance comme ses remises en service.
+  it("le journal filtré sur un gabarit ramène sa création", async () => {
+    const { entete } = await session("admin");
+    const cree = gabaritStudioSchema.parse(await (await appeler("POST", "", entete, gabarit())).json());
+
+    const traces = await db.prisma.auditLog.findMany({
+      where: { targetType: "prompt_template", targetId: cree.id },
+    });
+
+    expect(traces.map((t) => t.action)).toContain("prompt_template_create");
+  });
+
   // « Les versions ne se modifient pas. » Ajuster crée une version nouvelle ;
   // l'ancienne demeure, ce qui permet d'y revenir et de comprendre un écart de
   // qualité. Sans ça, la question « pourquoi les productions d'hier valaient

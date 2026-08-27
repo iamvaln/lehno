@@ -120,12 +120,6 @@ export class StudioService {
     const version = (derniere?.version ?? 0) + 1;
 
     return this.prisma.$transaction(async (tx) => {
-      await this.journal.consigner({
-        auteurId, action: "prompt_template_create", motif: entree.reason,
-        cibleType: "prompt_template",
-        details: { kind: entree.kind, key: entree.key, version },
-      }, tx);
-
       // La version précédente se range avant que la nouvelle prenne la main :
       // l'index unique partiel n'admet qu'une seule active par (kind, key), et
       // il refuserait l'insertion dans l'ordre inverse.
@@ -143,6 +137,25 @@ export class StudioService {
           createdByAdminId: auteurId,
         },
       });
+
+      /**
+       * La trace **après** l'écriture, et non avant : elle désigne le gabarit
+       * créé, ce qu'elle ne pouvait pas faire tant qu'il n'existait pas. Sans
+       * cible, l'historique d'un gabarit ne montrait que ses remises en service
+       * — jamais sa naissance — et le filtre par cible (ux-admin §7) ne pouvait
+       * pas la ramener.
+       *
+       * L'ordre ne relâche rien : la transaction enveloppe les deux, et un
+       * motif absent ou trop court fait tomber l'écriture avec elle. Ce qui
+       * change est qu'on refuse après un `INSERT` défait plutôt qu'avant — le
+       * résultat visible est le même, la trace est juste.
+       */
+      await this.journal.consigner({
+        auteurId, action: "prompt_template_create", motif: entree.reason,
+        cibleType: "prompt_template", cibleId: cree.id,
+        details: { kind: entree.kind, key: entree.key, version },
+      }, tx);
+
       return await this.rendre(cree);
     });
   }
