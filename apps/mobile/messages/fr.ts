@@ -872,4 +872,37 @@ export const fr = {
   bienvenueParrainageSoi: "Code de parrainage",
   bienvenueParrainageSoiVal: "le vôtre",
   bienvenueParrainageAide: "Le compte est créé, sans le bonus.",
+
+  /* Le lot du 23/49. La naissance vit sur la PERSONNE, une seule fois :
+     l'anniversaire s'en déduit, et c'est de la naissance qu'on ignore l'année,
+     jamais de l'anniversaire.
+
+     Le genre et le topo attendent leur contrat : `gender` a été retiré du
+     modèle, et aucun chemin ne sert de profil extrait. Les clés sont là, elles
+     ne servent encore nulle part. */
+  champGenre: "Genre",
+  champGenreAide: "Pour que les messages soient écrits correctement.",
+  genreFeminin: "Féminin",
+  genreMasculin: "Masculin",
+  profilGenreAide: "Pour que ce que vous signez soit écrit correctement.",
+  identNaissance: "Date de naissance",
+  identNaissanceAide: "L'anniversaire s'en déduit — inutile de le poser deux fois.",
+  identAnnee: "Année",
+  identAnneeInconnue: "Je ne connais pas l'année",
+  ficheTopo: "Son topo",
+  topoMetier: "métier",
+  topoPlat: "plat",
+  topoCouleur: "couleur",
+  topoAnimal: "animal",
+  topoBoisson: "boisson",
+  topoLoisir: "loisir",
+  topoStyle: "style",
+  topoParfum: "parfum",
+  topoTaille: "taille",
+  topoPointure: "pointure",
+  topoEviter: "à éviter",
+  topoDepuis: (note: string, quand: string) => note + ", " + quand,
+  listeArchivee: "Archivée",
+  listeArchiveeTexte: "L'occasion est passée. Les réservations sont closes ; la liste reste là pour l'an prochain.",
+  listeMesDatesAucune: "Aucune date à vous pour l'instant.",
 };

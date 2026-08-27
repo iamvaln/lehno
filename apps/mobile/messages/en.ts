@@ -810,4 +810,37 @@ export const en = {
   bienvenueParrainageSoi: "Referral code",
   bienvenueParrainageSoiVal: "your own",
   bienvenueParrainageAide: "The account is created, without the bonus.",
+
+  /* Le lot du 23/49. La naissance vit sur la PERSONNE, une seule fois :
+     l'anniversaire s'en déduit, et c'est de la naissance qu'on ignore l'année,
+     jamais de l'anniversaire.
+
+     Le genre et le topo attendent leur contrat : `gender` a été retiré du
+     modèle, et aucun chemin ne sert de profil extrait. Les clés sont là, elles
+     ne servent encore nulle part. */
+  champGenre: "Gender",
+  champGenreAide: "So the messages are written correctly.",
+  genreFeminin: "Feminine",
+  genreMasculin: "Masculine",
+  profilGenreAide: "So what you sign is written correctly.",
+  identNaissance: "Date of birth",
+  identNaissanceAide: "The birthday follows from it — no need to set it twice.",
+  identAnnee: "Year",
+  identAnneeInconnue: "I don't know the year",
+  ficheTopo: "Their profile",
+  topoMetier: "job",
+  topoPlat: "dish",
+  topoCouleur: "colour",
+  topoAnimal: "animal",
+  topoBoisson: "drink",
+  topoLoisir: "hobby",
+  topoStyle: "style",
+  topoParfum: "scent",
+  topoTaille: "size",
+  topoPointure: "shoe size",
+  topoEviter: "to avoid",
+  topoDepuis: (note: string, quand: string) => note + ", " + quand,
+  listeArchivee: "Archived",
+  listeArchiveeTexte: "The occasion has passed. Reservations are closed; the list stays for next year.",
+  listeMesDatesAucune: "No dates of your own yet.",
 };
