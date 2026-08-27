@@ -176,3 +176,66 @@ Le principe du §1 rend cette garantie automatique : puisque le moindre changeme
 | **Retour arrière** depuis les réglages en service | Demande un motif |
 | **Version publiée à l'instant**, aucun taux de régénération encore | Le rang existe mais n'a rien à dire : il ne doit pas se lire comme 0 % — un zéro sans explication se prend pour une mesure |
 | **Couverture de profils incomplète** | Nommer ce qui manque |
+
+---
+
+## 12. Ajustements après la livraison du routage des modèles
+
+Le catalogue, le routage par tâche et le disjoncteur existent maintenant en base
+et à l'écran d'administration. Trois choses de ce brief s'en trouvent précisées.
+
+### L'établi n'a pas de repli — et ce n'est pas un détail d'ergonomie
+
+Le repli automatique d'un modèle sur le suivant vaut pour **ce qui tourne sans
+témoin** : les passes d'arrière-plan, et les générations lancées par un
+utilisateur. Personne ne regarde, et une génération perdue est perdue pour de
+bon.
+
+**L'administration ne suit pas cette règle.** Quand on essaie une combinaison,
+on essaie *celle-là*. Si le serveur bascule silencieusement sur le rang suivant
+parce que le modèle demandé ne répond pas, l'administrateur regarde un résultat
+produit par un modèle qu'il n'a pas choisi — et il le publie en croyant avoir vu
+ce qui tournera en production.
+
+Ce serait l'exact contraire du §1. « On ne garde que ce qu'on a vu tourner »
+suppose qu'on sache **ce qu'on a vu tourner**.
+
+Donc, à l'établi : **le modèle demandé, ou l'échec dit franchement**, en le
+nommant. Jamais un repli muet.
+
+### L'échec d'une génération est un état à dessiner
+
+Le §11 prévoit « génération en cours ». Il ne prévoit pas « génération
+échouée », et elle arrivera : c'est un appel réseau à un tiers.
+
+**Le brouillon ne doit pas être perdu.** Composer dix minutes de consigne, voir
+le fournisseur ne pas répondre, et tout retrouver vide — c'est ce qui fait
+détester un outil. L'état composé survit à l'échec ; seul l'essai a manqué.
+
+L'écran dit lequel des trois cas s'est produit, parce qu'ils appellent trois
+gestes différents :
+
+| Ce qui s'est passé | Ce qu'on fait |
+|---|---|
+| Le modèle n'a pas répondu — panne, débit, délai | Réessayer, ou choisir un autre modèle |
+| Le modèle a refusé la demande | Réessayer ne sert à rien : c'est la consigne qu'il faut reprendre |
+| Le compte du fournisseur est à sec | Ni l'un ni l'autre : il faut recharger |
+
+Le troisième n'est pas théorique — deux des quatre fournisseurs y étaient encore
+ce matin.
+
+### Une combinaison, c'est un couple — pas un modèle
+
+Le §3 fait choisir « le modèle appelé ». Mais un gabarit ne vaut pas la même
+chose d'un modèle à l'autre : une consigne taillée pour un modèle bavard donne
+autre chose sur un modèle bref. **Ce qu'on essaie, et ce qu'on publie, c'est le
+couple consigne + modèle.**
+
+Et ce que l'administrateur retient à la fin d'une séance, ce n'est pas *un*
+couple mais **deux** : celui qu'on essaie en premier, et celui qui prend le
+relais s'il ne répond pas. Choisir le primaire et le secondaire est le geste qui
+clôt la séance d'essais — l'établi sert à comparer, la chaîne sert à exécuter.
+
+**Ce que ça demande à l'écran** : après le comparatif, un geste qui range la
+combinaison gagnante en premier rang et une autre en second. Pas un formulaire à
+part — la suite naturelle de « celle-ci vaut mieux ».
