@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { LegalService } from "../public/legal.controller.js";
 import { AppError } from "../common/errors.js";
+import { canonicalEmail } from "../common/email.js";
 
 const MAX_TENTATIVES = 3;
 
@@ -19,6 +20,9 @@ export type Creation =
       plafondAtteint: false;
       user: { id: string; email: string };
       creditsOfferts: number;
+      // Nul quand la personne n'attendait pas. L'écran de bienvenue ne doit
+      // annoncer un cadeau que s'il y en a un.
+      cadeauAttente: { credits: number } | null;
       parrainage: IssueParrainage;
     };
 
@@ -115,11 +119,13 @@ export class SignupService {
           }
 
           const parrainage = await this.appliquerParrainage(tx, user.id, input.referralCode);
+          const cadeauAttente = await this.appliquerCadeauDAttente(tx, user.id, input.email);
 
           return {
             plafondAtteint: false as const,
             user: { id: user.id, email: user.email },
             creditsOfferts,
+            cadeauAttente,
             parrainage,
           };
         });
@@ -151,6 +157,52 @@ export class SignupService {
   // inscription (maquette §3.1) : code inconnu, expiré ou code à soi, on
   // poursuit et on le dit. Refuser la création pour un champ facultatif
   // perdrait un utilisateur pour rien.
+  /* Le cadeau de celui qui attendait.
+   *
+   * La détection se fait sur l'ADRESSE, jamais sur un jeton porté par le lien.
+   * C'est ce qui protège le cadeau : un bonus dans le lien serait
+   * transférable — on le fait suivre à dix amis, et dix comptes touchent ce qui
+   * était réservé à un inscrit. Sur l'adresse, le lien peut circuler autant
+   * qu'il veut, seul celui qui attendait vraiment reçoit quelque chose.
+   *
+   * L'anti-double-crédit ne vit pas ici mais dans le schéma : `convertedUserId`
+   * est UNIQUE. Supprimer son compte et recommencer ne rend donc pas le cadeau
+   * disponible une seconde fois — le `updateMany` conditionné à
+   * `convertedAt: null` échoue sans rien écrire.
+   *
+   * Zéro crédit est un état valide : on peut lancer sans cadeau et l'activer
+   * plus tard. On marque quand même la conversion — c'est la mesure de ce que
+   * la liste d'attente a rapporté, indépendamment de ce qu'on a offert. */
+  private async appliquerCadeauDAttente(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    email: string,
+  ): Promise<{ credits: number } | null> {
+    const canonique = canonicalEmail(email);
+    const attente = await tx.waitlistSignup.findUnique({
+      where: { emailCanonical: canonique },
+      select: { id: true, convertedAt: true },
+    });
+    if (!attente || attente.convertedAt !== null) return null;
+
+    // `convertedAt: null` dans le WHERE : deux inscriptions concurrentes sur la
+    // même adresse — impossible aujourd'hui, mais on ne s'appuie pas là-dessus
+    // — ne créditeraient qu'une fois.
+    const prise = await tx.waitlistSignup.updateMany({
+      where: { id: attente.id, convertedAt: null },
+      data: { convertedUserId: userId, convertedAt: new Date() },
+    });
+    if (prise.count === 0) return null;
+
+    const credits = await this.param(tx, "waitlist_bonus_credits", 0);
+    if (credits > 0) {
+      await tx.creditTransaction.create({
+        data: { userId, type: "grant", source: "waitlist_bonus", amount: credits },
+      });
+    }
+    return { credits };
+  }
+
   private async appliquerParrainage(
     tx: Prisma.TransactionClient,
     filleulId: string,
