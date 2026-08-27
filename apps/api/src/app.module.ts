@@ -13,6 +13,11 @@ import {
 } from "./onboarding/credits.controller.js";
 import { FlagsService } from "./flags/flags.service.js";
 import { AttributsService } from "./me/attributs.service.js";
+import { RechargeService } from "./payments/recharge.service.js";
+import {
+  CreditBundlesController, PaymentChannelsController,
+  CollectionAccountsController, PaymentsController,
+} from "./payments/recharge.controller.js";
 import { CatalogueIAService } from "./ia/catalogue.service.js";
 import { RouteurIAService } from "./ia/routeur.service.js";
 import { construireAdaptateurs, FOURNISSEURS_IA } from "./ia/adaptateurs/index.js";
@@ -98,7 +103,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, StudioController, MeController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, StudioController, MeController,
   ],
   providers: [
     PrismaService,
@@ -191,6 +196,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     CreditsService,
     FlagsService,
     AttributsService,
+    RechargeService,
     CatalogueIAService,
     RouteurIAService,
     // Construits une fois, au démarrage : les instancier à chaque génération
