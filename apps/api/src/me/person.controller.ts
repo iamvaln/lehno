@@ -51,12 +51,14 @@ export class PersonController {
     @Query("direction") direction?: string,
     @Query("offset") offset?: string,
     @Query("limit") limit?: string,
+    @Query("q") q?: string,
   ): Promise<PersonList> {
     const analyse = listPersonsQuerySchema.safeParse({
       ...(sort !== undefined ? { sort } : {}),
       ...(direction !== undefined ? { direction } : {}),
       ...(offset !== undefined ? { offset: Number(offset) } : {}),
       ...(limit !== undefined ? { limit: Number(limit) } : {}),
+      ...(q !== undefined ? { q } : {}),
     });
     if (!analyse.success) {
       throw new AppError("validation_failed", "invalid persons query", {

@@ -105,6 +105,17 @@ export const listPersonsQuerySchema = z
     direction: z.enum(SORT_DIRECTIONS).optional(),
     offset: z.number().int().nonnegative().optional(),
     limit: z.number().int().positive().max(100).optional(),
+    /* La recherche du carnet (§3.15). Elle vit ICI et non sur un chemin à part
+       parce qu'elle doit se COMBINER au tri et à la pagination : §3.15 demande
+       des résultats « classés par proximité de leur prochaine échéance », donc
+       le même tri que la liste, et un carnet fourni peut rendre plus de vingt
+       correspondances.
+       
+       Sans elle, l'écran de recherche filtrait la page déjà chargée — vingt
+       fiches — et un proche de la troisième page restait introuvable. Le
+       contourner en demandant tout le carnet annulerait la pagination qu'on
+       vient de poser. */
+    q: z.string().trim().min(1).max(120).optional(),
   })
   .strict();
 

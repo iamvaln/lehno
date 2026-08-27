@@ -159,6 +159,60 @@ describe("annuaire des proches", () => {
       expect(za.persons.map((p) => p.displayName)).toEqual(["Zoé", "Émile", "Awa"]);
     });
 
+    /* La recherche (§3.15). Elle vit sur le même chemin que la liste parce
+       qu'elle doit se combiner au tri et à la pagination — l'écran de recherche
+       filtrait jusqu'ici la page déjà chargée, et un proche de la troisième
+       page restait introuvable. */
+    it("filtre sur le nom affiché", async () => {
+      for (const nom of ["Célarine", "Valery", "Quentin"]) {
+        await service.create(awa, { displayName: nom });
+      }
+      const r = await service.list(awa, { q: "val" });
+      expect(r.persons.map((p) => p.displayName)).toEqual(["Valery"]);
+    });
+
+    // Le nom d'usage est celui par lequel on l'APPELLE : quelqu'un cherche
+    // « maman » sans savoir si la fiche affiche « Chantal Mbarga ».
+    it("filtre aussi sur le nom d'usage", async () => {
+      await service.create(awa, { displayName: "Chantal Mbarga", callingName: "Maman" });
+      await service.create(awa, { displayName: "Valery" });
+      const r = await service.list(awa, { q: "maman" });
+      expect(r.persons.map((p) => p.displayName)).toEqual(["Chantal Mbarga"]);
+    });
+
+    /* LE cas du marché visé : les claviers ne portent pas toujours les
+       accents. Une recherche sensible aux accents serait inutilisable pour la
+       moitié des noms du carnet. */
+    it("ignore la casse et les accents dans les deux sens", async () => {
+      await service.create(awa, { displayName: "Émile" });
+      await service.create(awa, { displayName: "Célarine" });
+      expect((await service.list(awa, { q: "emile" })).persons).toHaveLength(1);
+      expect((await service.list(awa, { q: "ÉMILE" })).persons).toHaveLength(1);
+      expect((await service.list(awa, { q: "celarine" })).persons).toHaveLength(1);
+    });
+
+    /* Le filtre s'applique AVANT la découpe, jamais après : filtrer une page
+       déjà coupée est exactement le défaut qu'on corrige. Vingt-cinq fiches
+       dont une seule correspond, et elle doit sortir — même si elle serait
+       tombée en troisième page sans le filtre. */
+    it("cherche dans TOUT le carnet, pas dans la page déjà chargée", async () => {
+      for (let i = 0; i < 25; i += 1) {
+        await service.create(awa, { displayName: `Zzz${String(i).padStart(2, "0")}` });
+      }
+      await service.create(awa, { displayName: "Aiguille" });
+
+      const r = await service.list(awa, { q: "aiguille", sort: "alpha" });
+      expect(r.persons.map((p) => p.displayName)).toEqual(["Aiguille"]);
+      // Le total compte les CORRESPONDANCES, pas le carnet : « Voir plus · n
+      // restants » compterait sinon des fiches que la recherche a écartées.
+      expect(r.total).toBe(1);
+    });
+
+    it("ne cherche jamais dans le carnet d'un autre compte", async () => {
+      await service.create(bila, { displayName: "Celarine" });
+      expect((await service.list(awa, { q: "celarine" })).persons).toEqual([]);
+    });
+
     it("pagine par vingt, et rend le total pour « n restants »", async () => {
       for (let i = 0; i < 23; i += 1) {
         await service.create(awa, { displayName: `P${String(i).padStart(2, "0")}` });
