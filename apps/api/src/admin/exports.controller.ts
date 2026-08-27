@@ -7,6 +7,7 @@ import { Role, RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
 import { documentCsv } from "./csv.js";
 import { methodeLisible } from "./payment-lists.controller.js";
+import { MetriquesService, requeteMetriquesSchema } from "./metriques.controller.js";
 
 /**
  * L'export des deux lectures — ux-admin §5.12, §5.13 et §7.
@@ -57,6 +58,11 @@ const mouvementsSchema = z.object({
 }).strict();
 
 /** Ce que l'export a emporté, dit en clair pour le journal. */
+// Le même schéma que la lecture, et non un jumeau : deux listes de périodes
+// finiraient par diverger, et l'export accepterait une fenêtre que l'écran ne
+// propose pas.
+const metriquesExportSchema = requeteMetriquesSchema;
+
 function resume(quoi: string, filtres: Record<string, unknown>): string {
   const dits = Object.entries(filtres)
     .filter(([, v]) => v !== undefined)
@@ -71,6 +77,10 @@ export class ExportsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly journal: AuditService,
+    // Le service des métriques plutôt qu'une seconde requête : deux calculs de
+    // la même chose finiraient par diverger, et le fichier dirait autre chose
+    // que l'écran. C'est la règle déjà tenue pour les filtres des listes.
+    @Inject(MetriquesService) private readonly metriques: MetriquesService,
   ) {}
 
   async journalDAudit(auteurId: string, requete: z.infer<typeof journalSchema>): Promise<string> {
@@ -270,6 +280,39 @@ export class ExportsService {
 
     return fichier;
   }
+
+  /**
+   * Ce que la section sait mesurer, sorti par le même service que l'écran lit.
+   *
+   * **Les cohortes, et non les trois indicateurs.** Un fichier d'une seule
+   * ligne portant « 24 acheteurs » ne s'analyse pas : ce qu'on emporte dans un
+   * tableur, c'est la table qui a des rangs. Les indicateurs se lisent à
+   * l'écran, où ils sont.
+   *
+   * Aucun plafond : douze mois font douze lignes. Le `PLAFOND` des autres
+   * exports borne des listes qui grandissent avec le service ; celle-ci a une
+   * hauteur fixée par le calendrier.
+   */
+  async metriquesCsv(auteurId: string, requete: z.infer<typeof requeteMetriquesSchema>): Promise<string> {
+    const donnees = await this.metriques.etat(requete);
+
+    const fichier = documentCsv(
+      ["mois", "entrees", "deRetourA7j", "deRetourA30j"],
+      donnees.retention.cohortes.map((c) => [
+        c.mois, String(c.inscrits), String(c.actifsA7j), String(c.actifsA30j),
+      ]),
+    );
+
+    await this.journal.consigner({
+      auteurId,
+      action: "metrics_export",
+      motif: resume("des métriques", requete),
+      cibleType: "metrics",
+      details: { lignes: donnees.retention.cohortes.length },
+    });
+
+    return fichier;
+  }
 }
 
 @Controller("admin")
@@ -354,5 +397,20 @@ export class ExportsController {
     @Req() req: { admin?: { id: string } },
   ): Promise<string> {
     return this.service.mouvements(req.admin?.id ?? "", requete);
+  }
+
+  // Le sixième, et le premier où la distinction se voit à l'œil nu : §6 ouvre
+  // la LECTURE des métriques au support ; la sortie reste fermée comme les
+  // cinq autres. Voir une liste et pouvoir la sortir sont deux choses.
+  @Post("metrics/export")
+  @Role("admin")
+  @HttpCode(200)
+  @Header("content-type", "text/csv; charset=utf-8")
+  @Header("content-disposition", 'attachment; filename="metriques.csv"')
+  metriques(
+    @Query(new ZodValidationPipe(metriquesExportSchema)) requete: z.infer<typeof metriquesExportSchema>,
+    @Req() req: { admin?: { id: string } },
+  ): Promise<string> {
+    return this.service.metriquesCsv(req.admin?.id ?? "", requete);
   }
 }
