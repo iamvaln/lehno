@@ -32,9 +32,10 @@ Chaque point ci-dessous a été relu contre les documents à leur état du jour.
   colonnes `ip` des autres tables y sont bien.
 - **A5** — `login_method` et `login_activity.method` restent absents du
   dictionnaire, dont la table `LoginActivity` (L308) ne porte pas la voie.
-- **A6** — la justification fausse tient toujours, dictionnaire L144 :
-  « sans quoi deux demandes en attente entreraient en collision sur une valeur
-  nulle ». La décision est bonne, le motif est faux.
+- ~~**A6**~~ — **corrigé le 27/08.** La phrase est coupée à sa source :
+  le dictionnaire dit maintenant que l'index est partiel **pour la taille et
+  l'intention**, et que ce n'est pas pour admettre plusieurs nuls. Deux autres
+  lignes du même passage suivaient le même raisonnement, elles y passent aussi.
 - **B5** — origines autorisées et relais de confiance : rien dans aucune
   spécification, alors que `TRUST_PROXY_HOPS` est lu par le code.
 - **C2** — `AIUsage.origin` : la table elle-même n'existe pas.
@@ -150,7 +151,7 @@ dictionnaire.**
 citant « spécification technique §9 ». Cette section porte sur les droits
 d'accès et ne dit rien de l'adresse. La citation a été retirée.
 
-### A6. L'index partiel n'est pas ce qui permet plusieurs nuls
+### A6. L'index partiel n'est pas ce qui permet plusieurs nuls — **corrigé**
 
 **Où** : `dictionnaire-donnees-lehno.md`, `Payment.provider_ref`.
 
@@ -169,7 +170,18 @@ des mouvements — octrois d'inscription, bonus de parrainage, consommations,
 ajustements — n'ont pas de paiement, et il n'y a rien à gagner à les indexer.
 N'indexer que les valeurs présentes dit aussi exactement ce qu'on garantit.
 
-**À corriger** : la justification, pas la décision.
+**Corrigé le 27/08/2026** au dictionnaire, en trois endroits : la ligne du
+tableau (`provider_ref`), la note qui l'explicitait, et la mention de l'unicité
+sur `credit_transaction.payment_id` — resserrée entre-temps au type `purchase`
+(voir J).
+
+**Quatre fois avant de couper à la racine.** Cette phrase a été rattrapée dans
+un commentaire de migration, dans un commentaire de contrôleur, dans un
+commentaire de test, puis enfin ici. Les trois premières fois ne servaient à
+rien : la source continuait de la produire. Une correction qui laisse vivre ce
+qui l'a causée n'est pas une correction.
+
+**À corriger** : ~~la justification, pas la décision~~ — fait.
 
 ## B. Ce que la documentation ne couvre pas du tout
 
