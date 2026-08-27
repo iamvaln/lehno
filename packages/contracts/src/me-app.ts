@@ -4,8 +4,11 @@ import {
   CATEGORY_CODES, PERSON_RELATIONS, PERSON_REGISTERS, CONTACT_CHANNELS,
 } from "./me.js";
 
-/* Le Mur, les notifications, la recherche, les reprises et les métadonnées —
- * spec technique §5.5, §5.7 et §5.8.
+/* Le Mur, la recherche, les reprises et les métadonnées — spec technique
+ * §5.5, §5.7 et §5.8. Les préférences de notification et le centre de
+ * notifications vivent à part, dans me-notifications.ts (§3.11 et §3.13) :
+ * un domaine assez chargé de règles pour mériter son propre fichier plutôt
+ * que de s'ajouter au fourre-tout des surfaces restantes.
  */
 
 // ── Le Mur ──────────────────────────────────────────────────────────────────
@@ -34,61 +37,6 @@ export const updateWallSchema = z.object({
 }).strict().refine((v) => Object.keys(v).length > 0, { message: "au moins un champ" });
 
 export type UpdateWallInput = z.infer<typeof updateWallSchema>;
-
-// ── Les notifications ───────────────────────────────────────────────────────
-
-export const NOTIFICATION_TYPES = [
-  "event_reminder", "event_day_of", "digest", "contribution_received",
-  "wish_received", "enrichment_nudge_global", "enrichment_nudge_person",
-  "generation_ready", "payment_succeeded", "payment_failed", "credits_received",
-  "login_code", "security", "account",
-] as const;
-export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
-
-/* Trois natures partent quelles que soient les préférences : un code de
-   connexion, une alerte de sécurité, un fait de compte. Les laisser régler
-   afficherait un interrupteur sans effet — et un interrupteur sans effet
-   apprend à ne pas croire les interrupteurs. */
-export const ALWAYS_SENT_NOTIFICATIONS = ["login_code", "security", "account"] as const;
-
-export const CONFIGURABLE_NOTIFICATION_TYPES = NOTIFICATION_TYPES.filter(
-  (type): type is Exclude<NotificationType, (typeof ALWAYS_SENT_NOTIFICATIONS)[number]> =>
-    !(ALWAYS_SENT_NOTIFICATIONS as readonly string[]).includes(type),
-);
-
-/* Le serveur transporte des clés, jamais des phrases : la langue d'interface
-   peut changer après l'envoi, et une notification émise il y a trois semaines
-   en français doit se relire en anglais si l'utilisateur a changé depuis.
-   C'est l'inverse du catalogue du studio, dont les libellés arrivent résolus —
-   lui est servi à l'instant où il s'affiche, et il n'a rien à traverser. */
-export const notificationSchema = z.object({
-  id: z.string().uuid(),
-  type: z.enum(NOTIFICATION_TYPES),
-  titleKey: z.string().max(60),
-  // Les valeurs à insérer dans le gabarit traduit : prénom, date, nombre.
-  bodyParams: z.record(z.string(), z.union([z.string(), z.number()])).nullable(),
-  // « Une notification mène là où l'on agit » — directement à l'écran concerné,
-  // sans passer par la liste.
-  targetRoute: z.string().nullable(),
-  readAt: z.string().nullable(),
-  createdAt: z.string(),
-}).strict();
-
-export type Notification = z.infer<typeof notificationSchema>;
-
-export const updateNotificationPreferencesSchema = z.object({
-  preferences: z.array(z.object({
-    type: z.enum(CONFIGURABLE_NOTIFICATION_TYPES as [NotificationType, ...NotificationType[]]),
-    pushEnabled: z.boolean(),
-    emailEnabled: z.boolean(),
-  }).strict()).min(1),
-  // L'heure d'envoi vaut pour toutes les natures : elle vit sur le compte, pas
-  // sur une préférence.
-  sendHour: z.number().int().min(0).max(23).optional(),
-  digestFrequency: z.enum(["monthly", "weekly", "never"]).optional(),
-}).strict();
-
-export type UpdateNotificationPreferencesInput = z.infer<typeof updateNotificationPreferencesSchema>;
 
 // ── La recherche ────────────────────────────────────────────────────────────
 

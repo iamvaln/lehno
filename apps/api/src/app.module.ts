@@ -34,6 +34,8 @@ import { HomeController } from "./me/home.controller.js";
 import { HomeService } from "./me/home.service.js";
 import { MetadataController } from "./me/metadata.controller.js";
 import { MetadataService } from "./me/metadata.service.js";
+import { NotificationPreferencesController } from "./me/notification-preferences.controller.js";
+import { NotificationPreferencesService } from "./me/notification-preferences.service.js";
 import { TenantRepository } from "./tenancy/tenant.repository.js";
 import { ConfigController, ConfigService } from "./public/config.controller.js";
 import { LegalController, LegalService } from "./public/legal.controller.js";
@@ -71,7 +73,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
 
 @Module({
   controllers: [
-    AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, ConfigController, LegalController,
+    AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, ConfigController, LegalController,
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
@@ -171,6 +173,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     NoteService,
     HomeService,
     MetadataService,
+    NotificationPreferencesService,
     ConfigService,
     LegalService,
     WaitlistService,
