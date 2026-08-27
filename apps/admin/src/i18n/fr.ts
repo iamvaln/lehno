@@ -1041,6 +1041,58 @@ export const fr = {
     formulaire: "Formulaire de configuration",
   },
 
+  metriques: {
+    titre: "Métriques",
+    sous: "L'usage au-delà des chiffres du tableau de bord.",
+    periode: "Période",
+    periodes: { j7: "7 jours", j30: "30 jours", j90: "90 jours", m12: "12 mois" },
+    retention: {
+      titre: "Rétention",
+      sous: "Ce que devient chaque mois d'arrivées. Toujours douze mois, quelle que soit la période retenue : sur une fenêtre plus courte, la colonne des trente jours ne pourrait afficher que des zéros, et ces zéros se liraient comme une fuite.",
+      // « De retour » et non « revenus » : la page porte des montants juste à
+      // côté, et le mot s'y lirait comme de l'argent.
+      col: { mois: "Mois d'entrée", inscrits: "Entrées", a7: "De retour à 7 jours", a30: "De retour à 30 jours" },
+      vide: "Aucune arrivée sur les douze derniers mois.",
+    },
+    conversion: {
+      titre: "Conversion",
+      sous: "La part d'une arrivée qui finit par acheter. Le chiffre d'affaires, lui, se lit au tableau de bord.",
+      comptes: "Comptes entrés",
+      acheteurs: "Ont acheté",
+      delai: "Délai médian jusqu'au premier achat",
+      // Zéro dirait « le jour même ». Personne n'ayant acheté, il n'y a pas de
+      // délai à annoncer — et non un délai nul.
+      sansDelai: "Personne n'a encore acheté",
+      jours: "{n} j",
+      paliers: "Achats par palier",
+      colPalier: "Palier",
+      colAchats: "Achats",
+      credits: "{n} crédits",
+      sansPalier: "Aucun achat rattaché à un palier sur la période.",
+    },
+    consommation: {
+      titre: "Consommation",
+      credits: "Crédits consommés",
+      mouvements: "Mouvements",
+    },
+    manques: {
+      titre: "Ce qui n'est pas encore mesurable",
+      sous: "Trois des cinq contenus de la section n'ont pas de source dans ce dépôt. Ils sont nommés ici plutôt que rendus en rangs vides : un zéro sans explication se prend pour une mesure.",
+      usage_par_fonctionnalite: {
+        quoi: "Usage par fonctionnalité",
+        bloque: "Le marquage part vers l'outil d'analyse sans que rien n'en soit conservé ici.",
+      },
+      issue_des_actions: {
+        quoi: "Exécutions des actions payantes et leur issue",
+        bloque: "Le registre des exécutions n'existe pas encore en base.",
+      },
+      contributions: {
+        quoi: "Contributions reçues et validées",
+        bloque: "Les surfaces publiques qui les produisent ne sont pas construites.",
+      },
+    },
+  },
+
   attente: {
     titre: "Section à venir",
     texte: "Le lot 1 couvre le tableau de bord, les utilisateurs, les crédits, les configurations et le journal d'audit. Cette section arrive ensuite.",
