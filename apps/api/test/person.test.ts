@@ -271,6 +271,7 @@ describe("annuaire des proches", () => {
         city: "Douala",
         country: "CM",
         preferredChannel: "whatsapp",
+        gender: "male",
       };
 
       // Si le contrat gagne un champ, cette ligne échoue à la compilation
@@ -282,9 +283,46 @@ describe("annuaire des proches", () => {
       const p = await service.create(awa, complet);
       const relu = await service.get(awa, p.id);
 
-      for (const champ of attendus) {
+      /* `gender` S'ÉCRIT SANS SE LIRE, et c'est la seule exception.
+       *
+       * Il sert l'accord grammatical et rien d'autre — « fier » ou « fière ».
+       * Le absent de `personSchema` est la garde : un écran ne peut pas
+       * l'afficher, ni s'en servir pour trier, ni le laisser paraître dans une
+       * liste. Il entre par le formulaire d'identité et ne ressort que vers le
+       * modèle.
+       *
+       * Le relire ici échouerait donc à la compilation. Le cas suivant vérifie
+       * qu'il est bien arrivé EN BASE — sans quoi cette exception se
+       * transformerait en champ silencieusement perdu. */
+      for (const champ of attendus.filter((c) => c !== "gender")) {
         expect(relu[champ], `« ${champ} » n'a pas été écrit par le service`).toBe(complet[champ]);
       }
+    });
+
+    /* La contrepartie de l'exception ci-dessus : écrit, mais invisible.
+     *
+     * Sans ce cas, retirer `gender` du service ne ferait rougir personne — la
+     * réponse ne le porte pas, et la boucle l'exclut. Un champ dont l'absence
+     * ne se voit nulle part finit par disparaître. */
+    it("écrit le genre en base sans jamais le rendre au client", async () => {
+      const p = await service.create(awa, { displayName: "Célarine", gender: "female" });
+
+      const enBase = await db.prisma.person.findUniqueOrThrow({
+        where: { id: p.id }, select: { gender: true },
+      });
+      expect(enBase.gender).toBe("female");
+      expect(p).not.toHaveProperty("gender");
+      expect(await service.get(awa, p.id)).not.toHaveProperty("gender");
+    });
+
+    it("se corrige, et reste tout aussi invisible", async () => {
+      const p = await service.create(awa, { displayName: "Célarine", gender: "female" });
+      const apres = await service.update(awa, p.id, { gender: "other" });
+
+      expect(apres).not.toHaveProperty("gender");
+      expect((await db.prisma.person.findUniqueOrThrow({
+        where: { id: p.id }, select: { gender: true },
+      })).gender).toBe("other");
     });
 
     // `relation` et `relationHint` COEXISTENT : l'énumération sert la

@@ -182,6 +182,11 @@ export class PersonService {
       avatarUrl: input.avatarUrl ?? null,
       relation: input.relation ?? null,
       register: input.register ?? null,
+      /* S'écrit, ne se lit pas. `personSchema` ne le rend pas — c'est la garde
+         qui empêche un écran d'afficher le genre d'un tiers, ou de trier
+         dessus. Il ne sert que l'accord grammatical, et ne ressort que vers le
+         modèle. */
+      gender: input.gender ?? "unspecified",
       language: input.language ?? null,
       relationHint: input.relationHint ?? null,
       birthDate: input.birthDate ? new Date(`${input.birthDate}T00:00:00Z`) : null,

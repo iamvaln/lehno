@@ -17,9 +17,6 @@ export type PersonRelation = (typeof PERSON_RELATIONS)[number];
 // Signal de DERNIER recours : il oriente des idées de cadeaux lorsque rien
 // d'autre n'est disponible. Une seule note bien prise vaut mieux que lui.
 // « unspecified » est une valeur légitime, jamais un champ à remplir.
-export const PERSON_GENDERS = ["female", "male", "other", "unspecified"] as const;
-export type PersonGender = (typeof PERSON_GENDERS)[number];
-
 // Par où on lui écrit d'ordinaire : oriente la LONGUEUR du message produit —
 // on n'écrit pas la même chose par SMS et par courriel.
 export const CONTACT_CHANNELS = ["whatsapp", "sms", "email", "autre"] as const;
@@ -46,12 +43,22 @@ export const personSchema = z
     // Faux quand on connaît le jour et le mois sans l'année : on suit alors
     // l'anniversaire sans pouvoir annoncer d'âge.
     birthYearKnown: z.boolean(),
-    // `gender` NE FIGURE PAS ici, et c'est le point : le carnet ne pose pas la
-    // question (handoff proches, « Le genre n'a pas de champ »). Tant qu'il
-    // traversait jusqu'au client, la règle ne tenait que par la retenue de
-    // celui-ci — rien n'empêchait un écran de l'afficher un jour. Retiré du
-    // contrat, il devient inécrivable, pas seulement non demandé. La colonne
-    // reste en base : c'est un signal de génération, déduit côté serveur.
+    /* `gender` NE FIGURE PAS EN LECTURE, et il s'ÉCRIT pourtant. Ce n'est pas
+       une incohérence : ce sont deux gestes distincts.
+     *
+     * Il sert L'ACCORD GRAMMATICAL, et rien d'autre — « fier » ou « fière ».
+     * Le handoff mobile le tranche : « Aucune phrase de l'interface ne s'en
+     * sert ; seule la génération le reçoit », et son libellé à l'écran est
+     * « Accord du message ».
+     *
+     * L'absence en lecture est donc la garde : un écran ne peut pas l'afficher,
+     * ni s'en servir pour trier, ni le laisser paraître dans une liste de
+     * proches. Il entre par le formulaire d'identité (§3.18) et ne ressort que
+     * vers le modèle.
+     *
+     * Ce commentaire disait auparavant « déduit côté serveur ». C'était faux :
+     * un genre ne se devine pas, il se demande — et le déduire d'un prénom est
+     * exactement le genre de raccourci qui se trompe sur les gens. */
     city: z.string().nullable(),
     country: z.string().nullable(),
     register: z.enum(PERSON_REGISTERS).nullable(),
@@ -138,6 +145,17 @@ export type PersonList = z.infer<typeof personListSchema>;
 // userId n'y figure pas, et c'est délibéré : une colonne d'appartenance ne
 // franchit jamais la frontière. Le serveur sait à qui appartient la fiche, le
 // client n'a pas à le lui rappeler — ni à pouvoir l'écrire.
+/**
+ * Les genres, pour l'accord grammatical.
+ *
+ * `other` et `unspecified` sont deux choses différentes : la première est une
+ * réponse, la seconde une absence de réponse. Elles se traitent pareil à la
+ * génération — des tournures qui s'en passent — et il n'y a donc pas lieu de
+ * les fondre : ce serait décider à la place de quelqu'un.
+ */
+export const PERSON_GENDERS = ["female", "male", "other", "unspecified"] as const;
+export type PersonGender = (typeof PERSON_GENDERS)[number];
+
 /* La FORME, séparée de ses règles — et EXPORTÉE.
  *
  * Elle sort d'ici parce qu'un test s'en sert pour vérifier que le service
@@ -156,6 +174,11 @@ export const champsDeProche = z
     avatarUrl: z.string().url().max(2048).optional(),
     relation: z.enum(PERSON_RELATIONS).optional(),
     register: z.enum(PERSON_REGISTERS).optional(),
+    /* L'accord grammatical, et rien d'autre — « fier » ou « fière ». Il
+       s'écrit ici et ne se lit nulle part : `personSchema` ne le rend pas, ce
+       qui empêche un écran de l'afficher ou de s'en servir pour trier.
+       Le libellé à l'écran est « Accord du message », jamais « Genre ». */
+    gender: z.enum(PERSON_GENDERS).optional(),
     // Langue de ce que le produit écrira POUR ce proche — distincte de la langue
     // d'interface du propriétaire.
     language: z.enum(["fr", "en"]).optional(),
