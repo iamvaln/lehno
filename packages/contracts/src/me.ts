@@ -255,3 +255,56 @@ export const createNotesSchema = z.object({
 }).strict();
 
 export type CreateNotesInput = z.infer<typeof createNotesSchema>;
+
+// ——— Le topo d'un proche ——————————————————————————————————————————
+
+/**
+ * Ce qu'une note a appris d'une personne.
+ *
+ * **Rien ne se saisit.** Ces valeurs sont extraites des notes par la passe qui
+ * les classe déjà — aucun appel de plus, les mêmes valeurs de sortie avec
+ * quelques champs en plus. Corriger, c'est écrire une note nouvelle.
+ *
+ * C'est ce qui distingue ce bloc du résumé qu'on avait écarté pour l'accueil :
+ * là il fallait **composer** un texte, ici il n'y a qu'à **extraire**.
+ */
+export const ATTRIBUT_NATURES = [
+  "color", "animal", "food", "drink", "clothing_size", "shoe_size",
+  "fragrance", "style", "hobby", "occupation", "avoid",
+] as const;
+
+export type AttributNature = (typeof ATTRIBUT_NATURES)[number];
+
+export const personAttributeSchema = z
+  .object({
+    kind: z.enum(ATTRIBUT_NATURES),
+    /** La valeur, telle qu'elle a été dite. Aucun libellé : le client traduit `kind`. */
+    value: z.string(),
+    /**
+     * La note d'où l'attribut vient, et sa date. **La provenance voyage avec la
+     * valeur** : sans elle, un attribut est une affirmation sans source — on ne
+     * peut ni la vérifier, ni remonter à ce qui a été écrit. Un appui y ramène.
+     *
+     * `noteId` peut être nul si la note a été supprimée depuis ; la valeur
+     * demeure, ce qu'elle a appris ne s'efface pas avec sa phrase.
+     */
+    noteId: z.string().uuid().nullable(),
+    observedAt: z.string(),
+  })
+  .strict();
+
+/**
+ * Le topo entier.
+ *
+ * **Une liste vide est un état normal**, pas un défaut : une fiche neuve n'a
+ * rien appris encore. Le client n'affiche alors aucun bloc — jamais une grille
+ * de cases vides qui attendraient d'être remplies.
+ *
+ * Et la composition doit tenir **avec deux valeurs comme avec onze**.
+ */
+export const personAttributesSchema = z
+  .object({ attributes: z.array(personAttributeSchema) })
+  .strict();
+
+export type PersonAttribute = z.infer<typeof personAttributeSchema>;
+export type PersonAttributes = z.infer<typeof personAttributesSchema>;

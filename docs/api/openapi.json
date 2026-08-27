@@ -10955,6 +10955,254 @@
         }
       }
     },
+    "/me/persons/{id}/attributes": {
+      "get": {
+        "summary": "Le topo d'un proche : ce que les notes ont appris de lui",
+        "description": "Le bloc en tête de fiche (§3.4) : couleur, animal, plat, taille, métier,\nce qu'il faut éviter — onze natures.\n\n### Rien ne se saisit, et il n'y a rien à écrire\n\nCes valeurs sont **extraites des notes** par la passe qui les classe\ndéjà. Aucun formulaire ne les demande, et **ce chemin n'accepte que la\nlecture** : corriger, c'est écrire une note nouvelle, et le plus récent\nl'emporte.\n\n**Le plus récent au sens de la NOTE**, pas du traitement. Une note de\nmars traitée après une note de septembre ne remplace pas celle de\nseptembre — le cas arrive dès qu'un arriéré se traite d'un coup.\n\n### Une liste vide est un état normal\n\nUne fiche neuve n'a rien appris encore. Le client n'affiche alors\n**aucun bloc** — jamais une grille de cases vides qui attendraient\nd'être remplies. Et la composition doit tenir **avec deux valeurs comme\navec onze**.\n\n### La provenance voyage avec la valeur\n\n`noteId` et `observedAt` permettent d'afficher la ligne de provenance et\nde remonter à ce qui a été écrit. Sans eux, un attribut est une\naffirmation sans source, qu'on ne peut ni vérifier ni corriger.\n\n`noteId` peut être **nul** si la note a été supprimée depuis : la valeur\ndemeure. Ce qu'une phrase a appris ne s'efface pas avec elle.\n\n### Un chemin à part de la fiche\n\nLa fiche se lit à chaque ouverture d'écran ; le topo ne bouge qu'au\nrythme des notes. Les servir ensemble ferait payer une jointure de plus\nau chemin le plus fréquenté du carnet, pour une donnée qui n'a pas\nchangé.\n\n**Aucun libellé n'est rendu** : `kind` est un code, traduit par le\nclient.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "attributes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "color",
+                              "animal",
+                              "food",
+                              "drink",
+                              "clothing_size",
+                              "shoe_size",
+                              "fragrance",
+                              "style",
+                              "hobby",
+                              "occupation",
+                              "avoid"
+                            ]
+                          },
+                          "value": {
+                            "type": "string"
+                          },
+                          "noteId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "observedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "value",
+                          "noteId",
+                          "observedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "attributes"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/home": {
       "get": {
         "summary": "L'accueil en un appel : la phrase d'état et les trois échéances les plus proches",

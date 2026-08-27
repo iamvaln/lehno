@@ -13,6 +13,20 @@ export type Adaptateur = {
   appeler(modele: string, demande: DemandeIA): Promise<ReponseIA>;
 };
 
+/* À quoi rattacher la dépense d'un appel.
+ *
+ * Les quatre champs répondent à quatre questions distinctes, et aucun ne se
+ * déduit d'un autre : QUI (userId), POURQUOI on a payé (actionRunId, l'exécution
+ * facturée), QU'EST-CE QUI a déclenché (origine), et OÙ retrouver la trace
+ * technique (correlationId). Sans le deuxième, on sait qu'on a payé mais pas
+ * pour quoi — et ce rattachement ne se reconstitue pas après coup. */
+export type ContexteAppel = {
+  readonly userId?: string | null;
+  readonly actionRunId?: string | null;
+  readonly origine?: "user_action" | "scheduled_job" | "retry" | "studio_trial";
+  readonly correlationId?: string | null;
+};
+
 export type DemandeIA = {
   readonly invite: string;
   readonly systeme?: string;
@@ -77,14 +91,21 @@ export class RouteurIAService {
 
   /* Essaie les modèles de la tâche dans l'ordre, et rend la première réponse.
    *
-   * `userId` est nul pour ce qui ne se rattache à personne. Chaque tentative
-   * laisse sa ligne, y compris les échouées : sans elles, les pannes seraient
-   * gratuites dans les statistiques et la chaîne aurait l'air parfaite. */
+   * Chaque tentative laisse sa ligne, y compris les échouées : sans elles, les
+   * pannes seraient gratuites dans les statistiques et la chaîne aurait l'air
+   * parfaite.
+   *
+   * Le CONTEXTE dit à quoi rattacher la dépense. Il est facultatif parce que la
+   * plupart des appels n'ont rien à quoi se rattacher — une passe
+   * d'arrière-plan n'a pas d'exécution payante —, mais son absence par défaut
+   * est `user_action`, la valeur la plus coûteuse à confondre : mieux vaut
+   * qu'un appel de fond mal étiqueté gonfle la facture « utilisateur » et se
+   * remarque, plutôt que l'inverse. */
   async executer(
     tache: TacheIA,
     demande: DemandeIA,
     adaptateurs: Record<string, Adaptateur>,
-    userId: string | null = null,
+    contexte: ContexteAppel = {},
   ): Promise<{ contenu: string; modele: string; fournisseur: string; rang: number }> {
     const candidats = await this.chaine(tache);
 
@@ -111,14 +132,14 @@ export class RouteurIAService {
       try {
         const reponse = await adaptateur.appeler(c.modelKey, demande);
         const latence = Date.now() - debut;
-        await this.consigner(c, tache, userId, "success", reponse, latence, null);
+        await this.consigner(c, tache, contexte, "success", reponse, latence, null);
         await this.succes(c.id);
         return { contenu: reponse.contenu, modele: c.modelKey, fournisseur: c.provider, rang: c.rank };
       } catch (err: unknown) {
         const latence = Date.now() - debut;
 
         if (err instanceof RefusModele) {
-          await this.consigner(c, tache, userId, "refused", null, latence, err.code);
+          await this.consigner(c, tache, contexte, "refused", null, latence, err.code);
           /* On s'arrête là. Le suivant refusera la même demande — replier
              paierait le même non autant de fois qu'il y a de rangs. Et un refus
              ne compte pas dans les échecs consécutifs : le fournisseur va très
@@ -130,7 +151,7 @@ export class RouteurIAService {
         const code = err instanceof PanneFournisseur
           ? err.code
           : (err instanceof Error ? err.name : "unknown");
-        await this.consigner(c, tache, userId, estDelai ? "timeout" : "error", null, latence, code);
+        await this.consigner(c, tache, contexte, estDelai ? "timeout" : "error", null, latence, code);
         await this.echec(c.id, code);
         dernier = err;
       }
@@ -179,7 +200,7 @@ export class RouteurIAService {
      dépense d'hier. Nul quand le modèle n'est pas tarifé — « on ne sait pas »,
      jamais « gratuit ». */
   private async consigner(
-    c: Candidat, task: TacheIA, userId: string | null,
+    c: Candidat, purpose: TacheIA, contexte: ContexteAppel,
     status: "success" | "error" | "timeout" | "refused",
     reponse: ReponseIA | null, latencyMs: number, errorCode: string | null,
   ): Promise<void> {
@@ -198,10 +219,15 @@ export class RouteurIAService {
     try {
       await this.prisma.aIUsage.create({
         data: {
-          userId, task, modelId: c.id, provider: c.provider, modelKey: c.modelKey,
+          purpose,
+          origin: contexte.origine ?? "user_action",
+          userId: contexte.userId ?? null,
+          actionRunId: contexte.actionRunId ?? null,
+          correlationId: contexte.correlationId?.slice(0, 64) ?? null,
+          modelId: c.id, provider: c.provider, modelKey: c.modelKey,
           attempt: c.rank, status,
-          inputTokens: entree, outputTokens: sortie,
-          costEstimate: cout, latencyMs, errorCode: errorCode?.slice(0, 80) ?? null,
+          tokensIn: entree, tokensOut: sortie,
+          cost: cout, latencyMs, errorCode: errorCode?.slice(0, 80) ?? null,
         },
       });
     } catch (err: unknown) {
