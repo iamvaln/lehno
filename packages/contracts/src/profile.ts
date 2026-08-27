@@ -36,11 +36,14 @@ export const profileSchema = z.object({
    * de toi » dépend de qui écrit, pas de qui reçoit. Toutes les orientations du
    * studio parlent à la première personne.
    *
-   * Contrairement à celui du proche, il est RENDU en lecture : c'est son propre
-   * compte, il a le droit de voir ce qu'il a répondu et de le corriger. Ce que
-   * le carnet interdit, c'est d'exposer le genre d'un TIERS qui n'a rien
-   * demandé — pas de cacher à quelqu'un ce qui le concerne. */
-  gender: z.enum(PERSON_GENDERS),
+   * NULLABLE, contrairement à celui d'un proche — et pour une raison qui tient
+   * au parcours, pas à un relâchement de la règle : une fiche naît d'un
+   * formulaire qui pose la question, un compte naît d'un code à usage unique
+   * qui ne pose rien. Il se renseigne donc au profil (§3.23), plus tard.
+   *
+   * Nul veut dire « pas encore répondu », et la génération emploie alors des
+   * tournures qui s'en passent — jamais un accord au hasard. */
+  gender: z.enum(PERSON_GENDERS).nullable(),
 }).strict();
 
 export const updateProfileSchema = profileSchema
