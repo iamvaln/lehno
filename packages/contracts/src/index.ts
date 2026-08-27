@@ -9,6 +9,7 @@ export * from "./maintenance.js";
 export * from "./tracking.js";
 export * from "./me.js";
 export * from "./me-app.js";
+export * from "./me-notifications.js";
 export * from "./me-contributions.js";
 export * from "./me-credits.js";
 export * from "./me-events.js";
