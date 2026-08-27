@@ -154,3 +154,93 @@ Le troisième point est le seul de ce document qui puisse produire un défaut vi
 | Dictionnaire, `StudioConfig` | `version` s'incrémente à chaque publication | Une ligne `draft` naît **sans version** ; le numéro s'attribue à la publication |
 | Dictionnaire, `StudioConfig` | « Un brouillon se modifie librement » | Un brouillon **se rejoue** : chaque prévisualisation en crée un et dépasse le précédent |
 | — | « Rien ne se publie sans essai » | Énoncé exactement : essai **réussi**, sur l'**empreinte de la partie lue par le modèle** |
+
+---
+
+## 11. Ce que la livraison du routage des modèles précise
+
+Le catalogue (`AIModel`), le routage par tâche (`AITaskRoute`), le disjoncteur
+et la mesure d'usage (`AIUsage`) existent maintenant. Quatre points de ce
+document s'en trouvent tranchés, et deux manques apparaissent.
+
+### 11.1 L'essai n'a pas de repli
+
+Le routeur essaie les rangs d'une tâche dans l'ordre et bascule au suivant quand
+l'un tombe. **Cette règle ne vaut que pour ce qui tourne sans témoin** : les
+passes d'arrière-plan et les générations lancées par un utilisateur.
+
+**Un essai d'administration l'ignore.** Il appelle le modèle demandé, un point
+c'est tout, et rend l'échec en le nommant.
+
+Ce n'est pas un confort. Le §3 range « le modèle appelé » dans la partie **lue
+par le modèle**, donc dans l'empreinte. Si un repli muet servait l'essai, on
+enregistrerait un `StudioTrial` en `success` portant une empreinte qui désigne
+un modèle qui n'a rien produit — et la règle de publication du §4 autoriserait
+une mise en service sur la foi d'un résultat obtenu ailleurs. La garantie serait
+vraie au dossier et fausse en fait.
+
+### 11.2 Le brouillon naît AVANT l'essai, pas après
+
+Le §1 dit que chaque prévisualisation crée une `StudioConfig` en `draft`. Il ne
+dit pas à quel moment, et l'ordre décide de ce qu'on perd.
+
+**Créer d'abord, essayer ensuite.** Un appel à un tiers échoue ; si le brouillon
+n'était écrit qu'au retour, un fournisseur en panne effacerait dix minutes de
+composition. En créant d'abord, un essai raté laisse un `draft` sans
+`StudioTrial` réussi : la publication reste fermée — ce qui est correct — mais
+le travail est là.
+
+C'est aussi ce qui rend le §4 exact : un `StudioTrial` porte
+`studio_config_id`, donc la configuration doit exister quand l'essai commence.
+
+### 11.3 Une combinaison est un couple, et il en faut deux
+
+Le §3 range « le modèle appelé par production » dans `settings`. Le routage,
+lui, range un **ordre de modèles par tâche** dans `AITaskRoute`. **Deux endroits
+décideraient du même choix**, et ils divergeraient au premier désaccord.
+
+Ce qui est éprouvé à l'établi n'est pas un modèle seul : c'est le **couple
+consigne + modèle**. Une consigne taillée pour un modèle bavard rend autre chose
+sur un modèle bref, et « le secondaire » n'a de sens que si la consigne suit le
+modèle.
+
+**Recommandation, à trancher** : un seul ordre, dans `AITaskRoute`, dont chaque
+rang porte un couple — le modèle **et** le gabarit qui l'accompagne. `settings`
+cesse alors de désigner un modèle : il décrit la consigne, et c'est la
+publication qui range le couple gagnant au premier rang et son suivant au
+second.
+
+L'alternative — laisser `settings` porter le modèle et ignorer la chaîne pour
+les tâches du Studio — donne deux mécaniques de repli à maintenir, dont l'une
+n'en est pas une. Elle est moins coûteuse à écrire et plus coûteuse à vivre.
+
+### 11.4 Deux champs manquent à `AIUsage`
+
+Le §7 prévoit « une ligne `AIUsage` avec `origin = studio_trial` et
+`action_run_id` nul ». **`AIUsage` ne porte ni l'un ni l'autre.** Elle porte
+aujourd'hui : la tâche, le modèle (référencé et recopié), le rang tenté, l'état,
+les jetons, le coût estimé, la latence, et un `user_id` facultatif.
+
+Il faut donc y ajouter :
+
+- **`origin`** — d'où vient l'appel : une action d'utilisateur, une passe
+  d'arrière-plan, un essai d'administration. Sans lui, la facture des essais se
+  confond avec celle de la production, et on ne peut répondre ni à « combien
+  nous coûtent les réglages » ni à « combien nous coûtent les utilisateurs ».
+- **Un lien vers ce qui a déclenché l'appel** — `action_run_id` quand
+  `ActionRun` existera, `studio_trial_id` pour un essai. Sans lui, une ligne de
+  dépense ne se rattache à rien : on sait qu'on a payé, pas pour quoi.
+
+Le second point mérite d'être posé **avant** la première génération facturée. Le
+rattachement ne se reconstitue pas après coup.
+
+### 11.5 Le prix affiché sera vide au début
+
+Le §8 du brief de design garde le prix estimé comme fiche technique du modèle.
+Les tarifs de `AIModel` sont volontairement **nuls** au départ : les prix
+changent sans nous prévenir, et un tarif recopié dans le code aurait l'air de
+faire foi longtemps après être devenu faux.
+
+L'écran affichera donc « non tarifé » tant que personne ne les aura saisis en
+administration. C'est un état normal à dessiner, pas un défaut — et il vaut
+mieux que zéro, qui se prend pour un fait.
