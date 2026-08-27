@@ -54,29 +54,29 @@ enum LoginMethod {
 }
 
 model User {
-  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email               String          @unique
-  emailVerified       Boolean         @default(false) @map("email_verified")
-  username            String          @unique
-  displayName         String?         @map("display_name")
-  avatarUrl           String?         @map("avatar_url")
-  referralCode        String          @unique @map("referral_code") @db.VarChar(16)
-  referredBy          String?         @map("referred_by") @db.Uuid
-  status              UserStatus      @default(active)
-  deletionRequestedAt DateTime?       @map("deletion_requested_at") @db.Timestamptz
-  deletionReason      String?         @map("deletion_reason")
-  uiLanguage          String          @default("fr") @map("ui_language") @db.VarChar(10)
-  theme               UiTheme         @default(system)
-  timezone            String          @default("UTC") @db.VarChar(64)
-  sendHour            Int             @default(9) @map("send_hour") @db.SmallInt
-  digestFrequency     DigestFrequency @default(monthly) @map("digest_frequency")
+  id                       String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                    String          @unique
+  emailVerified            Boolean         @default(false) @map("email_verified")
+  username                 String          @unique
+  displayName              String?         @map("display_name")
+  avatarUrl                String?         @map("avatar_url")
+  referralCode             String          @unique @map("referral_code") @db.VarChar(16)
+  referredBy               String?         @map("referred_by") @db.Uuid
+  status                   UserStatus      @default(active)
+  deletionRequestedAt      DateTime?       @map("deletion_requested_at") @db.Timestamptz
+  deletionReason           String?         @map("deletion_reason")
+  uiLanguage               String          @default("fr") @map("ui_language") @db.VarChar(10)
+  theme                    UiTheme         @default(system)
+  timezone                 String          @default("UTC") @db.VarChar(64)
+  sendHour                 Int             @default(9) @map("send_hour") @db.SmallInt
+  digestFrequency          DigestFrequency @default(monthly) @map("digest_frequency")
   // Le renoncement aux relances d'activation, posé depuis le lien d'un
   // courrier — sans connexion, d'un clic. Il vit ici et non dans
   // NotificationPreference parce que celle-ci se règle nature par nature dans
   // l'application, et que l'activation n'y figure pas : elle est bornée, elle
   // s'arrête d'elle-même, et un interrupteur d'écran arriverait trop tard.
-  activationEmailsOptedOut Boolean @default(false) @map("activation_emails_opted_out")
-  reminderLeadDays    Int?            @map("reminder_lead_days")
+  activationEmailsOptedOut Boolean         @default(false) @map("activation_emails_opted_out")
+  reminderLeadDays         Int?            @map("reminder_lead_days")
   // Trace de l'acceptation des conditions. Aucune case à cocher : les CGU
   // disent elles-mêmes « en créant un compte […] vous acceptez », et c'est la
   // création du compte qui vaut acceptation.
@@ -86,11 +86,11 @@ model User {
   // l'historique du dossier légal pour le reconstituer. Elle se lit dans le
   // document servi, jamais dans une constante — une constante finirait par
   // mentir le jour où quelqu'un met à jour les CGU sans y penser.
-  acceptedTermsAt      DateTime? @map("accepted_terms_at") @db.Timestamptz
-  acceptedTermsVersion String?   @map("accepted_terms_version") @db.VarChar(32)
+  acceptedTermsAt          DateTime?       @map("accepted_terms_at") @db.Timestamptz
+  acceptedTermsVersion     String?         @map("accepted_terms_version") @db.VarChar(32)
 
-  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   referrer                User?                    @relation("parrainage", fields: [referredBy], references: [id], onDelete: SetNull)
   referrals               User[]                   @relation("parrainage")
@@ -108,16 +108,17 @@ model User {
   notificationPreferences NotificationPreference[]
   devices                 Device[]
   supportRequests         SupportRequest[]
+  aiUsages                AIUsage[]
   feedbacks               Feedback[]
   dataExportRequests      DataExportRequest[]
   creditTransactions      CreditTransaction[]
   referralsMade           Referral[]               @relation("parrain")
   referralReceived        Referral?                @relation("filleul")
+  paymentMethods          PaymentMethod[]
+  payments                Payment[]
+  paymentStatusChanges    PaymentStatusHistory[]
 
   @@map("user")
-  paymentMethods       PaymentMethod[]
-  payments             Payment[]
-  paymentStatusChanges PaymentStatusHistory[]
 }
 
 enum ReferralStatus {
@@ -289,19 +290,19 @@ model DeviceSignup {
 }
 
 model LoginActivity {
-  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String?     @map("user_id") @db.Uuid
-  attemptedEmail String?     @map("attempted_email")
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String?      @map("user_id") @db.Uuid
+  attemptedEmail String?      @map("attempted_email")
   result         LoginResult
   // La voie d'entrée. Nulle sur les traces écrites avant qu'elle existe.
   method         LoginMethod?
   // L'adresse au moment de la tentative. Elle sert aux investigations, et non
   // à l'affichage courant : le back-office rend le lieu approximatif, pas
   // l'adresse. Voir dictionnaire, LoginActivity.
-  ip             String?     @db.Inet
-  userAgent      String?     @map("user_agent")
-  geoApprox      String?     @map("geo_approx")
-  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  ip             String?      @db.Inet
+  userAgent      String?      @map("user_agent")
+  geoApprox      String?      @map("geo_approx")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -328,7 +329,7 @@ model WaitlistSignup {
   /// cette colonne qui le garantit, et non un drapeau global — celui-ci ne
   /// dirait rien de qui a déjà reçu, et une hésitation sur la bascule
   /// enverrait deux fois à tout le monde.
-  invitedAt      DateTime? @map("invited_at") @db.Timestamptz
+  invitedAt DateTime? @map("invited_at") @db.Timestamptz
 
   /// Le compte né de cette attente, et le cadeau qui va avec.
   ///
@@ -336,7 +337,7 @@ model WaitlistSignup {
   /// Sans cette contrainte, supprimer son compte et recommencer suffirait à
   /// toucher le cadeau autant de fois qu'on veut. Même parade que Referral,
   /// dont `invitedUserId` est unique pour la même raison.
-  convertedUserId String?  @unique @map("converted_user_id") @db.Uuid
+  convertedUserId String?   @unique @map("converted_user_id") @db.Uuid
   convertedAt     DateTime? @map("converted_at") @db.Timestamptz
 
   /// L'index qui sert au courrier d'ouverture : « ceux qui n'ont pas encore
@@ -465,42 +466,42 @@ enum ContactChannel {
 }
 
 model Person {
-  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId       String          @map("user_id") @db.Uuid
-  displayName  String          @map("display_name")
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String          @map("user_id") @db.Uuid
+  displayName      String          @map("display_name")
   // Comment on l'APPELLE — « Karim », « Maman », « mon vieux ». C'est ce nom
   // qui paraît dans les contenus générés ; à défaut, display_name.
-  callingName  String?         @map("calling_name")
-  avatarUrl    String?         @map("avatar_url")
-  isSelf       Boolean         @default(false) @map("is_self")
+  callingName      String?         @map("calling_name")
+  avatarUrl        String?         @map("avatar_url")
+  isSelf           Boolean         @default(false) @map("is_self")
   // `relation` et `relationHint` COEXISTENT, et ce n'est pas une redondance :
   // l'énumération sert la génération, le texte libre garde la nuance qu'elle
   // écrase — « on a fait la fac ensemble » ne rentre dans aucune case.
-  relation     PersonRelation?
+  relation         PersonRelation?
   // Signal de DERNIER recours : il oriente des idées de cadeaux quand rien
   // d'autre n'est disponible. Une seule note bien prise vaut mieux que lui, et
   // `unspecified` est une valeur légitime — jamais un champ à remplir.
-  gender       PersonGender?   @default(unspecified)
-  city         String?
-  country      String?         @db.VarChar(2)
+  gender           PersonGender?   @default(unspecified)
+  city             String?
+  country          String?         @db.VarChar(2)
   // Sa date de NAISSANCE, et elle appartient au proche : c'est un fait de son
   // identité, pas un rendez-vous. L'anniversaire n'en est qu'une conséquence —
   // le prochain jour de l'année portant le même jour et le même mois.
   //
   // La ranger sur un Event obligerait à la corriger à deux endroits le jour où
   // elle se révèle fausse.
-  birthDate      DateTime?     @map("birth_date") @db.Date
+  birthDate        DateTime?       @map("birth_date") @db.Date
   // Faux quand on connaît le jour et le mois sans l'année : on suit alors
   // l'anniversaire sans pouvoir annoncer d'âge. C'est la NAISSANCE dont
   // l'année est inconnue — l'anniversaire, lui, a toujours celle qui vient.
-  birthYearKnown Boolean       @default(true) @map("birth_year_known")
-  register     PersonRegister?
-  language     String?         @db.VarChar(10)
-  relationHint String?         @map("relation_hint")
+  birthYearKnown   Boolean         @default(true) @map("birth_year_known")
+  register         PersonRegister?
+  language         String?         @db.VarChar(10)
+  relationHint     String?         @map("relation_hint")
   // Par où on lui écrit d'ordinaire : oriente la LONGUEUR du message produit.
   preferredChannel ContactChannel? @map("preferred_channel")
-  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   events        Event[]
@@ -646,8 +647,8 @@ enum NotificationType {
   wish_received
   enrichment_nudge_global
   enrichment_nudge_person
-  /* L'ACTIVATION : les premiers pas d'un compte neuf.
-   *
+  /**
+   * L'ACTIVATION : les premiers pas d'un compte neuf.
    * Bornée dans le temps et plafonnée à deux envois, elle n'est pas réglable
    * dans l'application — la fenêtre se refermerait avant que quiconque n'ait
    * ouvert les réglages, et un interrupteur qu'on n'atteint pas à temps est
@@ -655,9 +656,9 @@ enum NotificationType {
    * connexion : c'est ce qui évite d'enfermer quelqu'un, et ce qui règle la
    * question de la qualification (« vous avez cinq crédits offerts non
    * utilisés » se défend mal comme message de service).
-   *
    * Deuxième et DERNIÈRE catégorie incoercible, après la sécurité. Chaque
-   * ajout affaiblit le principe. */
+   * ajout affaiblit le principe.
+   */
   activation_first_person
   activation_first_note
   activation_unused_credits
@@ -862,12 +863,12 @@ model Admin {
   isActive    Boolean   @default(true) @map("is_active")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  otpCodes      AdminOtpCode[]
-  refreshTokens AdminRefreshToken[]
-  featureFlags  FeatureFlag[]
+  otpCodes         AdminOtpCode[]
+  refreshTokens    AdminRefreshToken[]
+  featureFlags     FeatureFlag[]
+  paymentDecisions PaymentStatusHistory[]
 
   @@map("admin")
-  paymentDecisions PaymentStatusHistory[]
 }
 
 model AdminOtpCode {
@@ -947,20 +948,165 @@ model AuditLog {
 // Le catalogue des modèles et leur ordre de repli. La priorité gouverne le
 // routage : le plus bas passe en premier, et l'indisponibilité de l'un bascule
 // sur le suivant (spec technique §, repli entre fournisseurs).
+/**
+ * Ce qu'un modèle sait faire. Un modèle de texte rangé sur la tâche d'image
+ * n'échouerait pas à la configuration mais à la première génération, en
+ * production, sur un contenu déjà facturé. La capacité est donc portée par le
+ * catalogue et vérifiée au rangement.
+ */
+enum AICapability {
+  text
+  image
+
+  @@map("ai_capability")
+}
+
+/**
+ * Les tâches qui appellent un modèle. Chacune a sa chaîne de repli propre :
+ * c'est toute la raison d'être de cette énumération. Un rang unique pour tout
+ * forcerait le classement des notes et la rédaction d'un message à partager le
+ * même modèle, alors que l'un tourne sur chaque note en arrière-plan et que
+ * l'autre est le produit lui-même.
+ */
+enum AITask {
+  // Sur chaque note, en fond, personne n'attend : le volume commande.
+  note_classification
+  /**
+   * Même volume, mais l'erreur ne se rattrape pas côté utilisateur : un
+   * événement mal jugé fait envoyer un vœu joyeux sur un anniversaire de
+   * décès. C'est la seule tâche de fond où l'on paie pour ne pas se tromper.
+   */
+  sensitive_detection
+  message
+  gift_ideas
+  // Les deux tâches d'image. Elles n'acceptent qu'un modèle de capacité
+  // `image` — voir AICapability.
+  illustration
+  photo_style
+
+  @@map("ai_task")
+}
+
 model AIModel {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  provider   String   @db.VarChar(40)
-  modelKey   String   @map("model_key") @db.VarChar(80)
-  priority   Int
-  costInput  Decimal? @map("cost_input") @db.Decimal(12, 6)
-  costOutput Decimal? @map("cost_output") @db.Decimal(12, 6)
-  enabled    Boolean  @default(true)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider   String       @db.VarChar(40)
+  modelKey   String       @map("model_key") @db.VarChar(80)
+  capability AICapability @default(text)
+  costInput  Decimal?     @map("cost_input") @db.Decimal(12, 6)
+  costOutput Decimal?     @map("cost_output") @db.Decimal(12, 6)
+
+  /**
+   * DEUX interrupteurs, et surtout pas un seul.
+   * `enabled` appartient à l'administrateur, et à lui seul. Les trois champs de
+   * panne appartiennent au disjoncteur, et à lui seul. Les confondre casse dans
+   * les deux sens : la reprise automatique rallumerait un modèle qu'on avait
+   * volontairement coupé, et le disjoncteur redéclasserait trois minutes plus
+   * tard celui que l'admin vient de promouvoir — l'écran mentirait alors sur ce
+   * qui est en vigueur.
+   * Un modèle coupé à la main reste coupé même quand il redevient joignable.
+   * Un modèle en panne redevient primaire tout seul, sans que personne n'agisse.
+   */
+  enabled Boolean @default(true)
+
+  consecutiveFailures Int       @default(0) @map("consecutive_failures")
+  // Nul quand le modèle répond. Non nul, il est écarté du routage jusqu'à cette
+  // heure — pas retiré de la chaîne, seulement sauté.
+  outageUntil         DateTime? @map("outage_until") @db.Timestamptz
+  outageReason        String?   @map("outage_reason") @db.VarChar(200)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  routes AITaskRoute[]
+  usages AIUsage[]
 
   @@unique([provider, modelKey])
-  @@index([enabled, priority])
+  @@index([enabled, capability])
   @@map("ai_model")
+}
+
+/**
+ * La chaîne de repli d'une tâche : le rang 1 essaie en premier, puis le 2, puis
+ * le 3. Le rang appartient à l'administrateur ; rien d'automatique n'y touche.
+ * Voir le commentaire des deux interrupteurs sur AIModel.
+ */
+model AITaskRoute {
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task    AITask
+  modelId String @map("model_id") @db.Uuid
+  rank    Int
+
+  model AIModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  // Deux modèles au même rang rendraient l'ordre de repli dépendant du hasard
+  // du tri ; le même modèle deux fois dans une chaîne ferait « réessayer » sur
+  // celui qui vient d'échouer, ce qui n'est pas un repli.
+  @@unique([task, rank])
+  @@unique([task, modelId])
+  @@index([task, rank])
+  @@map("ai_task_route")
+}
+
+enum AIUsageStatus {
+  success
+  // Une panne du fournisseur : c'est ce qui doit faire replier.
+  error
+  timeout
+  /**
+   * Un refus du modèle, ou une réponse inexploitable. À part de `error` parce
+   * que ça ne se replie PAS : le modèle suivant refusera la même demande, et on
+   * aura payé deux fois pour le même non.
+   */
+  refused
+
+  @@map("ai_usage_status")
+}
+
+/**
+ * Ce qu'une génération a réellement coûté, en argent et en temps.
+ * Une ligne par TENTATIVE, pas par génération : un repli en produit deux, et
+ * c'est précisément la paire qu'on veut pouvoir lire. Sans elle, une chaîne qui
+ * se replie systématiquement coûte le double en silence, et on l'apprend sur la
+ * facture du mois.
+ */
+model AIUsage {
+  id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // Nul pour ce qui ne se rattache à personne (une passe de maintenance).
+  userId String? @map("user_id") @db.Uuid
+  task   AITask
+
+  /**
+   * Le modèle est référencé ET recopié. La référence sert aux jointures ;
+   * la copie survit au modèle : un catalogue qu'on nettoie ne doit pas rendre
+   * l'historique de facturation illisible.
+   */
+  modelId  String? @map("model_id") @db.Uuid
+  provider String  @db.VarChar(40)
+  modelKey String  @map("model_key") @db.VarChar(80)
+
+  // 1 pour le primaire, 2 pour le premier repli, etc. C'est le rang au moment
+  // de l'appel, figé : l'admin peut réordonner la chaîne demain.
+  attempt Int
+  status  AIUsageStatus
+
+  inputTokens  Int?     @map("input_tokens")
+  outputTokens Int?     @map("output_tokens")
+  // Estimé depuis le tarif du catalogue AU MOMENT de l'appel. Nul quand le
+  // modèle n'était pas tarifé — « on ne sait pas », jamais « gratuit ».
+  costEstimate Decimal? @map("cost_estimate") @db.Decimal(12, 6)
+  latencyMs    Int?     @map("latency_ms")
+  errorCode    String?  @map("error_code") @db.VarChar(80)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  model AIModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  user  User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([task, createdAt])
+  @@index([modelId, createdAt])
+  @@index([userId, createdAt])
+  @@map("ai_usage")
 }
 
 enum PromptKind {
@@ -999,13 +1145,13 @@ model PromptTemplate {
 // pas des données — les dupliquer ici ouvrirait une fuite d'un clic depuis
 // l'administration. Une ligne absente vaut éteint (voir FlagsService).
 model FeatureFlag {
-  key       String   @id @db.VarChar(64)
-  enabled   Boolean  @default(false)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  key              String   @id @db.VarChar(64)
+  enabled          Boolean  @default(false)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
   // Nul tant que personne n'a basculé : la réconciliation au démarrage crée
   // les lignes manquantes, elle ne décide rien. « SetNull » plutôt que cascade
   // — la trace d'une bascule survit au retrait du compte qui l'a faite.
-  updatedByAdminId String? @map("updated_by_admin_id") @db.Uuid
+  updatedByAdminId String?  @map("updated_by_admin_id") @db.Uuid
 
   updatedBy Admin? @relation(fields: [updatedByAdminId], references: [id], onDelete: SetNull)
 
@@ -1097,21 +1243,21 @@ model CreditBundle {
 /// chaque client, et à devoir tous les corriger le jour où MTN change son
 /// barème.
 model PaymentChannel {
-  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  kind        PaymentMethodKind
-  operator    String            @db.VarChar(40)
+  id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind       PaymentMethodKind
+  operator   String            @db.VarChar(40)
   // Les frais diffèrent d'un pays à l'autre, même chez le même opérateur.
-  country     String            @db.VarChar(2)
-  label       String            @db.VarChar(80)
-  feePercent  Decimal           @default(0) @map("fee_percent") @db.Decimal(5, 2)
-  feeFixed    Decimal           @default(0) @map("fee_fixed") @db.Decimal(12, 2)
-  feeMin      Decimal?          @map("fee_min") @db.Decimal(12, 2)
-  feeMax      Decimal?          @map("fee_max") @db.Decimal(12, 2)
-  feeBorneBy  FeeBearer         @default(payer) @map("fee_borne_by")
-  currency    String            @default("XAF") @db.VarChar(3)
-  isActive    Boolean           @default(true) @map("is_active")
-  position    Int?              @db.SmallInt
-  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+  country    String            @db.VarChar(2)
+  label      String            @db.VarChar(80)
+  feePercent Decimal           @default(0) @map("fee_percent") @db.Decimal(5, 2)
+  feeFixed   Decimal           @default(0) @map("fee_fixed") @db.Decimal(12, 2)
+  feeMin     Decimal?          @map("fee_min") @db.Decimal(12, 2)
+  feeMax     Decimal?          @map("fee_max") @db.Decimal(12, 2)
+  feeBorneBy FeeBearer         @default(payer) @map("fee_borne_by")
+  currency   String            @default("XAF") @db.VarChar(3)
+  isActive   Boolean           @default(true) @map("is_active")
+  position   Int?              @db.SmallInt
+  updatedAt  DateTime          @updatedAt @map("updated_at") @db.Timestamptz
 
   payments Payment[]
 
@@ -1168,41 +1314,41 @@ model PaymentMethod {
 
 /// Un achat de crédits. Les deux voies manuelles sont des Payment ordinaires.
 model Payment {
-  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId              String            @map("user_id") @db.Uuid
-  paymentMethodId     String?           @map("payment_method_id") @db.Uuid
-  mode                PaymentMode       @default(provider)
-  creditBundleId      String?           @map("credit_bundle_id") @db.Uuid
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String           @map("user_id") @db.Uuid
+  paymentMethodId     String?          @map("payment_method_id") @db.Uuid
+  mode                PaymentMode      @default(provider)
+  creditBundleId      String?          @map("credit_bundle_id") @db.Uuid
   // Le compte qui a REÇU l'argent, sur les voies manuelles.
-  collectionAccountId String?           @map("collection_account_id") @db.Uuid
+  collectionAccountId String?          @map("collection_account_id") @db.Uuid
   // Le numéro depuis lequel le client déclare avoir versé — semi-manuel seul.
-  payerMsisdn         String?           @map("payer_msisdn") @db.VarChar(32)
+  payerMsisdn         String?          @map("payer_msisdn") @db.VarChar(32)
   // Reçu déposé par le client ou saisi par l'administrateur. S'efface une fois
   // la demande traitée : le reçu ne prouve rien, c'est la réception sur le
   // compte de l'opérateur qui fait foi.
-  proofKey            String?           @map("proof_key")
+  proofKey            String?          @map("proof_key")
   // Nulle tant que la référence n'est pas connue. L'unicité est partielle,
   // posée en migration — pour n'indexer que les valeurs présentes, non pour
   // admettre plusieurs nuls : Postgres les traite déjà comme distincts.
-  providerRef         String?           @map("provider_ref")
-  paymentChannelId    String?           @map("payment_channel_id") @db.Uuid
+  providerRef         String?          @map("provider_ref")
+  paymentChannelId    String?          @map("payment_channel_id") @db.Uuid
   // Les frais ANNONCÉS à l'aperçu, figés ici. Pas ceux que le canal porte
   // aujourd'hui : changer un taux ne doit pas fausser rétroactivement la
   // comptabilité.
-  feeAmount           Decimal?          @map("fee_amount") @db.Decimal(12, 2)
+  feeAmount           Decimal?         @map("fee_amount") @db.Decimal(12, 2)
   // Ce qu'on ATTEND sur le compte, frais appliqués selon feeBorneBy.
-  expectedAmount      Decimal?          @map("expected_amount") @db.Decimal(12, 2)
+  expectedAmount      Decimal?         @map("expected_amount") @db.Decimal(12, 2)
   // Ce que l'administrateur a CONSTATÉ. Trois montants, et ils ne disent pas la
   // même chose : sans le deuxième on ne sait pas si un écart vient du client ou
   // du barème ; sans le troisième on ne sait pas qu'il y a écart.
-  receivedAmount      Decimal?          @map("received_amount") @db.Decimal(12, 2)
-  direction           PaymentDirection  @default(charge)
-  amount              Decimal           @db.Decimal(12, 2)
-  currency            String            @db.VarChar(3)
+  receivedAmount      Decimal?         @map("received_amount") @db.Decimal(12, 2)
+  direction           PaymentDirection @default(charge)
+  amount              Decimal          @db.Decimal(12, 2)
+  currency            String           @db.VarChar(3)
   credits             Int
-  status              PaymentStatus     @default(pending)
-  failureReason       String?           @map("failure_reason")
-  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  status              PaymentStatus    @default(pending)
+  failureReason       String?          @map("failure_reason")
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz
 
   user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   paymentMethod     PaymentMethod?         @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
