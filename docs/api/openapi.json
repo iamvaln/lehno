@@ -4598,7 +4598,7 @@
     "/me/persons": {
       "get": {
         "summary": "Lister ses proches — le carnet, trié et paginé",
-        "description": "### Une enveloppe, non plus un tableau\n\n`{ persons, total }`. Le total sert « Voir plus · n restants » : un\ncurseur ne saurait pas le donner, et à l'échelle d'un carnet personnel le\ndécalage numéroté est exact.\n\n### Le tri, et sa direction\n\n`sort=date` (défaut) range sur la prochaine échéance, `sort=alpha` sur le\nnom. `direction=asc` (défaut) ou `desc` : « par date » ne dit rien tant\nqu'on ne sait pas de quel bout.\n\n**Une fiche sans date passe en FIN de liste dans les DEUX sens.** Jamais\nen tête à l'inversion : le carnet sert à voir qui a une date qui\napproche, et une fiche à compléter y occuperait la place de ce qui presse.\n\n**Changer de tri revient à la première page** — remettre `offset` à zéro.\nLe serveur ne s'en souvient pas, c'est au client de le faire.\n\n### Ce que chaque fiche porte pour sa ligne\n\n`notesCount` — les notes DURABLES seules, celles que rend\n`/me/persons/{id}/notes`. Compter aussi celles de circonstance ferait dire\n« 7 notes » à une fiche qui n'en montre que trois.\n\n`nextOccurrence` — nulle quand le proche n'a aucune date ; la ligne\naffiche alors « Compléter » à la place du décompte. `daysUntil` est signé.\n\nLes deux voyagent AVEC la fiche : les chercher autrement ferait un appel\npar proche, soit quarante-trois sur le carnet d'essai du handoff.\n\n### Le genre n'est pas dans ce contrat\n\nNi en lecture, ni en écriture, ni dans `/me/metadata`. Le carnet ne pose\npas la question ; tant que le champ traversait, la règle ne tenait que par\nla retenue du client. La colonne existe en base — c'est un signal de\ngénération de dernier recours, déduit côté serveur, jamais demandé.",
+        "description": "### Une enveloppe, non plus un tableau\n\n`{ persons, total }`. Le total sert « Voir plus · n restants » : un\ncurseur ne saurait pas le donner, et à l'échelle d'un carnet personnel le\ndécalage numéroté est exact.\n\n### Le tri, et sa direction\n\n`sort=date` (défaut) range sur la prochaine échéance, `sort=alpha` sur le\nnom. `direction=asc` (défaut) ou `desc` : « par date » ne dit rien tant\nqu'on ne sait pas de quel bout.\n\n**Une fiche sans date passe en FIN de liste dans les DEUX sens.** Jamais\nen tête à l'inversion : le carnet sert à voir qui a une date qui\napproche, et une fiche à compléter y occuperait la place de ce qui presse.\n\n**Changer de tri revient à la première page** — remettre `offset` à zéro.\nLe serveur ne s'en souvient pas, c'est au client de le faire.\n\n### Ce que chaque fiche porte pour sa ligne\n\n`notesCount` — les notes DURABLES seules, celles que rend\n`/me/persons/{id}/notes`. Compter aussi celles de circonstance ferait dire\n« 7 notes » à une fiche qui n'en montre que trois.\n\n`nextOccurrence` — nulle quand le proche n'a aucune date ; la ligne\naffiche alors « Compléter » à la place du décompte. `daysUntil` est signé.\n\nLes deux voyagent AVEC la fiche : les chercher autrement ferait un appel\npar proche, soit quarante-trois sur le carnet d'essai du handoff.\n\n### La recherche\n\n`q` filtre sur le nom affiché ET le nom d'usage — quelqu'un cherche\n« maman » sans savoir si la fiche dit « Maman » ou « Maman Chantal ».\n\n**Insensible à la casse et aux accents** : « emile » trouve « Émile ».\nSur un marché où les claviers ne portent pas toujours les accents,\nl'inverse rendrait la recherche inutilisable pour la moitié des noms.\n\n**Elle se combine au tri et à la pagination**, et s'applique AVANT eux :\n`total` compte les correspondances, pas le carnet entier. Ne filtrez pas\nune page déjà chargée — un proche de la troisième page resterait\nintrouvable, et c'est le défaut que ce paramètre corrige.\n\n§3.15 demande des résultats « classés par proximité de leur prochaine\néchéance » : c'est `sort=date`, le tri par défaut. Rien à ajouter.\n\n### Le genre n'est pas dans ce contrat\n\nNi en lecture, ni en écriture, ni dans `/me/metadata`. Le carnet ne pose\npas la question ; tant que le champ traversait, la règle ne tenait que par\nla retenue du client. La colonne existe en base — c'est un signal de\ngénération de dernier recours, déduit côté serveur, jamais demandé.",
         "security": [
           {
             "bearerAuth": []
@@ -4673,6 +4673,23 @@
                   "exclusiveMinimum": true,
                   "minimum": 0,
                   "maximum": 100
+                }
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
                 }
               ]
             }
@@ -10256,10 +10273,10 @@
         }
       }
     },
-    "/me/notification-preferences": {
+    "/me/sessions": {
       "get": {
-        "summary": "Lire ses préférences de notification (§3.11)",
-        "description": "`preferences` porte UN type PAR TYPE CONFIGURABLE — `login_code`,\n`security` et `account` n'y figurent pas : ces natures partent\ntoujours, y régler un canal n'aurait aucun effet.\n\n**Une ligne absente vaut le défaut** : poussée ET courriel activés.\nCe chemin rend l'état EFFECTIF de chaque type, qu'une ligne existe en\nbase ou non — le client n'a pas à connaître ni à rejouer ce défaut.\n\nLa maquette groupe ces types en cinq NATURES affichées à l'écran\n(rappel d'échéance, récapitulatif, contributions à valider, relances,\nvie du compte). Ce groupement n'existe PAS côté serveur : chaque type\nse règle seul, et c'est l'écran qui décide quels boutons rassembler\nsous quel titre — le groupement ne change que l'affichage, jamais ce\nqui part.\n\n`digestFrequency` (`monthly` / `weekly` / `never`) vit ici et pas sur\n`/me/profile` : la maquette la range sous « Préférences de\nnotification », à la différence de `sendHour` et `timezone`, qui\nvalent pour toutes les natures et restent servis par `/me/profile`.",
+        "summary": "Lister les connexions récentes",
+        "description": "### Une session est une LIGNÉE, pas un jeton\n\n`RefreshToken` crée un jeton enfant à chaque renouvellement, dans la\nmême lignée : lister les jetons montrerait vingt lignes pour un seul\ntéléphone resté ouvert deux mois. `id` est celui de la lignée,\n`createdAt` la date de son premier jeton (l'ouverture), `lastActiveAt`\ncelle de son plus récent (la dernière fois qu'elle a servi).\n\n### Pas de lieu approximatif\n\nLa maquette en demande un ; ce chemin n'en rend pas. `RefreshToken.ip`\nsert aux investigations, pas à l'affichage (voir son commentaire dans\n`prisma/schema.prisma`), et aucun service de géolocalisation ne la\ntraduit aujourd'hui en lieu. Plutôt qu'une adresse brute affichée comme\nun lieu, le champ est absent — il rejoindra ce contrat le jour où un\nservice peut le produire honnêtement.\n\n### Pas de champ « appareil courant » non plus\n\nCe chemin ne reçoit qu'un jeton d'accès, qui ne dit pas de quelle\nlignée il descend. Le client sait déjà quel appareil est le sien ; ce\nn'est pas au serveur de le lui redire.",
         "security": [
           {
             "bearerAuth": []
@@ -10273,54 +10290,38 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "preferences": {
+                    "sessions": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "type": {
+                          "id": {
                             "type": "string",
-                            "enum": [
-                              "event_reminder",
-                              "event_day_of",
-                              "digest",
-                              "contribution_received",
-                              "wish_received",
-                              "enrichment_nudge_global",
-                              "enrichment_nudge_person",
-                              "generation_ready",
-                              "payment_succeeded",
-                              "payment_failed",
-                              "credits_received"
-                            ]
+                            "format": "uuid"
                           },
-                          "pushEnabled": {
-                            "type": "boolean"
+                          "createdAt": {
+                            "type": "string"
                           },
-                          "emailEnabled": {
-                            "type": "boolean"
+                          "lastActiveAt": {
+                            "type": "string"
+                          },
+                          "userAgent": {
+                            "type": "string",
+                            "nullable": true
                           }
                         },
                         "required": [
-                          "type",
-                          "pushEnabled",
-                          "emailEnabled"
+                          "id",
+                          "createdAt",
+                          "lastActiveAt",
+                          "userAgent"
                         ],
                         "additionalProperties": false
                       }
-                    },
-                    "digestFrequency": {
-                      "type": "string",
-                      "enum": [
-                        "monthly",
-                        "weekly",
-                        "never"
-                      ]
                     }
                   },
                   "required": [
-                    "preferences",
-                    "digestFrequency"
+                    "sessions"
                   ],
                   "additionalProperties": false
                 }
@@ -10503,71 +10504,204 @@
           }
         }
       },
-      "patch": {
-        "summary": "Modifier ses préférences de notification",
-        "description": "Un type de la liste toujours envoyée (`login_code`, `security`,\n`account`) dans `preferences` rend `400` (`validation_failed`) : le\nrefus est posé dans le contrat, pas seulement dans l'écran — aucun\nappelant ne peut l'oublier.\n\n`preferences` et `digestFrequency` sont indépendants et tous deux\nfacultatifs, mais au moins l'un des deux doit être présent — un corps\nvide rend `400`, comme `PATCH /me/wall`.\n\nPas de `sendHour` ici : voir la note du `GET`.",
+      "delete": {
+        "summary": "Se déconnecter de partout",
+        "description": "### Révoque TOUTES les lignées du compte, y compris celle-ci\n\nCe chemin ne reçoit qu'un jeton d'accès : rien n'y distingue « cet\nappareil » des autres pour l'épargner. Plutôt qu'épargner une lignée au\nhasard, cet appel révoque tout, sans exception. **Le client doit donc\ntraiter cet appel comme SA PROPRE déconnexion aussi** : effacer ses\njetons locaux et revenir à l'écran de connexion, sans attendre un signal\ndu serveur pour le faire.\n\n### L'effet n'est pas instantané\n\nLe jeton d'accès est autoportant, valable quinze minutes, et sa\nvalidité ne se vérifie jamais en base : révoquer les lignées ici ne\nl'invalide pas rétroactivement. Un appareil qui vient d'obtenir un\njeton d'accès peut continuer à l'utiliser jusqu'à quinze minutes après\ncet appel ; c'est à son prochain RENOUVELLEMENT (`/auth/refresh`) que la\ndéconnexion se fait sentir, avec `session_expired`.",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "preferences": {
-                    "type": "array",
-                    "items": {
+        "responses": {
+          "204": {
+            "description": "Succès"
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
                       "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "event_reminder",
-                            "event_day_of",
-                            "digest",
-                            "contribution_received",
-                            "wish_received",
-                            "enrichment_nudge_global",
-                            "enrichment_nudge_person",
-                            "generation_ready",
-                            "payment_succeeded",
-                            "payment_failed",
-                            "credits_received"
-                          ]
-                        },
-                        "pushEnabled": {
-                          "type": "boolean"
-                        },
-                        "emailEnabled": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "pushEnabled",
-                        "emailEnabled"
-                      ],
-                      "additionalProperties": false
+                      "additionalProperties": {}
                     }
                   },
-                  "digestFrequency": {
-                    "type": "string",
-                    "enum": [
-                      "monthly",
-                      "weekly",
-                      "never"
-                    ]
-                  }
-                },
-                "additionalProperties": false
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/me/identities": {
+      "get": {
+        "summary": "Lister les moyens de connexion externes rattachés",
+        "description": "Les moyens EXTERNES seulement — Google, Apple. La connexion par e-mail\net code n'apparaît pas ici : elle est toujours active, ne se détache\njamais (elle reste l'accès de secours, maquette §3.24), et l'écran\nl'affiche sans avoir besoin de ce chemin pour le savoir.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Succès",
@@ -10576,54 +10710,37 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "preferences": {
+                    "identities": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "type": {
+                          "provider": {
                             "type": "string",
                             "enum": [
-                              "event_reminder",
-                              "event_day_of",
-                              "digest",
-                              "contribution_received",
-                              "wish_received",
-                              "enrichment_nudge_global",
-                              "enrichment_nudge_person",
-                              "generation_ready",
-                              "payment_succeeded",
-                              "payment_failed",
-                              "credits_received"
+                              "google",
+                              "apple"
                             ]
                           },
-                          "pushEnabled": {
-                            "type": "boolean"
+                          "linkedAt": {
+                            "type": "string"
                           },
-                          "emailEnabled": {
-                            "type": "boolean"
+                          "lastUsedAt": {
+                            "type": "string",
+                            "nullable": true
                           }
                         },
                         "required": [
-                          "type",
-                          "pushEnabled",
-                          "emailEnabled"
+                          "provider",
+                          "linkedAt",
+                          "lastUsedAt"
                         ],
                         "additionalProperties": false
                       }
-                    },
-                    "digestFrequency": {
-                      "type": "string",
-                      "enum": [
-                        "monthly",
-                        "weekly",
-                        "never"
-                      ]
                     }
                   },
                   "required": [
-                    "preferences",
-                    "digestFrequency"
+                    "identities"
                   ],
                   "additionalProperties": false
                 }

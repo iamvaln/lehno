@@ -70,6 +70,12 @@ model User {
   timezone            String          @default("UTC") @db.VarChar(64)
   sendHour            Int             @default(9) @map("send_hour") @db.SmallInt
   digestFrequency     DigestFrequency @default(monthly) @map("digest_frequency")
+  // Le renoncement aux relances d'activation, posé depuis le lien d'un
+  // courrier — sans connexion, d'un clic. Il vit ici et non dans
+  // NotificationPreference parce que celle-ci se règle nature par nature dans
+  // l'application, et que l'activation n'y figure pas : elle est bornée, elle
+  // s'arrête d'elle-même, et un interrupteur d'écran arriverait trop tard.
+  activationEmailsOptedOut Boolean @default(false) @map("activation_emails_opted_out")
   reminderLeadDays    Int?            @map("reminder_lead_days")
   // Trace de l'acceptation des conditions. Aucune case à cocher : les CGU
   // disent elles-mêmes « en créant un compte […] vous acceptez », et c'est la
@@ -618,6 +624,23 @@ enum NotificationType {
   wish_received
   enrichment_nudge_global
   enrichment_nudge_person
+  /* L'ACTIVATION : les premiers pas d'un compte neuf.
+   *
+   * Bornée dans le temps et plafonnée à deux envois, elle n'est pas réglable
+   * dans l'application — la fenêtre se refermerait avant que quiconque n'ait
+   * ouvert les réglages, et un interrupteur qu'on n'atteint pas à temps est
+   * décoratif. Elle se coupe par le lien du courrier, d'un clic et sans
+   * connexion : c'est ce qui évite d'enfermer quelqu'un, et ce qui règle la
+   * question de la qualification (« vous avez cinq crédits offerts non
+   * utilisés » se défend mal comme message de service).
+   *
+   * Deuxième et DERNIÈRE catégorie incoercible, après la sécurité. Chaque
+   * ajout affaiblit le principe. */
+  activation_first_person
+  activation_first_note
+  activation_unused_credits
+  activation_collect_link
+  activation_invite
   generation_ready
   payment_succeeded
   payment_failed
