@@ -16,10 +16,24 @@ import { z } from "zod";
 export const maintenanceStatusSchema = z
   .object({
     maintenance: z.boolean(),
-    // Combien de secondes attendre avant de réessayer. Nul hors intervention.
-    // Le client l'affiche en compte à rebours ; il ne l'invente pas, sans quoi
-    // deux versions du parc appliqueraient deux délais.
+    /* Deux valeurs, et les confondre était mon erreur.
+     *
+     * `retryAfterSeconds` est le RYTHME de réessai. Il existe toujours pendant
+     * une intervention : sans lui, tout le parc martèle. Le client l'attend, il
+     * ne l'invente pas — sinon deux versions appliqueraient deux délais.
+     *
+     * `until` est l'HEURE DE RETOUR ANNONCÉE, et elle est facultative. On ne la
+     * connaît pas toujours, et l'écran de maintenance a raison d'en faire deux
+     * états : avec elle il dit quand revenir, sans elle il dit seulement qu'une
+     * mise à jour est en cours. « Pas de "bientôt", pas d'estimation inventée. »
+     *
+     * Dériver l'une de l'autre serait mentir : un rythme de quinze minutes ne
+     * dit pas que le service revient dans quinze minutes. */
     retryAfterSeconds: z.number().int().positive().nullable(),
+    // Horodatage ISO 8601, en UTC. Le client le met à l'heure du téléphone —
+    // le serveur ne connaît pas son fuseau, et le format d'affichage
+    // (« 14 h 30 » / « 2:30 pm ») appartient au dictionnaire du client.
+    until: z.string().nullable(),
   })
   .strict();
 
@@ -30,3 +44,4 @@ export type MaintenanceStatus = z.infer<typeof maintenanceStatusSchema>;
 // finirait par diverger, et l'interrupteur ne commanderait plus rien.
 export const PARAM_MAINTENANCE = "maintenance_mode";
 export const PARAM_MAINTENANCE_RETRY = "maintenance_retry_after_seconds";
+export const PARAM_MAINTENANCE_UNTIL = "maintenance_until";

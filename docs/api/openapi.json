@@ -752,7 +752,7 @@
     "/public/maintenance": {
       "get": {
         "summary": "Savoir si l'API est arrêtée pour intervention, et pour combien de temps",
-        "description": "### L'arrêt n'est PAS un drapeau de fonctionnalité\n\nUn drapeau éteint rend `404` — « cette surface n'existe pas » — et le\nclient masque l'écran. Un arrêt rend **`503`**, code `maintenance`, avec\n`details.retryAfterSeconds` : la ressource existe et revient. Le client\nmontre un écran d'attente et réessaie ; **il ne masque rien, il ne\ndéconnecte personne, il ne vide aucun cache local.**\n\n### Où il s'applique\n\nSur TOUS les chemins, sauf deux : `/admin*`, par où l'équipe rouvre, et\ncelui-ci, qui reste joignable pendant l'arrêt — c'est ce qui permet de\nsavoir quand revenir sans marteler un chemin fermé.\n\n### Ce que le client doit faire\n\n**Un arrêt commence au milieu d'une session.** Il n'y a rien à lire au\ndémarrage : le `503` arrive sur n'importe quel appel, à n'importe quel\nmoment. C'est lui le signal.\n\n**Attendre le délai annoncé**, pas un délai à soi. Il vient du serveur\npour que tout le parc applique la même règle, et pour qu'on puisse\nl'allonger si l'intervention dure.\n\n**Puis interroger ce chemin** plutôt que de réessayer l'appel d'origine :\n`maintenance: false` dit que c'est fini.",
+        "description": "### L'arrêt n'est PAS un drapeau de fonctionnalité\n\nUn drapeau éteint rend `404` — « cette surface n'existe pas » — et le\nclient masque l'écran. Un arrêt rend **`503`**, code `maintenance`, avec\n`details.retryAfterSeconds` : la ressource existe et revient. Le client\nmontre un écran d'attente et réessaie ; **il ne masque rien, il ne\ndéconnecte personne, il ne vide aucun cache local.**\n\n### Où il s'applique\n\nSur TOUS les chemins, sauf deux : `/admin*`, par où l'équipe rouvre, et\ncelui-ci, qui reste joignable pendant l'arrêt — c'est ce qui permet de\nsavoir quand revenir sans marteler un chemin fermé.\n\n### Ce que le client doit faire\n\n**Un arrêt commence au milieu d'une session.** Il n'y a rien à lire au\ndémarrage : le `503` arrive sur n'importe quel appel, à n'importe quel\nmoment. C'est lui le signal.\n\n**Deux valeurs, et elles ne disent pas la même chose.**\n\n- `retryAfterSeconds` — le **rythme de réessai**, toujours présent\n  pendant un arrêt. Attendre CE délai, pas un délai à soi : il vient du\n  serveur pour que tout le parc applique la même règle, et pour qu'on\n  puisse l'allonger si l'intervention dure.\n- `until` — l'**heure de retour annoncée**, en ISO 8601 UTC, **nulle**\n  quand on ne la connaît pas. Ne jamais la déduire du rythme : quinze\n  minutes entre deux essais ne veut pas dire que le service revient dans\n  quinze minutes. Nulle, l'écran dit seulement qu'une intervention est en\n  cours — pas de « bientôt », pas d'estimation inventée.\n\nLes deux voyagent AUSSI dans les détails du `503`, pour qu'un client\nrefusé sache quoi afficher sans faire un second appel.\n\n**Puis interroger ce chemin** plutôt que de réessayer l'appel d'origine :\n`maintenance: false` dit que c'est fini.",
         "responses": {
           "200": {
             "description": "Succès",
@@ -769,11 +769,16 @@
                       "exclusiveMinimum": true,
                       "minimum": 0,
                       "nullable": true
+                    },
+                    "until": {
+                      "type": "string",
+                      "nullable": true
                     }
                   },
                   "required": [
                     "maintenance",
-                    "retryAfterSeconds"
+                    "retryAfterSeconds",
+                    "until"
                   ],
                   "additionalProperties": false
                 }

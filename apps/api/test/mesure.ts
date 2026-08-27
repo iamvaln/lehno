@@ -10,7 +10,7 @@ import type { EvenementSortant } from "../src/tracking/tracking.port.js";
 export function mesureDeTest(prisma: unknown): {
   service: TrackingService;
   emis: EvenementSortant[];
-  attendre: () => Promise<void>;
+  attendre: (combien?: number) => Promise<void>;
 } {
   const emis: EvenementSortant[] = [];
   const port = { capture: async (e: EvenementSortant): Promise<void> => { emis.push(e); } };
