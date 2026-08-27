@@ -234,6 +234,18 @@ export const referralSummarySchema = z.object({
   // Somme des mouvements rattachés à ses parrainages. Calculée, comme le
   // solde — un compteur stocké finirait par diverger du registre.
   creditsEarned: z.number().int().min(0),
+  /* CE QUE LE PARRAINAGE RAPPORTE aujourd'hui, ou rien.
+   *
+   * Nul quand `credits` est éteint. Le drapeau `referral` ne dépend PAS de
+   * `credits` — l'éteindre tuerait l'acquisition avec la monétisation, ce que
+   * §6.4 interdit nommément — mais le parrainage n'a alors plus de crédits à
+   * promettre : ils n'achètent rien, et les générations sont gratuites.
+   *
+   * L'écran lit donc cette VALEUR, jamais les deux drapeaux. Un client qui
+   * croiserait `referral` et `credits` lui-même referait le raisonnement du
+   * serveur, et s'en écarterait le jour où il change. Nul, il présente le
+   * parrainage sans promesse chiffrée ; renseigné, il l'annonce. */
+  bonusParInvitation: z.number().int().positive().nullable(),
 }).strict();
 
 export type ReferralSummary = z.infer<typeof referralSummarySchema>;
