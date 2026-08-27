@@ -63,7 +63,7 @@ S'y ajoute une invitation discrète **« Faire ma liste »**, présente tant qu'
 
 ## 4. Les fonctionnalités s'allument une à une
 
-Le produit se livre par morceaux. Douze drapeaux gouvernent ce qui est visible ; le socle — proches, notes, dates, rappels — reste toujours là.
+Le produit se livre par morceaux. Treize drapeaux gouvernent ce qui est visible ; le socle — proches, notes, dates, rappels — reste toujours là.
 
 **Ce que ça demande au dessin :** une fonctionnalité éteinte laisse un trou, et **le trou doit rester habitable**.
 
@@ -103,7 +103,17 @@ Elles viennent de mesures, pas de goût.
 
 ---
 
-## 7. Un bloc nouveau sur la fiche
+## 7. Le topo, en tête de fiche
+
+La fiche s'ouvre sur ce que les notes ont appris du proche : sa couleur, son animal, ce qu'il aime manger, sa taille, son métier, ses loisirs, ce qu'il faut éviter. **Le topo en un regard**, avant la liste des notes.
+
+Rien ne se saisit : tout est extrait des notes au fil de l'eau, et chaque élément porte sa **ligne de provenance**.
+
+**Ce qui manque ne paraît pas.** Une fiche neuve n'affiche aucun bloc — jamais une grille de cases vides qui attendraient d'être remplies.
+
+**La composition doit tenir avec deux attributs comme avec dix.** C'est le même problème que la liste de souhaits : une grille pensée pour dix paraît vide à deux.
+
+## 8. Un bloc nouveau sur la fiche
 
 Une note que l'application n'a pas su classer **reste sans catégorie** — aucun repli sur une catégorie fourre-tout.
 
@@ -111,7 +121,43 @@ Elle paraît alors dans un bloc **« à ranger »**, en tête des notes de la fi
 
 Le ton compte ici : ce n'est ni une erreur ni une file d'attente. La note **sert déjà** — la préparation lit son contenu comme celui des autres. Le bloc propose un rangement, il ne réclame pas une correction.
 
-## 8. Deux écarts relevés dans le kit
+## 9. L'écran des modèles d'IA — ce qu'il faut dessiner
+
+Il est **livré et en service**, mais son dessin n'a jamais été fait : il tourne sur les primitives brutes.
+
+**Un catalogue, puis une chaîne par tâche.** Le catalogue liste les modèles ; en dessous, six chaînes — une par tâche — qui disent dans quel ordre on les essaie.
+
+**Trois états, jamais deux.** *En service* et *éteint* sont la décision d'un humain. *Momentanément injoignable* est le constat d'un disjoncteur automatique. Un modèle peut être **en service ET injoignable** — c'est même l'état où l'on cherche pourquoi rien ne sort. Les fondre en un seul « disponible » ferait attendre une reprise qui ne viendra pas : le premier attend qu'on le rallume, le second se rouvre seul.
+
+**Le fournisseur se répète à chaque rang.** Redondant avec le catalogue, et c'est le but : il faut voir d'un coup d'œil qu'on vient d'aligner trois modèles du même hébergeur — une chaîne qu'une seule panne emporte en entier.
+
+**Les avertissements ne sont pas des erreurs.** Une chaîne de moins de trois rangs est normale : deux fournisseurs seulement produisent des images. Le dessin doit les distinguer d'un refus — c'est une remarque, pas un blocage.
+
+**« Non tarifé » n'est pas « 0 ».** Les tarifs sont vides au départ, volontairement. Un zéro dans un calcul de marge se prend pour un fait.
+
+**Ce qui manque à l'écran** : où chaque modèle sert, pour qu'on voie ce qu'on casse avant de l'éteindre. Le serveur le rend déjà.
+
+---
+
+## 10. L'échec d'une génération — trois cas, trois gestes
+
+Il n'existe nulle part dans le kit, et il arrivera : c'est un appel réseau à un tiers.
+
+| Ce qui s'est passé | Ce qu'on propose |
+|---|---|
+| Le modèle n'a pas répondu — panne, débit, délai | Réessayer |
+| Le modèle a **refusé** la demande | Réessayer ne sert à rien : c'est la demande qu'il faut reprendre |
+| Le compte du fournisseur est **à sec** | Ni l'un ni l'autre — rien ne passera avant qu'on recharge |
+
+Le troisième n'est pas théorique : deux des quatre fournisseurs y étaient encore ce matin.
+
+**Ce que le message dit**, et l'ordre compte : ce qui s'est passé, ce qu'on a fait, ce qu'on peut faire maintenant. **Et que les crédits n'ont pas été débités** — c'est la première question de qui vient de voir échouer quelque chose qu'il a payé.
+
+Jamais « une erreur est survenue » : rien n'a échoué du côté de l'utilisateur, et le dire l'enverrait chercher une faute qu'il n'a pas commise.
+
+---
+
+## 11. Deux écarts relevés dans le kit
 
 **`CategoryTag` ne porte pas les catégories du modèle.** Le kit a *Goût, Idée cadeau, No-go, Souvenir, À classer*. Le modèle en compte sept, en deux natures :
 
@@ -126,7 +172,7 @@ Le ton compte ici : ce n'est ni une erreur ni une file d'attente. La note **sert
 
 ---
 
-## 9. Ce qui reste à produire
+## 12. Ce qui reste à produire
 
 - **Seize illustrations** sur vingt-six : attentes et issues, entrée dans l'application, surfaces publiques, back-office. Les dix états vides sont validés.
 - **Le portrait** : les trois gabarits, les trois styles de photo, la distribution des motifs.

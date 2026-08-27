@@ -66,6 +66,7 @@ Elles ne décorent pas l'application. Elles occupent la place que le contenu n'o
 | 13 | **Paiement abouti** | Le soulagement, sans triomphe |
 | 14 | **Paiement échoué ou expiré** | Une opération qui n'a pas abouti, sans faute |
 | 15 | **Solde de crédits épuisé** | Une réserve vide, sans culpabiliser |
+| 15 bis | **Arrêt pour intervention** | Un service momentanément suspendu, avec un délai annoncé. Ni panne, ni erreur : quelque chose se répare |
 
 ### Priorité 3 — l'entrée dans l'application
 
@@ -106,9 +107,9 @@ Il suit celui du produit : **intimiste, sans mièvrerie**.
 
 ## 6. Ce qui est livré
 
-- Les vingt-six illustrations en **SVG**, dans les deux thèmes, nommées par situation (`vide-carnet-neuf-clair.svg`).
+- Les vingt-sept illustrations en **SVG**, dans les deux thèmes, nommées par situation (`vide-carnet-neuf-clair.svg`).
 - Un **fichier source** modifiable.
-- Une **planche de contrôle** montrant les vingt-six à 120 px, dans les deux thèmes, pour vérifier qu'elles forment une famille.
+- Une **planche de contrôle** montrant les vingt-sept à 120 px, dans les deux thèmes, pour vérifier qu'elles forment une famille.
 
 ## 7. Comment juger
 
