@@ -204,6 +204,6 @@ describe("administration — les drapeaux de fonctionnalité", () => {
     const corps = (await (await lire(entete)).json()) as { items: { cle: string; parQui: string | null }[] };
 
     expect(corps.items.find((d) => d.cle === "wall")?.parQui).toBe("admin@lehno.app");
-    expect(corps.items.find((d) => d.cle === "credits")?.parQui).toBeNull();
+    expect(corps.items.find((d) => d.cle === "collect")?.parQui).toBeNull();
   });
 });
