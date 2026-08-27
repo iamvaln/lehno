@@ -1,6 +1,7 @@
 import type { MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
+import { ScheduleModule } from "@nestjs/schedule";
 import { CorrelationMiddleware } from "./common/correlation.middleware.js";
 import { RateLimitService } from "./common/rate-limit.service.js";
 import { PrismaService } from "./prisma/prisma.service.js";
@@ -68,11 +69,23 @@ import { StudioController, StudioService } from "./admin/studio.controller.js";
 import { MaintenanceService } from "./maintenance/maintenance.service.js";
 import { MaintenanceGuard } from "./maintenance/maintenance.guard.js";
 import { MaintenanceController } from "./maintenance/maintenance.controller.js";
+import { DeroulementService } from "./me/deroulement.service.js";
+import { ProgrammationService } from "./me/programmation.service.js";
+import { RelancesService } from "./me/relances.service.js";
+import { EnvoiService } from "./me/envoi.service.js";
+import { OrdonnanceurService } from "./me/ordonnanceur.service.js";
 import { TrackingService } from "./tracking/tracking.service.js";
 import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
 import { PostHogAdapter } from "./tracking/posthog.adapter.js";
 
 @Module({
+  /* Le déclencheur périodique de l'ordonnanceur. Il tourne DANS le processus
+     plutôt que par un cron externe : le dépôt se déploie en un conteneur, et un
+     déclencheur externe demanderait un chemin HTTP qu'il faudrait protéger —
+     une porte de plus pour un besoin interne. Si le parc passe un jour à
+     plusieurs instances, les clés uniques de la file rendent les passages
+     concurrents inoffensifs. */
+  imports: [ScheduleModule.forRoot()],
   controllers: [
     AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, SecurityController, ConfigController, LegalController,
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
@@ -89,6 +102,11 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     // interrupteur d'arrêt. Ses exemptions vivent dans le garde.
     { provide: APP_GUARD, useClass: MaintenanceGuard },
     MaintenanceService,
+    DeroulementService,
+    ProgrammationService,
+    RelancesService,
+    EnvoiService,
+    OrdonnanceurService,
     // La mesure, derrière son port (§16.5). Sans clé PostHog et sans adhésion
     // explicite à la console, l'adaptateur ne fait RIEN — contrairement au
     // courrier, l'absence de mesure n'est pas une raison de refuser de
