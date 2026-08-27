@@ -1,6 +1,7 @@
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import {
   MODELES_IA, CLES_MODELES, CHAINES_PAR_DEFAUT, TACHES_IA,
+  ACTIONS_PAYANTES, CODES_ACTIONS_PAYANTES,
   type TacheIA,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -23,6 +24,20 @@ export class CatalogueIAService implements OnModuleInit {
   async reconcilier(): Promise<void> {
     await this.semerLesModeles();
     for (const tache of TACHES_IA) await this.semerLaChaine(tache);
+    await this.semerLesActions();
+  }
+
+  /* Les actions payantes. Même règle que partout : `skipDuplicates`, donc un
+     prix réglé en administration survit au déploiement. Sans ce semis, aucune
+     génération n'est facturable — ActionRun exige une action existante. */
+  private async semerLesActions(): Promise<void> {
+    await this.prisma.premiumAction.createMany({
+      data: CODES_ACTIONS_PAYANTES.map((code) => {
+        const a = ACTIONS_PAYANTES[code]!;
+        return { code, label: a.libelle, creditCost: a.cout };
+      }),
+      skipDuplicates: true,
+    });
   }
 
   /* `skipDuplicates` : une ligne déjà présente n'est JAMAIS touchée. Sans ça,

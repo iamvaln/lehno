@@ -12,6 +12,7 @@ import {
   CreditsController, CreditsService, ReferralController, InvitationController,
 } from "./onboarding/credits.controller.js";
 import { FlagsService } from "./flags/flags.service.js";
+import { AttributsService } from "./me/attributs.service.js";
 import { CatalogueIAService } from "./ia/catalogue.service.js";
 import { RouteurIAService } from "./ia/routeur.service.js";
 import { construireAdaptateurs, FOURNISSEURS_IA } from "./ia/adaptateurs/index.js";
@@ -189,6 +190,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     SignupService,
     CreditsService,
     FlagsService,
+    AttributsService,
     CatalogueIAService,
     RouteurIAService,
     // Construits une fois, au démarrage : les instancier à chaque génération
