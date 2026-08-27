@@ -283,6 +283,9 @@ Deux rôles. Le premier suffit à l'assistance quotidienne ; le second ouvre les
 - Ajuster manuellement un solde de crédits ; déclencher un remboursement ; lever le blocage anti-fraude d'un remboursement ; confirmer manuellement un paiement en attente.
 - Effacer un compte sans attendre la fin du délai de grâce.
 - Consulter le journal d'audit et gérer les accès des administrateurs.
+- **Sortir une liste en fichier** — comptes, paiements, mouvements de crédits, connexions, journal d'audit.
+
+**Ce que le support ne sort pas.** Aucune liste ne s'exporte depuis son compte, **pas même celles qu'il consulte**. Voir une liste et pouvoir la sortir sont deux choses : la première est une lecture bornée par l'écran, que l'on quitte en fermant l'onglet ; la seconde produit un fichier qui part de l'outil et qu'on ne rappelle plus. C'est le geste qu'on borne, pas la lecture — le support garde tout ce que la liste ci-dessus lui accorde.
 
 **Ce que le support ne voit pas.** La famille **Économie** — paramètres, modèles d'IA, studio du portrait, offres — reste hors de sa navigation. Ce sont les leviers qui engagent le service et ses coûts.
 
@@ -295,7 +298,7 @@ Deux rôles. Le premier suffit à l'assistance quotidienne ; le second ouvre les
 - **Mise en page** — conçue pour l'ordinateur, largeurs de tableau ajustables, et lisible sur une tablette pour dépanner en déplacement.
 - **Langue** — l'interface suit la langue de l'administrateur, français ou anglais.
 - **Confirmation et motif** — toute action irréversible ou sensible demande une confirmation explicite et un motif, repris dans le journal d'audit.
-- **Export** — les listes filtrées s'exportent, pour l'analyse ou la conformité.
+- **Export** — les listes filtrées s'exportent, pour l'analyse ou la conformité, **et pour les administrateurs seuls** (§6). Le fichier emporte exactement les filtres de l'écran : reconstruire la requête à côté ferait dire au fichier autre chose qu'à la liste.
 - **États vides et chargement** — mêmes principes que les autres surfaces : dire ce qui manque, et orienter.
 - **Traçabilité visible** — sur chaque objet, l'historique des interventions est consultable depuis son détail.
 
