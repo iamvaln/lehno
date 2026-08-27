@@ -5,6 +5,7 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 import { AdminTokenService } from "../src/admin/admin-token.service.js";
+import type { Metriques } from "@lehno/contracts";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
@@ -43,6 +44,19 @@ describe("administration — les métriques", () => {
 
   const metriques = (entete: Record<string, string>, periode?: string) =>
     fetch(`${baseUrl}/v1/admin/metrics${periode ? `?periode=${periode}` : ""}`, { headers: entete });
+
+  /** La forme se dit une fois : la répéter à chaque lecture la ferait diverger. */
+  const lire = async (reponse: Response): Promise<Metriques> =>
+    (await reponse.json()) as Metriques;
+
+  /** La cohorte d'une taille donnée. Absente, on échoue en le disant : un
+   *  `undefined` traversant l'assertion rendrait « expected undefined to be 1 »,
+   *  qui ne dit pas que la cohorte manque. */
+  const cohorteDe = (donnees: Metriques, inscrits: number) => {
+    const cohorte = donnees.retention.cohortes.find((c) => c.inscrits === inscrits);
+    if (!cohorte) throw new Error(`aucune cohorte de ${inscrits} entrées`);
+    return cohorte;
+  };
 
   let n = 0;
   const compte = (ilYAJours: number) => {
@@ -105,7 +119,7 @@ describe("administration — les métriques", () => {
 
   it("prend trente jours quand rien n'est demandé", async () => {
     const { entete } = await session("admin");
-    expect((await (await metriques(entete)).json()).periode).toBe("30j");
+    expect((await lire(await metriques(entete))).periode).toBe("30j");
   });
 
   // ——— La rétention ———
@@ -116,9 +130,7 @@ describe("administration — les métriques", () => {
     await connexion(revenu.id, 36);
     await compte(40);
 
-    const { retention } = await (await metriques(entete)).json();
-    const cohorte = retention.cohortes.find((c: { inscrits: number }) => c.inscrits === 2);
-    expect(cohorte.actifsA7j).toBe(1);
+    expect(cohorteDe(await lire(await metriques(entete)), 2).actifsA7j).toBe(1);
   });
 
   // Une tentative ratée n'est pas un retour : elle dit qu'on a essayé, pas
@@ -129,8 +141,7 @@ describe("administration — les métriques", () => {
     const u = await compte(40);
     await connexion(u.id, 36, "failure");
 
-    const { retention } = await (await metriques(entete)).json();
-    expect(retention.cohortes.find((c: { inscrits: number }) => c.inscrits === 1).actifsA7j).toBe(0);
+    expect(cohorteDe(await lire(await metriques(entete)), 1).actifsA7j).toBe(0);
   });
 
   // Une connexion au-delà de la fenêtre compte à trente jours, pas à sept.
@@ -139,8 +150,7 @@ describe("administration — les métriques", () => {
     const u = await compte(60);
     await connexion(u.id, 40);
 
-    const { retention } = await (await metriques(entete)).json();
-    const c = retention.cohortes.find((x: { inscrits: number }) => x.inscrits === 1);
+    const c = cohorteDe(await lire(await metriques(entete)), 1);
     expect([c.actifsA7j, c.actifsA30j]).toEqual([0, 1]);
   });
 
@@ -151,8 +161,8 @@ describe("administration — les métriques", () => {
     const { entete } = await session("admin");
     await compte(200);
 
-    const court = await (await metriques(entete, "7j")).json();
-    const long = await (await metriques(entete, "12m")).json();
+    const court = await lire(await metriques(entete, "7j"));
+    const long = await lire(await metriques(entete, "12m"));
     expect(court.retention.cohortes).toEqual(long.retention.cohortes);
   });
 
@@ -165,7 +175,7 @@ describe("administration — les métriques", () => {
     await paiement(paye.id, 8);
     await paiement(attend.id, 8, "pending");
 
-    const { conversion } = await (await metriques(entete)).json();
+    const { conversion } = await lire(await metriques(entete));
     expect([conversion.comptes, conversion.acheteurs]).toEqual([2, 1]);
   });
 
@@ -173,7 +183,7 @@ describe("administration — les métriques", () => {
     const { entete } = await session("admin");
     await compte(10);
 
-    const { conversion } = await (await metriques(entete)).json();
+    const { conversion } = await lire(await metriques(entete));
     expect(conversion.delaiMedianJours).toBeNull();
   });
 
@@ -189,7 +199,7 @@ describe("administration — les métriques", () => {
 
     // Sur douze mois : les trois comptes datent de quarante jours, et une
     // fenêtre de trente les laisserait dehors.
-    const { conversion } = await (await metriques(entete, "12m")).json();
+    const { conversion } = await lire(await metriques(entete, "12m"));
     expect(conversion.delaiMedianJours).toBeCloseTo(2, 0);
   });
 
@@ -199,7 +209,7 @@ describe("administration — les métriques", () => {
     const u = await compte(10);
     await paiement(u.id, 8, "succeeded", petit.id);
 
-    const { conversion } = await (await metriques(entete)).json();
+    const { conversion } = await lire(await metriques(entete));
     expect(conversion.parPalier).toEqual([{ credits: 500, achats: 1 }]);
   });
 
@@ -211,7 +221,7 @@ describe("administration — les métriques", () => {
     await mouvement(u.id, -30, "consumption", 5);
     await mouvement(u.id, -12, "consumption", 5);
 
-    const { consommation } = await (await metriques(entete)).json();
+    const { consommation } = await lire(await metriques(entete));
     expect(consommation).toEqual({ credits: 42, mouvements: 2 });
   });
 
@@ -220,7 +230,7 @@ describe("administration — les métriques", () => {
     const u = await compte(10);
     await mouvement(u.id, 1000, "purchase", 5);
 
-    const { consommation } = await (await metriques(entete)).json();
+    const { consommation } = await lire(await metriques(entete));
     expect(consommation).toEqual({ credits: 0, mouvements: 0 });
   });
 
@@ -229,8 +239,8 @@ describe("administration — les métriques", () => {
     const u = await compte(200);
     await mouvement(u.id, -50, "consumption", 120);
 
-    const court = await (await metriques(entete, "30j")).json();
-    const long = await (await metriques(entete, "12m")).json();
+    const court = await lire(await metriques(entete, "30j"));
+    const long = await lire(await metriques(entete, "12m"));
     expect([court.consommation.credits, long.consommation.credits]).toEqual([0, 50]);
   });
 
@@ -242,7 +252,7 @@ describe("administration — les métriques", () => {
   // production (écart H).
   it("déclare les trois contenus qu'il ne sait pas encore mesurer", async () => {
     const { entete } = await session("admin");
-    const { manques } = await (await metriques(entete)).json();
+    const { manques } = await lire(await metriques(entete));
     expect(manques.sort()).toEqual(
       ["contributions", "issue_des_actions", "usage_par_fonctionnalite"],
     );

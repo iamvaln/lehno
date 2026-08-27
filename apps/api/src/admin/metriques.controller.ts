@@ -9,14 +9,19 @@ import { RoleGuard } from "./role.guard.js";
 /** Les périodes proposées, et ce qu'elles valent en jours. Une liste fermée :
  *  « choisir la période » (ux-admin §5.11) est un geste de lecture, pas la
  *  construction d'un intervalle libre que rien n'indexe. */
-const JOURS: Record<string, number> = { "7j": 7, "30j": 30, "90j": 90, "12m": 365 };
+const JOURS = { "7j": 7, "30j": 30, "90j": 90, "12m": 365 } as const;
 
-const PERIODE_DEFAUT = "30j";
+/** Le type se déduit de la table plutôt que d'être redit à côté : deux listes
+ *  de périodes finiraient par diverger, et l'une d'elles rendrait `undefined`
+ *  là où l'autre promet un nombre. */
+export type Periode = keyof typeof JOURS;
+
+const PERIODE_DEFAUT: Periode = "30j";
 
 /** Les cohortes couvrent toujours les douze derniers mois. */
 const MOIS_DE_COHORTES = 11;
 
-const requeteSchema = z.object({
+export const requeteMetriquesSchema = z.object({
   periode: z.enum(["7j", "30j", "90j", "12m"]).optional(),
 }).strict();
 
@@ -41,7 +46,7 @@ type LignePalier = { credits: number; achats: number };
 export class MetriquesService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async etat(requete: z.infer<typeof requeteSchema>) {
+  async etat(requete: z.infer<typeof requeteMetriquesSchema>) {
     const periode = requete.periode ?? PERIODE_DEFAUT;
     const depuis = new Date(Date.now() - JOURS[periode] * 24 * 60 * 60_000);
 
@@ -116,6 +121,9 @@ export class MetriquesService {
    * croire à un cycle d'achat long qui n'existe pour personne.
    */
   private async conversion(depuis: Date): Promise<LigneConversion> {
+    // `percentile_cont` sur un ensemble vide rend `null`, et un `SELECT` sans
+    // `FROM` rend toujours une ligne : le tableau n'est jamais vide. Le typage
+    // ne peut pas le savoir, d'où la valeur de repli — qui ne sert jamais.
     const [ligne] = await this.prisma.$queryRaw<LigneConversion[]>`
       WITH comptes AS (
         SELECT u.id, u.created_at FROM "user" u WHERE u.created_at >= ${depuis}
@@ -132,7 +140,7 @@ export class MetriquesService {
              (SELECT percentile_cont(0.5) WITHIN GROUP (
                 ORDER BY EXTRACT(EPOCH FROM (pr.premier - pr.created_at)) / 86400)
               FROM premiers pr) AS "delai"`;
-    return ligne;
+    return ligne ?? { comptes: 0, acheteurs: 0, delai: null };
   }
 
   /** Le palier se désigne par ses crédits ; la phrase appartient à l'écran, qui
@@ -172,7 +180,7 @@ export class MetriquesController {
    *  fermée, et elle l'est dans `exports.controller.ts`. Voir une liste et
    *  pouvoir la sortir sont deux choses. */
   @Get("metrics")
-  etat(@Query(new ZodValidationPipe(requeteSchema)) requete: z.infer<typeof requeteSchema>) {
+  etat(@Query(new ZodValidationPipe(requeteMetriquesSchema)) requete: z.infer<typeof requeteMetriquesSchema>) {
     return this.service.etat(requete);
   }
 }

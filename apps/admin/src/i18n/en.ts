@@ -974,6 +974,54 @@ export const en: typeof fr = {
     formulaire: "Configuration form",
   },
 
+  metriques: {
+    titre: "Metrics",
+    sous: "Usage beyond the dashboard figures.",
+    periode: "Period",
+    periodes: { j7: "7 days", j30: "30 days", j90: "90 days", m12: "12 months" },
+    retention: {
+      titre: "Retention",
+      sous: "What becomes of each month of arrivals. Always twelve months, whatever period is chosen: over a shorter window the thirty-day column could only show zeros, and those zeros would read as churn.",
+      col: { mois: "Month joined", inscrits: "Joined", a7: "Back within 7 days", a30: "Back within 30 days" },
+      vide: "No arrivals over the past twelve months.",
+    },
+    conversion: {
+      titre: "Conversion",
+      sous: "The share of an intake that ends up buying. Revenue itself is on the dashboard.",
+      comptes: "Accounts joined",
+      acheteurs: "Bought",
+      delai: "Median time to first purchase",
+      sansDelai: "No one has bought yet",
+      jours: "{n} d",
+      paliers: "Purchases by bundle",
+      colPalier: "Bundle",
+      colAchats: "Purchases",
+      credits: "{n} credits",
+      sansPalier: "No purchase tied to a bundle over this period.",
+    },
+    consommation: {
+      titre: "Consumption",
+      credits: "Credits used",
+      mouvements: "Movements",
+    },
+    manques: {
+      titre: "What cannot be measured yet",
+      sous: "Three of the five contents of this section have no source in this repository. They are named here rather than rendered as empty rows: an unexplained zero reads as a measurement.",
+      usage_par_fonctionnalite: {
+        quoi: "Usage by feature",
+        bloque: "Tracking goes out to the analytics tool with nothing kept here.",
+      },
+      issue_des_actions: {
+        quoi: "Paid action runs and their outcome",
+        bloque: "The run ledger does not exist in the database yet.",
+      },
+      contributions: {
+        quoi: "Contributions received and approved",
+        bloque: "The public surfaces that produce them are not built.",
+      },
+    },
+  },
+
   attente: {
     titre: "Section on the way",
     texte: "Batch 1 covers the dashboard, users, credits, settings and the audit log. This section comes next.",
