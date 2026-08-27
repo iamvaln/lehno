@@ -13,6 +13,8 @@ import {
 } from "./onboarding/credits.controller.js";
 import { FlagsService } from "./flags/flags.service.js";
 import { CatalogueIAService } from "./ia/catalogue.service.js";
+import { RouteurIAService } from "./ia/routeur.service.js";
+import { construireAdaptateurs, FOURNISSEURS_IA } from "./ia/adaptateurs/index.js";
 import { FeatureGuard } from "./flags/feature.guard.js";
 import { MeFeaturesController, PublicFeaturesController } from "./flags/features.controller.js";
 import { AuthService } from "./auth/auth.service.js";
@@ -188,6 +190,11 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     CreditsService,
     FlagsService,
     CatalogueIAService,
+    RouteurIAService,
+    // Construits une fois, au démarrage : les instancier à chaque génération
+    // relirait l'environnement à chaque appel, et un fournisseur retiré à chaud
+    // disparaîtrait sans qu'aucun journal ne le dise.
+    { provide: FOURNISSEURS_IA, useFactory: () => construireAdaptateurs() },
     FeatureGuard,
     ProfileService,
     TenantRepository,

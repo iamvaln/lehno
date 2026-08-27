@@ -48,6 +48,12 @@ export type EntreeModele = {
 /* Le catalogue. La clé est « fournisseur:modèle » — c'est l'unicité que porte
    la base, et s'en écarter ici créerait un doublon au premier démarrage.
 
+   Les clés sont celles que les API DÉCLARENT — vérifiées en interrogeant
+   /v1/models, pas recopiées d'une documentation. « grok-4 » et « grok-2-image »
+   y figuraient d'abord : le premier répond par alias, le second n'existe pas du
+   tout et rendait 404. Une clé de modèle inventée ne se voit qu'au premier
+   appel réel, c'est-à-dire chez l'utilisateur.
+
    AUCUN TARIF n'est déclaré. Les prix changent sans nous prévenir, et un tarif
    périmé dans le code produirait des estimations de coût qui ont l'air de faire
    foi. Non tarifé veut dire « on ne sait pas », et l'administration le voit. */
@@ -57,8 +63,8 @@ export const MODELES_IA: Record<string, EntreeModele> = {
   "anthropic:claude-haiku-4-5-20251001": { fournisseur: "anthropic", modele: "claude-haiku-4-5-20251001", capacite: "text" },
   "deepseek:deepseek-chat": { fournisseur: "deepseek", modele: "deepseek-chat", capacite: "text" },
   "deepseek:deepseek-reasoner": { fournisseur: "deepseek", modele: "deepseek-reasoner", capacite: "text" },
-  "xai:grok-4": { fournisseur: "xai", modele: "grok-4", capacite: "text" },
-  "xai:grok-2-image": { fournisseur: "xai", modele: "grok-2-image", capacite: "image" },
+  "xai:grok-4.6": { fournisseur: "xai", modele: "grok-4.6", capacite: "text" },
+  "xai:grok-imagine-image": { fournisseur: "xai", modele: "grok-imagine-image", capacite: "image" },
   "openai:gpt-image-1": { fournisseur: "openai", modele: "gpt-image-1", capacite: "image" },
 };
 
@@ -82,7 +88,7 @@ export const CHAINES_PAR_DEFAUT: Record<TacheIA, readonly string[]> = {
   note_classification: [
     "anthropic:claude-haiku-4-5-20251001",
     "deepseek:deepseek-chat",
-    "xai:grok-4",
+    "xai:grok-4.6",
   ],
   sensitive_detection: [
     "anthropic:claude-sonnet-5",
@@ -97,10 +103,10 @@ export const CHAINES_PAR_DEFAUT: Record<TacheIA, readonly string[]> = {
   gift_ideas: [
     "anthropic:claude-sonnet-5",
     "deepseek:deepseek-chat",
-    "xai:grok-4",
+    "xai:grok-4.6",
   ],
-  illustration: ["xai:grok-2-image", "openai:gpt-image-1"],
-  photo_style: ["xai:grok-2-image", "openai:gpt-image-1"],
+  illustration: ["xai:grok-imagine-image", "openai:gpt-image-1"],
+  photo_style: ["xai:grok-imagine-image", "openai:gpt-image-1"],
 };
 
 /* Le disjoncteur. Trois échecs D'AFFILÉE écartent un modèle pour cinq minutes.
