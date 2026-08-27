@@ -154,3 +154,29 @@ Deux sections nouvelles dans la famille Économie : **§5.7 Fonctionnalités**, 
 - Le **fournisseur** du traitement d'image et sa politique de conservation — une photo de tiers ne peut pas servir à entraîner un modèle.
 - Le **délai d'attente de la notification** avant bascule sur l'interrogation, et le délai d'expiration — à caler sur chaque opérateur.
 - Le **mécanisme de chiffrement au repos** des numéros mobile money, et la rotation de sa clé.
+
+---
+
+## Les modèles d'IA : catalogue, chaîne par tâche, disjoncteur
+
+**Livré.** Ce qui suit décrit ce qui existe, pour que personne ne le refasse autrement à côté.
+
+**Le registre vit dans le code** (`packages/contracts/src/ia.ts`), l'état en base — même partage que les drapeaux. Sans registre, un serveur neuf démarre avec un catalogue vide et aucune génération ne fonctionne tant qu'un humain n'a rien saisi. La réconciliation au démarrage **crée ce qui manque et ne touche jamais** une ligne existante.
+
+**Une chaîne se sème entière ou pas du tout.** Compléter rang par rang serait pire que ne rien faire : la base porte une unicité sur (tâche, rang), donc insérer un rang 1 par défaut sur une chaîne réordonnée réussirait **dans le trou laissé par un déclassement** et remettrait en tête le modèle qu'on venait d'écarter. Même raison à l'écriture : on efface et on réécrit dans la même transaction.
+
+**Deux interrupteurs qui n'écrivent pas au même endroit.** `enabled` appartient à l'administration ; `outageUntil` et `consecutiveFailures` au disjoncteur. Les confondre casse dans les deux sens — la reprise automatique rallumerait un modèle volontairement coupé, et le disjoncteur redéclasserait celui que l'admin vient de promouvoir.
+
+**Un refus n'est pas une panne.** `refused` ne déclenche **pas** de repli : le modèle suivant refusera la même demande, et on aurait payé le même non autant de fois qu'il y a de rangs. Il ne compte pas non plus dans les échecs consécutifs — le fournisseur va très bien.
+
+**Un compte à sec est une panne, pas un refus.** Éprouvé en vrai : DeepSeek le dit en `402`, OpenAI en `400` avec « billing hard limit ». Ce `400` serait tombé dans la branche du refus, donc sans repli, alors qu'un compte à sec est exactement le cas où un autre fournisseur doit prendre le relais.
+
+**Une ligne `AIUsage` par tentative, échouée comprise.** Sans les échecs, les pannes seraient gratuites dans les statistiques et une chaîne qui se replie systématiquement aurait l'air parfaite tout en coûtant le double. Le modèle y est **référencé et recopié** : la copie survit à un catalogue qu'on nettoie.
+
+**Le repli ne vaut que pour ce qui tourne sans témoin** — arrière-plan et générations d'utilisateur. Les essais d'administration appellent le modèle demandé, ou échouent en le nommant.
+
+**Deux champs manquent encore à `AIUsage`** : `origin` et un lien vers ce qui a déclenché l'appel. Sans eux, la facture des essais se confond avec celle de la production. **À poser avant la première génération facturée** — le rattachement ne se reconstitue pas après coup.
+
+**Aucune clé d'API n'est obligatoire au démarrage**, contrairement au courrielleur : l'API sert les proches, les dates et les rappels sans aucune IA. Un fournisseur sans clé n'est pas construit — l'inscrire quand même le ferait échouer à chaque appel et afficher « momentanément injoignable » sur un modèle jamais joignable.
+
+**Les clés de modèle viennent de `/v1/models`, interrogé — pas d'une documentation recopiée.** Une clé inventée ne se voit qu'au premier appel réel, c'est-à-dire chez l'utilisateur.

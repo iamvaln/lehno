@@ -158,3 +158,20 @@ L'application déclare les chemins qu'elle prend en charge. **Trois cas** :
 **Le décompte** — `J−3` en français, `3 days` en anglais. **La notation n'est pas arrêtée** : elle sera éprouvée par un test utilisateur, avec l'hypothèse d'une forme valable dans les deux langues. Un composant qui la fabrique fige une décision qui n'est pas prise.
 
 **Deux points relevés par le port**, à porter aussi côté kit web : les **guillemets sont de la copy** (`« … »` ne sont pas ceux de l'anglais), et la couleur d'icône ne s'hérite pas en React Native.
+
+---
+
+## L'accueil, et ce qui arrive quand une génération échoue
+
+**`/me/home` figure enfin au contrat.** Il était servi depuis le début sans y être déclaré. Rien ne change côté serveur ; ce qui change, c'est que vous pouvez le lire dans `openapi.json` au lieu de le deviner.
+
+Deux pièges y sont écrits, et tous deux se trompent en silence :
+
+- **`counts` ne se déduit pas de `occurrences`.** La liste est plafonnée à **trois** cartes ; les décomptes sont faits séparément, sur la table entière. Compter les éléments rendus annoncerait **moins** d'échéances qu'il n'y en a — une erreur qui va toujours dans le même sens, et qu'on ne remarque pas.
+- **`hasPersons` distingue les deux états vides.** « Le carnet est vide » et « le carnet est plein mais rien n'approche » rendent tous deux `occurrences: []`. Le libellé du bouton principal en dépend.
+
+**Un code d'erreur nouveau : `generation_unavailable`, en `503`.** Aucun modèle ne peut répondre pour cette tâche.
+
+**Ne masquez rien.** Ce n'est pas `maintenance` : l'API va bien, seul un fournisseur tiers ne répond pas, et le reste de l'application fonctionne. Proposez de réessayer, et **dites que les crédits n'ont pas été débités** — c'est la première question de qui vient de voir échouer ce qu'il a payé.
+
+Jamais « une erreur est survenue » : rien n'a échoué du côté de l'utilisateur.

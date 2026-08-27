@@ -133,4 +133,10 @@ Le domaine sert les fichiers d'association ; l'application déclare les chemins 
 - Les **schémas détaillés** de requête et de réponse, ressource par ressource.
 - Les **noms des trois styles de photo** du portrait.
 
+**Un code nouveau : `generation_unavailable`, en `503`.** Aucun modèle d'IA ne peut répondre — la chaîne de la tâche est vide, ou tous ses rangs ont échoué. **503 et non 500** : l'API va bien, c'est un fournisseur tiers qui ne répond pas, et la demande vaudra encore dans cinq minutes.
+
+À distinguer de `maintenance`, qui porte le même statut et dit tout autre chose : là, c'est **l'API** qui est arrêtée. Ici le reste de l'application fonctionne, et **l'écran ne doit pas se masquer**. Un refus du modèle ne porte pas ce code : ce n'est pas une indisponibilité, et réessayer donnerait le même non.
+
+**`/me/home` est désormais publié.** Il était servi depuis le début sans figurer au contrat — donc sans exister pour qui le lit. Deux pièges y sont maintenant écrits : `counts` ne se déduit **pas** de `occurrences` (la liste est plafonnée à trois), et `hasPersons` distingue les deux états vides, que le client ne peut pas départager puisque tous deux rendent une liste vide.
+
 **Le contrat publié fait autorité.** `docs/api/openapi.json` est engendré depuis les schémas de validation ; en cas d'écart avec un document écrit à la main, il l'emporte.
