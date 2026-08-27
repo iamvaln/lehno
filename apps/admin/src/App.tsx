@@ -54,9 +54,13 @@ import {
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
+  profilAdminSchema,
+  type Intervention,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
-import { interventions, profil } from "./fixtures/index.js";
+// Les données d'aperçu ne servent qu'à la bande de développement. Un écran
+// branché ne s'en approche pas : ce qu'il montre vient du serveur ou n'est pas
+// montré du tout.
 import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
@@ -252,6 +256,7 @@ export function App(): ReactNode {
   const [tourDrapeaux, setTourDrapeaux] = useState(0);
   const [tourCredits, setTourCredits] = useState(0);
   const [tourAcces, setTourAcces] = useState(0);
+  const [tourProfil, setTourProfil] = useState(0);
   const [tourAssistance, setTourAssistance] = useState(0);
   const [ongletAssistance, setOngletAssistance] = useState<"demandes" | "contact" | "attente" | "retours">("demandes");
   const [filtreAssistance, setFiltreAssistance] = useState("tous");
@@ -328,6 +333,41 @@ export function App(): ReactNode {
       : Promise.resolve(null)),
     [section, ouvert],
   );
+
+  /**
+   * La traçabilité du compte ouvert — « sur chaque objet, l'historique des
+   * interventions est consultable depuis son détail » (ux-admin §7).
+   *
+   * Réservée aux administrateurs, comme le journal dont elle est une vue : le
+   * serveur refuse la lecture au support, et la demander lui vaudrait un 403 à
+   * chaque fiche ouverte. La fiche, elle, reste ouverte aux deux — c'est le
+   * pied de page qui disparaît.
+   */
+  const etatTracabilite = useRessource(
+    () => (section === "comptes" && ouvert && role === "admin"
+      ? api.appeler(`/admin/audit-log?targetType=user&targetId=${ouvert}`, { schema: pageAuditSchema })
+      : Promise.resolve(null)),
+    [section, ouvert, role],
+  );
+
+  /**
+   * Du journal vers le pied de fiche.
+   *
+   * Le journal ne porte pas de nom d'auteur : `actorId` n'est pas une clé
+   * étrangère, pour qu'une trace survive au compte qu'elle décrit. On dit donc
+   * la qualité — « Administration », « Utilisateur » — plutôt que d'inventer un
+   * nom ou d'afficher un identifiant que personne ne reconnaît.
+   */
+  const versIntervention = (trace: TraceAudit): Intervention => ({
+    id: trace.id,
+    date: quand(trace.date, langue),
+    auteur: t.journal.acteurs[trace.acteurType],
+    // Le code brut quand le libellé manque : une action qu'on vient d'ajouter
+    // se lit mal, mais elle se lit — et l'absence se voit.
+    action: t.journal.filtres.actions[trace.action as keyof typeof t.journal.filtres.actions] ?? trace.action,
+    objet: trace.cibleId ?? "",
+    motif: trace.motif ?? t.journal.sansMotif,
+  });
 
   const etatParametres = useRessource(
     () => (section === "parametres"
@@ -522,9 +562,41 @@ export function App(): ReactNode {
     [section, tourAcces],
   );
 
+  const etatProfil = useRessource(
+    () => (section === "profil"
+      ? api.appeler("/admin/me", { schema: profilAdminSchema })
+      : Promise.resolve(null)),
+    [section, tourProfil],
+  );
+
   let vue: ReactNode;
   if (section === "profil") {
-    vue = <Profil profil={profil} langue={langue} />;
+    vue = (
+      <Ressource
+        etat={etatProfil}
+        t={t}
+        enfant={(moi) => (moi ? (
+          <Profil
+            profil={moi}
+            langue={langue}
+            // La page retire les lignes fermées de ce qu'elle montre ; on relit
+            // quand même, pour que ce qui reste vienne du serveur et non d'une
+            // soustraction faite de notre côté.
+            onFermerSessions={() => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/me/sessions", { methode: "DELETE" });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourProfil((n) => n + 1);
+                }
+              })();
+            }}
+          />
+        ) : null)}
+      />
+    );
   } else if (section === "comptes" && ouvert) {
     vue = (
       <Ressource
@@ -535,7 +607,12 @@ export function App(): ReactNode {
             role={role}
             langue={langue}
             compte={compte}
-            interventions={interventions.items}
+            // Le pied de page ne bloque pas la fiche : tant que le journal
+            // n'est pas revenu — ou s'il a échoué — la fiche se lit, avec un
+            // historique vide. L'inverse ferait attendre le compte pour son
+            // annexe.
+            interventions={(etatTracabilite.statut === "pret" ? etatTracabilite.donnees?.items ?? [] : [])
+              .map(versIntervention)}
             onRetour={() => setOuvert(null)}
           />
         ) : null)}
@@ -808,7 +885,16 @@ export function App(): ReactNode {
             colonnes={[
               { cle: "date", titre: t.journal.col.date, largeur: 190, rendu: (l) => quand(l.date, langue) },
               { cle: "acteurType", titre: t.journal.col.acteur, largeur: 150, rendu: (l) => t.journal.acteurs[l.acteurType] },
-              { cle: "action", titre: t.journal.col.action },
+              {
+                cle: "action",
+                titre: t.journal.col.action,
+                // Le filtre proposait des libellés et la colonne rendait des
+                // codes : on filtrait sur « Ajustement d'un solde » pour
+                // obtenir des lignes disant `credit_adjustment`. Le code brut
+                // reste le repli — une action qu'on vient d'ajouter se lit mal,
+                // mais elle se lit, et son absence du dictionnaire se voit.
+                rendu: (l) => t.journal.filtres.actions[l.action as keyof typeof t.journal.filtres.actions] ?? l.action,
+              },
               {
                 cle: "motif",
                 titre: t.journal.col.motif,
@@ -1098,7 +1184,10 @@ export function App(): ReactNode {
         }
         topbar={
           <Topbar
-            compte="sam@lehno.app"
+            // L'adresse du compte connecté, portée par la session depuis
+            // l'entrée. Une adresse écrite en dur montrait ici le compte de
+            // quelqu'un d'autre à tout le monde.
+            compte={api.session()?.email ?? ""}
             role={role}
             langue={langue}
             onLangue={setLangue}

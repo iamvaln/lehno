@@ -121,7 +121,7 @@ describe("Liste — le gabarit des quinze sections", () => {
 
 describe("Detail — un compte, ses faces, sa traçabilité", () => {
   it("rend l'historique des interventions en pied de page", () => {
-    render(<Detail role="admin" />);
+    render(<Detail role="admin" interventions={interventions.items} />);
 
     // L'historique est la seule liste ordonnée de la page : ce qu'il porte se
     // lit là, avec son motif — un journal sans raison ne prouve rien.
@@ -136,7 +136,7 @@ describe("Detail — un compte, ses faces, sa traçabilité", () => {
   // Spec §6 : le journal d'audit est réservé à l'administrateur. Le prototype
   // l'ouvrait au support ; c'est la spec qui tranche.
   it("garde le journal d'audit hors de portée du support", () => {
-    render(<Detail role="support" />);
+    render(<Detail role="support" interventions={interventions.items} />);
 
     expect(screen.queryByText(interventions.items[0]!.action)).not.toBeInTheDocument();
     expect(screen.queryByText(fr.audit.titre)).not.toBeInTheDocument();

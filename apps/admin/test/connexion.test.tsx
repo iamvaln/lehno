@@ -293,7 +293,7 @@ describe("le renvoi d'un code", () => {
 
 describe("mon profil", () => {
   it("rend le compte, son rôle et ce que ce rôle ouvre", () => {
-    render(<Profil />);
+    render(<Profil profil={profilDemo} />);
 
     expect(screen.getByRole("heading", { level: 1, name: fr.profil.titre })).toBeInTheDocument();
     expect(screen.getAllByText(profilDemo.email).length).toBeGreaterThan(0);
@@ -311,12 +311,13 @@ describe("mon profil", () => {
   });
 
   it("rend les sessions ouvertes et marque celle d'ici", () => {
-    render(<Profil />);
+    render(<Profil profil={profilDemo} />);
 
     const table = screen.getByRole("table");
     expect(within(table).getAllByRole("row")).toHaveLength(profilDemo.sessions.length + 1);
     for (const session of profilDemo.sessions) {
-      expect(within(table).getByText(session.appareil, { exact: false })).toBeInTheDocument();
+      // L'appareil peut manquer — une session ouverte avant qu'on le trace.
+      expect(within(table).getByText(session.appareil ?? fr.profil.inconnu, { exact: false })).toBeInTheDocument();
       expect(within(table).getByText(session.depuis)).toBeInTheDocument();
     }
     expect(within(table).getAllByText(fr.profil.ici)).toHaveLength(1);
@@ -324,7 +325,7 @@ describe("mon profil", () => {
 
   it("remonte à l'appelant les sessions fermées, et ne les montre plus", async () => {
     const onFermerSessions = vi.fn();
-    render(<Profil onFermerSessions={onFermerSessions} />);
+    render(<Profil profil={profilDemo} onFermerSessions={onFermerSessions} />);
 
     await cliquer(screen.getByRole("button", { name: fr.profil.fermer }));
 

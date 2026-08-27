@@ -45,6 +45,9 @@ describe("administration — les deux lectures de suivi", () => {
     fetch(`${baseUrl}/v1/admin/${chemin}`, { headers: entete });
 
   describe("le journal d'audit", () => {
+    const CIBLE = "11111111-1111-4111-8111-111111111111";
+    const AUTRE_CIBLE = "22222222-2222-4222-8222-222222222222";
+
     const consigner = (adminId: string, action: string, over: Record<string, unknown> = {}) =>
       db.prisma.auditLog.create({
         data: {
@@ -59,6 +62,79 @@ describe("administration — les deux lectures de suivi", () => {
     it("est refusé au support", async () => {
       const { entete } = await session("support");
       expect((await lire("audit-log", entete)).status).toBe(403);
+    });
+
+    /**
+     * « Sur chaque objet, l'historique des interventions est consultable depuis
+     * son détail » (ux-admin §7).
+     *
+     * Le pied de fiche d'un compte a rendu pendant tout le premier lot le même
+     * historique fabriqué pour tous : un défaut de props le fournissait, et
+     * aucun filtre par cible n'existait pour le remplacer.
+     */
+    describe("filtré sur une cible", () => {
+      it("ne rend que les gestes portés sur cet objet", async () => {
+        const { compte, entete } = await session("admin");
+        await consigner(compte.id, "user_status_update", { targetType: "user", targetId: CIBLE });
+        await consigner(compte.id, "credit_adjustment", { targetType: "user", targetId: AUTRE_CIBLE });
+        await consigner(compte.id, "parameter_update");
+
+        const res = await lire(`audit-log?targetType=user&targetId=${CIBLE}`, entete);
+        expect(res.status).toBe(200);
+        const page = pageAuditSchema.parse(await res.json());
+        expect(page.items).toHaveLength(1);
+        expect(page.items[0]?.cibleId).toBe(CIBLE);
+      });
+
+      // Les deux colonnes portent chacune leur part. Le type d'abord : sans lui,
+      // un identifiant partagé entre deux tables ramènerait des gestes portés
+      // sur autre chose que ce qu'on regarde.
+      it("le type de cible discrimine, à identifiant égal", async () => {
+        const { compte, entete } = await session("admin");
+        await consigner(compte.id, "user_status_update", { targetType: "user", targetId: CIBLE });
+        await consigner(compte.id, "payment_decision", { targetType: "payment", targetId: CIBLE });
+
+        const page = pageAuditSchema.parse(
+          await (await lire(`audit-log?targetType=user&targetId=${CIBLE}`, entete)).json(),
+        );
+        expect(page.items).toHaveLength(1);
+        expect(page.items[0]?.cibleType).toBe("user");
+      });
+
+      // L'identifiant ensuite : sans lui, deux comptes se confondraient, et la
+      // fiche de l'un montrerait les gestes portés sur l'autre.
+      it("l'identifiant discrimine, à type égal", async () => {
+        const { compte, entete } = await session("admin");
+        await consigner(compte.id, "user_status_update", { targetType: "user", targetId: CIBLE });
+        await consigner(compte.id, "credit_adjustment", { targetType: "user", targetId: AUTRE_CIBLE });
+
+        const page = pageAuditSchema.parse(await (await lire("audit-log?targetType=user", entete)).json());
+        expect(page.items).toHaveLength(2);
+      });
+
+      // 400 et non 422 : la maison réserve le second aux refus métier, et
+        // garde le premier pour un schéma qui ne tient pas.
+      it("refuse un identifiant qui n'est pas un uuid", async () => {
+        const { entete } = await session("admin");
+        expect((await lire("audit-log?targetType=user&targetId=pas-un-uuid", entete)).status).toBe(400);
+      });
+
+      // Le filtre se combine à ceux qui existaient : documenter un incident,
+      // c'est souvent « ce compte, ce mois-ci ».
+      it("se combine à la période", async () => {
+        const { compte, entete } = await session("admin");
+        await consigner(compte.id, "user_status_update", {
+          targetType: "user", targetId: CIBLE, createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        });
+        await consigner(compte.id, "credit_adjustment", { targetType: "user", targetId: CIBLE });
+
+        const depuis = new Date(Date.now() - 60_000).toISOString();
+        const page = pageAuditSchema.parse(
+          await (await lire(`audit-log?targetType=user&targetId=${CIBLE}&since=${depuis}`, entete)).json(),
+        );
+        expect(page.items).toHaveLength(1);
+        expect(page.items[0]?.action).toBe("credit_adjustment");
+      });
     });
 
     // Le contrat est la seule chose que les deux côtés partagent. Sans ce test,

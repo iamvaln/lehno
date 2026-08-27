@@ -26,7 +26,7 @@ export class AdminGuard implements CanActivate {
     if (!entete?.startsWith("Bearer "))
       throw new AppError("unauthorized", "missing bearer token");
 
-    const { adminId } = this.jetons.verifierAcces(entete.slice(7));
+    const { adminId, familyId } = this.jetons.verifierAcces(entete.slice(7));
 
     const admin = await this.prisma.admin.findUnique({
       where: { id: adminId },
@@ -37,7 +37,9 @@ export class AdminGuard implements CanActivate {
     if (!admin || !admin.isActive)
       throw new AppError("unauthorized", "no active admin for this token");
 
-    req.admin = { id: admin.id, role: admin.role };
+    // La lignée voyage avec l'appelant : c'est elle qui permet à « mon
+    // profil » de reconnaître la session d'où vient l'appel.
+    req.admin = { id: admin.id, role: admin.role, familyId };
     return true;
   }
 }

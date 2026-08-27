@@ -155,6 +155,13 @@ export const en: typeof fr = {
       touteLaPeriode: "All time",
       actions: {
         user_status_update: "Account state change",
+        admin_invite: "Administrator invited",
+        admin_role_update: "Administrator role changed",
+        admin_revoke: "Administrator access revoked",
+        ai_model_update: "AI model setting changed",
+        prompt_template_create: "Production template created",
+        prompt_template_activate: "Production template activated",
+        support_request_update: "Support request state changed",
         parameter_update: "Parameter change",
         feature_flag_update: "Feature toggle",
         credit_bundle_update: "Bundle change",
@@ -173,7 +180,7 @@ export const en: typeof fr = {
 
   entrees: {
     titre: "Sign-ins",
-    sous: "Successful entries and refused attempts. No IP address: it never reaches the database.",
+    sous: "Successful entries and refused attempts. The IP address is recorded but not shown here: it serves investigations, not everyday reading.",
     col: { date: "When", compte: "Account", adresse: "Address tried", resultat: "Result", appareil: "Device", lieu: "Approximate location" },
     resultats: { success: "Signed in", failure: "Refused" },
     inconnu: "—",
@@ -820,6 +827,8 @@ export const en: typeof fr = {
 
   profil: {
     titre: "My profile",
+    /** Stands in for a missing value — never an invented one. */
+    inconnu: "—",
     groupes: {
       compte: "Account",
       acces: "Access",

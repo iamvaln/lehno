@@ -55,13 +55,26 @@ export class AdminTokenService {
     return createHash("sha256").update(token).digest("hex");
   }
 
-  verifierAcces(token: string): { adminId: string } {
+  /**
+   * Le jeton porte la **lignée** dont il est né, pas seulement son sujet.
+   *
+   * Sans elle, « mon profil » ne peut pas dire laquelle des sessions ouvertes
+   * est celle d'où l'on regarde : deux appareils du même compte présentent des
+   * jetons indiscernables. La pastille « ici » se poserait au hasard, et
+   * « fermer les autres sessions » fermerait la sienne.
+   *
+   * La lignée n'ouvre rien par elle-même — c'est un identifiant de session, pas
+   * un secret. Un jeton émis avant cette version n'en porte pas ; il reste
+   * valide, et sa session ne se reconnaît simplement pas. Trente minutes plus
+   * tard, l'échange en aura remis une.
+   */
+  verifierAcces(token: string): { adminId: string; familyId: string | null } {
     try {
       const charge = jwt.verify(token, this.secret, { algorithms: [ALGORITHM] }) as {
-        sub: string; typ?: string;
+        sub: string; typ?: string; fam?: string;
       };
       if (charge.typ !== TYPE) throw new Error("mauvais type de jeton");
-      return { adminId: charge.sub };
+      return { adminId: charge.sub, familyId: charge.fam ?? null };
     } catch {
       throw new AppError("session_expired", "admin access token invalid or expired");
     }
@@ -87,7 +100,7 @@ export class AdminTokenService {
         ip: ip ?? null,
       },
     });
-    const accessToken = jwt.sign({ sub: adminId, typ: TYPE }, this.secret, {
+    const accessToken = jwt.sign({ sub: adminId, typ: TYPE, fam: familyId }, this.secret, {
       expiresIn: ACCESS_TTL_S, algorithm: ALGORITHM,
     });
     return { accessToken, refreshToken, expiresIn: ACCESS_TTL_S };

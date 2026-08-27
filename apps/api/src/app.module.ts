@@ -54,6 +54,7 @@ import { AdminPaymentsController, AdminCreditsController, AdminPaymentsService }
 import { PaymentListsController, PaymentListsService } from "./admin/payment-lists.controller.js";
 import { ExportsController, ExportsService } from "./admin/exports.controller.js";
 import { QueuesController, QueuesService } from "./admin/queues.controller.js";
+import { MeController, MeService } from "./admin/me.controller.js";
 import { AdminUsersController, AdminUsersService } from "./admin/users.controller.js";
 import { DeletionsController, DeletionsService } from "./admin/deletions.controller.js";
 import { LecturesController, LecturesService } from "./admin/lectures.controller.js";
@@ -74,7 +75,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, StudioController, MeController,
   ],
   providers: [
     PrismaService,
@@ -186,6 +187,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     PaymentListsService,
     ExportsService,
     QueuesService,
+    MeService,
     AdminUsersService,
     DeletionsService,
     LecturesService,

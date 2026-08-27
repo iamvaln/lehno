@@ -186,6 +186,13 @@ export const fr = {
       // posé ce geste.
       actions: {
         user_status_update: "Changement d'état d'un compte",
+        admin_invite: "Invitation d'un administrateur",
+        admin_role_update: "Changement de rôle d'un administrateur",
+        admin_revoke: "Révocation d'un accès d'administrateur",
+        ai_model_update: "Réglage d'un modèle d'IA",
+        prompt_template_create: "Création d'un gabarit de production",
+        prompt_template_activate: "Activation d'un gabarit de production",
+        support_request_update: "Changement d'état d'une demande d'assistance",
         parameter_update: "Modification d'un paramètre",
         feature_flag_update: "Bascule d'une fonctionnalité",
         credit_bundle_update: "Modification d'un palier",
@@ -204,7 +211,7 @@ export const fr = {
 
   entrees: {
     titre: "Connexions",
-    sous: "Les entrées réussies et les tentatives refusées. Sans adresse IP : elle ne descend pas en base.",
+    sous: "Les entrées réussies et les tentatives refusées. L'adresse IP est enregistrée mais ne se lit pas ici : elle sert aux investigations, pas à la lecture courante.",
     col: { date: "Quand", compte: "Compte", adresse: "Adresse tentée", resultat: "Résultat", appareil: "Appareil", lieu: "Lieu approximatif" },
     resultats: { success: "Entrée", failure: "Refusée" },
     inconnu: "—",
@@ -881,6 +888,8 @@ export const fr = {
 
   profil: {
     titre: "Mon profil",
+    /** Ce qu'on écrit à la place d'une valeur absente — jamais une valeur inventée. */
+    inconnu: "—",
     groupes: {
       compte: "Compte",
       acces: "Accès",

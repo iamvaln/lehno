@@ -367,3 +367,40 @@ donnerait à lire une pile qui n'existe pas.
 2. **L'hébergement n'a pas d'entrée.** Le VPS et la base sont bien réels, mais
    rien dans le dépôt ne nomme le fournisseur ni l'adresse de sa console. Une
    adresse inventée serait pire qu'une absence. À donner.
+
+---
+
+## H. Ce que le back-office affichait sans que ce soit vrai
+
+Quatre écrans rendaient des données inventées, en production. Aucun ne pouvait
+le signaler : la page se construisait, et ce qu'elle montrait avait l'air d'un
+compte.
+
+| Où | Ce qui s'affichait | Corrigé par |
+|---|---|---|
+| Mon profil | une fixture : adresse, rôle et sessions inventés, avec leurs IP | `GET /admin/me` |
+| Barre haute | `"sam@lehno.app"` **écrit en dur** | l'adresse portée par la session |
+| Traçabilité d'un compte | la même fixture d'historique pour tous | le journal filtré sur la cible |
+| Journal d'audit | les codes bruts, alors que son filtre proposait les libellés | le même dictionnaire des deux côtés |
+
+**Comment c'est entré.** Trois des quatre venaient d'un **défaut de props qui
+valait une fixture**. L'appelant avait oublié de le remplacer, et rien ne
+pouvait échouer — le défaut fournissait exactement ce qu'il fallait pour que la
+page se construise.
+
+Ce motif est refermé pour les deux écrans touchés : `profil` est désormais
+exigé, `interventions` vaut le tableau vide. **Il reste ailleurs** —
+`Detail.compte`, `Liste.comptes`, `Edition.parametres`, `Suppressions.demandes`
+gardent chacun une fixture par défaut. Aucun ne fuit aujourd'hui : leurs
+appelants passent tous des données réelles. Mais c'est la même porte, et c'est
+par là que les autres sont entrées.
+
+**Deux phrases fausses, corrigées avec.** « Sans adresse IP : elle ne descend
+pas en base », sous les connexions — elle y descend depuis le chantier des IP.
+Et le renvoi inventé à « la spécification technique §9 », qui vivait encore dans
+`packages/contracts` après avoir été retiré du contrôleur.
+
+**Ce qui reste ouvert.** Sept libellés d'action manquaient au dictionnaire du
+journal ; ils y sont. Rien ne garantit que le prochain code écrit par le serveur
+y arrive — l'outil ne peut pas lire les contrôleurs. Le repli affiche le code
+brut, ce qui rend l'absence visible sans la corriger.
