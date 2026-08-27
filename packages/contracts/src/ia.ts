@@ -82,6 +82,12 @@ export const CLES_MODELES = Object.keys(MODELES_IA);
  * utilisateur : un événement mal jugé fait envoyer un « bonne fête » sur un
  * anniversaire de décès. Elle est donc volontairement un cran au-dessus.
  *
+ * Un piège de coût, mesuré : sur une invite de cinq mots, grok-4.6 compte 642
+ * jetons d'entrée là où les modèles d'Anthropic en comptent 16. Sa consigne
+ * interne est facturée à chaque appel. Il reste en dernier rang du classement
+ * des notes — la tâche au plus gros volume — précisément pour ça : il n'y est
+ * appelé que si les deux autres sont tombés.
+ *
  * Les deux chaînes d'image n'ont que deux rangs. Ce n'est pas un oubli : parmi
  * les fournisseurs retenus, seuls xAI et OpenAI produisent des images. */
 export const CHAINES_PAR_DEFAUT: Record<TacheIA, readonly string[]> = {

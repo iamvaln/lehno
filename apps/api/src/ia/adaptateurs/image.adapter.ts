@@ -26,7 +26,14 @@ const DELAI_MS = 180_000;
  * deux API ont la même forme, ce sont leurs exigences qui divergent.
  *
  * Aucun compte de jetons : ces API facturent à l'image. Les jetons restent nuls
- * — « on ne sait pas », qui est la vérité, plutôt que zéro. */
+ * — « on ne sait pas », qui est la vérité, plutôt que zéro.
+ *
+ * ATTENTION À LA TAILLE. Mesuré sur une même invite : xAI rend ~130 Ko de
+ * base64, OpenAI ~1,8 Mo — treize fois plus. Le base64 pèse déjà un tiers de
+ * plus que l'octet brut, et cette chaîne traverse la mémoire du serveur en
+ * entier. L'appelant décode et range AVANT de rendre quoi que ce soit : faire
+ * transiter ça par une réponse JSON ferait un corps de plusieurs mégaoctets sur
+ * un téléphone en 3G, pour une image qu'on aurait de toute façon à stocker. */
 export class ImageAdaptateur implements Adaptateur {
   constructor(
     private readonly cle: string,
