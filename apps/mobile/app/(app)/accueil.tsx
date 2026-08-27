@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { homeSchema, type Home, type Occurrence } from "@lehno/contracts";
 import {
   nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin, nativeTracking,
@@ -40,6 +40,7 @@ export default function Accueil() {
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const { actives } = useDrapeaux();
+  const routeur = useRouter();
 
   const [home, setHome] = useState<Home | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
@@ -102,6 +103,7 @@ export default function Accueil() {
           title={t.videCarnetTitre}
           text={t.videCarnetTexte}
           actionLabel={t.ajouterAnniversaire}
+          onAction={() => routeur.push("/evenement")}
         />
       </View>
     );
@@ -123,9 +125,12 @@ export default function Accueil() {
         <>
           <EmptyState illustration="rien-approche" title={t.videRienTitre} text={t.videRienTexte} />
           {/* Le carnet est rempli, mais rien n'approche : la note demeure, et
-              c'est tout ce que l'écran a à proposer. */}
+              c'est tout ce que l'écran a à proposer. Sans proche désigné — on
+              le choisit dans la feuille. */}
           <View style={styles.pied}>
-            <Button variant="primary" full icon="plus">{t.laisserNote}</Button>
+            <Button variant="primary" full icon="plus" onPress={() => routeur.push("/note")}>
+              {t.laisserNote}
+            </Button>
           </View>
         </>
       ) : (

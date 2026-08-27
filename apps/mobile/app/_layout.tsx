@@ -35,7 +35,25 @@ function Coquille() {
           headerShown: false,
           contentStyle: { backgroundColor: couleurs.surfacePage },
         }}
-      />
+      >
+        {/* CE QUI POUSSE, ET CE QUI MONTE — décisions natives, §1.
+            Une SAISIE qui revient d'où elle vient monte en feuille : elle
+            s'écrit à propos de ce qu'on a sous les yeux, la feuille laisse voir
+            l'écran derrière, et le geste qui la ferme est celui qui l'annule.
+            Une DESTINATION, elle, remplace ce qu'on regardait.
+
+            La note et l'ajout d'une date sont des saisies. Elles vivent donc
+            au-dessus des onglets, pas dedans : un onglet les rendrait
+            atteignables sans qu'on ait rien à écrire. */}
+        <Stack.Screen
+          name="note"
+          options={{ presentation: "transparentModal", animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="evenement"
+          options={{ presentation: "transparentModal", animation: "slide_from_bottom" }}
+        />
+      </Stack>
     </>
   );
 }

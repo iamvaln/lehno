@@ -135,6 +135,10 @@ export default function Proche() {
     { cle: "identite", icone: "user-pen", libelle: t.ficheIdentiteCourt, drapeau: null, route: "/(app)/proches/identite" },
     { cle: "portrait", icone: "sparkles", libelle: t.fichePortraitsCourt, drapeau: "generation.portrait", route: null },
   ];
+  /* « Ajouter une note » et « Ajouter une date » ne sont pas des sorties de la
+     rangée : ce sont les deux gestes de même poids que le kit met côte à côte,
+     au-dessus. Ils portent le proche — depuis sa fiche, on sait de qui il
+     s'agit, et le redemander serait poser une question dont on a la réponse. */
   const sorties = TOUTES.filter(
     (s) => s.route !== null && (s.drapeau === null || estActive(actives, s.drapeau)),
   );
@@ -251,6 +255,23 @@ export default function Proche() {
         </View>
       ) : null}
 
+      <View style={[styles.gestes]}>
+        <Button
+          variant="outline"
+          icon="plus"
+          onPress={() => routeur.push({ pathname: "/note", params: { personId: proche.id } })}
+        >
+          {t.ficheAjouterNote}
+        </Button>
+        <Button
+          variant="outline"
+          icon="plus"
+          onPress={() => routeur.push({ pathname: "/evenement", params: { personId: proche.id } })}
+        >
+          {t.ficheAjouterDate}
+        </Button>
+      </View>
+
       {sorties.length ? (
         <View style={[styles.sorties]}>
           {sorties.map((s) => (
@@ -291,5 +312,8 @@ const styles = StyleSheet.create({
   carte: { padding: nativeSpace[14], borderRadius: nativeRadius.lg, borderWidth: nativeBorder.width },
   nature: { flexDirection: "row", alignItems: "center", gap: nativeSpace[4] },
   natureTexte: { fontFamily: nativeFont.bodySemibold, fontSize: 12, textTransform: "uppercase" },
-  sorties: { gap: nativeSpace[8], marginTop: nativeSpace[24] },
+  /* Deux ajouts de même poids : ce qu'on a appris, et une date de plus pour
+     cette personne. Côte à côte, ils ne poussent pas la fiche. */
+  gestes: { flexDirection: "row", gap: nativeSpace[8], marginTop: nativeSpace[24] },
+  sorties: { gap: nativeSpace[8], marginTop: nativeSpace[8] },
 });
