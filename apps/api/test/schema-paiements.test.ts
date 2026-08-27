@@ -56,9 +56,59 @@ describe("schéma — les paiements", () => {
     await expect(db.prisma.creditTransaction.create({ data: octroi })).rejects.toThrow();
   });
 
-  // L'unicité est partielle : la plupart des mouvements — octrois d'inscription,
-  // consommations, ajustements — n'ont pas de paiement, et un index total les
-  // ferait entrer en collision sur une valeur nulle.
+  /**
+   * Le dictionnaire réserve la contrainte au type `purchase`, et prévoit que
+   * `payment_id` serve aussi « sur l'ajustement qui reprend un remboursement ».
+   *
+   * Deux mouvements désignent donc légitimement le même paiement : l'achat, et
+   * l'ajustement qui l'annule. Sans cette distinction, un remboursement
+   * n'aurait aucun moyen de dire quel achat il reprend, et un litige se
+   * réglerait à l'estime — c'est exactement ce que le lien devait empêcher.
+   */
+  it("un remboursement peut désigner l'achat qu'il reprend", async () => {
+    const p = await paiement();
+    await db.prisma.creditTransaction.create({
+      data: { userId: p.userId, type: "purchase", source: "purchase", amount: 10, paymentId: p.id },
+    });
+
+    await db.prisma.creditTransaction.create({
+      data: { userId: p.userId, type: "adjustment", source: "refund", amount: -10, paymentId: p.id },
+    });
+
+    expect(await db.prisma.creditTransaction.count({ where: { paymentId: p.id } })).toBe(2);
+  });
+
+  /**
+   * Effacer un paiement ne doit pas faire disparaître le crédit qu'il a
+   * produit : la ligne resterait sans savoir d'où elle vient, et le litige que
+   * le lien devait trancher se réglerait à l'estime.
+   *
+   * Aucun chemin n'efface un paiement aujourd'hui. La garantie vaut pour le
+   * jour où l'un existera : elle refusera, plutôt que d'orpheliner en silence.
+   */
+  it("un paiement qui a produit un crédit ne se supprime pas", async () => {
+    const p = await paiement();
+    await db.prisma.creditTransaction.create({
+      data: { userId: p.userId, type: "purchase", source: "purchase", amount: 10, paymentId: p.id },
+    });
+
+    await expect(db.prisma.payment.delete({ where: { id: p.id } })).rejects.toThrow();
+    expect(await db.prisma.creditTransaction.count({ where: { paymentId: p.id } })).toBe(1);
+  });
+
+  // Un paiement que rien n'a crédité s'efface : la garantie porte sur le crédit
+  // produit, pas sur le paiement lui-même.
+  it("un paiement sans crédit se supprime", async () => {
+    const p = await paiement();
+    await db.prisma.payment.delete({ where: { id: p.id } });
+    expect(await db.prisma.payment.count({ where: { id: p.id } })).toBe(0);
+  });
+
+  // L'unicité est partielle pour la **taille** : la plupart des mouvements —
+  // octrois d'inscription, bonus de parrainage, consommations, ajustements —
+  // n'ont pas de paiement, et il n'y a rien à gagner à les indexer. Pas pour
+  // admettre plusieurs nuls : Postgres les traite déjà comme distincts, et un
+  // index total en accepterait autant.
   it("les mouvements sans paiement ne se gênent pas entre eux", async () => {
     const userId = await compte();
 
