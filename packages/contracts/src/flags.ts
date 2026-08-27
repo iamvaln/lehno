@@ -108,7 +108,20 @@ export const DRAPEAUX = {
   },
   "generation.message": {
     gouverne: "Le message généré",
-    portee: ["app"],
+    /* Portée PUBLIQUE en plus de l'application, et ce n'est pas une erreur :
+       la landing montre ses sections d'après les drapeaux, comme l'application
+       masque les siennes. Même source, donc une page ne peut pas promettre ce
+       qui est éteint — pas plus qu'un écran ne peut proposer ce qui est fermé.
+       
+       C'est structurel plutôt que discipliné : sans ça, quelqu'un devrait
+       PENSER à mettre la landing à jour le jour où un drapeau bascule. Ça
+       marche trois fois, puis la page promet « bientôt » ce qui est livré
+       depuis un mois.
+       
+       La correspondance section → drapeaux, elle, vit côté landing : une
+       section peut dépendre d'un drapeau ou d'un « ou » entre plusieurs, et
+       c'est éditorial. Le serveur dit ce qui est ACTIF, pas ce qu'on en montre. */
+    portee: ["app", "public"],
     // Pas de dépendance à `credits`, et c'est le piège que §6.4 signale :
     // éteindre l'achat ne doit pas éteindre le produit. Sans crédits, les
     // générations restent disponibles et GRATUITES si leur drapeau est allumé.
@@ -118,14 +131,14 @@ export const DRAPEAUX = {
   },
   "generation.ideas": {
     gouverne: "Les idées de cadeaux",
-    portee: ["app"],
+    portee: ["app", "public"],
     requiert: [],
     ecrans: ["3.7 (idées)"],
     chemins: ["/me/generations"],
   },
   "generation.portrait": {
     gouverne: "Le studio et le portrait",
-    portee: ["app"],
+    portee: ["app", "public"],
     requiert: [],
     ecrans: ["3.22", "le studio"],
     chemins: ["/me/studio/options", "/me/generations", "/me/portraits/*"],
@@ -141,7 +154,7 @@ export const DRAPEAUX = {
    * drapeau est allumé (§6.4) : fermer le paiement ne ferme pas le produit. */
   credits: {
     gouverne: "Les crédits : ils existent, ils s'achètent par paliers",
-    portee: ["app"],
+    portee: ["app", "public"],
     requiert: [],
     ecrans: ["3.9 (achat)"],
     chemins: ["/me/credit-bundles", "/me/payments"],

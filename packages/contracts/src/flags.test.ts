@@ -96,9 +96,17 @@ describe("registre des drapeaux", () => {
     }
   });
 
+  /* La portée publique s'est élargie le 27/08 : la landing montre ses sections
+     d'après les drapeaux, comme l'application masque les siennes. Sans ça,
+     quelqu'un devrait PENSER à mettre la page à jour le jour où un drapeau
+     bascule — et un jour elle promettrait « bientôt » ce qui est livré depuis
+     un mois. Les quatre clés ajoutées sont celles qui décident d'une section
+     de la page : les trois générations et l'achat de crédits. */
   it("les listes par portée se dérivent de « portee »", () => {
     expect([...CLES_PUBLIQUES].sort()).toEqual([
-      "collect", "launch.live", "referral", "reservation", "wall", "wishes", "wishlist.own",
+      "collect", "credits", "generation.ideas", "generation.message",
+      "generation.portrait", "launch.live", "referral", "reservation",
+      "wall", "wishes", "wishlist.own",
     ]);
     expect(CLES_APPLICATION).not.toContain("launch.live");
     expect(CLES_APPLICATION).toContain("wall");
