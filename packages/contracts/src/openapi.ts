@@ -34,6 +34,7 @@ import { featuresResponseSchema, DRAPEAUX, CLES_DRAPEAUX, type CleDrapeau } from
 import { maintenanceStatusSchema } from "./maintenance.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
 import { metadataSchema } from "./me-app.js";
+import { notificationPreferencesSchema, updateNotificationPreferencesSchema } from "./me-notifications.js";
 import { sessionsListSchema, identitiesListSchema } from "./me-security.js";
 
 // Le contrat se CALCULE depuis les schémas Zod, il ne se recopie pas. Une
@@ -879,6 +880,55 @@ const CHEMINS: Chemin[] = [
     ].join("\n"),
     authentifie: true,
     reponse: metadataSchema,
+  },
+  // ——— me/notification-preferences (apps/api/src/me) ——————————————————
+  {
+    chemin: "/me/notification-preferences",
+    methode: "get",
+    resume: "Lire ses préférences de notification (§3.11)",
+    note: [
+      "`preferences` porte UN type PAR TYPE CONFIGURABLE — `login_code`,",
+      "`security` et `account` n'y figurent pas : ces natures partent",
+      "toujours, y régler un canal n'aurait aucun effet.",
+      "",
+      "**Une ligne absente vaut le défaut** : poussée ET courriel activés.",
+      "Ce chemin rend l'état EFFECTIF de chaque type, qu'une ligne existe en",
+      "base ou non — le client n'a pas à connaître ni à rejouer ce défaut.",
+      "",
+      "La maquette groupe ces types en cinq NATURES affichées à l'écran",
+      "(rappel d'échéance, récapitulatif, contributions à valider, relances,",
+      "vie du compte). Ce groupement n'existe PAS côté serveur : chaque type",
+      "se règle seul, et c'est l'écran qui décide quels boutons rassembler",
+      "sous quel titre — le groupement ne change que l'affichage, jamais ce",
+      "qui part.",
+      "",
+      "`digestFrequency` (`monthly` / `weekly` / `never`) vit ici et pas sur",
+      "`/me/profile` : la maquette la range sous « Préférences de",
+      "notification », à la différence de `sendHour` et `timezone`, qui",
+      "valent pour toutes les natures et restent servis par `/me/profile`.",
+    ].join("\n"),
+    authentifie: true,
+    reponse: notificationPreferencesSchema,
+  },
+  {
+    chemin: "/me/notification-preferences",
+    methode: "patch",
+    resume: "Modifier ses préférences de notification",
+    note: [
+      "Un type de la liste toujours envoyée (`login_code`, `security`,",
+      "`account`) dans `preferences` rend `400` (`validation_failed`) : le",
+      "refus est posé dans le contrat, pas seulement dans l'écran — aucun",
+      "appelant ne peut l'oublier.",
+      "",
+      "`preferences` et `digestFrequency` sont indépendants et tous deux",
+      "facultatifs, mais au moins l'un des deux doit être présent — un corps",
+      "vide rend `400`, comme `PATCH /me/wall`.",
+      "",
+      "Pas de `sendHour` ici : voir la note du `GET`.",
+    ].join("\n"),
+    authentifie: true,
+    corps: updateNotificationPreferencesSchema,
+    reponse: notificationPreferencesSchema,
   },
   // ——— me/sessions, me/identities (apps/api/src/me/security.controller.ts) ——
   // Écran « Sécurité et connexions », maquette §3.24. La suppression du
