@@ -126,7 +126,15 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Les paliers d'achat.** Les montants proposés dans l'application, leurs crédits et leur remise affichée. Aucune saisie libre : on achète un palier, et le plus petit fixe le minimum. Valeurs de départ : 500 F → 5 crédits · 1 000 → 10 · 2 000 → 22 (+10 %) · 5 000 → 57 (+15 %) · 10 000 → 120 (+20 %).
 
-**Les recharges manuelles.** Une file de demandes à traiter : l'utilisateur a versé sur un numéro affiché dans l'application et déposé un justificatif. **Le justificatif ne prouve rien** — un montage est facile : l'administrateur **vérifie la réception sur le compte de l'opérateur** avant d'approuver. Approuver crédite le compte ; rejeter exige un motif. Le justificatif s'efface une fois la demande traitée.
+**Les paiements manuels.** Une recharge manuelle **est un paiement**, pas une demande à part : elle figure dans l'historique du client comme les autres, avec son `mode` — `semi_manual` (le client verse puis dépose son reçu) ou `manual` (l'administrateur saisit tout).
+
+La file présente les paiements en attente de vérification. Pour chacun : le palier visé, le **canal** employé et son barème, le **compte de collecte** qui a reçu l'argent, le **montant attendu** et le reçu déposé.
+
+> **Le reçu ne prouve rien.** Un montage est facile : l'administrateur **constate la réception sur le compte de l'opérateur** et saisit le **montant reçu**. L'écart entre attendu et reçu se traite, il ne se devine pas. Approuver crédite le compte ; rejeter exige un motif.
+
+**Les canaux de paiement.** Ce que le service propose — opérateur, pays, barème de frais : part proportionnelle, part fixe, plancher, plafond, et **qui supporte les frais**. À ne pas confondre avec les méthodes enregistrées par les clients : un barème se règle une fois, il ne se recopie pas sur chaque numéro.
+
+**Les comptes de collecte.** Les numéros sur lesquels les clients versent. On en ouvre, on les nomme, on décide de leur **visibilité dans l'application** — distincte de leur **activité** : un compte peut servir aux saisies d'administration sans être proposé aux clients. Jamais supprimé, seulement désactivé : un paiement passé le référence.
 
 **Actions.** Ajuster manuellement le solde d'un utilisateur, avec motif obligatoire · déclencher un remboursement · lever au cas par cas le blocage anti-fraude d'un remboursement, avec motif · relancer une opération restée en suspens · **confirmer manuellement un paiement en attente**, avec motif, lorsque l'opération a visiblement abouti chez l'opérateur sans que le prestataire l'ait rapporté.
 
@@ -146,7 +154,7 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Rôle.** Régler les valeurs qui pilotent le produit ; elles prennent effet dès l'enregistrement.
 
-**Contenu.** Prix du crédit · crédits offerts à l'inscription · montants de parrainage (parrain et filleul) · délais d'anticipation des rappels · cadence des relances · fenêtre de dépôt de vœux (avant et après la date) · délai de grâce avant effacement d'un compte · ancienneté minimale d'une méthode de paiement pour un remboursement · nombre maximal de comptes créés depuis un même appareil · plafonds d'usage.
+**Contenu.** Arrêt pour intervention, avec la durée annoncée · prix du crédit · crédits offerts à l'inscription · montants de parrainage (parrain et filleul) · délais d'anticipation des rappels · cadence des relances · fenêtre de dépôt de vœux (avant et après la date) · délai de grâce avant effacement d'un compte · ancienneté minimale d'une méthode de paiement pour un remboursement · nombre maximal de comptes créés depuis un même appareil · plafonds d'usage.
 
 **Actions.** Modifier une valeur, avec rappel de la précédente et journalisation du changement.
 
@@ -162,7 +170,9 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Actions.** Allumer ou éteindre un drapeau. Chaque bascule est journalisée avec son auteur et sa date.
 
-**Précaution.** Éteindre l'achat de crédits laisse les générations disponibles et gratuites, si leur propre drapeau est allumé — et c'est la recharge manuelle qui prend le relais. Éteindre le paiement ne doit jamais éteindre le produit.
+**L'arrêt pour intervention est ailleurs, et c'est voulu.** Éteindre une fonctionnalité et arrêter le service sont deux gestes différents : le premier retire une surface, le second suspend tout et annonce un délai. Les mettre au même endroit inviterait à les confondre. L'arrêt se déclenche depuis les paramètres, avec sa durée annoncée — c'est elle que tout le parc respecte.
+
+**Précaution.** Éteindre l'achat de crédits laisse les générations disponibles et gratuites, si leur propre drapeau est allumé — et ce sont les voies manuelles qui prennent le relais. Éteindre le paiement ne doit jamais éteindre le produit.
 
 ### 5.8 Modèles d'IA
 
@@ -224,7 +234,9 @@ Chaque élément « à traiter » mène directement à la section concernée.
 
 **Rôle.** Comprendre l'usage au-delà des chiffres du tableau de bord.
 
-**Contenu.** Usage par fonctionnalité, exécutions des actions payantes et leur issue, rétention, conversion vers l'achat de crédits, volumes de contributions reçues et validées. Ces vues s'appuient sur le tracking plan défini dans la spécification technique.
+**Contenu.** Usage par fonctionnalité, exécutions des actions payantes et leur issue, rétention, conversion vers l'achat de crédits, volumes de contributions reçues et validées.
+
+**Deux vues qui comptent plus que les autres.** La **boucle des listes** — vues par liste partagée, réservations par vue, installations par réservation : c'est la mécanique de croissance du produit. Et l'**emploi du studio**, orientation par orientation, avec le taux de régénération de chacune : c'est ce qui dira si douze orientations servent ou si trois suffisent. Ces vues s'appuient sur le tracking plan défini dans la spécification technique.
 
 **Actions.** Choisir la période, croiser les axes, exporter.
 
@@ -271,9 +283,6 @@ Deux rôles. Le premier suffit à l'assistance quotidienne ; le second ouvre les
 - Ajuster manuellement un solde de crédits ; déclencher un remboursement ; lever le blocage anti-fraude d'un remboursement ; confirmer manuellement un paiement en attente.
 - Effacer un compte sans attendre la fin du délai de grâce.
 - Consulter le journal d'audit et gérer les accès des administrateurs.
-- **Sortir une liste en fichier** — comptes, paiements, mouvements de crédits, connexions, journal d'audit.
-
-**Ce que le support ne sort pas.** Aucune liste ne s'exporte depuis son compte, **pas même celles qu'il consulte**. Voir une liste et pouvoir la sortir sont deux choses : la première est une lecture bornée par l'écran, que l'on quitte en fermant l'onglet ; la seconde produit un fichier qui part de l'outil et qu'on ne rappelle plus. C'est le geste qu'on borne, pas la lecture — le support garde tout ce que la liste ci-dessus lui accorde.
 
 **Ce que le support ne voit pas.** La famille **Économie** — paramètres, modèles d'IA, studio du portrait, offres — reste hors de sa navigation. Ce sont les leviers qui engagent le service et ses coûts.
 
@@ -286,7 +295,7 @@ Deux rôles. Le premier suffit à l'assistance quotidienne ; le second ouvre les
 - **Mise en page** — conçue pour l'ordinateur, largeurs de tableau ajustables, et lisible sur une tablette pour dépanner en déplacement.
 - **Langue** — l'interface suit la langue de l'administrateur, français ou anglais.
 - **Confirmation et motif** — toute action irréversible ou sensible demande une confirmation explicite et un motif, repris dans le journal d'audit.
-- **Export** — les listes filtrées s'exportent, pour l'analyse ou la conformité, **et pour les administrateurs seuls** (§6). Le fichier emporte exactement les filtres de l'écran : reconstruire la requête à côté ferait dire au fichier autre chose qu'à la liste.
+- **Export** — les listes filtrées s'exportent, pour l'analyse ou la conformité.
 - **États vides et chargement** — mêmes principes que les autres surfaces : dire ce qui manque, et orienter.
 - **Traçabilité visible** — sur chaque objet, l'historique des interventions est consultable depuis son détail.
 

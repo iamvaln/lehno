@@ -182,9 +182,11 @@ Fond `card`, contour `edge`, rayon 10 px, rembourrage 12–15 px, texte 16 px �
 
 ### 5.6 Barre d'onglets
 
-Quatre onglets : **Accueil · Dates · Proches · Moi**. Icône de 21 px au-dessus d'un libellé de 10.5 px. Actif en `violet-deep`, inactif en `faint`. Filet supérieur en `line`, fond `surface`.
+Cinq onglets : **Accueil · Dates · Proches · Moi · Réglages**. Icône de 21 px au-dessus d'un libellé de 10.5 px. Actif en `violet-deep`, inactif en `faint`. Filet supérieur en `line`, fond `surface`.
 
-Les icônes : maison, calendrier, **cœur**, silhouette — quatre formes nettement distinctes.
+Les icônes : maison, calendrier, **cœur**, silhouette, engrenage — cinq formes nettement distinctes.
+
+**La barre tient à trois comme à cinq.** Les fonctionnalités s'éteignent par drapeau, et un onglet peut disparaître : aucune largeur n'est figée, et l'onglet d'ouverture existe toujours.
 
 ### 5.7 En-tête
 
@@ -292,4 +294,4 @@ Quatre intentions, quatre couleurs — et **l'information n'en reçoit pas de no
 
 - La **notation du décompte**, à éprouver par un test utilisateur.
 - La **reprise à la main du logotype** sur les courbes livrées, le masque circulaire et la marge de recadrage pour les magasins d'applications.
-- L'**écran de lancement** et le filigrane du portrait partagé.
+- L'**écran de lancement**, et la composition du portrait (voir `brief-portrait-lehno.md`).
