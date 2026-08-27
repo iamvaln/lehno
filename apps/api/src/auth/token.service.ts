@@ -210,4 +210,22 @@ export class TokenService {
       data: { revokedAt: new Date() },
     });
   }
+
+  // « Se déconnecter de partout » (§3.24 de la spec mobile) : même mécanisme
+  // que revokeFamily, élargi à TOUTES les lignées du compte plutôt qu'à une
+  // seule — on ne réinvente pas une seconde façon de révoquer.
+  //
+  // Décision : l'appareil courant tombe aussi. `/me/sessions` ne reçoit qu'un
+  // jeton d'ACCÈS (voir SecurityController), qui ne porte que `sub` — rien
+  // n'y dit de quelle lignée il descend. Exclure « l'appareil courant » sans
+  // moyen de l'identifier reviendrait à épargner une lignée au hasard, ce qui
+  // est pire que n'en épargner aucune. Le contrat documente ce choix pour que
+  // le client traite cet appel comme une déconnexion complète, y compris
+  // localement.
+  async revokeAllForUser(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
 }
