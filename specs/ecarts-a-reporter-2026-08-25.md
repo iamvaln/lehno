@@ -516,7 +516,15 @@ raccourci y mènera.
 
 ---
 
-## J. Deux divergences entre le dictionnaire et le schéma des paiements
+## J. Deux divergences entre le dictionnaire et le schéma des paiements — **corrigées**
+
+**Réglées le 27/08/2026**, migration `20260827120000_paiement_dictionnaire`. Le
+schéma dit maintenant ce que le dictionnaire décrit : l'unicité de l'octroi est
+réservée au type `purchase`, et le lien refuse la suppression d'un paiement qui
+a produit un crédit. Trois garanties éprouvées par mutation dans
+`schema-paiements.test.ts` — un remboursement peut désigner son achat, deux
+octrois pour un paiement restent refusés, un paiement crédité ne se supprime
+pas. Le récit ci-dessous reste pour mémoire.
 
 Relevées le 27/08/2026 en relisant, sur `credit_transaction.payment_id` — le
 lien ajouté en C3, désormais construit.
