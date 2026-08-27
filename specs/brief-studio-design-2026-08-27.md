@@ -174,18 +174,5 @@ Le principe du §1 rend cette garantie automatique : puisque le moindre changeme
 | **Journal vide** *(début de séance)* et **journal chargé** *(trentième essai)* | Le second ne doit pas noyer l'établi |
 | **Publication refusée** faute d'essai | Dire quoi faire, pas seulement que c'est fermé |
 | **Retour arrière** depuis les réglages en service | Demande un motif |
+| **Version publiée à l'instant**, aucun taux de régénération encore | Le rang existe mais n'a rien à dire : il ne doit pas se lire comme 0 % — un zéro sans explication se prend pour une mesure |
 | **Couverture de profils incomplète** | Nommer ce qui manque |
-
----
-
-## 12. Une chose à savoir avant de dessiner
-
-**Le Studio n'existe pas encore en base, et rien ne génère aujourd'hui.**
-
-Trois tables manquent — la configuration et son brouillon, les profils de simulation, les essais — et **aucun fournisseur d'IA n'est branché** dans le dépôt.
-
-Ce n'est pas un obstacle au dessin, et c'est même la bonne raison de le faire maintenant : ce document décide de l'expérience avant que le code la fige. Mais deux conséquences valent d'être connues.
-
-**La règle du §1 verrouille l'ordre de construction.** Sans fournisseur, aucune génération ; sans génération, aucun essai ; sans essai, aucune publication. On ne pourra donc pas livrer la composition d'abord et l'essai ensuite — l'administrateur se retrouverait avec un brouillon qu'il ne peut ni éprouver ni mettre en service.
-
-**Certains chiffres viendront après le reste.** Le taux de régénération du §9 suppose que les productions soient enregistrées avec leur issue. Rien ne le fait aujourd'hui. Dessinez-le, mais prévoyez à quoi ressemble la section **avant** qu'il existe : un rang qui dit ce qu'il ne sait pas encore mesurer, plutôt qu'un zéro — un zéro sans explication se prend pour une mesure.
