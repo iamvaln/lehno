@@ -34,11 +34,8 @@ import { featuresResponseSchema, DRAPEAUX, CLES_DRAPEAUX, type CleDrapeau } from
 import { maintenanceStatusSchema } from "./maintenance.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
 import { metadataSchema } from "./me-app.js";
-<<<<<<< HEAD
 import { notificationPreferencesSchema, updateNotificationPreferencesSchema } from "./me-notifications.js";
-=======
 import { sessionsListSchema, identitiesListSchema } from "./me-security.js";
->>>>>>> origin/develop
 
 // Le contrat se CALCULE depuis les schémas Zod, il ne se recopie pas. Une
 // seconde déclaration des mêmes formes — en DTO décoré, par exemple — dériverait
@@ -884,7 +881,6 @@ const CHEMINS: Chemin[] = [
     authentifie: true,
     reponse: metadataSchema,
   },
-<<<<<<< HEAD
   // ——— me/notification-preferences (apps/api/src/me) ——————————————————
   {
     chemin: "/me/notification-preferences",
@@ -933,7 +929,7 @@ const CHEMINS: Chemin[] = [
     authentifie: true,
     corps: updateNotificationPreferencesSchema,
     reponse: notificationPreferencesSchema,
-=======
+  },
   // ——— me/sessions, me/identities (apps/api/src/me/security.controller.ts) ——
   // Écran « Sécurité et connexions », maquette §3.24. La suppression du
   // compte (§3.24, en trois temps) n'a PAS de chemin ici : chantier à part,
@@ -1008,7 +1004,6 @@ const CHEMINS: Chemin[] = [
       "l'affiche sans avoir besoin de ce chemin pour le savoir.",
     ].join("\n"),
     reponse: identitiesListSchema,
->>>>>>> origin/develop
   },
 ];
 
