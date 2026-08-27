@@ -1004,6 +1004,45 @@ export const en: typeof fr = {
     formulaire: "Configuration form",
   },
 
+  arret: {
+    titre: "Service pause",
+    sous: "Suspends the whole service and announces a delay. Not to be confused with turning a feature off, which removes only one surface.",
+    etats: {
+      ouvert: "Service open",
+      arrete: "Service paused",
+    },
+    jusqua: "Back at {heure}",
+    sansHeure: "No return time announced",
+    arreter: "Pause the service",
+    prolonger: "Extend",
+    rouvrir: "Reopen the service",
+    duree: "Duration",
+    durees: {
+      m15: "15 minutes",
+      m30: "30 minutes",
+      h1: "1 hour",
+      h2: "2 hours",
+      inconnue: "Not known yet",
+    },
+    dialogueArreter: {
+      titre: "Pause the service",
+      consequence: "Every call will return a waiting response, sign-in included. The back-office stays reachable — that is how you reopen.",
+      motifs: [
+        "Database migration",
+        "Release going out",
+        "Incident being handled",
+      ],
+    },
+    dialogueRouvrir: {
+      titre: "Reopen the service",
+      consequence: "Calls resume immediately. The announced return time is cleared.",
+      motifs: [
+        "Work finished",
+        "Work postponed",
+      ],
+    },
+  },
+
   metriques: {
     titre: "Metrics",
     sous: "Usage beyond the dashboard figures.",
