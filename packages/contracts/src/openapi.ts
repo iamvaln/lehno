@@ -30,6 +30,7 @@ import {
   eventSchema, createEventSchema, updateEventSchema,
   occurrenceSchema, listOccurrencesQuerySchema, listEventsQuerySchema,
 } from "./me-events.js";
+import { homeSchema } from "./me-home.js";
 import { featuresResponseSchema, DRAPEAUX, CLES_DRAPEAUX, type CleDrapeau } from "./flags.js";
 import { maintenanceStatusSchema } from "./maintenance.js";
 import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "./me-credits.js";
@@ -929,6 +930,53 @@ const CHEMINS: Chemin[] = [
     authentifie: true,
     corps: updateNotificationPreferencesSchema,
     reponse: notificationPreferencesSchema,
+  },
+  // ——— me/home (apps/api/src/me/home.controller.ts) ———————————————————
+  {
+    chemin: "/me/home",
+    methode: "get",
+    resume: "L'accueil en un appel : la phrase d'état et les trois échéances les plus proches",
+    note: [
+      "L'écran d'ouverture de l'application (§3.2 de la maquette, §5.8 du",
+      "technique). Tout y tient en un seul aller-retour, à dessein : c'est le",
+      "premier appel après la connexion, et c'est là qu'un chargement en",
+      "cascade se voit le plus.",
+      "",
+      "### `counts` ne se déduit PAS de `occurrences`",
+      "",
+      "La liste est plafonnée à **trois** cartes. Trois échéances rendues ne",
+      "disent pas combien il y en a cette semaine : `counts.today` et",
+      "`counts.thisWeek` sont comptés séparément, en base, sur la table",
+      "entière. Un client qui compterait les éléments de `occurrences` pour",
+      "composer sa phrase se tromperait dès la quatrième échéance — et il se",
+      "tromperait **par défaut**, en annonçant moins qu'il n'y en a.",
+      "",
+      "La semaine, ce sont les **sept prochains jours, aujourd'hui compris**.",
+      "",
+      "### Les deux états vides ne se ressemblent pas",
+      "",
+      "`hasPersons` distingue « le carnet est vide » de « le carnet est plein",
+      "mais rien n'approche ». Au premier lancement, le bouton principal",
+      "devient « Ajouter un anniversaire » — il n'y a personne à propos de qui",
+      "écrire. Ensuite, « Laisser une note » demeure.",
+      "",
+      "**Le client ne peut pas trancher depuis une liste vide** : les deux cas",
+      "rendent `occurrences: []`. Ce drapeau lui évite d'appeler `/me/persons`",
+      "rien que pour choisir un libellé de bouton.",
+      "",
+      "### La pastille de la cloche voyage avec",
+      "",
+      "`unreadNotifications` accompagne la réponse parce que l'en-tête",
+      "l'affiche dès l'ouverture. La demander à part ferait clignoter la",
+      "pastille — apparue vide, puis remplie une fraction de seconde plus tard.",
+      "",
+      "### Ce chemin n'a pas de drapeau",
+      "",
+      "Les dates relèvent du **socle**, qui ne s'éteint pas (§6.3). Il répond",
+      "toujours, y compris à un compte qui n'a encore rien saisi.",
+    ].join("\n"),
+    authentifie: true,
+    reponse: homeSchema,
   },
   // ——— me/sessions, me/identities (apps/api/src/me/security.controller.ts) ——
   // Écran « Sécurité et connexions », maquette §3.24. La suppression du
