@@ -101,6 +101,180 @@ export const paymentSchema = z.object({
 
 export type Payment = z.infer<typeof paymentSchema>;
 
+// ── La recharge par palier, voie manuelle ───────────────────────────────────
+
+/**
+ * Un palier d'achat.
+ *
+ * **Un achat porte un palier, jamais un montant libre** (§5.6) : le plus petit
+ * fixe le minimum. C'est ce qui permet d'annoncer une remise en clair, et ce
+ * qui évite d'avoir à valider un montant arbitraire contre un barème.
+ */
+export const creditBundleSchema = z.object({
+  id: z.string().uuid(),
+  amount: z.number().nonnegative(),
+  currency: currencySchema,
+  credits: z.number().int().positive(),
+  /**
+   * La remise, en clair, sur les plus grands paliers — « +20 % offerts ».
+   * C'est un argument de vente, pas une décoration : nul quand il n'y en a pas,
+   * et **la ligne ne doit alors pas exister** plutôt qu'afficher « +0 % ».
+   */
+  bonusPercent: z.number().int().nullable(),
+  position: z.number().int(),
+}).strict();
+
+export const creditBundlesSchema = z.object({
+  bundles: z.array(creditBundleSchema),
+}).strict();
+
+/**
+ * Un canal de paiement : un opérateur, dans un pays, avec son barème.
+ *
+ * **Ce n'est pas une méthode de paiement.** Le canal est ce que le service
+ * propose — une poignée, réglés en administration. La méthode est ce qu'un
+ * client a enregistré, autant que de clients. Les fondre porterait un taux de
+ * frais sur le numéro de chaque client, et changer le barème d'un opérateur
+ * demanderait de tous les corriger.
+ */
+export const paymentChannelSchema = z.object({
+  id: z.string().uuid(),
+  kind: z.enum(PAYMENT_METHOD_KINDS),
+  operator: z.string(),
+  country: z.string(),
+  label: z.string(),
+  /**
+   * Qui supporte les frais. **Ça change le sens du calcul**, pas seulement son
+   * affichage : sur le mobile money le client paie en plus — un palier à 1 000
+   * fait verser 1 020 et il en arrive 1 000. La carte fera l'inverse.
+   *
+   * Le client n'a pas à en déduire quoi que ce soit : `/me/payments/preview`
+   * rend les montants déjà calculés.
+   */
+  feeBorneBy: z.enum(["payer", "payee"]),
+  currency: currencySchema,
+}).strict();
+
+export const paymentChannelsSchema = z.object({
+  channels: z.array(paymentChannelSchema),
+}).strict();
+
+/**
+ * Un compte sur lequel verser.
+ *
+ * Ne sont rendus que ceux qui sont **visibles ET actifs**. Les deux ne disent
+ * pas la même chose en base : le premier décide de ce que le client voit, le
+ * second de ce qui reste employable. Le client ne voit que l'intersection, et
+ * **la création refuse un compte hors de cette intersection** — sinon un client
+ * qui garde son écran ouvert verserait sur un compte qu'on vient de retirer.
+ */
+export const collectionAccountSchema = z.object({
+  id: z.string().uuid(),
+  label: z.string(),
+  operator: z.string(),
+  number: z.string(),
+}).strict();
+
+export const collectionAccountsSchema = z.object({
+  accounts: z.array(collectionAccountSchema),
+}).strict();
+
+/**
+ * Ce qu'on demande avant de payer : un palier, un canal.
+ */
+export const paymentPreviewInputSchema = z.object({
+  bundleId: z.string().uuid(),
+  channelId: z.string().uuid(),
+}).strict();
+
+export type PaymentPreviewInput = z.infer<typeof paymentPreviewInputSchema>;
+
+/**
+ * Ce qu'un achat coûtera, calculé par le serveur.
+ *
+ * **Quatre montants, et ils ne disent pas la même chose.** Les confondre est
+ * l'erreur la plus coûteuse de cet écran :
+ *
+ * - `amount` — le prix du palier ;
+ * - `fee` — ce que l'opérateur prélève ;
+ * - `amountToSend` — **ce que le client doit taper** dans son application
+ *   d'opérateur. C'est le seul chiffre qui l'intéresse au moment d'agir ;
+ * - `expectedOnAccount` — ce que l'administrateur doit voir arriver. Tout
+ *   manque est un vrai écart, pas le fonctionnement de l'opérateur.
+ *
+ * Le client **n'en recalcule aucun**. Refaire le calcul côté client le ferait
+ * diverger du serveur le jour où un barème change, et l'écart se découvrirait
+ * devant l'application de l'opérateur — au pire moment.
+ */
+export const paymentPreviewSchema = z.object({
+  amount: z.number().nonnegative(),
+  fee: z.number().nonnegative(),
+  amountToSend: z.number().nonnegative(),
+  expectedOnAccount: z.number().nonnegative(),
+  currency: currencySchema,
+  credits: z.number().int().positive(),
+  bonusPercent: z.number().int().nullable(),
+}).strict();
+
+export type PaymentPreview = z.infer<typeof paymentPreviewSchema>;
+
+/**
+ * Déclarer un versement déjà effectué — la voie **semi-manuelle**.
+ *
+ * L'ordre des gestes n'est pas celui d'un paiement automatique : le client
+ * verse d'abord depuis son application d'opérateur, **puis** vient le déclarer.
+ * Le paiement naît donc `pending`, et c'est l'administration qui constate la
+ * réception sur le compte.
+ *
+ * **Aucun reçu n'est demandé**, et c'est une décision. La spec le dit :
+ * « le reçu ne prouve rien — un montage est facile ; c'est la réception sur le
+ * compte de l'opérateur qui fait foi ». Ce qui le remplace est plus utile :
+ * `payerMsisdn`, le numéro depuis lequel le versement a été fait, qui permet de
+ * retrouver la transaction sur le relevé.
+ */
+export const declarePaymentSchema = z.object({
+  bundleId: z.string().uuid(),
+  channelId: z.string().uuid(),
+  collectionAccountId: z.string().uuid(),
+  /** Le numéro employé pour verser. Format libre : les opérateurs diffèrent. */
+  payerMsisdn: z.string().min(6).max(32),
+  /** La référence rendue par l'opérateur, si le client l'a sous les yeux. */
+  providerRef: z.string().max(120).optional(),
+}).strict();
+
+export type DeclarePaymentInput = z.infer<typeof declarePaymentSchema>;
+
+/**
+ * Un paiement tel que le client le suit.
+ *
+ * Les montants figés à la création accompagnent la ligne : **relire le barème
+ * du jour pour expliquer un paiement d'il y a trois mois donnerait un chiffre
+ * faux**, et c'est en litige qu'on va le lire.
+ */
+export const paymentDetailSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(PAYMENT_STATUSES),
+  mode: z.enum(["provider", "semi_manual", "manual"]),
+  amount: z.number().nonnegative(),
+  currency: currencySchema,
+  credits: z.number().int(),
+  fee: z.number().nonnegative().nullable(),
+  expectedOnAccount: z.number().nonnegative().nullable(),
+  failureReason: z.string().nullable(),
+  /** Le compte visé, pour que l'écran puisse rappeler où l'argent a été versé. */
+  collectionAccount: collectionAccountSchema.nullable(),
+  createdAt: z.string(),
+}).strict();
+
+export const paymentsSchema = z.object({
+  payments: z.array(paymentDetailSchema),
+}).strict();
+
+export type PaymentDetail = z.infer<typeof paymentDetailSchema>;
+export type CreditBundle = z.infer<typeof creditBundleSchema>;
+export type PaymentChannel = z.infer<typeof paymentChannelSchema>;
+export type CollectionAccount = z.infer<typeof collectionAccountSchema>;
+
 // ── Le solde ────────────────────────────────────────────────────────────────
 
 export const CREDIT_TRANSACTION_TYPES = ["grant", "purchase", "consumption", "adjustment"] as const;
