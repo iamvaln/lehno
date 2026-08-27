@@ -11521,6 +11521,1934 @@
         }
       }
     },
+    "/me/credit-bundles": {
+      "get": {
+        "summary": "Les paliers d'achat proposés, avec leur remise",
+        "description": "**Un achat porte un palier, jamais un montant libre.** Le plus petit\nfixe le minimum. C'est ce qui permet d'annoncer une remise en clair, et\nce qui évite d'avoir à valider un montant arbitraire contre un barème.\n\n`bonusPercent` est **nul** quand il n'y en a pas — la ligne ne doit alors\npas exister, jamais « +0 % ».\n\nGouverné par `credits`, **pas** par `topup.manual` : les paliers disent\nque les crédits s'achètent ; la façon de payer est une autre question.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bundles": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "amount": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "currency": {
+                            "type": "string",
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "credits": {
+                            "type": "integer",
+                            "exclusiveMinimum": true,
+                            "minimum": 0
+                          },
+                          "bonusPercent": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "position": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "amount",
+                          "currency",
+                          "credits",
+                          "bonusPercent",
+                          "position"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "bundles"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/payment-channels": {
+      "get": {
+        "summary": "Les canaux de versement et qui en supporte les frais",
+        "description": "Un canal est un **opérateur, dans un pays, avec son barème**. Ce n'est\npas une méthode de paiement : celle-là est ce qu'un client a enregistré,\ncelui-ci est ce que le service propose.\n\n`feeBorneBy` change le **sens** du calcul, pas seulement son affichage.\nLe client n'a rien à en déduire : `/me/payments/preview` rend les\nmontants déjà calculés.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "channels": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "mobile_money",
+                              "card"
+                            ]
+                          },
+                          "operator": {
+                            "type": "string"
+                          },
+                          "country": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "feeBorneBy": {
+                            "type": "string",
+                            "enum": [
+                              "payer",
+                              "payee"
+                            ]
+                          },
+                          "currency": {
+                            "type": "string",
+                            "pattern": "^[A-Z]{3}$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "operator",
+                          "country",
+                          "label",
+                          "feeBorneBy",
+                          "currency"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "channels"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/collection-accounts": {
+      "get": {
+        "summary": "Les comptes sur lesquels verser",
+        "description": "Ne sont rendus que les comptes **visibles ET actifs**. Les deux ne disent\npas la même chose en base : le premier décide de ce que le client voit,\nle second de ce qui reste employable.\n\n**La création vérifie à nouveau au moment de déclarer.** Un écran laissé\nouvert une heure verserait sinon sur un compte qu'on vient de retirer, et\nl'argent partirait vers un numéro que plus personne ne surveille.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "operator": {
+                            "type": "string"
+                          },
+                          "number": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label",
+                          "operator",
+                          "number"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "accounts"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/payments/preview": {
+      "post": {
+        "summary": "Ce qu'un achat coûtera : les frais, et le montant attendu",
+        "description": "`200`, pas `201` : **rien n'est créé**. C'est un POST parce qu'il porte\ndes paramètres, pas parce qu'il écrit.\n\n### Quatre montants, et ils ne disent pas la même chose\n\n- `amount` — le prix du palier ;\n- `fee` — ce que l'opérateur prélève ;\n- `amountToSend` — **ce que le client doit taper** dans son application\n  d'opérateur. C'est le seul chiffre qui l'intéresse au moment d'agir ;\n- `expectedOnAccount` — ce que l'administrateur doit voir arriver. Tout\n  manque est un vrai écart, pas le fonctionnement de l'opérateur.\n\n**N'en recalculez aucun.** Refaire le calcul côté client le ferait\ndiverger du serveur le jour où un barème change, et l'écart se\ndécouvrirait devant l'application de l'opérateur — au pire moment.\n\nUn palier retiré ou un canal fermé rendent **`422`** (`resource_inactive`)\net non `400` : la requête est bien formée, c'est l'offre qui ne l'est\nplus. L'écran peut dire « ce palier n'est plus proposé ».",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bundleId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "channelId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "bundleId",
+                  "channelId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "fee": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "amountToSend": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "expectedOnAccount": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "credits": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "minimum": 0
+                    },
+                    "bonusPercent": {
+                      "type": "integer",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "fee",
+                    "amountToSend",
+                    "expectedOnAccount",
+                    "currency",
+                    "credits",
+                    "bonusPercent"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/payments": {
+      "post": {
+        "summary": "Déclarer un versement effectué",
+        "description": "### L'ordre des gestes n'est pas celui d'un paiement automatique\n\nLe client **verse d'abord** depuis son application d'opérateur, **puis**\nvient le déclarer. Le paiement naît donc `pending`, et c'est\nl'administration qui constate la réception sur le compte.\n\n**Aucun crédit n'est octroyé ici.** L'écran doit le dire, et annoncer le\ndélai de vérification.\n\n### Aucun reçu n'est demandé\n\nC'est une décision, pas un oubli : *« le reçu ne prouve rien — un montage\nest facile ; c'est la réception sur le compte de l'opérateur qui fait\nfoi »*. Ce qui le remplace est plus utile — `payerMsisdn`, le numéro\ndepuis lequel le versement a été fait, qui permet de retrouver la\ntransaction sur le relevé.\n\n### Rien n'est cru sur parole\n\nLe montant, les crédits et la devise viennent **du palier lu en base**.\nLe client envoie deux identifiants ; le serveur compose le reste.\n\nLes frais annoncés sont **figés sur le paiement**. Un barème change ; ce\npaiement garde ce qui lui a été dit.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bundleId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "channelId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "collectionAccountId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "payerMsisdn": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 32
+                  },
+                  "providerRef": {
+                    "type": "string",
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "bundleId",
+                  "channelId",
+                  "collectionAccountId",
+                  "payerMsisdn"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "succeeded",
+                        "failed",
+                        "expired",
+                        "refunded"
+                      ]
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "provider",
+                        "semi_manual",
+                        "manual"
+                      ]
+                    },
+                    "amount": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "credits": {
+                      "type": "integer"
+                    },
+                    "fee": {
+                      "type": "number",
+                      "minimum": 0,
+                      "nullable": true
+                    },
+                    "expectedOnAccount": {
+                      "type": "number",
+                      "minimum": 0,
+                      "nullable": true
+                    },
+                    "failureReason": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "collectionAccount": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "operator": {
+                          "type": "string"
+                        },
+                        "number": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "label",
+                        "operator",
+                        "number"
+                      ],
+                      "additionalProperties": false,
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "mode",
+                    "amount",
+                    "currency",
+                    "credits",
+                    "fee",
+                    "expectedOnAccount",
+                    "failureReason",
+                    "collectionAccount",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "L'historique des paiements, du plus récent au plus ancien",
+        "description": "**Une recharge manuelle est un paiement comme les autres** : même cycle,\nmême historique, même place ici. Seul son `mode` la distingue.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "payments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "succeeded",
+                              "failed",
+                              "expired",
+                              "refunded"
+                            ]
+                          },
+                          "mode": {
+                            "type": "string",
+                            "enum": [
+                              "provider",
+                              "semi_manual",
+                              "manual"
+                            ]
+                          },
+                          "amount": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "currency": {
+                            "type": "string",
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "credits": {
+                            "type": "integer"
+                          },
+                          "fee": {
+                            "type": "number",
+                            "minimum": 0,
+                            "nullable": true
+                          },
+                          "expectedOnAccount": {
+                            "type": "number",
+                            "minimum": 0,
+                            "nullable": true
+                          },
+                          "failureReason": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "collectionAccount": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "operator": {
+                                "type": "string"
+                              },
+                              "number": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "label",
+                              "operator",
+                              "number"
+                            ],
+                            "additionalProperties": false,
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "mode",
+                          "amount",
+                          "currency",
+                          "credits",
+                          "fee",
+                          "expectedOnAccount",
+                          "failureReason",
+                          "collectionAccount",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "payments"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/payments/{id}": {
+      "get": {
+        "summary": "Suivre une opération, puis son issue",
+        "description": "Le paiement d'un autre rend **`404`**, jamais `403` : un `403`\nconfirmerait qu'il existe, et l'identifiant se devine.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "succeeded",
+                        "failed",
+                        "expired",
+                        "refunded"
+                      ]
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "provider",
+                        "semi_manual",
+                        "manual"
+                      ]
+                    },
+                    "amount": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "credits": {
+                      "type": "integer"
+                    },
+                    "fee": {
+                      "type": "number",
+                      "minimum": 0,
+                      "nullable": true
+                    },
+                    "expectedOnAccount": {
+                      "type": "number",
+                      "minimum": 0,
+                      "nullable": true
+                    },
+                    "failureReason": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "collectionAccount": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "operator": {
+                          "type": "string"
+                        },
+                        "number": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "label",
+                        "operator",
+                        "number"
+                      ],
+                      "additionalProperties": false,
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "mode",
+                    "amount",
+                    "currency",
+                    "credits",
+                    "fee",
+                    "expectedOnAccount",
+                    "failureReason",
+                    "collectionAccount",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/sessions": {
       "get": {
         "summary": "Lister les connexions récentes",
