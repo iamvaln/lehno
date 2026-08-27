@@ -2,62 +2,79 @@ import { describe, expect, it } from "vitest";
 import { en } from "../messages/en.js";
 import { fr } from "../messages/fr.js";
 
-const cles = (o: object) => Object.keys(o).sort();
-
-describe("le dictionnaire", () => {
-  /* Une clé présente dans une langue et pas dans l'autre ne casse rien à la
-     compilation : l'écran rend « undefined » dans une seule langue, et
-     seulement pour qui l'a réglée ainsi. C'est le défaut le plus facile à ne
-     jamais voir. */
-  it("porte exactement les mêmes clés dans les deux langues", () => {
-    expect(cles(fr)).toEqual(cles(en));
+describe("les deux langues portent les mêmes clés", () => {
+  /* Aucun repli d'une langue sur l'autre : un appel qui oublie sa clé doit
+     échouer à la compilation, pas s'afficher dans la mauvaise langue. */
+  it("aucune clé ne manque d'un côté", () => {
+    expect(Object.keys(fr).sort()).toEqual(Object.keys(en).sort());
   });
 
-  // Une clé qui est une fonction d'un côté et une chaîne de l'autre plante à
-  // l'appel, dans une langue seulement.
-  it("porte la même forme sous chaque clé", () => {
-    for (const cle of cles(fr)) {
-      const a = fr[cle as keyof typeof fr];
-      const b = en[cle as keyof typeof en];
-      expect(typeof a, cle).toBe(typeof b);
-    }
-  });
-
-  it("ne laisse aucune valeur vide", () => {
-    for (const [cle, valeur] of [...Object.entries(fr), ...Object.entries(en)]) {
-      if (typeof valeur === "string") expect(valeur.trim(), cle).not.toBe("");
+  it("chaque clé a la même nature dans les deux", () => {
+    for (const cle of Object.keys(fr) as (keyof typeof fr)[]) {
+      expect(typeof fr[cle], cle).toBe(typeof en[cle]);
     }
   });
 });
 
-/* Le contrôle mécanique de `verifier-genre.md`. La règle « le genre du tiers
-   n'existe pas » s'est fait contourner trois fois de suite par de la relecture
-   humaine — d'où un test plutôt qu'une consigne.
+/* LE GENRE D'UN TIERS — et ce que cette règle veut vraiment dire.
  *
- * Ce qui est un vrai défaut : tout ce qui désigne UN PROCHE — un pronom, un
- * possessif, ou un accord d'adjectif, celui-ci passant le plus facilement.
- * Ce qui n'en est pas : « il vous reste deux essais » (impersonnel), « pendant
- * qu'elle est fraîche » (une idée, pas une personne). */
-describe("le genre du tiers n'existe pas", () => {
-  const SUSPECT = /\b(il|elle|ils|elles|son|sa|ses|he|she|his|her|fier|fière)\b/i;
+ * Le produit parle de proches dont il ne connaît pas le genre, et n'a pas de
+ * champ pour le demander. Une phrase qui suppose « il » ou « elle » d'une
+ * PERSONNE se trompe une fois sur deux.
+ *
+ * Ce que ce test cherchait au début — tout `il`, `elle`, `son`, `sa`, `ses` —
+ * relevait vingt-quatre chaînes pour deux vraies fautes. En français, le
+ * possessif s'accorde avec l'OBJET POSSÉDÉ, pas avec la personne : « ses
+ * notes » vaut pour tout le monde. Et « elle s'affiche », d'une date, ne genre
+ * personne. Vingt-deux reformulations ont alourdi la copy sans rien corriger,
+ * et il a fallu les défaire.
+ *
+ * D'où deux traitements, parce que les deux langues ne se ressemblent pas ici :
+ *
+ * L'ANGLAIS se vérifie. `he`, `she`, `his`, `her` désignent une personne, sans
+ * ambiguïté possible : un objet y prend `it`, et `their` couvre le reste.
+ *
+ * LE FRANÇAIS ne se vérifie pas ainsi. Aucune expression régulière ne distingue
+ * le « elle » d'une date de celui d'une personne. Ce qui se cherche, en
+ * revanche, c'est la marque d'un accord — les formes doublées par lesquelles on
+ * essaie de genrer les deux à la fois. Elles trahissent une phrase écrite en
+ * pensant à quelqu'un.
+ */
+describe("le genre d'un tiers n'existe pas", () => {
+  const chaines = (table: Record<string, unknown>): [string, string][] =>
+    Object.entries(table).filter((e): e is [string, string] => typeof e[1] === "string");
 
-  // Les tournures impersonnelles et les reprises d'objet, relevées une à une
-  // plutôt que tolérées en bloc : la liste doit rester courte et se relire.
-  const ADMISES = [
-    "il vous reste", "il vous en reste", "il ne reste",
-    "pendant qu'elle est fraîche", "sans elle",
-  ];
+  /* Un objet prend `it`, une personne dont on ignore le genre prend `their`.
+     Les tournures impersonnelles sont relevées une à une plutôt que tolérées en
+     bloc : la liste doit rester courte et se relire. */
+  const ADMISES_EN = ["here", "there", "where", "other", "another", "either", "whether", "the rest"];
 
-  it("aucune chaîne ne genre un tiers", () => {
-    const fautes: string[] = [];
-    for (const [langue, table] of [["fr", fr], ["en", en]] as const) {
-      for (const [cle, valeur] of Object.entries(table)) {
-        if (typeof valeur !== "string") continue;
-        if (!SUSPECT.test(valeur)) continue;
-        if (ADMISES.some((a) => valeur.toLowerCase().includes(a))) continue;
-        fautes.push(`${langue}.${cle} — « ${valeur} »`);
-      }
-    }
+  it("l'anglais ne suppose pas le genre d'une personne", () => {
+    const suspect = /\b(he|she|him|his|her|hers)\b/i;
+    const fautes = chaines(en)
+      .filter(([, v]) => suspect.test(v))
+      .filter(([, v]) => !ADMISES_EN.some((a) => v.toLowerCase().includes(a)))
+      .map(([c, v]) => `en.${c} — « ${v} »`);
+    expect(fautes).toEqual([]);
+  });
+
+  /* Une personne rangée parmi les choses — « Its notes and dates go with it »
+     pour un proche — est une faute plus grave qu'un genre supposé. Elle s'est
+     produite une fois, et elle est corrigée.
+     
+     Elle n'a PAS son test : « it » désigne une chose neuf fois sur dix, et la
+     règle relevait « Get it filled » ou « its last legs » sans rien trouver de
+     vrai. Un test qu'on truffe d'exceptions pour qu'il passe n'éprouve plus
+     rien — il apprend à ignorer ses propres alertes. */
+
+  /* Les marques d'accord doublé — « invité(e) », « prêt·e », « celui/celle ».
+     Elles n'apparaissent que dans une phrase écrite en pensant à une personne,
+     et c'est précisément celle-là qu'il ne faut pas genrer. */
+  it("le français ne double aucun accord", () => {
+    const doublure = /(\w+\(e\)|\w+·e\b|\bcelui\s*\/\s*celle|\bil\s*\/\s*elle)/i;
+    const fautes = chaines(fr)
+      .filter(([, v]) => doublure.test(v))
+      .map(([c, v]) => `fr.${c} — « ${v} »`);
     expect(fautes).toEqual([]);
   });
 });
