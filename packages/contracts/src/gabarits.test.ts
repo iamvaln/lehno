@@ -122,6 +122,17 @@ describe("le gabarit du message", () => {
   });
 
   describe("les orientations", () => {
+    /* L'ordre vient de l'écran, pas de la table de la spec : les plus
+       courantes d'abord. C'est le serveur qui le rend, donc c'est ici qu'il
+       vit — deux ordres finiraient par diverger. */
+    it("les range dans l'ordre de l'écran, les plus courantes d'abord", () => {
+      expect(ORIENTATIONS[0]).toBe("notre_relation");
+      expect(ORIENTATIONS.at(-1)).toBe("un_hommage");
+      // L'hommage en dernier : c'est la seule qui mérite un avertissement, et
+      // la noyer au milieu la traiterait comme un réglage de plus.
+      expect(ORIENTATIONS.indexOf("un_soutien")).toBeGreaterThan(ORIENTATIONS.indexOf("ma_fierte"));
+    });
+
     it("en porte douze, chacune avec sa consigne dans les deux langues", () => {
       expect(ORIENTATIONS).toHaveLength(12);
       for (const o of ORIENTATIONS) {

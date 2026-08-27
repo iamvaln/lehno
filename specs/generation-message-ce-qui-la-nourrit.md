@@ -18,7 +18,7 @@ Tout ce que la §4.1 demande est là. Rien à créer côté données du proche.
 |---|---|---|
 | Le nom d'usage | `Person.callingName`, à défaut `displayName` | ✅ |
 | Le genre du proche | `Person.gender` | ✅ |
-| **Le genre de l'utilisateur** | `User.gender` | ✅ posé, **jamais renseigné** |
+| **Le genre de l'utilisateur** | `User.gender` | ✅ |
 | La relation | `Person.relation` — sept valeurs — et `relationHint` en clair | ✅ |
 | Le registre | `Person.register` — familier · amical · formel | ✅ |
 | La langue | `Person.language`, à défaut celle du compte | ✅ |
@@ -169,9 +169,19 @@ doivent vivre en base (§8 de la spec portrait : *« rien de tout cela ne vit da
 le code »*), mais `StudioConfig` n'existe pas non plus. Même réponse : un
 registre de départ dans le code.
 
-**`User.gender` n'est jamais renseigné.** Le champ existe depuis aujourd'hui ; la
-question du studio — *« pour écrire correctement : fier ou fière ? »* — n'est
-posée nulle part. Sans elle, tous les messages emploieront des tournures neutres.
+**Le genre se collecte aux deux formulaires d'identité**, et non au studio — le
+lot de design le tranche : *« Deux champs : celui du proche (§3.18), celui de qui
+écrit (§3.23) »*, sous le libellé **« Accord du message »**.
+
+Ce document disait d'abord « demandé au studio », d'après `profil-proche`. Le lot
+est postérieur et il l'emporte : la question ne se pose pas à la première
+génération, elle se pose là où l'on décrit quelqu'un.
+
+**L'asymétrie qui en découle** : `gender` **s'écrit sans se lire**. Il entre par
+le formulaire et ne ressort que vers le modèle ; `personSchema` ne le rend pas,
+ce qui empêche un écran d'afficher le genre d'un tiers ou de trier dessus. Celui
+de l'utilisateur, lui, est rendu — c'est son propre compte, et lui cacher ce
+qu'il a répondu n'aurait aucun sens.
 
 **`GiftGiven` n'existe pas.** Sans impact sur le message ; bloquant pour les
 idées de cadeaux.

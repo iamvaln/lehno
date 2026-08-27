@@ -18,10 +18,19 @@ export type LangueGeneration = "fr" | "en";
    Elles vivront en base avec leurs libellés dans les deux langues, leur ordre
    et leur activation. Ici ne figure que ce dont le GABARIT a besoin : la
    consigne qui oriente le texte. */
+/* L'ORDRE EST CELUI DE L'ÉCRAN, pas celui de la §2.1.
+ *
+ * Le lot de design les range par fréquence — « les plus courantes viennent
+ * d'abord, et l'écran reste franchissable en quelques gestes ». La table de la
+ * spec les énumère ; elle ne les classe pas.
+ *
+ * C'est le serveur qui rend cet ordre (`/me/studio/options`), donc c'est ici
+ * qu'il vit. Deux ordres, un au serveur et un à l'écran, finiraient par
+ * diverger — et l'écran retrierait ce que le serveur a déjà trié. */
 export const ORIENTATIONS = [
-  "notre_relation", "tes_progres", "nos_progres", "une_motivation",
-  "un_soutien", "ce_qui_te_caracterise", "ma_fierte", "mon_affection",
-  "ma_gratitude", "ce_que_tu_mas_appris", "un_voeu", "un_hommage",
+  "notre_relation", "ce_qui_te_caracterise", "ma_gratitude", "ma_fierte",
+  "mon_affection", "tes_progres", "nos_progres", "ce_que_tu_mas_appris",
+  "un_voeu", "une_motivation", "un_soutien", "un_hommage",
 ] as const;
 
 export type Orientation = (typeof ORIENTATIONS)[number];
