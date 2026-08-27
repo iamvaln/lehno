@@ -49,7 +49,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  canauxSchema, catalogueIaSchema, comptesAdminSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  canauxSchema, catalogueIaSchema, chainesIaSchema, comptesAdminSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
   pageAssistanceSchema, pageContactSchema, pageAttenteSchema, pageRetoursSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
@@ -478,10 +478,17 @@ export function App(): ReactNode {
     { garderAncien: true },
   );
 
+  /* Le catalogue et les chaînes se chargent ENSEMBLE. Deux lectures séparées
+     donneraient deux états d'attente sur un écran qui n'en montre qu'un — et,
+     pire, un instant où la chaîne cite un modèle que le catalogue n'a pas
+     encore rendu. */
   const etatModeles = useRessource(
-    () => (section === "modeles"
-      ? api.appeler("/admin/ai-models", { schema: catalogueIaSchema })
-      : Promise.resolve(null)),
+    async () => (section === "modeles"
+      ? {
+        catalogue: await api.appeler("/admin/ai-models", { schema: catalogueIaSchema }),
+        chaines: await api.appeler("/admin/ai-routes", { schema: chainesIaSchema }),
+      }
+      : null),
     [section, tourModeles],
   );
 
@@ -956,11 +963,30 @@ export function App(): ReactNode {
       <Ressource
         etat={etatModeles}
         t={t}
-        enfant={(catalogue) => (catalogue ? (
+        enfant={(charge) => (charge ? (
           <Modeles
             role={role}
             langue={langue}
-            modeles={catalogue.items}
+            modeles={charge.catalogue.items}
+            chaines={charge.chaines.items}
+            onReordonner={(tache, modeleIds, motif) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/ai-routes", {
+                    methode: "PATCH",
+                    corps: { task: tache, modelIds: modeleIds, reason: motif },
+                  });
+                } catch (echec) {
+                  /* Le serveur refuse un modèle dont la capacité ne correspond
+                     pas à la tâche, et une chaîne dont aucun modèle n'est en
+                     service. L'écran traduit ce refus plutôt que de laisser
+                     croire à une panne de l'outil. */
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourModeles((n) => n + 1);
+                }
+              })();
+            }}
             onBasculer={(modele, actif, motif) => {
               void (async () => {
                 try {
@@ -969,10 +995,10 @@ export function App(): ReactNode {
                     corps: { id: modele.id, enabled: actif, reason: motif },
                   });
                 } catch (echec) {
-                  // Le serveur refuse d'éteindre le dernier modèle en service :
-                  // couper toute génération sans que rien ne le dise avant la
-                  // première panne. L'écran traduit ce refus plutôt que de
-                  // laisser croire à une panne de l'outil.
+                  /* Le serveur refuse d'éteindre le dernier modèle en service
+                     D'UNE TÂCHE — un catalogue riche en modèles de texte ne
+                     sauve pas la tâche d'image dont on vient de couper le
+                     dernier. L'écran traduit ce refus. */
                   if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
                 } finally {
                   setTourModeles((n) => n + 1);

@@ -12,6 +12,9 @@ import {
   CreditsController, CreditsService, ReferralController, InvitationController,
 } from "./onboarding/credits.controller.js";
 import { FlagsService } from "./flags/flags.service.js";
+import { CatalogueIAService } from "./ia/catalogue.service.js";
+import { RouteurIAService } from "./ia/routeur.service.js";
+import { construireAdaptateurs, FOURNISSEURS_IA } from "./ia/adaptateurs/index.js";
 import { FeatureGuard } from "./flags/feature.guard.js";
 import { MeFeaturesController, PublicFeaturesController } from "./flags/features.controller.js";
 import { AuthService } from "./auth/auth.service.js";
@@ -64,7 +67,7 @@ import { AdminUsersController, AdminUsersService } from "./admin/users.controlle
 import { DeletionsController, DeletionsService } from "./admin/deletions.controller.js";
 import { LecturesController, LecturesService } from "./admin/lectures.controller.js";
 import { AdminsController, AdminsService } from "./admin/admins.controller.js";
-import { AIModelsController, AIModelsService } from "./admin/ai-models.controller.js";
+import { AIModelsController, AIRoutesController, AIModelsService } from "./admin/ai-models.controller.js";
 import { DashboardController, DashboardService } from "./admin/dashboard.controller.js";
 import { MetriquesController, MetriquesService } from "./admin/metriques.controller.js";
 import { StudioController, StudioService } from "./admin/studio.controller.js";
@@ -94,7 +97,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, DashboardController, MetriquesController, StudioController, MeController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, StudioController, MeController,
   ],
   providers: [
     PrismaService,
@@ -186,6 +189,12 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     SignupService,
     CreditsService,
     FlagsService,
+    CatalogueIAService,
+    RouteurIAService,
+    // Construits une fois, au démarrage : les instancier à chaque génération
+    // relirait l'environnement à chaque appel, et un fournisseur retiré à chaud
+    // disparaîtrait sans qu'aucun journal ne le dise.
+    { provide: FOURNISSEURS_IA, useFactory: () => construireAdaptateurs() },
     FeatureGuard,
     ProfileService,
     TenantRepository,

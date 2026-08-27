@@ -77,7 +77,7 @@ describe("administration — les gabarits du studio", () => {
   it("nomme le modèle appelé, plutôt que son identifiant", async () => {
     const { entete } = await session("admin");
     const modele = await db.prisma.aIModel.create({
-      data: { provider: "anthropic", modelKey: "claude-opus-5", priority: 1 },
+      data: { provider: "anthropic", modelKey: "claude-opus-5" },
     });
     await appeler("POST", "", entete, gabarit({ aiModelId: modele.id }));
 

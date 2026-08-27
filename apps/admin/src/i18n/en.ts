@@ -201,16 +201,26 @@ export const en: typeof fr = {
 
   modeles: {
     titre: "AI models",
-    sous: "The order we try them in, and what each one costs at the provider.",
-    col: { rang: "Try order", fournisseur: "Provider", modele: "Model", etat: "State", entree: "Input cost", sortie: "Output cost" },
-    etats: { actif: "In service", eteint: "Off" },
+    sous: "What we call for each task, in what order, and what it costs at the provider.",
+    col: { fournisseur: "Provider", modele: "Model", capacite: "Handles", etat: "State", emplois: "Where it serves", entree: "Input cost", sortie: "Output cost" },
+    capacites: { texte: "Text", image: "Image" },
+    etats: { actif: "In service", eteint: "Off", enPanne: "Briefly unreachable" },
     sansCout: "Not priced",
+    sansEmploi: "In no chain",
     unite: "$ / M tokens",
+    taches: {
+      note_classification: "Note sorting",
+      sensitive_detection: "Sensitive detection",
+      message: "Message",
+      gift_ideas: "Gift ideas",
+      illustration: "Illustration",
+      photo_style: "Photo style",
+    } as Record<string, string>,
     eteindre: "Turn this model off",
     rallumer: "Put back in service",
     dialogueEteindre: {
       titre: "Turn off {modele}",
-      consequence: "Work will move to the next model in the try order. If this is the last one in service, the server will refuse.",
+      consequence: "Work moves to the next model in every chain this one sits in. If it is the last one in service for a task, the server refuses.",
       motifs: [
         "The model fails too often",
         "Cost has grown too high",
@@ -219,13 +229,33 @@ export const en: typeof fr = {
     },
     dialogueRallumer: {
       titre: "Put {modele} back in service",
-      consequence: "It returns to the try order, at its rank.",
+      consequence: "It returns at its rank, in every chain it sits in.",
       motifs: [
         "The provider incident is over",
         "Rolling back a trial",
       ],
     },
-    manque: "Real spend and what it earned are not shown yet: usage records do not exist in the database. This catalogue says what we try, and in what order.",
+    chaines: {
+      titre: "Try order, task by task",
+      sous: "Rank 1 is called first. If it does not answer, we move down. The provider is repeated at every rank: three models from one host is a chain a single outage takes out whole.",
+      vide: "No model set for this task: nothing will be produced.",
+      promouvoir: "Move up one rank",
+      declasser: "Move down one rank",
+      dialogue: {
+        titre: "Change the try order",
+        consequence: "The order applies to the next run. Credits already committed are unaffected.",
+        motifs: [
+          "The primary costs too much",
+          "The fallback gives better results",
+          "The primary's provider is unstable",
+        ],
+      },
+      avertissements: {
+        courte: "This chain has only {rangs} rank(s) instead of {recommande}. Not an error: only two providers make images.",
+        fournisseurRepete: "Several ranks share one provider: a single outage would take the whole chain, and the fallback would never happen.",
+      },
+    },
+    manque: "Real spend and what it earned are not shown yet: paid runs are not linked to their consumption. This catalogue says what we try, in what order, and what it costs at the provider.",
   },
 
   drapeaux: {
