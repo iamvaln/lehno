@@ -155,6 +155,13 @@ export const en: typeof fr = {
       touteLaPeriode: "All time",
       actions: {
         user_status_update: "Account state change",
+        admin_invite: "Administrator invited",
+        admin_role_update: "Administrator role changed",
+        admin_revoke: "Administrator access revoked",
+        ai_model_update: "AI model setting changed",
+        prompt_template_create: "Production template created",
+        prompt_template_activate: "Production template activated",
+        support_request_update: "Support request state changed",
         parameter_update: "Parameter change",
         feature_flag_update: "Feature toggle",
         credit_bundle_update: "Bundle change",

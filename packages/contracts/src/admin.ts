@@ -291,9 +291,16 @@ export type PageAudit = z.infer<typeof pageAuditSchema>;
 /**
  * Une tentative d'entrée, réussie ou non.
  *
- * Pas d'adresse IP : la spécification technique §9 dit qu'elle ne descend pas
- * en base. Ce qu'on garde est un lieu approximatif — assez pour voir qu'une
- * série d'essais vient d'ailleurs, pas assez pour suivre quelqu'un.
+ * **Pas d'adresse IP dans cette lecture** — mais elle est bien en base.
+ *
+ * Un commentaire a longtemps affirmé ici que « la spécification technique §9 »
+ * disait qu'elle n'y descendait pas. Cette section porte sur les droits d'accès
+ * et ne dit rien de l'adresse : la citation était inventée, et le fait qu'elle
+ * avançait est faux depuis qu'on enregistre l'adresse.
+ *
+ * Ce qui reste vrai est un choix, pas une contrainte : l'écran montre un lieu
+ * approximatif, assez pour voir qu'une série d'essais vient d'ailleurs, pas
+ * assez pour suivre quelqu'un. L'adresse sert aux investigations, et s'y lit.
  *
  * L'adresse tentée reste visible même quand aucun compte n'y correspond : c'est
  * elle qui montre qu'on essaie mille adresses à la suite.

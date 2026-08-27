@@ -889,6 +889,9 @@ model AuditLog {
   createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([actorType, actorId])
+  // La traçabilité d'un objet se lit depuis son détail (ux-admin §7) : sans cet
+  // index, ouvrir une fiche parcourrait tout le journal.
+  @@index([targetType, targetId])
   @@index([createdAt])
   @@map("audit_log")
 }

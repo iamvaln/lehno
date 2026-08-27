@@ -55,6 +55,7 @@ import {
   paiementDetailSchema, paliersSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
   profilAdminSchema,
+  type Intervention,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
@@ -333,6 +334,41 @@ export function App(): ReactNode {
     [section, ouvert],
   );
 
+  /**
+   * La traçabilité du compte ouvert — « sur chaque objet, l'historique des
+   * interventions est consultable depuis son détail » (ux-admin §7).
+   *
+   * Réservée aux administrateurs, comme le journal dont elle est une vue : le
+   * serveur refuse la lecture au support, et la demander lui vaudrait un 403 à
+   * chaque fiche ouverte. La fiche, elle, reste ouverte aux deux — c'est le
+   * pied de page qui disparaît.
+   */
+  const etatTracabilite = useRessource(
+    () => (section === "comptes" && ouvert && role === "admin"
+      ? api.appeler(`/admin/audit-log?targetType=user&targetId=${ouvert}`, { schema: pageAuditSchema })
+      : Promise.resolve(null)),
+    [section, ouvert, role],
+  );
+
+  /**
+   * Du journal vers le pied de fiche.
+   *
+   * Le journal ne porte pas de nom d'auteur : `actorId` n'est pas une clé
+   * étrangère, pour qu'une trace survive au compte qu'elle décrit. On dit donc
+   * la qualité — « Administration », « Utilisateur » — plutôt que d'inventer un
+   * nom ou d'afficher un identifiant que personne ne reconnaît.
+   */
+  const versIntervention = (trace: TraceAudit): Intervention => ({
+    id: trace.id,
+    date: quand(trace.date, langue),
+    auteur: t.journal.acteurs[trace.acteurType],
+    // Le code brut quand le libellé manque : une action qu'on vient d'ajouter
+    // se lit mal, mais elle se lit — et l'absence se voit.
+    action: t.journal.filtres.actions[trace.action as keyof typeof t.journal.filtres.actions] ?? trace.action,
+    objet: trace.cibleId ?? "",
+    motif: trace.motif ?? t.journal.sansMotif,
+  });
+
   const etatParametres = useRessource(
     () => (section === "parametres"
       ? api.appeler("/admin/parameters", { schema: parametresSchema })
@@ -571,9 +607,12 @@ export function App(): ReactNode {
             role={role}
             langue={langue}
             compte={compte}
-            // Vide tant qu'aucun point d'entrée ne rend l'historique d'un
-            // compte : un pied de page vide dit ce qui est, la fixture qui
-            // était passée ici disait le contraire.
+            // Le pied de page ne bloque pas la fiche : tant que le journal
+            // n'est pas revenu — ou s'il a échoué — la fiche se lit, avec un
+            // historique vide. L'inverse ferait attendre le compte pour son
+            // annexe.
+            interventions={(etatTracabilite.statut === "pret" ? etatTracabilite.donnees?.items ?? [] : [])
+              .map(versIntervention)}
             onRetour={() => setOuvert(null)}
           />
         ) : null)}
@@ -846,7 +885,16 @@ export function App(): ReactNode {
             colonnes={[
               { cle: "date", titre: t.journal.col.date, largeur: 190, rendu: (l) => quand(l.date, langue) },
               { cle: "acteurType", titre: t.journal.col.acteur, largeur: 150, rendu: (l) => t.journal.acteurs[l.acteurType] },
-              { cle: "action", titre: t.journal.col.action },
+              {
+                cle: "action",
+                titre: t.journal.col.action,
+                // Le filtre proposait des libellés et la colonne rendait des
+                // codes : on filtrait sur « Ajustement d'un solde » pour
+                // obtenir des lignes disant `credit_adjustment`. Le code brut
+                // reste le repli — une action qu'on vient d'ajouter se lit mal,
+                // mais elle se lit, et son absence du dictionnaire se voit.
+                rendu: (l) => t.journal.filtres.actions[l.action as keyof typeof t.journal.filtres.actions] ?? l.action,
+              },
               {
                 cle: "motif",
                 titre: t.journal.col.motif,

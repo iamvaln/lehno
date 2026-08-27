@@ -186,6 +186,13 @@ export const fr = {
       // posé ce geste.
       actions: {
         user_status_update: "Changement d'état d'un compte",
+        admin_invite: "Invitation d'un administrateur",
+        admin_role_update: "Changement de rôle d'un administrateur",
+        admin_revoke: "Révocation d'un accès d'administrateur",
+        ai_model_update: "Réglage d'un modèle d'IA",
+        prompt_template_create: "Création d'un gabarit de production",
+        prompt_template_activate: "Activation d'un gabarit de production",
+        support_request_update: "Changement d'état d'une demande d'assistance",
         parameter_update: "Modification d'un paramètre",
         feature_flag_update: "Bascule d'une fonctionnalité",
         credit_bundle_update: "Modification d'un palier",

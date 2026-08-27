@@ -13,6 +13,12 @@ const journalSchema = z.object({
   cursor: z.string().uuid().optional(),
   action: z.string().max(64).optional(),
   actorId: z.string().uuid().optional(),
+  // « Sur chaque objet, l'historique des interventions est consultable depuis
+  // son détail » (ux-admin §7). Les deux vont ensemble : le type seul
+  // confondrait deux objets, et la fiche d'un compte montrerait les gestes
+  // portés sur un autre.
+  targetType: z.string().max(40).optional(),
+  targetId: z.string().uuid().optional(),
   since: z.coerce.date().optional(),
 }).strict();
 
@@ -37,6 +43,11 @@ export class LecturesService {
       where: {
         ...(requete.action ? { action: requete.action } : {}),
         ...(requete.actorId ? { actorId: requete.actorId } : {}),
+
+
+        ...(requete.targetType ? { targetType: requete.targetType } : {}),
+        ...(requete.targetId ? { targetId: requete.targetId } : {}),
+
         ...(requete.since ? { createdAt: { gte: requete.since } } : {}),
       },
       // Le plus récent en tête : on ouvre le journal pour savoir ce qui vient
