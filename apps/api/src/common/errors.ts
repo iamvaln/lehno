@@ -17,6 +17,10 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   // maintenance/maintenance.guard.ts — surtout pas 404, qui ferait lire un
   // arrêt de deux heures comme une suppression.
   maintenance: 503,
+  // Même statut que maintenance, sens différent : ce n'est pas l'API qui est
+  // fermée, c'est le fournisseur d'IA qui ne répond pas. Le client réessaie ;
+  // il ne masque pas l'écran.
+  generation_unavailable: 503,
 };
 
 // 422 par défaut : une règle métier non satisfaite, requête pourtant bien formée.
