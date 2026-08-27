@@ -114,11 +114,18 @@ describe("surfaces publiques — HTTP de bout en bout", () => {
     // Un drapeau d'application n'a rien à faire sur une surface sans compte :
     // l'exposer annoncerait au monde ce qu'on prépare. La preuve se fait ici,
     // en HTTP réel — le service seul ne démontre pas ce que la route rend.
+    /* La portée s'est élargie le 27/08 : les quatre clés qui décident d'une
+       section de la landing sont devenues publiques, pour que la page ne puisse
+       pas promettre ce qui est éteint. Ce cas garde son sujet — une clé
+       purement applicative ne fuite pas — mais le prouve sur deux clés qui le
+       sont restées : `events.other` gouverne une valeur dans une requête, et
+       `topup.manual` un chemin de paiement. Ni l'une ni l'autre n'a de section
+       sur la page. */
     it("ne laisse pas fuiter un drapeau d'application", async () => {
       await db.prisma.featureFlag.createMany({
         data: [
-          { key: "credits", enabled: true },
-          { key: "generation.portrait", enabled: true },
+          { key: "events.other", enabled: true },
+          { key: "topup.manual", enabled: true },
           { key: "launch.live", enabled: true },
         ],
       });

@@ -257,13 +257,30 @@ describe("drapeaux de fonctionnalité", () => {
 
     // Un drapeau d'application n'a rien à faire sur une surface sans compte :
     // l'exposer annoncerait au monde ce qu'on prépare.
+    /* La portée s'est élargie le 27/08 : la landing montre ses sections d'après
+       les drapeaux, comme l'application masque les siennes, donc les quatre
+       clés qui décident d'une section de la page sont devenues publiques.
+       
+       Ce cas garde son SUJET — une clé purement applicative ne fuite pas — mais
+       le prouve sur une clé qui l'est restée. `events.other` gouverne une
+       valeur dans une requête, elle n'a aucune section sur la landing. */
     it("/public/features ne laisse pas fuiter un drapeau d'application", async () => {
-      await allumer("credits", "generation.portrait", "launch.live");
+      await allumer("events.other", "topup.manual", "launch.live");
       const r = await fetch(`${baseUrl}/v1/public/features`);
       const corps = (await r.json()) as { features: string[] };
-      expect(corps.features).not.toContain("credits");
-      expect(corps.features).not.toContain("generation.portrait");
+      expect(corps.features).not.toContain("events.other");
+      expect(corps.features).not.toContain("topup.manual");
       expect(corps.features).toContain("launch.live");
+    });
+
+    // Et l'inverse, qui compte autant : les quatre clés élargies DOIVENT
+    // paraître, sinon la landing ne saurait pas quoi montrer.
+    it("expose les drapeaux dont la landing compose ses sections", async () => {
+      await allumer("credits", "generation.message", "launch.live");
+      const r = await fetch(`${baseUrl}/v1/public/features`);
+      const corps = (await r.json()) as { features: string[] };
+      expect(corps.features).toContain("credits");
+      expect(corps.features).toContain("generation.message");
     });
 
     it("/public/features n'expose pas ce qui est éteint", async () => {
