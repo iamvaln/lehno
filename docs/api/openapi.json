@@ -9692,7 +9692,7 @@
     "/me/metadata": {
       "get": {
         "summary": "Lire les valeurs dont les écrans composent leurs listes",
-        "description": "Aucun libellé : ils vivent dans les ressources de traduction de\nl'application, indexés par `code`.\n\n`categories` est la seule valeur lue EN BASE — sa `kind` et son\n`isConstraint` ne se déduisent d'aucune énumération. `dislikes_nogo`\nporte `isConstraint: true` : cela change ce que le produit PROPOSE, pas\nseulement ce qu'il affiche. Le reste est figé, servi avec elle pour\nque le client n'aille pas chercher la même chose à deux endroits.",
+        "description": "Aucun libellé : ils vivent dans les ressources de traduction de\nl'application, indexés par `code`.\n\n`categories` est la seule valeur lue EN BASE — sa `kind` et son\n`isConstraint` ne se déduisent d'aucune énumération. `dislikes_nogo`\nporte `isConstraint: true` : cela change ce que le produit PROPOSE, pas\nseulement ce qu'il affiche. Le reste est figé, servi avec elle pour\nque le client n'aille pas chercher la même chose à deux endroits.\n\n### `eventKinds` est FILTRÉ par les drapeaux\n\nC'est la seule liste qui varie d'un compte à l'autre. Quand\n`events.other` est éteint, elle rend `[\"birthday\"]` — et l'écran de\n§3.6 ne propose plus le choix « autre type », **sans avoir la moindre\nrègle à connaître**.\n\n**C'est ce chemin qu'il faut lire, pas le drapeau.** Un client qui\ntesterait `events.other` lui-même referait le raisonnement du serveur,\net s'en écarterait le jour où il change.\n\n**À relire après chaque connexion**, comme `/me/features` : un drapeau\npeut basculer pendant qu'une session est ouverte.",
         "security": [
           {
             "bearerAuth": []
