@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { randomBytes } from "node:crypto";
 import type { INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
@@ -264,5 +265,214 @@ describe("administration — l'export des lectures", () => {
   it("rien ne sort sans session", async () => {
     expect((await exporter("audit-log", {})).status).toBe(401);
     expect((await exporter("login-activity", {})).status).toBe(401);
+  });
+
+  // ─── Les trois listes d'exploitation ───────────────────────────────────────
+  //
+  // « Les listes filtrées s'exportent, pour l'analyse ou la conformité »
+  // (ux-admin §7). Le journal et les connexions le faisaient ; les comptes, les
+  // paiements et les mouvements de crédits, non — c'étaient pourtant les trois
+  // qu'on demande le jour d'un contrôle.
+
+  describe("les comptes", () => {
+    const compte = async (over: Record<string, unknown> = {}) => db.prisma.user.create({
+      data: {
+        email: `${randomBytes(6).toString("hex")}@exemple.cm`,
+        username: `u${randomBytes(4).toString("hex")}`,
+        referralCode: randomBytes(4).toString("hex").toUpperCase(),
+        ...over,
+      },
+    });
+
+    /**
+     * **Réservé aux administrateurs**, et c'est un choix qui mérite d'être dit.
+     *
+     * §6 accorde au support « consulter les comptes » et « consulter les
+     * paiements et les mouvements de crédits », et §7 n'assortit l'export
+     * d'aucun rôle : les deux ensemble le lui ouvriraient. L'écran des comptes,
+     * lui, réserve déjà son bouton d'export aux administrateurs.
+     *
+     * Devant ce désaccord, on prend la lecture la plus fermée : un fichier sort
+     * de l'outil et circule, restreindre se défait d'une ligne, élargir laisse
+     * sortir des données. À trancher — voir K du fichier d'écarts.
+     */
+    it("est réservé aux administrateurs, comme le bouton de l'écran", async () => {
+      const { entete } = await session("support");
+      expect((await exporter("users", entete)).status).toBe(403);
+    });
+
+    it("rend un document nommé, avec ses colonnes", async () => {
+      const { entete } = await session("admin");
+      await compte({ username: "awa" });
+
+      const res = await exporter("users", entete);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toContain("text/csv");
+      const texte = await res.text();
+      expect(texte.split("\n")[0]).toContain("pseudo");
+      expect(texte).toContain("awa");
+    });
+
+    // Le filtre affiché doit partir dans la requête, sinon on exporterait la
+    // liste entière en croyant exporter sa sélection — et le fichier dirait
+    // autre chose que l'écran.
+    it("n'emporte que la sélection affichée", async () => {
+      const { entete } = await session("admin");
+      // Des pseudos qui ne ressemblent à aucun état : nommer un compte
+      // « suspendu » rendait l'assertion vraie que le filtre morde ou non.
+      await compte({ username: "zoe", status: "active" });
+      await compte({ username: "kofi", status: "suspended" });
+
+      const texte = await (await exporter("users", entete, "?status=suspended")).text();
+      expect(texte).toContain("kofi");
+      expect(texte).not.toContain("zoe");
+    });
+
+    // Et l'autre filtre, qui a le sien : une recherche vide ne doit pas tout
+    // ramener sous prétexte qu'elle ne dit rien.
+    it("la recherche libre borne aussi l'export", async () => {
+      const { entete } = await session("admin");
+      await compte({ username: "zoe" });
+      await compte({ username: "kofi" });
+
+      const texte = await (await exporter("users", entete, "?q=kof")).text();
+      expect(texte).toContain("kofi");
+      expect(texte).not.toContain("zoe");
+    });
+
+    it("inscrit au journal ce qui a été exporté, avec son filtre", async () => {
+      const { compte: admin, entete } = await session("admin");
+      await exporter("users", entete, "?status=suspended");
+
+      const trace = await db.prisma.auditLog.findFirstOrThrow({ where: { action: "user_export" } });
+      expect(trace.actorId).toBe(admin.id);
+      expect(trace.reason).toContain("suspended");
+    });
+  });
+
+  describe("les paiements", () => {
+    const paiement = async (over: Record<string, unknown> = {}) => {
+      const u = await db.prisma.user.create({
+        data: {
+          email: `${randomBytes(6).toString("hex")}@exemple.cm`,
+          username: `p${randomBytes(4).toString("hex")}`,
+          referralCode: randomBytes(4).toString("hex").toUpperCase(),
+        },
+      });
+      const collecte = await db.prisma.collectionAccount.create({
+        data: { label: "MTN principal", operator: "mtn", number: "237690000000", isActive: true },
+      });
+      return db.prisma.payment.create({
+        data: {
+          userId: u.id, mode: "manual", collectionAccountId: collecte.id,
+          amount: 1000, currency: "XAF", credits: 10, ...over,
+        },
+      });
+    };
+
+    /**
+     * **Réservé aux administrateurs**, et c'est un choix qui mérite d'être dit.
+     *
+     * §6 accorde au support « consulter les comptes » et « consulter les
+     * paiements et les mouvements de crédits », et §7 n'assortit l'export
+     * d'aucun rôle : les deux ensemble le lui ouvriraient. L'écran des comptes,
+     * lui, réserve déjà son bouton d'export aux administrateurs.
+     *
+     * Devant ce désaccord, on prend la lecture la plus fermée : un fichier sort
+     * de l'outil et circule, restreindre se défait d'une ligne, élargir laisse
+     * sortir des données. À trancher — voir K du fichier d'écarts.
+     */
+    it("est réservé aux administrateurs, comme le bouton de l'écran", async () => {
+      const { entete } = await session("support");
+      expect((await exporter("payments", entete)).status).toBe(403);
+    });
+
+    it("rend les paiements, filtre compris", async () => {
+      const { entete } = await session("admin");
+      const abouti = await paiement({ status: "succeeded" });
+      const echoue = await paiement({ status: "failed" });
+
+      const texte = await (await exporter("payments", entete, "?etat=succeeded")).text();
+
+      // Sur le pseudo du payeur, qui distingue les deux : compter les lignes
+      // passerait aussi bien si le filtre ne filtrait rien et qu'il n'y avait
+      // qu'un paiement.
+      const nomAbouti = (await db.prisma.user.findUniqueOrThrow({ where: { id: abouti.userId } })).username;
+      const nomEchoue = (await db.prisma.user.findUniqueOrThrow({ where: { id: echoue.userId } })).username;
+      expect(texte).toContain(nomAbouti);
+      expect(texte).not.toContain(nomEchoue);
+    });
+
+    /**
+     * **Le numéro d'un compte mobile money ne sort jamais**, pas même pour un
+     * administrateur — il est chiffré au repos et masqué à l'affichage. Un
+     * fichier circule par courriel et s'ouvre dans un tableur : c'est le
+     * dernier endroit où le laisser passer.
+     */
+    it("ne laisse pas échapper le numéro de mobile money", async () => {
+      const { entete } = await session("admin");
+      const p = await paiement({ payerMsisdn: "237699887766" });
+      void p;
+
+      const texte = await (await exporter("payments", entete)).text();
+      expect(texte).not.toContain("237699887766");
+      expect(texte).not.toContain("237690000000");
+    });
+
+    it("inscrit au journal ce qui a été exporté", async () => {
+      const { entete } = await session("admin");
+      await exporter("payments", entete, "?etat=pending");
+
+      const trace = await db.prisma.auditLog.findFirstOrThrow({ where: { action: "payment_export" } });
+      expect(trace.reason).toContain("pending");
+    });
+  });
+
+  describe("les mouvements de crédits", () => {
+    /**
+     * **Réservé aux administrateurs**, et c'est un choix qui mérite d'être dit.
+     *
+     * §6 accorde au support « consulter les comptes » et « consulter les
+     * paiements et les mouvements de crédits », et §7 n'assortit l'export
+     * d'aucun rôle : les deux ensemble le lui ouvriraient. L'écran des comptes,
+     * lui, réserve déjà son bouton d'export aux administrateurs.
+     *
+     * Devant ce désaccord, on prend la lecture la plus fermée : un fichier sort
+     * de l'outil et circule, restreindre se défait d'une ligne, élargir laisse
+     * sortir des données. À trancher — voir K du fichier d'écarts.
+     */
+    it("est réservé aux administrateurs, comme le bouton de l'écran", async () => {
+      const { entete } = await session("support");
+      expect((await exporter("credit-transactions", entete)).status).toBe(403);
+    });
+
+    it("rend les mouvements, filtre compris", async () => {
+      const { entete } = await session("admin");
+      const u = await db.prisma.user.create({
+        data: {
+          email: `${randomBytes(6).toString("hex")}@exemple.cm`,
+          username: "beneficiaire",
+          referralCode: randomBytes(4).toString("hex").toUpperCase(),
+        },
+      });
+      await db.prisma.creditTransaction.create({
+        data: { userId: u.id, type: "grant", source: "signup_grant", amount: 5 },
+      });
+      await db.prisma.creditTransaction.create({
+        data: { userId: u.id, type: "consumption", source: "consumption", amount: -1 },
+      });
+
+      const texte = await (await exporter("credit-transactions", entete, "?type=grant")).text();
+      expect(texte).toContain("signup_grant");
+      expect(texte).not.toContain("consumption");
+    });
+
+    it("inscrit au journal ce qui a été exporté", async () => {
+      const { entete } = await session("admin");
+      await exporter("credit-transactions", entete, "?type=adjustment");
+
+      const trace = await db.prisma.auditLog.findFirstOrThrow({ where: { action: "credit_transaction_export" } });
+      expect(trace.reason).toContain("adjustment");
+    });
   });
 });

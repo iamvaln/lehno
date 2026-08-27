@@ -585,3 +585,46 @@ dictionnaire dit comment la resserrer : `WHERE type = 'purchase'`.
 C'est à corriger **avant** le chantier des remboursements, pas pendant — §6
 demande de « déclencher un remboursement » et de « lever le blocage anti-fraude
 d'un remboursement », et `refunded` est déjà un état lisible que rien ne pose.
+
+---
+
+## K. Qui a le droit d'exporter une liste ?
+
+Relevé le 27/08/2026 en livrant l'export des trois listes d'exploitation.
+
+**Trois textes, deux réponses.**
+
+- **§6** accorde au support « consulter les comptes, leur état, leur
+  volumétrie » et « consulter les paiements et les mouvements de crédits ».
+- **§7** dit « les listes filtrées s'exportent, pour l'analyse ou la
+  conformité », sans assortir l'export d'un rôle.
+- **L'écran des comptes** réserve déjà son bouton d'export aux administrateurs
+  — `RoleGate autorise="admin"` dans `Liste.tsx`, livré avant ce chantier.
+
+Les deux premiers, ensemble, l'ouvriraient au support. Le troisième le ferme.
+
+**Ce qui a été fait, et pourquoi.** Les trois exports sont réservés aux
+administrateurs, côté serveur comme à l'écran. Devant un désaccord entre une
+spécification et une décision livrée, on a pris la lecture la plus fermée : un
+fichier sort de l'outil et circule — par courriel, dans un tableur, sur un
+poste. Restreindre se défait d'une ligne ; élargir laisse sortir des données
+qu'on ne rattrape pas.
+
+**Ce que ça rend incohérent, et qu'il faut voir.** L'export des connexions,
+livré plus tôt, est **ouvert au support** parce que sa liste l'est. Le principe
+« l'export suit la visibilité de sa liste » vaut donc pour les connexions et
+pas pour les comptes. L'un des deux est à aligner :
+
+1. **Ouvrir les trois au support** — cohérent avec §6, §7 et les connexions ;
+   demande de retirer la `RoleGate` de `Liste.tsx`, donc d'élargir un accès.
+2. **Fermer aussi l'export des connexions** — cohérent avec le choix fait ici ;
+   demande d'admettre qu'un support voit une liste sans pouvoir la sortir.
+
+La première a ma préférence, mais élargir un accès n'est pas une décision
+d'implémentation.
+
+**Un détail qui n'en est pas un.** Le bouton d'export des comptes proposait
+« csv » **et « json »** ; le serveur ne rend que du CSV. Choisir JSON aurait
+livré un CSV nommé `comptes.csv`. Les formats servis se déclarent désormais à
+l'appelant, qui ne propose que ce qui existe. Le dictionnaire garde le libellé
+JSON pour le jour où le format arrivera.
