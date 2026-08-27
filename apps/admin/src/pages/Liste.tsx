@@ -69,6 +69,13 @@ export interface ListeProps {
   onRetablir?: (compte: CompteLigne, motif: string) => void;
   onAjuster?: (compte: CompteLigne, motif: string) => void;
   onExporter?: (format: string) => void;
+  /**
+   * Les formats réellement servis. Sans serveur — l'aperçu, un test de
+   * composant — les deux du dictionnaire se montrent ; branché, l'appelant ne
+   * passe que ce que le point d'entrée rend. Proposer « json » et livrer un
+   * CSV serait un mensonge d'un clic.
+   */
+  formatsExport?: string[];
 
   /**
    * Piloté par le serveur. Passer `onRequete` fait basculer l'écran : il cesse
@@ -114,6 +121,7 @@ export function Liste({
   onRetablir,
   onAjuster,
   onExporter,
+  formatsExport = ["csv", "json"],
   onRequete, curseurSuivant = null, aPrecedent = false, onPagePrecedente, onPageSuivante,
 }: ListeProps): ReactNode {
   const t = messages(langue);
@@ -250,7 +258,7 @@ export function Liste({
         actions={
           <RoleGate role={role} autorise="admin">
             <ExportButton
-              formats={["csv", "json"]}
+              formats={formatsExport}
               portee={portee}
               libelles={{
                 exporter: t.exporter.bouton,

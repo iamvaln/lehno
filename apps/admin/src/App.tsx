@@ -310,15 +310,28 @@ export function App(): ReactNode {
   };
   const curseur = curseurs.at(-1) ?? null;
 
+  /**
+   * Les filtres des comptes, construits une fois.
+   *
+   * La liste et l'export les lisent tous deux : deux constructions
+   * divergeraient, et le fichier finirait par dire autre chose que l'écran.
+   * Ni `limit` ni `cursor` n'en font partie — ils découpent l'affichage, ils ne
+   * choisissent pas ce qu'on regarde, et un export borné à une page ne serait
+   * pas un export.
+   */
+  const filtresComptes = {
+    ...(requeteComptes.q ? { q: requeteComptes.q } : {}),
+    ...(requeteComptes.etat && requeteComptes.etat !== "tous"
+      ? { status: ETAT_SERVEUR[requeteComptes.etat] }
+      : {}),
+  };
+
   const etatComptes = useRessource(
     () => (section === "comptes" && !ouvert
       ? api.appeler("/admin/users", {
         schema: pageComptesSchema,
         requete: {
-          ...(requeteComptes.q ? { q: requeteComptes.q } : {}),
-          ...(requeteComptes.etat && requeteComptes.etat !== "tous"
-            ? { status: ETAT_SERVEUR[requeteComptes.etat] }
-            : {}),
+          ...filtresComptes,
           ...(requeteComptes.limit ? { limit: String(requeteComptes.limit) } : {}),
           ...(curseur ? { cursor: curseur } : {}),
         },
@@ -705,6 +718,25 @@ export function App(): ReactNode {
       onFiltre: (f: { etat?: string; mode?: string }) =>
         setFiltresPaiements((courant) => ({ ...courant, ...f })),
       onRetour: aller,
+      exportEnCours,
+      /**
+       * Chaque onglet sort sa propre liste, avec ses propres filtres.
+       *
+       * Les paiements reprennent `requetePaiements`, celui-là même que la liste
+       * envoie : le fichier emporte la sélection affichée, jamais la table.
+       * Les mouvements n'ont pas de filtre à l'écran, l'export n'en invente
+       * donc pas — il sort ce que l'onglet montre.
+       *
+       * Réservé aux administrateurs, comme le bouton des comptes et comme le
+       * serveur le refuse au support.
+       */
+      ...(role === "admin"
+        ? {
+          onExporter: () => (ongletCredits === "mouvements"
+            ? exporter("/admin/credit-transactions/export", {}, "mouvements-credits.csv")
+            : exporter("/admin/payments/export", requetePaiements, "paiements.csv")),
+        }
+        : {}),
     };
 
     if (ongletCredits === "mouvements") {
@@ -1042,7 +1074,13 @@ export function App(): ReactNode {
                 },
               }
               : {})}
-            onExporter={() => exporter("/admin/login-activity/export", requeteEntrees, "connexions.csv")}
+            // Le support voit les connexions mais ne les sort pas : on ne
+            // montre pas un geste que le serveur refuserait (décision du
+            // 27/08, voir K). Le journal d'audit n'a pas besoin de la même
+            // garde — sa section entière lui est fermée.
+            {...(role === "admin"
+              ? { onExporter: () => exporter("/admin/login-activity/export", requeteEntrees, "connexions.csv") }
+              : {})}
             exportEnCours={exportEnCours}
           />
         ) : null)}
@@ -1081,6 +1119,11 @@ export function App(): ReactNode {
               if (page.nextCursor) setCurseurs((c) => [...c, page.nextCursor]);
             }}
             onPagePrecedente={() => setCurseurs((c) => (c.length > 1 ? c.slice(0, -1) : c))}
+            // Les mêmes filtres que la liste, lus au même endroit : le fichier
+            // emporte ce qu'on regarde, jamais la table entière.
+            // Le serveur ne rend que du CSV : ne proposer que lui.
+            formatsExport={["csv"]}
+            onExporter={() => exporter("/admin/users/export", filtresComptes, "comptes.csv")}
           />
         ) : null)}
       />
