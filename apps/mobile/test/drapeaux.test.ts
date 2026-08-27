@@ -47,3 +47,40 @@ describe("le repli quand l'appel échoue", () => {
     }
   });
 });
+
+describe("le trou reste habitable", () => {
+  /* En développement les quinze drapeaux sont ouverts ; un déploiement neuf
+     les crée ÉTEINTS. C'est donc l'état vide qu'il faut éprouver, pas celui où
+     tout marche — sans quoi la première mise en production serait la première
+     fois qu'on voit le produit sans ses fonctionnalités. */
+  it("le socle répond toujours oui, liste vide comprise", () => {
+    for (const capacite of SOCLE) {
+      expect(estActive([], capacite), capacite).toBe(true);
+    }
+  });
+
+  // Le repli du premier démarrage EST la liste vide : tant qu'on n'a rien lu,
+  // seul le socle se montre. Rien ne s'affiche sur une supposition.
+  it("part de rien plutôt que de supposer", () => {
+    expect(etatDeRepli()).toEqual([]);
+  });
+
+  /* Absent et inconnu se confondent, à dessein : une version installée ignore
+     une clé créée après elle, et doit se comporter comme si elle était
+     éteinte. C'est ce qui permet de livrer un drapeau neuf sans attendre que
+     tout le parc se mette à jour. */
+  it("traite une clé inconnue comme éteinte", () => {
+    expect(estActive([], "events.other")).toBe(false);
+    expect(estActive([], "topup.provider")).toBe(false);
+    expect(estActive(["credits"], "topup.manual")).toBe(false);
+  });
+
+  /* Les deux canaux de rechargement dépendent de `credits`. Si les crédits
+     s'éteignent, les deux disparaissent de la liste résolue — le serveur l'a
+     déjà fait, le client n'a RIEN à en déduire. Ce test tient l'absence de
+     déduction : `topup.manual` ne s'allume pas parce que `credits` est là. */
+  it("ne déduit aucune dépendance", () => {
+    expect(estActive(["credits"], "topup.provider")).toBe(false);
+    expect(estActive(["credits", "topup.manual"], "topup.manual")).toBe(true);
+  });
+});

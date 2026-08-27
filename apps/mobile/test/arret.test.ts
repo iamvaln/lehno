@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DELAI_MINIMAL, SECONDES_POUR_ANNONCER_UNE_HEURE, delaiDAttente, estUnArret,
-  exigeDeRelireLesDrapeaux, heureDeRetour,
+  exigeDeRelireLesDrapeaux, exigeDeRelireLesMetadonnees, heureDeRetour,
 } from "../lib/arret.js";
 
 describe("reconnaître un arrêt", () => {
@@ -90,5 +90,21 @@ describe("l'heure de retour", () => {
 
   it("ne dit rien sans délai du tout", () => {
     expect(heureDeRetour(null, MIDI, "fr")).toBeNull();
+  });
+});
+
+describe("le filet des choix fermés", () => {
+  /* `422 resource_inactive`, pas `404` : le chemin existe, les anniversaires
+     l'empruntent. Une surface fermée par un drapeau rend `404` et se masque ;
+     un CHOIX fermé dans une surface ouverte rend `422` et se relit. */
+  it("se distingue d'une surface fermée", () => {
+    expect(exigeDeRelireLesMetadonnees(422, "resource_inactive")).toBe(true);
+    expect(exigeDeRelireLesMetadonnees(404, "not_found")).toBe(false);
+  });
+
+  // Un autre 422 est une vraie erreur de saisie, qui se montre : une date de
+  // naissance manquante, un pseudo déjà pris.
+  it("ne confond pas avec une saisie refusée", () => {
+    expect(exigeDeRelireLesMetadonnees(422, "validation_failed")).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import type {
-  CategoryCode, Metadata, Note, PersonSort, SortDirection,
+  CategoryCode, EventKind, Metadata, Note, PersonSort, SortDirection,
 } from "@lehno/contracts";
 
 /* Les décisions du carnet, séparées de son affichage.
@@ -146,4 +146,24 @@ export function dateCourte(civile: string, langue: string): string {
  */
 export function sousTitreDuProche(morceaux: readonly (string | null)[]): string {
   return morceaux.filter((m): m is string => Boolean(m)).join(" · ");
+}
+
+/* Les types d'événement OUVERTS, lus dans les métadonnées — jamais déduits
+ * d'un drapeau.
+ *
+ * `eventKinds` est la seule liste de `/me/metadata` qui varie d'un compte à
+ * l'autre : le serveur la FILTRE déjà. Quand `events.other` est éteint, elle
+ * rend `["birthday"]`, et le formulaire ne propose plus « autre type » sans
+ * avoir la moindre règle à connaître.
+ *
+ * Tester le drapeau nous-mêmes referait le raisonnement du serveur, et nous
+ * en écarterait le jour où il change. C'est le contrat qui l'écrit ainsi, sur
+ * le chemin lui-même.
+ *
+ * Vide tant que la réponse n'est pas là : on ne propose rien qu'on ne sache
+ * ouvert. L'anniversaire, lui, relève du socle et ne s'éteint jamais — mais
+ * même lui s'affirme depuis la liste, pas depuis une exception écrite ici.
+ */
+export function offreLeType(ouverts: readonly EventKind[], kind: EventKind): boolean {
+  return ouverts.includes(kind);
 }

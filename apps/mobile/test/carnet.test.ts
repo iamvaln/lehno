@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Note } from "@lehno/contracts";
+import { MESSAGES } from "../messages/index.js";
+import { libelleDeLEcheance } from "../lib/libelles.js";
 import type { TableDesCategories } from "../lib/carnet.js";
 import {
   PAGE, basculeDeTri, dateCourte, interetsEtNotes, parametresDuCarnet,
-  categoriesDeLaNote, estUnGardeFou, presseAssezPourSAfficher, resteACharger,
+  categoriesDeLaNote, estUnGardeFou, offreLeType, presseAssezPourSAfficher,
+  resteACharger,
   sousTitreDuProche,
 } from "../lib/carnet.js";
 
@@ -217,5 +220,44 @@ describe("le sous-titre de la fiche", () => {
     expect(sousTitreDuProche([null, null, "amical"])).toBe("amical");
     expect(sousTitreDuProche(["Anniversaire", null, null])).toBe("Anniversaire");
     expect(sousTitreDuProche([null, null, null])).toBe("");
+  });
+});
+
+describe("les types d'événement ouverts", () => {
+  /* `eventKinds` vient de `/me/metadata`, DÉJÀ FILTRÉ par le serveur. Tester
+     `events.other` nous-mêmes referait son raisonnement, et s'en écarterait le
+     jour où il change — c'est le contrat qui l'écrit, sur le chemin. */
+  it("se lisent dans la liste servie, pas dans un drapeau", () => {
+    expect(offreLeType(["birthday"], "other")).toBe(false);
+    expect(offreLeType(["birthday", "other"], "other")).toBe(true);
+  });
+
+  // Rien tant que la réponse n'est pas là : on ne propose pas un choix qu'on
+  // ne sait pas ouvert. Même l'anniversaire s'affirme depuis la liste.
+  it("ne propose rien avant d'avoir lu", () => {
+    expect(offreLeType([], "birthday")).toBe(false);
+  });
+});
+
+describe("ce qu'un drapeau ferme, et ce qu'il ne ferme pas", () => {
+  const t = MESSAGES.fr;
+
+  /* IL FERME LA CRÉATION, JAMAIS L'EXISTANT. Un événement libre créé avant
+     l'extinction reste lisible, modifiable, et ses échéances tombent toujours.
+     Le masquer ferait disparaître les dates de quelqu'un parce qu'on a éteint
+     un interrupteur — le pire défaut possible dans un produit dont c'est la
+     seule promesse.
+
+     Ce test tient l'affichage : `libelleDeLEcheance` ne prend AUCUNE liste de
+     types ouverts. Lui en passer une serait le premier pas vers un masquage. */
+  it("une échéance libre garde son libellé, quoi qu'on ait fermé", () => {
+    expect(libelleDeLEcheance("other", "Soutenance", t)).toBe("Soutenance");
+  });
+
+  // Le libellé d'un événement libre est du CONTENU : il s'affiche tel quel,
+  // sans traduction. Un anniversaire, lui, prend le sien au dictionnaire.
+  it("ne traduit pas ce que l'utilisateur a écrit", () => {
+    expect(libelleDeLEcheance("birthday", null, t)).toBe(t.typeAnniversaire);
+    expect(libelleDeLEcheance("other", "Retraite de papa", t)).toBe("Retraite de papa");
   });
 });

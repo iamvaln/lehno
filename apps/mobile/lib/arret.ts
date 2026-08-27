@@ -70,3 +70,23 @@ export function heureDeRetour(
     hour: "numeric", minute: "2-digit",
   }).format(new Date(maintenant + secondes * 1000));
 }
+
+/* Le FILET du serveur, à ne jamais montrer à l'utilisateur.
+ *
+ * `POST /me/events` rend `422 resource_inactive` sur un `kind` que le drapeau
+ * `events.other` a fermé — le type refusé voyageant dans `details.kind`. Ce
+ * n'est pas `404` : le chemin existe, les anniversaires l'empruntent, il n'y a
+ * rien à cacher.
+ *
+ * Le contrat le dit sans détour : « un client à jour ne devrait jamais le
+ * voir ». Le recevoir signifie que NOTRE écran a proposé un choix que ses
+ * métadonnées ne portaient plus. C'est un défaut chez nous, pas chez le
+ * serveur, et le traduire en message d'erreur ferait porter à quelqu'un la
+ * faute d'une liste que nous n'avons pas relue. On relit, et on se tait.
+ */
+export function exigeDeRelireLesMetadonnees(
+  statut: number,
+  code: ErrorCode | null,
+): boolean {
+  return statut === 422 && code === "resource_inactive";
+}

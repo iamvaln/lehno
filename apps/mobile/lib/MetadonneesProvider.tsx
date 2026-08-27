@@ -13,24 +13,32 @@ import { surChangementDeSession } from "./jetons.js";
  * serveur donne leur sens. Les deviner ici reviendrait à réécrire chez nous
  * une règle qui vit là-bas, et à la voir diverger au premier ajout.
  *
- * Elles ne changent pas en séance : on les lit une fois, et à chaque
- * changement de compte — les listes sont les mêmes, mais le chemin est
- * authentifié et n'aurait rien rendu avant la connexion.
+ * `eventKinds` est LA liste qui varie : le serveur la filtre selon les
+ * drapeaux, et un drapeau peut basculer pendant qu'une session est ouverte. Le
+ * contrat demande donc de relire APRÈS CHAQUE CONNEXION, comme `/me/features`
+ * — c'est ce que fait l'abonnement au changement de session plus bas.
  */
 interface Metadonnees {
   categories: Metadata["categories"];
+  /* La seule liste qui varie d'un compte à l'autre : le serveur la FILTRE
+     selon les drapeaux. `events.other` éteint, elle rend `["birthday"]`, et le
+     formulaire ne propose plus « autre type » sans avoir de règle à connaître.
+     C'est ce chemin qu'il faut lire — tester le drapeau referait le
+     raisonnement du serveur et s'en écarterait le jour où il change. */
+  eventKinds: Metadata["eventKinds"];
 }
 
 // Vide plutôt que nul : un écran monté avant la réponse ne devine rien, il
 // n'affiche simplement pas ce qu'il ne sait pas encore.
-const Contexte = createContext<Metadonnees>({ categories: [] });
+const Contexte = createContext<Metadonnees>({ categories: [], eventKinds: [] });
 
 export function MetadonneesProvider({ children }: { children: ReactNode }) {
-  const [categories, setCategories] = useState<Metadata["categories"]>([]);
+  const [tout, setTout] = useState<Metadonnees>({ categories: [], eventKinds: [] });
 
   const demande = useCallback(async () => {
     try {
-      setCategories(metadataSchema.parse(await appel<unknown>("/me/metadata")).categories);
+      const lu = metadataSchema.parse(await appel<unknown>("/me/metadata"));
+      setTout({ categories: lu.categories, eventKinds: lu.eventKinds });
     } catch {
       /* Un échec n'efface pas ce qu'on savait. Sans table, la fiche montre ses
          notes en cartes sans étiquette ni pointillé : moins, jamais faux. */
@@ -40,9 +48,15 @@ export function MetadonneesProvider({ children }: { children: ReactNode }) {
   useEffect(() => { void demande(); }, [demande]);
   useEffect(() => surChangementDeSession(() => { void demande(); }), [demande]);
 
-  return <Contexte.Provider value={{ categories }}>{children}</Contexte.Provider>;
+  return <Contexte.Provider value={tout}>{children}</Contexte.Provider>;
 }
 
 export function useCategories(): Metadata["categories"] {
   return useContext(Contexte).categories;
+}
+
+/* Les types d'événement OUVERTS. Vide tant que la réponse n'est pas là : on
+   ne propose pas un choix qu'on ne sait pas ouvert. */
+export function useTypesOuverts(): Metadata["eventKinds"] {
+  return useContext(Contexte).eventKinds;
 }
