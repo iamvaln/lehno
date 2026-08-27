@@ -75,6 +75,7 @@ import { LecturesController, LecturesService } from "./admin/lectures.controller
 import { AdminsController, AdminsService } from "./admin/admins.controller.js";
 import { AIModelsController, AIRoutesController, AIModelsService } from "./admin/ai-models.controller.js";
 import { DashboardController, DashboardService } from "./admin/dashboard.controller.js";
+import { AdminMaintenanceController, AdminMaintenanceService } from "./admin/maintenance.controller.js";
 import { MetriquesController, MetriquesService } from "./admin/metriques.controller.js";
 import { StudioController, StudioService } from "./admin/studio.controller.js";
 import { MaintenanceService } from "./maintenance/maintenance.service.js";
@@ -103,7 +104,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, StudioController, MeController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, AdminMaintenanceController, StudioController, MeController,
   ],
   providers: [
     PrismaService,
@@ -238,6 +239,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     AIModelsService,
     DashboardService,
     MetriquesService,
+    AdminMaintenanceService,
     StudioService,
   ],
 })
