@@ -11130,6 +11130,7 @@
                         "waitlist_email_invalid",
                         "waitlist_rejected",
                         "maintenance",
+                        "generation_unavailable",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -11188,6 +11189,7 @@
                         "waitlist_email_invalid",
                         "waitlist_rejected",
                         "maintenance",
+                        "generation_unavailable",
                         "contact_invalid",
                         "contact_rejected"
                       ]
@@ -11246,6 +11248,7 @@
                         "waitlist_email_invalid",
                         "waitlist_rejected",
                         "maintenance",
+                        "generation_unavailable",
                         "contact_invalid",
                         "contact_rejected"
                       ]
