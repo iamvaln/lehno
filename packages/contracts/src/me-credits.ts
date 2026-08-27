@@ -162,6 +162,12 @@ export const CREDIT_REASON_LABELS: Record<CreditReason, { fr: string; en: string
 export const CREDIT_SOURCES = [
   "signup_grant",
   "referral_bonus",
+  /* Le cadeau réservé à qui attendait sur la liste. Une source à PART de
+     `gift` : celui-ci est discrétionnaire — un geste commercial décidé au cas
+     par cas —, celui-là est systématique et se compte. Sans la distinction, on
+     ne saurait pas combien d'inscrits en attente ont converti, ni ce que ça a
+     coûté. L'utilisateur, lui, voit la même chose : « Cadeau de bienvenue ». */
+  "waitlist_bonus",
   "purchase",
   "manual_topup",
   "promo_code",
@@ -181,6 +187,9 @@ export type CreditSource = (typeof CREDIT_SOURCES)[number];
 export const RAISON_DE_LA_SOURCE: Record<CreditSource, CreditReason> = {
   signup_grant: "signup",
   referral_bonus: "referral",
+  // Un cadeau, du point de vue de qui le reçoit : la source dit d'où il vient,
+  // la raison dit ce que l'utilisateur en lit.
+  waitlist_bonus: "gift",
   purchase: "purchase",
   manual_topup: "purchase",
   promo_code: "promo",

@@ -2855,6 +2855,12 @@
                       "type": "integer",
                       "minimum": 0
                     },
+                    "waitlistBonus": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "minimum": 0,
+                      "nullable": true
+                    },
                     "referral": {
                       "type": "object",
                       "properties": {
@@ -2891,6 +2897,7 @@
                     "expiresIn",
                     "isNewAccount",
                     "signupCredits",
+                    "waitlistBonus",
                     "referral"
                   ],
                   "additionalProperties": false
