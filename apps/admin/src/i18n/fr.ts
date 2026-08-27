@@ -1075,6 +1075,47 @@ export const fr = {
     formulaire: "Formulaire de configuration",
   },
 
+  arret: {
+    titre: "Arrêt pour intervention",
+    // Deux gestes différents, et les confondre coûterait cher : éteindre une
+    // fonctionnalité retire une surface, arrêter le service les suspend toutes.
+    sous: "Suspend tout le service et annonce un délai. À ne pas confondre avec l'extinction d'une fonctionnalité, qui ne retire qu'une surface.",
+    etats: {
+      ouvert: "Service ouvert",
+      arrete: "Service arrêté",
+    },
+    jusqua: "Retour annoncé pour {heure}",
+    sansHeure: "Aucune heure de retour annoncée",
+    arreter: "Arrêter le service",
+    prolonger: "Prolonger",
+    rouvrir: "Rouvrir le service",
+    duree: "Durée",
+    durees: {
+      m15: "15 minutes",
+      m30: "30 minutes",
+      h1: "1 heure",
+      h2: "2 heures",
+      inconnue: "Je ne sais pas encore",
+    },
+    dialogueArreter: {
+      titre: "Arrêter le service",
+      consequence: "Tous les appels rendront une réponse d'attente, y compris la connexion. Le back-office reste joignable — c'est par là qu'on rouvre.",
+      motifs: [
+        "Migration de la base de données",
+        "Mise en production d'une version",
+        "Incident en cours de traitement",
+      ],
+    },
+    dialogueRouvrir: {
+      titre: "Rouvrir le service",
+      consequence: "Les appels repartent immédiatement. L'heure de retour annoncée est effacée.",
+      motifs: [
+        "Intervention terminée",
+        "Intervention reportée",
+      ],
+    },
+  },
+
   metriques: {
     titre: "Métriques",
     sous: "L'usage au-delà des chiffres du tableau de bord.",

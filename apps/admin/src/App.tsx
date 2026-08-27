@@ -61,7 +61,7 @@ import {
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
 // branché ne s'en approche pas : ce qu'il montre vient du serveur ou n'est pas
 // montré du tout.
-import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole, type PeriodeMetriques } from "@lehno/contracts";
+import { demandeCodeReponseSchema, maintenanceStatusSchema, sessionAdminSchema, type AdminRole, type PeriodeMetriques } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
 
@@ -383,11 +383,23 @@ export function App(): ReactNode {
     motif: trace.motif ?? t.journal.sansMotif,
   });
 
+  const [tourArret, setTourArret] = useState(0);
+
   const etatParametres = useRessource(
     () => (section === "parametres"
       ? api.appeler("/admin/parameters", { schema: parametresSchema })
       : Promise.resolve(null)),
     [section, tourParametres],
+  );
+
+  // L'arrêt se lit à part des paramètres : c'est le même écran, mais pas la
+  // même chose. Un réglage se modifie et s'enregistre ; l'arrêt se déclenche et
+  // se lève, et il doit se relire après chaque geste sans recharger le reste.
+  const etatArret = useRessource(
+    () => (section === "parametres"
+      ? api.appeler("/admin/maintenance", { schema: maintenanceStatusSchema })
+      : Promise.resolve(null)),
+    [section, tourArret],
   );
 
   const etatSuppressions = useRessource(
@@ -1207,6 +1219,43 @@ export function App(): ReactNode {
             role={role}
             langue={langue}
             parametres={reglages}
+            // Le bloc n'apparaît qu'une fois l'état connu. Le rendre pendant
+            // le chargement afficherait « Service ouvert » avant de savoir —
+            // et c'est précisément l'écran qu'on regarde quand on doute.
+            {...(etatArret.statut === "pret" && etatArret.donnees
+              ? { arret: etatArret.donnees }
+              : {})}
+            onArreter={(dureeMinutes, motif) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/maintenance", {
+                    methode: "POST",
+                    corps: { dureeMinutes, reason: motif },
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  // On relit plutôt que de croire : l'écran qui dirait « arrêté »
+                  // sur la foi de son propre clic mentirait le jour où le
+                  // serveur a refusé.
+                  setTourArret((n) => n + 1);
+                }
+              })();
+            }}
+            onRouvrir={(motif) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/maintenance", {
+                    methode: "DELETE",
+                    corps: { reason: motif },
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourArret((n) => n + 1);
+                }
+              })();
+            }}
             onEnregistrer={(valeurs, motif) => {
               void (async () => {
                 // Un paramètre à la fois : le serveur écrit et journalise chaque

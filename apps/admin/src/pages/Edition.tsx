@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import type { AdminRole, Parametre, Parametres } from "@lehno/contracts";
+import type { AdminRole, MaintenanceStatus, Parametre, Parametres } from "@lehno/contracts";
 import { Breadcrumb, FormRow, PageHeader, PageTabs } from "../composants/page/index.js";
 import { DataTable, type Colonne } from "../composants/donnees/index.js";
 import { ConfirmWithReason, RoleGate } from "../composants/actions/index.js";
@@ -26,10 +26,123 @@ type TypeOccasion = Parametres["typesEvenement"][number];
 
 const ENTIER_POSITIF = /^\d+$/;
 
+/** Les durées proposées. Une liste fermée plutôt qu'un champ libre : on
+ *  annonce un ordre de grandeur, pas une minute précise, et un champ libre
+ *  inviterait à saisir « 90 » en croyant dire une heure et demie de travail
+ *  quand on veut dire « je ne sais pas ». */
+const DUREES = [
+  { cle: "m15", minutes: 15 },
+  { cle: "m30", minutes: 30 },
+  { cle: "h1", minutes: 60 },
+  { cle: "h2", minutes: 120 },
+  { cle: "inconnue", minutes: null },
+] as const;
+
+/**
+ * L'arrêt pour intervention, en tête des paramètres.
+ *
+ * **Il est ici et pas dans Fonctionnalités, et c'est voulu.** Éteindre une
+ * fonctionnalité retire une surface ; arrêter le service les suspend toutes et
+ * annonce un délai. Les poser au même endroit inviterait à les confondre — et
+ * l'un des deux enferme l'équipe dehors s'il est pris pour l'autre.
+ */
+function ArretPourIntervention({ t, langue, etat, onArreter, onRouvrir }: {
+  t: Messages;
+  langue: Langue;
+  etat: MaintenanceStatus;
+  onArreter?: (dureeMinutes: number | null, motif: string) => void;
+  onRouvrir?: (motif: string) => void;
+}): ReactNode {
+  const [duree, setDuree] = useState<string>("h1");
+  const [geste, setGeste] = useState<"arreter" | "rouvrir" | null>(null);
+
+  // L'heure vient du serveur en UTC ; c'est ici qu'elle passe à celle de qui
+  // lit. Le serveur ne connaît pas le fuseau du navigateur, et une heure
+  // affichée en UTC ferait annoncer un retour à la mauvaise heure.
+  const heure = etat.until === null
+    ? null
+    : new Intl.DateTimeFormat(langue === "fr" ? "fr-FR" : "en-GB", {
+      dateStyle: "short", timeStyle: "short",
+    }).format(new Date(etat.until));
+
+  const minutes = DUREES.find((d) => d.cle === duree)?.minutes ?? null;
+
+  return (
+    <section className="admin-arret" aria-labelledby="arret-titre">
+      <h2 id="arret-titre" className="admin-rang-titre">{t.arret.titre}</h2>
+      <p className="admin-rang-sous">{t.arret.sous}</p>
+
+      <p className="admin-arret-etat">
+        <strong>{etat.maintenance ? t.arret.etats.arrete : t.arret.etats.ouvert}</strong>
+        {etat.maintenance
+          ? ` — ${heure === null ? t.arret.sansHeure : t.arret.jusqua.replace("{heure}", heure)}`
+          : null}
+      </p>
+
+      <div className="admin-arret-gestes">
+        <select
+          className="admin-champ admin-focus"
+          aria-label={t.arret.duree}
+          value={duree}
+          onChange={(e) => setDuree(e.target.value)}
+        >
+          {DUREES.map((d) => (
+            <option key={d.cle} value={d.cle}>{t.arret.durees[d.cle]}</option>
+          ))}
+        </select>
+
+        {/* Aucune action pleine ici : la vue en a déjà une, « Enregistrer », et
+            deux boutons de même rang ne diraient plus lequel fait avancer.
+            L'emphase est portée par la ligne d'état, qui dit en gras si le
+            service est ouvert ou fermé — c'est l'information, pas le geste. */}
+        <Button
+          variant={etat.maintenance ? "outline" : "destructive"}
+          onClick={() => setGeste("arreter")}
+        >
+          {etat.maintenance ? t.arret.prolonger : t.arret.arreter}
+        </Button>
+
+        {etat.maintenance ? (
+          <Button variant="outline" onClick={() => setGeste("rouvrir")}>
+            {t.arret.rouvrir}
+          </Button>
+        ) : null}
+      </div>
+
+      {geste === "arreter" ? (
+        <ConfirmWithReason
+          titre={t.arret.dialogueArreter.titre}
+          consequence={t.arret.dialogueArreter.consequence}
+          destructif
+          motifs={t.arret.dialogueArreter.motifs}
+          libelles={t.confirmation}
+          onConfirmer={(motif) => { setGeste(null); onArreter?.(minutes, motif); }}
+          onAnnuler={() => setGeste(null)}
+        />
+      ) : null}
+
+      {geste === "rouvrir" ? (
+        <ConfirmWithReason
+          titre={t.arret.dialogueRouvrir.titre}
+          consequence={t.arret.dialogueRouvrir.consequence}
+          motifs={t.arret.dialogueRouvrir.motifs}
+          libelles={t.confirmation}
+          onConfirmer={(motif) => { setGeste(null); onRouvrir?.(motif); }}
+          onAnnuler={() => setGeste(null)}
+        />
+      ) : null}
+    </section>
+  );
+}
+
 export interface EditionProps {
   role: AdminRole;
   langue?: Langue;
   parametres?: Parametres;
+  /** L'état de l'arrêt. Absent tant que le serveur ne l'a pas rendu. */
+  arret?: MaintenanceStatus;
+  onArreter?: (dureeMinutes: number | null, motif: string) => void;
+  onRouvrir?: (motif: string) => void;
   /** Le motif accompagne toujours l'enregistrement : sans lui, le serveur refuse. */
   onEnregistrer?: (valeurs: Parametres, motif: string) => void;
   onRetour?: (id?: string) => void;
@@ -70,6 +183,9 @@ export function Edition({
   role,
   langue = "fr",
   parametres = parametresDemo,
+  arret,
+  onArreter,
+  onRouvrir,
   onEnregistrer,
   onRetour,
 }: EditionProps): ReactNode {
@@ -189,6 +305,16 @@ export function Edition({
         titre={t.parametres.titre}
         sous={onglet === "economie" ? t.parametres.sous : t.parametres.occasions.sous}
       />
+
+      {arret ? (
+        <ArretPourIntervention
+          t={t}
+          langue={langue}
+          etat={arret}
+          {...(onArreter ? { onArreter } : {})}
+          {...(onRouvrir ? { onRouvrir } : {})}
+        />
+      ) : null}
 
       <PageTabs
         actif={onglet}
