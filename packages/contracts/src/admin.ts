@@ -814,3 +814,88 @@ export type DemandeAssistance = z.infer<typeof demandeAssistanceSchema>;
 export type MessageContact = z.infer<typeof messageContactSchema>;
 export type InscriptionAttente = z.infer<typeof inscriptionAttenteSchema>;
 export type Retour = z.infer<typeof retourSchema>;
+
+// ——— Métriques (ux-admin §5.11) ———————————————————————————————————
+
+/** Les périodes que l'écran propose. Une liste fermée plutôt qu'un couple de
+ *  dates : « choisir la période » (§5.11) est un geste de lecture, pas la
+ *  construction d'une requête. Un intervalle libre ouvrirait des fenêtres que
+ *  personne ne relit et que rien n'indexe. */
+export const periodeMetriquesSchema = z.enum(["7j", "30j", "90j", "12m"]);
+
+/** Une cohorte de rétention : le mois d'entrée, et ce qu'il en reste.
+ *
+ *  `actifsA7j` et non `revenusA7j` : en économie, « revenus » se lit d'abord
+ *  comme de l'argent, et cette section en montre juste à côté. */
+export const cohorteSchema = z.object({
+  /** Le mois d'inscription, `AAAA-MM`. */
+  mois: z.string().regex(/^\d{4}-\d{2}$/),
+  inscrits: z.number().int().nonnegative(),
+  actifsA7j: z.number().int().nonnegative(),
+  actifsA30j: z.number().int().nonnegative(),
+}).strict()
+  // Plus de revenants que d'entrants n'est pas un chiffre surprenant, c'est une
+  // requête fausse. Refusé à la frontière : sinon l'erreur ressort trois écrans
+  // plus loin, sous la forme d'une barre qui dépasse son cadre, et se lit comme
+  // un problème d'affichage.
+  .refine((c) => c.actifsA7j <= c.inscrits && c.actifsA30j <= c.inscrits, {
+    message: "une cohorte ne peut pas rendre plus de comptes qu'elle n'en a reçus",
+  });
+
+export const retentionSchema = z.object({
+  cohortes: z.array(cohorteSchema),
+}).strict();
+
+export const conversionSchema = z.object({
+  comptes: z.number().int().nonnegative(),
+  acheteurs: z.number().int().nonnegative(),
+  /** Jours entre l'inscription et le premier paiement réussi. **Médiane**, pas
+   *  moyenne : un compte qui paie au bout d'un an tirerait la moyenne pour tous
+   *  et ferait croire à un cycle long qui n'existe pas.
+   *
+   *  Nul quand personne n'a encore acheté — `0` dirait « le jour même ». */
+  delaiMedianJours: z.number().nonnegative().nullable(),
+  parPalier: z.array(z.object({
+    palier: z.string(),
+    achats: z.number().int().nonnegative(),
+  }).strict()),
+}).strict()
+  .refine((c) => c.acheteurs <= c.comptes, {
+    message: "il ne peut pas y avoir plus d'acheteurs que de comptes",
+  });
+
+export const consommationSchema = z.object({
+  /** Crédits débités sur la période, en valeur absolue : le registre les porte
+   *  en négatif, mais un volume ne se lit pas avec un signe moins. */
+  credits: z.number().int().nonnegative(),
+  mouvements: z.number().int().nonnegative(),
+}).strict();
+
+/** Ce que §5.11 demande et que le dépôt ne sait pas encore mesurer.
+ *
+ *  Une liste **fermée**, et rendue par le serveur : c'est lui qui sait ce qui
+ *  lui manque. Le jour où la source arrive, il cesse de le déclarer et l'écran
+ *  suit — personne n'a à se souvenir d'aller retirer un avertissement écrit en
+ *  dur dans une page.
+ *
+ *  Seul l'identifiant circule ; la phrase vit dans les deux tables de langue.
+ *  Un libellé venu du serveur ne se traduirait pas. */
+export const manqueMetriqueSchema = z.enum([
+  "usage_par_fonctionnalite",
+  "issue_des_actions",
+  "contributions",
+]);
+
+export const metriquesSchema = z.object({
+  periode: periodeMetriquesSchema,
+  retention: retentionSchema,
+  conversion: conversionSchema,
+  consommation: consommationSchema,
+  manques: z.array(manqueMetriqueSchema),
+}).strict();
+
+export type PeriodeMetriques = z.infer<typeof periodeMetriquesSchema>;
+export type Cohorte = z.infer<typeof cohorteSchema>;
+export type Conversion = z.infer<typeof conversionSchema>;
+export type Metriques = z.infer<typeof metriquesSchema>;
+export type ManqueMetrique = z.infer<typeof manqueMetriqueSchema>;
