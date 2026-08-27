@@ -22,6 +22,7 @@ const ACCUEIL = {
   counts: { today: 1, thisWeek: 2 },
   unreadNotifications: 3,
   hasPersons: true,
+  remainingOccurrences: 0,
 };
 
 describe("l'accueil en un appel", () => {
@@ -63,5 +64,19 @@ describe("l'accueil en un appel", () => {
 
   it("refuse un champ que le serveur ne connaît pas", () => {
     expect(() => homeSchema.parse({ ...ACCUEIL, resumables: [] })).toThrow();
+  });
+
+  /* Le « n restants » du bouton « Voir plus ». Le client ne peut pas le
+     calculer : la liste s'arrête à sept, les décomptes s'arrêtent à la
+     semaine. */
+  it("porte ce qui reste au-delà des échéances rendues", () => {
+    const charge = homeSchema.parse({ ...ACCUEIL, remainingOccurrences: 14 });
+    expect(charge.remainingOccurrences).toBe(14);
+  });
+
+  // Zéro veut dire qu'il n'y a rien de plus, et le bouton ne s'affiche pas.
+  // Un négatif n'aurait aucun sens : le contrat le refuse.
+  it("refuse un reste négatif", () => {
+    expect(homeSchema.safeParse({ ...ACCUEIL, remainingOccurrences: -1 }).success).toBe(false);
   });
 });
