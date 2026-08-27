@@ -232,18 +232,32 @@ export const fr = {
 
   modeles: {
     titre: "Modèles d'IA",
-    sous: "L'ordre dans lequel on essaie, et ce que chaque modèle coûte au fournisseur.",
-    col: { rang: "Ordre d'essai", fournisseur: "Fournisseur", modele: "Modèle", etat: "État", entree: "Coût entrée", sortie: "Coût sortie" },
-    etats: { actif: "En service", eteint: "Éteint" },
+    sous: "Ce qu'on appelle pour chaque tâche, dans quel ordre, et ce que ça coûte au fournisseur.",
+    col: { fournisseur: "Fournisseur", modele: "Modèle", capacite: "Sait faire", etat: "État", emplois: "Où il sert", entree: "Coût entrée", sortie: "Coût sortie" },
+    capacites: { texte: "Texte", image: "Image" },
+    /* Trois états, et surtout pas deux. « Éteint » est la décision d'un humain,
+       « momentanément injoignable » le constat du disjoncteur. Ils se réparent
+       par des gestes opposés : le premier attend qu'on le rallume, le second se
+       rouvre seul. Les confondre ferait attendre une reprise qui ne viendra pas. */
+    etats: { actif: "En service", eteint: "Éteint", enPanne: "Momentanément injoignable" },
     // Un coût absent n'est pas un coût nul : c'est un modèle qu'on n'a pas
     // encore tarifé. « 0 » le ferait passer pour gratuit dans un calcul de marge.
     sansCout: "Non tarifé",
+    sansEmploi: "Dans aucune chaîne",
     unite: "$ / M jetons",
+    taches: {
+      note_classification: "Classement des notes",
+      sensitive_detection: "Détection du sensible",
+      message: "Message",
+      gift_ideas: "Idées de cadeaux",
+      illustration: "Illustration",
+      photo_style: "Style photo",
+    } as Record<string, string>,
     eteindre: "Éteindre ce modèle",
     rallumer: "Remettre en service",
     dialogueEteindre: {
       titre: "Éteindre {modele}",
-      consequence: "Les productions passeront au modèle suivant dans l'ordre d'essai. Si c'est le dernier en service, le serveur refusera.",
+      consequence: "Les productions passeront au modèle suivant, dans chaque chaîne où celui-ci figure. Si c'est le dernier en service d'une tâche, le serveur refusera.",
       motifs: [
         "Le modèle échoue trop souvent",
         "Coût devenu trop élevé",
@@ -252,14 +266,34 @@ export const fr = {
     },
     dialogueRallumer: {
       titre: "Remettre {modele} en service",
-      consequence: "Il reprendra sa place dans l'ordre d'essai, à son rang.",
+      consequence: "Il reprendra sa place, à son rang, dans chaque chaîne où il figure.",
       motifs: [
         "L'incident du fournisseur est clos",
         "Retour arrière après un essai",
       ],
     },
+    chaines: {
+      titre: "L'ordre d'essai, tâche par tâche",
+      sous: "Le rang 1 est appelé en premier. S'il ne répond pas, on passe au suivant. Le fournisseur est rappelé à chaque rang : trois modèles du même hébergeur, c'est une chaîne qu'une seule panne emporte en entier.",
+      vide: "Aucun modèle rangé sur cette tâche : rien ne sera produit.",
+      promouvoir: "Monter d'un rang",
+      declasser: "Descendre d'un rang",
+      dialogue: {
+        titre: "Changer l'ordre d'essai",
+        consequence: "L'ordre s'applique à la prochaine production. Les crédits déjà engagés ne sont pas concernés.",
+        motifs: [
+          "Le primaire coûte trop cher",
+          "Le repli donne de meilleurs résultats",
+          "Le fournisseur du primaire est instable",
+        ],
+      },
+      avertissements: {
+        courte: "Cette chaîne ne compte que {rangs} rang(s) au lieu de {recommande}. Ce n'est pas une erreur : deux fournisseurs seulement produisent des images.",
+        fournisseurRepete: "Plusieurs rangs partagent le même fournisseur : une seule panne emporterait toute la chaîne, et le repli n'aurait pas lieu.",
+      },
+    },
     // Ce que cet écran ne montre pas encore, et pourquoi.
-    manque: "La dépense réelle et ce qu'elle a rapporté n'apparaissent pas encore : les relevés d'usage n'existent pas en base. Ce catalogue dit ce qu'on essaie et dans quel ordre.",
+    manque: "La dépense réelle et ce qu'elle a rapporté n'apparaissent pas encore : les productions payantes ne sont pas encore rattachées à leur consommation. Ce catalogue dit ce qu'on essaie, dans quel ordre, et ce que ça coûte au fournisseur.",
   },
 
   drapeaux: {

@@ -43,6 +43,16 @@ export const ERROR_CODES = [
   // relire ses drapeaux et de masquer l'écran — une fenêtre de deux heures se
   // lirait comme une suppression. 503 dit « reviens », et porte le délai.
   "maintenance",
+  /* Aucun modèle d'IA ne peut répondre : la chaîne de la tâche est vide, ou
+     tous ses rangs ont échoué. 503 et non 500 — l'API va bien, c'est un
+     fournisseur tiers qui ne répond pas, et la demande vaudra encore dans cinq
+     minutes. À part de `maintenance`, qui dit que L'API est arrêtée : ici le
+     reste de l'application fonctionne, et l'écran ne doit surtout pas se
+     masquer en entier.
+
+     Un refus du modèle ne porte PAS ce code : ce n'est pas une indisponibilité,
+     et réessayer donnerait le même non. */
+  "generation_unavailable",
   // formulaire de contact
   "contact_invalid",
   // Même raisonnement que waitlist_rejected, pour les deux mêmes filtres :

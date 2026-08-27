@@ -382,25 +382,42 @@ export type PageConnexions = z.infer<typeof pageConnexionsSchema>;
 // ——— Modèles d'IA —————————————————————————————————————————————
 
 /**
- * Un modèle du catalogue, et son rang dans l'ordre de repli.
+ * Un modèle du catalogue, avec ce qu'il sait faire et où il sert.
  *
  * Les coûts sont ceux du fournisseur, par million de jetons, tels qu'on les a
  * relevés — ils peuvent manquer pour un modèle qu'on n'a pas encore tarifé.
+ * Manquer veut dire « on ne sait pas », jamais « gratuit ».
+ *
+ * Le RANG n'est plus ici. Il appartenait à un ordre global, remplacé par une
+ * chaîne par tâche : voir `chainesIaSchema`. Un modèle occupe désormais
+ * plusieurs rangs, un par tâche où il sert, et c'est `emplois` qui les porte.
  *
  * Ce que ce contrat **ne porte pas** : la dépense réelle et ce qu'elle a
- * rapporté. Le §5.8 les demande face à face, mais `AIUsage` et `ActionRun`
- * n'existent pas encore. Les inventer ici donnerait un écran qui affiche des
- * zéros là où il devrait afficher une marge.
+ * rapporté. Le §5.8 les demande face à face, mais `ActionRun` n'existe pas
+ * encore. Les inventer ici donnerait un écran qui affiche des zéros là où il
+ * devrait afficher une marge.
  */
 export const modeleIaSchema = z.object({
   id: z.string(),
   fournisseur: z.string(),
   modele: z.string(),
-  /** Le plus petit d'abord : c'est l'ordre dans lequel on essaie. */
-  rang: z.number().int(),
+  capacite: z.enum(["text", "image"]),
+  /** L'interrupteur de l'administration, et lui seul. */
   actif: z.boolean(),
+  /**
+   * L'état de panne, tenu par le disjoncteur — SÉPARÉ de `actif`, jamais fondu
+   * avec lui. Un modèle coupé à la main et un modèle en panne se réparent par
+   * des gestes opposés : le premier attend qu'on le rallume, le second se
+   * rouvre seul. Les confondre à l'écran ferait attendre une reprise qui ne
+   * viendra pas.
+   */
+  enPanneJusquA: z.string().nullable(),
+  motifDePanne: z.string().nullable(),
+  echecsConsecutifs: z.number().int(),
   coutEntree: z.number().nullable(),
   coutSortie: z.number().nullable(),
+  /** Où ce modèle sert, pour qu'on voie ce qu'on casse en le coupant. */
+  emplois: z.array(z.object({ tache: z.string(), rang: z.number().int() }).strict()),
   misAJourLe: z.string(),
 }).strict();
 
@@ -408,8 +425,45 @@ export const catalogueIaSchema = z.object({
   items: z.array(modeleIaSchema),
 }).strict();
 
+/**
+ * Une chaîne de repli : les modèles d'une tâche, du premier essai au dernier.
+ *
+ * Le FOURNISSEUR est rendu à chaque rang, et pas seulement dans le catalogue.
+ * C'est ce qui rend visible d'un coup d'œil qu'on vient d'aligner trois modèles
+ * du même hébergeur — une chaîne qu'une seule panne emporte en entier, et donc
+ * un repli qui n'aura jamais lieu.
+ *
+ * Les avertissements ne sont pas des refus. Une chaîne de moins de trois rangs
+ * est un jugement d'exploitation, pas une erreur : parmi les fournisseurs
+ * retenus, deux seulement produisent des images, et refuser rendrait ces
+ * tâches-là inconfigurables.
+ */
+export const chaineIaSchema = z.object({
+  tache: z.string(),
+  capaciteRequise: z.enum(["text", "image"]),
+  rangs: z.array(z.object({
+    rang: z.number().int(),
+    modeleId: z.string(),
+    fournisseur: z.string(),
+    modele: z.string(),
+    actif: z.boolean(),
+    enPanne: z.boolean(),
+  }).strict()),
+  avertissements: z.array(z.object({
+    code: z.string(),
+    rangs: z.number().int().optional(),
+    recommande: z.number().int().optional(),
+  }).strict()),
+}).strict();
+
+export const chainesIaSchema = z.object({
+  items: z.array(chaineIaSchema),
+}).strict();
+
 export type ModeleIa = z.infer<typeof modeleIaSchema>;
 export type CatalogueIa = z.infer<typeof catalogueIaSchema>;
+export type ChaineIa = z.infer<typeof chaineIaSchema>;
+export type ChainesIa = z.infer<typeof chainesIaSchema>;
 
 // ——— Drapeaux de fonctionnalité ————————————————————————————————
 
