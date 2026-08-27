@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Studio, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, Studio, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -49,7 +49,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  canauxSchema, catalogueIaSchema, comptesAdminSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  canauxSchema, catalogueIaSchema, comptesAdminSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
   pageAssistanceSchema, pageContactSchema, pageAttenteSchema, pageRetoursSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
@@ -61,7 +61,7 @@ import {
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
 // branché ne s'en approche pas : ce qu'il montre vient du serveur ou n'est pas
 // montré du tout.
-import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
+import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole, type PeriodeMetriques } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
 
@@ -460,6 +460,21 @@ export function App(): ReactNode {
       })
       : Promise.resolve(null)),
     [section, curseurLecture, filtresEntrees.resultat, filtresEntrees.jours],
+    { garderAncien: true },
+  );
+
+  // Trente jours par défaut, comme le serveur : les deux valeurs par défaut se
+  // rencontrent, plutôt que l'écran demande une période et en affiche une autre.
+  const [periodeMetriques, setPeriodeMetriques] = useState<PeriodeMetriques>("30j");
+
+  const etatMetriques = useRessource(
+    () => (section === "metriques"
+      ? api.appeler(`/admin/metrics?periode=${periodeMetriques}`, { schema: metriquesSchema })
+      : Promise.resolve(null)),
+    // La période est dans les dépendances : sans elle, changer le sélecteur
+    // changerait l'étiquette sans refaire l'appel, et la page mentirait sans
+    // que rien ne le signale.
+    [section, periodeMetriques],
     { garderAncien: true },
   );
 
@@ -904,6 +919,34 @@ export function App(): ReactNode {
               })();
             }}
             onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "metriques") {
+    vue = (
+      <Ressource
+        etat={etatMetriques}
+        t={t}
+        enfant={(donnees) => (donnees ? (
+          <Metriques
+            langue={langue}
+            donnees={donnees}
+            periode={periodeMetriques}
+            onPeriode={setPeriodeMetriques}
+            exportEnCours={exportEnCours}
+            // Le support lit la section — §6 la lui accorde — mais ne la sort
+            // pas : le serveur refuse les cinq exports, et on ne montre pas un
+            // geste qu'il refuserait.
+            {...(role === "admin"
+              ? {
+                onExporter: () => exporter(
+                  "/admin/metrics/export",
+                  { periode: periodeMetriques },
+                  "metriques.csv",
+                ),
+              }
+              : {})}
           />
         ) : null)}
       />
