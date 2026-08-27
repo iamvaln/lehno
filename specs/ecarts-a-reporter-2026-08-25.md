@@ -601,10 +601,11 @@ un fichier qui quitte l'outil, circule par courriel et s'ouvre dans un tableur.
 C'est le geste qu'on borne, pas la lecture — le support garde l'accès à tout ce
 que §6 lui accorde.
 
-**À reporter** dans `ux-admin-lehno.md` : §7 dit « les listes filtrées
-s'exportent » sans nommer de rôle, et §6 n'en parle pas. La restriction doit y
-figurer, sans quoi la lecture naturelle des deux sections dit l'inverse de ce
-qui est construit.
+**Reporté le 27/08/2026** dans `ux-admin-lehno.md` : §6 gagne le droit
+d'exporter parmi les leviers réservés à l'administrateur, et le principe qui
+sépare la lecture du geste ; §7 ne dit plus « les listes filtrées s'exportent »
+sans nommer de rôle. Sans ce report, la lecture naturelle des deux sections
+disait l'inverse de ce qui est construit.
 
 Le relevé d'origine, pour mémoire :
 
