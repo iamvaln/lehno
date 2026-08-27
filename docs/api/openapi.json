@@ -12526,7 +12526,7 @@
     "/me/payments": {
       "post": {
         "summary": "Déclarer un versement effectué",
-        "description": "### L'ordre des gestes n'est pas celui d'un paiement automatique\n\nLe client **verse d'abord** depuis son application d'opérateur, **puis**\nvient le déclarer. Le paiement naît donc `pending`, et c'est\nl'administration qui constate la réception sur le compte.\n\n**Aucun crédit n'est octroyé ici.** L'écran doit le dire, et annoncer le\ndélai de vérification.\n\n### Aucun reçu n'est demandé\n\nC'est une décision, pas un oubli : *« le reçu ne prouve rien — un montage\nest facile ; c'est la réception sur le compte de l'opérateur qui fait\nfoi »*. Ce qui le remplace est plus utile — `payerMsisdn`, le numéro\ndepuis lequel le versement a été fait, qui permet de retrouver la\ntransaction sur le relevé.\n\n### Rien n'est cru sur parole\n\nLe montant, les crédits et la devise viennent **du palier lu en base**.\nLe client envoie deux identifiants ; le serveur compose le reste.\n\nLes frais annoncés sont **figés sur le paiement**. Un barème change ; ce\npaiement garde ce qui lui a été dit.",
+        "description": "### L'ordre des gestes n'est pas celui d'un paiement automatique\n\nLe client **verse d'abord** depuis son application d'opérateur, **puis**\nvient le déclarer. Le paiement naît donc `pending`, et c'est\nl'administration qui constate la réception sur le compte.\n\n**Aucun crédit n'est octroyé ici.** L'écran doit le dire, et annoncer le\ndélai de vérification.\n\n### La référence de transaction, pas un fichier\n\n`providerRef` est **obligatoire** : c'est le code que l'opérateur envoie\npar SMS juste après le versement.\n\nCe n'est pas un pis-aller. Une capture d'écran ne prouve rien — *« un\nmontage est facile ; c'est la réception sur le compte de l'opérateur qui\nfait foi »* —, et l'administration l'efface une fois la demande traitée.\nLa référence, elle, **retrouve la transaction sur le relevé**.\n\nEt elle apporte ce qu'un fichier n'apportait pas : **elle est unique**.\nUne référence déjà déclarée rend **`409`**, y compris depuis un autre\ncompte — sans quoi deux comptes suffiraient à transformer un versement en\ndeux recharges. Une image ne se compare à rien.\n\nFormat **libre** : les opérateurs ne s'accordent sur rien. On vérifie\nqu'il y a quelque chose, pas qu'il ressemble à ce qu'on croit connaître —\nune règle de forme trop stricte rejetterait le jour où un opérateur change\nla sienne, et personne ne saurait pourquoi.\n\n### Rien n'est cru sur parole\n\nLe montant, les crédits et la devise viennent **du palier lu en base**.\nLe client envoie deux identifiants ; le serveur compose le reste.\n\nLes frais annoncés sont **figés sur le paiement**. Un barème change ; ce\npaiement garde ce qui lui a été dit.",
         "security": [
           {
             "bearerAuth": []
@@ -12558,6 +12558,7 @@
                   },
                   "providerRef": {
                     "type": "string",
+                    "minLength": 4,
                     "maxLength": 120
                   }
                 },
@@ -12565,7 +12566,8 @@
                   "bundleId",
                   "channelId",
                   "collectionAccountId",
-                  "payerMsisdn"
+                  "payerMsisdn",
+                  "providerRef"
                 ],
                 "additionalProperties": false
               }

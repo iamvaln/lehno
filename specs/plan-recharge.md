@@ -105,7 +105,9 @@ c'est l'offre qui ne l'est plus.
 
 ## Ce qui n'est pas dans ce lot
 
-- **Le dépôt du reçu** — attend un stockage de fichiers.
+- **Le dépôt d'un fichier** — attend un stockage, qui servira aussi aux photos
+  du portrait et aux avatars. La référence de transaction le remplace, et elle
+  fait mieux : elle empêche le doublon.
 - **Le paiement automatique** — attend une intégration de prestataire.
 - **`/me/payment-methods`** — sert le canal automatique ; sans lui, rien à
   enregistrer.
