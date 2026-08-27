@@ -5,6 +5,7 @@ import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "@l
 import { CreditsService } from "../src/onboarding/credits.controller.js";
 import { SignupService } from "../src/onboarding/signup.service.js";
 import { LegalService } from "../src/public/legal.controller.js";
+import { FlagsService } from "../src/flags/flags.service.js";
 
 describe("crédits, parrainage et invitation", () => {
   let db: TestDb;
@@ -28,7 +29,7 @@ describe("crédits, parrainage et invitation", () => {
   afterAll(async () => { await db.close(); });
   beforeEach(async () => {
     await resetDatabase(db.prisma);
-    credits = new CreditsService(db.prisma as never);
+    credits = new CreditsService(db.prisma as never, new FlagsService(db.prisma as never));
     signup = new SignupService(db.prisma as never, new LegalService());
     for (const [key, value] of [
       ["signup_free_credits", "5"],
@@ -189,4 +190,42 @@ describe("crédits, parrainage et invitation", () => {
       await expect(credits.invitation("INEXISTANT")).rejects.toMatchObject({ code: "not_found" });
     });
   });
+
+  /* Ce que le parrainage rapporte se lit sur une VALEUR, jamais en croisant
+     deux drapeaux côté client. Le mobile l'avait signalé : `referral` ne
+     dépend pas de `credits`, donc l'écran pouvait promettre cinq crédits dans
+     un produit où ils n'achètent rien. */
+  describe("ce que le parrainage rapporte", () => {
+    const allumer = async (actif: boolean): Promise<void> => {
+      const f = new FlagsService(db.prisma as never);
+      await f.reconcilier();
+      await db.prisma.featureFlag.update({ where: { key: "credits" }, data: { enabled: actif } });
+    };
+
+    it("annonce le bonus quand les crédits existent", async () => {
+      await allumer(true);
+      const moi = await creer();
+      const r = await credits.parrainage(moi.id);
+      expect(r.bonusParInvitation).toBeGreaterThan(0);
+    });
+
+    /* Nul, et non zéro : l'écran doit présenter le parrainage SANS promesse
+       chiffrée, pas annoncer « zéro crédit ». La distinction porte le sens. */
+    it("n'annonce rien quand les crédits sont éteints", async () => {
+      await allumer(false);
+      const moi = await creer();
+      const r = await credits.parrainage(moi.id);
+      expect(r.bonusParInvitation).toBeNull();
+    });
+
+    // Le parrainage lui-même reste servi : l'éteindre avec l'achat tuerait
+    // l'acquisition avec la monétisation, ce que §6.4 interdit.
+    it("continue de servir le parrainage quand les crédits sont éteints", async () => {
+      await allumer(false);
+      const moi = await creer();
+      const r = await credits.parrainage(moi.id);
+      expect(r.code).toBeTruthy();
+    });
+  });
+
 });
