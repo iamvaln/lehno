@@ -309,8 +309,8 @@ Le produit se livre **par morceaux**. Les proches, les notes, les dates et les r
 | `generation.message` | Le message généré | Écran 3.7 (message) · `/me/generations` (type message), `/me/messages/{id}` |
 | `generation.ideas` | Les idées de cadeaux | Écran 3.7 (idées) · `/me/generations` (type idées) |
 | `generation.portrait` | Le studio et le portrait | Écrans 3.22 et le studio · `/me/studio/options`, `/me/generations` (type portrait), `/me/portraits/*` |
-| `credits` | L'achat de crédits dans l'application | Écran 3.9 (achat), 3.25 · `/me/credit-bundles`, `/me/payments`, `/me/payment-methods*` |
-| `topup.manual` | Le versement manuel : verser sur un compte affiché, puis déposer son reçu | Écran 3.9 (autre chemin) · `/me/collection-accounts`, `/me/payments` en mode semi-manuel |
+| `topup.provider` | Le paiement par opérateur : méthodes enregistrées et sollicitation sur le téléphone | Écrans 3.25, 3.9 (attente opérateur) · `/me/credit-bundles`, `/me/payment-methods*`, `/me/payments` en mode provider |
+| `topup.manual` | Le versement manuel : verser sur un compte affiché, puis déposer son reçu | Écran 3.9 (autre chemin) · `/me/credit-bundles`, `/me/collection-accounts`, `/me/payments` en mode semi-manuel |
 | `referral` | Le parrainage et la page d'invitation | Écran 3.9 (inviter), public 3.7 · `/me/referral`, `/public/invitations/{code}` |
 | `launch.live` | Sur la landing : les liens vers les magasins, ou le formulaire de liste d'attente | Public 3.1 · `/public/waitlist` |
 
@@ -324,7 +324,9 @@ Certaines extinctions en emportent d'autres. Le serveur les résout **avant** de
 
 - `wall` éteint emporte `wishes` et `reservation` — le dépôt de vœux et la réservation passent par le Mur.
 - `wishlist.own` éteint emporte `reservation` — il n'y a plus de liste partagée à réserver.
-- `credits` éteint : les générations restent **disponibles et gratuites** si leur propre drapeau est allumé. Éteindre l'achat ne doit pas éteindre le produit ; c'est `topup.manual` qui prend le relais pour les recharges.
+- **Les canaux de paiement ne dépendent de rien, et rien n'en dépend.** Fermer `topup.provider` laisse `topup.manual` encaisser, et l'inverse ; fermer les deux laisse le solde déjà acquis dépensable et les générations disponibles. Éteindre l'achat ne doit pas éteindre le produit.
+
+**Il n'y a pas de drapeau sur les crédits, et c'est délibéré.** Il y en a eu un ; c'était la même erreur qu'un `me.persons` posé jadis sur l'annuaire des proches. Les actions payantes consomment du crédit, toujours : ce n'est pas une fonctionnalité qu'on allume, c'est le fonctionnement de l'économie. Un drapeau masque une surface ; celui-là changeait le sens de données déjà écrites — des soldes que personne ne pouvait plus dépenser ni recharger, des mouvements `referral_bonus` libellés dans une monnaie disparue. Ce qui s'ouvre et se ferme, ce sont les **canaux** d'achat. Ce qui se règle sans interrupteur — le prix du crédit, les crédits offerts à l'inscription — vit en paramètre.
 
 ### 6.5 L'arrêt pour intervention n'est pas un drapeau
 

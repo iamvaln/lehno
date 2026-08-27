@@ -122,9 +122,9 @@ export const DRAPEAUX = {
        section peut dépendre d'un drapeau ou d'un « ou » entre plusieurs, et
        c'est éditorial. Le serveur dit ce qui est ACTIF, pas ce qu'on en montre. */
     portee: ["app", "public"],
-    // Pas de dépendance à `credits`, et c'est le piège que §6.4 signale :
-    // éteindre l'achat ne doit pas éteindre le produit. Sans crédits, les
-    // générations restent disponibles et GRATUITES si leur drapeau est allumé.
+    // Aucune dépendance à un canal de paiement, et c'est le piège que §6.4
+    // signale : fermer un canal ne doit pas éteindre le produit. Le solde
+    // déjà acquis reste dépensable, et la génération reste offerte.
     requiert: [],
     ecrans: ["3.7 (message)"],
     chemins: ["/me/generations", "/me/messages/{id}"],
@@ -143,42 +143,47 @@ export const DRAPEAUX = {
     ecrans: ["3.22", "le studio"],
     chemins: ["/me/studio/options", "/me/generations", "/me/portraits/*"],
   },
-  /* « Les crédits existent et s'achètent » — le fait, pas le canal.
+  /* Il n'y a PAS de drapeau sur les crédits, et c'est délibéré.
    *
-   * Il mélangeait les deux jusqu'ici, et ça rendait un lancement en paiement
-   * manuel seul INEXPRIMABLE : l'éteindre pour couper l'opérateur emportait
-   * `/me/credit-bundles`, or le versement manuel achète les MÊMES paliers
-   * (contrat commun §5). Le manuel tombait avec l'automatique.
+   * Il y en a eu un, et c'était la même erreur qu'un `me.persons` posé jadis
+   * sur l'annuaire des proches : les actions payantes consomment du crédit,
+   * toujours. Ce n'est pas une fonctionnalité qu'on allume, c'est le
+   * fonctionnement de l'économie.
    *
-   * Éteint, les générations restent disponibles et GRATUITES si leur propre
-   * drapeau est allumé (§6.4) : fermer le paiement ne ferme pas le produit. */
-  credits: {
-    gouverne: "Les crédits : ils existent, ils s'achètent par paliers",
-    portee: ["app", "public"],
-    requiert: [],
-    ecrans: ["3.9 (achat)"],
-    chemins: ["/me/credit-bundles", "/me/payments"],
-  },
+   * Un drapeau masque une surface ; celui-là changeait le sens de données
+   * déjà écrites — des soldes que personne ne pouvait plus dépenser ni
+   * recharger, des mouvements libellés `referral_bonus` dans une monnaie qui
+   * n'existait plus. Ce que l'on ouvre et ferme, ce sont les CANAUX
+   * d'achat — et ils suivent, chacun sous son drapeau.
+   *
+   * Ce qui reste réglable l'est par un paramètre, non par un interrupteur :
+   * `credit_unit_price` et `signup_free_credits` vivent en base. */
   /* Le canal AUTOMATIQUE, seul. Éteint, on encaisse par versement manuel
    * pendant que l'intégration opérateur attend — et les paliers, eux, restent
    * servis. C'est ce qui rend « lancer en manuel seul » exprimable :
    * `credits` allumé, `topup.manual` allumé, celui-ci éteint. */
   "topup.provider": {
     gouverne: "Le paiement par opérateur : méthodes enregistrées et sollicitation sur le téléphone",
-    // Il n'y a rien à payer si les crédits n'existent pas.
-    requiert: ["credits"],
+    // Aucune dépendance : ce drapeau EST ce qui se ferme. Le faire dépendre
+    // d'autre chose ferait tomber le versement manuel avec lui, alors que
+    // lancer en manuel seul est le profil retenu.
+    requiert: [],
+    // Portée applicative seule : aucun canal n'a de section sur la landing.
+    // La page parle des crédits sans condition, puisqu'ils existent toujours —
+    // il n'y a plus rien à masquer.
     portee: ["app"],
     ecrans: ["3.25", "3.9 (attente opérateur)"],
-    chemins: ["/me/payment-methods*", "/me/payments (mode provider)"],
+    chemins: ["/me/credit-bundles", "/me/payment-methods*", "/me/payments (mode provider)"],
   },
   "topup.manual": {
     gouverne: "Le versement manuel : verser sur un compte affiché, puis déposer son reçu",
     portee: ["app"],
-    // Comme le canal automatique : il achète les mêmes paliers, donc il n'a
-    // aucun sens sans les crédits.
-    requiert: ["credits"],
+    requiert: [],
     ecrans: ["3.9 (autre chemin)"],
-    chemins: ["/me/collection-accounts", "/me/payments (mode semi-manuel)"],
+    // Les paliers figurent sur LES DEUX canaux : les deux achètent les mêmes
+    // (contrat commun §5), et les poser sur un seul ferait disparaître l'écran
+    // d'achat en fermant ce canal-là.
+    chemins: ["/me/credit-bundles", "/me/collection-accounts", "/me/payments (mode semi-manuel)"],
   },
   referral: {
     gouverne: "Le parrainage et la page d'invitation",
