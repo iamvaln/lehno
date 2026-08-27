@@ -57,13 +57,9 @@ export const fr = {
 
   sections: {
     tableau: "Tableau de bord",
-    alertes: "Alertes",
     moderation: "Modération",
     suppressions: "Demandes de suppression",
     assistance: "Assistance",
-    contact: "Messages de contact",
-    attente: "Liste d'attente",
-    transactions: "Transactions",
     comptes: "Comptes",
     credits: "Crédits et paiements",
     acces: "Accès administrateurs",
@@ -190,6 +186,13 @@ export const fr = {
       // posé ce geste.
       actions: {
         user_status_update: "Changement d'état d'un compte",
+        admin_invite: "Invitation d'un administrateur",
+        admin_role_update: "Changement de rôle d'un administrateur",
+        admin_revoke: "Révocation d'un accès d'administrateur",
+        ai_model_update: "Réglage d'un modèle d'IA",
+        prompt_template_create: "Création d'un gabarit de production",
+        prompt_template_activate: "Activation d'un gabarit de production",
+        support_request_update: "Changement d'état d'une demande d'assistance",
         parameter_update: "Modification d'un paramètre",
         feature_flag_update: "Bascule d'une fonctionnalité",
         credit_bundle_update: "Modification d'un palier",
@@ -208,7 +211,7 @@ export const fr = {
 
   entrees: {
     titre: "Connexions",
-    sous: "Les entrées réussies et les tentatives refusées. Sans adresse IP : elle ne descend pas en base.",
+    sous: "Les entrées réussies et les tentatives refusées. L'adresse IP est enregistrée mais ne se lit pas ici : elle sert aux investigations, pas à la lecture courante.",
     col: { date: "Quand", compte: "Compte", adresse: "Adresse tentée", resultat: "Résultat", appareil: "Appareil", lieu: "Lieu approximatif" },
     resultats: { success: "Entrée", failure: "Refusée" },
     inconnu: "—",
@@ -885,6 +888,8 @@ export const fr = {
 
   profil: {
     titre: "Mon profil",
+    /** Ce qu'on écrit à la place d'une valeur absente — jamais une valeur inventée. */
+    inconnu: "—",
     groupes: {
       compte: "Compte",
       acces: "Accès",
@@ -965,6 +970,66 @@ export const fr = {
     account_suspended: "Ce compte est suspendu.",
     reseau_indisponible: "Le service est injoignable. Vérifiez votre connexion.",
     reponse_invalide: "Le service a répondu quelque chose d'inattendu. Réessayez dans un instant.",
+  },
+
+  studio: {
+    titre: "Studio du portrait",
+    sous: "Les gabarits de production en service, et ce qui les a précédés.",
+    portee: "Cette entrée montre les réglages en service. La composition d'un brouillon et le banc d'essai ne sont pas encore possibles : le modèle de données ne porte pas de brouillon, et aucun fournisseur d'IA n'est branché.",
+    col: {
+      genre: "Production",
+      cle: "Gabarit",
+      version: "En service",
+      modele: "Modèle appelé",
+      parQui: "Publié par",
+      corps: "Consigne",
+    },
+    genres: {
+      message: "Message",
+      illustration: "Illustration",
+      photo_style: "Style de photo",
+      note_classification: "Classement des notes",
+      sensitive_detection: "Détection des cas sensibles",
+    },
+    version: "Version {n}",
+    aucune: "Aucune",
+    parPriorite: "Au routage par priorité",
+    parMigration: "Posé à l'installation",
+    historique: "Historique de « {cle} »",
+    revenir: "Remettre en service",
+    dialogue: {
+      titre: "Remettre la version {n} en service",
+      consequence: "La version en service se range, celle-ci reprend la main. Rien n'est reconstruit, et le changement rejoint le journal d'audit avec son motif.",
+      motifs: [
+        "Les productions se sont dégradées depuis la publication",
+        "La version en service ne tient pas ses garde-fous",
+        "Retour arrière après un essai non concluant",
+      ],
+    },
+    vide: {
+      titre: "Aucun gabarit",
+      texte: "Les gabarits de production s'inscrivent ici dès qu'une première version est publiée.",
+    },
+  },
+
+  liens: {
+    titre: "Liens externes",
+    sous: "Les consoles des plateformes sur lesquelles Lehno s'appuie, rassemblées ici plutôt que cherchées ailleurs.",
+    groupes: {
+      mesure: "Mesure et supervision",
+      messages: "Envoi de messages",
+      identite: "Identité et connexion",
+      code: "Code et livraison",
+    },
+    usages: {
+      posthog: "La mesure d'usage : ce que les gens font dans l'application, et ce qu'ils n'y font pas.",
+      resend: "L'envoi des e-mails transactionnels — codes de connexion, confirmations, avis.",
+      google: "Les identifiants de la connexion Google, et leur validité.",
+      apple: "Les identifiants de la connexion Apple, et les certificats de l'application.",
+      github: "Le dépôt, les revues et les livraisons.",
+    },
+    ouvrir: "Ouvre {nom} dans un nouvel onglet",
+    horsOutil: "Chaque plateforme garde sa propre authentification : ces liens ne donnent aucun accès par eux-mêmes.",
   },
 
   gabarits: {

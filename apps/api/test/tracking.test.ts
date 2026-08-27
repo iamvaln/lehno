@@ -78,6 +78,28 @@ describe("le plan de mesure", () => {
     expect(rejets, "un rejet non traité abat le processus en production").toEqual([]);
   });
 
+  /* Le défaut constaté en intégration le 26/08 : signin.completed partait avec
+     userId à null, parce qu'il s'émettait au contrôleur — là où VerifyOutcome ne
+     porte pas l'identifiant. Une connexion sans compte ne se rattache à aucun
+     parcours, et la rétention à sept, trente et quatre-vingt-dix jours (§16.1)
+     devient incalculable. C'est la moitié de ce pour quoi le plan existe. */
+  it("attache l'identifiant de compte à une connexion", async () => {
+    const { service, emis, attendre } = mesureDeTest(db.prisma);
+    service.emettre(awa, "signin.completed", { method: "code" });
+    await attendre();
+    expect(emis[0]?.common["userId"]).toBe(awa);
+  });
+
+  /* Et l'inverse, qui compte autant : une inscription qui COMMENCE n'a pas
+     encore de compte. `null` y est la vérité, pas un manque — inventer un
+     identifiant à ce moment-là ferait deux personnes d'une seule. */
+  it("laisse l'identifiant vide sur une inscription qui commence", async () => {
+    const { service, emis, attendre } = mesureDeTest(db.prisma);
+    service.emettre(null, "signup.started", { method: "google" });
+    await attendre();
+    expect(emis[0]?.common["userId"]).toBeNull();
+  });
+
   describe("le contexte client", () => {
     it("lit les en-têtes et les rend disponibles sans les faire voyager", () => {
       const contexte = lireEntetes({

@@ -48,13 +48,9 @@ export const en: typeof fr = {
 
   sections: {
     tableau: "Dashboard",
-    alertes: "Alerts",
     moderation: "Moderation",
     suppressions: "Deletion requests",
     assistance: "Support",
-    contact: "Contact messages",
-    attente: "Waitlist",
-    transactions: "Transactions",
     comptes: "Accounts",
     credits: "Credits and payments",
     acces: "Administrator access",
@@ -159,6 +155,13 @@ export const en: typeof fr = {
       touteLaPeriode: "All time",
       actions: {
         user_status_update: "Account state change",
+        admin_invite: "Administrator invited",
+        admin_role_update: "Administrator role changed",
+        admin_revoke: "Administrator access revoked",
+        ai_model_update: "AI model setting changed",
+        prompt_template_create: "Production template created",
+        prompt_template_activate: "Production template activated",
+        support_request_update: "Support request state changed",
         parameter_update: "Parameter change",
         feature_flag_update: "Feature toggle",
         credit_bundle_update: "Bundle change",
@@ -177,7 +180,7 @@ export const en: typeof fr = {
 
   entrees: {
     titre: "Sign-ins",
-    sous: "Successful entries and refused attempts. No IP address: it never reaches the database.",
+    sous: "Successful entries and refused attempts. The IP address is recorded but not shown here: it serves investigations, not everyday reading.",
     col: { date: "When", compte: "Account", adresse: "Address tried", resultat: "Result", appareil: "Device", lieu: "Approximate location" },
     resultats: { success: "Signed in", failure: "Refused" },
     inconnu: "—",
@@ -824,6 +827,8 @@ export const en: typeof fr = {
 
   profil: {
     titre: "My profile",
+    /** Stands in for a missing value — never an invented one. */
+    inconnu: "—",
     groupes: {
       compte: "Account",
       acces: "Access",
@@ -898,6 +903,66 @@ export const en: typeof fr = {
     account_suspended: "This account is suspended.",
     reseau_indisponible: "The service is unreachable. Check your connection.",
     reponse_invalide: "The service answered something unexpected. Try again in a moment.",
+  },
+
+  studio: {
+    titre: "Portrait studio",
+    sous: "The production templates in service, and what came before them.",
+    portee: "This entry shows the settings in service. Drafting and the test bench are not possible yet: the data model carries no draft, and no AI provider is wired.",
+    col: {
+      genre: "Production",
+      cle: "Template",
+      version: "In service",
+      modele: "Model called",
+      parQui: "Published by",
+      corps: "Instruction",
+    },
+    genres: {
+      message: "Message",
+      illustration: "Illustration",
+      photo_style: "Photo style",
+      note_classification: "Note classification",
+      sensitive_detection: "Sensitive case detection",
+    },
+    version: "Version {n}",
+    aucune: "None",
+    parPriorite: "By priority routing",
+    parMigration: "Set at install",
+    historique: "History of \u00ab {cle} \u00bb",
+    revenir: "Put back in service",
+    dialogue: {
+      titre: "Put version {n} back in service",
+      consequence: "The version in service steps aside and this one takes over. Nothing is rebuilt, and the change joins the audit log with its reason.",
+      motifs: [
+        "Output has degraded since publication",
+        "The version in service does not hold its guardrails",
+        "Rolling back after an inconclusive trial",
+      ],
+    },
+    vide: {
+      titre: "No templates",
+      texte: "Production templates appear here as soon as a first version is published.",
+    },
+  },
+
+  liens: {
+    titre: "External links",
+    sous: "Consoles for the platforms Lehno relies on, gathered here rather than looked up elsewhere.",
+    groupes: {
+      mesure: "Analytics and monitoring",
+      messages: "Message delivery",
+      identite: "Identity and sign-in",
+      code: "Code and releases",
+    },
+    usages: {
+      posthog: "Usage analytics: what people do in the app, and what they don't.",
+      resend: "Transactional email delivery — sign-in codes, confirmations, notices.",
+      google: "Google sign-in credentials, and their validity.",
+      apple: "Apple sign-in credentials, and the app's certificates.",
+      github: "The repository, reviews and releases.",
+    },
+    ouvrir: "Opens {nom} in a new tab",
+    horsOutil: "Each platform keeps its own authentication: these links grant no access by themselves.",
   },
 
   gabarits: {

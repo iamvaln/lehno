@@ -81,6 +81,31 @@ export const DRAPEAUX = {
     ecrans: ["3.27"],
     chemins: ["/me/reservations", "/public/owner-wishes/{id}/reserve*"],
   },
+  /* LE SOCLE GARDE LES ANNIVERSAIRES. Ce drapeau ne gouverne que les AUTRES
+   * types — fête, jalon, mariage, date à échéances multiples. Éteint, on lance
+   * avec les seuls anniversaires : la promesse du produit resserrée, et toute
+   * la complexité de §3.6 (récurrences libres, jalons, libellés) écartée.
+   *
+   * Il n'est PAS de la même nature que les autres, et c'est assumé. Les autres
+   * gouvernent des écrans et des chemins : le garde rend 404, la surface
+   * n'existe pas. Celui-ci gouverne une VALEUR dans une requête — `kind:
+   * "other"` sur un chemin que les anniversaires empruntent aussi. Un 404 y
+   * serait faux : le chemin existe, et tout le monde le sait.
+   *
+   * Il garde la CRÉATION, jamais l'existant. Éteint après usage, les événements
+   * libres déjà créés restent visibles et modifiables, leurs échéances
+   * continuent de tomber — seul le bouton « autre type » disparaît. Éteindre
+   * une fonctionnalité ne doit pas effacer ce que les gens ont écrit.
+   *
+   * Le client n'a AUCUNE règle à connaître : `/me/metadata` filtre `eventKinds`
+   * d'après ce drapeau, et l'écran propose ce que la liste contient. */
+  "events.other": {
+    gouverne: "Les événements autres qu'un anniversaire — fête, jalon, date à échéances",
+    portee: ["app"],
+    requiert: [],
+    ecrans: ["3.6 (choix du type)"],
+    chemins: ["/me/events (kind: other)", "/me/metadata (eventKinds)"],
+  },
   "generation.message": {
     gouverne: "Le message généré",
     portee: ["app"],
@@ -105,17 +130,40 @@ export const DRAPEAUX = {
     ecrans: ["3.22", "le studio"],
     chemins: ["/me/studio/options", "/me/generations", "/me/portraits/*"],
   },
+  /* « Les crédits existent et s'achètent » — le fait, pas le canal.
+   *
+   * Il mélangeait les deux jusqu'ici, et ça rendait un lancement en paiement
+   * manuel seul INEXPRIMABLE : l'éteindre pour couper l'opérateur emportait
+   * `/me/credit-bundles`, or le versement manuel achète les MÊMES paliers
+   * (contrat commun §5). Le manuel tombait avec l'automatique.
+   *
+   * Éteint, les générations restent disponibles et GRATUITES si leur propre
+   * drapeau est allumé (§6.4) : fermer le paiement ne ferme pas le produit. */
   credits: {
-    gouverne: "L'achat de crédits dans l'application",
+    gouverne: "Les crédits : ils existent, ils s'achètent par paliers",
     portee: ["app"],
     requiert: [],
-    ecrans: ["3.9 (achat)", "3.25"],
-    chemins: ["/me/credit-bundles", "/me/payments", "/me/payment-methods*"],
+    ecrans: ["3.9 (achat)"],
+    chemins: ["/me/credit-bundles", "/me/payments"],
+  },
+  /* Le canal AUTOMATIQUE, seul. Éteint, on encaisse par versement manuel
+   * pendant que l'intégration opérateur attend — et les paliers, eux, restent
+   * servis. C'est ce qui rend « lancer en manuel seul » exprimable :
+   * `credits` allumé, `topup.manual` allumé, celui-ci éteint. */
+  "topup.provider": {
+    gouverne: "Le paiement par opérateur : méthodes enregistrées et sollicitation sur le téléphone",
+    // Il n'y a rien à payer si les crédits n'existent pas.
+    requiert: ["credits"],
+    portee: ["app"],
+    ecrans: ["3.25", "3.9 (attente opérateur)"],
+    chemins: ["/me/payment-methods*", "/me/payments (mode provider)"],
   },
   "topup.manual": {
     gouverne: "Le versement manuel : verser sur un compte affiché, puis déposer son reçu",
     portee: ["app"],
-    requiert: [],
+    // Comme le canal automatique : il achète les mêmes paliers, donc il n'a
+    // aucun sens sans les crédits.
+    requiert: ["credits"],
     ecrans: ["3.9 (autre chemin)"],
     chemins: ["/me/collection-accounts", "/me/payments (mode semi-manuel)"],
   },

@@ -5,7 +5,6 @@ import { Button } from "../composants/base/index.js";
 import { PageHeader } from "../composants/page/index.js";
 import { DataTable, EmptyState, StatusPill, type Colonne } from "../composants/donnees/index.js";
 import { messages, type Langue } from "../i18n/index.js";
-import { profil as profilDemo } from "../fixtures/index.js";
 
 /* Mon profil — le compte connecté. Quatre choses, et rien d'autre : qui l'on
  * est, ce que le rôle ouvre, comment on est entré, et où le compte est ouvert
@@ -24,8 +23,16 @@ import { profil as profilDemo } from "../fixtures/index.js";
 type Session = ProfilAdmin["sessions"][number];
 
 export interface ProfilProps {
-  /** Le compte connecté. Sans serveur, c'est la fixture validée par le contrat. */
-  profil?: ProfilAdmin;
+  /**
+   * Le compte connecté, tel que le serveur le rend.
+   *
+   * **Exigé, sans valeur par défaut.** L'écran a rendu une fixture pendant tout
+   * le premier lot — un e-mail, un rôle et des sessions inventés, avec leurs
+   * adresses IP — parce qu'un défaut de props la fournissait et que l'appelant
+   * l'avait oublié. Un compte est ce que le serveur en dit, ou l'écran ne se
+   * construit pas.
+   */
+  profil: ProfilAdmin;
   langue?: Langue;
   /** Les sessions fermées, dans l'ordre du tableau. À l'appelant de les révoquer. */
   onFermerSessions?: (ids: string[]) => void;
@@ -42,13 +49,18 @@ function Champ({ cle, valeur }: { cle: string; valeur: string }) {
   );
 }
 
-export function Profil({ profil = profilDemo, langue = "fr", onFermerSessions }: ProfilProps): ReactNode {
+export function Profil({ profil, langue = "fr", onFermerSessions }: ProfilProps): ReactNode {
   const t = messages(langue);
   const [fermees, setFermees] = useState<string[]>([]);
 
   const visibles = profil.sessions.filter((session) => !fermees.includes(session.id));
   const autres = visibles.filter((session) => !session.courante);
   const libelleRole = profil.role === "admin" ? t.barre.roleAdmin : t.barre.roleSupport;
+
+  // Une session ouverte avant qu'on trace l'appareil ou l'adresse n'en porte
+  // pas. On écrit un tiret : une case vide se lit comme un défaut d'affichage,
+  // et inventer une valeur serait pire que les deux.
+  const dire = (valeur: string | null): string => valeur ?? t.profil.inconnu;
 
   const colonnes: Colonne<Session>[] = [
     {
@@ -57,13 +69,13 @@ export function Profil({ profil = profilDemo, langue = "fr", onFermerSessions }:
       rendu: (session) =>
         session.courante ? (
           <>
-            {session.appareil} <StatusPill ton="actif">{t.profil.ici}</StatusPill>
+            {dire(session.appareil)} <StatusPill ton="actif">{t.profil.ici}</StatusPill>
           </>
         ) : (
-          session.appareil
+          dire(session.appareil)
         ),
     },
-    { cle: "ip", titre: t.profil.col.ip, discret: true, largeur: 150 },
+    { cle: "ip", titre: t.profil.col.ip, discret: true, largeur: 150, rendu: (session) => dire(session.ip) },
     { cle: "depuis", titre: t.profil.col.depuis, discret: true, aligne: "right", largeur: 170 },
   ];
 

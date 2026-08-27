@@ -5,11 +5,18 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AdminGuard } from "../src/admin/admin.guard.js";
 import { RoleGuard, ROLE_REQUIS } from "../src/admin/role.guard.js";
 import { AdminTokenService } from "../src/admin/admin-token.service.js";
+import jwt from "jsonwebtoken";
 import { AppError } from "../src/common/errors.js";
 
 const SECRET_ADMIN = "Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh";
 
-type Requete = { headers: Record<string, string>; admin?: { id: string; role: string } };
+/* Ce que le GARDE pose sur la requête, pas moins : il écrit désormais la
+   lignée du jeton en plus de l'identité. Un type de test en retard sur le code
+   qu'il éprouve ne compile pas — c'est ce qui a rendu la vérification rouge. */
+type Requete = {
+  headers: Record<string, string>;
+  admin?: { id: string; role: string; familyId: string | null };
+};
 
 function contexte(entete?: string): { ctx: ExecutionContext; req: Requete } {
   const req: Requete = { headers: entete === undefined ? {} : { authorization: entete } };
@@ -47,7 +54,38 @@ describe("AdminGuard", () => {
     const { ctx, req } = contexte(`Bearer ${accessToken}`);
 
     await expect(garde.canActivate(ctx)).resolves.toBe(true);
-    expect(req.admin).toEqual({ id: sam.id, role: "admin" });
+    expect(req.admin).toEqual({ id: sam.id, role: "admin", familyId: expect.any(String) });
+  });
+
+  // La lignée voyage avec l'appelant : c'est elle qui permet à « mon profil »
+  // de reconnaître la session d'où vient l'appel, et à « fermer les autres
+  // sessions » d'épargner la sienne. Sans elle, les deux se feraient au hasard.
+  it("pose la lignée de la session d'où vient l'appel", async () => {
+    const sam = await creerAdmin({ role: "admin" });
+    const une = await jetons.ouvrir(sam.id);
+    const autre = await jetons.ouvrir(sam.id);
+
+    const { ctx: ctxUne, req: reqUne } = contexte(`Bearer ${une.accessToken}`);
+    const { ctx: ctxAutre, req: reqAutre } = contexte(`Bearer ${autre.accessToken}`);
+    await garde.canActivate(ctxUne);
+    await garde.canActivate(ctxAutre);
+
+    expect(reqUne.admin?.familyId).toEqual(expect.any(String));
+    expect(reqUne.admin?.familyId).not.toBe(reqAutre.admin?.familyId);
+  });
+
+  // Un jeton signé avant que la lignée voyage dans la charge reste valide : on
+  // ne coupe pas les sessions ouvertes pour une version. Il ne désigne
+  // simplement aucune session, et c'est ce que la garde doit dire.
+  it("laisse passer un jeton d'avant la lignée, sans en inventer une", async () => {
+    const sam = await creerAdmin({ role: "admin" });
+    const ancien = jwt.sign({ sub: sam.id, typ: "adm" }, SECRET_ADMIN, {
+      expiresIn: 600, algorithm: "HS256",
+    });
+    const { ctx, req } = contexte(`Bearer ${ancien}`);
+
+    await expect(garde.canActivate(ctx)).resolves.toBe(true);
+    expect(req.admin?.familyId).toBeNull();
   });
 
   // Le jeton reste valide trente minutes. Désactiver un compte doit le couper
@@ -78,7 +116,10 @@ describe("RoleGuard", () => {
   const garde = new RoleGuard(reflector);
 
   function contexteAvecRole(role: string, requis?: string): ExecutionContext {
-    const req: Requete = { headers: {}, admin: { id: "x", role } };
+    // Ce cas n'éprouve que le rôle : la lignée n'y joue aucun rôle, mais le
+    // type l'exige — c'est lui qui garantit qu'on n'oublie pas de la poser
+    // là où elle compte.
+    const req: Requete = { headers: {}, admin: { id: "x", role, familyId: null } };
     const handler = () => undefined;
     if (requis) Reflect.defineMetadata(ROLE_REQUIS, requis, handler);
     return {

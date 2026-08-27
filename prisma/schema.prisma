@@ -197,7 +197,10 @@ model CreditTransaction {
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   referral Referral? @relation(fields: [referralId], references: [id], onDelete: SetNull)
-  payment  Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  // Restrict, et non SetNull : effacer un paiement ne doit pas faire
+  // disparaître le crédit qu'il a produit — la ligne resterait sans savoir d'où
+  // elle vient, et le litige que ce lien tranche se réglerait à l'estime.
+  payment  Payment?  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
   @@map("credit_transaction")
@@ -889,6 +892,9 @@ model AuditLog {
   createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([actorType, actorId])
+  // La traçabilité d'un objet se lit depuis son détail (ux-admin §7) : sans cet
+  // index, ouvrir une fiche parcourrait tout le journal.
+  @@index([targetType, targetId])
   @@index([createdAt])
   @@map("audit_log")
 }

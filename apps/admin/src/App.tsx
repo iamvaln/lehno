@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Studio, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -54,9 +54,13 @@ import {
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
+  profilAdminSchema, catalogueGabaritsSchema,
+  type Intervention, type GabaritStudio,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
-import { interventions, profil } from "./fixtures/index.js";
+// Les données d'aperçu ne servent qu'à la bande de développement. Un écran
+// branché ne s'en approche pas : ce qu'il montre vient du serveur ou n'est pas
+// montré du tout.
 import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
@@ -105,13 +109,24 @@ const ICONES: Record<string, string> = {
 
 // Les sections qu'un délai court presse portent un point, jamais un chiffre :
 // la barre latérale ne compte pas, les nombres vivent au tableau de bord.
-const PRESSEES = new Set(["alertes", "moderation", "suppressions", "transactions"]);
+// Seules des entrées de menu peuvent s'allumer : ce jeu n'est consulté que pour
+// elles, et une section absente du menu n'y gagnerait rien.
+const PRESSEES = new Set(["moderation", "suppressions"]);
 
-// Les sections livrées ; les autres annoncent le gabarit qu'elles emploieront.
+/**
+ * Les sections encore à livrer, et le gabarit que chacune emploiera.
+ *
+ * Exactement celles que le menu offre sans qu'un écran les rende : une entrée
+ * de trop y affirmerait qu'une section livrée reste à venir, une entrée
+ * manquante ferait annoncer « Gabarit : » suivi de rien. Les deux se voient
+ * dans `sections-atteignables.test.tsx`, qui ouvre chaque entrée du menu.
+ *
+ * Le gabarit se lit de la spécification, il ne se devine pas : le studio règle
+ * une configuration (§5.9), les offres se listent puis se détaillent (§5.10).
+ */
 const GABARITS: Record<string, string> = {
-  alertes: "liste", moderation: "liste", contact: "liste", attente: "liste",
-  transactions: "liste", acces: "liste", metriques: "tableau", audit: "liste",
-  connexions: "liste", liens: "liste",
+  moderation: "liste", offres: "liste",
+  metriques: "tableau",
 };
 
 // Le nom de la marque ne se traduit pas et ne se remplace pas par le nom de
@@ -241,6 +256,8 @@ export function App(): ReactNode {
   const [tourDrapeaux, setTourDrapeaux] = useState(0);
   const [tourCredits, setTourCredits] = useState(0);
   const [tourAcces, setTourAcces] = useState(0);
+  const [tourProfil, setTourProfil] = useState(0);
+  const [tourStudio, setTourStudio] = useState(0);
   const [tourAssistance, setTourAssistance] = useState(0);
   const [ongletAssistance, setOngletAssistance] = useState<"demandes" | "contact" | "attente" | "retours">("demandes");
   const [filtreAssistance, setFiltreAssistance] = useState("tous");
@@ -317,6 +334,41 @@ export function App(): ReactNode {
       : Promise.resolve(null)),
     [section, ouvert],
   );
+
+  /**
+   * La traçabilité du compte ouvert — « sur chaque objet, l'historique des
+   * interventions est consultable depuis son détail » (ux-admin §7).
+   *
+   * Réservée aux administrateurs, comme le journal dont elle est une vue : le
+   * serveur refuse la lecture au support, et la demander lui vaudrait un 403 à
+   * chaque fiche ouverte. La fiche, elle, reste ouverte aux deux — c'est le
+   * pied de page qui disparaît.
+   */
+  const etatTracabilite = useRessource(
+    () => (section === "comptes" && ouvert && role === "admin"
+      ? api.appeler(`/admin/audit-log?targetType=user&targetId=${ouvert}`, { schema: pageAuditSchema })
+      : Promise.resolve(null)),
+    [section, ouvert, role],
+  );
+
+  /**
+   * Du journal vers le pied de fiche.
+   *
+   * Le journal ne porte pas de nom d'auteur : `actorId` n'est pas une clé
+   * étrangère, pour qu'une trace survive au compte qu'elle décrit. On dit donc
+   * la qualité — « Administration », « Utilisateur » — plutôt que d'inventer un
+   * nom ou d'afficher un identifiant que personne ne reconnaît.
+   */
+  const versIntervention = (trace: TraceAudit): Intervention => ({
+    id: trace.id,
+    date: quand(trace.date, langue),
+    auteur: t.journal.acteurs[trace.acteurType],
+    // Le code brut quand le libellé manque : une action qu'on vient d'ajouter
+    // se lit mal, mais elle se lit — et l'absence se voit.
+    action: t.journal.filtres.actions[trace.action as keyof typeof t.journal.filtres.actions] ?? trace.action,
+    objet: trace.cibleId ?? "",
+    motif: trace.motif ?? t.journal.sansMotif,
+  });
 
   const etatParametres = useRessource(
     () => (section === "parametres"
@@ -511,9 +563,48 @@ export function App(): ReactNode {
     [section, tourAcces],
   );
 
+  const etatStudio = useRessource(
+    () => (section === "studio"
+      ? api.appeler("/admin/portrait-studio/templates", { schema: catalogueGabaritsSchema })
+      : Promise.resolve(null)),
+    [section, tourStudio],
+  );
+
+  const etatProfil = useRessource(
+    () => (section === "profil"
+      ? api.appeler("/admin/me", { schema: profilAdminSchema })
+      : Promise.resolve(null)),
+    [section, tourProfil],
+  );
+
   let vue: ReactNode;
   if (section === "profil") {
-    vue = <Profil profil={profil} langue={langue} />;
+    vue = (
+      <Ressource
+        etat={etatProfil}
+        t={t}
+        enfant={(moi) => (moi ? (
+          <Profil
+            profil={moi}
+            langue={langue}
+            // La page retire les lignes fermées de ce qu'elle montre ; on relit
+            // quand même, pour que ce qui reste vienne du serveur et non d'une
+            // soustraction faite de notre côté.
+            onFermerSessions={() => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/me/sessions", { methode: "DELETE" });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourProfil((n) => n + 1);
+                }
+              })();
+            }}
+          />
+        ) : null)}
+      />
+    );
   } else if (section === "comptes" && ouvert) {
     vue = (
       <Ressource
@@ -524,7 +615,12 @@ export function App(): ReactNode {
             role={role}
             langue={langue}
             compte={compte}
-            interventions={interventions.items}
+            // Le pied de page ne bloque pas la fiche : tant que le journal
+            // n'est pas revenu — ou s'il a échoué — la fiche se lit, avec un
+            // historique vide. L'inverse ferait attendre le compte pour son
+            // annexe.
+            interventions={(etatTracabilite.statut === "pret" ? etatTracabilite.donnees?.items ?? [] : [])
+              .map(versIntervention)}
             onRetour={() => setOuvert(null)}
           />
         ) : null)}
@@ -694,6 +790,41 @@ export function App(): ReactNode {
           enfant={(page) => <Assistance {...communAssistance} demandes={page?.items ?? []} />} />
       );
     }
+  } else if (section === "studio") {
+    vue = (
+      <Ressource
+        etat={etatStudio}
+        t={t}
+        enfant={(catalogue) => (catalogue ? (
+          <Studio
+            role={role}
+            langue={langue}
+            gabarits={catalogue.items}
+            onRevenir={(gabarit: GabaritStudio, motif) => {
+              void (async () => {
+                try {
+                  await api.appeler(`/admin/portrait-studio/templates/${gabarit.id}`, {
+                    methode: "PATCH",
+                    corps: { isActive: true, reason: motif },
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  // On relit dans tous les cas : après un refus, ce qui est
+                  // affiché est l'état d'avant, et c'est lui qui fait foi.
+                  setTourStudio((n) => n + 1);
+                }
+              })();
+            }}
+            onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "liens") {
+    // Aucun appel : la page rend un registre du code. Pas d'état de chargement
+    // à tenir, donc pas de `Ressource` — l'envelopper en inventerait un.
+    vue = <Liens langue={langue} onRetour={aller} />;
   } else if (section === "acces") {
     vue = (
       <Ressource
@@ -793,7 +924,16 @@ export function App(): ReactNode {
             colonnes={[
               { cle: "date", titre: t.journal.col.date, largeur: 190, rendu: (l) => quand(l.date, langue) },
               { cle: "acteurType", titre: t.journal.col.acteur, largeur: 150, rendu: (l) => t.journal.acteurs[l.acteurType] },
-              { cle: "action", titre: t.journal.col.action },
+              {
+                cle: "action",
+                titre: t.journal.col.action,
+                // Le filtre proposait des libellés et la colonne rendait des
+                // codes : on filtrait sur « Ajustement d'un solde » pour
+                // obtenir des lignes disant `credit_adjustment`. Le code brut
+                // reste le repli — une action qu'on vient d'ajouter se lit mal,
+                // mais elle se lit, et son absence du dictionnaire se voit.
+                rendu: (l) => t.journal.filtres.actions[l.action as keyof typeof t.journal.filtres.actions] ?? l.action,
+              },
               {
                 cle: "motif",
                 titre: t.journal.col.motif,
@@ -993,10 +1133,16 @@ export function App(): ReactNode {
       />
     );
   } else {
+    // Le repli attrape toute section sans écran, y compris une que le tableau de
+    // bord désignerait sans qu'on l'ait prévue. On n'annonce donc le gabarit que
+    // lorsqu'on le connaît : « Gabarit : » suivi de rien n'est pas une annonce.
+    const nomDuGabarit = t.gabarits[GABARITS[section] as keyof typeof t.gabarits];
     vue = (
       <EmptyState
         titre={t.attente.titre}
-        texte={`${t.attente.texte} ${t.attente.gabarit.replace("{gabarit}", t.gabarits[GABARITS[section] as keyof typeof t.gabarits] ?? "")}`}
+        texte={nomDuGabarit
+          ? `${t.attente.texte} ${t.attente.gabarit.replace("{gabarit}", nomDuGabarit)}`
+          : t.attente.texte}
       />
     );
   }
@@ -1077,7 +1223,10 @@ export function App(): ReactNode {
         }
         topbar={
           <Topbar
-            compte="sam@lehno.app"
+            // L'adresse du compte connecté, portée par la session depuis
+            // l'entrée. Une adresse écrite en dur montrait ici le compte de
+            // quelqu'un d'autre à tout le monde.
+            compte={api.session()?.email ?? ""}
             role={role}
             langue={langue}
             onLangue={setLangue}

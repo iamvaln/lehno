@@ -73,15 +73,13 @@ export class AuthController {
         ...(userAgent !== undefined ? { userAgent } : {}),
       })
       .then((issue) => {
-        // L'issue distingue les deux faits : une session ouverte est une
-        // CONNEXION, un jeton d'inscription est une inscription qui COMMENCE.
-        // Les confondre compterait les revenants comme des nouveaux, et
-        // l'entonnoir d'activation ne voudrait plus rien dire.
-        this.mesure.emettre(
-          null,
-          issue.outcome === "session" ? "signin.completed" : "signup.started",
-          { method: "code" },
-        );
+        /* Seul signup.started part d'ici. Une inscription qui COMMENCE n'a pas
+           encore de compte : `null` y est la vérité, pas un manque.
+           signin.completed, lui, s'émet dans le service, où l'identifiant
+           existe — VerifyOutcome ne le porte pas, et n'a pas à le porter. */
+        if (issue.outcome !== "session") {
+          this.mesure.emettre(null, "signup.started", { method: "code" });
+        }
         return issue;
       });
   }
@@ -109,11 +107,10 @@ export class AuthController {
     return this.federatedAuth
       .signIn({ ...body, ...(userAgent !== undefined ? { userAgent } : {}) })
       .then((issue) => {
-        this.mesure.emettre(
-          null,
-          issue.outcome === "session" ? "signin.completed" : "signup.started",
-          { method: body.provider },
-        );
+        // Voir /auth/otp/verify : seul le début d'inscription part du contrôleur.
+        if (issue.outcome !== "session") {
+          this.mesure.emettre(null, "signup.started", { method: body.provider });
+        }
         return issue;
       });
   }

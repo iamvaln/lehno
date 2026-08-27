@@ -132,3 +132,77 @@
     margin-left: 0;
   }
 }
+
+/* Les liens externes — ux-admin §5.14.
+   Une page de portes : rien à trier, rien à comparer, donc pas de tableau. Des
+   groupes titrés et, sous chaque nom, ce à quoi l'outil sert. On lit un nom, on
+   sort. La grille tient deux colonnes sur un écran d'ordinateur et retombe à
+   une seule sur tablette, où l'outil sert à dépanner (§7). */
+.admin-liens-note {
+  max-width: var(--measure);
+  margin-bottom: var(--space-24);
+  font-size: var(--text-body-s);
+  color: var(--text-secondary);
+}
+.admin-liens-groupe + .admin-liens-groupe {
+  margin-top: var(--space-32);
+}
+.admin-liens-titre {
+  font-size: var(--text-body-s);
+  font-weight: var(--font-body-semibold);
+  letter-spacing: var(--tracking-title);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+.admin-liens-liste {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-12);
+  margin-top: var(--space-12);
+  list-style: none;
+}
+.admin-liens-entree {
+  padding: var(--space-16);
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-object);
+  border-radius: var(--radius-md);
+}
+/* L'icône de sortie suit le nom : elle dit qu'on quitte l'outil, et c'est la
+   seule chose que cette page ait à annoncer. */
+.admin-liens-lien {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  color: var(--text-body);
+  font-weight: var(--font-body-semibold);
+  text-decoration: none;
+}
+.admin-liens-lien:hover .admin-liens-nom,
+.admin-liens-lien:focus-visible .admin-liens-nom {
+  text-decoration: underline;
+}
+.admin-liens-lien:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-xs);
+}
+.admin-liens-usage {
+  margin-top: var(--space-4);
+  font-size: var(--text-body-s);
+  line-height: var(--leading-body);
+  color: var(--text-secondary);
+}
+
+/* Le studio — ux-admin §5.9, entrée « réglages en service ».
+   La portée se dit au-dessus du tableau, une fois : un administrateur qui
+   cherche le banc d'essai doit apprendre qu'il n'existe pas, plutôt que de le
+   chercher dans un onglet. */
+.admin-studio-portee {
+  max-width: var(--measure);
+  margin-bottom: var(--space-20);
+  font-size: var(--text-body-s);
+  color: var(--text-secondary);
+}
+.admin-studio-histoire {
+  margin-top: var(--space-28);
+}

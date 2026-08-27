@@ -201,17 +201,79 @@ export const parametresSchema = z.object({
 export type Parametres = z.infer<typeof parametresSchema>;
 export type Parametre = z.infer<typeof parametreSchema>;
 
+// ——— Studio du portrait ————————————————————————————————————————
+
+/**
+ * Les gabarits de production — ux-admin §5.9, entrée « réglages en service ».
+ *
+ * **Un gabarit ne se modifie pas, il se reversionne.** Ajuster crée une version
+ * de plus ; l'ancienne demeure. Sans cela, comprendre pourquoi les productions
+ * d'une semaine valaient mieux que celles de la suivante devient impossible, et
+ * c'est tout l'objet du versionnage.
+ *
+ * Une seule version est en service par couple (genre, clé) — la base le tient
+ * par un index unique partiel, et non le service : une seconde version active
+ * ne se verrait pas, la génération en prendrait une au hasard, et l'écart de
+ * qualité resterait inexplicable.
+ */
+export const GENRES_GABARIT = [
+  "message", "illustration", "photo_style", "note_classification", "sensitive_detection",
+] as const;
+
+export const gabaritStudioSchema = z.object({
+  id: z.string(),
+  genre: z.enum(GENRES_GABARIT),
+  /** Ce que le gabarit produit : une orientation, une famille, un style. */
+  cle: z.string(),
+  version: z.number().int().positive(),
+  corps: z.string(),
+  /** Les garde-fous, tels que le gabarit les porte. Forme libre, et souvent nuls. */
+  gardeFous: z.unknown().nullable(),
+  /**
+   * Le modèle appelé, résolu à la lecture. Un identifiant seul ne se reconnaît
+   * pas ; le fournisseur et la clé se lisent. Nul quand le gabarit s'en remet
+   * au routage par priorité plutôt que d'en nommer un.
+   */
+  modele: z.object({
+    id: z.string(),
+    fournisseur: z.string(),
+    cle: z.string(),
+  }).strict().nullable(),
+  actif: z.boolean(),
+  /**
+   * Qui a publié cette version. Nul pour un gabarit posé par une migration,
+   * avant qu'il y ait quelqu'un pour publier — et non « inconnu », qui
+   * laisserait croire qu'on a perdu le nom.
+   */
+  parQui: z.string().nullable(),
+  quand: z.string(),
+}).strict();
+
+export const catalogueGabaritsSchema = z.object({
+  items: z.array(gabaritStudioSchema),
+}).strict();
+
+export type GabaritStudio = z.infer<typeof gabaritStudioSchema>;
+export type CatalogueGabarits = z.infer<typeof catalogueGabaritsSchema>;
+
 // ——— Le compte connecté ————————————————————————————————————————
 
 export const profilAdminSchema = z.object({
   email: z.string(),
   role: adminRoleSchema,
+  /** Qui a ouvert cet accès, d'après le journal d'audit. Nul pour un compte
+   *  posé à la main, avant qu'il y ait quelqu'un pour inviter. */
   ajoutePar: z.string().nullable(),
   derniereConnexion: z.string().nullable(),
   sessions: z.array(z.object({
+    /** La lignée de jetons, non le jeton : une session survit à ses échanges. */
     id: z.string(),
-    appareil: z.string(),
-    ip: z.string(),
+    // Nuls tous les deux, comme les colonnes qui les portent et comme
+    // `entreeSchema` les rend déjà pour les connexions d'utilisateur. Une
+    // session ouverte avant qu'on trace l'adresse n'en a pas, et « — » écrit
+    // par le serveur serait une donnée inventée là où il n'y en a pas.
+    appareil: z.string().nullable(),
+    ip: z.string().nullable(),
     depuis: z.string(),
     courante: z.boolean(),
   }).strict()),
@@ -284,9 +346,16 @@ export type PageAudit = z.infer<typeof pageAuditSchema>;
 /**
  * Une tentative d'entrée, réussie ou non.
  *
- * Pas d'adresse IP : la spécification technique §9 dit qu'elle ne descend pas
- * en base. Ce qu'on garde est un lieu approximatif — assez pour voir qu'une
- * série d'essais vient d'ailleurs, pas assez pour suivre quelqu'un.
+ * **Pas d'adresse IP dans cette lecture** — mais elle est bien en base.
+ *
+ * Un commentaire a longtemps affirmé ici que « la spécification technique §9 »
+ * disait qu'elle n'y descendait pas. Cette section porte sur les droits d'accès
+ * et ne dit rien de l'adresse : la citation était inventée, et le fait qu'elle
+ * avançait est faux depuis qu'on enregistre l'adresse.
+ *
+ * Ce qui reste vrai est un choix, pas une contrainte : l'écran montre un lieu
+ * approximatif, assez pour voir qu'une série d'essais vient d'ailleurs, pas
+ * assez pour suivre quelqu'un. L'adresse sert aux investigations, et s'y lit.
  *
  * L'adresse tentée reste visible même quand aucun compte n'y correspond : c'est
  * elle qui montre qu'on essaie mille adresses à la suite.

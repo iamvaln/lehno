@@ -273,6 +273,14 @@ export class AuthService {
 
     await this.recordAttempt(input, user.id, "success");
     const pair = await this.tokens.issuePair(user.id, input.userAgent, input.ip);
+
+    /* Émis ICI et non au contrôleur, pour la même raison que signup.completed :
+       VerifyOutcome ne porte pas l'identifiant de compte, et il n'a rien à faire
+       côté client. Sans lui, une connexion ne se rattache à aucun parcours — et
+       la rétention à sept, trente et quatre-vingt-dix jours (§16.1) devient
+       incalculable, c'est-à-dire la moitié de ce pour quoi le plan existe. */
+    this.mesure.emettre(user.id, "signin.completed", { method: "code" });
+
     return { outcome: "session" as const, ...pair, isNewAccount };
   }
 }

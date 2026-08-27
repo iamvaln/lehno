@@ -9,6 +9,7 @@ import { PersonService } from "../src/me/person.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
+import { FlagsService } from "../src/flags/flags.service.js";
 
 // Trente jours devant nous : une date d'événement libre valable, sans dépendre
 // de la date du jour où le test tourne.
@@ -36,8 +37,14 @@ describe("les événements et leur première échéance", () => {
   afterAll(async () => { await db.close(); });
   beforeEach(async () => {
     await resetDatabase(db.prisma);
+    // `events.other` allumé : ces cas éprouvent les événements libres, pas le
+    // lancement resserré. Un drapeau naît ÉTEINT — c'est voulu, et c'est
+    // précisément l'état d'un déploiement neuf.
+    const drapeaux = new FlagsService(db.prisma as never);
+    await drapeaux.reconcilier();
+    await db.prisma.featureFlag.update({ where: { key: "events.other" }, data: { enabled: true } });
     const depot = new TenantRepository(db.prisma as never);
-    events = new EventService(depot, db.prisma as never);
+    events = new EventService(depot, db.prisma as never, new FlagsService(db.prisma as never));
     persons = new PersonService(depot, events, db.prisma as never);
     awa = await compte();
     bila = await compte();
@@ -124,6 +131,66 @@ describe("les événements et leur première échéance", () => {
     const e = await events.create(awa, { personId: p.id, kind: "birthday" });
     await events.remove(awa, e.id);
     expect(await db.prisma.eventOccurrence.count({ where: { eventId: e.id } })).toBe(0);
+  });
+
+  /* Le lancement resserré : anniversaires seuls (§6.3, drapeau `events.other`).
+     Ces cas éteignent le drapeau à l'intérieur, puisque la suite l'allume. */
+  describe("quand les autres types d'événement sont fermés", () => {
+    const fermer = async (): Promise<void> => {
+      await db.prisma.featureFlag.update({
+        where: { key: "events.other" }, data: { enabled: false },
+      });
+    };
+
+    it("laisse créer un anniversaire — le socle ne s'éteint jamais", async () => {
+      await fermer();
+      const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+      const e = await events.create(awa, { personId: p.id, kind: "birthday" });
+      expect(e.kind).toBe("birthday");
+    });
+
+    /* 422 et non 404 : les autres drapeaux ferment des chemins, et le 404 y
+       cache l'existence de la surface. Ici le chemin existe — les
+       anniversaires l'empruntent —, il n'y a rien à cacher. */
+    it("refuse un événement libre, en 422 et non en 404", async () => {
+      await fermer();
+      const p = await persons.create(awa, { displayName: "Valery" });
+      await expect(events.create(awa, {
+        personId: p.id, kind: "other", label: "Mariage", referenceDate: dansTrenteJours,
+      })).rejects.toMatchObject({ code: "resource_inactive" });
+      expect(await db.prisma.event.count({ where: { personId: p.id } })).toBe(0);
+    });
+
+    /* LE point : c'est le SERVEUR qui refuse, pas seulement les métadonnées qui
+       omettent le type. Un client d'une version antérieure — ou qui n'a pas
+       relu ses métadonnées — ne doit pas pouvoir créer ce qu'on a fermé. */
+    it("refuse même à un client qui n'a pas relu ses métadonnées", async () => {
+      await fermer();
+      const p = await persons.create(awa, { displayName: "Valery" });
+      // On n'appelle PAS /me/metadata : on tape directement, comme le ferait
+      // une version installée qui ignore le drapeau.
+      await expect(events.create(awa, {
+        personId: p.id, kind: "other", label: "Jalon", referenceDate: dansTrenteJours,
+      })).rejects.toMatchObject({ code: "resource_inactive" });
+    });
+
+    /* Le drapeau garde la CRÉATION, jamais l'existant. Éteindre après usage ne
+       doit pas effacer ce que les gens ont écrit : les événements libres déjà
+       créés restent lisibles, modifiables, et leurs échéances tombent. */
+    it("laisse vivre un événement libre créé AVANT la fermeture", async () => {
+      const p = await persons.create(awa, { displayName: "Valery" });
+      const e = await events.create(awa, {
+        personId: p.id, kind: "other", label: "Mariage", referenceDate: dansTrenteJours,
+      });
+      await fermer();
+
+      expect((await events.get(awa, e.id)).label).toBe("Mariage");
+      expect(await events.list(awa, {})).toHaveLength(1);
+      const modifie = await events.update(awa, e.id, { label: "Mariage de Sarah" });
+      expect(modifie.label).toBe("Mariage de Sarah");
+      // Et son échéance est toujours là : le décompte continue de tomber.
+      expect(await db.prisma.eventOccurrence.count({ where: { eventId: e.id } })).toBe(1);
+    });
   });
 
   // « Proche déjà porteur d'un anniversaire : l'application le signale plutôt

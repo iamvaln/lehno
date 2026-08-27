@@ -4,6 +4,7 @@ import { FederatedService, type IdentityVerifier } from "../src/auth/federated.s
 import { SignupService } from "../src/onboarding/signup.service.js";
 import { LegalService } from "../src/public/legal.controller.js";
 import { TokenService } from "../src/auth/token.service.js";
+import { mesureDeTest } from "./mesure.js";
 
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
 
@@ -17,7 +18,8 @@ describe("identités externes", () => {
   const build = (v: IdentityVerifier) =>
     new FederatedService(db.prisma as never, new TokenService(db.prisma as never, SECRET),
       { google: v, apple: v },
-      new SignupService(db.prisma as never, new LegalService()));
+      new SignupService(db.prisma as never, new LegalService()),
+      mesureDeTest(db.prisma).service);
 
   beforeAll(async () => { db = await withDatabase(); }, 120_000);
   afterAll(async () => { await db.close(); });
