@@ -905,6 +905,46 @@ export const en: typeof fr = {
     reponse_invalide: "The service answered something unexpected. Try again in a moment.",
   },
 
+  studio: {
+    titre: "Portrait studio",
+    sous: "The production templates in service, and what came before them.",
+    portee: "This entry shows the settings in service. Drafting and the test bench are not possible yet: the data model carries no draft, and no AI provider is wired.",
+    col: {
+      genre: "Production",
+      cle: "Template",
+      version: "In service",
+      modele: "Model called",
+      parQui: "Published by",
+      corps: "Instruction",
+    },
+    genres: {
+      message: "Message",
+      illustration: "Illustration",
+      photo_style: "Photo style",
+      note_classification: "Note classification",
+      sensitive_detection: "Sensitive case detection",
+    },
+    version: "Version {n}",
+    aucune: "None",
+    parPriorite: "By priority routing",
+    parMigration: "Set at install",
+    historique: "History of \u00ab {cle} \u00bb",
+    revenir: "Put back in service",
+    dialogue: {
+      titre: "Put version {n} back in service",
+      consequence: "The version in service steps aside and this one takes over. Nothing is rebuilt, and the change joins the audit log with its reason.",
+      motifs: [
+        "Output has degraded since publication",
+        "The version in service does not hold its guardrails",
+        "Rolling back after an inconclusive trial",
+      ],
+    },
+    vide: {
+      titre: "No templates",
+      texte: "Production templates appear here as soon as a first version is published.",
+    },
+  },
+
   liens: {
     titre: "External links",
     sous: "Consoles for the platforms Lehno relies on, gathered here rather than looked up elsewhere.",

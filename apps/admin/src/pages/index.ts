@@ -19,3 +19,4 @@ export { Assistance, type AssistanceProps } from "./Assistance.js";
 
 // La seule page qui n'appelle personne : un registre tenu dans le code.
 export { Liens, type LiensProps } from "./Liens.js";
+export { Studio, type StudioProps } from "./Studio.js";

@@ -6,6 +6,14 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AdminGuard } from "./admin.guard.js";
 import { Role, RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
+import type { GabaritStudio } from "@lehno/contracts";
+
+/** Une ligne de `prompt_template`, telle que Prisma la rend. */
+type LigneGabarit = {
+  id: string; kind: string; key: string; version: number; body: string;
+  guardrails: unknown; aiModelId: string | null; isActive: boolean;
+  createdByAdminId: string | null; createdAt: Date;
+};
 
 const KINDS = ["message", "illustration", "photo_style", "note_classification", "sensitive_detection"] as const;
 
@@ -45,19 +53,59 @@ export class StudioService {
       // aujourd'hui, et remonter ensuite.
       orderBy: [{ kind: "asc" }, { key: "asc" }, { version: "desc" }],
     });
-    return { items: lignes.map((g) => this.rendre(g)) };
+    return { items: await this.rendreTous(lignes) };
   }
 
-  private rendre(g: {
-    id: string; kind: string; key: string; version: number; body: string;
-    guardrails: unknown; aiModelId: string | null; isActive: boolean;
-    createdByAdminId: string | null; createdAt: Date;
-  }) {
-    return {
-      id: g.id, kind: g.kind, key: g.key, version: g.version, body: g.body,
-      guardrails: g.guardrails, aiModelId: g.aiModelId, isActive: g.isActive,
-      createdByAdminId: g.createdByAdminId, createdAt: g.createdAt.toISOString(),
-    };
+  /**
+   * Deux résolutions à la lecture : le modèle appelé et l'auteur de la
+   * publication.
+   *
+   * Un identifiant ne se reconnaît pas — ni celui d'un modèle, ni celui d'un
+   * compte. On les résout ici plutôt que de laisser l'écran faire un second
+   * appel par ligne, et en une requête par table plutôt qu'une par gabarit.
+   *
+   * Un identifiant qui ne désigne plus rien rend nul, comme une absence : le
+   * modèle a pu être retiré du catalogue, l'administrateur quitter l'équipe.
+   * La trace du gabarit, elle, demeure — c'est le versionnage qui la porte.
+   */
+  private async rendreTous(lignes: LigneGabarit[]): Promise<GabaritStudio[]> {
+    const idsModeles = [...new Set(lignes.flatMap((g) => (g.aiModelId ? [g.aiModelId] : [])))];
+    const idsAuteurs = [...new Set(lignes.flatMap((g) => (g.createdByAdminId ? [g.createdByAdminId] : [])))];
+
+    const [modeles, auteurs] = await Promise.all([
+      idsModeles.length === 0 ? [] : this.prisma.aIModel.findMany({
+        where: { id: { in: idsModeles } },
+        select: { id: true, provider: true, modelKey: true },
+      }),
+      idsAuteurs.length === 0 ? [] : this.prisma.admin.findMany({
+        where: { id: { in: idsAuteurs } },
+        select: { id: true, email: true },
+      }),
+    ]);
+    const parModele = new Map(modeles.map((m) => [m.id, m]));
+    const parAuteur = new Map(auteurs.map((a) => [a.id, a.email]));
+
+    return lignes.map((g) => {
+      const modele = g.aiModelId ? parModele.get(g.aiModelId) : undefined;
+      return {
+        id: g.id,
+        genre: g.kind as GabaritStudio["genre"],
+        cle: g.key,
+        version: g.version,
+        corps: g.body,
+        gardeFous: g.guardrails ?? null,
+        modele: modele ? { id: modele.id, fournisseur: modele.provider, cle: modele.modelKey } : null,
+        actif: g.isActive,
+        parQui: (g.createdByAdminId ? parAuteur.get(g.createdByAdminId) : undefined) ?? null,
+        quand: g.createdAt.toISOString(),
+      };
+    });
+  }
+
+  private async rendre(g: LigneGabarit): Promise<GabaritStudio> {
+    // Une ligne suit le même chemin qu'une liste : deux formes de rendu pour
+    // une seule chose finissent toujours par diverger.
+    return (await this.rendreTous([g]))[0]!;
   }
 
   // Ajuster un gabarit **crée une version** : l'ancienne demeure. Sans cela,
@@ -95,7 +143,7 @@ export class StudioService {
           createdByAdminId: auteurId,
         },
       });
-      return this.rendre(cree);
+      return await this.rendre(cree);
     });
   }
 
@@ -117,7 +165,7 @@ export class StudioService {
       });
 
       const apres = await tx.promptTemplate.update({ where: { id }, data: { isActive: true } });
-      return this.rendre(apres);
+      return await this.rendre(apres);
     });
   }
 }

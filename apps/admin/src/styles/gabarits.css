@@ -192,3 +192,17 @@
   line-height: var(--leading-body);
   color: var(--text-secondary);
 }
+
+/* Le studio — ux-admin §5.9, entrée « réglages en service ».
+   La portée se dit au-dessus du tableau, une fois : un administrateur qui
+   cherche le banc d'essai doit apprendre qu'il n'existe pas, plutôt que de le
+   chercher dans un onglet. */
+.admin-studio-portee {
+  max-width: var(--measure);
+  margin-bottom: var(--space-20);
+  font-size: var(--text-body-s);
+  color: var(--text-secondary);
+}
+.admin-studio-histoire {
+  margin-top: var(--space-28);
+}

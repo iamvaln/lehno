@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Studio, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -54,8 +54,8 @@ import {
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
-  profilAdminSchema,
-  type Intervention,
+  profilAdminSchema, catalogueGabaritsSchema,
+  type Intervention, type GabaritStudio,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
@@ -125,7 +125,7 @@ const PRESSEES = new Set(["moderation", "suppressions"]);
  * une configuration (§5.9), les offres se listent puis se détaillent (§5.10).
  */
 const GABARITS: Record<string, string> = {
-  moderation: "liste", studio: "formulaire", offres: "liste",
+  moderation: "liste", offres: "liste",
   metriques: "tableau",
 };
 
@@ -257,6 +257,7 @@ export function App(): ReactNode {
   const [tourCredits, setTourCredits] = useState(0);
   const [tourAcces, setTourAcces] = useState(0);
   const [tourProfil, setTourProfil] = useState(0);
+  const [tourStudio, setTourStudio] = useState(0);
   const [tourAssistance, setTourAssistance] = useState(0);
   const [ongletAssistance, setOngletAssistance] = useState<"demandes" | "contact" | "attente" | "retours">("demandes");
   const [filtreAssistance, setFiltreAssistance] = useState("tous");
@@ -562,6 +563,13 @@ export function App(): ReactNode {
     [section, tourAcces],
   );
 
+  const etatStudio = useRessource(
+    () => (section === "studio"
+      ? api.appeler("/admin/portrait-studio/templates", { schema: catalogueGabaritsSchema })
+      : Promise.resolve(null)),
+    [section, tourStudio],
+  );
+
   const etatProfil = useRessource(
     () => (section === "profil"
       ? api.appeler("/admin/me", { schema: profilAdminSchema })
@@ -782,6 +790,37 @@ export function App(): ReactNode {
           enfant={(page) => <Assistance {...communAssistance} demandes={page?.items ?? []} />} />
       );
     }
+  } else if (section === "studio") {
+    vue = (
+      <Ressource
+        etat={etatStudio}
+        t={t}
+        enfant={(catalogue) => (catalogue ? (
+          <Studio
+            role={role}
+            langue={langue}
+            gabarits={catalogue.items}
+            onRevenir={(gabarit: GabaritStudio, motif) => {
+              void (async () => {
+                try {
+                  await api.appeler(`/admin/portrait-studio/templates/${gabarit.id}`, {
+                    methode: "PATCH",
+                    corps: { isActive: true, reason: motif },
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  // On relit dans tous les cas : après un refus, ce qui est
+                  // affiché est l'état d'avant, et c'est lui qui fait foi.
+                  setTourStudio((n) => n + 1);
+                }
+              })();
+            }}
+            onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
   } else if (section === "liens") {
     // Aucun appel : la page rend un registre du code. Pas d'état de chargement
     // à tenir, donc pas de `Ressource` — l'envelopper en inventerait un.

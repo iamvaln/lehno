@@ -404,3 +404,58 @@ Et le renvoi inventé à « la spécification technique §9 », qui vivait encor
 journal ; ils y sont. Rien ne garantit que le prochain code écrit par le serveur
 y arrive — l'outil ne peut pas lire les contrôleurs. Le repli affiche le code
 brut, ce qui rend l'absence visible sans la corriger.
+
+---
+
+## I. §5.9 Studio du portrait — une entrée sur trois
+
+La section décrit **trois entrées** : réglages en service, composition, banc
+d'essai. Une seule a de la matière.
+
+**Livrée — « réglages en service ».** Ce qui tourne aujourd'hui, l'historique
+des publications et le retour arrière. Le serveur les servait déjà, sans écran :
+`admin/portrait-studio/templates` versionne chaque gabarit, et une seule version
+est en service par couple (genre, clé) — tenue par un index unique partiel, en
+base et non dans le service.
+
+**Bloquée — « composition ».** §5.9 promet un brouillon : « on y travaille
+librement, **rien ne change pour les utilisateurs tant qu'on n'a pas publié** ».
+Le modèle de données n'a pas de brouillon : `POST` crée une version **et la met
+en service au même geste**. Un onglet « composition » bâti dessus publierait à
+chaque enregistrement — l'inverse exact de sa promesse.
+
+C'est une décision à prendre, pas un oubli à combler : ajouter un état brouillon
+change ce que `POST` veut dire, et l'index unique partiel qui garantit
+aujourd'hui « une seule active » devra distinguer « publiée » de « en cours ».
+
+**Bloqué — « banc d'essai ».** Il appelle un modèle et se paie en argent réel.
+Aucun fournisseur d'IA n'est branché dans le dépôt (voir G), `AIUsage` n'existe
+pas, et `/me/studio/options` — le catalogue que l'application consomme — n'est
+servi par aucun contrôleur. Ni l'essai, ni son coût, ni le plafond quotidien,
+ni les profils de simulation n'ont où se poser.
+
+**Absents du modèle.** Les **orientations** (libellés dans les deux langues,
+ordre, activation), les **ambiances**, le **motif identitaire** : aucune table.
+`PromptTemplate.key` en tient lieu implicitement, sans libellé ni ordre ni
+activation propres.
+
+**Ce que la section devait montrer** — volume produit, taux de régénération,
+coût moyen, taux d'échec par orientation — suppose les mêmes données que les
+métriques (§5.11). Rien ne les enregistre.
+
+### Un désaccord à trancher : le studio est-il fermé au support ?
+
+§5.9 est explicite : « il reste fermé au rôle support, **y compris en
+lecture** ». `navigation.ts` le suit — la section ne figure pas au menu d'un
+support.
+
+Le serveur dit l'inverse : `GET admin/portrait-studio/templates` est ouvert aux
+deux rôles, et un test le fixe délibérément — « le support consulte, il ne règle
+pas » — avec pour raison que comprendre ce qui a produit un contenu raté fait
+partie de l'assistance.
+
+**Je n'ai pas tranché.** L'argument du test est défendable et la spécification
+est nette ; ce n'est pas à moi de choisir entre les deux. En pratique la
+divergence est invisible : le menu ne montre pas la section au support, qui n'a
+donc aucun chemin pour l'atteindre. Elle deviendra visible le jour où un
+raccourci y mènera.
