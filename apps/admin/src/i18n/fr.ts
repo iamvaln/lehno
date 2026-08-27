@@ -204,7 +204,7 @@ export const fr = {
 
   entrees: {
     titre: "Connexions",
-    sous: "Les entrées réussies et les tentatives refusées. Sans adresse IP : elle ne descend pas en base.",
+    sous: "Les entrées réussies et les tentatives refusées. L'adresse IP est enregistrée mais ne se lit pas ici : elle sert aux investigations, pas à la lecture courante.",
     col: { date: "Quand", compte: "Compte", adresse: "Adresse tentée", resultat: "Résultat", appareil: "Appareil", lieu: "Lieu approximatif" },
     resultats: { success: "Entrée", failure: "Refusée" },
     inconnu: "—",
@@ -881,6 +881,8 @@ export const fr = {
 
   profil: {
     titre: "Mon profil",
+    /** Ce qu'on écrit à la place d'une valeur absente — jamais une valeur inventée. */
+    inconnu: "—",
     groupes: {
       compte: "Compte",
       acces: "Accès",

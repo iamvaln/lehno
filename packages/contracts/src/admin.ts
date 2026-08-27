@@ -206,12 +206,19 @@ export type Parametre = z.infer<typeof parametreSchema>;
 export const profilAdminSchema = z.object({
   email: z.string(),
   role: adminRoleSchema,
+  /** Qui a ouvert cet accès, d'après le journal d'audit. Nul pour un compte
+   *  posé à la main, avant qu'il y ait quelqu'un pour inviter. */
   ajoutePar: z.string().nullable(),
   derniereConnexion: z.string().nullable(),
   sessions: z.array(z.object({
+    /** La lignée de jetons, non le jeton : une session survit à ses échanges. */
     id: z.string(),
-    appareil: z.string(),
-    ip: z.string(),
+    // Nuls tous les deux, comme les colonnes qui les portent et comme
+    // `entreeSchema` les rend déjà pour les connexions d'utilisateur. Une
+    // session ouverte avant qu'on trace l'adresse n'en a pas, et « — » écrit
+    // par le serveur serait une donnée inventée là où il n'y en a pas.
+    appareil: z.string().nullable(),
+    ip: z.string().nullable(),
     depuis: z.string(),
     courante: z.boolean(),
   }).strict()),

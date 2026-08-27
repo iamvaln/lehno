@@ -173,7 +173,7 @@ export const en: typeof fr = {
 
   entrees: {
     titre: "Sign-ins",
-    sous: "Successful entries and refused attempts. No IP address: it never reaches the database.",
+    sous: "Successful entries and refused attempts. The IP address is recorded but not shown here: it serves investigations, not everyday reading.",
     col: { date: "When", compte: "Account", adresse: "Address tried", resultat: "Result", appareil: "Device", lieu: "Approximate location" },
     resultats: { success: "Signed in", failure: "Refused" },
     inconnu: "—",
@@ -820,6 +820,8 @@ export const en: typeof fr = {
 
   profil: {
     titre: "My profile",
+    /** Stands in for a missing value — never an invented one. */
+    inconnu: "—",
     groupes: {
       compte: "Account",
       acces: "Access",

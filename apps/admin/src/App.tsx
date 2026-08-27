@@ -54,9 +54,12 @@ import {
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
+  profilAdminSchema,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
-import { interventions, profil } from "./fixtures/index.js";
+// Les données d'aperçu ne servent qu'à la bande de développement. Un écran
+// branché ne s'en approche pas : ce qu'il montre vient du serveur ou n'est pas
+// montré du tout.
 import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
@@ -252,6 +255,7 @@ export function App(): ReactNode {
   const [tourDrapeaux, setTourDrapeaux] = useState(0);
   const [tourCredits, setTourCredits] = useState(0);
   const [tourAcces, setTourAcces] = useState(0);
+  const [tourProfil, setTourProfil] = useState(0);
   const [tourAssistance, setTourAssistance] = useState(0);
   const [ongletAssistance, setOngletAssistance] = useState<"demandes" | "contact" | "attente" | "retours">("demandes");
   const [filtreAssistance, setFiltreAssistance] = useState("tous");
@@ -522,9 +526,41 @@ export function App(): ReactNode {
     [section, tourAcces],
   );
 
+  const etatProfil = useRessource(
+    () => (section === "profil"
+      ? api.appeler("/admin/me", { schema: profilAdminSchema })
+      : Promise.resolve(null)),
+    [section, tourProfil],
+  );
+
   let vue: ReactNode;
   if (section === "profil") {
-    vue = <Profil profil={profil} langue={langue} />;
+    vue = (
+      <Ressource
+        etat={etatProfil}
+        t={t}
+        enfant={(moi) => (moi ? (
+          <Profil
+            profil={moi}
+            langue={langue}
+            // La page retire les lignes fermées de ce qu'elle montre ; on relit
+            // quand même, pour que ce qui reste vienne du serveur et non d'une
+            // soustraction faite de notre côté.
+            onFermerSessions={() => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/me/sessions", { methode: "DELETE" });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourProfil((n) => n + 1);
+                }
+              })();
+            }}
+          />
+        ) : null)}
+      />
+    );
   } else if (section === "comptes" && ouvert) {
     vue = (
       <Ressource
@@ -535,7 +571,9 @@ export function App(): ReactNode {
             role={role}
             langue={langue}
             compte={compte}
-            interventions={interventions.items}
+            // Vide tant qu'aucun point d'entrée ne rend l'historique d'un
+            // compte : un pied de page vide dit ce qui est, la fixture qui
+            // était passée ici disait le contraire.
             onRetour={() => setOuvert(null)}
           />
         ) : null)}
@@ -1098,7 +1136,10 @@ export function App(): ReactNode {
         }
         topbar={
           <Topbar
-            compte="sam@lehno.app"
+            // L'adresse du compte connecté, portée par la session depuis
+            // l'entrée. Une adresse écrite en dur montrait ici le compte de
+            // quelqu'un d'autre à tout le monde.
+            compte={api.session()?.email ?? ""}
             role={role}
             langue={langue}
             onLangue={setLangue}

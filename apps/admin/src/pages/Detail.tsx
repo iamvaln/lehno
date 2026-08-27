@@ -6,7 +6,7 @@ import { ConfirmWithReason, RoleGate } from "../composants/actions/index.js";
 import { AlertPill, AuditTrail, StatCard, Toast } from "../composants/signaux/index.js";
 import { Button } from "../composants/base/index.js";
 import { messages, type Langue, type Messages } from "../i18n/index.js";
-import { compteDetail, interventions as interventionsDemo } from "../fixtures/index.js";
+import { compteDetail } from "../fixtures/index.js";
 
 /* Le gabarit de détail — un objet, ses faces, ses actions, sa traçabilité.
  *
@@ -45,7 +45,14 @@ export interface DetailProps {
   role: AdminRole;
   langue?: Langue;
   compte?: CompteDetail;
-  /** L'historique des interventions sur *ce* compte. */
+  /**
+   * L'historique des interventions sur *ce* compte (ux-admin §7).
+   *
+   * Vide par défaut, et non rempli d'une démonstration : ce pied de page a
+   * rendu pendant tout le premier lot le même historique fabriqué pour chaque
+   * compte, parce qu'un défaut de props le fournissait et que l'appelant
+   * l'avait oublié. Un tableau vide se voit ; une fausse trace passe pour vraie.
+   */
   interventions?: Intervention[];
   onRetour?: (id?: string) => void;
   onSuspendre?: (motif: string) => void;
@@ -72,7 +79,7 @@ export function Detail({
   role,
   langue = "fr",
   compte = compteDetail,
-  interventions = interventionsDemo.items,
+  interventions = [],
   onRetour,
   onSuspendre,
   onRetablir,
