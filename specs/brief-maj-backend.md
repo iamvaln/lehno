@@ -4,7 +4,6 @@
 
 Références : `spec-technique-lehno.md`, `dictionnaire-donnees-lehno.md`, `ux-admin-lehno.md`, `spec-portrait-lehno.md`.
 
-
 > **Corrigé le 25/08/2026 — `ManualTopUp` n'existe plus.** Elle a été absorbée
 > par `Payment`, distingué par son `mode` : `provider`, `semi_manual`, `manual`.
 > Une entité séparée aurait obligé à tenir deux registres et deux historiques
@@ -40,14 +39,18 @@ Références : `spec-technique-lehno.md`, `dictionnaire-donnees-lehno.md`, `ux-a
 | `WishlistItem` | `is_shortlisted` remplace `is_public` — un repère personnel, invisible aux tiers |
 | `FeatureFlag` | **Nouvelle**, réduite à l'état |
 | `CreditBundle` | **Nouvelle.** Paliers d'achat, réglés en administration |
-| `ManualTopUp` | **Nouvelle.** Recharge manuelle avec justificatif |
+| `PaymentChannel` | **Nouvelle.** Ce que le service propose : opérateur, pays, barème de frais |
+| `CollectionAccount` | **Nouvelle.** Les comptes sur lesquels les clients versent |
+| `Payment` | Absorbe la recharge manuelle : `mode` (`provider`, `semi_manual`, `manual`), `collection_account_id`, `payment_channel_id`, `proof_key`, `expected_amount`, `received_amount` |
+| `CreditTransaction` | `payment_id`, avec unicité partielle là où `type = 'purchase'` |
+| `PersonAttribute` | **Nouvelle.** Traits extraits des notes ; unicité sur (`person_id`, `kind`), le plus récent l'emporte |
 | `GiftGiven` | **Nouvelle.** Ce qui a été offert ; la génération d'idées **l'écarte des suggestions** |
 | `PromptTemplate` | **Nouvelle.** Gabarits versionnés, une seule version active par (`kind`, `key`) |
 | `StudioConfig` / `StudioProfile` / `StudioTrial` | **Nouvelles.** Brouillon, profils de simulation, essais |
 | `GeneratedProfile` | Orientation, voie d'image, famille, style, `image_key`, `source_photo_key`. `share_token` **supprimé** |
 | `ActionRun` | `prompt_template_id` — la version exacte qui a produit le contenu |
 | `AIUsage` | `origin` (`user_action`, `scheduled_job`, `retry`, `studio_trial`) et `correlation_id` |
-| `Person` | `calling_name`, `avatar_url`, `relation`, `gender`, `city`, `country`, `preferred_channel` |
+| `Person` | `calling_name`, `avatar_url`, `relation`, `gender`, `city`, `country`, `preferred_channel`, **`birth_date` et `birth_year_known`** |
 | `DeviceSignup.user_id` | **Nullable, `on delete set null`** |
 | `Payment` | État `expired` ; `PaymentStatusHistory` trace chaque état |
 | `NoteCategory` | **Zéro ligne est un état valide** |
@@ -65,6 +68,18 @@ Références : `spec-technique-lehno.md`, `dictionnaire-donnees-lehno.md`, `ux-a
 
 **Les versions de `PromptTemplate` ne se modifient pas.** Ajuster crée une version nouvelle ; l'ancienne demeure, ce qui permet d'y revenir et d'expliquer un écart de qualité.
 
+**`CreditTransaction.payment_id` porte une unicité partielle** là où `type = 'purchase'`. Un paiement se résout par trois voies, dont deux peuvent constater le succès à quelques secondes d'écart : sans cette contrainte, l'octroi unique reposerait sur du code. Et `on delete restrict` — effacer un paiement ne doit pas faire disparaître le crédit qu'il a produit.
+
+**Trois montants sur un paiement, et ils ne disent pas la même chose.** `amount` est le prix du palier ; `expected_amount` ce qu'on attend sur le compte une fois les frais appliqués selon `fee_borne_by` ; `received_amount` ce qui est réellement arrivé. Sans le deuxième, on ne saurait pas si un écart vient du client ou du barème ; sans le troisième, on ne saurait pas qu'il y a écart.
+
+**`PaymentChannel` n'est pas `PaymentMethod`.** Le premier est ce que le service propose — une poignée, réglés en administration. Le second est ce qu'un client a enregistré — autant que de clients. Les fondre porterait un taux de frais sur le numéro de chaque client, et changer le barème MTN demanderait de tous les corriger.
+
+**La date de naissance appartient au proche, pas à un événement.** `Person.birth_date` et `birth_year_known` ; l'anniversaire s'en déduit. `year_known` n'avait rien à faire sur le planning : c'est la **naissance** dont on ignore l'année, pas l'anniversaire — celui-ci a toujours lieu cette année.
+
+**Le genre revient au contrat, mais au studio.** Il sert d'abord **l'accord grammatical** : en français, on n'écrit pas à quelqu'un sans savoir — *fier ou fière*, *le meilleur ou la meilleure*. Il se demande à la première génération, pour le proche **et pour l'utilisateur** (celui qui signe s'accorde aussi), jamais dans le carnet. `unspecified` reste légitime : la génération emploie alors des tournures qui s'en passent.
+
+**La passe de classement extrait aussi les attributs** — couleur, animal, plat, taille, métier, loisir, ce qu'il faut éviter. **Aucun appel de plus** : les mêmes valeurs de sortie, quelques champs supplémentaires.
+
 **`AIUsage.action_run_id` est nullable.** Le classement des notes et la détection du sensible ne produisent rien de facturable, mais coûtent en argent réel. Les omettre fausserait le suivi de marge.
 
 ---
@@ -81,7 +96,9 @@ Références : `spec-technique-lehno.md`, `dictionnaire-donnees-lehno.md`, `ux-a
 
 **Les origines autorisées forment une liste fermée**, jamais `*`.
 
-**Le justificatif d'une recharge manuelle ne prouve rien.** Un montage est facile : l'administrateur **vérifie la réception sur le compte de l'opérateur**. Le fichier suit les règles des fichiers reçus (§10.6) et **s'efface une fois la demande traitée**.
+**Le délai entre deux demandes de code croît** — 5 s, 25, 125 — et le serveur le rend dans `retryAfterSeconds`. C'est lui qui fait règle : un client qui recalculerait ferait diverger le parc.
+
+**Le reçu d'un paiement manuel ne prouve rien.** Un montage est facile : l'administrateur **constate la réception sur le compte** et saisit `received_amount`. L'écart avec `expected_amount` se traite, il ne se devine pas. Le fichier suit les règles des fichiers reçus (§10.6).
 
 ---
 

@@ -63,7 +63,7 @@ S'y ajoute une invitation discrète **« Faire ma liste »**, présente tant qu'
 
 ## 4. Les fonctionnalités s'allument une à une
 
-Le produit se livre par morceaux. Douze drapeaux gouvernent ce qui est visible ; le socle — proches, notes, dates, rappels — reste toujours là.
+Le produit se livre par morceaux. Treize drapeaux gouvernent ce qui est visible ; le socle — proches, notes, dates, rappels — reste toujours là.
 
 **Ce que ça demande au dessin :** une fonctionnalité éteinte laisse un trou, et **le trou doit rester habitable**.
 
@@ -103,7 +103,17 @@ Elles viennent de mesures, pas de goût.
 
 ---
 
-## 7. Un bloc nouveau sur la fiche
+## 7. Le topo, en tête de fiche
+
+La fiche s'ouvre sur ce que les notes ont appris du proche : sa couleur, son animal, ce qu'il aime manger, sa taille, son métier, ses loisirs, ce qu'il faut éviter. **Le topo en un regard**, avant la liste des notes.
+
+Rien ne se saisit : tout est extrait des notes au fil de l'eau, et chaque élément porte sa **ligne de provenance**.
+
+**Ce qui manque ne paraît pas.** Une fiche neuve n'affiche aucun bloc — jamais une grille de cases vides qui attendraient d'être remplies.
+
+**La composition doit tenir avec deux attributs comme avec dix.** C'est le même problème que la liste de souhaits : une grille pensée pour dix paraît vide à deux.
+
+## 8. Un bloc nouveau sur la fiche
 
 Une note que l'application n'a pas su classer **reste sans catégorie** — aucun repli sur une catégorie fourre-tout.
 
@@ -111,7 +121,7 @@ Elle paraît alors dans un bloc **« à ranger »**, en tête des notes de la fi
 
 Le ton compte ici : ce n'est ni une erreur ni une file d'attente. La note **sert déjà** — la préparation lit son contenu comme celui des autres. Le bloc propose un rangement, il ne réclame pas une correction.
 
-## 8. Deux écarts relevés dans le kit
+## 9. Deux écarts relevés dans le kit
 
 **`CategoryTag` ne porte pas les catégories du modèle.** Le kit a *Goût, Idée cadeau, No-go, Souvenir, À classer*. Le modèle en compte sept, en deux natures :
 
@@ -126,7 +136,7 @@ Le ton compte ici : ce n'est ni une erreur ni une file d'attente. La note **sert
 
 ---
 
-## 9. Ce qui reste à produire
+## 10. Ce qui reste à produire
 
 - **Seize illustrations** sur vingt-six : attentes et issues, entrée dans l'application, surfaces publiques, back-office. Les dix états vides sont validés.
 - **Le portrait** : les trois gabarits, les trois styles de photo, la distribution des motifs.

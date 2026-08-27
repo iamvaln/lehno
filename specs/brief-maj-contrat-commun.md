@@ -19,7 +19,8 @@ Le reste vit dans `brief-maj-backend.md`, `brief-maj-mobile.md` et `brief-maj-ad
 | Ressource absente, **hors de son périmètre**, ou gouvernée par un **drapeau éteint** | **`404`** | Un `403` confirmerait son existence |
 | Conflit d'état | `409` | |
 | Règle métier non satisfaite | `422` | |
-| Trop de requêtes | `429` | |
+| Trop de requêtes | `429` | Avec `retryAfterSeconds` ; le délai croît, et vient du serveur |
+| **Arrêt pour intervention** | **`503`** | Code `maintenance`, avec `retryAfterSeconds` |
 
 **Les `POST` qui ne créent rien gardent `200`** — `/auth/otp` envoie un code, `/public/waitlist` est idempotent à dessein, une décision de validation modifie un état.
 
@@ -39,7 +40,7 @@ La même règle vaut pour les notifications : le serveur transporte `title_key` 
 
 ## 3. Les drapeaux de fonctionnalité
 
-Douze drapeaux. Le socle — proches, notes, dates, occasions, rappels, compte — n'en a pas.
+Treize drapeaux. Le socle — proches, notes, dates, occasions, rappels, compte — n'en a pas.
 
 **Le partage des rôles**
 
@@ -51,6 +52,8 @@ Douze drapeaux. Le socle — proches, notes, dates, occasions, rappels, compte �
 **Les dépendances sont résolues côté serveur** avant l'envoi : `wall` emporte `wishes` et `reservation` ; `wishlist.own` emporte `reservation`. **Le client n'a aucune règle à connaître.**
 
 **Un drapeau inconnu vaut éteint** — le parc ne se met pas à jour d'un bloc.
+
+**L'arrêt pour intervention n'est pas un drapeau.** Un drapeau éteint rend `404` : la surface n'existe pas, le client la masque. Un arrêt rend `503` : tout est suspendu pour un temps annoncé, **le client ne masque rien** et affiche une attente. Les confondre ferait lire une fenêtre de deux heures comme une suppression définitive. `/public/maintenance` et `/v1/admin*` restent joignables pendant un arrêt ; tout le reste, y compris `/public/config` et `/auth/*`, rend `503`.
 
 **Le cas qui trompe** : `credits` éteint laisse les générations **disponibles et gratuites** si leur propre drapeau est allumé. Éteindre le paiement ne doit pas éteindre le produit ; c'est `topup.manual` qui prend le relais.
 
@@ -84,6 +87,8 @@ C'est le point le plus facile à implémenter de travers, des deux côtés.
 **Les paliers remplacent la saisie libre.** On achète un `CreditBundle`, le plus petit fixe le minimum. Montants, crédits et remises se règlent depuis l'administration — rien en dur, ni côté serveur ni côté client.
 
 **Le coût réel s'enregistre à part** : ce qui a été dépensé (`AIUsage.cost`) en face de ce qui a été facturé (`ActionRun.credits_spent`). Les opérations d'administration **ne facturent rien mais coûtent**.
+
+**Une recharge manuelle est un paiement**, pas une demande à part : même cycle, même historique, même place dans l'historique du client. Seul son `mode` la distingue. Et **les frais d'opérateur se disent avant** : si le client les supporte, le montant affiché les inclut.
 
 ---
 
@@ -127,3 +132,5 @@ Le domaine sert les fichiers d'association ; l'application déclare les chemins 
 - La **notation du décompte** — `J−3` / `3 days`, à éprouver par un test utilisateur. **Ne pas la figer dans un composant.**
 - Les **schémas détaillés** de requête et de réponse, ressource par ressource.
 - Les **noms des trois styles de photo** du portrait.
+
+**Le contrat publié fait autorité.** `docs/api/openapi.json` est engendré depuis les schémas de validation ; en cas d'écart avec un document écrit à la main, il l'emporte.

@@ -4,7 +4,6 @@
 
 Références : `ux-admin-lehno.md`, `spec-technique-lehno.md` (§8 pour les chemins, §9 pour les droits), `spec-portrait-lehno.md`, `design-system-lehno.md`.
 
-
 > **Corrigé le 25/08/2026 — `ManualTopUp` n'existe plus.** Elle a été absorbée
 > par `Payment`, distingué par son `mode` : `provider`, `semi_manual`, `manual`.
 > Une entité séparée aurait obligé à tenir deux registres et deux historiques
@@ -53,6 +52,8 @@ Allumer et éteindre les fonctionnalités, pour livrer le produit par morceaux.
 
 **Le socle n'y figure pas** — proches, notes, dates, rappels, compte ne sont pas extinguibles.
 
+**L'arrêt pour intervention est ailleurs**, dans les paramètres. Éteindre une fonctionnalité retire une surface ; arrêter le service suspend tout et annonce un délai. Les mettre au même endroit inviterait à les confondre — et le back-office reste joignable pendant un arrêt, ce qui permet de le lever.
+
 Chaque bascule est journalisée avec son auteur et sa date.
 
 ---
@@ -83,9 +84,15 @@ C'est la section la plus riche de l'outil, et celle qui bougera le plus.
 
 **Les paliers d'achat.** Montants, crédits obtenus, remise affichée, ordre. Aucune saisie libre côté application : le plus petit palier fixe le minimum.
 
-**Les recharges manuelles.** Une file de demandes à traiter, avec le justificatif déposé.
+**Les paiements manuels.** Une recharge manuelle **est un paiement**, pas une demande à part : même cycle, même historique d'états, même place dans l'historique du client. Son `mode` la distingue — `semi_manual` (le client verse puis dépose son reçu) ou `manual` (l'administrateur saisit tout).
 
-> **Le justificatif ne prouve rien.** Un montage est facile : l'administrateur **vérifie la réception sur le compte de l'opérateur** avant d'approuver. L'écran doit porter ce rappel — il évite l'approbation machinale. Rejeter exige un motif ; le fichier s'efface une fois la demande traitée.
+La file présente ceux qui attendent vérification, avec le palier, le **canal** et son barème, le **compte de collecte**, le **montant attendu** et le reçu.
+
+> **Le reçu ne prouve rien.** Un montage est facile : l'administrateur **constate la réception sur le compte** et **saisit le montant reçu**. L'écart entre attendu et reçu se traite, il ne se devine pas. L'écran doit porter ce rappel — il évite l'approbation machinale. Rejeter exige un motif.
+
+**Les canaux de paiement.** Opérateur, pays, barème : part proportionnelle, part fixe, plancher, plafond, et **qui supporte les frais**. Un barème se règle une fois — il ne se recopie pas sur chaque numéro de client.
+
+**Les comptes de collecte.** Les numéros sur lesquels les clients versent. **`is_visible_in_app` et `is_active` ne disent pas la même chose** : le premier décide de ce que le client voit, le second de ce qui reste employable. Jamais supprimé, seulement désactivé — un paiement passé le référence.
 
 **La confirmation manuelle d'un paiement.** Une opération restée en attente alors qu'elle a visiblement abouti chez l'opérateur se tranche à la main, avec motif.
 
@@ -130,8 +137,12 @@ Les nouveaux, sous `/v1/admin` :
 | Chemin | Rôle |
 |---|---|
 | `/admin/feature-flags` | Drapeaux et leur couverture |
+| `/admin/maintenance` | Déclencher, prolonger ou lever un arrêt pour intervention |
 | `/admin/credit-bundles` | Paliers d'achat |
-| `/admin/manual-topups`, `/{id}/decision` | Recharges manuelles à traiter |
+| `/admin/payments?mode=manual` | Paiements manuels à vérifier |
+| `/admin/payments/{id}/verify` | Constater le montant reçu, approuver ou rejeter |
+| `/admin/payment-channels` | Canaux et barèmes de frais |
+| `/admin/collection-accounts` | Comptes de collecte |
 | `/admin/payments/{id}/confirm` | Confirmation manuelle d'un paiement |
 | `/admin/portrait-studio/candidates` | Valeurs candidates |
 | `/admin/portrait-studio/config`, `/publish`, `/rollback`, `/history` | Brouillon, publication, retour arrière |
