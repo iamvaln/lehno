@@ -10,9 +10,19 @@ import type { Couleurs } from "../theme.js";
  * français ; les clés — accueil, dates, proches, moi — sont de la structure et
  * restent, les libellés viennent du dictionnaire.
  */
+/* LA BARRE PORTE L'INSET DU BAS, et les écrans ne l'ajoutent pas.
+ *
+ * Deux insets additionnés donnent le trou blanc au-dessus du menu système
+ * qu'on voit dans tant d'applications. La barre peint DESSOUS : son fond
+ * descend jusqu'au bord, et seuls les onglets s'arrêtent au-dessus de la
+ * poignée. Un fond qui s'arrêterait à la poignée laisserait une bande de page
+ * sous une barre qui ne s'y pose plus.
+ *
+ * Sur un appareil sans encoche ni poignée, l'inset vaut zéro et le
+ * rembourrage de l'onglet suffit — c'est le cas ordinaire, pas une exception. */
 export function styleDOnglets({
-  couleurs, actif = false,
-}: { couleurs: Couleurs; actif?: boolean }): {
+  couleurs, actif = false, insetBas = 0,
+}: { couleurs: Couleurs; actif?: boolean; insetBas?: number }): {
   barre: ViewStyle;
   onglet: ViewStyle;
   libelle: TextStyle;
@@ -26,6 +36,7 @@ export function styleDOnglets({
       borderTopWidth: nativeBorder.width,
       borderTopColor: couleurs.borderHairline,
       backgroundColor: couleurs.surfacePage,
+      paddingBottom: insetBas,
     },
     onglet: {
       flex: 1,
