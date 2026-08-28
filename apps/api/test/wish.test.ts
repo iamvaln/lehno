@@ -41,7 +41,7 @@ describe("les souhaits notés sur la fiche d'un proche", () => {
   // souhait → occurrence → compte —, et l'écrire en entier ici évite d'en
   // éprouver un maillon en croyant les éprouver tous.
   const occasion = async (userId: string): Promise<string> => {
-    const p = await persons.create(userId, { displayName: "Valery" });
+    const p = await persons.create(userId, { displayName: "Valery", gender: "male" });
     const e = await db.prisma.event.create({
       data: { personId: p.id, kind: "birthday", referenceDate: new Date("1990-08-24") },
     });
