@@ -1,6 +1,6 @@
 # Conditions générales d'utilisation
 
-_Version 2026-08-23 · Dernière mise à jour : 23 août 2026_
+_Version 2026-08-27 · Dernière mise à jour : 27 août 2026_
 
 ## 1. Objet
 
@@ -66,10 +66,28 @@ d'empêcher l'ouverture automatisée de comptes.
 Les fonctions de base du Service sont gratuites et sans limite de temps : vos
 notes, vos fiches, vos dates, vos rappels et votre Mur.
 
-Les contenus créés pour vous sont payés en crédits. Le prix du crédit et le
-nombre de crédits offerts à l'inscription sont affichés dans le Service et sur
-son site ; ils peuvent changer, sans effet sur les crédits déjà acquis. **Le coût
-d'une action vous est annoncé avant qu'elle ne soit lancée.**
+Les contenus créés pour vous sont payés en crédits. Les prix sont affichés dans
+le Service et sur son site.
+
+**Nous fixons librement nos tarifs, et nous pouvons les revoir à tout moment.**
+Cela vaut pour le prix d'un lot de crédits, le nombre de crédits qu'il contient,
+la remise éventuelle qui l'accompagne, le nombre de crédits offerts à
+l'inscription, et le coût en crédits de chaque action. Un lot peut également
+cesser d'être proposé.
+
+**Vous êtes prévenu avant.** Un changement de tarif vous est annoncé par
+courriel **avant** qu'il ne prenne effet, et non constaté après coup. Vous
+disposez donc du temps d'acheter aux conditions que vous connaissiez.
+
+Trois choses vous protègent également :
+
+- **Les crédits que vous avez déjà acquis gardent leur valeur.** Un changement de
+  tarif ne les diminue jamais, ne les reprend pas et ne les fait pas expirer.
+- **Le coût d'une action vous est annoncé avant qu'elle ne soit lancée.** Vous
+  décidez au moment de dépenser, jamais après.
+- **Un achat déjà effectué garde ses conditions.** Le montant, le nombre de
+  crédits et les frais qui vous ont été annoncés restent ceux de votre achat,
+  quels que soient les tarifs du lendemain.
 
 Les crédits s'achètent par mobile money ou par carte. **Ils ne périment pas** :
 ils restent acquis tant que le compte existe, et s'emploient dans l'application au

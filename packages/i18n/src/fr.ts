@@ -31,5 +31,9 @@ export const fr = {
     contact_invalid: "Ce formulaire n'est pas valide. Vérifiez les champs et réessayez.",
     contact_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
     maintenance: "Lehno est momentanément fermé pour une intervention. Réessayez dans un instant.",
+    // Pas « une erreur est survenue » : rien n'a échoué de notre côté, et le
+    // dire enverrait chercher une faute qu'on n'a pas commise. §4.5 : ce qui
+    // s'est passé, ce qu'on a fait, ce qu'on peut faire maintenant.
+    generation_unavailable: "Le modèle ne répond pas pour l'instant. Vos crédits n'ont pas été débités — réessayez dans quelques minutes.",
   },
 } as const;

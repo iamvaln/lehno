@@ -103,7 +103,7 @@ describe("schéma — contenu", () => {
               imageUrl: "https://media.example/x.jpg", details: "manuel, pas électrique" },
     });
     expect(w.status).toBe("available");
-    expect(w.isPublic).toBe(false);
+    expect(w.isShortlisted).toBe(false);
   });
 
   it("supprimer un compte purge tout ce qui en dépend malgré les deux chemins vers l'occurrence", async () => {

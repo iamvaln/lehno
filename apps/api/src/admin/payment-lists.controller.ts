@@ -42,7 +42,7 @@ const requeteMouvements = z.object({
  * **y compris pour l'administrateur**. Cette fonction est le seul endroit qui
  * compose ce libellé : ailleurs, le champ ne sort pas de la base.
  */
-function methodeLisible(m: { brand: string | null; last4: string | null } | null): string | null {
+export function methodeLisible(m: { brand: string | null; last4: string | null } | null): string | null {
   if (!m) return null;
   const marque = m.brand ?? "";
   return m.last4 ? `${marque} ••••${m.last4}`.trim() : marque || null;

@@ -113,12 +113,13 @@ describe("drapeaux de fonctionnalité", () => {
     // éteindre le produit : les générations restent disponibles et gratuites.
     // Une dépendance ajoutée ici par réflexe couperait la génération à tout le
     // monde le jour où le paiement tombe.
-    it("« credits » éteint laisse les générations actives", async () => {
+    it("les canaux de paiement éteints laissent les générations actives", async () => {
       await allumer("generation.message", "generation.ideas", "generation.portrait");
       expect(await service.estActif("generation.message")).toBe(true);
       expect(await service.estActif("generation.ideas")).toBe(true);
       expect(await service.estActif("generation.portrait")).toBe(true);
-      expect(await service.estActif("credits")).toBe(false);
+      expect(await service.estActif("topup.manual")).toBe(false);
+      expect(await service.estActif("topup.provider")).toBe(false);
     });
   });
 
@@ -257,13 +258,30 @@ describe("drapeaux de fonctionnalité", () => {
 
     // Un drapeau d'application n'a rien à faire sur une surface sans compte :
     // l'exposer annoncerait au monde ce qu'on prépare.
+    /* La portée s'est élargie le 27/08 : la landing montre ses sections d'après
+       les drapeaux, comme l'application masque les siennes, donc les quatre
+       clés qui décident d'une section de la page sont devenues publiques.
+       
+       Ce cas garde son SUJET — une clé purement applicative ne fuite pas — mais
+       le prouve sur une clé qui l'est restée. `events.other` gouverne une
+       valeur dans une requête, elle n'a aucune section sur la landing. */
     it("/public/features ne laisse pas fuiter un drapeau d'application", async () => {
-      await allumer("credits", "generation.portrait", "launch.live");
+      await allumer("events.other", "topup.manual", "launch.live");
       const r = await fetch(`${baseUrl}/v1/public/features`);
       const corps = (await r.json()) as { features: string[] };
-      expect(corps.features).not.toContain("credits");
-      expect(corps.features).not.toContain("generation.portrait");
+      expect(corps.features).not.toContain("events.other");
+      expect(corps.features).not.toContain("topup.manual");
       expect(corps.features).toContain("launch.live");
+    });
+
+    // Et l'inverse, qui compte autant : les clés élargies DOIVENT paraître,
+    // sinon la landing ne saurait pas quoi montrer.
+    it("expose les drapeaux dont la landing compose ses sections", async () => {
+      await allumer("generation.portrait", "generation.message", "launch.live");
+      const r = await fetch(`${baseUrl}/v1/public/features`);
+      const corps = (await r.json()) as { features: string[] };
+      expect(corps.features).toContain("generation.portrait");
+      expect(corps.features).toContain("generation.message");
     });
 
     it("/public/features n'expose pas ce qui est éteint", async () => {
@@ -278,7 +296,7 @@ describe("drapeaux de fonctionnalité", () => {
     });
 
     it("/me/features rend les capacités d'application actives", async () => {
-      await allumer("wall", "credits", "launch.live");
+      await allumer("wall", "topup.manual", "launch.live");
       const token = jwt.sign({ sub: await compte() }, SECRET, {
         algorithm: "HS256", expiresIn: 900,
       });
@@ -288,7 +306,7 @@ describe("drapeaux de fonctionnalité", () => {
       expect(r.status).toBe(200);
       const corps = (await r.json()) as { features: string[] };
       expect(corps.features).toContain("wall");
-      expect(corps.features).toContain("credits");
+      expect(corps.features).toContain("topup.manual");
       // launch.live n'a de sens que sur la landing : sa portée est publique.
       expect(corps.features).not.toContain("launch.live");
     });

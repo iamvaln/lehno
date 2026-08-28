@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Studio, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, Studio, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -49,7 +49,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  canauxSchema, catalogueIaSchema, comptesAdminSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  canauxSchema, catalogueIaSchema, chainesIaSchema, comptesAdminSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
   pageAssistanceSchema, pageContactSchema, pageAttenteSchema, pageRetoursSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
@@ -61,7 +61,7 @@ import {
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
 // branché ne s'en approche pas : ce qu'il montre vient du serveur ou n'est pas
 // montré du tout.
-import { demandeCodeReponseSchema, sessionAdminSchema, type AdminRole } from "@lehno/contracts";
+import { demandeCodeReponseSchema, maintenanceStatusSchema, sessionAdminSchema, type AdminRole, type PeriodeMetriques } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
 
@@ -310,15 +310,28 @@ export function App(): ReactNode {
   };
   const curseur = curseurs.at(-1) ?? null;
 
+  /**
+   * Les filtres des comptes, construits une fois.
+   *
+   * La liste et l'export les lisent tous deux : deux constructions
+   * divergeraient, et le fichier finirait par dire autre chose que l'écran.
+   * Ni `limit` ni `cursor` n'en font partie — ils découpent l'affichage, ils ne
+   * choisissent pas ce qu'on regarde, et un export borné à une page ne serait
+   * pas un export.
+   */
+  const filtresComptes = {
+    ...(requeteComptes.q ? { q: requeteComptes.q } : {}),
+    ...(requeteComptes.etat && requeteComptes.etat !== "tous"
+      ? { status: ETAT_SERVEUR[requeteComptes.etat] }
+      : {}),
+  };
+
   const etatComptes = useRessource(
     () => (section === "comptes" && !ouvert
       ? api.appeler("/admin/users", {
         schema: pageComptesSchema,
         requete: {
-          ...(requeteComptes.q ? { q: requeteComptes.q } : {}),
-          ...(requeteComptes.etat && requeteComptes.etat !== "tous"
-            ? { status: ETAT_SERVEUR[requeteComptes.etat] }
-            : {}),
+          ...filtresComptes,
           ...(requeteComptes.limit ? { limit: String(requeteComptes.limit) } : {}),
           ...(curseur ? { cursor: curseur } : {}),
         },
@@ -370,11 +383,23 @@ export function App(): ReactNode {
     motif: trace.motif ?? t.journal.sansMotif,
   });
 
+  const [tourArret, setTourArret] = useState(0);
+
   const etatParametres = useRessource(
     () => (section === "parametres"
       ? api.appeler("/admin/parameters", { schema: parametresSchema })
       : Promise.resolve(null)),
     [section, tourParametres],
+  );
+
+  // L'arrêt se lit à part des paramètres : c'est le même écran, mais pas la
+  // même chose. Un réglage se modifie et s'enregistre ; l'arrêt se déclenche et
+  // se lève, et il doit se relire après chaque geste sans recharger le reste.
+  const etatArret = useRessource(
+    () => (section === "parametres"
+      ? api.appeler("/admin/maintenance", { schema: maintenanceStatusSchema })
+      : Promise.resolve(null)),
+    [section, tourArret],
   );
 
   const etatSuppressions = useRessource(
@@ -450,10 +475,32 @@ export function App(): ReactNode {
     { garderAncien: true },
   );
 
-  const etatModeles = useRessource(
-    () => (section === "modeles"
-      ? api.appeler("/admin/ai-models", { schema: catalogueIaSchema })
+  // Trente jours par défaut, comme le serveur : les deux valeurs par défaut se
+  // rencontrent, plutôt que l'écran demande une période et en affiche une autre.
+  const [periodeMetriques, setPeriodeMetriques] = useState<PeriodeMetriques>("30j");
+
+  const etatMetriques = useRessource(
+    () => (section === "metriques"
+      ? api.appeler(`/admin/metrics?periode=${periodeMetriques}`, { schema: metriquesSchema })
       : Promise.resolve(null)),
+    // La période est dans les dépendances : sans elle, changer le sélecteur
+    // changerait l'étiquette sans refaire l'appel, et la page mentirait sans
+    // que rien ne le signale.
+    [section, periodeMetriques],
+    { garderAncien: true },
+  );
+
+  /* Le catalogue et les chaînes se chargent ENSEMBLE. Deux lectures séparées
+     donneraient deux états d'attente sur un écran qui n'en montre qu'un — et,
+     pire, un instant où la chaîne cite un modèle que le catalogue n'a pas
+     encore rendu. */
+  const etatModeles = useRessource(
+    async () => (section === "modeles"
+      ? {
+        catalogue: await api.appeler("/admin/ai-models", { schema: catalogueIaSchema }),
+        chaines: await api.appeler("/admin/ai-routes", { schema: chainesIaSchema }),
+      }
+      : null),
     [section, tourModeles],
   );
 
@@ -705,6 +752,25 @@ export function App(): ReactNode {
       onFiltre: (f: { etat?: string; mode?: string }) =>
         setFiltresPaiements((courant) => ({ ...courant, ...f })),
       onRetour: aller,
+      exportEnCours,
+      /**
+       * Chaque onglet sort sa propre liste, avec ses propres filtres.
+       *
+       * Les paiements reprennent `requetePaiements`, celui-là même que la liste
+       * envoie : le fichier emporte la sélection affichée, jamais la table.
+       * Les mouvements n'ont pas de filtre à l'écran, l'export n'en invente
+       * donc pas — il sort ce que l'onglet montre.
+       *
+       * Réservé aux administrateurs, comme le bouton des comptes et comme le
+       * serveur le refuse au support.
+       */
+      ...(role === "admin"
+        ? {
+          onExporter: () => (ongletCredits === "mouvements"
+            ? exporter("/admin/credit-transactions/export", {}, "mouvements-credits.csv")
+            : exporter("/admin/payments/export", requetePaiements, "paiements.csv")),
+        }
+        : {}),
     };
 
     if (ongletCredits === "mouvements") {
@@ -876,16 +942,63 @@ export function App(): ReactNode {
         ) : null)}
       />
     );
+  } else if (section === "metriques") {
+    vue = (
+      <Ressource
+        etat={etatMetriques}
+        t={t}
+        enfant={(donnees) => (donnees ? (
+          <Metriques
+            langue={langue}
+            donnees={donnees}
+            periode={periodeMetriques}
+            onPeriode={setPeriodeMetriques}
+            exportEnCours={exportEnCours}
+            // Le support lit la section — §6 la lui accorde — mais ne la sort
+            // pas : le serveur refuse les cinq exports, et on ne montre pas un
+            // geste qu'il refuserait.
+            {...(role === "admin"
+              ? {
+                onExporter: () => exporter(
+                  "/admin/metrics/export",
+                  { periode: periodeMetriques },
+                  "metriques.csv",
+                ),
+              }
+              : {})}
+          />
+        ) : null)}
+      />
+    );
   } else if (section === "modeles") {
     vue = (
       <Ressource
         etat={etatModeles}
         t={t}
-        enfant={(catalogue) => (catalogue ? (
+        enfant={(charge) => (charge ? (
           <Modeles
             role={role}
             langue={langue}
-            modeles={catalogue.items}
+            modeles={charge.catalogue.items}
+            chaines={charge.chaines.items}
+            onReordonner={(tache, modeleIds, motif) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/ai-routes", {
+                    methode: "PATCH",
+                    corps: { task: tache, modelIds: modeleIds, reason: motif },
+                  });
+                } catch (echec) {
+                  /* Le serveur refuse un modèle dont la capacité ne correspond
+                     pas à la tâche, et une chaîne dont aucun modèle n'est en
+                     service. L'écran traduit ce refus plutôt que de laisser
+                     croire à une panne de l'outil. */
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourModeles((n) => n + 1);
+                }
+              })();
+            }}
             onBasculer={(modele, actif, motif) => {
               void (async () => {
                 try {
@@ -894,10 +1007,10 @@ export function App(): ReactNode {
                     corps: { id: modele.id, enabled: actif, reason: motif },
                   });
                 } catch (echec) {
-                  // Le serveur refuse d'éteindre le dernier modèle en service :
-                  // couper toute génération sans que rien ne le dise avant la
-                  // première panne. L'écran traduit ce refus plutôt que de
-                  // laisser croire à une panne de l'outil.
+                  /* Le serveur refuse d'éteindre le dernier modèle en service
+                     D'UNE TÂCHE — un catalogue riche en modèles de texte ne
+                     sauve pas la tâche d'image dont on vient de couper le
+                     dernier. L'écran traduit ce refus. */
                   if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
                 } finally {
                   setTourModeles((n) => n + 1);
@@ -1042,7 +1155,13 @@ export function App(): ReactNode {
                 },
               }
               : {})}
-            onExporter={() => exporter("/admin/login-activity/export", requeteEntrees, "connexions.csv")}
+            // Le support voit les connexions mais ne les sort pas : on ne
+            // montre pas un geste que le serveur refuserait (décision du
+            // 27/08, voir K). Le journal d'audit n'a pas besoin de la même
+            // garde — sa section entière lui est fermée.
+            {...(role === "admin"
+              ? { onExporter: () => exporter("/admin/login-activity/export", requeteEntrees, "connexions.csv") }
+              : {})}
             exportEnCours={exportEnCours}
           />
         ) : null)}
@@ -1081,6 +1200,11 @@ export function App(): ReactNode {
               if (page.nextCursor) setCurseurs((c) => [...c, page.nextCursor]);
             }}
             onPagePrecedente={() => setCurseurs((c) => (c.length > 1 ? c.slice(0, -1) : c))}
+            // Les mêmes filtres que la liste, lus au même endroit : le fichier
+            // emporte ce qu'on regarde, jamais la table entière.
+            // Le serveur ne rend que du CSV : ne proposer que lui.
+            formatsExport={["csv"]}
+            onExporter={() => exporter("/admin/users/export", filtresComptes, "comptes.csv")}
           />
         ) : null)}
       />
@@ -1095,6 +1219,43 @@ export function App(): ReactNode {
             role={role}
             langue={langue}
             parametres={reglages}
+            // Le bloc n'apparaît qu'une fois l'état connu. Le rendre pendant
+            // le chargement afficherait « Service ouvert » avant de savoir —
+            // et c'est précisément l'écran qu'on regarde quand on doute.
+            {...(etatArret.statut === "pret" && etatArret.donnees
+              ? { arret: etatArret.donnees }
+              : {})}
+            onArreter={(dureeMinutes, motif) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/maintenance", {
+                    methode: "POST",
+                    corps: { dureeMinutes, reason: motif },
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  // On relit plutôt que de croire : l'écran qui dirait « arrêté »
+                  // sur la foi de son propre clic mentirait le jour où le
+                  // serveur a refusé.
+                  setTourArret((n) => n + 1);
+                }
+              })();
+            }}
+            onRouvrir={(motif) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/maintenance", {
+                    methode: "DELETE",
+                    corps: { reason: motif },
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourArret((n) => n + 1);
+                }
+              })();
+            }}
             onEnregistrer={(valeurs, motif) => {
               void (async () => {
                 // Un paramètre à la fois : le serveur écrit et journalise chaque

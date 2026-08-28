@@ -14,6 +14,17 @@ import { EventService } from "./event.service.js";
 // et l'anglais collationnent identiquement sur ce jeu, un seul collateur suffit.
 const COLLATEUR = new Intl.Collator("fr", { sensitivity: "base" });
 
+/* Abaisse la casse ET retire les accents : chercher « emile » doit trouver
+   « Émile », et « celarine » doit trouver « Célarine ». Sur un marché où les
+   claviers ne portent pas toujours les accents, l'inverse rendrait la
+   recherche inutilisable pour la moitié des noms du carnet.
+   
+   NFD sépare la lettre de son signe diacritique, la plage \u0300-\u036f les
+   retire. C'est la forme la plus courte qui traite aussi bien « ç » que « ï ». */
+function sansAccents(valeur: string): string {
+  return valeur.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 // L'annuaire et la fiche. Toutes les lectures passent par la portée cloisonnée
 // du dépôt : une requête Prisma directe sur `person` ici serait un défaut, le
 // cloisonnement cesserait d'être garanti par construction.
@@ -110,7 +121,26 @@ export class PersonService {
   async list(userId: string, query: ListPersonsQuery = {}): Promise<PersonList> {
     const lignes = await this.depot.persons(userId).findMany({});
     const details = await this.enrichir(lignes.map((l) => l.id));
-    const tous = lignes.map((l) => rendre(l, details.get(l.id)));
+    const bruts = lignes.map((l) => rendre(l, details.get(l.id)));
+
+    /* Le filtre AVANT le tri et la découpe, jamais après : filtrer une page
+       déjà coupée laisserait un proche de la troisième page introuvable, ce
+       qui est exactement le défaut qu'on corrige.
+       
+       La comparaison se fait ici et non en base : `contains` de PostgreSQL
+       suit la collation du serveur, que rien ne garantit être celle d'un
+       lecteur francophone — chercher « emile » ne trouverait pas « Émile ».
+       On normalise donc explicitement, comme le tri alphabétique le fait déjà
+       avec son collateur.
+
+       La recherche porte sur les DEUX noms : quelqu'un cherche « maman » sans
+       savoir si sa fiche dit « Maman » ou « Maman Chantal », et le nom d'usage
+       est justement celui par lequel on l'appelle. */
+    const tous = query.q === undefined ? bruts : bruts.filter((p) => {
+      const aiguille = sansAccents(query.q!);
+      return sansAccents(p.displayName).includes(aiguille)
+        || (p.callingName !== null && sansAccents(p.callingName).includes(aiguille));
+    });
 
     const sens = query.direction === "desc" ? -1 : 1;
     if (query.sort === "alpha") {
@@ -152,6 +182,10 @@ export class PersonService {
       avatarUrl: input.avatarUrl ?? null,
       relation: input.relation ?? null,
       register: input.register ?? null,
+      // L'accord grammatical. `unspecified` par défaut : une absence de réponse
+      // est une réponse légitime, et la génération emploie alors des tournures
+      // qui s'en passent.
+      gender: input.gender ?? "unspecified",
       language: input.language ?? null,
       relationHint: input.relationHint ?? null,
       birthDate: input.birthDate ? new Date(`${input.birthDate}T00:00:00Z`) : null,
@@ -199,6 +233,7 @@ export class PersonService {
 function rendre(p: {
   id: string; displayName: string; callingName: string | null; avatarUrl: string | null;
   isSelf: boolean; relation: string | null; register: string | null; language: string | null;
+  gender: string | null;
   relationHint: string | null; birthDate: Date | null; birthYearKnown: boolean;
   city: string | null;
   country: string | null; preferredChannel: string | null; createdAt: Date;
@@ -210,6 +245,12 @@ function rendre(p: {
     avatarUrl: p.avatarUrl,
     isSelf: p.isSelf,
     relation: p.relation as Person["relation"],
+    /* `unspecified` et `other` existent encore en base — des lignes antérieures
+       à la règle, ou écrites avant que les deux écrans ne posent la question.
+       Le contrat n'en connaît que deux, et rend NULL pour le reste : une absence
+       de réponse est une absence, pas une troisième réponse qu'un écran devrait
+       savoir afficher. */
+    gender: p.gender === "female" || p.gender === "male" ? p.gender : null,
     relationHint: p.relationHint,
     // La date de naissance se rend en chaîne civile, comme toutes les dates
     // du contrat : du JSON, pas un objet Date.

@@ -179,6 +179,11 @@ export class AuthService {
       ...pair,
       isNewAccount: true as const,
       signupCredits: creation.creditsOfferts,
+      // Nul quand la personne n'attendait pas, ou quand le cadeau vaut zéro :
+      // dans les deux cas l'écran ne doit rien annoncer.
+      waitlistBonus: creation.cadeauAttente && creation.cadeauAttente.credits > 0
+        ? creation.cadeauAttente.credits
+        : null,
       referral: p.etat === "aucun" ? null : {
         outcome: p.etat === "credite" ? ("credited" as const)
           : p.etat === "soi_meme" ? ("self" as const) : ("unknown" as const),

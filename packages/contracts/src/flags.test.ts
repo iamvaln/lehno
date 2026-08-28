@@ -7,9 +7,9 @@ describe("registre des drapeaux", () => {
   // La liste de la spécification technique §6.3, à la clé près. Un drapeau
   // ajouté au code sans l'être à la spécification — ou l'inverse — casse la
   // référence commune entre le serveur, le mobile et le back-office.
-  it("porte les quinze clés de la spécification, et rien d'autre", () => {
+  it("porte les quatorze clés de la spécification, et rien d'autre", () => {
     expect([...CLES_DRAPEAUX].sort()).toEqual([
-      "collect", "credits", "events.other", "generation.ideas",
+      "collect", "events.other", "generation.ideas",
       "generation.message", "generation.portrait", "launch.live", "referral",
       "reservation", "topup.manual", "topup.provider", "wall", "wishes",
       "wishlist", "wishlist.own",
@@ -30,18 +30,22 @@ describe("registre des drapeaux", () => {
     expect(DRAPEAUX["events.other"].chemins).not.toContain("/me/events");
   });
 
-  /* Le lancement en versement manuel seul doit être EXPRIMABLE. Il ne l'était
-     pas : `credits` mêlait « les crédits existent » et « on paie par
-     opérateur », donc l'éteindre emportait les paliers — que le versement
-     manuel achète pourtant lui aussi (contrat commun §5). */
-  it("sépare le fait que les crédits existent des canaux qui les achètent", () => {
-    expect(DRAPEAUX["topup.provider"].requiert).toContain("credits");
-    expect(DRAPEAUX["topup.manual"].requiert).toContain("credits");
-    // Les paliers appartiennent à `credits`, jamais à un canal : sinon fermer
-    // un canal fermerait l'achat pour l'autre.
-    expect(DRAPEAUX.credits.chemins).toContain("/me/credit-bundles");
-    expect(DRAPEAUX["topup.provider"].chemins.join(" ")).not.toContain("credit-bundles");
-    expect(DRAPEAUX["topup.manual"].chemins.join(" ")).not.toContain("credit-bundles");
+  /* Les canaux ne dépendent de rien : ils SONT ce qui s'éteint. Un `requiert`
+     vers un drapeau des crédits ferait tomber le versement manuel avec le
+     paiement par opérateur — or lancer en manuel seul est précisément le
+     profil retenu. */
+  it("les deux canaux de paiement sont indépendants l'un de l'autre", () => {
+    expect(DRAPEAUX["topup.provider"].requiert).toEqual([]);
+    expect(DRAPEAUX["topup.manual"].requiert).toEqual([]);
+  });
+
+  /* Les paliers se servent tant qu'UN canal reste ouvert : ils appartiennent
+     donc aux deux, et non à l'un d'eux. Les poser sur un seul ferait
+     disparaître l'écran d'achat en fermant ce canal-là, alors que l'autre
+     achète les mêmes paliers (contrat commun §5). */
+  it("les paliers appartiennent aux deux canaux", () => {
+    expect(DRAPEAUX["topup.provider"].chemins.join(" ")).toContain("/me/credit-bundles");
+    expect(DRAPEAUX["topup.manual"].chemins.join(" ")).toContain("/me/credit-bundles");
   });
 
   // Le socle — proches, notes, dates, occasions, rappels, compte — n'a PAS de
@@ -50,7 +54,12 @@ describe("registre des drapeaux", () => {
   // qu'un drapeau « me.persons » avait été posé sur l'annuaire des proches
   // avant que la règle ne soit écrite, et qu'il a fallu le retirer.
   it("ne gouverne aucune capacité du socle", () => {
-    const socle = ["me.persons", "persons", "notes", "events", "occurrences", "reminders", "account"];
+    // `credits` y a figuré, et c'est la même erreur que `me.persons` : les
+    // actions payantes consomment du crédit, toujours. Ce n'était pas une
+    // fonctionnalité qu'on allume, mais le fonctionnement de l'économie —
+    // et l'éteindre laissait des soldes indépensables et des mouvements
+    // libellés dans une monnaie qui n'existait plus.
+    const socle = ["me.persons", "persons", "notes", "events", "occurrences", "reminders", "account", "credits"];
     for (const interdit of socle) {
       expect(CLES_DRAPEAUX, `« ${interdit} » relève du socle : il ne se pilote pas`)
         .not.toContain(interdit);
@@ -96,23 +105,30 @@ describe("registre des drapeaux", () => {
     }
   });
 
+  /* La portée publique s'est élargie le 27/08 : la landing montre ses sections
+     d'après les drapeaux, comme l'application masque les siennes. Sans ça,
+     quelqu'un devrait PENSER à mettre la page à jour le jour où un drapeau
+     bascule — et un jour elle promettrait « bientôt » ce qui est livré depuis
+     un mois. Les quatre clés ajoutées sont celles qui décident d'une section
+     de la page : les trois générations et l'achat de crédits. */
   it("les listes par portée se dérivent de « portee »", () => {
     expect([...CLES_PUBLIQUES].sort()).toEqual([
-      "collect", "launch.live", "referral", "reservation", "wall", "wishes", "wishlist.own",
+      "collect", "generation.ideas", "generation.message",
+      "generation.portrait", "launch.live", "referral", "reservation",
+      "wall", "wishes", "wishlist.own",
     ]);
     expect(CLES_APPLICATION).not.toContain("launch.live");
     expect(CLES_APPLICATION).toContain("wall");
   });
 
-  // §6.4, mot pour mot : « credits éteint : les générations restent
-  // disponibles et gratuites si leur propre drapeau est allumé. Éteindre
-  // l'achat ne doit pas éteindre le produit. » C'est le piège que la
-  // spécification signale elle-même ; une dépendance ajoutée par réflexe
-  // couperait la génération à tout le monde le jour où le paiement tombe.
-  it("aucune génération ne dépend de « credits »", () => {
+  /* « Éteindre l'achat ne doit pas éteindre le produit » (§6.4). Une
+     dépendance ajoutée par réflexe — d'une génération vers un canal de
+     paiement — couperait la génération à tout le monde le jour où l'on ferme
+     un canal, alors que le solde déjà acquis reste dépensable. */
+  it("aucune génération ne dépend d'un canal de paiement", () => {
     for (const cle of CLES_DRAPEAUX.filter((c) => c.startsWith("generation."))) {
       expect(DRAPEAUX[cle].requiert, `« ${cle} » ne doit pas dépendre de l'achat`)
-        .not.toContain("credits");
+        .toEqual([]);
     }
   });
 });

@@ -382,25 +382,42 @@ export type PageConnexions = z.infer<typeof pageConnexionsSchema>;
 // ——— Modèles d'IA —————————————————————————————————————————————
 
 /**
- * Un modèle du catalogue, et son rang dans l'ordre de repli.
+ * Un modèle du catalogue, avec ce qu'il sait faire et où il sert.
  *
  * Les coûts sont ceux du fournisseur, par million de jetons, tels qu'on les a
  * relevés — ils peuvent manquer pour un modèle qu'on n'a pas encore tarifé.
+ * Manquer veut dire « on ne sait pas », jamais « gratuit ».
+ *
+ * Le RANG n'est plus ici. Il appartenait à un ordre global, remplacé par une
+ * chaîne par tâche : voir `chainesIaSchema`. Un modèle occupe désormais
+ * plusieurs rangs, un par tâche où il sert, et c'est `emplois` qui les porte.
  *
  * Ce que ce contrat **ne porte pas** : la dépense réelle et ce qu'elle a
- * rapporté. Le §5.8 les demande face à face, mais `AIUsage` et `ActionRun`
- * n'existent pas encore. Les inventer ici donnerait un écran qui affiche des
- * zéros là où il devrait afficher une marge.
+ * rapporté. Le §5.8 les demande face à face, mais `ActionRun` n'existe pas
+ * encore. Les inventer ici donnerait un écran qui affiche des zéros là où il
+ * devrait afficher une marge.
  */
 export const modeleIaSchema = z.object({
   id: z.string(),
   fournisseur: z.string(),
   modele: z.string(),
-  /** Le plus petit d'abord : c'est l'ordre dans lequel on essaie. */
-  rang: z.number().int(),
+  capacite: z.enum(["text", "image"]),
+  /** L'interrupteur de l'administration, et lui seul. */
   actif: z.boolean(),
+  /**
+   * L'état de panne, tenu par le disjoncteur — SÉPARÉ de `actif`, jamais fondu
+   * avec lui. Un modèle coupé à la main et un modèle en panne se réparent par
+   * des gestes opposés : le premier attend qu'on le rallume, le second se
+   * rouvre seul. Les confondre à l'écran ferait attendre une reprise qui ne
+   * viendra pas.
+   */
+  enPanneJusquA: z.string().nullable(),
+  motifDePanne: z.string().nullable(),
+  echecsConsecutifs: z.number().int(),
   coutEntree: z.number().nullable(),
   coutSortie: z.number().nullable(),
+  /** Où ce modèle sert, pour qu'on voie ce qu'on casse en le coupant. */
+  emplois: z.array(z.object({ tache: z.string(), rang: z.number().int() }).strict()),
   misAJourLe: z.string(),
 }).strict();
 
@@ -408,8 +425,45 @@ export const catalogueIaSchema = z.object({
   items: z.array(modeleIaSchema),
 }).strict();
 
+/**
+ * Une chaîne de repli : les modèles d'une tâche, du premier essai au dernier.
+ *
+ * Le FOURNISSEUR est rendu à chaque rang, et pas seulement dans le catalogue.
+ * C'est ce qui rend visible d'un coup d'œil qu'on vient d'aligner trois modèles
+ * du même hébergeur — une chaîne qu'une seule panne emporte en entier, et donc
+ * un repli qui n'aura jamais lieu.
+ *
+ * Les avertissements ne sont pas des refus. Une chaîne de moins de trois rangs
+ * est un jugement d'exploitation, pas une erreur : parmi les fournisseurs
+ * retenus, deux seulement produisent des images, et refuser rendrait ces
+ * tâches-là inconfigurables.
+ */
+export const chaineIaSchema = z.object({
+  tache: z.string(),
+  capaciteRequise: z.enum(["text", "image"]),
+  rangs: z.array(z.object({
+    rang: z.number().int(),
+    modeleId: z.string(),
+    fournisseur: z.string(),
+    modele: z.string(),
+    actif: z.boolean(),
+    enPanne: z.boolean(),
+  }).strict()),
+  avertissements: z.array(z.object({
+    code: z.string(),
+    rangs: z.number().int().optional(),
+    recommande: z.number().int().optional(),
+  }).strict()),
+}).strict();
+
+export const chainesIaSchema = z.object({
+  items: z.array(chaineIaSchema),
+}).strict();
+
 export type ModeleIa = z.infer<typeof modeleIaSchema>;
 export type CatalogueIa = z.infer<typeof catalogueIaSchema>;
+export type ChaineIa = z.infer<typeof chaineIaSchema>;
+export type ChainesIa = z.infer<typeof chainesIaSchema>;
 
 // ——— Drapeaux de fonctionnalité ————————————————————————————————
 
@@ -814,3 +868,92 @@ export type DemandeAssistance = z.infer<typeof demandeAssistanceSchema>;
 export type MessageContact = z.infer<typeof messageContactSchema>;
 export type InscriptionAttente = z.infer<typeof inscriptionAttenteSchema>;
 export type Retour = z.infer<typeof retourSchema>;
+
+// ——— Métriques (ux-admin §5.11) ———————————————————————————————————
+
+/** Les périodes que l'écran propose. Une liste fermée plutôt qu'un couple de
+ *  dates : « choisir la période » (§5.11) est un geste de lecture, pas la
+ *  construction d'une requête. Un intervalle libre ouvrirait des fenêtres que
+ *  personne ne relit et que rien n'indexe. */
+export const periodeMetriquesSchema = z.enum(["7j", "30j", "90j", "12m"]);
+
+/** Une cohorte de rétention : le mois d'entrée, et ce qu'il en reste.
+ *
+ *  `actifsA7j` et non `revenusA7j` : en économie, « revenus » se lit d'abord
+ *  comme de l'argent, et cette section en montre juste à côté. */
+export const cohorteSchema = z.object({
+  /** Le mois d'inscription, `AAAA-MM`. */
+  mois: z.string().regex(/^\d{4}-\d{2}$/),
+  inscrits: z.number().int().nonnegative(),
+  actifsA7j: z.number().int().nonnegative(),
+  actifsA30j: z.number().int().nonnegative(),
+}).strict()
+  // Plus de revenants que d'entrants n'est pas un chiffre surprenant, c'est une
+  // requête fausse. Refusé à la frontière : sinon l'erreur ressort trois écrans
+  // plus loin, sous la forme d'une barre qui dépasse son cadre, et se lit comme
+  // un problème d'affichage.
+  .refine((c) => c.actifsA7j <= c.inscrits && c.actifsA30j <= c.inscrits, {
+    message: "une cohorte ne peut pas rendre plus de comptes qu'elle n'en a reçus",
+  });
+
+export const retentionSchema = z.object({
+  cohortes: z.array(cohorteSchema),
+}).strict();
+
+export const conversionSchema = z.object({
+  comptes: z.number().int().nonnegative(),
+  acheteurs: z.number().int().nonnegative(),
+  /** Jours entre l'inscription et le premier paiement réussi. **Médiane**, pas
+   *  moyenne : un compte qui paie au bout d'un an tirerait la moyenne pour tous
+   *  et ferait croire à un cycle long qui n'existe pas.
+   *
+   *  Nul quand personne n'a encore acheté — `0` dirait « le jour même ». */
+  delaiMedianJours: z.number().nonnegative().nullable(),
+  /** Le palier se désigne par son **nombre de crédits**, jamais par une phrase.
+   *  `CreditBundle` n'a pas de libellé : le serveur devrait en fabriquer un, et
+   *  il le ferait dans une seule langue. La mise en forme — séparateur de
+   *  milliers, mot « crédits » — appartient à l'écran, qui sait laquelle. */
+  parPalier: z.array(z.object({
+    credits: z.number().int().positive(),
+    achats: z.number().int().nonnegative(),
+  }).strict()),
+}).strict()
+  .refine((c) => c.acheteurs <= c.comptes, {
+    message: "il ne peut pas y avoir plus d'acheteurs que de comptes",
+  });
+
+export const consommationSchema = z.object({
+  /** Crédits débités sur la période, en valeur absolue : le registre les porte
+   *  en négatif, mais un volume ne se lit pas avec un signe moins. */
+  credits: z.number().int().nonnegative(),
+  mouvements: z.number().int().nonnegative(),
+}).strict();
+
+/** Ce que §5.11 demande et que le dépôt ne sait pas encore mesurer.
+ *
+ *  Une liste **fermée**, et rendue par le serveur : c'est lui qui sait ce qui
+ *  lui manque. Le jour où la source arrive, il cesse de le déclarer et l'écran
+ *  suit — personne n'a à se souvenir d'aller retirer un avertissement écrit en
+ *  dur dans une page.
+ *
+ *  Seul l'identifiant circule ; la phrase vit dans les deux tables de langue.
+ *  Un libellé venu du serveur ne se traduirait pas. */
+export const manqueMetriqueSchema = z.enum([
+  "usage_par_fonctionnalite",
+  "issue_des_actions",
+  "contributions",
+]);
+
+export const metriquesSchema = z.object({
+  periode: periodeMetriquesSchema,
+  retention: retentionSchema,
+  conversion: conversionSchema,
+  consommation: consommationSchema,
+  manques: z.array(manqueMetriqueSchema),
+}).strict();
+
+export type PeriodeMetriques = z.infer<typeof periodeMetriquesSchema>;
+export type Cohorte = z.infer<typeof cohorteSchema>;
+export type Conversion = z.infer<typeof conversionSchema>;
+export type Metriques = z.infer<typeof metriquesSchema>;
+export type ManqueMetrique = z.infer<typeof manqueMetriqueSchema>;

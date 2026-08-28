@@ -5,6 +5,7 @@ import { creditBalanceSchema, referralSummarySchema, invitationSchema } from "@l
 import { CreditsService } from "../src/onboarding/credits.controller.js";
 import { SignupService } from "../src/onboarding/signup.service.js";
 import { LegalService } from "../src/public/legal.controller.js";
+import { FlagsService } from "../src/flags/flags.service.js";
 
 describe("crédits, parrainage et invitation", () => {
   let db: TestDb;
@@ -28,7 +29,7 @@ describe("crédits, parrainage et invitation", () => {
   afterAll(async () => { await db.close(); });
   beforeEach(async () => {
     await resetDatabase(db.prisma);
-    credits = new CreditsService(db.prisma as never);
+    credits = new CreditsService(db.prisma as never, new FlagsService(db.prisma as never));
     signup = new SignupService(db.prisma as never, new LegalService());
     for (const [key, value] of [
       ["signup_free_credits", "5"],
@@ -189,4 +190,50 @@ describe("crédits, parrainage et invitation", () => {
       await expect(credits.invitation("INEXISTANT")).rejects.toMatchObject({ code: "not_found" });
     });
   });
+
+  /* Ce que le parrainage rapporte se lit sur une VALEUR, jamais en croisant
+     des drapeaux côté client.
+     
+     Ces cas éprouvaient une condition qui n'existe plus : le bonus était tu
+     quand le drapeau `credits` était éteint, au motif que les crédits
+     n'achetaient alors rien. Le drapeau a été retiré — les actions payantes
+     consomment du crédit, toujours —, donc le bonus s'annonce en permanence.
+     
+     Ce qui reste à éprouver est la distinction qui portait le sens : nul et
+     zéro ne disent pas la même chose. */
+  describe("ce que le parrainage rapporte", () => {
+    const poser = async (valeur: string): Promise<void> => {
+      await db.prisma.systemParameter.upsert({
+        where: { key: "referral_bonus_invited" },
+        update: { value: valeur },
+        create: { key: "referral_bonus_invited", value: valeur, valueType: "number" },
+      });
+    };
+
+    it("annonce le bonus, sans condition", async () => {
+      await poser("5");
+      const moi = await creer();
+      const r = await credits.parrainage(moi.id);
+      expect(r.bonusParInvitation).toBe(5);
+    });
+
+    /* Nul, et non zéro : « le parrainage ne rapporte rien » est un réglage,
+       « on ne sait pas ce qu'il rapporte » est une panne. L'écran présente le
+       parrainage sans promesse chiffrée dans le second cas ; il ne doit pas
+       annoncer « zéro crédit ». */
+    it("rend nul plutôt que zéro quand le paramètre ne dit rien", async () => {
+      await poser("pas un nombre");
+      const moi = await creer();
+      const r = await credits.parrainage(moi.id);
+      expect(r.bonusParInvitation).toBeNull();
+    });
+
+    it("sert le parrainage même sans bonus annonçable", async () => {
+      await poser("pas un nombre");
+      const moi = await creer();
+      const r = await credits.parrainage(moi.id);
+      expect(r.code).toBeTruthy();
+    });
+  });
+
 });

@@ -105,6 +105,18 @@ export const registeredSchema = z.object({
   expiresIn: z.number().int().positive(),
   isNewAccount: z.literal(true),
   signupCredits: z.number().int().min(0),
+  /* Le cadeau réservé à qui attendait sur la liste, EN PLUS du précédent.
+   *
+   * Nul quand la personne n'attendait pas — et l'écran de bienvenue ne doit
+   * alors rien annoncer. Deux champs plutôt qu'un total, pour la même raison
+   * que `signupCredits` et `referral` sont déjà séparés : ce sont deux gestes
+   * distincts, et les confondre dans une somme unique effacerait la raison de
+   * s'être inscrit à la liste.
+   *
+   * La détection s'est faite sur l'ADRESSE, pas sur un jeton porté par le
+   * lien : un bonus dans le lien serait transférable. Le client n'a donc rien
+   * à transmettre — il lit ce champ, c'est tout. */
+  waitlistBonus: z.number().int().positive().nullable(),
   referral: z.object({
     outcome: z.enum(REFERRAL_OUTCOMES),
     // Le pseudo du parrain, pour « invité par … ». Nul si le code n'a mené

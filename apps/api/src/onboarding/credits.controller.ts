@@ -2,6 +2,7 @@ import { Controller, Get, Inject, Injectable, Param, Req, UseGuards } from "@nes
 import { RAISON_DE_LA_SOURCE } from "@lehno/contracts";
 import type { CreditBalance, ReferralSummary, Invitation } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { FlagsService } from "../flags/flags.service.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { AppError } from "../common/errors.js";
 
@@ -10,7 +11,10 @@ type AuthedRequest = { userId: string };
 @Injectable()
 export class CreditsService {
   // @Inject explicite : voir ProfileService, même contrainte esbuild/vitest.
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(FlagsService) private readonly flags: FlagsService,
+  ) {}
 
   // Le solde est la SOMME des mouvements, calculée à chaque appel. Aucune
   // colonne de solde n'existe, donc aucune ne peut diverger du registre qui
@@ -72,7 +76,26 @@ export class CreditsService {
           createdAt: r.createdAt.toISOString(),
         })),
       creditsEarned: gagnes._sum.amount ?? 0,
+      bonusParInvitation: await this.bonusParInvitation(),
     };
+  }
+
+  /* Ce que le parrainage rapporte AUJOURD'HUI, ou rien.
+   *
+   * Le bonus s'annonce toujours, et c'est nouveau : il était conditionné au
+   * drapeau `credits`, qui n'existe plus. Les actions payantes consomment du
+   * crédit en permanence, donc cinq crédits offerts achètent toujours quelque
+   * chose — la question « et s'ils n'achetaient rien » ne se pose plus.
+   *
+   * Nul reste possible pour une autre raison : le paramètre absent ou
+   * illisible. Zéro dirait « le parrainage ne rapporte rien », ce qui est un
+   * réglage ; nul dit « on ne sait pas », ce qui est une panne. */
+  private async bonusParInvitation(): Promise<number | null> {
+    const l = await this.prisma.systemParameter.findUnique({
+      where: { key: "referral_bonus_invited" },
+    });
+    const n = l ? Number(l.value) : NaN;
+    return Number.isInteger(n) && n > 0 ? n : null;
   }
 
   // Ouverte SANS compte : un code d'invitation circule par message, par

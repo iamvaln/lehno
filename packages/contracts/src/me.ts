@@ -1,6 +1,24 @@
 import { z } from "zod";
 import { dateCivileSchema, bornerLaNaissance } from "./me-events.js";
 
+/**
+ * Les genres, pour l'accord grammatical — et **deux valeurs seulement**.
+ *
+ * C'est ce que les deux écrans d'identité proposent (§3.18, §3.23), et rien
+ * d'autre. La colonne en base porte encore `other` et `unspecified` : le
+ * contrat les refuse plutôt que de les migrer, parce qu'un état qu'aucun écran
+ * ne produit n'a pas à pouvoir s'écrire. Ce que la base tolère et ce que le
+ * produit accepte ne sont pas la même chose.
+ *
+ * `unspecified` reste possible EN LECTURE, et seulement là : c'est l'état d'une
+ * ligne écrite avant cette règle, ou d'un compte dont l'inscription n'a jamais
+ * posé la question — l'inscription se fait par code à usage unique, pas par
+ * formulaire. Le contrat le rend `null` : une absence de réponse est une
+ * absence, pas une troisième réponse.
+ */
+export const PERSON_GENDERS = ["female", "male"] as const;
+export type PersonGender = (typeof PERSON_GENDERS)[number];
+
 // Le registre de langage gouverne le ton de ce que le produit écrira pour ce
 // proche. Ensemble fixe : enum person_register du dictionnaire.
 export const PERSON_REGISTERS = ["familier", "amical", "formel"] as const;
@@ -17,9 +35,6 @@ export type PersonRelation = (typeof PERSON_RELATIONS)[number];
 // Signal de DERNIER recours : il oriente des idées de cadeaux lorsque rien
 // d'autre n'est disponible. Une seule note bien prise vaut mieux que lui.
 // « unspecified » est une valeur légitime, jamais un champ à remplir.
-export const PERSON_GENDERS = ["female", "male", "other", "unspecified"] as const;
-export type PersonGender = (typeof PERSON_GENDERS)[number];
-
 // Par où on lui écrit d'ordinaire : oriente la LONGUEUR du message produit —
 // on n'écrit pas la même chose par SMS et par courriel.
 export const CONTACT_CHANNELS = ["whatsapp", "sms", "email", "autre"] as const;
@@ -46,12 +61,28 @@ export const personSchema = z
     // Faux quand on connaît le jour et le mois sans l'année : on suit alors
     // l'anniversaire sans pouvoir annoncer d'âge.
     birthYearKnown: z.boolean(),
-    // `gender` NE FIGURE PAS ici, et c'est le point : le carnet ne pose pas la
-    // question (handoff proches, « Le genre n'a pas de champ »). Tant qu'il
-    // traversait jusqu'au client, la règle ne tenait que par la retenue de
-    // celui-ci — rien n'empêchait un écran de l'afficher un jour. Retiré du
-    // contrat, il devient inécrivable, pas seulement non demandé. La colonne
-    // reste en base : c'est un signal de génération, déduit côté serveur.
+    /* Le genre sert L'ACCORD GRAMMATICAL, et rien d'autre — « fier » ou
+     * « fière ». Son libellé à l'écran est « Accord du message », jamais
+     * « Genre » : ce n'est pas un signal d'orientation des cadeaux, c'est de la
+     * grammaire.
+     *
+     * IL SE LIT, et il le faut : le formulaire d'identité (§3.18) porte un
+     * sélecteur, donc l'ouvrir pour corriger autre chose doit montrer ce qui a
+     * été répondu. L'en retirer ferait repartir le champ à vide à chaque
+     * modification, et redemanderait la question sans raison.
+     *
+     * Ce qui reste vrai, et qui est une règle de RÉDACTION : « aucune phrase de
+     * l'interface ne s'en sert » (handoff mobile). Il remplit son propre champ
+     * et ne paraît nulle part ailleurs — ni dans une liste de proches, ni dans
+     * un tri, ni dans une copy.
+     *
+     * Ce commentaire disait auparavant « déduit côté serveur ». C'était faux :
+     * un genre ne se devine pas, il se demande — et le déduire d'un prénom est
+     * exactement le raccourci qui se trompe sur les gens.
+     *
+     * NULLABLE en lecture seulement, pour les fiches antérieures à la règle. Une
+     * fiche créée aujourd'hui en porte toujours un : voir `champsDeProche`. */
+    gender: z.enum(PERSON_GENDERS).nullable(),
     city: z.string().nullable(),
     country: z.string().nullable(),
     register: z.enum(PERSON_REGISTERS).nullable(),
@@ -105,6 +136,17 @@ export const listPersonsQuerySchema = z
     direction: z.enum(SORT_DIRECTIONS).optional(),
     offset: z.number().int().nonnegative().optional(),
     limit: z.number().int().positive().max(100).optional(),
+    /* La recherche du carnet (§3.15). Elle vit ICI et non sur un chemin à part
+       parce qu'elle doit se COMBINER au tri et à la pagination : §3.15 demande
+       des résultats « classés par proximité de leur prochaine échéance », donc
+       le même tri que la liste, et un carnet fourni peut rendre plus de vingt
+       correspondances.
+       
+       Sans elle, l'écran de recherche filtrait la page déjà chargée — vingt
+       fiches — et un proche de la troisième page restait introuvable. Le
+       contourner en demandant tout le carnet annulerait la pagination qu'on
+       vient de poser. */
+    q: z.string().trim().min(1).max(120).optional(),
   })
   .strict();
 
@@ -145,6 +187,16 @@ export const champsDeProche = z
     avatarUrl: z.string().url().max(2048).optional(),
     relation: z.enum(PERSON_RELATIONS).optional(),
     register: z.enum(PERSON_REGISTERS).optional(),
+    /* OBLIGATOIRE, et c'est le seul champ de la fiche qui le soit avec le nom.
+     *
+     * En français on n'écrit pas à quelqu'un sans le savoir. Le rendre
+     * facultatif produirait des messages en tournures contournées pour tous
+     * ceux qui auraient sauté le champ — c'est-à-dire la plupart —, et
+     * personne n'aurait su pourquoi les textes sonnaient bizarrement.
+     *
+     * Le libellé à l'écran est « Accord du message », jamais « Genre » : ce
+     * n'est pas un signal d'orientation des cadeaux, c'est de la grammaire. */
+    gender: z.enum(PERSON_GENDERS),
     // Langue de ce que le produit écrira POUR ce proche — distincte de la langue
     // d'interface du propriétaire.
     language: z.enum(["fr", "en"]).optional(),
@@ -253,3 +305,56 @@ export const createNotesSchema = z.object({
 }).strict();
 
 export type CreateNotesInput = z.infer<typeof createNotesSchema>;
+
+// ——— Le topo d'un proche ——————————————————————————————————————————
+
+/**
+ * Ce qu'une note a appris d'une personne.
+ *
+ * **Rien ne se saisit.** Ces valeurs sont extraites des notes par la passe qui
+ * les classe déjà — aucun appel de plus, les mêmes valeurs de sortie avec
+ * quelques champs en plus. Corriger, c'est écrire une note nouvelle.
+ *
+ * C'est ce qui distingue ce bloc du résumé qu'on avait écarté pour l'accueil :
+ * là il fallait **composer** un texte, ici il n'y a qu'à **extraire**.
+ */
+export const ATTRIBUT_NATURES = [
+  "color", "animal", "food", "drink", "clothing_size", "shoe_size",
+  "fragrance", "style", "hobby", "occupation", "avoid",
+] as const;
+
+export type AttributNature = (typeof ATTRIBUT_NATURES)[number];
+
+export const personAttributeSchema = z
+  .object({
+    kind: z.enum(ATTRIBUT_NATURES),
+    /** La valeur, telle qu'elle a été dite. Aucun libellé : le client traduit `kind`. */
+    value: z.string(),
+    /**
+     * La note d'où l'attribut vient, et sa date. **La provenance voyage avec la
+     * valeur** : sans elle, un attribut est une affirmation sans source — on ne
+     * peut ni la vérifier, ni remonter à ce qui a été écrit. Un appui y ramène.
+     *
+     * `noteId` peut être nul si la note a été supprimée depuis ; la valeur
+     * demeure, ce qu'elle a appris ne s'efface pas avec sa phrase.
+     */
+    noteId: z.string().uuid().nullable(),
+    observedAt: z.string(),
+  })
+  .strict();
+
+/**
+ * Le topo entier.
+ *
+ * **Une liste vide est un état normal**, pas un défaut : une fiche neuve n'a
+ * rien appris encore. Le client n'affiche alors aucun bloc — jamais une grille
+ * de cases vides qui attendraient d'être remplies.
+ *
+ * Et la composition doit tenir **avec deux valeurs comme avec onze**.
+ */
+export const personAttributesSchema = z
+  .object({ attributes: z.array(personAttributeSchema) })
+  .strict();
+
+export type PersonAttribute = z.infer<typeof personAttributeSchema>;
+export type PersonAttributes = z.infer<typeof personAttributesSchema>;

@@ -25,11 +25,28 @@ export const wishSchema = z.object({
   price: z.number().nonnegative().nullable(),
   currency: currencySchema.nullable(),
   status: z.enum(WISH_STATUSES),
+  /* EN LECTURE SEULE, et c'est tout l'intérêt du champ : il dit d'où vient le
+     souhait, donc ce qu'il vaut. `collected` a été dit par le proche lui-même
+     via un lien de collecte, `accepted_idea` a été retenu d'une génération,
+     `owner` a été noté de sa propre main. Laisser le client l'écrire ferait
+     passer une supposition pour une confidence — le serveur le pose. */
   origin: z.enum(WISH_ORIGINS),
-  isPublic: z.boolean(),
+  /* Le REPÈRE PERSONNEL : « ce qui m'intéresse », invisible pour tout autre
+     que moi et sans effet sur la disponibilité. Il s'appelait `isPublic`, nom
+     hérité d'`OwnerWish` où il décide bien de ce qui paraît sur la liste
+     partagée. Ici il n'y a rien à partager : un souhait de proche est privé.
+     Marquer n'engage à rien — on en marque cinq et on n'en offre qu'un. */
+  isShortlisted: z.boolean(),
   /* « Le nom du réservant si ce dernier l'a autorisé. Le reste demeure
      anonyme. » Nul ne veut donc pas dire « personne n'a réservé » mais « aucun
-     nom n'a été donné » : un souhait peut être `reserved` sans nom. */
+     nom n'a été donné » : un souhait peut être `reserved` sans nom.
+
+     TOUJOURS NUL aujourd'hui sur un souhait de proche, et le serveur ne pose
+     jamais `reserved` non plus : une `WishReservation` pointe un `OwnerWish`,
+     jamais un `WishlistItem` — « aucune réservation ici, un souhait de proche
+     se marque ». Le champ reste au contrat parce que l'énumération d'état est
+     commune aux deux tables ; le retirer ferait diverger deux formes qui
+     décrivent la même colonne. */
   reservedByName: z.string().nullable(),
 }).strict();
 
@@ -51,7 +68,12 @@ export const createWishSchema = prixEtDevise(z.object({
   details: z.string().trim().max(500).optional(),
   price: z.number().nonnegative().optional(),
   currency: currencySchema.optional(),
-  isPublic: z.boolean().optional(),
+  isShortlisted: z.boolean().optional(),
+  /* Ni `origin` ni `status` ici, et ce n'est pas un oubli. `origin` dit d'où
+     vient le souhait : accepté du client, n'importe quel ajout personnel
+     pourrait se déclarer `collected` et se faire passer pour une confidence du
+     proche. `status` naît `available` — un souhait qu'on note au moment de le
+     noter n'est ni réservé ni déjà offert. */
 }).strict());
 
 export type CreateWishInput = z.infer<typeof createWishSchema>;
@@ -69,7 +91,7 @@ export const updateWishSchema = prixEtDevise(z.object({
   price: z.number().nonnegative().nullable().optional(),
   currency: currencySchema.nullable().optional(),
   status: z.enum(OWNER_WISH_STATUSES).optional(),
-  isPublic: z.boolean().optional(),
+  isShortlisted: z.boolean().optional(),
 }).strict()).refine(
   (v) => Object.keys(v).length > 0,
   { message: "au moins un champ" },

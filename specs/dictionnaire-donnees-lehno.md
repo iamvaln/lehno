@@ -35,6 +35,7 @@ Titulaire et compte fusionnés. Racine du cloisonnement multi-tenant.
 | status | user_status (enum) | non | — | 'active' | `active` \| `suspended` \| `pending_deletion` (désactivé, dans le délai de grâce) \| `deleted` |
 | deletion_requested_at | timestamptz | oui | — | — | Début du délai de grâce ; l'effacement définitif intervient après `account_grace_period_days` |
 | deletion_reason | text | oui | — | — | Raison du départ, facultative (motif choisi ou texte libre) |
+| gender | person_gender (enum) | oui | — | 'unspecified' | **Sert l'accord grammatical** de ce que l'utilisateur signe : *je suis fier* ou *fière*. Demandé au studio, à la première génération |
 | ui_language | varchar(10) | non | — | 'fr' | Langue de l'interface (code BCP 47, ex. `fr`, `en`) ; distincte de `person.language`, la langue de communication propre à chaque proche |
 | theme | ui_theme (enum) | non | — | 'system' | Apparence choisie : `system` (suit l'appareil) \| `light` \| `dark` |
 | timezone | varchar(64) | non | — | 'Africa/Douala' | Fuseau IANA ; décide de « aujourd'hui » et de l'heure des envois |
@@ -125,7 +126,7 @@ Achat de crédits réglé par un `User`. Alimente l'historique des paiements et 
 | collection_account_id | uuid | oui | — | — | FK → collection_account(id) on delete restrict ; le compte qui a REÇU l'argent, sur les voies manuelles |
 | payer_msisdn | varchar(32) | oui | — | — | Le numéro depuis lequel le client déclare avoir versé — semi-manuel seulement |
 | proof_key | text | oui | — | — | Reçu déposé par le client ou saisi par l'administrateur : image ou PDF. Référence sur le stockage |
-| provider_ref | text | oui | oui | — | Référence de la transaction. Chez le prestataire pour `provider` ; **saisie par l'administrateur** sur les voies manuelles, à la confirmation. Nulle tant qu'elle n'est pas connue ; unicité partielle sur les valeurs présentes, pour la taille et l'intention (voir ci-dessous) |
+| provider_ref | text | oui | oui | — | Référence de la transaction. Chez le prestataire pour `provider` ; **saisie par l'administrateur** sur les voies manuelles, à la confirmation. Nulle tant qu'elle n'est pas connue — d'où l'unicité partielle, sur les valeurs présentes |
 | payment_channel_id | uuid | oui | — | — | FK → payment_channel(id) on delete restrict ; le canal employé, et son barème |
 | fee_amount | numeric(12,2) | oui | — | — | Les frais **annoncés à l'aperçu**, figés ici. Pas ceux que le canal porte aujourd'hui : changer un taux ne doit pas fausser rétroactivement la comptabilité |
 | expected_amount | numeric(12,2) | oui | — | — | Ce qu'on **attend sur le compte**, calculé à l'aperçu depuis le montant, les frais et `fee_borne_by` |
@@ -141,13 +142,13 @@ Achat de crédits réglé par un `User`. Alimente l'historique des paiements et 
 - Enum `payment_direction` : `charge`, `refund`.
 - Enum `payment_mode` : `provider` (l'intégration, quand elle existera), `semi_manual` (le client verse puis dépose son reçu), `manual` (un administrateur saisit tout depuis le back-office).
 - **Les deux voies manuelles sont des `Payment`, pas une entité à part.** Elles ont le même cycle de vie, la même histoire d'états, et produisent le même `CreditTransaction` portant `payment_id`. Une table parallèle obligerait à tenir deux registres, deux historiques et deux chemins d'octroi — et une recharge manuelle n'apparaîtrait pas dans l'historique des paiements du client.
-- **`provider_ref` est nulle tant que la référence n'est pas connue.** Sur la voie du prestataire elle arrive avec la notification ; sur les voies manuelles, c'est l'administrateur qui la consigne au moment de confirmer. L'unicité porte sur les valeurs présentes (index unique partiel), **pour la taille et pour l'intention** : la plupart des paiements en attente n'ont pas encore de référence, il n'y a rien à gagner à les indexer, et n'indexer que le présent dit exactement ce qu'on garantit. Ce n'est **pas** pour admettre plusieurs nuls — Postgres les traite déjà comme distincts dans un index unique, et un index total en accepterait autant. Vérifié en base le 26/08/2026, après qu'un commentaire eut affirmé le contraire.
+- **`provider_ref` est nulle tant que la référence n'est pas connue.** Sur la voie du prestataire elle arrive avec la notification ; sur les voies manuelles, c'est l'administrateur qui la consigne au moment de confirmer. L'unicité porte donc sur les valeurs présentes (index unique partiel) — sans quoi deux demandes en attente entreraient en collision sur une valeur nulle.
 - **Trois montants, et ils ne disent pas la même chose.** `amount` est le prix du palier ; `expected_amount` ce qu'on attend sur le compte une fois les frais appliqués selon `fee_borne_by` ; `received_amount` ce qui est réellement arrivé. Un seul champ ne suffirait pas : sans `expected_amount`, on ne saurait pas si un écart vient du client ou du barème ; sans `received_amount`, on ne saurait pas qu'il y a écart.
 - **`fee_amount` est figé au moment de l'aperçu.** Le barème d'un canal change ; un paiement passé garde les frais qui lui ont été annoncés. Lire le taux du jour pour expliquer un paiement d'il y a trois mois donnerait un chiffre faux, et personne ne s'en apercevrait.
 - **`received_amount` n'est pas `amount`.** Le premier est ce que l'administrateur a vu arriver sur le compte, le second ce que le paiement visait. Les confondre effacerait le cas qui compte : un client qui verse moins que le palier choisi. L'écart se traite — on crédite le palier correspondant, ou on rejette avec motif — mais il ne se devine pas après coup.
 - **Le reçu ne prouve rien.** Un montage est facile : l'administrateur **vérifie la réception sur le compte de l'opérateur** avant de confirmer, et ne se fie pas à l'image. Le fichier suit les règles des fichiers reçus (type vérifié par le contenu, poids borné, métadonnées retirées) et s'efface une fois la demande traitée.
 - **Seul un administrateur confirme ou rejette**, quelle que soit la voie. Chaque passage d'état ouvre une ligne de `PaymentStatusHistory` avec `origin = 'admin'`, `changed_by_admin_id` renseigné et un **motif obligatoire** — c'est ce qui rend le registre lisible le jour d'un litige.
-- **À la confirmation** : les crédits sont octroyés une seule fois (unicité partielle sur `credit_transaction.payment_id` **là où `type` vaut `purchase`**, ce qui laisse l'ajustement de remboursement désigner l'achat qu'il reprend), et le client reçoit une notification par courriel **et** par poussée.
+- **À la confirmation** : les crédits sont octroyés une seule fois (unicité partielle sur `credit_transaction.payment_id` **là où `type` vaut `purchase`** — un remboursement rattaché au même paiement violerait sinon la contrainte), et le client reçoit une notification par courriel **et** par poussée.
 - Enum `payment_status` : `pending`, `succeeded`, `failed`, `expired`, `refunded`.
 - Chaque changement d'état ouvre une ligne dans `PaymentStatusHistory` et ferme la précédente.
 - Un `pending` se résout par trois voies, dans cet ordre : la **notification du prestataire** ; à défaut, l'**interrogation de son point d'état**, engagée une fois le délai de notification dépassé ; en dernier ressort, la **confirmation manuelle d'un administrateur**, avec motif. Les crédits ne sont octroyés qu'au passage à `succeeded`, une seule fois quelle que soit la voie qui l'a constaté. Sans résolution au terme du délai configuré, l'opération passe à `expired`.
@@ -340,7 +341,7 @@ Fiche d'un proche, ou fiche de l'utilisateur lui-même (self-Person).
 | is_self | boolean | non | — | false | true pour la self-Person (support du Wall) |
 | relation | person_relation (enum) | oui | — | — | Lien avec ce proche ; oriente le ton et les idées de cadeaux |
 | relation_hint | text | oui | — | — | « on se connaît d'où », en toutes lettres — souvent plus riche que l'enum. Renseigné par le proche via une collecte publique, ou par le propriétaire |
-| gender | person_gender (enum) | oui | — | 'unspecified' | Facultatif ; sert **uniquement** à orienter des idées de cadeaux faute d'autre matière |
+| gender | person_gender (enum) | oui | — | 'unspecified' | **Sert l'accord grammatical** des contenus produits pour ce proche. Demandé au studio, à la première génération, jamais dans le carnet |
 | city | text | oui | — | — | Ville, pour suggérer des adresses et des sorties |
 | country | varchar(2) | oui | — | — | Code ISO 3166-1 alpha-2 |
 | birth_date | date | oui | — | — | **Sa date de naissance.** Elle appartient au PROCHE, pas à un événement : c'est un fait de son identité, et l'anniversaire n'en est qu'une conséquence |
@@ -358,7 +359,9 @@ Fiche d'un proche, ou fiche de l'utilisateur lui-même (self-Person).
 - **La date de naissance vit ICI, et l'anniversaire s'en déduit.** Un anniversaire n'est pas une donnée de plus : c'est le prochain jour de l'année qui porte le même jour et le même mois que la naissance — celui de cette année s'il est devant nous, celui de l'année prochaine sinon. La porter sur un `Event` reviendrait à ranger un fait d'identité parmi les rendez-vous, et à devoir la corriger à deux endroits le jour où elle se révèle fausse.
 - **`birth_year_known` accompagne la date, pas l'événement.** C'est la naissance dont l'année est inconnue, pas l'anniversaire — celui-ci a toujours une année, celle qui vient. Le champ décide si une fiche peut annoncer un âge.
 - **`relation` et `relation_hint` coexistent** : l'enum sert la génération, le texte libre garde la nuance que l'enum écrase (« on a fait la fac ensemble »). Une réponse de collecte publique peut proposer une `relation`, que le propriétaire confirme.
-- **Le genre est un signal de dernier recours.** Il oriente des idées de cadeaux lorsque rien d'autre n'est disponible ; une seule note bien prise vaut mieux que lui. Il reste facultatif, et `unspecified` est une valeur légitime, jamais un champ à remplir.
+- **Le genre sert d'abord la grammaire.** En français, on n'écrit pas à quelqu'un sans savoir : *fier ou fière*, *le meilleur ou la meilleure*. Ce n'est pas un signal, c'est un accord. Sans lui, un message est soit fautif, soit contraint à des tournures neutres qui sonnent creux.
+- **Il se demande au studio, à la première génération**, là où il sert — « pour écrire correctement : fier ou fière ? » —, jamais dans le carnet. Un champ posé sans raison paraît intrusif ; posé à l'endroit où il sert, il ne l'est pas. `unspecified` reste une réponse légitime, et la génération emploie alors des tournures qui s'en passent.
+- **Il oriente aussi les idées de cadeaux**, mais faiblement : une seule note bien prise vaut mieux que lui.
 - Contrainte : au plus une `person` avec `is_self = true` par `user_id` (index unique partiel).
 
 ## Event
@@ -457,6 +460,26 @@ Catégorie de classement des notes. **Ensemble fixe défini par le système** (a
 
 - Enum `category_kind` : `ponctuelle`, `durable`.
 - Socle des `code` : `gift_ideas`, `message_ideas`, `facts`, `encouragements`, `challenges` (ponctuelles) ; `interests`, `dislikes_nogo` (durables ; `dislikes_nogo` a `is_constraint = true`).
+
+## PersonAttribute
+
+Trait caractéristique d'un proche, **extrait des notes** par la passe de classement — jamais saisi dans un formulaire. C'est ce qui donne, en un regard, le topo d'une personne.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| person_id | uuid | non | — | — | FK → person(id) on delete cascade |
+| kind | attribute_kind (enum) | non | — | — | Ce que l'attribut décrit |
+| value | text | non | — | — | La valeur, telle qu'elle a été dite |
+| note_id | uuid | oui | — | — | FK → note(id) on delete set null ; **la note d'où il vient** |
+| observed_at | date | non | — | — | Date de la note dont il est tiré |
+| created_at | timestamptz | non | — | now() | |
+
+- Enum `attribute_kind` : `color`, `animal`, `food`, `drink`, `clothing_size`, `shoe_size`, `fragrance`, `style`, `hobby`, `occupation`, `avoid`.
+- **Le plus récent l'emporte** : unicité sur (`person_id`, `kind`), la valeur nouvelle remplaçant l'ancienne. Une personne aime le bleu en mars et le vert en septembre : c'est le vert qu'on retient.
+- **Chaque attribut garde sa provenance** — `note_id` et `observed_at` permettent d'afficher la ligne de provenance et de remonter à ce qui a été écrit.
+- **Aucun formulaire ne les demande.** Ils naissent de la passe qui classe les notes : le même appel, avec quelques valeurs de sortie de plus. Le client affiche ce qui vient ; une valeur absente n'apparaît pas.
+- `avoid` recoupe la catégorie `dislikes_nogo` : l'attribut porte la valeur précise (« alcool »), la catégorie porte la note entière.
 
 ## NoteCategory (association)
 
@@ -739,7 +762,8 @@ Vue publique curée sur la self-Person de l'utilisateur.
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
-- Le contenu exposé dérive de la self-Person : catégories `interests` marquées publiques et `wishlist_item.is_public = true`. La visibilité par élément vit sur ces entités, pas sur le `Wall`.
+- Le contenu exposé dérive de la self-Person : catégories `interests` marquées publiques et `owner_wish.is_public = true`. La visibilité par élément vit sur ces entités, pas sur le `Wall`.
+- **Pas de `wishlist_item` ici.** Cette ligne visait autrefois `wishlist_item.is_public` ; c'était une confusion entre les deux tables de souhaits. Un `WishlistItem` est ce qu'un proche m'a confié : il est privé, ne se partage pas, et son booléen — désormais `is_shortlisted` — n'est qu'un repère personnel. Ce qui se publie est `OwnerWish`, dont c'est la raison d'être.
 
 ## CollectionLink
 
@@ -1240,6 +1264,7 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | fee_bearer | payer, payee |
 | status_change_origin | user, webhook, polling, admin, system |
 | person_register | familier, amical, formel |
+| attribute_kind | color, animal, food, drink, clothing_size, shoe_size, fragrance, style, hobby, occupation, avoid |
 | person_relation | famille_proche, famille_etendue, ami, partenaire, collegue, relation_pro, connaissance |
 | person_gender | female, male, other, unspecified |
 | contact_channel | whatsapp, sms, email, autre |

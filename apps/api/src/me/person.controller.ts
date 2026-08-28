@@ -15,11 +15,12 @@ import {
 } from "@nestjs/common";
 import {
   createPersonSchema, updatePersonSchema, listPersonsQuerySchema,
-  type CreatePersonInput, type Person, type PersonList, type UpdatePersonInput,
+  type CreatePersonInput, type Person, type PersonAttributes, type PersonList, type UpdatePersonInput,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { AppError } from "../common/errors.js";
+import { AttributsService } from "./attributs.service.js";
 import { PersonService } from "./person.service.js";
 import { TrackingService } from "../tracking/tracking.service.js";
 
@@ -39,6 +40,7 @@ export class PersonController {
   constructor(
     @Inject(PersonService) private readonly persons: PersonService,
     @Inject(TrackingService) private readonly mesure: TrackingService,
+    @Inject(AttributsService) private readonly attributs_: AttributsService,
   ) {}
 
   // La chaîne de requête ne porte que du texte : `offset` arrive en « 20 », pas
@@ -51,12 +53,14 @@ export class PersonController {
     @Query("direction") direction?: string,
     @Query("offset") offset?: string,
     @Query("limit") limit?: string,
+    @Query("q") q?: string,
   ): Promise<PersonList> {
     const analyse = listPersonsQuerySchema.safeParse({
       ...(sort !== undefined ? { sort } : {}),
       ...(direction !== undefined ? { direction } : {}),
       ...(offset !== undefined ? { offset: Number(offset) } : {}),
       ...(limit !== undefined ? { limit: Number(limit) } : {}),
+      ...(q !== undefined ? { q } : {}),
     });
     if (!analyse.success) {
       throw new AppError("validation_failed", "invalid persons query", {
@@ -92,6 +96,24 @@ export class PersonController {
   @Get(":id")
   get(@Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string): Promise<Person> {
     return this.persons.get(req.userId, id);
+  }
+
+  /* Le topo, sur son propre chemin plutôt que dans la fiche.
+   *
+   * La fiche se lit à chaque ouverture d'écran ; le topo ne bouge qu'au rythme
+   * des notes. Les servir ensemble ferait payer une jointure de plus au chemin
+   * le plus fréquenté du carnet, pour une donnée qui n'a pas changé. */
+  @Get(":id/attributes")
+  async attributs(
+    @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<PersonAttributes> {
+    const lignes = await this.attributs_.lister(req.userId, id);
+    return {
+      attributes: lignes.map((a) => ({
+        kind: a.kind, value: a.value, noteId: a.noteId,
+        observedAt: a.observedAt.toISOString().slice(0, 10),
+      })),
+    };
   }
 
   @Patch(":id")

@@ -30,5 +30,8 @@ export const en = {
     contact_invalid: "This form isn't valid. Check the fields and try again.",
     contact_rejected: "That didn't go through. Try again in a moment.",
     maintenance: "Lehno is briefly closed for maintenance. Try again in a moment.",
+    // Not "something went wrong": nothing is wrong on our side, and saying so
+    // would send people looking for a mistake they did not make.
+    generation_unavailable: "We can't reach the model right now. Your credits haven't been spent — try again in a few minutes.",
   },
 } as const;

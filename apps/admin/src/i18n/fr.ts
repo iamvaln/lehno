@@ -205,6 +205,9 @@ export const fr = {
         credit_adjustment: "Ajustement d'un solde",
         audit_log_export: "Export du journal",
         login_activity_export: "Export des connexions",
+        user_export: "Export des comptes",
+        payment_export: "Export des paiements",
+        credit_transaction_export: "Export des mouvements de crédits",
       },
     },
   },
@@ -229,18 +232,32 @@ export const fr = {
 
   modeles: {
     titre: "Modèles d'IA",
-    sous: "L'ordre dans lequel on essaie, et ce que chaque modèle coûte au fournisseur.",
-    col: { rang: "Ordre d'essai", fournisseur: "Fournisseur", modele: "Modèle", etat: "État", entree: "Coût entrée", sortie: "Coût sortie" },
-    etats: { actif: "En service", eteint: "Éteint" },
+    sous: "Ce qu'on appelle pour chaque tâche, dans quel ordre, et ce que ça coûte au fournisseur.",
+    col: { fournisseur: "Fournisseur", modele: "Modèle", capacite: "Sait faire", etat: "État", emplois: "Où il sert", entree: "Coût entrée", sortie: "Coût sortie" },
+    capacites: { texte: "Texte", image: "Image" },
+    /* Trois états, et surtout pas deux. « Éteint » est la décision d'un humain,
+       « momentanément injoignable » le constat du disjoncteur. Ils se réparent
+       par des gestes opposés : le premier attend qu'on le rallume, le second se
+       rouvre seul. Les confondre ferait attendre une reprise qui ne viendra pas. */
+    etats: { actif: "En service", eteint: "Éteint", enPanne: "Momentanément injoignable" },
     // Un coût absent n'est pas un coût nul : c'est un modèle qu'on n'a pas
     // encore tarifé. « 0 » le ferait passer pour gratuit dans un calcul de marge.
     sansCout: "Non tarifé",
+    sansEmploi: "Dans aucune chaîne",
     unite: "$ / M jetons",
+    taches: {
+      note_classification: "Classement des notes",
+      sensitive_detection: "Détection du sensible",
+      message: "Message",
+      gift_ideas: "Idées de cadeaux",
+      illustration: "Illustration",
+      photo_style: "Style photo",
+    } as Record<string, string>,
     eteindre: "Éteindre ce modèle",
     rallumer: "Remettre en service",
     dialogueEteindre: {
       titre: "Éteindre {modele}",
-      consequence: "Les productions passeront au modèle suivant dans l'ordre d'essai. Si c'est le dernier en service, le serveur refusera.",
+      consequence: "Les productions passeront au modèle suivant, dans chaque chaîne où celui-ci figure. Si c'est le dernier en service d'une tâche, le serveur refusera.",
       motifs: [
         "Le modèle échoue trop souvent",
         "Coût devenu trop élevé",
@@ -249,14 +266,34 @@ export const fr = {
     },
     dialogueRallumer: {
       titre: "Remettre {modele} en service",
-      consequence: "Il reprendra sa place dans l'ordre d'essai, à son rang.",
+      consequence: "Il reprendra sa place, à son rang, dans chaque chaîne où il figure.",
       motifs: [
         "L'incident du fournisseur est clos",
         "Retour arrière après un essai",
       ],
     },
+    chaines: {
+      titre: "L'ordre d'essai, tâche par tâche",
+      sous: "Le rang 1 est appelé en premier. S'il ne répond pas, on passe au suivant. Le fournisseur est rappelé à chaque rang : trois modèles du même hébergeur, c'est une chaîne qu'une seule panne emporte en entier.",
+      vide: "Aucun modèle rangé sur cette tâche : rien ne sera produit.",
+      promouvoir: "Monter d'un rang",
+      declasser: "Descendre d'un rang",
+      dialogue: {
+        titre: "Changer l'ordre d'essai",
+        consequence: "L'ordre s'applique à la prochaine production. Les crédits déjà engagés ne sont pas concernés.",
+        motifs: [
+          "Le primaire coûte trop cher",
+          "Le repli donne de meilleurs résultats",
+          "Le fournisseur du primaire est instable",
+        ],
+      },
+      avertissements: {
+        courte: "Cette chaîne ne compte que {rangs} rang(s) au lieu de {recommande}. Ce n'est pas une erreur : deux fournisseurs seulement produisent des images.",
+        fournisseurRepete: "Plusieurs rangs partagent le même fournisseur : une seule panne emporterait toute la chaîne, et le repli n'aurait pas lieu.",
+      },
+    },
     // Ce que cet écran ne montre pas encore, et pourquoi.
-    manque: "La dépense réelle et ce qu'elle a rapporté n'apparaissent pas encore : les relevés d'usage n'existent pas en base. Ce catalogue dit ce qu'on essaie et dans quel ordre.",
+    manque: "La dépense réelle et ce qu'elle a rapporté n'apparaissent pas encore : les productions payantes ne sont pas encore rattachées à leur consommation. Ce catalogue dit ce qu'on essaie, dans quel ordre, et ce que ça coûte au fournisseur.",
   },
 
   drapeaux: {
@@ -1036,6 +1073,99 @@ export const fr = {
     tableau: "Tableau de bord",
     liste: "Liste filtrable, puis détail",
     formulaire: "Formulaire de configuration",
+  },
+
+  arret: {
+    titre: "Arrêt pour intervention",
+    // Deux gestes différents, et les confondre coûterait cher : éteindre une
+    // fonctionnalité retire une surface, arrêter le service les suspend toutes.
+    sous: "Suspend tout le service et annonce un délai. À ne pas confondre avec l'extinction d'une fonctionnalité, qui ne retire qu'une surface.",
+    etats: {
+      ouvert: "Service ouvert",
+      arrete: "Service arrêté",
+    },
+    jusqua: "Retour annoncé pour {heure}",
+    sansHeure: "Aucune heure de retour annoncée",
+    arreter: "Arrêter le service",
+    prolonger: "Prolonger",
+    rouvrir: "Rouvrir le service",
+    duree: "Durée",
+    durees: {
+      m15: "15 minutes",
+      m30: "30 minutes",
+      h1: "1 heure",
+      h2: "2 heures",
+      inconnue: "Je ne sais pas encore",
+    },
+    dialogueArreter: {
+      titre: "Arrêter le service",
+      consequence: "Tous les appels rendront une réponse d'attente, y compris la connexion. Le back-office reste joignable — c'est par là qu'on rouvre.",
+      motifs: [
+        "Migration de la base de données",
+        "Mise en production d'une version",
+        "Incident en cours de traitement",
+      ],
+    },
+    dialogueRouvrir: {
+      titre: "Rouvrir le service",
+      consequence: "Les appels repartent immédiatement. L'heure de retour annoncée est effacée.",
+      motifs: [
+        "Intervention terminée",
+        "Intervention reportée",
+      ],
+    },
+  },
+
+  metriques: {
+    titre: "Métriques",
+    sous: "L'usage au-delà des chiffres du tableau de bord.",
+    periode: "Période",
+    periodes: { j7: "7 jours", j30: "30 jours", j90: "90 jours", m12: "12 mois" },
+    retention: {
+      titre: "Rétention",
+      sous: "Ce que devient chaque mois d'arrivées. Toujours douze mois, quelle que soit la période retenue : sur une fenêtre plus courte, la colonne des trente jours ne pourrait afficher que des zéros, et ces zéros se liraient comme une fuite.",
+      // « De retour » et non « revenus » : la page porte des montants juste à
+      // côté, et le mot s'y lirait comme de l'argent.
+      col: { mois: "Mois d'entrée", inscrits: "Entrées", a7: "De retour à 7 jours", a30: "De retour à 30 jours" },
+      vide: "Aucune arrivée sur les douze derniers mois.",
+    },
+    conversion: {
+      titre: "Conversion",
+      sous: "La part d'une arrivée qui finit par acheter. Le chiffre d'affaires, lui, se lit au tableau de bord.",
+      comptes: "Comptes entrés",
+      acheteurs: "Ont acheté",
+      delai: "Délai médian jusqu'au premier achat",
+      // Zéro dirait « le jour même ». Personne n'ayant acheté, il n'y a pas de
+      // délai à annoncer — et non un délai nul.
+      sansDelai: "Personne n'a encore acheté",
+      jours: "{n} j",
+      paliers: "Achats par palier",
+      colPalier: "Palier",
+      colAchats: "Achats",
+      credits: "{n} crédits",
+      sansPalier: "Aucun achat rattaché à un palier sur la période.",
+    },
+    consommation: {
+      titre: "Consommation",
+      credits: "Crédits consommés",
+      mouvements: "Mouvements",
+    },
+    manques: {
+      titre: "Ce qui n'est pas encore mesurable",
+      sous: "Trois des cinq contenus de la section n'ont pas de source dans ce dépôt. Ils sont nommés ici plutôt que rendus en rangs vides : un zéro sans explication se prend pour une mesure.",
+      usage_par_fonctionnalite: {
+        quoi: "Usage par fonctionnalité",
+        bloque: "Le marquage part vers l'outil d'analyse sans que rien n'en soit conservé ici.",
+      },
+      issue_des_actions: {
+        quoi: "Exécutions des actions payantes et leur issue",
+        bloque: "Le registre des exécutions n'existe pas encore en base.",
+      },
+      contributions: {
+        quoi: "Contributions reçues et validées",
+        bloque: "Les surfaces publiques qui les produisent ne sont pas construites.",
+      },
+    },
   },
 
   attente: {
