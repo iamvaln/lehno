@@ -762,7 +762,8 @@ Vue publique curée sur la self-Person de l'utilisateur.
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
-- Le contenu exposé dérive de la self-Person : catégories `interests` marquées publiques et `wishlist_item.is_public = true`. La visibilité par élément vit sur ces entités, pas sur le `Wall`.
+- Le contenu exposé dérive de la self-Person : catégories `interests` marquées publiques et `owner_wish.is_public = true`. La visibilité par élément vit sur ces entités, pas sur le `Wall`.
+- **Pas de `wishlist_item` ici.** Cette ligne visait autrefois `wishlist_item.is_public` ; c'était une confusion entre les deux tables de souhaits. Un `WishlistItem` est ce qu'un proche m'a confié : il est privé, ne se partage pas, et son booléen — désormais `is_shortlisted` — n'est qu'un repère personnel. Ce qui se publie est `OwnerWish`, dont c'est la raison d'être.
 
 ## CollectionLink
 

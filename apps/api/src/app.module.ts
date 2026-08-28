@@ -40,6 +40,8 @@ import { OccurrenceController } from "./me/occurrence.controller.js";
 import { OccurrenceService } from "./me/occurrence.service.js";
 import { NoteController, NotesController } from "./me/note.controller.js";
 import { NoteService } from "./me/note.service.js";
+import { OccurrenceWishesController, WishController } from "./me/wish.controller.js";
+import { WishService } from "./me/wish.service.js";
 import { HomeController } from "./me/home.controller.js";
 import { HomeService } from "./me/home.service.js";
 import { MetadataController } from "./me/metadata.controller.js";
@@ -101,6 +103,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
   controllers: [
     AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, ConfigController, LegalController,
     AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, SecurityController, ConfigController, LegalController,
+    OccurrenceWishesController, WishController,
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
@@ -211,6 +214,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     OccurrenceService,
     PersonService,
     NoteService,
+    WishService,
     HomeService,
     MetadataService,
     NotificationPreferencesService,

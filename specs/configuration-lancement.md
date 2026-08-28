@@ -18,7 +18,7 @@ Ce document existe parce que la décision s'était prise **par morceaux, dans un
 | `topup.provider` | éteint | L'intégration opérateur attend. |
 | `referral` | **allumé** | Levier d'acquisition, développé de bout en bout. |
 | `collect` | **allumé** | Remplit les fiches sans que l'utilisateur tape — la réponse à « je n'ai rien à noter ». |
-| `wishlist` | éteint | `WishlistItem` porte encore `is_public` au lieu de `is_shortlisted`. |
+| `wishlist` | éteint | **L'obstacle est levé** : la colonne s'appelle `is_shortlisted`, et `/me/occurrences/{id}/wishes` comme `/me/wishes/{id}` sont servis et gardés par le drapeau. Reste la décision d'allumer — ce tableau est une liste de gestes, pas un état qui s'obtient tout seul. |
 | `wishlist.own` | éteint | `OwnerWish` n'existe pas. |
 | `wall` | éteint | Aucune table. |
 | `wishes` | éteint | Dépend du Mur. |
