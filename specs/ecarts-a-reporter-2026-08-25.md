@@ -601,6 +601,13 @@ un fichier qui quitte l'outil, circule par courriel et s'ouvre dans un tableur.
 C'est le geste qu'on borne, pas la lecture — le support garde l'accès à tout ce
 que §6 lui accorde.
 
+> **Le report a été annulé une fois, puis refait.** Une copie de travail du
+> document, plus ancienne que ce report, a été versée par-dessus : les trois
+> passages ont disparu de la spécification pendant que le code, lui, continuait
+> de refuser. Le fichier d'écarts affirmait donc un report qui n'existait plus.
+> Rien de perdu, mais c'est ce que produit un `.md` qui vieillit hors du dépôt
+> pendant qu'on écrit dedans.
+
 **Reporté le 27/08/2026** dans `ux-admin-lehno.md` : §6 gagne le droit
 d'exporter parmi les leviers réservés à l'administrateur, et le principe qui
 sépare la lecture du geste ; §7 ne dit plus « les listes filtrées s'exportent »

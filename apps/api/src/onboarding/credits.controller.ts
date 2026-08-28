@@ -82,17 +82,15 @@ export class CreditsService {
 
   /* Ce que le parrainage rapporte AUJOURD'HUI, ou rien.
    *
-   * Nul quand `credits` est éteint. Le drapeau `referral` ne dépend pas de
-   * `credits` — l'éteindre tuerait l'acquisition avec la monétisation, ce que
-   * §6.4 interdit nommément — mais le parrainage n'a alors plus de crédits à
-   * promettre : ils n'achètent rien, et les générations sont gratuites. Un
-   * écran qui annoncerait « cinq crédits » dans cet état mentirait.
+   * Le bonus s'annonce toujours, et c'est nouveau : il était conditionné au
+   * drapeau `credits`, qui n'existe plus. Les actions payantes consomment du
+   * crédit en permanence, donc cinq crédits offerts achètent toujours quelque
+   * chose — la question « et s'ils n'achetaient rien » ne se pose plus.
    *
-   * C'est le serveur qui tranche, jamais le client. Croiser `referral` et
-   * `credits` côté client reviendrait à y refaire ce raisonnement — et à s'en
-   * écarter le jour où il change. */
+   * Nul reste possible pour une autre raison : le paramètre absent ou
+   * illisible. Zéro dirait « le parrainage ne rapporte rien », ce qui est un
+   * réglage ; nul dit « on ne sait pas », ce qui est une panne. */
   private async bonusParInvitation(): Promise<number | null> {
-    if (!(await this.flags.estActif("credits"))) return null;
     const l = await this.prisma.systemParameter.findUnique({
       where: { key: "referral_bonus_invited" },
     });
