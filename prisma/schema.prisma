@@ -709,7 +709,8 @@ model WishlistItem {
   currency          String?        @db.VarChar(3)
   status            WishlistStatus @default(available)
   origin            WishlistOrigin
-  /* Le REPÈRE PERSONNEL du propriétaire, pas une exposition publique.
+  /**
+   * Le REPÈRE PERSONNEL du propriétaire, pas une exposition publique.
    * La colonne s'appelait `is_public` — un nom hérité d'`OwnerWish`, où il
    * décide bien de ce qui paraît sur la liste partagée. Ici il n'y a rien à
    * partager : un souhait de proche est privé, personne d'autre ne le voit
@@ -717,7 +718,8 @@ model WishlistItem {
    * disponibilité — on en marque cinq et on n'en offre qu'un ; c'est la
    * préparation qui s'en sert pour remonter ces souhaits en tête.
    * Le laisser nommé `is_public` finissait par le faire exposer un jour, sur
-   * la foi de son seul nom. */
+   * la foi de son seul nom.
+   */
   isShortlisted     Boolean        @default(false) @map("is_shortlisted")
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
@@ -1287,6 +1289,14 @@ model ActionRun {
    * jamais montré au demandeur : c'est notre marge, pas son prix.
    */
   internalCost      Decimal?        @map("internal_cost") @db.Decimal(12, 6)
+  /**
+   * La clé fournie par le client pour qu'une demande relancée REJOIGNE la
+   * génération en cours au lieu d'en créer une seconde.
+   * Nulle quand le client n'en envoie pas — et Postgres traite les nuls comme
+   * distincts, donc autant de lancements sans clé qu'on veut. C'est voulu : la
+   * protection est offerte, jamais imposée.
+   */
+  idempotencyKey    String?         @map("idempotency_key") @db.VarChar(128)
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz
 
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1296,8 +1306,16 @@ model ActionRun {
   usages           AIUsage[]
   generatedMessage GeneratedMessage?
 
+  /**
+   * LA garantie, et elle vient de la base — pas d'une lecture préalable.
+   * Entre un « cette clé existe-t-elle ? » et l'écriture, deux clics rapides
+   * passeraient tous les deux : c'est précisément la fenêtre qu'on veut
+   * fermer. On écrit, et on traduit le refus.
+   */
+  @@unique([userId, idempotencyKey])
   @@index([userId, createdAt])
   @@index([createdAt])
+  @@index([status, createdAt])
   @@map("action_run")
 }
 
