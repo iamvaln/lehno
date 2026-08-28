@@ -1068,6 +1068,21 @@ export const en: typeof fr = {
       credits: "{n} credits",
       sansPalier: "No purchase tied to a bundle over this period.",
     },
+    actionsPayantes: {
+      titre: "Paid actions",
+      sous: "What gets started, and how it ends. An action no one uses shows as zero: not seeing it and not having it would look too much alike.",
+      col: {
+        action: "Action", lancements: "Runs", reussies: "Succeeded",
+        echouees: "Failed", enAttente: "Pending", echec: "Failure rate",
+      },
+      sansTaux: "—",
+      vide: "No paid action declared.",
+      codes: {
+        gift_ideas: "Gift ideas",
+        portrait: "A portrait",
+        wish_message: "A message",
+      },
+    },
     consommation: {
       titre: "Consumption",
       credits: "Credits used",
@@ -1079,10 +1094,6 @@ export const en: typeof fr = {
       usage_par_fonctionnalite: {
         quoi: "Usage by feature",
         bloque: "Tracking goes out to the analytics tool with nothing kept here.",
-      },
-      issue_des_actions: {
-        quoi: "Paid action runs and their outcome",
-        bloque: "The run ledger does not exist in the database yet.",
       },
       contributions: {
         quoi: "Contributions received and approved",

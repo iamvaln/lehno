@@ -141,4 +141,36 @@ describe("la session d'administration, du serveur à l'écran", () => {
     localStorage.setItem(CLE_SESSION, JSON.stringify({ acces: "a", rafraichissement: "r", role: "dieu" }));
     expect(magasinLocal.lire()).toBeNull();
   });
+
+  /* Le tableau de bord est la section par DÉFAUT : sa ressource partait au
+     montage, avant toute connexion, et recevait 401. Comme `section` ne change
+     pas quand on entre, elle ne repartait jamais — l'écran d'accueil affichait
+     « le chargement n'a pas abouti » à quiconque venait de se connecter, et il
+     fallait cliquer « Réessayer » pour voir son propre tableau de bord.
+
+     Trouvé en pilotant un navigateur, le 28/08. Invisible dans les suites
+     jusque-là : les cas d'écran posent une session AVANT de rendre l'outil, si
+     bien que le premier appel partait toujours authentifié. */
+  it("n'interroge pas le tableau de bord tant qu'on n'est pas entré", async () => {
+    const appels = serveur({ "/admin/auth/otp": reponse(200, { envoye: true }) });
+    render(<App />);
+
+    await screen.findByLabelText(t.connexion.adresse);
+    expect(appels.mock.calls.filter(([u]) => String(u).includes("/admin/dashboard"))).toHaveLength(0);
+  });
+
+  it("charge le tableau de bord dès l'entrée, sans qu'on ait à réessayer", async () => {
+    const appels = serveur({
+      "/admin/auth/otp/verify": reponse(200, PAIRE),
+      "/admin/auth/otp": reponse(200, { envoye: true }),
+    });
+    const utilisateur = userEvent.setup({ delay: null });
+    render(<App />);
+
+    await entrer(utilisateur);
+
+    await waitFor(() =>
+      expect(appels.mock.calls.some(([u]) => String(u).includes("/admin/dashboard"))).toBe(true));
+    expect(screen.queryByRole("button", { name: t.actions.reessayer })).toBeNull();
+  });
 });
