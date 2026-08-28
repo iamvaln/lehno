@@ -4,6 +4,7 @@ import { DeroulementService } from "./deroulement.service.js";
 import { ProgrammationService } from "./programmation.service.js";
 import { RelancesService } from "./relances.service.js";
 import { EnvoiService } from "./envoi.service.js";
+import { GenerationService } from "./generation.service.js";
 
 /* Le chef d'orchestre : ce qui déclenche, et dans quel ordre.
  *
@@ -37,6 +38,7 @@ export class OrdonnanceurService {
     @Inject(ProgrammationService) private readonly programmation: ProgrammationService,
     @Inject(RelancesService) private readonly relances: RelancesService,
     @Inject(EnvoiService) private readonly envoi: EnvoiService,
+    @Inject(GenerationService) private readonly generation: GenerationService,
   ) {}
 
   @Cron(CHAQUE_JOUR)
@@ -63,6 +65,11 @@ export class OrdonnanceurService {
       ["relance globale", () => this.relances.enrichissementGlobal()],
       ["relance par personne", () => this.relances.enrichissementParPersonne()],
       ["activation", () => this.relances.activations()],
+      /* AVANT l'envoi, et à part du reste : ce qu'on rattrape ici n'est pas une
+         notification mais de l'argent. Une exécution restée en attente laisse un
+         crédit débité pour rien, et personne ne le signale — l'utilisateur voit
+         un écran qui tourne, puis passe à autre chose. */
+      ["générations abandonnées", () => this.generation.reconcilierLesEnCours()],
       ["envoi", () => this.envoi.envoyer()],
     ] as [string, () => Promise<unknown>][]) {
       try {
