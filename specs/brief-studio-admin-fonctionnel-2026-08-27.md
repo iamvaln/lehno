@@ -76,7 +76,7 @@ Trois précisions que « rien ne se publie sans essai » laissait ouvertes :
 
 ## 5. La publication
 
-Elle se fait depuis l'établi, jamais depuis un écran de lecture : on publie après avoir vu un résultat, pas après avoir tapé un texte.
+Elle se fait depuis l'atelier, jamais depuis un écran de lecture : on publie après avoir vu un résultat, pas après avoir tapé un texte.
 
 Ce qu'elle fait, en une transaction :
 
@@ -149,7 +149,7 @@ Le troisième point est le seul de ce document qui puisse produire un défaut vi
 
 | Où | Ce qui était écrit | Ce qui vaut désormais |
 |---|---|---|
-| `ux-admin-lehno.md` §5.9 | Trois entrées — réglages, composition, banc d'essai | **Deux écrans** : lecture de ce qui tourne, et l'établi |
+| `ux-admin-lehno.md` §5.9 | Trois entrées — réglages, composition, banc d'essai | **Deux écrans** : lecture de ce qui tourne, et l'atelier |
 | Dictionnaire, `StudioTrial` | « L'écran affiche son coût et le cumul du jour » | **Aucun compteur à l'écran.** Le prix estimé reste, comme fiche technique du modèle |
 | Dictionnaire, `StudioConfig` | `version` s'incrémente à chaque publication | Une ligne `draft` naît **sans version** ; le numéro s'attribue à la publication |
 | Dictionnaire, `StudioConfig` | « Un brouillon se modifie librement » | Un brouillon **se rejoue** : chaque prévisualisation en crée un et dépasse le précédent |
@@ -199,7 +199,7 @@ Le §3 range « le modèle appelé par production » dans `settings`. Le routage
 lui, range un **ordre de modèles par tâche** dans `AITaskRoute`. **Deux endroits
 décideraient du même choix**, et ils divergeraient au premier désaccord.
 
-Ce qui est éprouvé à l'établi n'est pas un modèle seul : c'est le **couple
+Ce qui est éprouvé à l'atelier n'est pas un modèle seul : c'est le **couple
 consigne + modèle**. Une consigne taillée pour un modèle bavard rend autre chose
 sur un modèle bref, et « le secondaire » n'a de sens que si la consigne suit le
 modèle.
