@@ -13,6 +13,8 @@ import {
 } from "./onboarding/credits.controller.js";
 import { FlagsService } from "./flags/flags.service.js";
 import { AttributsService } from "./me/attributs.service.js";
+import { GenerationService } from "./me/generation.service.js";
+import { GenerationController, MessagesController } from "./me/generation.controller.js";
 import { RechargeService } from "./payments/recharge.service.js";
 import {
   CreditBundlesController, PaymentChannelsController,
@@ -109,7 +111,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, AdminMaintenanceController, StudioController, MeController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, AdminMaintenanceController, StudioController, MeController,
   ],
   providers: [
     PrismaService,
@@ -202,6 +204,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     CreditsService,
     FlagsService,
     AttributsService,
+    GenerationService,
     RechargeService,
     CatalogueIAService,
     RouteurIAService,
