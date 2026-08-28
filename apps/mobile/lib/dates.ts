@@ -107,3 +107,21 @@ export function echeancesParJour(
   }
   return carte;
 }
+
+/* Le titre d'un mois — « Août », « Août 2027 ».
+ *
+ * L'ANNÉE NE PARAÎT QUE SI ELLE DIFFÈRE de l'année courante. Écrire « Août
+ * 2026 » en août 2026 dit une évidence, et la répéter douze fois de suite dans
+ * une liste finit par masquer les fois où elle compte vraiment.
+ *
+ * Le nom vient d'`Intl`, jamais du dictionnaire : le kit portait `moisAout` et
+ * `moisSept`, deux mois sur douze — ce qui marchait tant que la planche ne
+ * montrait que l'été. Douze clés par langue diraient ce que le système sait
+ * déjà, et ne suivraient pas une langue de plus.
+ */
+export function titreDuMois(mois: string, langue: string, anneeCourante: number): string {
+  const [a, m] = mois.split("-").map(Number);
+  const nom = new Intl.DateTimeFormat(langue, { month: "long", timeZone: "UTC" })
+    .format(new Date(Date.UTC(a ?? 0, (m ?? 1) - 1, 1)));
+  return a === anneeCourante ? nom : `${nom} ${a}`;
+}

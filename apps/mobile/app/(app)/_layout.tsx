@@ -33,6 +33,7 @@ export default function Application() {
      handoff, et elle vaut aussi pendant qu'on construit. */
   const onglets: Onglet[] = [
     { id: "accueil", label: t.ongletAccueil, icon: "house" },
+    { id: "dates", label: t.ongletDates, icon: "calendar" },
     { id: "proches", label: t.ongletProches, icon: "heart" },
   ];
   if (moiVisible(actives)) {
@@ -56,6 +57,7 @@ export default function Application() {
       )}
     >
       <Tabs.Screen name="accueil" />
+      <Tabs.Screen name="dates" />
       <Tabs.Screen name="proches" />
     </Tabs>
   );

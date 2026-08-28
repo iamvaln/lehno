@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Occurrence } from "@lehno/contracts";
 import {
   JOURS_PAR_SEMAINE, decaleDeMois, echeancesParJour, fenetreDesDates,
-  grilleDuMois, parMois,
+  grilleDuMois, parMois, titreDuMois,
 } from "../lib/dates.js";
 
 function echeance(date: string, kind: Occurrence["kind"] = "birthday", n = date): Occurrence {
@@ -143,5 +143,30 @@ describe("ce qui existe ne se masque jamais", () => {
     const libre = echeance("2026-08-28", "other");
     expect(parMois([libre])[0]!.echeances).toHaveLength(1);
     expect(echeancesParJour([libre], "2026-08").get(28)).toHaveLength(1);
+  });
+});
+
+describe("le titre d'un mois", () => {
+  /* L'année ne paraît QUE si elle diffère de l'année courante. « Août 2026 »
+     en août 2026 dit une évidence, et la répéter douze fois de suite finit par
+     masquer les fois où elle compte. */
+  it("tait l'année courante et dit les autres", () => {
+    expect(titreDuMois("2026-08", "fr", 2026)).not.toMatch(/2026/);
+    expect(titreDuMois("2027-08", "fr", 2026)).toMatch(/2027/);
+  });
+
+  /* Le nom vient d'`Intl`. Le kit portait `moisAout` et `moisSept` — deux mois
+     sur douze, ce qui marchait tant que la planche ne montrait que l'été. */
+  it("nomme les douze mois, dans la langue de lecture", () => {
+    const noms = Array.from({ length: 12 }, (_, i) =>
+      titreDuMois(`2026-${String(i + 1).padStart(2, "0")}`, "fr", 2026));
+    expect(new Set(noms).size).toBe(12);
+    expect(titreDuMois("2026-08", "fr", 2026)).not.toEqual(titreDuMois("2026-08", "en", 2026));
+  });
+
+  // En UTC : un fuseau à l'ouest ferait basculer le premier du mois sur le
+  // précédent, et janvier s'afficherait « décembre ».
+  it("ne recule pas d'un mois selon le fuseau", () => {
+    expect(titreDuMois("2026-01", "fr", 2026).toLowerCase()).toContain("janv");
   });
 });

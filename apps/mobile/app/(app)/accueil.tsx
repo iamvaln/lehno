@@ -144,9 +144,12 @@ export default function Accueil() {
                 sans `remainingOccurrences` ce lien aurait toujours dit « tout »
                 alors qu'il en manquait vingt.
 
-                Il ne mène nulle part tant que Dates n'existe pas — le pointer
-                vers Proches serait mentir sur sa destination. */}
-            <Text style={[styles.voir, { color: couleurs.textMention }]}>
+                Il mène à Dates, la même liste en entier. */}
+            <Text
+              accessibilityRole="button"
+              onPress={() => routeur.push("/(app)/dates")}
+              style={[styles.voir, { color: couleurs.textAccent }]}
+            >
               {reste ? t.voirPlus : t.voirTout}
             </Text>
           </View>

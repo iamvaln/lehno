@@ -68,11 +68,11 @@ export default function Pseudo() {
         params: {
           pseudo,
           credits: String(session.signupCredits),
-          /* Le cadeau de lancement — celui qui récompense l'attente. Le
-             contrat ne porte pas encore `waitlistBonus` : tant qu'il ne le
-             rend pas, la ligne ne paraît pas, plutôt que d'annoncer un geste
-             qu'on n'a pas fait. Signalé au backend. */
-          attente: "0",
+          /* Le cadeau de lancement — celui qui récompense l'attente. NUL quand
+             la personne n'attendait pas, jamais zéro : le serveur l'a détecté
+             sur l'ADRESSE, pas sur un jeton porté par le lien — un bonus dans
+             le lien serait transférable. Le client lit ce champ, c'est tout. */
+          attente: String(session.waitlistBonus ?? 0),
           /* L'issue voyage avec le bonus : sans elle, un code introuvable et
              un code absent se ressembleraient, et l'écran se tairait là où il
              doit constater. */
