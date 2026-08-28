@@ -71,6 +71,10 @@ describe("ce que l'écran de bienvenue reçoit", () => {
   const NEE = {
     outcome: "session" as const, accessToken: JETON, refreshToken: JETON,
     expiresIn: 900, isNewAccount: true as const, signupCredits: 5,
+    /* La liste d'attente : un TROISIÈME geste, distinct des deux autres. NUL
+       quand la personne n'attendait pas — jamais zéro : un zéro se lirait comme
+       un bonus qui n'a rien donné, là où il n'y a pas eu de geste du tout. */
+    waitlistBonus: null,
   };
 
   /* Le DÉTAIL, pas un total : cadeau de bienvenue et bonus de parrainage sont

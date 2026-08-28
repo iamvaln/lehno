@@ -5,8 +5,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  CONTACT_CHANNELS, PERSON_REGISTERS, PERSON_RELATIONS, personSchema,
-  type ContactChannel, type PersonRegister, type PersonRelation,
+  CONTACT_CHANNELS, PERSON_GENDERS, PERSON_REGISTERS, PERSON_RELATIONS,
+  personSchema, type ContactChannel, type PersonGender, type PersonRegister,
+  type PersonRelation,
 } from "@lehno/contracts";
 import {
   nativeBorder, nativeFont, nativeRadius, nativeSpace,
@@ -18,7 +19,7 @@ import { useLangue } from "../../../lib/langue.js";
 import { appel, ErreurDApi } from "../../../lib/api.js";
 import { messageDErreur } from "../../../lib/session.js";
 import {
-  CLES_DE_CANAL, CLES_DE_REGISTRE, CLES_DE_RELATION,
+  CLES_DE_CANAL, CLES_DE_GENRE, CLES_DE_REGISTRE, CLES_DE_RELATION,
 } from "../../../lib/libelles.js";
 
 /* L'identité d'un proche — et sa création.
@@ -53,6 +54,7 @@ export default function Identite() {
   const [nom, setNom] = useState("");
   const [appelle, setAppelle] = useState("");
   const [relation, setRelation] = useState<PersonRelation | null>(null);
+  const [genre, setGenre] = useState<PersonGender | null>(null);
   const [souvenir, setSouvenir] = useState("");
   const [registre, setRegistre] = useState<PersonRegister | null>(null);
   const [canal, setCanal] = useState<ContactChannel | null>(null);
@@ -67,6 +69,7 @@ export default function Identite() {
     setNom(fiche.displayName);
     setAppelle(fiche.callingName ?? "");
     setRelation(fiche.relation);
+    setGenre(fiche.gender);
     setSouvenir(fiche.relationHint ?? "");
     setRegistre(fiche.register);
     setCanal(fiche.preferredChannel);
@@ -87,6 +90,13 @@ export default function Identite() {
         displayName: nom.trim(),
         ...(appelle.trim() ? { callingName: appelle.trim() } : {}),
         ...(relation ? { relation } : {}),
+        /* OBLIGATOIRE à la création. Le contrat en fait un champ requis pour
+           une seule raison : « en français on n'écrit pas à quelqu'un sans le
+           savoir ». Le rendre facultatif produirait des messages en tournures
+           contournées pour tous ceux qui auraient sauté le champ — c'est-à-dire
+           la plupart —, et personne n'aurait su pourquoi les textes sonnaient
+           bizarrement. */
+        ...(genre ? { gender: genre } : {}),
         ...(souvenir.trim() ? { relationHint: souvenir.trim() } : {}),
         ...(registre ? { register: registre } : {}),
         ...(canal ? { preferredChannel: canal } : {}),
@@ -182,6 +192,20 @@ export default function Identite() {
         </View>
 
         <View style={[styles.bloc]}>
+          {/* DEUX valeurs, parce que c'est un accord et non une identité :
+              un accord français n'a que deux formes. Aucune phrase de
+              l'interface ne s'en sert — seule la génération le reçoit. */}
+          <SectionLabel>{t.champGenre}</SectionLabel>
+          <Choix
+            options={PERSON_GENDERS}
+            libelle={(v) => t[CLES_DE_GENRE[v]]}
+            valeur={genre}
+            pose={setGenre}
+          />
+          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.champGenreAide}</Text>
+        </View>
+
+        <View style={[styles.bloc]}>
           <SectionLabel>{t.champRegistre}</SectionLabel>
           <Choix
             options={PERSON_REGISTERS}
@@ -214,7 +238,7 @@ export default function Identite() {
         <Button
           variant="primary"
           full
-          disabled={envoi || !pret || !nom.trim()}
+          disabled={envoi || !pret || !nom.trim() || (creation && !genre)}
           onPress={() => void enregistre()}
           style={{ marginTop: nativeSpace[24] }}
         >

@@ -1,5 +1,6 @@
 import type {
-  CategoryCode, ContactChannel, EventKind, PersonRegister, PersonRelation,
+  CategoryCode, ContactChannel, EventKind, PersonGender, PersonRegister,
+  PersonRelation,
 } from "@lehno/contracts";
 import type { Messages } from "../messages/index.js";
 
@@ -61,6 +62,16 @@ const CATEGORIES: Record<CategoryCode, CleDeTexte> = {
   dislikes_nogo: "noteEviter",
 };
 
+/* Le genre, à DEUX valeurs — parce que c'est un ACCORD, pas une identité.
+   « En français on n'écrit pas à quelqu'un sans le savoir » : le contrat le
+   rend obligatoire à la création pour cette seule raison, et aucune phrase de
+   l'interface ne s'en sert. Seule la génération le reçoit. */
+const GENRES: Record<PersonGender, CleDeTexte> = {
+  female: "genreFeminin",
+  male: "genreMasculin",
+};
+
+export const CLES_DE_GENRE = GENRES;
 export const CLES_DE_CATEGORIE = CATEGORIES;
 export const CLES_DE_RELATION = RELATIONS;
 export const CLES_DE_REGISTRE = REGISTRES;

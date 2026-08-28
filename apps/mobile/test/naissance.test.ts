@@ -80,7 +80,7 @@ describe("ce qu'on envoie passe le contrat", () => {
      tranche. */
   it("une naissance connue est acceptée", () => {
     const r = createPersonSchema.safeParse({
-      displayName: "Awa",
+      displayName: "Awa", gender: "female" as const,
       birthDate: dateDeNaissance({ jour: 24, mois: 8, annee: 1990 }),
       birthYearKnown: true,
     });
@@ -93,7 +93,7 @@ describe("ce qu'on envoie passe le contrat", () => {
      envoyer la date sans le booléen ferait refuser tout le monde. */
   it("l'année de support n'est valide que déclarée inconnue", () => {
     const corps = {
-      displayName: "Awa",
+      displayName: "Awa", gender: "female" as const,
       birthDate: dateDeNaissance({ jour: 24, mois: 8, annee: null }),
     };
     expect(createPersonSchema.safeParse({ ...corps, birthYearKnown: false }).success).toBe(true);
@@ -103,7 +103,8 @@ describe("ce qu'on envoie passe le contrat", () => {
   // chose, et ce test rougirait si l'une des deux bougeait sans l'autre.
   it("refuse la même chose que nous", () => {
     const futur = createPersonSchema.safeParse({
-      displayName: "Awa", birthDate: "2099-01-01", birthYearKnown: true,
+      displayName: "Awa", gender: "female" as const,
+      birthDate: "2099-01-01", birthYearKnown: true,
     });
     expect(futur.success).toBe(false);
   });
