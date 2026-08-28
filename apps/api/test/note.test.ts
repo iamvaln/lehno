@@ -49,7 +49,7 @@ describe("les notes d'un proche", () => {
   });
 
   it("crée une note déjà rangée", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
+    const p = await persons.create(awa, { gender: "female", displayName: "Valery" });
     const n = await notes.createForPerson(awa, p.id, { content: "Il a parlé d'un cadeau" });
 
     expect(noteSchema.safeParse(n).success).toBe(true);
@@ -60,7 +60,7 @@ describe("les notes d'un proche", () => {
   // Le classement est une décision du serveur : il est rendu AVEC la note,
   // sans second appel (spec technique §5.2).
   it("range en base, pas seulement dans la réponse", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
+    const p = await persons.create(awa, { gender: "female", displayName: "Valery" });
     const n = await notes.createForPerson(awa, p.id, { content: "Elle adore le cinéma" });
 
     const liens = await db.prisma.noteCategory.findMany({ where: { noteId: n.id } });
@@ -77,7 +77,7 @@ describe("les notes d'un proche", () => {
   // non classées. C'est précisément la perte que l'ancien repli sur « facts »
   // prétendait éviter, en la payant d'un mensonge.
   it("rend les notes sans aucune catégorie", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
+    const p = await persons.create(awa, { gender: "female", displayName: "Valery" });
     const n = await notes.createForPerson(awa, p.id, { content: "azerty qwerty" });
     expect(n.categories).toEqual([]);
 
@@ -87,7 +87,7 @@ describe("les notes d'un proche", () => {
   });
 
   it("n'écrit pas de note sur le proche d'un autre", async () => {
-    const p = await persons.create(bila, { displayName: "Celarine" });
+    const p = await persons.create(bila, { gender: "female", displayName: "Celarine" });
     await expect(
       notes.createForPerson(awa, p.id, { content: "essai" }),
     ).rejects.toMatchObject({ code: "not_found" });
@@ -97,14 +97,14 @@ describe("les notes d'un proche", () => {
   // 404 avant même de lire : une liste vide laisserait croire que le proche
   // existe et n'a rien, et l'identifiant deviendrait un oracle.
   it("ne lit pas les notes du proche d'un autre", async () => {
-    const p = await persons.create(bila, { displayName: "Celarine" });
+    const p = await persons.create(bila, { gender: "female", displayName: "Celarine" });
     await notes.createForPerson(bila, p.id, { content: "secret" });
     await expect(notes.listForPerson(awa, p.id)).rejects.toMatchObject({ code: "not_found" });
   });
 
   it("ne lit que les notes du proche demandé", async () => {
-    const a = await persons.create(awa, { displayName: "Valery" });
-    const b = await persons.create(awa, { displayName: "Celarine" });
+    const a = await persons.create(awa, { gender: "female", displayName: "Valery" });
+    const b = await persons.create(awa, { gender: "female", displayName: "Celarine" });
     await notes.createForPerson(awa, a.id, { content: "aime le café" });
     await notes.createForPerson(awa, b.id, { content: "aime le thé" });
 
@@ -115,7 +115,7 @@ describe("les notes d'un proche", () => {
   // Les plus récentes d'abord : la fiche se lit du haut, et une note fraîche
   // vaut mieux qu'une note d'il y a deux ans (doc fonctionnelle §7).
   it("rend les notes de la plus récente à la plus ancienne", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
+    const p = await persons.create(awa, { gender: "female", displayName: "Valery" });
     await notes.createForPerson(awa, p.id, { content: "premiere" });
     await new Promise((r) => setTimeout(r, 5));
     await notes.createForPerson(awa, p.id, { content: "seconde" });
@@ -127,7 +127,7 @@ describe("les notes d'un proche", () => {
   // Le double rattachement est VOULU, pas toléré : une difficulté relève de ce
   // qu'il traverse ET de ce qu'il a besoin d'entendre (doc fonctionnelle §7).
   it("garde les deux catégories d'une note à double rattachement", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
+    const p = await persons.create(awa, { gender: "female", displayName: "Valery" });
     const n = await notes.createForPerson(awa, p.id, {
       content: "Il traverse une période difficile, il a besoin qu'on le soutienne",
     });
@@ -138,7 +138,7 @@ describe("les notes d'un proche", () => {
   // Supprimer un proche emporte ses notes : la cascade est déclarée au schéma,
   // ce cas la constate plutôt que de la supposer.
   it("les notes disparaissent avec le proche", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
+    const p = await persons.create(awa, { gender: "female", displayName: "Valery" });
     await notes.createForPerson(awa, p.id, { content: "aime le café" });
     await persons.remove(awa, p.id);
     expect(await db.prisma.note.count({ where: { personId: p.id } })).toBe(0);
@@ -146,8 +146,8 @@ describe("les notes d'un proche", () => {
 
   describe("une note pour plusieurs proches", () => {
     it("crée une note par proche, indépendantes", async () => {
-      const a = await persons.create(awa, { displayName: "Valery" });
-      const b = await persons.create(awa, { displayName: "Celarine" });
+      const a = await persons.create(awa, { gender: "female", displayName: "Valery" });
+      const b = await persons.create(awa, { gender: "female", displayName: "Celarine" });
 
       const creees = await notes.createForMany(awa, {
         content: "Ils adorent le cinéma", personIds: [a.id, b.id],
@@ -166,8 +166,8 @@ describe("les notes d'un proche", () => {
     // recevrait une erreur en croyant que rien n'a été écrit, alors qu'une
     // note serait déjà sur une fiche.
     it("n'écrit rien si un seul identifiant n'est pas au demandeur", async () => {
-      const mien = await persons.create(awa, { displayName: "Valery" });
-      const autre = await persons.create(bila, { displayName: "Celarine" });
+      const mien = await persons.create(awa, { gender: "female", displayName: "Valery" });
+      const autre = await persons.create(bila, { gender: "female", displayName: "Celarine" });
 
       await expect(
         notes.createForMany(awa, { content: "essai", personIds: [mien.id, autre.id] }),
@@ -179,7 +179,7 @@ describe("les notes d'un proche", () => {
     // Un identifiant qui ne désigne personne échoue comme celui d'un autre :
     // les deux rendent 404, et rien ne les distingue de l'extérieur.
     it("n'écrit rien si un identifiant ne désigne personne", async () => {
-      const mien = await persons.create(awa, { displayName: "Valery" });
+      const mien = await persons.create(awa, { gender: "female", displayName: "Valery" });
       await expect(
         notes.createForMany(awa, {
           content: "essai",
@@ -192,7 +192,7 @@ describe("les notes d'un proche", () => {
     // Le même proche cité deux fois ne mérite pas deux notes identiques — et
     // sans dédoublonnage, le décompte de vérification serait faussé.
     it("un proche cité deux fois ne reçoit qu'une note", async () => {
-      const a = await persons.create(awa, { displayName: "Valery" });
+      const a = await persons.create(awa, { gender: "female", displayName: "Valery" });
       const creees = await notes.createForMany(awa, {
         content: "aime le café", personIds: [a.id, a.id],
       });
@@ -203,8 +203,8 @@ describe("les notes d'un proche", () => {
     it("attache l'occasion à toutes les notes quand elle est donnée", async () => {
       // Monter l'événement et son occurrence directement en base : cette tâche
       // ne construit pas les chemins des dates, elle s'appuie sur le schéma.
-      const a = await persons.create(awa, { displayName: "Valery" });
-      const b = await persons.create(awa, { displayName: "Celarine" });
+      const a = await persons.create(awa, { gender: "female", displayName: "Valery" });
+      const b = await persons.create(awa, { gender: "female", displayName: "Celarine" });
       const e = await db.prisma.event.create({
         data: {
           personId: a.id, authorUserId: awa, kind: "birthday",
@@ -265,7 +265,7 @@ describe("les notes d'un proche", () => {
       jwt.sign({ sub: userId }, SECRET, { algorithm: "HS256", expiresIn: 900 });
 
     it("refuse un appel sans jeton", async () => {
-      const p = await persons.create(awa, { displayName: "Valery" });
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery" });
       const r = await fetch(`${baseUrl}/v1/me/persons/${p.id}/notes`);
       expect(r.status).toBe(401);
     });
@@ -274,7 +274,7 @@ describe("les notes d'un proche", () => {
     // réellement : le test de péremption compare le fichier au calcul, jamais
     // le calcul à la réponse HTTP.
     it("écrit une note via HTTP et rend 201", async () => {
-      const p = await persons.create(awa, { displayName: "Valery" });
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery" });
       const r = await fetch(`${baseUrl}/v1/me/persons/${p.id}/notes`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${jeton(awa)}` },
@@ -286,7 +286,7 @@ describe("les notes d'un proche", () => {
     });
 
     it("rend 404 sur le proche d'un autre compte", async () => {
-      const p = await persons.create(bila, { displayName: "Celarine" });
+      const p = await persons.create(bila, { gender: "female", displayName: "Celarine" });
       const r = await fetch(`${baseUrl}/v1/me/persons/${p.id}/notes`, {
         headers: { authorization: `Bearer ${jeton(awa)}` },
       });

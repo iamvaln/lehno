@@ -182,6 +182,10 @@ export class PersonService {
       avatarUrl: input.avatarUrl ?? null,
       relation: input.relation ?? null,
       register: input.register ?? null,
+      // L'accord grammatical. `unspecified` par défaut : une absence de réponse
+      // est une réponse légitime, et la génération emploie alors des tournures
+      // qui s'en passent.
+      gender: input.gender ?? "unspecified",
       language: input.language ?? null,
       relationHint: input.relationHint ?? null,
       birthDate: input.birthDate ? new Date(`${input.birthDate}T00:00:00Z`) : null,
@@ -229,6 +233,7 @@ export class PersonService {
 function rendre(p: {
   id: string; displayName: string; callingName: string | null; avatarUrl: string | null;
   isSelf: boolean; relation: string | null; register: string | null; language: string | null;
+  gender: string | null;
   relationHint: string | null; birthDate: Date | null; birthYearKnown: boolean;
   city: string | null;
   country: string | null; preferredChannel: string | null; createdAt: Date;
@@ -240,6 +245,12 @@ function rendre(p: {
     avatarUrl: p.avatarUrl,
     isSelf: p.isSelf,
     relation: p.relation as Person["relation"],
+    /* `unspecified` et `other` existent encore en base — des lignes antérieures
+       à la règle, ou écrites avant que les deux écrans ne posent la question.
+       Le contrat n'en connaît que deux, et rend NULL pour le reste : une absence
+       de réponse est une absence, pas une troisième réponse qu'un écran devrait
+       savoir afficher. */
+    gender: p.gender === "female" || p.gender === "male" ? p.gender : null,
     relationHint: p.relationHint,
     // La date de naissance se rend en chaîne civile, comme toutes les dates
     // du contrat : du JSON, pas un objet Date.
