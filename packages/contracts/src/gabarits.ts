@@ -133,6 +133,18 @@ export type ContexteMessage = {
   readonly texteLibre: string | null;
   /** L'âge, seulement si l'utilisateur l'a demandé. */
   readonly age: number | null;
+  /* La consigne d'orientation, quand elle vient d'AILLEURS que de ce fichier.
+   *
+   * C'est la couture par laquelle le Studio reprend la main : la §8 veut que
+   * les consignes vivent en base, et une configuration publiée en porte une
+   * par orientation. Absente, on retombe sur ORIENTATION_CONSIGNE — ce qui
+   * garde ce fichier utilisable seul, au premier démarrage comme dans les
+   * tests.
+   *
+   * Un champ plutôt qu'une seconde fonction d'invite : deux assemblages
+   * différents rendraient un essai d'administration non comparable à ce que la
+   * production produit, et c'est justement ce que l'établi prétend montrer. */
+  readonly consigneOrientation?: { readonly fr: string; readonly en: string } | null;
 };
 
 const ACCORDS = {
@@ -223,7 +235,8 @@ export function invite(c: ContexteMessage): string {
     : `AGREEMENT — recipient: ${accords[c.genreDuProche]} · writer: ${accords[c.genreDeLAuteur]}`);
   if (c.age !== null) l.push(fr ? `ÂGE : ${c.age}` : `AGE: ${c.age}`);
 
-  l.push("", fr ? `CE QU'IL FAUT DIRE : ${ORIENTATION_CONSIGNE[c.orientation].fr}` : `WHAT TO SAY: ${ORIENTATION_CONSIGNE[c.orientation].en}`);
+  const consigne = c.consigneOrientation ?? ORIENTATION_CONSIGNE[c.orientation];
+  l.push("", fr ? `CE QU'IL FAUT DIRE : ${consigne.fr}` : `WHAT TO SAY: ${consigne.en}`);
 
   /* `dislikes_nogo` part À PART, comme une interdiction.
    *

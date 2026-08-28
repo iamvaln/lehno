@@ -940,15 +940,38 @@ export const consommationSchema = z.object({
  *  Un libellé venu du serveur ne se traduirait pas. */
 export const manqueMetriqueSchema = z.enum([
   "usage_par_fonctionnalite",
-  "issue_des_actions",
+  // « issue_des_actions » y figurait. Retiré le 28/08 : `ActionRun` existe,
+  // avec son statut et son code d'échec — la section le MESURE désormais, elle
+  // ne le déclare plus. C'est le mouvement que ce mécanisme prévoyait.
   "contributions",
 ]);
+
+/* Les exécutions d'une action payante, sur la période, et leur issue.
+ *
+ * §5.11 : « exécutions des actions payantes et leur issue ». L'issue est ce qui
+ * compte — un volume seul ne dit pas si les gens obtiennent ce qu'ils paient. */
+export const actionPayanteSchema = z.object({
+  /** Le code de l'action, jamais son libellé : celui-ci vit dans le
+   *  dictionnaire de l'outil, qui sait dans quelle langue il se lit. */
+  code: z.string(),
+  lancements: z.number().int().nonnegative(),
+  reussies: z.number().int().nonnegative(),
+  echouees: z.number().int().nonnegative(),
+  enAttente: z.number().int().nonnegative(),
+}).strict()
+  // Les trois issues redonnent le total : l'enum n'en connaît que trois, donc
+  // un écart signale une requête qui compte deux fois ou en oublie une. À
+  // l'écran, il se lirait comme un taux d'échec — faux, et crédible.
+  .refine((a) => a.reussies + a.echouees + a.enAttente === a.lancements, {
+    message: "les issues ne redonnent pas le total des lancements",
+  });
 
 export const metriquesSchema = z.object({
   periode: periodeMetriquesSchema,
   retention: retentionSchema,
   conversion: conversionSchema,
   consommation: consommationSchema,
+  actions: z.array(actionPayanteSchema),
   manques: z.array(manqueMetriqueSchema),
 }).strict();
 
@@ -957,3 +980,4 @@ export type Cohorte = z.infer<typeof cohorteSchema>;
 export type Conversion = z.infer<typeof conversionSchema>;
 export type Metriques = z.infer<typeof metriquesSchema>;
 export type ManqueMetrique = z.infer<typeof manqueMetriqueSchema>;
+export type ActionPayante = z.infer<typeof actionPayanteSchema>;

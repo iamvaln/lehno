@@ -136,3 +136,27 @@ export function valideSelection(config: StudioConfig, selection: StudioSelection
 
   return defauts;
 }
+
+/* Ce que rend `/me/studio/options` — spec technique §5.4.
+ *
+ * Trois choses, et pas une de plus : le catalogue tel que la configuration EN
+ * SERVICE l'expose, ce que l'action coûte, et le numéro de la version qui l'a
+ * produit.
+ *
+ * **Le prix vient de la base** (`PremiumAction.credit_cost`), jamais d'une
+ * constante : il se règle en administration sans livraison, et un prix recopié
+ * dans le client afficherait l'ancien tarif sur tout un parc jusqu'à la mise à
+ * jour suivante. C'est la même raison qui met le catalogue au serveur.
+ *
+ * `version` sert l'assistance, pas l'écran : quand quelqu'un rapporte un
+ * portrait raté, elle dit quelle configuration il avait sous les yeux. Nulle
+ * seulement si rien n'a jamais été publié — un état que la réconciliation au
+ * démarrage rend improbable, mais qu'on ne peut pas jurer impossible.
+ */
+export const studioOptionsSchema = z.object({
+  catalogue: studioConfigSchema,
+  creditCost: z.number().int().min(0),
+  version: z.number().int().positive().nullable(),
+}).strict();
+
+export type StudioOptions = z.infer<typeof studioOptionsSchema>;

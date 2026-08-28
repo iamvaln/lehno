@@ -13,6 +13,10 @@ export const fr = {
     otp_expired: "Ce code a expiré. Demandez-en un nouveau.",
     otp_too_many_attempts: "Trop d'essais. Demandez un nouveau code.",
     reason_required: "Ce geste demande un motif : il sera gardé au journal.",
+    // Le studio : on ne publie que ce qu'on a vu tourner. Le message dit le
+    // geste qui manque, pas seulement le refus — un bouton grisé sans
+    // explication se lit comme une panne.
+    trial_required: "Prévisualisez d'abord ce réglage : rien ne part en service sans avoir tourné une fois.",
     // Un palier retiré, un canal fermé, un compte de collecte désactivé : la
     // demande est bien formée, c'est ce qu'elle vise qui ne se propose plus.
     resource_inactive: "Ce choix n'est plus proposé. Rechargez la page pour voir ce qui reste disponible.",
