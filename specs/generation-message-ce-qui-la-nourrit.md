@@ -171,7 +171,12 @@ registre de départ dans le code.
 
 **Le genre se collecte aux deux formulaires d'identité**, et non au studio — le
 lot de design le tranche : *« Deux champs : celui du proche (§3.18), celui de qui
-écrit (§3.23) »*, sous le libellé **« Accord du message »**.
+écrit (§3.23) »*, sous le libellé **« Genre »** — celui de la copy du kit.
+
+*Un commentaire du kit proposait « Accord du message ». C'est la copy qui fait
+foi : un libellé n'est pas une explication, et personne ne reconnaît son propre
+champ derrière une périphrase. C'est l'aide sous le champ qui dit à quoi il
+sert — « Pour que les messages soient écrits correctement. »*
 
 Ce document disait d'abord « demandé au studio », d'après `profil-proche`. Le lot
 est postérieur et il l'emporte : la question ne se pose pas à la première
