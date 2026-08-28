@@ -439,5 +439,29 @@ describe("la génération d'un message", () => {
       await s.reconcilierLesEnCours();
       expect(await solde()).toBe(5);
     });
+
+    /* LA garde que le passage séquentiel ne prouve pas.
+     *
+     * Deux passages l'un après l'autre ne se croisent jamais : le second ne
+     * trouve plus rien. Deux passages SIMULTANÉS, si — et c'est le cas réel,
+     * puisque le rattrapage de nuit peut tomber pendant qu'un lancement échoue
+     * et rembourse de son côté.
+     *
+     * Sans la condition sur `pending` dans le remboursement, les deux
+     * rendraient — et le solde deviendrait faux À LA HAUSSE, ce que personne
+     * ne signale jamais. */
+    it("ne rend pas deux fois quand deux passages se croisent", async () => {
+      await crediter(5);
+      await abandonner(120);
+
+      const un = fabrique({});
+      const deux = fabrique({});
+      await Promise.all([un.reconcilierLesEnCours(), deux.reconcilierLesEnCours()]);
+
+      expect(await solde()).toBe(5);
+      expect(await db.prisma.creditTransaction.count({
+        where: { userId: awa, type: "adjustment" },
+      })).toBe(1);
+    });
   });
 });
