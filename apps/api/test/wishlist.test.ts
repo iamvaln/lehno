@@ -520,6 +520,32 @@ describe("mes listes de souhaits, leur partage et leur réservation", () => {
     expect(ligne.displayName).toBeNull();
   });
 
+  /* LA MÊME GARDE, AU RENDU, et il en faut deux.
+     La première ne retient pas le nom sans autorisation ; celle-ci refuse de le
+     rendre même s'il est là. Poser la ligne à la main est exactement ce que
+     ferait un chemin d'écriture futur — une reprise de données, une correction
+     d'administration —, et c'est le jour où quelqu'un remplace la recopie
+     champ par champ par un `...ligne` que la seconde garde compte. Sans ce cas,
+     on peut la casser sans qu'aucun test ne tombe : c'est vérifié. */
+  it("refuse de rendre un nom présent en base mais non autorisé", async () => {
+    const { listeId, souhaitId } = await listePartagee(awa);
+    await db.prisma.wishReservation.create({
+      data: {
+        ownerWishId: souhaitId, email: "kine@example.com",
+        displayName: "Kiné", showIdentity: false,
+        status: "confirmed", confirmedAt: new Date(), expiresAt: new Date(),
+      },
+    });
+    await db.prisma.ownerWish.update({
+      where: { id: souhaitId }, data: { status: "reserved" },
+    });
+
+    const souhaits = await listes.listWishes(awa, listeId);
+    expect(souhaits[0]?.status).toBe("reserved");
+    expect(souhaits[0]?.reservedByName).toBeNull();
+    expect(JSON.stringify(souhaits)).not.toContain("Kiné");
+  });
+
   it("montre le nom au propriétaire lorsque le réservant l'a autorisé", async () => {
     const { listeId, souhaitId } = await listePartagee(awa);
     await publiques.reserver(souhaitId, {
