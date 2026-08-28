@@ -26,6 +26,19 @@ type TypeOccasion = Parametres["typesEvenement"][number];
 
 const ENTIER_POSITIF = /^\d+$/;
 
+/** Les trois clés que le bloc d'arrêt gouverne.
+ *
+ *  Elles restent en base et le serveur les sert, mais **elles ne se saisissent
+ *  pas ici**. Deux commandes pour la même chose invitent à les désaccorder — et
+ *  celle du formulaire demanderait de taper `true` et une date ISO à la main,
+ *  quand le bloc au-dessus fait le même geste en deux clics.
+ *
+ *  Filtrées à l'affichage seulement : le serveur reste la source, et le jour où
+ *  le bloc disparaîtrait, elles redeviendraient réglables sans rien migrer. */
+const CLES_ARRET = new Set([
+  "maintenance_mode", "maintenance_retry_after_seconds", "maintenance_until",
+]);
+
 /** Les durées proposées. Une liste fermée plutôt qu'un champ libre : on
  *  annonce un ordre de grandeur, pas une minute précise, et un champ libre
  *  inviterait à saisir « 90 » en croyant dire une heure et demie de travail
@@ -69,8 +82,8 @@ function ArretPourIntervention({ t, langue, etat, onArreter, onRouvrir }: {
 
   return (
     <section className="admin-arret" aria-labelledby="arret-titre">
-      <h2 id="arret-titre" className="admin-rang-titre">{t.arret.titre}</h2>
-      <p className="admin-rang-sous">{t.arret.sous}</p>
+      <h2 id="arret-titre" className="admin-section-titre">{t.arret.titre}</h2>
+      <p className="admin-section-sous">{t.arret.sous}</p>
 
       <p className="admin-arret-etat">
         <strong>{etat.maintenance ? t.arret.etats.arrete : t.arret.etats.ouvert}</strong>
@@ -175,7 +188,13 @@ function invalide(parametre: Parametre, saisie: string): boolean {
   // Le type vient du serveur, qui le tient de la base. S'en remettre à la forme
   // de la valeur reçue serait fragile : « 100 » arrive en chaîne, et le champ
   // deviendrait libre au premier paramètre servi ainsi.
-  if (!estNumerique(parametre)) return saisie.trim() === "";
+  //
+  // Un paramètre TEXTE peut légitimement être vide, et le refuser coûtait cher :
+  // `maintenance_until` est vide par défaut — « vide : aucune annonce » —, donc
+  // le formulaire était invalide en permanence et « Enregistrer » restait éteint
+  // pour TOUS les réglages du produit. Le serveur, lui, ne vérifie que les types
+  // numériques et booléens : l'écran était plus strict que l'autorité.
+  if (!estNumerique(parametre)) return false;
   return !ENTIER_POSITIF.test(saisie.trim()) || Number(saisie) <= 0;
 }
 
@@ -210,8 +229,12 @@ export function Edition({
   const saisieDe = (parametre: Parametre) => saisies[parametre.cle] ?? String(parametre.valeur);
   const actifDe = (type: TypeOccasion) => occasions[type.id] ?? type.actif;
 
-  const valide = reference.economie.every((p) => !invalide(p, saisieDe(p)));
-  const changes = reference.economie.filter((p) => saisieDe(p) !== String(p.valeur));
+  // Ce que le formulaire montre et gouverne : tout sauf ce que le bloc d'arrêt
+  // pilote déjà.
+  const reglages = reference.economie.filter((p) => !CLES_ARRET.has(p.cle));
+
+  const valide = reglages.every((p) => !invalide(p, saisieDe(p)));
+  const changes = reglages.filter((p) => saisieDe(p) !== String(p.valeur));
   const modifie =
     changes.length > 0 ||
     reference.typesEvenement.some((type) => type.reglable && actifDe(type) !== type.actif);
@@ -327,7 +350,7 @@ export function Edition({
 
       {onglet === "economie" ? (
         <div className="gabarit-form">
-          {reference.economie.map((parametre) => {
+          {reglages.map((parametre) => {
             const saisie = saisieDe(parametre);
             const champId = `config-${parametre.cle}`;
             return (
