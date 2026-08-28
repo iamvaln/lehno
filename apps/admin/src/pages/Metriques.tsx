@@ -4,7 +4,7 @@ import { DataTable, EmptyState, FilterBar, type Colonne } from "../composants/do
 import { StatCard } from "../composants/signaux/index.js";
 import { ExportButton } from "../composants/actions/index.js";
 import { messages, type Langue } from "../i18n/index.js";
-import type { Metriques as Donnees, PeriodeMetriques } from "@lehno/contracts";
+import type { ActionPayante, Metriques as Donnees, PeriodeMetriques } from "@lehno/contracts";
 
 /**
  * L'usage au-delà des chiffres du tableau de bord (ux-admin §5.11).
@@ -48,6 +48,7 @@ function Rang({ id, titre, sous, children }: { id: string; titre: string; sous?:
 
 type LigneCohorte = { id: string; mois: string; inscrits: number; actifsA7j: number; actifsA30j: number };
 type LignePalier = { id: string; palier: string; achats: number };
+type LigneAction = ActionPayante & { id: string; libelle: string; taux: string };
 
 export function Metriques({
   langue = "fr", donnees, periode, onPeriode, onExporter, exportEnCours,
@@ -73,6 +74,34 @@ export function Metriques({
   const colonnesPaliers: Colonne<LignePalier>[] = [
     { cle: "palier", titre: t.metriques.conversion.colPalier },
     { cle: "achats", titre: t.metriques.conversion.colAchats, aligne: "right", rendu: (p) => nombre.format(p.achats) },
+  ];
+
+  /* Le libellé d'une action vit dans le dictionnaire, indexé par son code —
+     le serveur transporte des clés, jamais des phrases composées. Un code
+     inconnu s'affiche tel quel : ça se voit, là où un libellé vide se
+     confondrait avec une ligne cassée. */
+  const libelleAction = (code: string): string =>
+    (t.metriques.actionsPayantes.codes as Record<string, string>)[code] ?? code;
+
+  /* Aucun lancement ne donne pas « 0 % » : c'est un taux qui n'a rien à
+     mesurer. Zéro pour cent se lirait « rien n'échoue », ce qui est une
+     mesure — et c'est faux tant que rien n'a tourné. */
+  const taux = (a: ActionPayante): string =>
+    a.lancements === 0
+      ? t.metriques.actionsPayantes.sansTaux
+      : `${Math.round((a.echouees / a.lancements) * 100)} %`;
+
+  const actions: LigneAction[] = donnees.actions.map((a) => ({
+    ...a, id: a.code, libelle: libelleAction(a.code), taux: taux(a),
+  }));
+
+  const colonnesActions: Colonne<LigneAction>[] = [
+    { cle: "libelle", titre: t.metriques.actionsPayantes.col.action },
+    { cle: "lancements", titre: t.metriques.actionsPayantes.col.lancements, aligne: "right", rendu: (a) => nombre.format(a.lancements) },
+    { cle: "reussies", titre: t.metriques.actionsPayantes.col.reussies, aligne: "right", rendu: (a) => nombre.format(a.reussies) },
+    { cle: "echouees", titre: t.metriques.actionsPayantes.col.echouees, aligne: "right", rendu: (a) => nombre.format(a.echouees) },
+    { cle: "enAttente", titre: t.metriques.actionsPayantes.col.enAttente, aligne: "right", discret: true, rendu: (a) => nombre.format(a.enAttente) },
+    { cle: "taux", titre: t.metriques.actionsPayantes.col.echec, aligne: "right" },
   ];
 
   // Nul et zéro ne disent pas la même chose : personne n'a acheté, ou tout le
@@ -139,6 +168,18 @@ export function Metriques({
           colonnes={colonnesPaliers}
           lignes={paliers}
           vide={<EmptyState titre={t.metriques.conversion.sansPalier} />}
+        />
+      </Rang>
+
+      <Rang
+        id="rang-actions"
+        titre={t.metriques.actionsPayantes.titre}
+        sous={t.metriques.actionsPayantes.sous}
+      >
+        <DataTable
+          colonnes={colonnesActions}
+          lignes={actions}
+          vide={<EmptyState titre={t.metriques.actionsPayantes.vide} />}
         />
       </Rang>
 
