@@ -14,7 +14,7 @@ const SOUHAIT = {
   currency: null,
   status: "available" as const,
   origin: "owner" as const,
-  isPublic: false,
+  isShortlisted: false,
   reservedByName: null,
 };
 
@@ -55,6 +55,24 @@ describe("les souhaits", () => {
 
   it("refuse un PATCH vide", () => {
     expect(() => updateWishSchema.parse({})).toThrow();
+  });
+
+  /* Le repère personnel n'est PAS une exposition. Le champ s'appelait
+     `isPublic` — nom hérité d'`OwnerWish`, où il décide de ce qui paraît sur
+     la liste partagée. Un souhait de proche ne se partage pas : le laisser
+     nommé « public » le faisait exposer un jour sur la foi de son seul nom. */
+  it("porte un repère personnel, jamais une exposition", () => {
+    expect(wishSchema.parse({ ...SOUHAIT, isShortlisted: true }).isShortlisted).toBe(true);
+    expect(() => wishSchema.parse({ ...SOUHAIT, isPublic: true })).toThrow();
+    expect(() => updateWishSchema.parse({ isPublic: true })).toThrow();
+  });
+
+  /* La provenance ne s'écrit pas : elle dit ce que vaut le souhait. Accepter
+     `origin` du client laisserait un ajout personnel se déclarer `collected`,
+     donc se faire passer pour une confidence du proche lui-même. */
+  it("ne laisse pas le client déclarer la provenance", () => {
+    expect(() => createWishSchema.parse({ label: "Un livre", origin: "collected" })).toThrow();
+    expect(() => updateWishSchema.parse({ origin: "collected" })).toThrow();
   });
 });
 

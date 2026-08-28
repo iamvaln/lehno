@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { WishOrigin } from "./me-wishes.js";
 
 /* Le plan de mesure — spécification technique §16.
  *
@@ -103,6 +104,12 @@ export type EvenementsMesure = {
     origin: OrigineNote;
   };
   "event.created": { kind: string; scheduleCount: number };
+  /* §16.3 : « `wish.added` (provenance) ». La provenance SEULE — ni le
+     libellé, ni le lien, ni le prix : §16.4 interdit de transporter du
+     contenu, et un souhait en est. Ce qu'on cherche à savoir est si les
+     souhaits arrivent par la collecte, par une idée retenue ou de la main du
+     propriétaire ; c'est ce qui dit laquelle des trois voies porte le produit. */
+  "wish.added": { origin: WishOrigin };
 };
 
 export type NomEvenement = keyof EvenementsMesure;
@@ -112,6 +119,7 @@ export type NomEvenement = keyof EvenementsMesure;
 export const NOMS_EVENEMENTS = [
   "signup.started", "signup.completed", "signin.completed",
   "person.first_created", "person.created", "note.created", "event.created",
+  "wish.added",
 ] as const satisfies readonly NomEvenement[];
 
 // La forme qu'un adaptateur reçoit. Le nom, ses propriétés propres, et les
