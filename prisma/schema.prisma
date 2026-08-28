@@ -709,7 +709,16 @@ model WishlistItem {
   currency          String?        @db.VarChar(3)
   status            WishlistStatus @default(available)
   origin            WishlistOrigin
-  isPublic          Boolean        @default(false) @map("is_public")
+  /* Le REPÈRE PERSONNEL du propriétaire, pas une exposition publique.
+   * La colonne s'appelait `is_public` — un nom hérité d'`OwnerWish`, où il
+   * décide bien de ce qui paraît sur la liste partagée. Ici il n'y a rien à
+   * partager : un souhait de proche est privé, personne d'autre ne le voit
+   * (dictionnaire, WishlistItem). Marquer n'engage à rien et ne change pas la
+   * disponibilité — on en marque cinq et on n'en offre qu'un ; c'est la
+   * préparation qui s'en sert pour remonter ces souhaits en tête.
+   * Le laisser nommé `is_public` finissait par le faire exposer un jour, sur
+   * la foi de son seul nom. */
+  isShortlisted     Boolean        @default(false) @map("is_shortlisted")
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
 

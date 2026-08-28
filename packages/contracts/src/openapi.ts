@@ -48,6 +48,7 @@ import { creditBalanceSchema, referralSummarySchema, invitationSchema,
   paymentsSchema
 } from "./me-credits.js";
 import { metadataSchema } from "./me-app.js";
+import { wishSchema, createWishSchema, updateWishSchema } from "./me-wishes.js";
 import { notificationPreferencesSchema, updateNotificationPreferencesSchema } from "./me-notifications.js";
 import { sessionsListSchema, identitiesListSchema } from "./me-security.js";
 
@@ -862,6 +863,95 @@ const CHEMINS: Chemin[] = [
     reponse: noteSchema,
     // Une ressource neuve, dont le client apprend l'identifiant.
     statut: 201,
+  },
+  // ——— me/…/wishes (apps/api/src/me) — drapeau `wishlist` ————————————
+  {
+    chemin: "/me/occurrences/{id}/wishes",
+    methode: "get",
+    resume: "Lister les souhaits notés pour une occasion",
+    authentifie: true,
+    note: [
+      "**Gouverné par le drapeau `wishlist`.** Éteint, ces chemins rendent",
+      "`404` — la surface n'existe pas —, avant même de regarder le jeton.",
+      "",
+      "Une occasion qui n'est pas au demandeur rend `404`, jamais une liste",
+      "vide : celle-ci laisserait croire que l'occasion existe et n'a rien de",
+      "noté, et l'identifiant deviendrait un oracle.",
+      "",
+      "Le proche se déduit de l'occasion — une occurrence appartient à un",
+      "événement, qui appartient à un proche. Le client n'a pas à le dire.",
+      "",
+      "Ces souhaits sont PRIVÉS : ils ne se partagent pas, et `isShortlisted`",
+      "n'est qu'un repère personnel — « ce qui m'intéresse » —, invisible pour",
+      "tout autre que le propriétaire et sans effet sur la disponibilité. Il ne",
+      "faut pas le confondre avec l'`isPublic` d'une liste partagée",
+      "(`/me/owner-wishes`), qui décide, lui, de ce que des visiteurs voient.",
+    ].join("\n"),
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    reponse: z.array(wishSchema),
+  },
+  {
+    chemin: "/me/occurrences/{id}/wishes",
+    methode: "post",
+    resume: "Noter un souhait sur une occasion",
+    authentifie: true,
+    note: [
+      "**Gouverné par le drapeau `wishlist`.**",
+      "",
+      "`origin` et `status` ne s'écrivent pas. Le souhait créé par ce chemin",
+      "vaut `origin: \"owner\"` — noté de la main du propriétaire — et naît",
+      "`available`. Les deux autres provenances viennent d'ailleurs :",
+      "`collected` d'un lien de collecte validé, `accepted_idea` d'une idée",
+      "retenue à la génération. Accepter `origin` du client laisserait un",
+      "ajout personnel se faire passer pour une confidence du proche.",
+      "",
+      "Un prix porte toujours sa devise : « 12 000 » ne dit ni des francs CFA",
+      "ni des euros.",
+    ].join("\n"),
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: createWishSchema,
+    reponse: wishSchema,
+    // Une ressource neuve, dont le client apprend l'identifiant.
+    statut: 201,
+  },
+  {
+    chemin: "/me/wishes/{id}",
+    methode: "patch",
+    resume: "Corriger un souhait, le marquer ou le déclarer offert",
+    authentifie: true,
+    note: [
+      "**Gouverné par le drapeau `wishlist`.**",
+      "",
+      "`status` n'accepte que `available` et `fulfilled`. `reserved` DÉCOULE",
+      "d'une réservation confirmée et ne s'écrit jamais à la main — le poser",
+      "reviendrait à déclarer pris un cadeau que personne n'a réservé.",
+      "Aujourd'hui aucune réservation ne vise un souhait de proche : elles",
+      "portent sur les listes partagées (`OwnerWish`).",
+      "",
+      "L'invariant « un prix porte sa devise » se vérifie sur le souhait",
+      "APRÈS fusion, pas sur le seul corps envoyé : retirer la devise d'un",
+      "souhait qui garde son prix est refusé, alors même que le corps, lu",
+      "seul, ne porte aucun prix.",
+      "",
+      "Un souhait qui n'est pas au demandeur rend `404`, jamais `403`.",
+    ].join("\n"),
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: updateWishSchema,
+    reponse: wishSchema,
+  },
+  {
+    chemin: "/me/wishes/{id}",
+    methode: "delete",
+    resume: "Retirer un souhait",
+    authentifie: true,
+    note: [
+      "**Gouverné par le drapeau `wishlist`.** Un souhait qui n'est pas au",
+      "demandeur rend `404`, jamais `403`.",
+    ].join("\n"),
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    // 204 comme les autres suppressions : rien à décrire.
+    sansContenu: true,
+    statut: 204,
   },
   // ——— me/metadata (apps/api/src/me) ——————————————————————————————
   {
