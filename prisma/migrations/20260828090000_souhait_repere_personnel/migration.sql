@@ -1,0 +1,13 @@
+-- Le repère personnel d'un souhait de proche : `is_public` devient
+-- `is_shortlisted`.
+--
+-- RENAME, jamais DROP + ADD. C'est ce que `prisma migrate diff` propose ici,
+-- et ça viderait la colonne : tous les souhaits déjà marqués repartiraient à
+-- `false`, sans qu'aucune erreur ne le signale. Le renommage préserve les
+-- valeurs, le défaut et la contrainte NOT NULL — il n'y a rien à recréer.
+--
+-- Le nom venait d'`OwnerWish`, où `is_public` décide bien de ce qui paraît sur
+-- la liste partagée. Ici il n'y a rien à partager : un souhait de proche est
+-- privé (dictionnaire, WishlistItem). Un booléen nommé « public » sur une
+-- table privée finit par être exposé un jour, sur la foi de son seul nom.
+ALTER TABLE "wishlist_item" RENAME COLUMN "is_public" TO "is_shortlisted";

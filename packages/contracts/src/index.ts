@@ -5,6 +5,7 @@ export * from "./public.js";
 export * from "./admin.js";
 export * from "./flags.js";
 export * from "./ia.js";
+export * from "./gabarits.js";
 export * from "./maintenance.js";
 export * from "./tracking.js";
 export * from "./me.js";

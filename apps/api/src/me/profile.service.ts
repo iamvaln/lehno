@@ -7,6 +7,10 @@ import type { Profile, UpdateProfileInput } from "@lehno/contracts";
 const SELECT = {
   id: true, username: true, displayName: true, avatarUrl: true, email: true,
   emailVerified: true, uiLanguage: true, theme: true, timezone: true, sendHour: true,
+  // L'accord grammatical de celui qui SIGNE — « je suis fier » ou « fière ».
+  // Voir profileSchema : nul tant qu'il n'a pas répondu, l'inscription par code
+  // ne posant aucune question.
+  gender: true,
 } as const;
 
 @Injectable()
@@ -17,7 +21,7 @@ export class ProfileService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async get(userId: string): Promise<Profile> {
-    return (await this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: SELECT })) as Profile;
+    return rendre(await this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: SELECT }));
   }
 
   // La colonne est en citext : la comparaison est déjà insensible à la casse.
@@ -34,8 +38,18 @@ export class ProfileService {
     // `undefined`). `exactOptionalPropertyTypes` exige malgré tout ce cast —
     // le type généré par zod porte `| undefined` sur chaque valeur
     // optionnelle, plus large que celui, plus strict, que Prisma attend.
-    return (await this.prisma.user.update({
+    return rendre(await this.prisma.user.update({
       where: { id: userId }, data: patch as Prisma.UserUpdateInput, select: SELECT,
-    })) as Profile;
+    }));
   }
+}
+
+/* `unspecified` et `other` existent encore en colonne — un compte créé avant que
+   le profil ne pose la question. Le contrat n'en connaît que deux et rend NULL :
+   une absence de réponse est une absence, pas une troisième réponse. */
+function rendre(u: { gender: string | null }): Profile {
+  return {
+    ...(u as unknown as Profile),
+    gender: u.gender === "female" || u.gender === "male" ? u.gender : null,
+  };
 }

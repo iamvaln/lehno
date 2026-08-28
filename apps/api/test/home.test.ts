@@ -63,7 +63,7 @@ describe("l'accueil en un appel", () => {
   it("compte séparément de la liste plafonnée", async () => {
     const jour = aujourdhui();
     for (let i = 0; i < 10; i++) {
-      const p = await persons.create(awa, { displayName: `Proche ${i}` });
+      const p = await persons.create(awa, { gender: "female", displayName: `Proche ${i}` });
       await events.create(awa, { personId: p.id, kind: "other", label: `Occasion ${i}`, referenceDate: jour });
     }
 
@@ -80,7 +80,7 @@ describe("l'accueil en un appel", () => {
   it("rend jusqu'à sept échéances, de quoi remplir les cartes et les rangs", async () => {
     const jour = aujourdhui();
     for (let i = 0; i < 9; i++) {
-      const p = await persons.create(awa, { displayName: `Proche ${i}` });
+      const p = await persons.create(awa, { gender: "female", displayName: `Proche ${i}` });
       await events.create(awa, { personId: p.id, kind: "other", label: `Occasion ${i}`, referenceDate: jour });
     }
     expect((await home.get(awa)).occurrences).toHaveLength(7);
@@ -92,7 +92,7 @@ describe("l'accueil en un appel", () => {
     it("dit combien viennent au-delà de celles rendues", async () => {
       const jour = aujourdhui();
       for (let i = 0; i < 10; i++) {
-        const p = await persons.create(awa, { displayName: `Proche ${i}` });
+        const p = await persons.create(awa, { gender: "female", displayName: `Proche ${i}` });
         await events.create(awa, { personId: p.id, kind: "other", label: `Occasion ${i}`, referenceDate: jour });
       }
       expect((await home.get(awa)).remainingOccurrences).toBe(3);
@@ -102,7 +102,7 @@ describe("l'accueil en un appel", () => {
     it("rend zéro quand tout tient dans les sept", async () => {
       const jour = aujourdhui();
       for (let i = 0; i < 4; i++) {
-        const p = await persons.create(awa, { displayName: `Proche ${i}` });
+        const p = await persons.create(awa, { gender: "female", displayName: `Proche ${i}` });
         await events.create(awa, { personId: p.id, kind: "other", label: `Occasion ${i}`, referenceDate: jour });
       }
       expect((await home.get(awa)).remainingOccurrences).toBe(0);
@@ -118,7 +118,7 @@ describe("l'accueil en un appel", () => {
     it("ne descend jamais sous zéro, même sur des dates lointaines", async () => {
       const loin = new Date(Date.now() + 500 * 86_400_000).toISOString().slice(0, 10);
       for (let i = 0; i < 3; i++) {
-        const p = await persons.create(awa, { displayName: `Proche ${i}` });
+        const p = await persons.create(awa, { gender: "female", displayName: `Proche ${i}` });
         await events.create(awa, { personId: p.id, kind: "other", label: `Occasion ${i}`, referenceDate: loin });
       }
       expect((await home.get(awa)).remainingOccurrences).toBe(0);
@@ -127,15 +127,15 @@ describe("l'accueil en un appel", () => {
 
   it("distingue aujourd'hui de cette semaine, et exclut ce qui dépasse la semaine", async () => {
     const jour = aujourdhui();
-    const pAujourdhui = await persons.create(awa, { displayName: "Aujourd'hui" });
+    const pAujourdhui = await persons.create(awa, { gender: "female", displayName: "Aujourd'hui" });
     await events.create(awa, { personId: pAujourdhui.id, kind: "other", label: "Aujourd'hui", referenceDate: jour });
 
-    const pSemaine = await persons.create(awa, { displayName: "Dans la semaine" });
+    const pSemaine = await persons.create(awa, { gender: "female", displayName: "Dans la semaine" });
     await events.create(awa, {
       personId: pSemaine.id, kind: "other", label: "Dans la semaine", referenceDate: ajouterJours(jour, 5),
     });
 
-    const pApresSemaine = await persons.create(awa, { displayName: "Après la semaine" });
+    const pApresSemaine = await persons.create(awa, { gender: "female", displayName: "Après la semaine" });
     await events.create(awa, {
       personId: pApresSemaine.id, kind: "other", label: "Après la semaine", referenceDate: ajouterJours(jour, 10),
     });
@@ -147,7 +147,7 @@ describe("l'accueil en un appel", () => {
 
   it("ne compte pas les échéances d'un autre compte", async () => {
     const jour = aujourdhui();
-    const p = await persons.create(bila, { displayName: "Celarine" });
+    const p = await persons.create(bila, { gender: "female", displayName: "Celarine" });
     await events.create(bila, { personId: p.id, kind: "other", label: "Autre compte", referenceDate: jour });
 
     const rendu = await home.get(awa);
@@ -173,7 +173,7 @@ describe("l'accueil en un appel", () => {
     const vide = await home.get(awa);
     expect(vide.hasPersons).toBe(false);
 
-    await persons.create(awa, { displayName: "Valery" });
+    await persons.create(awa, { gender: "female", displayName: "Valery" });
     const rempli = await home.get(awa);
     expect(rempli.hasPersons).toBe(true);
     expect(rempli.occurrences).toHaveLength(0);
@@ -241,7 +241,7 @@ describe("l'accueil en un appel", () => {
     });
 
     it("rend l'accueil via HTTP", async () => {
-      const p = await persons.create(awa, { displayName: "Valery" });
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery" });
       await events.create(awa, {
         personId: p.id, kind: "other", label: "Occasion", referenceDate: aujourdhui(),
       });
