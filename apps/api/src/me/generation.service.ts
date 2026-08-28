@@ -19,6 +19,13 @@ import { FOURNISSEURS_IA } from "../ia/adaptateurs/index.js";
 
 const ACTION_MESSAGE = "wish_message";
 
+/* Au-delà de quoi une exécution restée en attente est tenue pour perdue.
+ *
+ * Une heure, et c'est généreux à dessein : trop court, on rembourserait une
+ * production qui allait aboutir — et l'utilisateur recevrait alors son message
+ * ET son crédit, ce qui coûte deux fois. */
+const SEUIL_ABANDON_MS = 60 * 60 * 1000;
+
 /* Ce que le modèle rend, et rien d'autre. La sortie est structurée pour être
    VÉRIFIABLE : « le message fait-il deux à quatre phrases » ne se contrôle pas,
    « les deux champs sont-ils là » se contrôle. */
@@ -50,7 +57,7 @@ export class GenerationService {
    * le bon compromis : perdre un crédit se répare, une base bloquée non. */
   async lancerMessage(
     userId: string, occurrenceId: string, orientation: Orientation,
-    options: { langue?: "fr" | "en"; texteLibre?: string | null } = {},
+    options: { langue?: "fr" | "en"; texteLibre?: string | null; cle?: string | null } = {},
   ) {
     const occurrence = await this.depot.occurrences(userId).findOrThrow(occurrenceId);
     const contexte = await this.rassembler(userId, occurrence.id, orientation, options);
@@ -67,7 +74,22 @@ export class GenerationService {
         `orientation "${orientation}" does not suit a sensitive occasion`,
       );
 
-    const execution = await this.debiter(userId, orientation);
+    const { execution, dejaLancee } = await this.debiter(userId, orientation, options.cle ?? null);
+
+    /* La demande avait déjà été lancée sous cette clé : on REJOINT plutôt que
+       de recommencer. Rien n'a été débité une seconde fois — l'unicité en base
+       s'en est chargée —, et il n'y a rien à produire : soit la production
+       tourne, soit elle a abouti, soit elle a échoué et le crédit est rendu.
+       Dans les trois cas, le client suit la même exécution. */
+    if (dejaLancee) {
+      const brouillon = await this.prisma.generatedMessage.findUnique({
+        where: { actionRunId: execution.id },
+      });
+      if (brouillon) return brouillon;
+      /* Elle tourne encore, ou elle a raté. On rend l'exécution telle quelle
+         plutôt que d'attendre : le client interroge, c'est son rôle. */
+      throw new AppError("conflict", "this generation is already running");
+    }
 
     try {
       const sortie = await this.produire(contexte, userId, execution.id);
@@ -83,42 +105,89 @@ export class GenerationService {
    * Le solde se relit DANS la transaction, pas avant : entre une lecture et une
    * écriture séparées, deux demandes simultanées liraient toutes deux un solde
    * suffisant et débiteraient deux fois un crédit qui n'existait qu'une. */
-  private async debiter(userId: string, orientation: Orientation) {
-    return this.prisma.$transaction(async (tx) => {
-      const action = await tx.premiumAction.findUnique({ where: { code: ACTION_MESSAGE } });
-      if (!action || !action.enabled)
-        throw new AppError("resource_inactive", "this action is not available");
+  private async debiter(userId: string, orientation: Orientation, cle: string | null) {
+    try {
+      const execution = await this.prisma.$transaction(async (tx) => {
+        const action = await tx.premiumAction.findUnique({ where: { code: ACTION_MESSAGE } });
+        if (!action || !action.enabled)
+          throw new AppError("resource_inactive", "this action is not available");
 
-      const somme = await tx.creditTransaction.aggregate({
-        where: { userId }, _sum: { amount: true },
+        const somme = await tx.creditTransaction.aggregate({
+          where: { userId }, _sum: { amount: true },
+        });
+        const solde = somme._sum.amount ?? 0;
+
+        /* `insufficient_credits`, pas `validation_failed` : la demande est bien
+           formée, c'est l'état du compte qui ne s'y prête pas. L'écran mène
+           alors à la recharge plutôt que d'afficher « requête invalide ». */
+        if (solde < action.creditCost)
+          throw new AppError("insufficient_credits", "not enough credits for this action");
+
+        /* La violation d'unicité sur la clé sort d'ici SANS ÊTRE RATTRAPÉE, et
+           c'est délibéré : une instruction en échec avorte la transaction
+           Postgres, et plus rien ne s'y lit — un `findFirst` posé ici échouerait
+           à son tour, sur une erreur qui ne dirait plus rien de la cause.
+           On laisse donc remonter, et on relit APRÈS le retour arrière. */
+        const execution = await tx.actionRun.create({
+          data: {
+            userId, premiumActionId: action.id, creditsSpent: action.creditCost,
+            status: "pending", orientation,
+            ...(cle === null ? {} : { idempotencyKey: cle }),
+          },
+          select: { id: true },
+        });
+
+        // Le mouvement est NÉGATIF : le solde est la somme du registre, jamais
+        // une colonne. Aucune valeur ne peut donc diverger de son historique.
+        await tx.creditTransaction.create({
+          data: {
+            userId, type: "consumption", source: "consumption",
+            amount: -action.creditCost,
+          },
+        });
+
+        return execution;
       });
-      const solde = somme._sum.amount ?? 0;
-
-      /* `insufficient_credits`, pas `validation_failed` : la demande est bien
-         formée, c'est l'état du compte qui ne s'y prête pas. L'écran mène alors
-         à la recharge plutôt que d'afficher « requête invalide ». */
-      if (solde < action.creditCost)
-        throw new AppError("insufficient_credits", "not enough credits for this action");
-
-      const execution = await tx.actionRun.create({
-        data: {
-          userId, premiumActionId: action.id, creditsSpent: action.creditCost,
-          status: "pending", orientation,
-        },
-        select: { id: true },
+      return { execution, dejaLancee: false as const };
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code !== "P2002" || cle === null) throw err;
+      /* La transaction a été défaite : le débit n'a pas eu lieu, et rien ne
+         subsiste de la tentative. On relit maintenant, sur une connexion
+         saine. */
+      const dejaLa = await this.prisma.actionRun.findFirstOrThrow({
+        where: { userId, idempotencyKey: cle }, select: { id: true },
       });
+      return { execution: dejaLa, dejaLancee: true as const };
+    }
+  }
 
-      // Le mouvement est NÉGATIF : le solde est la somme du registre, jamais une
-      // colonne. Aucune valeur ne peut donc diverger de son historique.
-      await tx.creditTransaction.create({
-        data: {
-          userId, type: "consumption", source: "consumption",
-          amount: -action.creditCost,
-        },
-      });
-
-      return execution;
+  /* Le rattrapage des exécutions restées en attente.
+   *
+   * Le débit et l'appel sont deux transactions — voir `lancerMessage`. Entre
+   * les deux, un arrêt du serveur laisse une exécution `pending` pour toujours
+   * et un crédit débité pour rien. Personne ne le signale : l'utilisateur voit
+   * un écran qui tourne, puis passe à autre chose.
+   *
+   * Le SEUIL est généreux. Une génération dure quelques secondes ; une heure
+   * laisse largement de quoi absorber une lenteur de fournisseur, un
+   * redémarrage lent, une reprise. Trop court, on rembourserait une production
+   * qui allait aboutir — et on écrirait alors deux fois le même message. */
+  async reconcilierLesEnCours(): Promise<number> {
+    const limite = new Date(Date.now() - SEUIL_ABANDON_MS);
+    const perdues = await this.prisma.actionRun.findMany({
+      where: { status: "pending", createdAt: { lt: limite } },
+      select: { id: true, userId: true },
     });
+
+    for (const p of perdues) {
+      /* `rendreLeCredit` est conditionné sur `pending` : si la production a
+         abouti entre-temps, le remboursement ne part pas. C'est la même garde
+         qui empêche de rendre deux fois. */
+      await this.rendreLeCredit(p.id, p.userId, "abandoned");
+    }
+    if (perdues.length > 0)
+      this.logger.warn(`${perdues.length} génération(s) abandonnée(s), crédits rendus`);
+    return perdues.length;
   }
 
   private async produire(

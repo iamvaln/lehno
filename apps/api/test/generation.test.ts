@@ -41,11 +41,18 @@ describe("la génération d'un message", () => {
       data: { userId, type: "grant", source: "signup_grant", amount: n },
     });
 
-  const lancer = (adaptateurs: Record<string, Adaptateur>, orientation = "ma_fierte") =>
+  const fabrique = (adaptateurs: Record<string, Adaptateur>) =>
     new GenerationService(
       db.prisma as never, new TenantRepository(db.prisma as never),
       new RouteurIAService(db.prisma as never), adaptateurs,
-    ).lancerMessage(awa, occurrence, orientation as never);
+    );
+
+  const lancer = (
+    adaptateurs: Record<string, Adaptateur>, orientation = "ma_fierte", cle?: string,
+  ) =>
+    fabrique(adaptateurs).lancerMessage(
+      awa, occurrence, orientation as never, cle === undefined ? {} : { cle },
+    );
 
   beforeAll(async () => { db = await withDatabase(); }, 180_000);
   afterAll(async () => { await db.close(); });
@@ -293,6 +300,144 @@ describe("la génération d'un message", () => {
       });
       await expect(service.corriger(bila.id, m.id, { content: "volé" }))
         .rejects.toMatchObject({ code: "not_found" });
+    });
+  });
+
+  /* « Une même demande relancée rejoint la génération en cours plutôt que d'en
+     créer une seconde, et ne débite qu'une fois » (§5.4).
+   *
+   * C'est le cas du double clic, et il coûte de l'argent réel. */
+  describe("la clé d'idempotence", () => {
+    it("ne débite qu'une fois pour deux demandes de même clé", async () => {
+      await crediter(5);
+      await lancer({ anthropic: repond() }, "ma_fierte", "clic-1");
+      await lancer({ anthropic: repond() }, "ma_fierte", "clic-1").catch(() => {});
+
+      expect(await solde()).toBe(4);
+      expect(await db.prisma.actionRun.count({ where: { userId: awa } })).toBe(1);
+    });
+
+    // Et la seconde demande REJOINT : elle rend le message déjà produit plutôt
+    // que d'en fabriquer un autre. C'est ce qui distingue « rejoindre » de
+    // « refuser ».
+    it("rend le message déjà produit plutôt que d'en refaire un", async () => {
+      await crediter(5);
+      const premier = await lancer({ anthropic: repond() }, "ma_fierte", "clic-2");
+      const second = await lancer({ anthropic: repond() }, "ma_fierte", "clic-2");
+      expect(second.id).toBe(premier.id);
+      expect(await db.prisma.generatedMessage.count()).toBe(1);
+    });
+
+    /* La seconde demande n'appelle AUCUN modèle. C'est là qu'est l'économie
+       réelle : le crédit non débité est visible, l'appel non fait ne l'est
+       pas — et c'est lui qu'on paie au fournisseur. */
+    it("n'appelle aucun modèle une seconde fois", async () => {
+      await crediter(5);
+      const modele = repond();
+      await lancer({ anthropic: modele }, "ma_fierte", "clic-3");
+      const appelsApresLePremier = modele.appels;
+      await lancer({ anthropic: modele }, "ma_fierte", "clic-3");
+      expect(modele.appels).toBe(appelsApresLePremier);
+    });
+
+    // Deux clés distinctes sont deux demandes : elles débitent deux fois.
+    it("laisse passer deux clés différentes", async () => {
+      await crediter(5);
+      await lancer({ anthropic: repond() }, "ma_fierte", "a");
+      await lancer({ anthropic: repond() }, "ma_fierte", "b");
+      expect(await solde()).toBe(3);
+    });
+
+    /* Sans clé, aucune protection — et Postgres traite les nuls comme
+       distincts, donc rien ne bloque. La protection est OFFERTE, jamais
+       imposée : un client qui ne l'emploie pas paie ses doubles clics. */
+    it("ne bloque pas deux lancements sans clé", async () => {
+      await crediter(5);
+      await lancer({ anthropic: repond() });
+      await lancer({ anthropic: repond() });
+      expect(await solde()).toBe(3);
+    });
+
+    // La clé appartient au compte : celle d'un autre ne bloque rien.
+    it("ne confond pas les clés de deux comptes", async () => {
+      await crediter(5);
+      await lancer({ anthropic: repond() }, "ma_fierte", "partagee");
+
+      const bila = await db.prisma.user.create({
+        data: {
+          email: `${randomBytes(6).toString("hex")}@example.com`,
+          username: `u${randomBytes(4).toString("hex")}`,
+          referralCode: randomBytes(4).toString("hex").toUpperCase(),
+        },
+        select: { id: true },
+      });
+      await crediter(5, bila.id);
+      await expect(
+        fabrique({ anthropic: repond() })
+          .lancerMessage(bila.id, occurrence, "ma_fierte" as never, { cle: "partagee" }),
+      ).rejects.toMatchObject({ code: "not_found" });
+      // Rejeté pour cloisonnement, pas pour la clé : l'occurrence est à Awa.
+      expect(await solde(bila.id)).toBe(5);
+    });
+  });
+
+  /* Le débit et l'appel sont deux transactions : entre les deux, un arrêt du
+     serveur laisse une exécution en attente pour toujours et un crédit débité
+     pour rien. Personne ne le signale — l'utilisateur voit un écran qui tourne,
+     puis passe à autre chose. */
+  describe("le rattrapage des générations abandonnées", () => {
+    const abandonner = async (ageMinutes: number): Promise<string> => {
+      const action = await db.prisma.premiumAction.findFirstOrThrow({ where: { code: "wish_message" } });
+      const run = await db.prisma.actionRun.create({
+        data: {
+          userId: awa, premiumActionId: action.id, creditsSpent: 1, status: "pending",
+          createdAt: new Date(Date.now() - ageMinutes * 60_000),
+        },
+        select: { id: true },
+      });
+      await db.prisma.creditTransaction.create({
+        data: { userId: awa, type: "consumption", source: "consumption", amount: -1 },
+      });
+      return run.id;
+    };
+
+    it("rend le crédit d'une exécution restée en attente", async () => {
+      await crediter(5);
+      await abandonner(120);
+      expect(await solde()).toBe(4);
+
+      await fabrique({}).reconcilierLesEnCours();
+      expect(await solde()).toBe(5);
+    });
+
+    /* Le seuil est GÉNÉREUX à dessein. Trop court, on rembourserait une
+       production qui allait aboutir — et l'utilisateur recevrait alors son
+       message ET son crédit, ce qui coûte deux fois. */
+    it("laisse tranquille une exécution récente", async () => {
+      await crediter(5);
+      await abandonner(5);
+      await fabrique({}).reconcilierLesEnCours();
+      expect(await solde()).toBe(4);
+    });
+
+    // Conditionné sur `pending` : une exécution déjà conclue ne se rembourse
+    // pas une seconde fois.
+    it("ne rembourse pas une exécution déjà conclue", async () => {
+      await crediter(5);
+      const id = await abandonner(120);
+      await db.prisma.actionRun.update({ where: { id }, data: { status: "success" } });
+
+      await fabrique({}).reconcilierLesEnCours();
+      expect(await solde()).toBe(4);
+    });
+
+    it("est idempotent : deux passages ne rendent qu'une fois", async () => {
+      await crediter(5);
+      await abandonner(120);
+      const s = fabrique({});
+      await s.reconcilierLesEnCours();
+      await s.reconcilierLesEnCours();
+      expect(await solde()).toBe(5);
     });
   });
 });
