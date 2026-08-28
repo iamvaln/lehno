@@ -346,6 +346,44 @@ describe("mes listes de souhaits, leur partage et leur réservation", () => {
     ).rejects.toMatchObject({ code: "P2002" });
   });
 
+  /* LA VRAIE COURSE, jouée sans concurrence.
+     Le cas ci-dessus passe par le service, qui périme les demandes en attente
+     dès qu'une confirmation aboutit : Fatou est alors arrêtée AVANT d'atteindre
+     l'index. C'est bien, mais ça n'éprouve pas l'index — et c'est lui qui doit
+     tenir le jour où deux confirmations tombent dans le même millier de
+     microsecondes, aucune n'ayant encore périmé l'autre.
+
+     On reproduit donc cet état exact — une confirmation écrite sans passer par
+     le service, la demande de Fatou toujours en attente — puis on la fait
+     confirmer. Deux écritures successives suffisent à prouver l'unicité ; deux
+     requêtes concurrentes donneraient un test qui ne mord qu'une fois sur
+     deux, et un tel test est pire qu'absent — il passe en intégration continue
+     en cachant la régression. */
+  it("laisse la base trancher quand deux confirmations se croisent avant toute péremption", async () => {
+    const { souhaitId } = await listePartagee(awa);
+    await publiques.reserver(souhaitId, { email: "fatou@example.com" }, {});
+    const codeFatou = boite.dernierCode();
+
+    // La confirmation de Kiné, écrite DIRECTEMENT : le service n'intervient
+    // pas, donc la demande de Fatou reste en attente, exactement comme si les
+    // deux étaient arrivées en même temps.
+    await db.prisma.wishReservation.create({
+      data: {
+        ownerWishId: souhaitId, email: "kine@example.com",
+        status: "confirmed", confirmedAt: new Date(), expiresAt: new Date(),
+      },
+    });
+
+    await expect(publiques.verifier(souhaitId, { email: "fatou@example.com", code: codeFatou }))
+      .rejects.toMatchObject({ code: "conflict" });
+
+    expect(await db.prisma.wishReservation.count({ where: { status: "confirmed" } })).toBe(1);
+    const fatou = await db.prisma.wishReservation.findFirstOrThrow({
+      where: { email: "fatou@example.com" },
+    });
+    expect(fatou.status).toBe("expired");
+  });
+
   it("refuse un code expiré", async () => {
     const { souhaitId } = await listePartagee(awa);
     await publiques.reserver(souhaitId, { email: "kine@example.com" }, {});
