@@ -30,7 +30,8 @@ describe("contrats des proches", () => {
 });
 
 /* Le genre sert l'ACCORD GRAMMATICAL, et rien d'autre — « fier » ou « fière ».
- * Son libellé à l'écran est « Accord du message », jamais « Genre ».
+ * Son libellé à l'écran est « Genre », et c'est l'aide qui le qualifie :
+ * « Pour que les messages soient écrits correctement. »
  *
  * Deux valeurs, parce que c'est ce que les deux écrans d'identité proposent
  * (§3.18, §3.23). La colonne en base en porte encore quatre ; le contrat les

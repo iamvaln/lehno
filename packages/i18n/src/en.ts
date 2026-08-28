@@ -13,6 +13,10 @@ export const en = {
     otp_expired: "That code has expired. Ask for a new one.",
     otp_too_many_attempts: "Too many wrong tries. That code's done — ask for a new one.",
     reason_required: "This action needs a reason — the audit log keeps it.",
+    // Le studio : on ne publie que ce qu'on a vu tourner. Le message dit le
+    // geste qui manque, pas seulement le refus — un bouton grisé sans
+    // explication se lit comme une panne.
+    trial_required: "Preview this setting first: nothing goes live until it has run once.",
     // Voir fr.ts : the request is fine, what it points at is no longer offered.
     resource_inactive: "That option is no longer offered. Reload to see what remains available.",
     insufficient_credits: "There aren't enough credits for that.",

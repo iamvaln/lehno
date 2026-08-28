@@ -62,9 +62,15 @@ export const personSchema = z
     // l'anniversaire sans pouvoir annoncer d'âge.
     birthYearKnown: z.boolean(),
     /* Le genre sert L'ACCORD GRAMMATICAL, et rien d'autre — « fier » ou
-     * « fière ». Son libellé à l'écran est « Accord du message », jamais
-     * « Genre » : ce n'est pas un signal d'orientation des cadeaux, c'est de la
-     * grammaire.
+     * « fière ». Ce n'est pas un signal d'orientation des cadeaux, c'est de la
+     * grammaire, et c'est l'aide sous le champ qui le dit : « Pour que les
+     * messages soient écrits correctement. »
+     *
+     * Le libellé, lui, est « Genre » — celui du kit. Un commentaire du kit
+     * proposait « Accord du message » ; sa copy dit « Genre », et c'est la copy
+     * qui fait foi. Un libellé n'est pas une explication : « Accord du message »
+     * décrit à quoi la réponse sert, pas ce qu'on demande, et personne ne
+     * reconnaît son propre champ derrière une périphrase.
      *
      * IL SE LIT, et il le faut : le formulaire d'identité (§3.18) porte un
      * sélecteur, donc l'ouvrir pour corriger autre chose doit montrer ce qui a
@@ -194,8 +200,9 @@ export const champsDeProche = z
      * ceux qui auraient sauté le champ — c'est-à-dire la plupart —, et
      * personne n'aurait su pourquoi les textes sonnaient bizarrement.
      *
-     * Le libellé à l'écran est « Accord du message », jamais « Genre » : ce
-     * n'est pas un signal d'orientation des cadeaux, c'est de la grammaire. */
+     * Le libellé à l'écran est « Genre », celui du kit. Ce qui le distingue
+     * d'un signal d'orientation des cadeaux n'est pas son nom mais l'aide qui
+     * l'accompagne : « Pour que les messages soient écrits correctement. » */
     gender: z.enum(PERSON_GENDERS),
     // Langue de ce que le produit écrira POUR ce proche — distincte de la langue
     // d'interface du propriétaire.

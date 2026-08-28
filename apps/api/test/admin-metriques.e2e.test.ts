@@ -244,17 +244,73 @@ describe("administration — les métriques", () => {
     expect([court.consommation.credits, long.consommation.credits]).toEqual([0, 50]);
   });
 
+  // ——— Les actions payantes ———
+
+  const action = (code: string, cout = 1) =>
+    db.prisma.premiumAction.create({ data: { code, label: code, creditCost: cout } });
+
+  const execution = (
+    userId: string, premiumActionId: string,
+    status: "pending" | "success" | "failure", ilYAJours: number,
+  ) =>
+    db.prisma.actionRun.create({
+      data: {
+        userId, premiumActionId, status, creditsSpent: 1,
+        createdAt: new Date(Date.now() - ilYAJours * JOUR),
+      },
+    });
+
+  it("ventile les exécutions par issue", async () => {
+    const { entete } = await session("admin");
+    const u = await compte(10);
+    const a = await action("message");
+    await execution(u.id, a.id, "success", 5);
+    await execution(u.id, a.id, "success", 4);
+    await execution(u.id, a.id, "failure", 3);
+    await execution(u.id, a.id, "pending", 2);
+
+    const { actions } = await lire(await metriques(entete));
+    expect(actions).toEqual([
+      { code: "message", lancements: 4, reussies: 2, echouees: 1, enAttente: 1 },
+    ]);
+  });
+
+  // Une action que personne ne lance est une information, pas une absence : on
+  // la rend à zéro plutôt que de la taire. Sans elle, « le portrait ne sert
+  // pas » et « le portrait n'existe pas » se ressemblent à l'écran.
+  it("rend à zéro une action que personne n'a lancée", async () => {
+    const { entete } = await session("admin");
+    await action("portrait");
+
+    const { actions } = await lire(await metriques(entete));
+    expect(actions).toEqual([
+      { code: "portrait", lancements: 0, reussies: 0, echouees: 0, enAttente: 0 },
+    ]);
+  });
+
+  it("ne compte pas une exécution hors de la période", async () => {
+    const { entete } = await session("admin");
+    const u = await compte(200);
+    const a = await action("message");
+    await execution(u.id, a.id, "success", 120);
+
+    const court = await lire(await metriques(entete, "30j"));
+    const long = await lire(await metriques(entete, "12m"));
+    expect([court.actions[0]?.lancements, long.actions[0]?.lancements]).toEqual([0, 1]);
+  });
+
   // ——— Ce qui manque ———
 
   // Trois des cinq contenus de §5.11 n'ont pas de source. Le serveur le DIT,
   // plutôt que de rendre des rangs vides : un zéro non expliqué se lit comme
   // une mesure, et c'est ainsi que quatre écrans ont affiché des fixtures en
   // production (écart H).
-  it("déclare les trois contenus qu'il ne sait pas encore mesurer", async () => {
+  it("déclare les deux contenus qu'il ne sait pas encore mesurer", async () => {
     const { entete } = await session("admin");
     const { manques } = await lire(await metriques(entete));
-    expect(manques.sort()).toEqual(
-      ["contributions", "issue_des_actions", "usage_par_fonctionnalite"],
-    );
+    // « issue_des_actions » n'y figure plus : `ActionRun` existe, la section le
+    // mesure désormais. C'est le mouvement que ce mécanisme prévoyait — le
+    // serveur cesse de déclarer ce qu'il sait mesurer.
+    expect(manques.sort()).toEqual(["contributions", "usage_par_fonctionnalite"]);
   });
 });

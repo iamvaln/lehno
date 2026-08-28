@@ -33,14 +33,16 @@ export const requeteMetriquesSchema = z.object({
  *
  *  - `usage_par_fonctionnalite` — le plan de marquage part vers PostHog en
  *    aveugle (`tracking.service.ts`) ; rien n'est conservé ici.
- *  - `issue_des_actions` — il faudrait `ActionRun`, absent du schéma.
  *  - `contributions` — les surfaces qui les produisent n'existent pas encore.
  */
-const MANQUES = ["usage_par_fonctionnalite", "issue_des_actions", "contributions"] as const;
+const MANQUES = ["usage_par_fonctionnalite", "contributions"] as const;
 
 type LigneCohorte = { mois: string; inscrits: number; actifsA7j: number; actifsA30j: number };
 type LigneConversion = { comptes: number; acheteurs: number; delai: number | null };
 type LignePalier = { credits: number; achats: number };
+type LigneAction = {
+  code: string; lancements: number; reussies: number; echouees: number; enAttente: number;
+};
 
 @Injectable()
 export class MetriquesService {
@@ -50,11 +52,12 @@ export class MetriquesService {
     const periode = requete.periode ?? PERIODE_DEFAUT;
     const depuis = new Date(Date.now() - JOURS[periode] * 24 * 60 * 60_000);
 
-    const [cohortes, conversion, paliers, consommation] = await Promise.all([
+    const [cohortes, conversion, paliers, consommation, actions] = await Promise.all([
       this.cohortes(),
       this.conversion(depuis),
       this.paliers(depuis),
       this.consommation(depuis),
+      this.actions(depuis),
     ]);
 
     return {
@@ -67,6 +70,7 @@ export class MetriquesService {
         parPalier: paliers,
       },
       consommation,
+      actions,
       manques: [...MANQUES],
     };
   }
@@ -156,6 +160,32 @@ export class MetriquesService {
         AND p.status = 'succeeded' AND p.direction = 'charge'
       GROUP BY cb.credits
       ORDER BY cb.credits`;
+  }
+
+  /**
+   * Les exécutions d'une action payante, et leur issue.
+   *
+   * **Toutes les actions, pas seulement celles qu'on a lancées.** Une jointure
+   * externe depuis `premium_action` : une action que personne n'emploie sort à
+   * zéro plutôt que de disparaître. Sans elle, « le portrait ne sert pas » et
+   * « le portrait n'existe pas » se ressemblent à l'écran, et ce sont deux
+   * informations opposées.
+   *
+   * Les trois issues sont comptées séparément et redonnent le total — le
+   * contrat le vérifie, parce qu'un écart se lirait comme un taux d'échec.
+   */
+  private actions(depuis: Date): Promise<LigneAction[]> {
+    return this.prisma.$queryRaw<LigneAction[]>`
+      SELECT pa.code AS "code",
+             count(ar.id)::int AS "lancements",
+             count(ar.id) FILTER (WHERE ar.status = 'success')::int AS "reussies",
+             count(ar.id) FILTER (WHERE ar.status = 'failure')::int AS "echouees",
+             count(ar.id) FILTER (WHERE ar.status = 'pending')::int AS "enAttente"
+      FROM premium_action pa
+      LEFT JOIN action_run ar
+        ON ar.premium_action_id = pa.id AND ar.created_at >= ${depuis}
+      GROUP BY pa.code
+      ORDER BY pa.code`;
   }
 
   /** Le registre porte les débits en négatif ; un volume ne se lit pas avec un

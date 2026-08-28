@@ -55,9 +55,18 @@ enum LoginMethod {
 
 model User {
   id                       String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                    String          @unique
+  /**
+   * `citext` — insensible à la casse, et c'est la migration `identity` qui le
+   * pose. Le déclarer ICI n'est pas cosmétique : sans lui, Prisma tient la
+   * colonne pour du `text` et la PROCHAINE migration engendrée la ramènerait à
+   * `text`, silencieusement. Les adresses redeviendraient sensibles à la casse,
+   * et « Valentine@… » ouvrirait un second compte à côté de « valentine@… ».
+   * Le code compte dessus explicitement — voir ProfileService : « la colonne est
+   * en citext, la comparaison est déjà insensible à la casse ».
+   */
+  email                    String          @unique @db.Citext
   emailVerified            Boolean         @default(false) @map("email_verified")
-  username                 String          @unique
+  username                 String          @unique @db.Citext
   displayName              String?         @map("display_name")
   avatarUrl                String?         @map("avatar_url")
   referralCode             String          @unique @map("referral_code") @db.VarChar(16)
@@ -235,7 +244,7 @@ model CreditTransaction {
 model OtpCode {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String?   @map("user_id") @db.Uuid
-  targetEmail String    @map("target_email")
+  targetEmail String    @map("target_email") @db.Citext
   codeHash    String    @map("code_hash")
   reason      OtpReason
   expiresAt   DateTime  @map("expires_at") @db.Timestamptz
@@ -254,7 +263,7 @@ model FederatedIdentity {
   userId         String           @map("user_id") @db.Uuid
   provider       IdentityProvider
   providerUserId String           @map("provider_user_id")
-  emailAtLink    String?          @map("email_at_link")
+  emailAtLink    String?          @map("email_at_link") @db.Citext
   createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
   lastUsedAt     DateTime?        @map("last_used_at") @db.Timestamptz
 
@@ -307,7 +316,7 @@ model DeviceSignup {
 model LoginActivity {
   id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId         String?      @map("user_id") @db.Uuid
-  attemptedEmail String?      @map("attempted_email")
+  attemptedEmail String?      @map("attempted_email") @db.Citext
   result         LoginResult
   // La voie d'entrée. Nulle sur les traces écrites avant qu'elle existe.
   method         LoginMethod?
@@ -329,7 +338,7 @@ model WaitlistSignup {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// L'adresse telle qu'elle a été saisie : c'est à elle qu'on écrit, et
   /// c'est elle que la personne reconnaîtra.
-  email          String   @unique
+  email          String   @unique @db.Citext
   /// La forme sous laquelle deux adresses désignent la même boîte — casse
   /// abaissée, étiquette après le « + » retirée, points ignorés chez Gmail
   /// (voir src/common/email.ts). C'est cette colonne qui porte l'unicité
@@ -709,7 +718,8 @@ model WishlistItem {
   currency          String?        @db.VarChar(3)
   status            WishlistStatus @default(available)
   origin            WishlistOrigin
-  /* Le REPÈRE PERSONNEL du propriétaire, pas une exposition publique.
+  /**
+   * Le REPÈRE PERSONNEL du propriétaire, pas une exposition publique.
    * La colonne s'appelait `is_public` — un nom hérité d'`OwnerWish`, où il
    * décide bien de ce qui paraît sur la liste partagée. Ici il n'y a rien à
    * partager : un souhait de proche est privé, personne d'autre ne le voit
@@ -717,7 +727,8 @@ model WishlistItem {
    * disponibilité — on en marque cinq et on n'en offre qu'un ; c'est la
    * préparation qui s'en sert pour remonter ces souhaits en tête.
    * Le laisser nommé `is_public` finissait par le faire exposer un jour, sur
-   * la foi de son seul nom. */
+   * la foi de son seul nom.
+   */
   isShortlisted     Boolean        @default(false) @map("is_shortlisted")
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
@@ -957,6 +968,8 @@ model Admin {
   refreshTokens    AdminRefreshToken[]
   featureFlags     FeatureFlag[]
   paymentDecisions PaymentStatusHistory[]
+  studioPublications StudioConfig[]
+  studioTrials       StudioTrial[]
 
   @@map("admin")
 }
@@ -1287,6 +1300,14 @@ model ActionRun {
    * jamais montré au demandeur : c'est notre marge, pas son prix.
    */
   internalCost      Decimal?        @map("internal_cost") @db.Decimal(12, 6)
+  /**
+   * La clé fournie par le client pour qu'une demande relancée REJOIGNE la
+   * génération en cours au lieu d'en créer une seconde.
+   * Nulle quand le client n'en envoie pas — et Postgres traite les nuls comme
+   * distincts, donc autant de lancements sans clé qu'on veut. C'est voulu : la
+   * protection est offerte, jamais imposée.
+   */
+  idempotencyKey    String?         @map("idempotency_key") @db.VarChar(128)
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz
 
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1296,8 +1317,16 @@ model ActionRun {
   usages           AIUsage[]
   generatedMessage GeneratedMessage?
 
+  /**
+   * LA garantie, et elle vient de la base — pas d'une lecture préalable.
+   * Entre un « cette clé existe-t-elle ? » et l'écriture, deux clics rapides
+   * passeraient tous les deux : c'est précisément la fenêtre qu'on veut
+   * fermer. On écrit, et on traduit le refus.
+   */
+  @@unique([userId, idempotencyKey])
   @@index([userId, createdAt])
   @@index([createdAt])
+  @@index([status, createdAt])
   @@map("action_run")
 }
 
@@ -1403,6 +1432,135 @@ model PromptTemplate {
   @@unique([kind, key, version])
   @@index([kind, key])
   @@map("prompt_template")
+}
+
+// ─── Le Studio du portrait ───────────────────────────────────────────────────
+
+enum StudioConfigState {
+  draft
+  published
+  superseded
+
+  @@map("studio_config_state")
+}
+
+/**
+ * Ce que le studio propose, et ce qu'on demande au modèle pour le produire.
+ *
+ * UNE LIGNE NE SE MODIFIE JAMAIS ; elle se dépasse. Chaque prévisualisation en
+ * crée une neuve en `draft` et fait passer la précédente à `superseded`.
+ *
+ * Ce n'est pas une préférence de style. Si le brouillon était mutable, un essai
+ * lancé avant une modification resterait rattaché à la même ligne après elle :
+ * la règle « rien ne se publie sans essai » serait satisfaite par un essai qui
+ * ne parle plus de rien, et on publierait sur la foi d'un résultat obtenu avec
+ * une autre consigne. Le contournement n'aurait besoin d'aucune mauvaise
+ * intention. En chaînant, chaque ligne est un état que quelqu'un a vu tourner.
+ */
+model StudioConfig {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  /**
+   * Nul tant que la ligne n'a jamais été publiée.
+   * ÉCART ASSUMÉ AVEC LE DICTIONNAIRE, qui le veut non nul et incrémenté « à
+   * chaque publication ». Avec le chaînage, une ligne naît à chaque
+   * prévisualisation — trente dans une séance de réglage. Leur donner un numéro
+   * ferait avancer la numérotation de trente entre deux versions servies, et le
+   * numéro cesserait de désigner un contenu.
+   */
+  version Int?
+
+  state    StudioConfigState @default(draft)
+  settings Json
+
+  /**
+   * L'empreinte de la partie LUE PAR LE MODÈLE, calculée à l'écriture.
+   *
+   * Elle est stockée plutôt que recalculée à la lecture : la règle de
+   * publication cherche « un essai réussi sur une configuration de même
+   * empreinte », et sans colonne cette recherche lirait toutes les lignes du
+   * studio pour en rehacher les réglages. C'est aussi ce qui la fige : une
+   * évolution de la projection ne doit pas rendre publiable, rétroactivement,
+   * un brouillon qui ne l'était pas.
+   */
+  fingerprint String @db.VarChar(64)
+
+  publishedAt        DateTime? @map("published_at") @db.Timestamptz
+  publishedByAdminId String?   @map("published_by_admin_id") @db.Uuid
+  /// « Ce que cette publication change, en une ligne. » C'est aussi le motif.
+  note               String?
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  publishedBy Admin?        @relation(fields: [publishedByAdminId], references: [id], onDelete: SetNull)
+  trials      StudioTrial[]
+
+  // Les deux unicités partielles vivent dans la migration, pas ici : Prisma ne
+  // sait pas exprimer un index unique partiel. Une seule ligne `published`, un
+  // seul `draft`, et `version` unique là où elle existe.
+  @@index([state, createdAt])
+  @@index([fingerprint])
+  @@map("studio_config")
+}
+
+/**
+ * Le proche simulé sur lequel on essaie une configuration.
+ * Il ne correspond à AUCUN compte réel : un essai sert la décision, jamais un
+ * utilisateur, et faire tourner un réglage douteux sur les notes de quelqu'un
+ * serait employer sa vie privée comme banc d'essai.
+ */
+model StudioProfile {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Ce que ce profil met à l'épreuve : « fiche pauvre, nom long, anglais ».
+  label       String   @db.VarChar(80)
+  payload     Json
+  isSensitive Boolean  @default(false) @map("is_sensitive")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  trials StudioTrial[]
+
+  @@map("studio_profile")
+}
+
+/**
+ * Un essai : une configuration, un profil, un modèle nommé, un résultat.
+ *
+ * Il porte `studioConfigId` et jamais « le studio en général » — c'est ce qui
+ * rend la règle de publication vérifiable. Un essai rattaché au studio
+ * couvrirait n'importe quel réglage, y compris celui qu'on vient d'écrire.
+ */
+model StudioTrial {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studioConfigId  String  @map("studio_config_id") @db.Uuid
+  /// Nul quand le profil a été supprimé après coup : l'essai reste, la preuve
+  /// de couverture aussi — elle porte sur l'empreinte, pas sur le profil.
+  studioProfileId String? @map("studio_profile_id") @db.Uuid
+  adminId         String? @map("admin_id") @db.Uuid
+
+  /**
+   * Le modèle DEMANDÉ, recopié. Un essai n'a pas de repli (brief §11.1) : c'est
+   * donc aussi le seul appelé. La copie survit au retrait du modèle du
+   * catalogue, comme dans `ai_usage` et pour la même raison.
+   */
+  provider String @db.VarChar(40)
+  modelKey String @map("model_key") @db.VarChar(80)
+
+  status    AIUsageStatus
+  output    Json?
+  cost      Decimal? @db.Decimal(12, 6)
+  /// Le code de l'échec, nommé. Jamais le message du fournisseur : ceux-là
+  /// recopient parfois l'invite, donc les notes du profil.
+  errorCode String?  @map("error_code") @db.VarChar(80)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  config  StudioConfig   @relation(fields: [studioConfigId], references: [id], onDelete: Cascade)
+  profile StudioProfile? @relation(fields: [studioProfileId], references: [id], onDelete: SetNull)
+  admin   Admin?         @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([studioConfigId])
+  @@index([status, createdAt])
+  @@index([createdAt])
+  @@map("studio_trial")
 }
 
 // La table ne porte que l'état. Quels drapeaux existent, leur description et

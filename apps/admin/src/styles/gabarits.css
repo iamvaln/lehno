@@ -206,3 +206,91 @@
 .admin-studio-histoire {
   margin-top: var(--space-28);
 }
+
+/* --------------------------------------------------------------------------
+   La SECTION d'une page : un titre de repère, une phrase, du contenu.
+
+   Ces trois règles vivaient dans `tableau.css` sous le nom `admin-accueil-*`.
+   Deux pages s'en servent désormais — le tableau de bord et les métriques —,
+   et le nom disait « accueil ». À ne pas confondre avec `.admin-rang`, qui est
+   un rang de FORMULAIRE : étiquette à gauche, champ à droite. La confusion a
+   déjà coûté une page rendue en deux colonnes écrasées.
+   -------------------------------------------------------------------------- */
+
+.admin-section {
+  margin-bottom: var(--space-24);
+}
+
+/* Le titre d'un rang se lit comme un surtitre, pas comme un titre de page :
+   c'est un repère de lecture entre trois blocs, et le titre de la page est
+   déjà posé au-dessus. Même recette que l'en-tête du tableau et que le libellé
+   d'une carte — c'est le même rang de voix. */
+.admin-section-titre {
+  margin-bottom: var(--space-10);
+  font-family: var(--font-body);
+  font-size: var(--text-body-xs);
+  font-weight: var(--font-body-bold);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--text-mention);
+}
+
+/* Les alertes tiennent sur une ligne — trois au plus, le plafond est dans le
+   contrat. Le retour à la ligne reste possible : une pastille porte une phrase,
+   et une phrase longue ne doit pas déborder du cadre sur un écran étroit. */
+
+/* auto-fit à 170 px : le nombre de colonnes suit la largeur du poste de travail
+   plutôt qu'un palier décidé d'avance. En deçà de 170 px, un chiffre et son
+   libellé en capitales ne tiennent plus côte à côte. */
+.admin-section-cartes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-12);
+}
+
+/* La phrase sous le titre : elle explique ce que le rang montre, et pourquoi.
+   Discrète — c'est le contenu qu'on vient lire, pas son mode d'emploi. */
+.admin-section-sous {
+  margin-bottom: var(--space-12);
+  max-width: 64ch;
+  font-size: var(--text-body-s);
+  color: var(--text-mention);
+}
+
+/* Ce qu'une page ne sait pas encore mesurer, nommé plutôt que rendu à zéro.
+   Le libellé et sa raison sont deux blocs : côte à côte, ils se colleraient —
+   « Usage par fonctionnalitéLe marquage part vers… » — et c'est arrivé. */
+.admin-manques {
+  display: grid;
+  gap: var(--space-12);
+  padding-left: var(--space-16);
+  max-width: 72ch;
+}
+
+.admin-manques li > strong { display: block; }
+
+.admin-manques li > span {
+  display: block;
+  font-size: var(--text-body-s);
+  color: var(--text-mention);
+}
+
+/* --------------------------------------------------------------------------
+   L'arrêt pour intervention, en tête des paramètres. Séparé du reste par un
+   filet : ce n'est pas un réglage parmi les réglages, c'est un interrupteur.
+   -------------------------------------------------------------------------- */
+
+.admin-arret {
+  margin-bottom: var(--space-24);
+  padding-bottom: var(--space-20);
+  border-bottom: 1px solid var(--border-subtle, currentColor);
+}
+
+.admin-arret-etat { margin-bottom: var(--space-12); }
+
+.admin-arret-gestes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-12);
+}

@@ -235,11 +235,21 @@ export function App(): ReactNode {
   // Appelé sans condition, comme tout hook : le placer derrière le « if » de la
   // section changerait l'ordre des hooks d'un rendu à l'autre. Il ne charge que
   // lorsque la section le demande — c'est la clé qui le décide.
+  /* `connecte` est dans les dépendances, et ce n'est pas décoratif.
+   *
+   * Le tableau de bord est la section par défaut : sa ressource partait donc au
+   * MONTAGE, avant toute connexion, et recevait 401. Comme `section` ne change
+   * pas quand on se connecte, elle ne repartait jamais — l'écran d'accueil
+   * affichait « le chargement n'a pas abouti » à quiconque venait d'entrer, et
+   * il fallait cliquer « Réessayer » pour voir son propre tableau de bord.
+   *
+   * La garde évite aussi l'appel inutile : on n'interroge pas une API qui va
+   * refuser, et le 401 disparaît du journal du serveur. */
   const etatTableau = useRessource(
-    () => (section === "tableau"
+    () => (section === "tableau" && connecte
       ? api.appeler("/admin/dashboard", { schema: dashboardSchema })
       : Promise.resolve(null)),
-    [section],
+    [section, connecte],
   );
 
   // La requête courante de la liste, et la pile des curseurs déjà franchis.
