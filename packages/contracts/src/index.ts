@@ -19,3 +19,4 @@ export * from "./me-home.js";
 export * from "./me-security.js";
 export * from "./me-studio.js";
 export * from "./me-wishes.js";
+export * from "./me-account.js";

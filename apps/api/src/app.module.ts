@@ -53,7 +53,15 @@ import { NotificationController } from "./me/notification.controller.js";
 import { NotificationService } from "./me/notification.service.js";
 import { NotificationPreferencesService } from "./me/notification-preferences.service.js";
 import { SecurityController } from "./me/security.controller.js";
+import { AccountController } from "./me/account.controller.js";
+import { DeviceController } from "./me/device.controller.js";
+import { DataExportController } from "./me/data-export.controller.js";
+import { SupportController } from "./me/support.controller.js";
 import { SecurityService } from "./me/security.service.js";
+import { AccountService } from "./me/account.service.js";
+import { DeviceService } from "./me/device.service.js";
+import { DataExportService } from "./me/data-export.service.js";
+import { SupportService } from "./me/support.service.js";
 import { TenantRepository } from "./tenancy/tenant.repository.js";
 import { ConfigController, ConfigService } from "./public/config.controller.js";
 import { LegalController, LegalService } from "./public/legal.controller.js";
@@ -107,6 +115,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
   controllers: [
     AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, NotificationController, ConfigController, LegalController,
     AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, SecurityController, ConfigController, LegalController,
+    AccountController, DeviceController, DataExportController, SupportController,
     OccurrenceWishesController, WishController,
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
@@ -225,6 +234,10 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     NotificationPreferencesService,
     NotificationService,
     SecurityService,
+    AccountService,
+    DeviceService,
+    DataExportService,
+    SupportService,
     ConfigService,
     LegalService,
     WaitlistService,

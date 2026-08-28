@@ -29,6 +29,13 @@ enum DigestFrequency {
 enum OtpReason {
   email_verification
   login
+  // La confirmation d'une suppression de compte (spec mobile §3.24, troisième
+  // temps). Une RAISON À PART, et pas `login` réemployé : les codes s'annulent
+  // entre eux par (adresse, raison) dans OtpService.issue, donc partager la
+  // raison ferait qu'ouvrir l'écran de suppression invaliderait le code de
+  // connexion qu'on venait de demander — et, plus grave, qu'un code obtenu
+  // pour se connecter suffirait à effacer le compte.
+  account_deletion
 }
 
 enum IdentityProvider {
