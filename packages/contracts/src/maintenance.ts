@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { motifSchema } from "./admin.js";
 
 /* L'arrêt pour intervention.
  *
@@ -45,3 +46,33 @@ export type MaintenanceStatus = z.infer<typeof maintenanceStatusSchema>;
 export const PARAM_MAINTENANCE = "maintenance_mode";
 export const PARAM_MAINTENANCE_RETRY = "maintenance_retry_after_seconds";
 export const PARAM_MAINTENANCE_UNTIL = "maintenance_until";
+
+/* ——— Le déclenchement, côté administration ———————————————————————
+ *
+ * L'administrateur annonce une **durée**, pas une heure. Il sait « il me faut
+ * deux heures » ; il ne sait pas « 21 h 47 UTC », et le lui faire calculer
+ * produirait des heures de retour fausses ou passées.
+ *
+ * Le serveur en déduit `maintenance_until`. C'est aussi ce qui rend
+ * « prolonger » sûr : un second appel repart de MAINTENANT, jamais de l'heure
+ * déjà annoncée. Prolonger de trente minutes quand l'échéance est dépassée
+ * doit donner trente minutes, pas une heure déjà passée.
+ */
+export const arretSchema = z.object({
+  /** Couper le service pour tout le monde est une action sensible : §6 exige un
+   *  motif, et le journal d'audit ne dirait rien sans lui. C'est aussi la
+   *  première chose qu'on cherche quand on découvre le service fermé. */
+  reason: motifSchema,
+  /** Nulle quand on ne sait pas : l'écran d'attente dit alors qu'une mise à
+   *  jour est en cours, sans promettre d'heure. « Pas de "bientôt", pas
+   *  d'estimation inventée. » Bornée à une journée — au-delà, ce n'est plus
+   *  une intervention, c'est une fermeture, et elle se décide autrement. */
+  dureeMinutes: z.number().int().positive().max(1440).nullable(),
+}).strict();
+
+export type Arret = z.infer<typeof arretSchema>;
+
+/** Lever un arrêt. Le motif seul — il n'y a rien d'autre à décider. */
+export const leverSchema = z.object({ reason: motifSchema }).strict();
+
+export type Lever = z.infer<typeof leverSchema>;
