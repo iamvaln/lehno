@@ -1448,6 +1448,14 @@ model ActionRun {
    * jamais montré au demandeur : c'est notre marge, pas son prix.
    */
   internalCost      Decimal?        @map("internal_cost") @db.Decimal(12, 6)
+  /**
+   * La clé fournie par le client pour qu'une demande relancée REJOIGNE la
+   * génération en cours au lieu d'en créer une seconde.
+   * Nulle quand le client n'en envoie pas — et Postgres traite les nuls comme
+   * distincts, donc autant de lancements sans clé qu'on veut. C'est voulu : la
+   * protection est offerte, jamais imposée.
+   */
+  idempotencyKey    String?         @map("idempotency_key") @db.VarChar(128)
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz
 
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1457,8 +1465,16 @@ model ActionRun {
   usages           AIUsage[]
   generatedMessage GeneratedMessage?
 
+  /**
+   * LA garantie, et elle vient de la base — pas d'une lecture préalable.
+   * Entre un « cette clé existe-t-elle ? » et l'écriture, deux clics rapides
+   * passeraient tous les deux : c'est précisément la fenêtre qu'on veut
+   * fermer. On écrit, et on traduit le refus.
+   */
+  @@unique([userId, idempotencyKey])
   @@index([userId, createdAt])
   @@index([createdAt])
+  @@index([status, createdAt])
   @@map("action_run")
 }
 

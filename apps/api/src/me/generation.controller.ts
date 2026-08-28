@@ -59,6 +59,9 @@ export class GenerationController {
       {
         ...(corps.language === undefined ? {} : { langue: corps.language }),
         ...(corps.briefText === undefined ? {} : { texteLibre: corps.briefText }),
+        // « Une même demande relancée rejoint la génération en cours plutôt que
+        // d'en créer une seconde, et ne débite qu'une fois » (§5.4).
+        ...(corps.idempotencyKey === undefined ? {} : { cle: corps.idempotencyKey }),
       },
     );
     return this.rendre(await this.generation.lire(req.userId, ligne.actionRunId) as LigneExecution);
