@@ -92,6 +92,18 @@ import { ProgrammationService } from "./me/programmation.service.js";
 import { RelancesService } from "./me/relances.service.js";
 import { EnvoiService } from "./me/envoi.service.js";
 import { OrdonnanceurService } from "./me/ordonnanceur.service.js";
+import {
+  WallController, WishLinkController, CollectionLinksController,
+  SubmissionsController, ReceivedWishesController,
+} from "./mur/mur.controller.js";
+import {
+  PublicWallController, PublicCollectController, PublicWishesController,
+} from "./mur/public-mur.controller.js";
+import { MurService } from "./mur/mur.service.js";
+import { CollecteService } from "./mur/collecte.service.js";
+import { SubmissionService } from "./mur/submission.service.js";
+import { VoeuxService } from "./mur/voeux.service.js";
+import { SurfacePubliqueService } from "./mur/jetons.js";
 import { TrackingService } from "./tracking/tracking.service.js";
 import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
 import { PostHogAdapter } from "./tracking/posthog.adapter.js";
@@ -111,6 +123,8 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
+    WallController, WishLinkController, CollectionLinksController, SubmissionsController, ReceivedWishesController,
+    PublicWallController, PublicCollectController, PublicWishesController,
     AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, AdminMaintenanceController, StudioController, MeController,
   ],
   providers: [
@@ -143,6 +157,12 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
       },
     },
     TrackingService,
+    // Le Mur et la collecte (§5.3, §5.5, §7).
+    SurfacePubliqueService,
+    MurService,
+    CollecteService,
+    SubmissionService,
+    VoeuxService,
     // useFactory : la valeur se lit à l'INSTANCIATION du provider, pas à
     // l'évaluation du décorateur (qui n'a lieu qu'une fois, au chargement du
     // module). Sans ça, une valeur d'environnement posée ou retirée après
@@ -194,6 +214,17 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     // affichée ailleurs sur le site (voir apps/web/messages). Une variable
     // d'environnement, quand elle est posée, la remplace.
     { provide: "CONTACT_TO_EMAIL", useFactory: () => process.env.CONTACT_TO_EMAIL ?? "hello@lehno.app" },
+    /* L'adresse du site public, celle ou vivent les Murs et les formulaires de
+       collecte. Ce n'est pas un secret — le domaine s'affiche sur chaque
+       lien — donc un repli documente plutot qu'un refus de demarrer, comme
+       CONTACT_TO_EMAIL. Elle vit ici et non dans le code des services : le
+       jour ou l'on sert un domaine de recette, un seul endroit change.
+       Sans barre oblique finale : les chemins la posent eux-memes, et
+       « https://lehno.app//valentine » n'est pas la meme adresse. */
+    {
+      provide: "PUBLIC_WEB_URL",
+      useFactory: () => (process.env.PUBLIC_WEB_URL ?? "https://lehno.app").replace(/\/+$/, ""),
+    },
     OtpService,
     TokenService,
     RateLimitService,

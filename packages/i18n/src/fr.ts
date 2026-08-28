@@ -30,6 +30,13 @@ export const fr = {
     waitlist_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
     contact_invalid: "Ce formulaire n'est pas valide. Vérifiez les champs et réessayez.",
     contact_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
+    // On DIT que le lien a existé : « page introuvable » ferait croire au
+    // visiteur qu'il a mal recopié une adresse qu'on lui a pourtant envoyée.
+    link_revoked: "Ce lien n'est plus actif.",
+    wish_window_closed: "Les vœux ne sont pas ouverts en ce moment.",
+    // Même formule que les deux autres refus de robot : elle ne dit pas
+    // lequel des filtres a mordu.
+    collect_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
     maintenance: "Lehno est momentanément fermé pour une intervention. Réessayez dans un instant.",
     // Pas « une erreur est survenue » : rien n'a échoué de notre côté, et le
     // dire enverrait chercher une faute qu'on n'a pas commise. §4.5 : ce qui

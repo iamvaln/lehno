@@ -84,6 +84,18 @@ export const submissionDecisionSchema = z.object({
   // demander le sort de chaque souhait reviendrait à faire trancher ce qu'on
   // vient d'écarter.
   reject: z.literal(true).optional(),
+  /* LA FICHE OÙ RANGER, sur une contribution venue d'un lien PUBLIC.
+   *
+   * Un lien public ne vise personne : à la validation, le propriétaire dit où
+   * la contribution atterrit. Absent, une fiche neuve se crée depuis le nom du
+   * répondant — c'est le cas courant, quelqu'un qu'on ne connaissait pas
+   * encore. Fourni, elle rejoint une fiche existante : « on se connaît d'où »
+   * a suffi à reconnaître quelqu'un qu'on avait déjà noté, et sans ce champ on
+   * se retrouverait avec deux fiches pour la même personne.
+   *
+   * Sans objet sur un lien NOMINATIF, qui porte déjà sa fiche : l'accepter là
+   * laisserait détourner une contribution vers la fiche d'un autre. */
+  personId: z.string().uuid().optional(),
   keepBirthDate: z.boolean().optional(),
   keepPersonalNote: z.boolean().optional(),
   wishes: z.array(z.object({
@@ -94,7 +106,7 @@ export const submissionDecisionSchema = z.object({
   }).strict()).optional(),
 }).strict().superRefine((v, ctx) => {
   if (v.reject) {
-    if (v.keepBirthDate !== undefined || v.keepPersonalNote !== undefined || v.wishes) {
+    if (v.keepBirthDate !== undefined || v.keepPersonalNote !== undefined || v.wishes || v.personId) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "un rejet global ne porte aucune répartition" });
     }
     return;
