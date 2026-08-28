@@ -53,7 +53,7 @@ describe("les échéances", () => {
   });
 
   it("rend les échéances avec le nom du proche", async () => {
-    const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+    const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
     await events.create(awa, { personId: p.id, kind: "birthday" });
 
     const [e] = await occurrences.list(awa, {});
@@ -64,7 +64,7 @@ describe("les échéances", () => {
   });
 
   it("ne rend pas les échéances d'un autre compte", async () => {
-    const p = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
+    const p = await persons.create(bila, { gender: "female", displayName: "Celarine", birthDate: "1990-03-14" });
     await events.create(bila, { personId: p.id, kind: "birthday" });
     expect(await occurrences.list(awa, {})).toEqual([]);
   });
@@ -73,8 +73,8 @@ describe("les échéances", () => {
   // le mobile tire tout et trie chez lui — et le plafond couperait AVANT le
   // tri, donc un proche discret disparaîtrait de sa propre fiche.
   it("filtre les échéances sur un proche", async () => {
-    const valery = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
-    const quentin = await persons.create(awa, { displayName: "Quentin", birthDate: "1988-07-02" });
+    const valery = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
+    const quentin = await persons.create(awa, { gender: "female", displayName: "Quentin", birthDate: "1988-07-02" });
     await events.create(awa, { personId: valery.id, kind: "birthday" });
     await events.create(awa, { personId: quentin.id, kind: "birthday" });
 
@@ -86,7 +86,7 @@ describe("les échéances", () => {
   // Le filtre ne doit pas devenir un oracle : une liste vide dirait « ce proche
   // existe et n'a rien », alors qu'il est à quelqu'un d'autre.
   it("rend 404 quand le proche filtré n'est pas au demandeur", async () => {
-    const celarine = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
+    const celarine = await persons.create(bila, { gender: "female", displayName: "Celarine", birthDate: "1990-03-14" });
     await expect(occurrences.list(awa, { personId: celarine.id })).rejects.toMatchObject({
       code: "not_found",
     });
@@ -105,7 +105,7 @@ describe("les échéances", () => {
      refuse une date passée à la création. Seul un appel direct au service,
      comme ici, pouvait la produire. */
   it("respecte la fenêtre et le plafond", async () => {
-    const p = await persons.create(awa, { displayName: "Valery" });
+    const p = await persons.create(awa, { gender: "female", displayName: "Valery" });
     for (const dans of [30, 60, 90]) {
       const jour = new Date(Date.now() + dans * 86_400_000).toISOString().slice(0, 10);
       await events.create(awa, {
@@ -124,7 +124,7 @@ describe("les échéances", () => {
     // Une naissance quelconque : ce test porte sur le décompte, pas sur l'âge —
     // mais un anniversaire ne s'ouvre qu'à condition que le proche en porte une
     // (tâche 2).
-    const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+    const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
     const e = await events.create(awa, { personId: p.id, kind: "birthday" });
     const hier = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
     await db.prisma.eventOccurrence.updateMany({
@@ -139,7 +139,7 @@ describe("les échéances", () => {
   // pas connue. Nullable plutôt qu'absent : l'écran est OBLIGÉ de traiter le
   // cas au lieu de l'oublier et d'afficher « NaN ans ».
   it("rend l'âge, et null quand l'année n'est pas connue", async () => {
-    const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+    const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
     await events.create(awa, { personId: p.id, kind: "birthday" });
     const [avec] = await occurrences.list(awa, {});
     expect(avec?.age).toBe(Number(avec?.occurrenceDate.slice(0, 4)) - 1990);
@@ -147,8 +147,7 @@ describe("les échéances", () => {
     // L'année de naissance peut être inconnue, mais la naissance elle-même
     // reste requise pour ouvrir un anniversaire (tâche 2) : un jour et un mois
     // portés par une année de convention, signalée non fiable.
-    const q = await persons.create(awa, {
-      displayName: "Inconnu", birthDate: "1900-03-14", birthYearKnown: false,
+    const q = await persons.create(awa, { gender: "female", displayName: "Inconnu", birthDate: "1900-03-14", birthYearKnown: false,
     });
     await events.create(awa, {
       personId: q.id, kind: "birthday",
@@ -159,7 +158,7 @@ describe("les échéances", () => {
 
   describe("le statut se dérive de la date", () => {
     const poser = async (dans: number): Promise<string> => {
-      const p = await persons.create(awa, { displayName: `P${dans}`, birthDate: "1990-03-14" });
+      const p = await persons.create(awa, { gender: "female", displayName: `P${dans}`, birthDate: "1990-03-14" });
       const e = await events.create(awa, { personId: p.id, kind: "birthday" });
       const jour = new Date(Date.now() + dans * 86_400_000).toISOString().slice(0, 10);
       await db.prisma.eventOccurrence.updateMany({
@@ -189,14 +188,14 @@ describe("les échéances", () => {
   });
 
   it("ne rend pas le détail d'une échéance d'un autre compte", async () => {
-    const p = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
+    const p = await persons.create(bila, { gender: "female", displayName: "Celarine", birthDate: "1990-03-14" });
     const e = await events.create(bila, { personId: p.id, kind: "birthday" });
     const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
     await expect(occurrences.get(awa, o.id)).rejects.toMatchObject({ code: "not_found" });
   });
 
   it("rend le détail d'une échéance avec le nom du proche", async () => {
-    const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+    const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
     const e = await events.create(awa, { personId: p.id, kind: "birthday" });
     const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
     const detail = await occurrences.get(awa, o.id);
@@ -206,7 +205,7 @@ describe("les échéances", () => {
 
   describe("les notes de circonstance", () => {
     it("écrit une note de circonstance rattachée à l'occasion", async () => {
-      const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
       const e = await events.create(awa, { personId: p.id, kind: "birthday" });
       const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
 
@@ -220,7 +219,7 @@ describe("les échéances", () => {
     // remonterait dans les durables ferait ressurgir « il a parlé d'un moulin »
     // trois ans plus tard, hors de son contexte.
     it("ne mêle pas les durables et les notes de circonstance", async () => {
-      const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
       const e = await events.create(awa, { personId: p.id, kind: "birthday" });
       const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
 
@@ -235,7 +234,7 @@ describe("les échéances", () => {
     });
 
     it("n'écrit pas sur l'occasion d'un autre compte", async () => {
-      const p = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
+      const p = await persons.create(bila, { gender: "female", displayName: "Celarine", birthDate: "1990-03-14" });
       const e = await events.create(bila, { personId: p.id, kind: "birthday" });
       const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
 
@@ -293,7 +292,7 @@ describe("les échéances", () => {
     });
 
     it("liste ses échéances via HTTP, avec limit en chaîne", async () => {
-      const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
       await events.create(awa, { personId: p.id, kind: "birthday" });
       const r = await fetch(`${baseUrl}/v1/me/occurrences?limit=1`, {
         headers: { authorization: `Bearer ${jeton(awa)}` },
@@ -305,7 +304,7 @@ describe("les échéances", () => {
     });
 
     it("lit le détail d'une échéance via HTTP", async () => {
-      const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
       const e = await events.create(awa, { personId: p.id, kind: "birthday" });
       const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
       const r = await fetch(`${baseUrl}/v1/me/occurrences/${o.id}`, {
@@ -317,7 +316,7 @@ describe("les échéances", () => {
     });
 
     it("rend 404 sur le détail d'une échéance d'un autre compte", async () => {
-      const p = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
+      const p = await persons.create(bila, { gender: "female", displayName: "Celarine", birthDate: "1990-03-14" });
       const e = await events.create(bila, { personId: p.id, kind: "birthday" });
       const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
       const r = await fetch(`${baseUrl}/v1/me/occurrences/${o.id}`, {
@@ -341,7 +340,7 @@ describe("les échéances", () => {
     });
 
     it("écrit une note de circonstance via HTTP et rend 201", async () => {
-      const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
       const e = await events.create(awa, { personId: p.id, kind: "birthday" });
       const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
 
@@ -356,7 +355,7 @@ describe("les échéances", () => {
     });
 
     it("liste les notes d'une occasion via HTTP", async () => {
-      const p = await persons.create(awa, { displayName: "Valery", birthDate: "1990-03-14" });
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
       const e = await events.create(awa, { personId: p.id, kind: "birthday" });
       const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
       await notes.createForOccurrence(awa, o.id, { content: "lui offrir un moulin" });
@@ -370,7 +369,7 @@ describe("les échéances", () => {
     });
 
     it("rend 404 sur les notes de l'occasion d'un autre compte", async () => {
-      const p = await persons.create(bila, { displayName: "Celarine", birthDate: "1990-03-14" });
+      const p = await persons.create(bila, { gender: "female", displayName: "Celarine", birthDate: "1990-03-14" });
       const e = await events.create(bila, { personId: p.id, kind: "birthday" });
       const o = await db.prisma.eventOccurrence.findFirstOrThrow({ where: { eventId: e.id } });
 

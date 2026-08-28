@@ -3935,6 +3935,14 @@
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 23
+                    },
+                    "gender": {
+                      "type": "string",
+                      "enum": [
+                        "female",
+                        "male"
+                      ],
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -3947,7 +3955,8 @@
                     "uiLanguage",
                     "theme",
                     "timezone",
-                    "sendHour"
+                    "sendHour",
+                    "gender"
                   ],
                   "additionalProperties": false
                 }
@@ -4181,6 +4190,14 @@
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 23
+                  },
+                  "gender": {
+                    "type": "string",
+                    "enum": [
+                      "female",
+                      "male"
+                    ],
+                    "nullable": true
                   }
                 },
                 "additionalProperties": false
@@ -4246,6 +4263,14 @@
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 23
+                    },
+                    "gender": {
+                      "type": "string",
+                      "enum": [
+                        "female",
+                        "male"
+                      ],
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -4258,7 +4283,8 @@
                     "uiLanguage",
                     "theme",
                     "timezone",
-                    "sendHour"
+                    "sendHour",
+                    "gender"
                   ],
                   "additionalProperties": false
                 }
@@ -4821,6 +4847,14 @@
                           "birthYearKnown": {
                             "type": "boolean"
                           },
+                          "gender": {
+                            "type": "string",
+                            "enum": [
+                              "female",
+                              "male"
+                            ],
+                            "nullable": true
+                          },
                           "city": {
                             "type": "string",
                             "nullable": true
@@ -4905,6 +4939,7 @@
                           "relationHint",
                           "birthDate",
                           "birthYearKnown",
+                          "gender",
                           "city",
                           "country",
                           "register",
@@ -5158,6 +5193,13 @@
                       "formel"
                     ]
                   },
+                  "gender": {
+                    "type": "string",
+                    "enum": [
+                      "female",
+                      "male"
+                    ]
+                  },
                   "language": {
                     "type": "string",
                     "enum": [
@@ -5197,7 +5239,8 @@
                   }
                 },
                 "required": [
-                  "displayName"
+                  "displayName",
+                  "gender"
                 ],
                 "additionalProperties": false
               }
@@ -5253,6 +5296,14 @@
                     },
                     "birthYearKnown": {
                       "type": "boolean"
+                    },
+                    "gender": {
+                      "type": "string",
+                      "enum": [
+                        "female",
+                        "male"
+                      ],
+                      "nullable": true
                     },
                     "city": {
                       "type": "string",
@@ -5338,6 +5389,7 @@
                     "relationHint",
                     "birthDate",
                     "birthYearKnown",
+                    "gender",
                     "city",
                     "country",
                     "register",
@@ -5601,6 +5653,14 @@
                     "birthYearKnown": {
                       "type": "boolean"
                     },
+                    "gender": {
+                      "type": "string",
+                      "enum": [
+                        "female",
+                        "male"
+                      ],
+                      "nullable": true
+                    },
                     "city": {
                       "type": "string",
                       "nullable": true
@@ -5685,6 +5745,7 @@
                     "relationHint",
                     "birthDate",
                     "birthYearKnown",
+                    "gender",
                     "city",
                     "country",
                     "register",
@@ -5937,6 +5998,13 @@
                       "formel"
                     ]
                   },
+                  "gender": {
+                    "type": "string",
+                    "enum": [
+                      "female",
+                      "male"
+                    ]
+                  },
                   "language": {
                     "type": "string",
                     "enum": [
@@ -6030,6 +6098,14 @@
                     "birthYearKnown": {
                       "type": "boolean"
                     },
+                    "gender": {
+                      "type": "string",
+                      "enum": [
+                        "female",
+                        "male"
+                      ],
+                      "nullable": true
+                    },
                     "city": {
                       "type": "string",
                       "nullable": true
@@ -6114,6 +6190,7 @@
                     "relationHint",
                     "birthDate",
                     "birthYearKnown",
+                    "gender",
                     "city",
                     "country",
                     "register",
