@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  CONFIGURABLE_NOTIFICATION_TYPES, notificationPreferencesSchema, notificationSchema,
+  CONFIGURABLE_NOTIFICATION_TYPES, markNotificationsReadSchema,
+  notificationPreferencesSchema, notificationSchema, notificationsPageSchema,
   updateNotificationPreferencesSchema,
 } from "./me-notifications.js";
 
@@ -13,8 +14,10 @@ describe("le centre de notifications", () => {
     titleKey: "notif.rappel.titre",
     bodyParams: { prenom: "Awa", jours: 3 },
     targetRoute: "/occasion/3f2504e0-4f89-11d3-9a0c-0305e82c3302",
+    personId: null,
+    eventOccurrenceId: "3f2504e0-4f89-11d3-9a0c-0305e82c3302",
     readAt: null,
-    createdAt: "2026-08-25T03:00:00.000Z",
+    notifiedAt: "2026-08-25T03:00:00.000Z",
   };
 
   /* « Le serveur transporte des clés, jamais des phrases — la langue
@@ -36,6 +39,63 @@ describe("le centre de notifications", () => {
 
   it("refuse une phrase là où une clé est attendue", () => {
     expect(() => notificationSchema.parse({ ...NOTIFICATION, title: "Rappel" })).toThrow();
+  });
+
+  /* La cible brute voyage AVEC la route. Sans elle, un client qui navigue par
+     écran typé découperait `/occasion/<uuid>` pour retrouver l'identifiant :
+     le jour où la route change, il ouvre des écrans vides, et rien ne tombe
+     côté serveur puisque le serveur reste cohérent avec lui-même. */
+  it("porte la cible brute, pas seulement l'URL où la lire", () => {
+    const lu = notificationSchema.parse(NOTIFICATION);
+    expect(lu.eventOccurrenceId).toBe("3f2504e0-4f89-11d3-9a0c-0305e82c3302");
+  });
+
+  /* `created_at` n'est PAS la date de l'entrée : la programmation écrit les
+     rappels jusqu'à un mois avant leur échéance. Le contrat n'expose donc
+     qu'une date, celle où l'entrée devient visible — deux obligeraient le
+     client à porter la règle qui choisit entre elles. */
+  it("ne rend qu'une date, et c'est celle de l'échéance", () => {
+    expect(() => notificationSchema.parse({ ...NOTIFICATION, createdAt: "2026-07-01T00:00:00.000Z" }))
+      .toThrow();
+  });
+
+  /* Le centre grandit par le haut : un `offset` ferait réapparaître la
+     dernière entrée d'une page en tête de la suivante, et en escamoterait une
+     autre. Le curseur désigne une ligne, pas un rang. */
+  it("pagine par curseur, et rend le décompte non lu avec la page", () => {
+    const page = notificationsPageSchema.parse({
+      items: [NOTIFICATION], nextCursor: null, unreadCount: 1,
+    });
+    expect(page.nextCursor).toBeNull();
+    expect(page.unreadCount).toBe(1);
+    expect(notificationsPageSchema.safeParse({
+      items: [], nextCursor: null, unreadCount: 0, offset: 20,
+    }).success).toBe(false);
+  });
+});
+
+describe("marquer comme lu", () => {
+  const ID = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
+
+  /* Le corps vide est le piège : un `{}` qui vaudrait « tout » ferait qu'un
+     client dont la sélection est restée vide éteindrait la pastille de
+     quelqu'un qui n'a rien lu. « Tout » se tape, il ne s'obtient pas par
+     omission. */
+  it("refuse un corps qui ne dit pas ce qu'il marque", () => {
+    expect(markNotificationsReadSchema.safeParse({}).success).toBe(false);
+    expect(markNotificationsReadSchema.safeParse({ ids: [] }).success).toBe(false);
+    expect(markNotificationsReadSchema.safeParse({ all: false }).success).toBe(false);
+  });
+
+  it("accepte une liste d'identifiants, ou tout", () => {
+    expect(markNotificationsReadSchema.safeParse({ ids: [ID] }).success).toBe(true);
+    expect(markNotificationsReadSchema.safeParse({ all: true }).success).toBe(true);
+  });
+
+  // Les deux formes s'excluent : un corps qui dit les deux ne dit rien de
+  // clair, et le serveur devrait deviner laquelle l'emporte.
+  it("refuse les deux formes à la fois", () => {
+    expect(markNotificationsReadSchema.safeParse({ all: true, ids: [ID] }).success).toBe(false);
   });
 });
 
