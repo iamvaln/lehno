@@ -442,21 +442,24 @@ describe("la génération d'un message", () => {
 
     /* LA garde que le passage séquentiel ne prouve pas.
      *
-     * Deux passages l'un après l'autre ne se croisent jamais : le second ne
-     * trouve plus rien. Deux passages SIMULTANÉS, si — et c'est le cas réel,
-     * puisque le rattrapage de nuit peut tomber pendant qu'un lancement échoue
-     * et rembourse de son côté.
+     * Le cas réel : le rattrapage de nuit relève une exécution en attente
+     * pendant qu'un lancement échoue et rembourse de son côté. Les deux
+     * concluent la même exécution.
      *
-     * Sans la condition sur `pending` dans le remboursement, les deux
-     * rendraient — et le solde deviendrait faux À LA HAUSSE, ce que personne
-     * ne signale jamais. */
-    it("ne rend pas deux fois quand deux passages se croisent", async () => {
+     * Ce cas l'appelle DEUX FOIS directement plutôt que de lancer deux passes
+     * en parallèle : la course ne se produit pas de façon fiable — mesurée, une
+     * fois sur deux —, et un test qui ne mord qu'une fois sur deux passera en
+     * intégration continue en cachant la régression.
+     *
+     * Sans la condition sur `pending`, les deux rendraient, et le solde
+     * deviendrait faux À LA HAUSSE — ce que personne ne signale jamais. */
+    it("ne rend pas deux fois le crédit d'une même exécution", async () => {
       await crediter(5);
-      await abandonner(120);
+      const id = await abandonner(120);
+      const s = fabrique({});
 
-      const un = fabrique({});
-      const deux = fabrique({});
-      await Promise.all([un.reconcilierLesEnCours(), deux.reconcilierLesEnCours()]);
+      await s.rendreLeCredit(id, awa, "abandoned");
+      await s.rendreLeCredit(id, awa, "abandoned");
 
       expect(await solde()).toBe(5);
       expect(await db.prisma.creditTransaction.count({

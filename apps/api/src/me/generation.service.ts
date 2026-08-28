@@ -323,7 +323,13 @@ export class GenerationService {
    * Un mouvement NOUVEAU, jamais la suppression du débit : le registre est
    * l'historique, et effacer une ligne effacerait la preuve qu'on a débité puis
    * rendu. Quelqu'un qui relit son compte doit voir les deux. */
-  private async rendreLeCredit(actionRunId: string, userId: string, code: string): Promise<void> {
+  /* Exposé plutôt que privé, comme `OrdonnanceurService.executer` et pour la
+     même raison : c'est ce qui rend la garde éprouvable sans dépendre d'une
+     course. Le cas qu'elle protège — deux passes qui concluent la même
+     exécution — ne se provoque pas de façon fiable en concurrence, et un test
+     qui ne mord qu'une fois sur deux passera en intégration continue en
+     cachant la régression. */
+  async rendreLeCredit(actionRunId: string, userId: string, code: string): Promise<void> {
     try {
       await this.prisma.$transaction(async (tx) => {
         const execution = await tx.actionRun.updateMany({
