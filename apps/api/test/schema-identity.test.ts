@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 
 describe("schéma — identité", () => {
@@ -135,6 +136,39 @@ describe("schéma — identité", () => {
     ];
     for (const [table, column] of inetColumns) {
       expect(await columnType(table, column), `${table}.${column} devrait être inet`).toBe("inet");
+    }
+  });
+
+  /* LA GARDE QUI MANQUAIT, et elle ne porte pas sur la base : elle porte sur ce
+   * que le SCHÉMA déclare.
+   *
+   * Les migrations posent ces colonnes en `citext` — insensible à la casse — et
+   * le test ci-dessus le vérifie. Mais si `schema.prisma` les déclare en
+   * `String` nu, Prisma les tient pour du `text`, et la PROCHAINE migration
+   * engendrée les ramène à `text` **silencieusement**. Les adresses
+   * redeviennent alors sensibles à la casse, et « Valentine@… » ouvre un second
+   * compte à côté de « valentine@… ».
+   *
+   * Le cas d'à côté n'aurait rien vu : il tourne sur une base montée par les
+   * migrations, donc déjà en citext. C'est l'écart entre les deux qui est le
+   * danger, et c'est lui qu'on éprouve ici. */
+  it("le schéma déclare citext partout où les migrations le posent", () => {
+    const schema = readFileSync(new URL("../../../prisma/schema.prisma", import.meta.url), "utf8");
+
+    const attendus: [string, string][] = [
+      ["User", "email"], ["User", "username"],
+      ["OtpCode", "targetEmail"], ["FederatedIdentity", "emailAtLink"],
+      ["LoginActivity", "attemptedEmail"], ["WaitlistSignup", "email"],
+      ["Admin", "email"],
+    ];
+
+    for (const [modele, champ] of attendus) {
+      const debut = schema.indexOf(`model ${modele} {`);
+      expect(debut, `modèle ${modele} introuvable`).toBeGreaterThan(-1);
+      const bloc = schema.slice(debut, schema.indexOf("\n}\n", debut));
+      const ligne = bloc.split("\n").find((l) => new RegExp(`^\\s{2}${champ}\\s`).test(l));
+      expect(ligne, `${modele}.${champ} introuvable`).toBeDefined();
+      expect(ligne, `${modele}.${champ} doit déclarer @db.Citext`).toMatch(/@db\.Citext/);
     }
   });
 });
