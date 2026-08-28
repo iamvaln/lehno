@@ -20,6 +20,23 @@ describe("origines autorisées", () => {
     expect(o).toContain("http://localhost:3000");
   });
 
+  /* Deux outils, deux ports, et le second manquait.
+   *
+   * La landing tient le 3000 — c'est le défaut de Next. Le back-office est
+   * servi par Vite, dont le défaut est 5173, et son `package.json` ne fixe
+   * aucun port. Sans cette origine, l'outil se charge mais chaque appel est
+   * refusé par le navigateur AVANT de partir : « No Access-Control-Allow-Origin
+   * header ». Il n'était donc pas utilisable dans un navigateur, en local.
+   *
+   * Trouvé le 28/08 en pilotant Chrome. C'est le même défaut que celui qui a
+   * valu ce fichier, et pour la même raison : les essais se faisaient en curl,
+   * qui n'envoie pas de requête préalable. */
+  it("accepte l'origine du back-office, servi sur un autre port que la landing", () => {
+    const o = originsAutorisees("lehno.app", "development");
+    expect(o).toContain("http://localhost:5173");
+    expect(o).toContain("http://127.0.0.1:5173");
+  });
+
   it("n'ouvre pas les origines locales en production", () => {
     const o = originsAutorisees("lehno.app", "production");
     expect(o.some((v) => v.includes("localhost"))).toBe(false);
