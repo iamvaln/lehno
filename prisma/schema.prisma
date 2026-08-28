@@ -131,6 +131,7 @@ model User {
   paymentMethods          PaymentMethod[]
   payments                Payment[]
   paymentStatusChanges    PaymentStatusHistory[]
+  generatedMessages       GeneratedMessage[]
 
   @@map("user")
 }
@@ -577,12 +578,13 @@ model EventOccurrence {
   status         OccurrenceStatus @default(upcoming)
   createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
 
-  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  notes         Note[]
-  wishes        WishlistItem[]
-  notifications Notification[]
-  actionRuns    ActionRun[]
+  event             Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes             Note[]
+  wishes            WishlistItem[]
+  notifications     Notification[]
+  actionRuns        ActionRun[]
+  generatedMessages GeneratedMessage[]
 
   @@unique([eventId, occurrenceDate])
   @@index([userId, occurrenceDate])
@@ -1162,11 +1164,61 @@ enum AIOrigin {
   @@map("ai_origin")
 }
 
+/**
+ * L'état d'une exécution payante.
+ * `pending` N'EST PAS AU DICTIONNAIRE, qui n'en prévoit que deux. Il le faut
+ * pourtant : la §5.4 dit que « le lancement débite le crédit et rend aussitôt un
+ * identifiant, sans attendre la production », et le client interroge ensuite.
+ * Sans état d'attente, il n'y a rien à rendre au lancement ni rien à interroger
+ * — le dictionnaire décrit une exécution TERMINÉE, la spec décrit un parcours.
+ * Les deux se réconcilient ici.
+ */
 enum ActionRunStatus {
+  pending
   success
   failure
 
   @@map("action_run_status")
+}
+
+enum GeneratedMessageStatus {
+  generated
+  edited
+  sent
+
+  @@map("generated_message_status")
+}
+
+/**
+ * Le brouillon de message, persistant.
+ * Il vit à part de l'ActionRun qui l'a produit, et ce n'est pas de la
+ * redondance : l'exécution dit ce qui a été payé et ce que ça a coûté, le
+ * brouillon dit ce que l'utilisateur en a fait. Il se corrige, il se marque
+ * envoyé — l'exécution, elle, ne bouge plus.
+ */
+model GeneratedMessage {
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actionRunId       String                 @unique @map("action_run_id") @db.Uuid
+  eventOccurrenceId String                 @map("event_occurrence_id") @db.Uuid
+  userId            String                 @map("user_id") @db.Uuid
+  content           String
+  /**
+   * La version courte, pour le format vertical. Elle sort du MÊME appel que le
+   * message : deux appels donneraient deux textes qui peuvent se contredire, et
+   * coûteraient deux fois pour un crédit débité une fois.
+   */
+  shortContent      String?                @map("short_content")
+  status            GeneratedMessageStatus @default(generated)
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz
+
+  actionRun  ActionRun       @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  occurrence EventOccurrence @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([eventOccurrenceId])
+  @@map("generated_message")
 }
 
 /**
@@ -1209,6 +1261,17 @@ model ActionRun {
   promptTemplateId  String?         @map("prompt_template_id") @db.Uuid
   // Recopié à l'exécution : le prix change, l'historique ne bouge pas.
   creditsSpent      Int             @map("credits_spent")
+  /**
+   * L'orientation retenue, figée. Le registre des orientations peut changer ;
+   * savoir ce qu'on a demandé le jour où le texte a déplu ne doit pas en
+   * dépendre.
+   */
+  orientation       String?         @db.VarChar(40)
+  /**
+   * Pourquoi ça a échoué, dans le vocabulaire du contrat — jamais un message de
+   * fournisseur, qui recopie parfois l'invite et donc les notes.
+   */
+  failureCode       String?         @map("failure_code") @db.VarChar(40)
   status            ActionRunStatus
   /**
    * Le coût réel, agrégat des `ai_usage` rattachés. Interne, jamais facturé, et
@@ -1217,11 +1280,12 @@ model ActionRun {
   internalCost      Decimal?        @map("internal_cost") @db.Decimal(12, 6)
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz
 
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  premiumAction  PremiumAction    @relation(fields: [premiumActionId], references: [id], onDelete: Restrict)
-  occurrence     EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
-  promptTemplate PromptTemplate?  @relation(fields: [promptTemplateId], references: [id], onDelete: SetNull)
-  usages         AIUsage[]
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  premiumAction    PremiumAction     @relation(fields: [premiumActionId], references: [id], onDelete: Restrict)
+  occurrence       EventOccurrence?  @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
+  promptTemplate   PromptTemplate?   @relation(fields: [promptTemplateId], references: [id], onDelete: SetNull)
+  usages           AIUsage[]
+  generatedMessage GeneratedMessage?
 
   @@index([userId, createdAt])
   @@index([createdAt])

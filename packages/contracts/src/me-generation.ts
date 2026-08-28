@@ -123,3 +123,70 @@ export const portraitSchema = z.object({
 }).strict();
 
 export type Portrait = z.infer<typeof portraitSchema>;
+
+// ── Le brouillon de message ─────────────────────────────────────────────────
+
+export const MESSAGE_STATUSES = ["generated", "edited", "sent"] as const;
+export type MessageStatus = (typeof MESSAGE_STATUSES)[number];
+
+/**
+ * Le message produit pour une occasion.
+ *
+ * Il vit à part de l'exécution qui l'a produit, et ce n'est pas de la
+ * redondance : l'exécution dit ce qui a été payé et ce que ça a coûté, le
+ * brouillon dit ce que l'utilisateur en a fait. Il se corrige, il se marque
+ * envoyé — l'exécution, elle, ne bouge plus.
+ *
+ * **`contentShort` peut manquer.** La version courte sort du même appel que le
+ * message, mais un modèle la rend parfois trop brève ou pas du tout. Elle n'a
+ * pas de crédit à elle : mieux vaut rendre le message sans elle que perdre les
+ * deux. Le client se replie alors sur le texte long.
+ */
+export const generatedMessageSchema = z.object({
+  id: z.string().uuid(),
+  occurrenceId: z.string().uuid(),
+  content: z.string(),
+  contentShort: z.string().nullable(),
+  status: z.enum(MESSAGE_STATUSES),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+}).strict();
+
+export type GeneratedMessage = z.infer<typeof generatedMessageSchema>;
+
+/**
+ * Corriger un brouillon, ou le marquer envoyé.
+ *
+ * `markSent` est **déclaratif** : l'application n'envoie rien elle-même — le
+ * message se copie ailleurs, dans la messagerie de son choix. Le marquer est
+ * donc une affirmation de l'utilisateur, pas un constat du serveur, et l'écrire
+ * autrement ferait croire à une preuve d'envoi qui n'existe pas.
+ */
+export const updateMessageSchema = z.object({
+  content: z.string().trim().min(1).max(4000).optional(),
+  markSent: z.boolean().optional(),
+}).strict().refine((v) => v.content !== undefined || v.markSent !== undefined, {
+  message: "au moins un champ doit être fourni",
+});
+
+export type UpdateMessageInput = z.infer<typeof updateMessageSchema>;
+
+/**
+ * Ce que rend le lancement, puis chaque interrogation.
+ *
+ * Les deux voyagent ensemble parce que le client suit **un seul objet** : lui
+ * faire recoller un état et un résultat venus de deux chemins l'obligerait à
+ * gérer le moment où l'un est arrivé et l'autre pas.
+ */
+export const generationResultSchema = z.object({
+  generation: generationSchema,
+  /** Nul tant que l'exécution n'a pas abouti — et pour toujours si elle échoue. */
+  message: generatedMessageSchema.nullable(),
+}).strict();
+
+export const generationsSchema = z.object({
+  generations: z.array(generationResultSchema),
+}).strict();
+
+export type GenerationResult = z.infer<typeof generationResultSchema>;
+
