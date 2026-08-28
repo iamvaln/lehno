@@ -55,7 +55,7 @@ export const configurationStudioSchema = z.object({
 export type ConfigurationStudio = z.infer<typeof configurationStudioSchema>;
 
 /* Les deux écrans du brief de design en un seul appel : ce qui tourne, et ce
-   qu'on est en train de composer. Deux points d'entrée obligeraient l'établi à
+   qu'on est en train de composer. Deux points d'entrée obligeraient l'atelier à
    deux allers-retours pour afficher son comparatif, qui les montre côte à
    côte. */
 export const etatStudioSchema = z.object({
@@ -96,7 +96,7 @@ export const GENRES_SIMULES = ["female", "male", "other", "unspecified"] as cons
 /* Le proche simulé. C'est, champ pour champ, ce que `ContexteMessage` attend :
  * un profil n'est pas une fiche allégée, c'est exactement la matière qu'un
  * gabarit reçoit. Une forme plus pauvre ferait essayer autre chose que ce que
- * la production exécute, et l'établi prétendrait montrer ce qui tournera. */
+ * la production exécute, et l'atelier prétendrait montrer ce qui tournera. */
 export const profilContenuSchema = z.object({
   langue: z.enum(["fr", "en"]),
   orientation: z.enum(ORIENTATIONS),
@@ -177,7 +177,7 @@ export const modificationProfilSchema = z.object({
 
 /* Les mêmes états que `ai_usage_status`, `refused` compris.
  *
- * Un refus du modèle N'EST PAS une panne, et l'établi doit les distinguer : le
+ * Un refus du modèle N'EST PAS une panne, et l'atelier doit les distinguer : le
  * brief de design §12 en fait trois gestes différents — réessayer, reprendre
  * la consigne, recharger le compte du fournisseur. Un seul « échec » les
  * confondrait, et on réessaierait trente fois une demande que le modèle
@@ -219,7 +219,7 @@ export const lancementEssaiSchema = z.object({
 
 // ── Les valeurs candidates ──────────────────────────────────────────────────
 
-/* Ce dans quoi l'établi choisit. Le prix est là comme FICHE TECHNIQUE du
+/* Ce dans quoi l'atelier choisit. Le prix est là comme FICHE TECHNIQUE du
  * modèle, à côté de son nom — jamais comme un décompte : le brief de design §8
  * retire tout compteur de dépense de l'écran.
  *
@@ -232,7 +232,7 @@ export const modeleCandidatSchema = z.object({
   modele: z.string(),
   capacite: z.string(),
   actif: z.boolean(),
-  /** Non nul quand le disjoncteur l'a écarté du routage automatique. L'établi
+  /** Non nul quand le disjoncteur l'a écarté du routage automatique. L'atelier
    *  l'appelle quand même si on le lui demande : c'est là qu'on va voir. */
   enPanneJusqua: z.string().nullable(),
   tarifs: z.object({
