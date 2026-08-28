@@ -38,9 +38,9 @@ export interface MetriquesProps {
  *  d'assistance — quatre rangs sans nom ne se distinguent qu'à l'œil. */
 function Rang({ id, titre, sous, children }: { id: string; titre: string; sous?: string; children: ReactNode }) {
   return (
-    <section className="admin-rang" aria-labelledby={id}>
-      <h2 id={id} className="admin-rang-titre">{titre}</h2>
-      {sous ? <p className="admin-rang-sous">{sous}</p> : null}
+    <section className="admin-section" aria-labelledby={id}>
+      <h2 id={id} className="admin-section-titre">{titre}</h2>
+      {sous ? <p className="admin-section-sous">{sous}</p> : null}
       {children}
     </section>
   );
@@ -130,7 +130,7 @@ export function Metriques({
       </Rang>
 
       <Rang id="rang-conversion" titre={t.metriques.conversion.titre} sous={t.metriques.conversion.sous}>
-        <div className="admin-indicateurs">
+        <div className="admin-section-cartes">
           <StatCard valeur={nombre.format(donnees.conversion.comptes)} libelle={t.metriques.conversion.comptes} />
           <StatCard valeur={nombre.format(donnees.conversion.acheteurs)} libelle={t.metriques.conversion.acheteurs} />
           <StatCard valeur={delai} libelle={t.metriques.conversion.delai} />
@@ -143,7 +143,7 @@ export function Metriques({
       </Rang>
 
       <Rang id="rang-consommation" titre={t.metriques.consommation.titre}>
-        <div className="admin-indicateurs">
+        <div className="admin-section-cartes">
           <StatCard valeur={nombre.format(donnees.consommation.credits)} libelle={t.metriques.consommation.credits} />
           <StatCard valeur={nombre.format(donnees.consommation.mouvements)} libelle={t.metriques.consommation.mouvements} />
         </div>
