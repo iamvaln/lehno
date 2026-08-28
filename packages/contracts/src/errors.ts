@@ -58,6 +58,10 @@ export const ERROR_CODES = [
   // Même raisonnement que waitlist_rejected, pour les deux mêmes filtres :
   // un seul code, pour ne pas apprendre au robot lequel a mordu.
   "contact_rejected",
+  // Réservation d'un souhait par un visiteur sans compte : troisième surface
+  // publique sans session, mêmes deux filtres, même code unique. En donner un
+  // par filtre dirait au robot lequel a mordu, et il s'ajusterait.
+  "reservation_rejected",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

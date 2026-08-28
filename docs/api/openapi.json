@@ -130,7 +130,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -189,7 +190,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -248,7 +250,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -397,7 +400,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -456,7 +460,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -515,7 +520,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -617,7 +623,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -676,7 +683,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -735,7 +743,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -833,7 +842,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -892,7 +902,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -981,7 +992,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1040,7 +1052,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1099,7 +1112,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1193,7 +1207,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1252,7 +1267,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1311,7 +1327,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1453,7 +1470,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1512,7 +1530,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1571,7 +1590,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1703,7 +1723,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1762,7 +1783,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1821,7 +1843,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1927,7 +1950,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -1986,7 +2010,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -2045,7 +2070,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -2141,7 +2167,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -2200,7 +2227,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -2259,7 +2287,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -2375,7 +2404,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -2434,7 +2464,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -2493,7 +2524,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -2673,7 +2705,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -2732,7 +2765,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -2791,7 +2825,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -2979,7 +3014,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -3038,7 +3074,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -3097,7 +3134,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -3279,7 +3317,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -3338,7 +3377,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -3397,7 +3437,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -3516,7 +3557,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -3575,7 +3617,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -3634,7 +3677,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -3728,7 +3772,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -3787,7 +3832,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -3846,7 +3892,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -4002,7 +4049,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -4061,7 +4109,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -4120,7 +4169,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -4330,7 +4380,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -4389,7 +4440,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -4448,7 +4500,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -4551,7 +4604,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -4610,7 +4664,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -4669,7 +4724,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -5005,7 +5061,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -5064,7 +5121,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -5123,7 +5181,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -5443,7 +5502,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -5502,7 +5562,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -5561,7 +5622,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -5799,7 +5861,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -5858,7 +5921,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -5917,7 +5981,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -6244,7 +6309,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -6303,7 +6369,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -6362,7 +6429,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -6445,7 +6513,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -6504,7 +6573,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -6563,7 +6633,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -6727,7 +6798,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -6786,7 +6858,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -6845,7 +6918,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -6985,7 +7059,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -7044,7 +7119,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -7103,7 +7179,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -7263,7 +7340,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -7322,7 +7400,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -7381,7 +7460,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -7576,7 +7656,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -7635,7 +7716,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -7694,7 +7776,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -7959,7 +8042,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -8018,7 +8102,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -8077,7 +8162,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -8262,7 +8348,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -8321,7 +8408,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -8380,7 +8468,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -8648,7 +8737,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -8707,7 +8797,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -8766,7 +8857,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -8849,7 +8941,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -8908,7 +9001,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -8967,7 +9061,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -9194,7 +9289,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -9253,7 +9349,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -9312,7 +9409,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -9478,7 +9576,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -9537,7 +9636,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -9596,7 +9696,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -9736,7 +9837,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -9795,7 +9897,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -9854,7 +9957,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -10015,7 +10119,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -10074,7 +10179,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -10133,7 +10239,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -10304,7 +10411,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -10363,7 +10471,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -10422,7 +10531,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -10629,7 +10739,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -10688,7 +10799,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -10747,7 +10859,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -10964,7 +11077,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -11023,7 +11137,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -11082,7 +11197,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -11166,7 +11282,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -11225,7 +11342,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -11284,7 +11402,3272 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/wishlists": {
+      "get": {
+        "summary": "Lister mes listes de souhaits",
+        "description": "**Gouverné par le drapeau `wishlist.own`.** Éteint, ces chemins rendent\n`404` — la surface n'existe pas —, avant même de regarder le jeton.\n\nUne liste par occasion à MOI. Ne pas confondre avec\n`/me/occurrences/{id}/wishes`, qui porte les souhaits notés sur la fiche\nd'un PROCHE : ceux-là sont privés et ne se partagent pas. Ici,\n`OwnerWish` a pour raison d'être d'être publié, et lui seul se réserve.\n\n`reservedCount` dit COMBIEN de souhaits sont réservés, jamais lesquels\nni par qui. Le nom d'un réservant n'apparaît que sur le souhait, et\nseulement s'il l'a autorisé.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "occurrenceId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "occurrenceDate": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "eventKind": {
+                        "type": "string"
+                      },
+                      "eventLabel": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "wishCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "reservedCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "isShared": {
+                        "type": "boolean"
+                      },
+                      "isArchived": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "occurrenceId",
+                      "occurrenceDate",
+                      "eventKind",
+                      "eventLabel",
+                      "wishCount",
+                      "reservedCount",
+                      "isShared",
+                      "isArchived"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Ouvrir une liste sur une de mes occasions",
+        "description": "**Gouverné par le drapeau `wishlist.own`.**\n\nCe chemin n'invente pas d'occasion : il en OUVRE une liste. L'occasion\ndoit exister (`/me/events`) et être une occasion de l'utilisateur\nlui-même — celle d'un proche rend `404`. Ouvrir une liste sur\nl'anniversaire d'un proche publierait à des visiteurs ce qu'il a confié\nen privé.\n\nUne seule liste par occasion : une seconde tentative rend `409`.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "occurrenceId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "occurrenceId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "occurrenceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "occurrenceDate": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "eventKind": {
+                      "type": "string"
+                    },
+                    "eventLabel": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "wishCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "reservedCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "isShared": {
+                      "type": "boolean"
+                    },
+                    "isArchived": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "occurrenceId",
+                    "occurrenceDate",
+                    "eventKind",
+                    "eventLabel",
+                    "wishCount",
+                    "reservedCount",
+                    "isShared",
+                    "isArchived"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/wishlists/{id}/wishes": {
+      "get": {
+        "summary": "Lister les souhaits d'une de mes listes",
+        "description": "**Gouverné par le drapeau `wishlist.own`.**\n\nL'ordre est celui du propriétaire : `position` croissante, les souhaits\nnon rangés ensuite, du plus ancien au plus récent.\n\n`reservedByName` porte le nom du réservant **si et seulement si**\ncelui-ci l'a autorisé. Nul ne veut pas dire « personne n'a réservé » —\nun souhait peut être `reserved` sans nom — mais « aucun nom n'a été\ndonné ». Ni l'adresse du réservant, ni son identifiant de compte, ni la\ndate de sa réservation ne sont exposés : recoupés, ils le désigneraient\naussi sûrement qu'un nom, et la surprise est ce que cet écran protège.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "wishlistId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "link": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                      },
+                      "imageUrl": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                      },
+                      "details": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "price": {
+                        "type": "number",
+                        "minimum": 0,
+                        "nullable": true
+                      },
+                      "currency": {
+                        "type": "string",
+                        "pattern": "^[A-Z]{3}$",
+                        "nullable": true
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "available",
+                          "reserved",
+                          "fulfilled"
+                        ]
+                      },
+                      "isPublic": {
+                        "type": "boolean"
+                      },
+                      "position": {
+                        "type": "integer",
+                        "nullable": true
+                      },
+                      "reservedByName": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "wishlistId",
+                      "label",
+                      "link",
+                      "imageUrl",
+                      "details",
+                      "price",
+                      "currency",
+                      "status",
+                      "isPublic",
+                      "position",
+                      "reservedByName"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Ajouter un souhait à une de mes listes",
+        "description": "**Gouverné par le drapeau `wishlist.own`.**\n\n`isPublic` vaut `true` par défaut : la liste existe pour être partagée.\nUn souhait peut rester à soi en le posant à `false` — il disparaît alors\nde la page publique sans quitter la liste.\n\n`status` ne s'écrit pas : un souhait qu'on note n'est ni réservé ni déjà\noffert. Un prix porte toujours sa devise.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "link": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048
+                  },
+                  "details": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "price": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  },
+                  "isPublic": {
+                    "type": "boolean"
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 32767
+                  }
+                },
+                "required": [
+                  "label"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "wishlistId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "link": {
+                      "type": "string",
+                      "format": "uri",
+                      "nullable": true
+                    },
+                    "imageUrl": {
+                      "type": "string",
+                      "format": "uri",
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "price": {
+                      "type": "number",
+                      "minimum": 0,
+                      "nullable": true
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$",
+                      "nullable": true
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "available",
+                        "reserved",
+                        "fulfilled"
+                      ]
+                    },
+                    "isPublic": {
+                      "type": "boolean"
+                    },
+                    "position": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "reservedByName": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "wishlistId",
+                    "label",
+                    "link",
+                    "imageUrl",
+                    "details",
+                    "price",
+                    "currency",
+                    "status",
+                    "isPublic",
+                    "position",
+                    "reservedByName"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/wishlists/{id}/share": {
+      "get": {
+        "summary": "L'adresse publique de la liste, à partager",
+        "description": "**Gouverné par le drapeau `wishlist.own`.**\n\nIDEMPOTENT : rouvrir la feuille de partage rend le MÊME jeton. Frapper\nune adresse neuve à chaque appel ferait cesser de valoir celle qu'on\nvient de coller dans un groupe.\n\nL'`url` complète est composée par le serveur. Le client ne la\nreconstitue pas : le domaine public change, et deux versions du parc en\nfabriqueraient deux différentes.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "url",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Révoquer le lien de partage d'une liste",
+        "description": "**Gouverné par le drapeau `wishlist.own`.**\n\nLe lien révoqué n'est pas effacé : il SURVIT pour que la page publique\nréponde `{ \"state\": \"revoked\" }` — « ce lien n'est plus actif » — plutôt\nqu'un `404` qui ferait croire à une panne à qui tient le lien.\n\nUn `GET /share` ultérieur frappe un jeton NEUF : l'ancien reste mort.\n\nIdempotent : révoquer une liste sans lien actif rend `204` sans rien\nfaire.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Succès"
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/owner-wishes/{id}": {
+      "patch": {
+        "summary": "Corriger un de mes souhaits, l'exposer ou le garder pour moi",
+        "description": "**Gouverné par le drapeau `wishlist.own`.**\n\n`status` n'accepte que `available` et `fulfilled`. `reserved` DÉCOULE\nd'une réservation confirmée et ne s'écrit jamais à la main.\n\nUn souhait déjà `reserved` ne se repasse pas `available` : `409`.\nQuelqu'un s'est engagé à l'offrir et a reçu confirmation ; le libérer le\nlaisserait réserver une seconde fois, et deux personnes offriraient la\nmême chose — ce que tout ce mécanisme existe pour éviter. Le RETIRER\nreste possible, par `DELETE` : c'est un geste explicite.\n\nL'invariant « un prix porte sa devise » se vérifie sur le souhait APRÈS\nfusion, pas sur le seul corps envoyé.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "link": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048,
+                    "nullable": true
+                  },
+                  "details": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "nullable": true
+                  },
+                  "price": {
+                    "type": "number",
+                    "minimum": 0,
+                    "nullable": true
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$",
+                    "nullable": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "fulfilled"
+                    ]
+                  },
+                  "isPublic": {
+                    "type": "boolean"
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 32767,
+                    "nullable": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "wishlistId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "link": {
+                      "type": "string",
+                      "format": "uri",
+                      "nullable": true
+                    },
+                    "imageUrl": {
+                      "type": "string",
+                      "format": "uri",
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "price": {
+                      "type": "number",
+                      "minimum": 0,
+                      "nullable": true
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$",
+                      "nullable": true
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "available",
+                        "reserved",
+                        "fulfilled"
+                      ]
+                    },
+                    "isPublic": {
+                      "type": "boolean"
+                    },
+                    "position": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "reservedByName": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "wishlistId",
+                    "label",
+                    "link",
+                    "imageUrl",
+                    "details",
+                    "price",
+                    "currency",
+                    "status",
+                    "isPublic",
+                    "position",
+                    "reservedByName"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Retirer un de mes souhaits",
+        "description": "**Gouverné par le drapeau `wishlist.own`.** Un souhait qui n'est pas au\ndemandeur rend `404`, jamais `403`.\n\nLes réservations qui le visaient disparaissent avec lui (cascade) : le\nréservant ne les retrouve plus dans `/me/reservations`.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Succès"
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/reservations": {
+      "get": {
+        "summary": "Les souhaits que je me suis réservés chez les autres",
+        "description": "**Gouverné par le drapeau `reservation`, qui REQUIERT `wishlist.own`**\n(et `wall`). Éteindre les listes éteint la réservation ; la résolution\nse fait côté serveur, le client n'a aucune règle de dépendance à\nconnaître.\n\nCe que J'AI réservé chez les autres — jamais ce qu'on a réservé sur MA\nliste, qui ne se lit sous aucune forme nominative.\n\nLes réservations faites SANS COMPTE avant l'inscription rejoignent cet\nécran dès que l'adresse coïncide : c'est l'adresse qui fait l'identité,\nle jeton de visite n'étant qu'un raccourci de navigateur.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "wishId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "wishLabel": {
+                        "type": "string"
+                      },
+                      "wishImageUrl": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                      },
+                      "price": {
+                        "type": "number",
+                        "minimum": 0,
+                        "nullable": true
+                      },
+                      "currency": {
+                        "type": "string",
+                        "pattern": "^[A-Z]{3}$",
+                        "nullable": true
+                      },
+                      "ownerDisplayName": {
+                        "type": "string"
+                      },
+                      "ownerUsername": {
+                        "type": "string"
+                      },
+                      "occurrenceDate": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "showIdentity": {
+                        "type": "boolean"
+                      },
+                      "confirmedAt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "wishId",
+                      "wishLabel",
+                      "wishImageUrl",
+                      "price",
+                      "currency",
+                      "ownerDisplayName",
+                      "ownerUsername",
+                      "occurrenceDate",
+                      "showIdentity",
+                      "confirmedAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/wishlists/{token}": {
+      "get": {
+        "summary": "Une liste partagée, telle qu'un visiteur la voit",
+        "description": "**Gouverné par le drapeau `wishlist.own`.** Sans compte : l'autorisation\ntient au jeton porté par le lien, qui désigne la ressource et vaut\npermission — rien d'autre.\n\n### La réponse porte son ÉTAT\n\n`state: \"ok\"` avec la liste, ou `state: \"revoked\"` quand le\npropriétaire a révoqué le lien — « ce lien n'est plus actif », plutôt\nqu'une absence sèche. Un jeton INCONNU rend `404` : là rien n'a jamais\nexisté, et dire « révoqué » apprendrait qu'un jeton a été valide.\n\n`acceptsReservations` vaut `false` quand l'occasion est passée : la\nliste s'affiche, sans accepter de réservation. Le client ne compare pas\nla date lui-même — deux fuseaux donneraient deux réponses.\n\n### Ce qui ne sort JAMAIS d'ici\n\nUn cadeau réservé apparaît comme tel, **jamais par qui** — pas même\nlorsque le réservant a accepté d'être nommé : ce nom a été donné au\npropriétaire, pas aux autres visiteurs. Les souhaits gardés pour soi\n(`isPublic: false`) ne transitent pas.\n\n### En-tête `x-lehno-reservation`\n\nLe jeton remis à la confirmation. Présenté, il fait passer à `true` le\n`reservedByMe` des souhaits que CE visiteur a réservés, et de ceux-là\nseulement. Un jeton inconnu est ignoré en silence. Ce n'est **pas** un\n`Authorization: Bearer` : il ne vaut pas session de compte.",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 32
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "ok"
+                          ]
+                        },
+                        "ownerFirstName": {
+                          "type": "string"
+                        },
+                        "ownerAvatarUrl": {
+                          "type": "string",
+                          "format": "uri",
+                          "nullable": true
+                        },
+                        "occasionLabel": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "occasionDate": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "acceptsReservations": {
+                          "type": "boolean"
+                        },
+                        "wishes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "imageUrl": {
+                                "type": "string",
+                                "format": "uri",
+                                "nullable": true
+                              },
+                              "details": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "link": {
+                                "type": "string",
+                                "format": "uri",
+                                "nullable": true
+                              },
+                              "price": {
+                                "type": "number",
+                                "minimum": 0,
+                                "nullable": true
+                              },
+                              "currency": {
+                                "type": "string",
+                                "pattern": "^[A-Z]{3}$",
+                                "nullable": true
+                              },
+                              "isReserved": {
+                                "type": "boolean"
+                              },
+                              "isFulfilled": {
+                                "type": "boolean"
+                              },
+                              "reservedByMe": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "label",
+                              "imageUrl",
+                              "details",
+                              "link",
+                              "price",
+                              "currency",
+                              "isReserved",
+                              "isFulfilled",
+                              "reservedByMe"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "ownerFirstName",
+                        "ownerAvatarUrl",
+                        "occasionLabel",
+                        "occasionDate",
+                        "acceptsReservations",
+                        "wishes"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "revoked"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/owner-wishes/{id}/reserve": {
+      "post": {
+        "summary": "Réserver un souhait",
+        "description": "**Gouverné par le drapeau `reservation`, qui requiert `wishlist.own`.**\n\n### Deux chemins selon qui réserve\n\nUn **utilisateur connecté** (jeton `Bearer` facultatif sur cet appel)\nréserve en un geste : son adresse est déjà vérifiée par son compte, la\nréponse est `state: \"confirmed\"`. L'adresse du corps est alors ignorée.\n\nUn **visiteur sans compte** donne son adresse et reçoit un code :\n`state: \"code_sent\"`. **Rien n'est réservé à ce stade** — d'où le `200`\net non un `201`. Tant que la demande est en attente, le cadeau demeure\ndisponible pour un autre : sans quoi une adresse inventée suffirait à le\nbloquer.\n\n### Refus\n\n`409` si le cadeau est déjà réservé · `422 resource_inactive` si\nl'occasion est passée ou le cadeau déjà offert · `404` si le souhait est\nprivé, sans liste ouverte, ou sans lien de partage actif ·\n`422 email_disposable` sur une adresse jetable · `429` au-delà du\nplafond, compté **par adresse destinataire autant que par origine**.\n\n`reservation_rejected` couvre les DEUX filtres à robots — champ leurre\nrempli, délai de soumission invraisemblable. Un code par filtre\napprendrait au robot lequel a mordu.\n\n`showIdentity` vaut `false` par défaut : la réservation reste anonyme\naux yeux du propriétaire. `displayName` n'est retenu que s'il est à\n`true` — le garder sans lui serait conserver une donnée dont on s'est\nengagé à ne rien faire.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 254
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "showIdentity": {
+                    "type": "boolean"
+                  },
+                  "locale": {
+                    "type": "string",
+                    "enum": [
+                      "fr",
+                      "en"
+                    ]
+                  },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 254
+                  },
+                  "renderedAt": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "code_sent"
+                          ]
+                        },
+                        "reservationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "expiresAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reservationId",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "confirmed"
+                          ]
+                        },
+                        "reservationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "sessionToken": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reservationId",
+                        "sessionToken"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/owner-wishes/{id}/reserve/verify": {
+      "post": {
+        "summary": "Saisir le code reçu ; la réservation devient effective",
+        "description": "**Gouverné par le drapeau `reservation`.**\n\nL'adresse ACCOMPAGNE le code : c'est elle qui fait l'identité. Sans\nelle, un code à six chiffres se rejouerait contre toutes les demandes en\nattente sur le même cadeau.\n\n### Ce que rend un refus\n\n`otp_invalid` (code faux, ou déjà consommé) · `otp_expired` ·\n`otp_too_many_attempts` après cinq essais, le code étant alors brûlé ·\n**`409`** lorsque quelqu'un d'autre a confirmé entre-temps : la demande\nen attente est signalée comme caduque, et ce n'est pas une erreur de\ncode — le dire ainsi ferait croire au visiteur qu'il a mal recopié.\n\nL'unicité « une seule réservation confirmée par souhait » est un index\nunique **partiel** en base, jamais une vérification préalable : deux\nvisiteurs qui confirment au même instant liraient tous deux\n« disponible » avant que l'un n'écrive.\n\n`sessionToken` n'est rendu **qu'une fois** — la base n'en garde que le\ncondensé. Il se représente ensuite dans `x-lehno-reservation`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 254
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reservationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "wishId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "sessionToken": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "reservationId",
+                    "wishId",
+                    "sessionToken"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -11485,7 +14868,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -11544,7 +14928,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -11603,7 +14988,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -11736,7 +15122,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -11795,7 +15182,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -11854,7 +15242,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -12042,7 +15431,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -12101,7 +15491,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -12160,7 +15551,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -12380,7 +15772,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -12439,7 +15832,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -12498,7 +15892,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -12634,7 +16029,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -12693,7 +16089,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -12752,7 +16149,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -12882,7 +16280,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -12941,7 +16340,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -13000,7 +16400,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -13205,7 +16606,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -13264,7 +16666,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -13323,7 +16726,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -13452,7 +16856,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -13511,7 +16916,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -13570,7 +16976,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -13707,7 +17114,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -13766,7 +17174,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -13825,7 +17234,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -13941,7 +17351,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -14000,7 +17411,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -14059,7 +17471,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -14207,7 +17620,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -14266,7 +17680,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -14325,7 +17740,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -14541,7 +17957,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -14600,7 +18017,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -14659,7 +18077,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -14843,7 +18262,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -14902,7 +18322,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -14961,7 +18382,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -15135,7 +18557,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -15194,7 +18617,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -15253,7 +18677,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -15510,7 +18935,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -15569,7 +18995,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -15628,7 +19055,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -15822,7 +19250,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -15881,7 +19310,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -15940,7 +19370,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16125,7 +19556,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16184,7 +19616,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16243,7 +19676,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16387,7 +19821,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16446,7 +19881,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16505,7 +19941,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16622,7 +20059,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16681,7 +20119,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16740,7 +20179,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16813,7 +20253,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16872,7 +20313,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -16931,7 +20373,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -17047,7 +20490,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -17106,7 +20550,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -17165,7 +20610,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {

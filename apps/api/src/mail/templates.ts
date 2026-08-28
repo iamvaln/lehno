@@ -128,3 +128,44 @@ export function contactConfirmationEmail(input: { locale: Locale }): { subject: 
   const g = CONTACT_ACCUSE[input.locale];
   return { subject: g.subject, text: g.body };
 }
+
+/* Le code d'une réservation, et il ne dit PAS ce qu'on réserve.
+ *
+ * Ni le libellé du cadeau, ni le prénom du propriétaire : le courriel voyage
+ * jusqu'à une boîte que l'on n'a pas vérifiée au moment de l'envoi — n'importe
+ * qui peut saisir l'adresse d'un tiers. Y mettre le contenu de la liste ferait
+ * de ce point d'entrée un moyen d'envoyer à quiconque ce qu'un inconnu
+ * souhaite pour son anniversaire.
+ *
+ * Le ton suit celui du code de connexion : on dit ce qu'il faut faire, on ne
+ * félicite pas.
+ */
+const RESERVATION = {
+  fr: {
+    subject: "Votre code de réservation",
+    body: (code: string) =>
+      `Votre code est ${code}.
+
+Saisissez-le dans la page pour confirmer votre réservation. ` +
+      `Il est valable 15 minutes.
+
+Si vous n'avez rien demandé, ignorez ce message.`,
+  },
+  en: {
+    subject: "Your reservation code",
+    body: (code: string) =>
+      `Your code is ${code}.
+
+Enter it on the page to confirm your reservation. ` +
+      `It is valid for 15 minutes.
+
+If you didn't ask for it, ignore this message.`,
+  },
+} as const;
+
+export function reservationCodeEmail(
+  input: { code: string; locale: Locale },
+): { subject: string; text: string } {
+  const g = RESERVATION[input.locale];
+  return { subject: g.subject, text: g.body(input.code) };
+}

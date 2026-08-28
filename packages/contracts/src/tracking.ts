@@ -110,6 +110,20 @@ export type EvenementsMesure = {
      souhaits arrivent par la collecte, par une idée retenue ou de la main du
      propriétaire ; c'est ce qui dit laquelle des trois voies porte le produit. */
   "wish.added": { origin: WishOrigin };
+  /* LA BOUCLE DES LISTES (§16.3), celle qui dit si le produit croît tout seul :
+     combien de vues par liste partagée, combien de réservations par vue.
+     Elle se lit d'un bout à l'autre, donc chaque maillon doit exister — un seul
+     manquant, et le taux qu'on cherche n'est plus calculable.
+
+     Aucun de ces événements ne porte de contenu (§16.4) : ni le libellé d'un
+     souhait, ni le prénom du propriétaire, ni — surtout — l'adresse ou le nom
+     du réservant. `identityRevealed` dit qu'un nom a été donné, jamais lequel. */
+  "wishlist.created": Record<string, never>;
+  "wishlist.wish_added": { hasPhoto: boolean; hasPrice: boolean };
+  "wishlist.shared": Record<string, never>;
+  "shared_list.viewed": { authenticated: boolean; wishCount: number };
+  "reservation.started": { authenticated: boolean };
+  "reservation.confirmed": { identityRevealed: boolean; secondsToConfirm: number };
 };
 
 export type NomEvenement = keyof EvenementsMesure;
@@ -120,6 +134,8 @@ export const NOMS_EVENEMENTS = [
   "signup.started", "signup.completed", "signin.completed",
   "person.first_created", "person.created", "note.created", "event.created",
   "wish.added",
+  "wishlist.created", "wishlist.wish_added", "wishlist.shared",
+  "shared_list.viewed", "reservation.started", "reservation.confirmed",
 ] as const satisfies readonly NomEvenement[];
 
 // La forme qu'un adaptateur reçoit. Le nom, ses propriétés propres, et les
