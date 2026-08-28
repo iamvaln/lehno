@@ -55,9 +55,18 @@ enum LoginMethod {
 
 model User {
   id                       String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                    String          @unique
+  /**
+   * `citext` — insensible à la casse, et c'est la migration `identity` qui le
+   * pose. Le déclarer ICI n'est pas cosmétique : sans lui, Prisma tient la
+   * colonne pour du `text` et la PROCHAINE migration engendrée la ramènerait à
+   * `text`, silencieusement. Les adresses redeviendraient sensibles à la casse,
+   * et « Valentine@… » ouvrirait un second compte à côté de « valentine@… ».
+   * Le code compte dessus explicitement — voir ProfileService : « la colonne est
+   * en citext, la comparaison est déjà insensible à la casse ».
+   */
+  email                    String          @unique @db.Citext
   emailVerified            Boolean         @default(false) @map("email_verified")
-  username                 String          @unique
+  username                 String          @unique @db.Citext
   displayName              String?         @map("display_name")
   avatarUrl                String?         @map("avatar_url")
   referralCode             String          @unique @map("referral_code") @db.VarChar(16)
@@ -241,7 +250,7 @@ model CreditTransaction {
 model OtpCode {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String?   @map("user_id") @db.Uuid
-  targetEmail String    @map("target_email")
+  targetEmail String    @map("target_email") @db.Citext
   codeHash    String    @map("code_hash")
   reason      OtpReason
   expiresAt   DateTime  @map("expires_at") @db.Timestamptz
@@ -260,7 +269,7 @@ model FederatedIdentity {
   userId         String           @map("user_id") @db.Uuid
   provider       IdentityProvider
   providerUserId String           @map("provider_user_id")
-  emailAtLink    String?          @map("email_at_link")
+  emailAtLink    String?          @map("email_at_link") @db.Citext
   createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
   lastUsedAt     DateTime?        @map("last_used_at") @db.Timestamptz
 
@@ -313,7 +322,7 @@ model DeviceSignup {
 model LoginActivity {
   id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId         String?      @map("user_id") @db.Uuid
-  attemptedEmail String?      @map("attempted_email")
+  attemptedEmail String?      @map("attempted_email") @db.Citext
   result         LoginResult
   // La voie d'entrée. Nulle sur les traces écrites avant qu'elle existe.
   method         LoginMethod?
@@ -335,7 +344,7 @@ model WaitlistSignup {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// L'adresse telle qu'elle a été saisie : c'est à elle qu'on écrit, et
   /// c'est elle que la personne reconnaîtra.
-  email          String   @unique
+  email          String   @unique @db.Citext
   /// La forme sous laquelle deux adresses désignent la même boîte — casse
   /// abaissée, étiquette après le « + » retirée, points ignorés chez Gmail
   /// (voir src/common/email.ts). C'est cette colonne qui porte l'unicité
