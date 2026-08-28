@@ -1,6 +1,24 @@
 import { z } from "zod";
 import { dateCivileSchema, bornerLaNaissance } from "./me-events.js";
 
+/**
+ * Les genres, pour l'accord grammatical — et **deux valeurs seulement**.
+ *
+ * C'est ce que les deux écrans d'identité proposent (§3.18, §3.23), et rien
+ * d'autre. La colonne en base porte encore `other` et `unspecified` : le
+ * contrat les refuse plutôt que de les migrer, parce qu'un état qu'aucun écran
+ * ne produit n'a pas à pouvoir s'écrire. Ce que la base tolère et ce que le
+ * produit accepte ne sont pas la même chose.
+ *
+ * `unspecified` reste possible EN LECTURE, et seulement là : c'est l'état d'une
+ * ligne écrite avant cette règle, ou d'un compte dont l'inscription n'a jamais
+ * posé la question — l'inscription se fait par code à usage unique, pas par
+ * formulaire. Le contrat le rend `null` : une absence de réponse est une
+ * absence, pas une troisième réponse.
+ */
+export const PERSON_GENDERS = ["female", "male"] as const;
+export type PersonGender = (typeof PERSON_GENDERS)[number];
+
 // Le registre de langage gouverne le ton de ce que le produit écrira pour ce
 // proche. Ensemble fixe : enum person_register du dictionnaire.
 export const PERSON_REGISTERS = ["familier", "amical", "formel"] as const;
@@ -17,9 +35,6 @@ export type PersonRelation = (typeof PERSON_RELATIONS)[number];
 // Signal de DERNIER recours : il oriente des idées de cadeaux lorsque rien
 // d'autre n'est disponible. Une seule note bien prise vaut mieux que lui.
 // « unspecified » est une valeur légitime, jamais un champ à remplir.
-export const PERSON_GENDERS = ["female", "male", "other", "unspecified"] as const;
-export type PersonGender = (typeof PERSON_GENDERS)[number];
-
 // Par où on lui écrit d'ordinaire : oriente la LONGUEUR du message produit —
 // on n'écrit pas la même chose par SMS et par courriel.
 export const CONTACT_CHANNELS = ["whatsapp", "sms", "email", "autre"] as const;
@@ -46,12 +61,28 @@ export const personSchema = z
     // Faux quand on connaît le jour et le mois sans l'année : on suit alors
     // l'anniversaire sans pouvoir annoncer d'âge.
     birthYearKnown: z.boolean(),
-    // `gender` NE FIGURE PAS ici, et c'est le point : le carnet ne pose pas la
-    // question (handoff proches, « Le genre n'a pas de champ »). Tant qu'il
-    // traversait jusqu'au client, la règle ne tenait que par la retenue de
-    // celui-ci — rien n'empêchait un écran de l'afficher un jour. Retiré du
-    // contrat, il devient inécrivable, pas seulement non demandé. La colonne
-    // reste en base : c'est un signal de génération, déduit côté serveur.
+    /* Le genre sert L'ACCORD GRAMMATICAL, et rien d'autre — « fier » ou
+     * « fière ». Son libellé à l'écran est « Accord du message », jamais
+     * « Genre » : ce n'est pas un signal d'orientation des cadeaux, c'est de la
+     * grammaire.
+     *
+     * IL SE LIT, et il le faut : le formulaire d'identité (§3.18) porte un
+     * sélecteur, donc l'ouvrir pour corriger autre chose doit montrer ce qui a
+     * été répondu. L'en retirer ferait repartir le champ à vide à chaque
+     * modification, et redemanderait la question sans raison.
+     *
+     * Ce qui reste vrai, et qui est une règle de RÉDACTION : « aucune phrase de
+     * l'interface ne s'en sert » (handoff mobile). Il remplit son propre champ
+     * et ne paraît nulle part ailleurs — ni dans une liste de proches, ni dans
+     * un tri, ni dans une copy.
+     *
+     * Ce commentaire disait auparavant « déduit côté serveur ». C'était faux :
+     * un genre ne se devine pas, il se demande — et le déduire d'un prénom est
+     * exactement le raccourci qui se trompe sur les gens.
+     *
+     * NULLABLE en lecture seulement, pour les fiches antérieures à la règle. Une
+     * fiche créée aujourd'hui en porte toujours un : voir `champsDeProche`. */
+    gender: z.enum(PERSON_GENDERS).nullable(),
     city: z.string().nullable(),
     country: z.string().nullable(),
     register: z.enum(PERSON_REGISTERS).nullable(),
@@ -156,6 +187,16 @@ export const champsDeProche = z
     avatarUrl: z.string().url().max(2048).optional(),
     relation: z.enum(PERSON_RELATIONS).optional(),
     register: z.enum(PERSON_REGISTERS).optional(),
+    /* OBLIGATOIRE, et c'est le seul champ de la fiche qui le soit avec le nom.
+     *
+     * En français on n'écrit pas à quelqu'un sans le savoir. Le rendre
+     * facultatif produirait des messages en tournures contournées pour tous
+     * ceux qui auraient sauté le champ — c'est-à-dire la plupart —, et
+     * personne n'aurait su pourquoi les textes sonnaient bizarrement.
+     *
+     * Le libellé à l'écran est « Accord du message », jamais « Genre » : ce
+     * n'est pas un signal d'orientation des cadeaux, c'est de la grammaire. */
+    gender: z.enum(PERSON_GENDERS),
     // Langue de ce que le produit écrira POUR ce proche — distincte de la langue
     // d'interface du propriétaire.
     language: z.enum(["fr", "en"]).optional(),

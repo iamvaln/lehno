@@ -11,7 +11,7 @@ const decalerJours = (n: number): string =>
 // Les bornes de la naissance se vérifient sur le PROCHE : elles dépendent de
 // deux champs, et un contrôle sur la seule date ne verrait pas le second.
 const naissance = (date: string, anneeConnue = true): boolean =>
-  createPersonSchema.safeParse({
+  createPersonSchema.safeParse({ gender: "female",
     displayName: "Valery", birthDate: date, birthYearKnown: anneeConnue,
   }).success;
 
@@ -53,7 +53,7 @@ describe("la naissance appartient au proche", () => {
   // Elle se saisit avec le PROCHE, pas avec un événement : c'est un fait de
   // son identité, au même titre que sa ville.
   it("se donne à la création d'un proche", () => {
-    const r = createPersonSchema.safeParse({
+    const r = createPersonSchema.safeParse({ gender: "female",
       displayName: "Valery", birthDate: "1990-03-14", birthYearKnown: true,
     });
     expect(r.success).toBe(true);
@@ -63,14 +63,14 @@ describe("la naissance appartient au proche", () => {
   // annoncer d'âge. C'est la NAISSANCE dont l'année manque — l'anniversaire,
   // lui, a toujours celle qui vient.
   it("accepte une naissance dont l'année n'est pas connue", () => {
-    const r = createPersonSchema.safeParse({
+    const r = createPersonSchema.safeParse({ gender: "female",
       displayName: "Valery", birthDate: "1900-03-14", birthYearKnown: false,
     });
     expect(r.success).toBe(true);
   });
 
   it("refuse une naissance hors bornes sur un proche", () => {
-    const r = createPersonSchema.safeParse({
+    const r = createPersonSchema.safeParse({ gender: "female",
       displayName: "Valery", birthDate: decalerJours(1),
     });
     expect(r.success).toBe(false);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PERSON_GENDERS } from "./me.js";
 
 // LE pseudo, déclaré ICI et nulle part ailleurs.
 //
@@ -29,10 +30,24 @@ export const profileSchema = z.object({
   theme: z.enum(["system", "light", "dark"]),
   timezone: z.string().max(64),
   sendHour: z.number().int().min(0).max(23),
+  /* L'accord grammatical de CELUI QUI SIGNE — « je suis fier » ou « fière ».
+   *
+   * Il en faut deux : celui du proche ne suffit pas, parce que « je suis fière
+   * de toi » dépend de qui écrit, pas de qui reçoit. Toutes les orientations du
+   * studio parlent à la première personne.
+   *
+   * NULLABLE, contrairement à celui d'un proche — et pour une raison qui tient
+   * au parcours, pas à un relâchement de la règle : une fiche naît d'un
+   * formulaire qui pose la question, un compte naît d'un code à usage unique
+   * qui ne pose rien. Il se renseigne donc au profil (§3.23), plus tard.
+   *
+   * Nul veut dire « pas encore répondu », et la génération emploie alors des
+   * tournures qui s'en passent — jamais un accord au hasard. */
+  gender: z.enum(PERSON_GENDERS).nullable(),
 }).strict();
 
 export const updateProfileSchema = profileSchema
-  .pick({ username: true, displayName: true, uiLanguage: true, theme: true, timezone: true, sendHour: true })
+  .pick({ username: true, displayName: true, uiLanguage: true, theme: true, timezone: true, sendHour: true, gender: true })
   .partial()
   .strict();
 
