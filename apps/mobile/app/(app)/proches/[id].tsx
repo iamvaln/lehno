@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  estActive, noteListSchema, personSchema, type Note, type Person,
+  estActive, noteListSchema, personAttributesSchema, personSchema,
+  type Note, type Person, type PersonAttribute,
 } from "@lehno/contracts";
 import {
   nativeBorder, nativeFont, nativeRadius, nativeSpace, nativeTouchMin,
@@ -19,9 +20,11 @@ import { useDrapeaux } from "../../../lib/DrapeauxProvider.js";
 import { useCategories } from "../../../lib/MetadonneesProvider.js";
 import {
   categoriesDeLaNote, dateCourte, estUnGardeFou, interetsEtNotes,
-  presseAssezPourSAfficher, sousTitreDuProche,
+  presseAssezPourSAfficher, sousTitreDuProche, topoReplie,
 } from "../../../lib/carnet.js";
-import { CLES_DE_CATEGORIE, libelleDeLEcheance } from "../../../lib/libelles.js";
+import {
+  CLES_DE_CATEGORIE, CLES_DE_NATURE, libelleDeLEcheance,
+} from "../../../lib/libelles.js";
 
 /* La fiche d'un proche.
  *
@@ -64,6 +67,8 @@ export default function Proche() {
 
   const [proche, setProche] = useState<Person | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [topo, setTopo] = useState<PersonAttribute[]>([]);
+  const [toutLeTopo, setToutLeTopo] = useState(false);
   const [tousLesInterets, setTousLesInterets] = useState(false);
   /* Un chargement qui échoue doit se DIRE. Sans cela, la promesse partait sans
      personne pour la rattraper et l'écran gardait ses squelettes : rien ne
@@ -76,12 +81,14 @@ export default function Proche() {
     /* Deux appels, en parallèle : la fiche et ses notes durables. Les
        enchaîner ferait attendre deux allers-retours pour un écran qui n'en
        demande qu'un de latence. */
-    const [fiche, durables] = await Promise.all([
+    const [fiche, durables, attributs] = await Promise.all([
       appel<unknown>(`/me/persons/${id}`),
       appel<unknown>(`/me/persons/${id}/notes`),
+      appel<unknown>(`/me/persons/${id}/attributes`),
     ]);
     setProche(personSchema.parse(fiche));
     setNotes(noteListSchema.parse(durables));
+    setTopo(personAttributesSchema.parse(attributs).attributes);
   }, [id]);
 
   const charge = useCallback(async () => {
@@ -183,6 +190,35 @@ export default function Proche() {
           />
         ) : null}
       </View>
+
+      {/* LE TOPO — extrait des notes, jamais saisi. Le bloc n'existe QUE s'il a
+          de la matière : une liste vide est un état normal, pas un défaut, et
+          une grille de cases vides transformerait une extraction en
+          questionnaire. Il se replie sur trois puces — onze attributs ne
+          repoussent pas les actions de la fiche. */}
+      {topo.length ? (
+        <View style={[styles.bloc]}>
+          <SectionLabel>{t.ficheTopo}</SectionLabel>
+          <View style={[styles.etiquettes]}>
+            {(toutLeTopo ? topo : topoReplie(topo).vus).map((a) => (
+              <Tag key={`${a.kind}-${a.value}`}>
+                {`${t[CLES_DE_NATURE[a.kind]]} · ${a.value}`}
+              </Tag>
+            ))}
+            {!toutLeTopo && topoReplie(topo).reste ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setToutLeTopo(true)}
+                style={[styles.reste, { borderColor: couleurs.borderObject }]}
+              >
+                <Text style={[styles.resteTexte, { color: couleurs.textAccent }]}>
+                  {t.ficheGoutsReste(topoReplie(topo).reste)}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
 
       {interets.length ? (
         <View style={[styles.bloc]}>

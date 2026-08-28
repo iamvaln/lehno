@@ -6,8 +6,7 @@ import type { TableDesCategories } from "../lib/carnet.js";
 import {
   PAGE, basculeDeTri, dateCourte, interetsEtNotes, parametresDuCarnet,
   categoriesDeLaNote, estUnGardeFou, offreLeType, presseAssezPourSAfficher,
-  resteACharger,
-  sousTitreDuProche,
+  resteACharger, sousTitreDuProche, TOPO_VISIBLE, topoReplie,
 } from "../lib/carnet.js";
 
 describe("le tri porte sa direction", () => {
@@ -259,5 +258,38 @@ describe("ce qu'un drapeau ferme, et ce qu'il ne ferme pas", () => {
   it("ne traduit pas ce que l'utilisateur a écrit", () => {
     expect(libelleDeLEcheance("birthday", null, t)).toBe(t.typeAnniversaire);
     expect(libelleDeLEcheance("other", "Retraite de papa", t)).toBe("Retraite de papa");
+  });
+});
+
+describe("le topo se replie", () => {
+  /* Trois puces, puis « +N ». Onze attributs ne repoussent pas les actions de
+     la fiche : c'est un aperçu, pas un dossier. */
+  it("montre trois valeurs et compte le reste", () => {
+    const onze = Array.from({ length: 11 }, (_, i) => i);
+    const { vus, reste } = topoReplie(onze);
+    expect(vus).toHaveLength(TOPO_VISIBLE);
+    expect(reste).toBe(8);
+  });
+
+  it("ne compte rien quand tout tient", () => {
+    expect(topoReplie([1, 2])).toEqual({ vus: [1, 2], reste: 0 });
+  });
+
+  /* Une liste vide est un état NORMAL, pas un défaut : une fiche neuve n'a
+     rien appris encore. Le bloc n'existe alors pas — jamais une grille de
+     cases vides qui attendraient d'être remplies, ce qui transformerait une
+     extraction en questionnaire. */
+  it("rend un vide franc plutôt qu'un reste négatif", () => {
+    expect(topoReplie([])).toEqual({ vus: [], reste: 0 });
+  });
+
+  // La composition doit tenir avec deux valeurs comme avec onze — le contrat
+  // le demande en toutes lettres.
+  it("tient de zéro à onze", () => {
+    for (let n = 0; n <= 11; n++) {
+      const { vus, reste } = topoReplie(Array.from({ length: n }, (_, i) => i));
+      expect(vus.length + reste, `${n}`).toBe(n);
+      expect(vus.length, `${n}`).toBeLessThanOrEqual(TOPO_VISIBLE);
+    }
   });
 });

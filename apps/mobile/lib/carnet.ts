@@ -167,3 +167,26 @@ export function sousTitreDuProche(morceaux: readonly (string | null)[]): string 
 export function offreLeType(ouverts: readonly EventKind[], kind: EventKind): boolean {
   return ouverts.includes(kind);
 }
+
+/* LE TOPO — ce que les notes ont appris, extrait et jamais saisi.
+ *
+ * Onze natures possibles, une seule valeur par nature — la plus récente —,
+ * chacune avec la note d'où elle vient. Aucun formulaire ne les demande :
+ * corriger, c'est écrire une note.
+ *
+ * LE BLOC N'EXISTE QUE S'IL A DE LA MATIÈRE. Une liste vide est un état normal,
+ * pas un défaut : une fiche neuve n'a rien appris encore. On n'affiche alors
+ * aucun bloc — jamais une grille de cases vides qui attendraient d'être
+ * remplies, ce qui transformerait une extraction en questionnaire.
+ *
+ * ET IL SE REPLIE : trois puces, puis « +N ». Onze attributs ne repoussent pas
+ * les actions de la fiche — c'est un aperçu, pas un dossier.
+ */
+export const TOPO_VISIBLE = 3;
+
+export function topoReplie<T>(attributs: readonly T[]): { vus: T[]; reste: number } {
+  return {
+    vus: attributs.slice(0, TOPO_VISIBLE),
+    reste: Math.max(0, attributs.length - TOPO_VISIBLE),
+  };
+}

@@ -1,6 +1,6 @@
 import type {
-  CategoryCode, ContactChannel, EventKind, PersonGender, PersonRegister,
-  PersonRelation,
+  AttributNature, CategoryCode, ContactChannel, EventKind, PersonGender,
+  PersonRegister, PersonRelation,
 } from "@lehno/contracts";
 import type { Messages } from "../messages/index.js";
 
@@ -71,6 +71,25 @@ const GENRES: Record<PersonGender, CleDeTexte> = {
   male: "genreMasculin",
 };
 
+/* Les onze natures du topo. Elles sont EXTRAITES des notes, jamais saisies :
+   aucun formulaire ne les demande, et corriger revient à écrire une note. Le
+   serveur ne rend que le `kind` — le libellé vit ici, indexé par lui, comme
+   pour toutes les énumérations. */
+const NATURES: Record<AttributNature, CleDeTexte> = {
+  occupation: "topoMetier",
+  food: "topoPlat",
+  color: "topoCouleur",
+  animal: "topoAnimal",
+  drink: "topoBoisson",
+  hobby: "topoLoisir",
+  style: "topoStyle",
+  fragrance: "topoParfum",
+  clothing_size: "topoTaille",
+  shoe_size: "topoPointure",
+  avoid: "topoEviter",
+};
+
+export const CLES_DE_NATURE = NATURES;
 export const CLES_DE_GENRE = GENRES;
 export const CLES_DE_CATEGORIE = CATEGORIES;
 export const CLES_DE_RELATION = RELATIONS;
