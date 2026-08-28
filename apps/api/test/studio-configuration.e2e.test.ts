@@ -147,6 +147,33 @@ describe("administration — la configuration du studio", () => {
     expect(sansTarif?.tarifs).toEqual({ entree: null, sortie: null });
   });
 
+  /* L'historique se résout en deux requêtes, pas en deux par ligne — et c'est
+     là que le risque est : un rendu groupé qui compterait les essais PAR LIGNE
+     au lieu de PAR EMPREINTE afficherait « 0 essai · non publiable » sur un
+     brouillon qui hérite pourtant de la couverture du précédent. L'écran
+     grisrait alors un bouton que le serveur, lui, accepte. */
+  it("compte les essais par empreinte, aussi dans l'historique", async () => {
+    const { entete } = await session("admin");
+    const avant = await brouillonner(reglages((r) => { r.consigneCommune = "la même matière"; }));
+    await essaiSur(avant.id, "success");
+    await essaiSur(avant.id, "error");
+    const apres = await brouillonner(reglages((r) => {
+      r.consigneCommune = "la même matière";
+      r.orientations[0]!.libelle.fr = "Ce qui nous lie";
+    }));
+
+    const page = historiqueStudioSchema.parse(await (await appeler("GET", "/config/history", entete)).json());
+    const ligne = page.items.find((i) => i.id === apres.id);
+    // Un seul essai RÉUSSI, hérité de l'état antérieur à même empreinte.
+    expect(ligne?.essaisReussis).toBe(1);
+    expect(ligne?.publiable).toBe(true);
+    expect(ligne?.blocage).toBeNull();
+    // Et la même ligne, lue en détail, dit exactement la même chose.
+    const etat = etatStudioSchema.parse(await (await appeler("GET", "/config", entete)).json());
+    expect(etat.brouillon?.essaisReussis).toBe(1);
+    expect(etat.brouillon?.publiable).toBe(true);
+  });
+
   // ── La publication ────────────────────────────────────────────────────────
 
   /* LA règle, énoncée exactement (§4). Sans elle, « rien ne se publie sans

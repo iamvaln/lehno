@@ -17,6 +17,23 @@ import { AuditService } from "../admin/audit.service.js";
  * essai » n'est vraie que par ce chaînage.
  */
 
+/* La règle de publication, ÉNONCÉE UNE SEULE FOIS.
+ *
+ * Elle est lue à deux endroits — la publication, qui refuse, et le rendu, qui
+ * grise le bouton. Deux formulations divergeraient au premier durcissement
+ * (par exemple « au moins un essai sur un profil sensible », §9 non tranché),
+ * et l'écran proposerait alors ce que le serveur refuse. C'est la pire des
+ * divergences : elle se découvre en cliquant.
+ *
+ * Pure à dessein : le COMPTE d'essais lui est passé, elle ne va pas le
+ * chercher. C'est ce qui permet de la lire depuis un rendu de liste, où le
+ * compte a déjà été groupé. */
+function blocagePour(etat: string, essaisReussis: number): BlocagePublication | null {
+  if (etat === "published") return "deja_en_service";
+  if (etat === "superseded") return "etat_depasse";
+  return essaisReussis === 0 ? "aucun_essai_reussi" : null;
+}
+
 type LigneConfig = {
   id: string; version: number | null; state: string; settings: unknown;
   fingerprint: string; publishedAt: Date | null; publishedByAdminId: string | null;
@@ -200,9 +217,7 @@ export class StudioConfigurationService {
    * un changement de libellé crée une ligne neuve, mais elle hérite de la
    * couverture d'essai de la précédente, puisque l'empreinte n'a pas bougé. */
   private async blocageDe(ligne: LigneConfig): Promise<BlocagePublication | null> {
-    if (ligne.state === "published") return "deja_en_service";
-    if (ligne.state === "superseded") return "etat_depasse";
-    return (await this.essaisReussis(ligne.fingerprint)) === 0 ? "aucun_essai_reussi" : null;
+    return blocagePour(ligne.state, await this.essaisReussis(ligne.fingerprint));
   }
 
   private erreurDe(blocage: BlocagePublication): AppError {
@@ -227,7 +242,14 @@ export class StudioConfigurationService {
           where: { id: ligne.publishedByAdminId }, select: { email: true },
         }),
     ]);
-    const blocage = await this.blocageDe(ligne);
+    return this.assembler(ligne, essais, auteur?.email ?? null);
+  }
+
+  private assembler(ligne: LigneConfig, essaisReussis: number, parQui: string | null): ConfigurationStudio {
+    /* Le blocage se DÉDUIT du compte déjà lu, il ne se relit pas : une seconde
+       interrogation rendrait la ligne vue en liste incohérente avec la même
+       ligne vue en détail dès qu'un essai tombe entre les deux. */
+    const blocage = blocagePour(ligne.state, essaisReussis);
 
     return {
       id: ligne.id,
@@ -240,17 +262,66 @@ export class StudioConfigurationService {
       /* Nul plutôt qu'« inconnu » pour la configuration posée par la
          réconciliation au démarrage : personne ne l'a publiée, et « inconnu »
          laisserait croire qu'on a perdu le nom. Même règle que les gabarits. */
-      parQui: auteur?.email ?? null,
+      parQui,
       creeeLe: ligne.createdAt.toISOString(),
-      essaisReussis: essais,
+      essaisReussis,
       publiable: blocage === null,
       blocage,
     };
   }
 
+  /* Une LISTE se résout en deux requêtes, pas en deux par ligne.
+   *
+   * `rendre` interroge la base deux fois — le compte d'essais et l'auteur —
+   * ce qui est juste pour une ligne et ruineux pour l'historique : une séance
+   * de réglage produit trente lignes, et l'écran en montre deux cents. On
+   * groupe donc en amont, puis on assemble en mémoire.
+   *
+   * Le rendu reste UN SEUL chemin : `assembler` est la même fonction pour une
+   * ligne et pour cent. Deux formes de rendu pour une seule chose finissent
+   * toujours par diverger — c'est ce qui fait qu'un champ ajouté n'apparaît
+   * que sur l'un des deux écrans. */
   async rendreTous(lignes: LigneConfig[]): Promise<ConfigurationStudio[]> {
-    // Une ligne suit le même chemin qu'une liste : deux formes de rendu pour
-    // une seule chose finissent toujours par diverger.
-    return Promise.all(lignes.map((l) => this.rendre(l)));
+    if (lignes.length === 0) return [];
+
+    const empreintes = [...new Set(lignes.map((l) => l.fingerprint))];
+    const auteurs = [...new Set(lignes.flatMap((l) => (l.publishedByAdminId ? [l.publishedByAdminId] : [])))];
+
+    const [comptes, comptables] = await Promise.all([
+      this.prisma.studioTrial.groupBy({
+        by: ["studioConfigId"],
+        where: { status: "success", config: { fingerprint: { in: empreintes } } },
+        _count: { _all: true },
+      }),
+      this.prisma.studioConfig.findMany({
+        where: { fingerprint: { in: empreintes } },
+        select: { id: true, fingerprint: true },
+      }),
+    ]);
+
+    /* Le compte se fait par EMPREINTE, jamais par configuration : la règle du
+       §4 accepte un essai venu d'un état antérieur à empreinte identique.
+       Compter par ligne rendrait « 0 essai » sur un brouillon qui hérite
+       pourtant de la couverture du précédent, et l'écran grisrait un bouton
+       que le serveur, lui, accepterait. */
+    const empreinteDe = new Map(comptables.map((c) => [c.id, c.fingerprint]));
+    const parEmpreinte = new Map<string, number>();
+    for (const c of comptes) {
+      const e = empreinteDe.get(c.studioConfigId);
+      if (e === undefined) continue;
+      parEmpreinte.set(e, (parEmpreinte.get(e) ?? 0) + c._count._all);
+    }
+
+    const parAuteur = new Map(
+      (auteurs.length === 0 ? [] : await this.prisma.admin.findMany({
+        where: { id: { in: auteurs } }, select: { id: true, email: true },
+      })).map((a) => [a.id, a.email]),
+    );
+
+    return lignes.map((l) => this.assembler(
+      l,
+      parEmpreinte.get(l.fingerprint) ?? 0,
+      (l.publishedByAdminId ? parAuteur.get(l.publishedByAdminId) : undefined) ?? null,
+    ));
   }
 }
