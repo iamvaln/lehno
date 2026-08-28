@@ -367,6 +367,41 @@ describe("l'effacement des comptes supprimés", () => {
     expect(await db.prisma.auditLog.count({ where: { action: "account_erased" } })).toBe(1);
   });
 
+  /* PIÈGE : L'ORDRE DES ÉTAPES. L'adresse du compte sert de critère pour
+     retrouver les traces de connexion écrites sans `user_id`. Si le compte
+     était anonymisé AVANT elles, une reprise relirait le substitut
+     `supprime+…@lehno.invalid`, ne retrouverait plus ces lignes, et l'adresse
+     d'origine resterait au journal pour toujours — sans que rien ne le
+     signale. Ce cas ne tombe QUE sur une reprise : un passage d'une traite
+     garde l'adresse d'origine dans une variable et masque le défaut. */
+  it("retrouve encore les traces par l'adresse après une reprise", async () => {
+    const u = await enSuppression(40);
+    await db.prisma.loginActivity.create({
+      data: { attemptedEmail: u.email, result: "failure", method: "otp" },
+    });
+
+    let tombe = true;
+    const boiteux = new Proxy(db.prisma, {
+      get(c, prop, r) {
+        if (prop === "loginActivity" && tombe) {
+          tombe = false;
+          return { updateMany: async () => { throw new Error("connexion perdue"); } };
+        }
+        return Reflect.get(c, prop, r) as unknown;
+      },
+    });
+    await new EffacementService(boiteux as never).executer();
+    // Interrompu juste avant l'anonymisation du compte : l'adresse d'origine
+    // est donc encore lisible, et c'est exactement ce que la reprise exige.
+    expect((await relu(u.id)).email).toBe(u.email);
+
+    await service.executer();
+
+    const trace = await db.prisma.loginActivity.findFirstOrThrow();
+    expect(trace.attemptedEmail).toBeNull();
+    expect((await relu(u.id)).erasedAt).not.toBeNull();
+  });
+
   /* PIÈGE : un compte en panne ne doit pas emporter la file. Sans le
      try/catch par compte, le premier échec laisserait tous les suivants
      intouchés — et la file se bloquerait sur lui, nuit après nuit. */
