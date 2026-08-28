@@ -3,6 +3,7 @@ import type { Home } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { OccurrenceService } from "./occurrence.service.js";
 import { ajouterJours } from "./calendrier.js";
+import { nonLuesDuCentre } from "./notification.service.js";
 
 /* Combien d'échéances l'accueil rend.
  *
@@ -70,8 +71,14 @@ export class HomeService {
       // ce que count() ne ferait pas sur une fiche bien remplie. count()
       // n'accepte d'ailleurs pas `take`.
       this.prisma.person.findFirst({ where: { userId }, select: { id: true } }),
-      // La cloche : `readAt` nullable, indexé par [userId, readAt].
-      this.prisma.notification.count({ where: { userId, readAt: null } }),
+      /* La cloche. Le prédicat vient du CENTRE, il n'est pas récrit ici : la
+         pastille et la liste de /me/notifications doivent compter la même
+         chose. Un `where: { userId, readAt: null }` écrit à la main comptait
+         les lignes `email` et `push` — des ENVOIS, jamais des entrées du
+         centre — et les rappels programmés un mois d'avance ; la cloche
+         annonçait donc des éléments que le centre ne montrait pas, et qu'aucun
+         geste ne pouvait éteindre. */
+      this.prisma.notification.count({ where: { userId, ...nonLuesDuCentre() } }),
       /* Tout ce qui vient dans l'horizon, RENDUES COMPRISES. On soustrait
          ensuite : compter « au-delà de la septième » demanderait de connaître la
          date de la septième, donc d'attendre la première requête pour lancer la
