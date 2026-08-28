@@ -89,7 +89,9 @@ export default function Accueil() {
   }
 
   const etat = etatDeLAccueil(home);
-  const { cartes, rangs } = composeLAccueil(home.occurrences, remplissage);
+  const { cartes, rangs, reste } = composeLAccueil(
+    home.occurrences, remplissage, home.remainingOccurrences,
+  );
   const preparer = preparationOuverte(actives);
 
   /* Le carnet neuf ne poursuit qu'UN BUT : conduire au premier ajout.
@@ -137,10 +139,16 @@ export default function Accueil() {
         <>
           <View style={styles.entete}>
             <SectionLabel>{t.ceQuiApproche}</SectionLabel>
-            {/* « Voir tout » mène à Dates, qui appartient au lot B. Le pointer
-                vers Proches en attendant serait mentir sur sa destination : ce
-                n'est pas la même liste, et le lien porte le mot « tout ». Il
-                revient avec son écran. */}
+            {/* « Voir plus » quand il en reste, « Voir tout » sinon. Le compte
+                vient du serveur : `/me/home` ne rend que les plus proches, et
+                sans `remainingOccurrences` ce lien aurait toujours dit « tout »
+                alors qu'il en manquait vingt.
+
+                Il ne mène nulle part tant que Dates n'existe pas — le pointer
+                vers Proches serait mentir sur sa destination. */}
+            <Text style={[styles.voir, { color: couleurs.textMention }]}>
+              {reste ? t.voirPlus : t.voirTout}
+            </Text>
           </View>
 
           {/* La zone mesurée. `onLayout` donne la hauteur disponible,

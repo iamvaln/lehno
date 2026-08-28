@@ -43,6 +43,8 @@ function proche(champs: Partial<Person> & { id: string; displayName: string }): 
     isSelf: false,
     relation: null,
     relationHint: null,
+    // Nullable en lecture : les fiches antérieures à la règle n'en portent pas.
+    gender: null,
     birthDate: null,
     birthYearKnown: false,
     city: null,

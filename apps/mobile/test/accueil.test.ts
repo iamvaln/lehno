@@ -129,7 +129,7 @@ describe("le retour au maximum n'appartient qu'au redimensionnement", () => {
 describe("les deux états vides ne se ressemblent pas", () => {
   const home = (occurrences: Occurrence[], hasPersons: boolean): Home => ({
     firstName: "Valentine", occurrences, counts: { today: 0, thisWeek: 0 },
-    unreadNotifications: 0, hasPersons,
+    unreadNotifications: 0, hasPersons, remainingOccurrences: 0,
   });
 
   /* Carnet neuf : l'écran ne poursuit qu'un but, conduire au premier ajout.
@@ -149,5 +149,29 @@ describe("les deux états vides ne se ressemblent pas", () => {
   it("une échéance suffit à sortir des deux", () => {
     expect(etatDeLAccueil(home([echeance(3)], true))).toBe("nominal");
     expect(etatDeLAccueil(home([echeance(3)], false))).toBe("nominal");
+  });
+});
+
+describe("ce que le serveur garde par-devers lui", () => {
+  /* `/me/home` ne rend que les échéances les plus proches — trois au moment où
+     j'écris. Sans `remainingOccurrences`, « Voir plus · n restants » était
+     INATTEIGNABLE : l'écran disait « Voir tout » alors qu'il en manquait vingt.
+     C'était un défaut vu à l'écran, et le contrat l'a réparé. */
+  it("compte ce qui n'est pas venu, pas seulement ce qui ne tient pas", () => {
+    const a = composeLAccueil([echeance(1), echeance(2)], REMPLISSAGE_PLEIN, 20);
+    expect(a.cartes).toHaveLength(2);
+    expect(a.rangs).toHaveLength(0);
+    expect(a.reste).toBe(20);
+  });
+
+  // Les deux s'additionnent : ce que la page laisse dehors ET ce que le serveur
+  // n'a pas envoyé. Compter l'un sans l'autre annoncerait un reste trop court.
+  it("additionne les deux manques", () => {
+    const dix = Array.from({ length: 10 }, (_, i) => echeance(i));
+    expect(composeLAccueil(dix, REMPLISSAGE_PLEIN, 5).reste).toBe(8);
+  });
+
+  it("ne compte rien quand tout est là et tout tient", () => {
+    expect(composeLAccueil([echeance(1)], REMPLISSAGE_PLEIN, 0).reste).toBe(0);
   });
 });

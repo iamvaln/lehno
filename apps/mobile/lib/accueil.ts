@@ -51,7 +51,9 @@ export interface Accueil {
   cartes: Occurrence[];
   rangs: Occurrence[];
   /* Ce qui n'entre nulle part. Jamais escamoté : le lien vers Dates le porte,
-     et c'est ce qui distingue « il n'y a que ça » de « le reste est ailleurs ». */
+     et c'est ce qui distingue « il n'y a que ça » de « le reste est ailleurs ».
+     Il compte ce que la page laisse dehors ET ce que le serveur n'a pas
+     envoyé — `/me/home` rend les plus proches, pas tout le calendrier. */
   reste: number;
 }
 
@@ -68,6 +70,10 @@ export interface Accueil {
 export function composeLAccueil(
   echeances: readonly Occurrence[],
   { cartes: nbCartes, rangs: nbRangs }: Remplissage,
+  /* Ce que le serveur garde par-devers lui. `/me/home` ne rend que les plus
+     proches ; sans ce nombre, « Voir plus » serait inatteignable et l'écran
+     dirait « Voir tout » alors qu'il en manque vingt. */
+  auDela = 0,
 ): Accueil {
   const semaine = echeances.filter((e) => e.daysUntil >= 0 && e.daysUntil <= SEMAINE);
   const source = semaine.length ? semaine : echeances.slice(0, MIN_CARTES);
@@ -77,7 +83,7 @@ export function composeLAccueil(
   return {
     cartes: [...cartes],
     rangs: [...rangs],
-    reste: Math.max(0, echeances.length - cartes.length - rangs.length),
+    reste: Math.max(0, echeances.length - cartes.length - rangs.length) + auDela,
   };
 }
 
