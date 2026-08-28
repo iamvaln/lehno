@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { randomBytes } from "node:crypto";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { MetadataService } from "../src/me/metadata.service.js";
+import { CatalogueIAService } from "../src/ia/catalogue.service.js";
 import { FlagsService } from "../src/flags/flags.service.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
@@ -194,6 +195,37 @@ describe("les métadonnées", () => {
       const corps = (await r.json()) as { categories: unknown[]; eventKinds: string[] };
       expect(corps.categories).toHaveLength(7);
       expect(corps.eventKinds).toEqual(["birthday", "other"]);
+    });
+  });
+
+  /* LE PRIX VIENT DE LA BASE, et il faut qu'il arrive au client : un écran qui
+     annonce un coût avant de débiter ne peut pas se tromper, et une constante
+     côté client afficherait l'ancien tarif sur tout un parc jusqu'à la mise à
+     jour suivante. */
+  describe("le prix des actions payantes", () => {
+    it("rend le coût lu en base", async () => {
+      await new CatalogueIAService(db.prisma as never).reconcilier();
+      const rendu = await metadata.get();
+      const message = rendu.premiumActions.find((a) => a.code === "wish_message");
+      expect(message).toBeDefined();
+      expect(message!.credits).toBeGreaterThan(0);
+    });
+
+    it("suit le tarif réglé en administration", async () => {
+      await new CatalogueIAService(db.prisma as never).reconcilier();
+      await db.prisma.premiumAction.updateMany({ where: { code: "portrait" }, data: { creditCost: 7 } });
+      const rendu = await metadata.get();
+      expect(rendu.premiumActions.find((a) => a.code === "portrait")?.credits).toBe(7);
+    });
+
+    /* Une action absente n'est pas disponible — même convention que les
+       drapeaux : ce qui n'est pas là est éteint, et « absent » se confond avec
+       « inconnu » à dessein. */
+    it("ne rend pas une action désactivée", async () => {
+      await new CatalogueIAService(db.prisma as never).reconcilier();
+      await db.prisma.premiumAction.updateMany({ where: { code: "gift_ideas" }, data: { enabled: false } });
+      const rendu = await metadata.get();
+      expect(rendu.premiumActions.map((a) => a.code)).not.toContain("gift_ideas");
     });
   });
 });
