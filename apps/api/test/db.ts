@@ -50,7 +50,22 @@ export async function withDatabase(): Promise<TestDb> {
 // migration des paiements et jamais rejoués. Les vider laisserait
 // l'application sans rien à proposer à l'achat, et un test qui ajuste un
 // palier déciderait du point de départ du suivant.
-const REFERENCE_TABLES = new Set(["category", "system_parameter", "credit_bundle"]);
+/* `audit_reason` et ses portées rejoignent l'ensemble : elles sont semées une
+   fois par la migration du module, avec les libellés du kit, et jamais
+   rejouées. Les vider laisserait chaque geste d'administration sans motif à
+   proposer — et le premier test qui en dépend échouerait de façon
+   incompréhensible.
+
+   Leurs tables d'HISTORIQUE les suivent, et pour une raison propre : un index
+   unique partiel garantit une seule version ouverte par ligne. Vider
+   l'historique en gardant les entités laisserait des lignes de configuration
+   sans version en vigueur — un état que la base n'accepte de nulle part
+   ailleurs, et qu'on n'a aucune raison de fabriquer dans les tests. */
+const REFERENCE_TABLES = new Set([
+  "category", "system_parameter", "credit_bundle",
+  "audit_reason", "audit_reason_scope",
+  "audit_reason_history", "audit_reason_scope_history",
+]);
 
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`

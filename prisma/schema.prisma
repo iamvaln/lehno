@@ -1272,6 +1272,46 @@ model AuditReasonScope {
   @@map("audit_reason_scope")
 }
 
+/// Les versions successives d'un motif. Alimentée par déclencheur.
+///
+/// Elle répond à la question que le code stable ne suffit pas à régler : quel
+/// LIBELLÉ portait ce code le jour où quelqu'un l'a retenu. Un libellé corrigé
+/// deux ans plus tard ne doit pas réécrire ce qu'on a fait lire à l'époque.
+model AuditReasonHistory {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auditReasonId String    @map("audit_reason_id") @db.Uuid
+  code          String    @db.VarChar(48)
+  labelFr       String    @map("label_fr") @db.VarChar(120)
+  labelEn       String    @map("label_en") @db.VarChar(120)
+  isActive      Boolean   @map("is_active")
+  updatedAt     DateTime  @map("updated_at") @db.Timestamptz
+  validFrom     DateTime  @map("valid_from") @db.Timestamptz
+  validTo       DateTime? @map("valid_to") @db.Timestamptz
+  changedBy     String?   @map("changed_by") @db.Uuid
+  reason        String
+  reasonCode    String?   @map("reason_code") @db.VarChar(48)
+
+  @@index([auditReasonId, validFrom])
+  @@map("audit_reason_history")
+}
+
+/// Les versions successives d'une portée : à quels gestes un motif s'est
+/// proposé, et entre quelles dates.
+model AuditReasonScopeHistory {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auditReasonScopeId String    @map("audit_reason_scope_id") @db.Uuid
+  reasonId           String    @map("reason_id") @db.Uuid
+  geste              String    @db.VarChar(48)
+  position           Int?      @db.SmallInt
+  validFrom          DateTime  @map("valid_from") @db.Timestamptz
+  validTo            DateTime? @map("valid_to") @db.Timestamptz
+  changedBy          String?   @map("changed_by") @db.Uuid
+  reason             String
+  reasonCode         String?   @map("reason_code") @db.VarChar(48)
+
+  @@map("audit_reason_scope_history")
+}
+
 // Le catalogue des modèles et leur ordre de repli. La priorité gouverne le
 // routage : le plus bas passe en premier, et l'indisponibilité de l'un bascule
 // sur le suivant (spec technique §, repli entre fournisseurs).
@@ -1945,6 +1985,7 @@ model PaymentChannelHistory {
   /// Nul pour une migration, qui n'a pas d'administrateur.
   changedBy        String?           @map("changed_by") @db.Uuid
   reason           String
+  reasonCode       String?           @map("reason_code") @db.VarChar(48)
 
   @@index([paymentChannelId, validFrom])
   @@map("payment_channel_history")
