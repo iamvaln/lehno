@@ -32,16 +32,22 @@ describe("ce que les réglages montrent", () => {
      sorties de la fiche d'un proche. Ouvrir vers rien apprend à ne pas croire
      les rangs, et c'est plus coûteux qu'un rang absent. */
   it("tait les rangs dont l'écran n'est pas porté", () => {
-    for (const attendu of ["rappels", "donnees", "aide", "recharge"]) {
+    for (const attendu of ["donnees", "aide", "recharge"]) {
       expect(cles(LANCEMENT)).not.toContain(attendu);
     }
   });
 
-  /* Une section vidée de ses rangs disparaît, titre compris : « Rappels et
-     données » seul annoncerait un contenu qui ne vient pas. */
+  /* Une section vidée de ses rangs disparaît, titre compris : « Crédits et
+     paiements » seul annoncerait un contenu qui ne vient pas.
+     
+     Au lancement elle l'est entièrement : la recharge n'est pas portée, le
+     parrainage non plus, et les méthodes de paiement suivent un drapeau
+     éteint. Ce test rougira quand l'une des trois arrivera — c'est ce qu'on
+     lui demande. */
   it("retire une section qui n'a plus aucun rang", () => {
     const sections = sectionsDeReglages(LANCEMENT).map((s) => s.cle);
-    expect(sections).not.toContain("alertes");
+    expect(sections).not.toContain("argent");
+    expect(sections).toContain("alertes");
     expect(sections).toContain("aide");
   });
 
@@ -51,6 +57,7 @@ describe("ce que les réglages montrent", () => {
   it("montre les rangs dont l'écran est porté", () => {
     expect(cles(LANCEMENT)).toContain("profil");
     expect(cles(LANCEMENT)).toContain("securite");
+    expect(cles(LANCEMENT)).toContain("rappels");
   });
 
   /* Les méthodes de paiement suivent `topup.provider`, éteint au lancement :
