@@ -40,6 +40,43 @@ export function parametresDuCarnet(tri: Tri, offset: number): string {
   return `?sort=${tri.cle}&direction=${tri.sens}&offset=${offset}&limit=${PAGE}`;
 }
 
+/* LA RECHERCHE PASSE PAR LE SERVEUR, et non plus par un filtre en mémoire.
+ *
+ * Elle filtrait la page déjà chargée — et pour l'éviter, l'écran tirait le
+ * carnet ENTIER par pages de cent avant de chercher dedans. Tenable à dix
+ * fiches, plus à trois cents : quatre allers-retours avant la première lettre
+ * tapée, et le même travail refait à chaque ouverture.
+ *
+ * `?q=` vit sur le MÊME chemin que la liste, et le contrat le dit : la
+ * recherche « doit se COMBINER au tri et à la pagination ». C'est pourquoi on
+ * garde ici le tri courant plutôt que d'en imposer un — §3.15 veut des
+ * résultats « classés par proximité de leur prochaine échéance », qui est le
+ * tri de la liste, et forcer l'alphabétique changerait l'ordre sous les yeux de
+ * quelqu'un qui vient seulement de taper une lettre.
+ *
+ * La requête est ENCODÉE : un nom porte des espaces, des apostrophes, parfois
+ * une esperluette. Sans encodage, « Marie & Ana » couperait l'URL en deux.
+ */
+export function parametresDeRecherche(tri: Tri, offset: number, q: string): string {
+  const propre = q.trim();
+  const base = parametresDuCarnet(tri, offset);
+  return propre ? `${base}&q=${encodeURIComponent(propre)}` : base;
+}
+
+/* CHERCHER NE COMMENCE PAS À LA PREMIÈRE LETTRE.
+ *
+ * Le contrat borne à un caractère au minimum, mais une seule lettre rend
+ * presque tout le carnet : l'appel coûte autant que la liste et n'apprend
+ * rien. Deux, c'est le seuil où la réponse commence à trier.
+ *
+ * En dessous, on ne cherche pas — on PARCOURT, ce que l'écran fait déjà sans
+ * saisie. Il n'y a donc pas d'état vide à dessiner entre les deux. */
+export const MINIMUM_POUR_CHERCHER = 2;
+
+export function chercheVraiment(q: string): boolean {
+  return q.trim().length >= MINIMUM_POUR_CHERCHER;
+}
+
 /* `daysUntil` est SIGNÉ : négatif pour une échéance passée. Une prochaine
    échéance ne devrait pas l'être, mais si elle l'est, « J−−3 » n'a aucun sens.
    On borne des deux côtés plutôt que de faire confiance. */
