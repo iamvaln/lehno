@@ -11,13 +11,18 @@
 -- deviner identifiant par identifiant dans quelle langue il a été écrit.
 --
 -- Les libellés, eux, sont ceux du designer, dans les deux langues, sans
--- réécriture. Vingt-quatre motifs entrent : ils viennent des écrans ajoutés
--- depuis — les productions du studio, les réclamations sur un portrait, le
--- retrait d'une ambiance, le versement d'un remboursement.
+-- réécriture. Vingt motifs entrent : ils viennent des écrans ajoutés depuis —
+-- les productions du studio, les réclamations sur un portrait, le retrait
+-- d'une ambiance, le versement d'un remboursement.
+--
+-- LES CODES SONT REPRIS TELS QUELS DU KIT, y compris là où sa convention
+-- diffère de la mienne : il écrit `holders_request` là où j'écrivais
+-- `holder_s_request`. La sienne se lit mieux, et surtout elle est DÉJÀ dans son
+-- fichier — recopier depuis une seule source vaut mieux que deux dérivations
+-- qui se ressemblent.
 
 SELECT set_config('app.reason', 'migration', true);
 
--- Les motifs, mis au jeu du kit de back-office du 29 août.
 INSERT INTO "audit_reason" ("code", "label_fr", "label_en") VALUES
   ('abuse_found', 'Abus constaté', 'Abuse found'),
   ('access_compromised', 'Accès compromis', 'Access compromised'),
@@ -25,7 +30,7 @@ INSERT INTO "audit_reason" ("code", "label_fr", "label_en") VALUES
   ('accounts_on_the_same_device', 'Comptes liés au même appareil', 'Accounts on the same device'),
   ('acquisition_campaign', 'Campagne d''acquisition', 'Acquisition campaign'),
   ('age_verified_another_way', 'Ancienneté vérifiée autrement', 'Age verified another way'),
-  ('aligning_with_the_brand_s_tone', 'Alignement sur le ton de la marque', 'Aligning with the brand''s tone'),
+  ('aligning_with_the_brands_tone', 'Alignement sur le ton de la marque', 'Aligning with the brand''s tone'),
   ('back_after_a_trial', 'Retour après essai', 'Back after a trial'),
   ('back_on_the_team', 'Retour dans l''équipe', 'Back on the team'),
   ('back_to_normal', 'Retour à la normale', 'Back to normal'),
@@ -50,10 +55,10 @@ INSERT INTO "audit_reason" ("code", "label_fr", "label_en") VALUES
   ('failure_rate_too_high', 'Taux d''échec trop haut', 'Failure rate too high'),
   ('fixing_an_error', 'Correction d''une erreur', 'Fixing an error'),
   ('generation_not_refunded', 'Génération non recréditée', 'Generation not refunded'),
-  ('goodwill', 'Geste commercial', 'Goodwill'),
+  ('goodwill_gesture', 'Geste commercial', 'Goodwill gesture'),
   ('handed_over_in_person', 'Remis en main propre', 'Handed over in person'),
   ('hateful_speech', 'Propos haineux', 'Hateful speech'),
-  ('holder_s_request', 'Demande du titulaire', 'Holder''s request'),
+  ('holders_request', 'Demande du titulaire', 'Holder''s request'),
   ('impersonation', 'Usurpation d''identité', 'Impersonation'),
   ('information_about_a_hidden_item', 'Information sur un masquage', 'Information about a hidden item'),
   ('inquiry_closed', 'Enquête close', 'Inquiry closed'),
@@ -69,7 +74,7 @@ INSERT INTO "audit_reason" ("code", "label_fr", "label_en") VALUES
   ('on_call', 'Astreinte', 'On call'),
   ('operation_seen_at_the_operator', 'Opération vue chez l''opérateur', 'Operation seen at the operator'),
   ('operator_error', 'Erreur de l''opérateur', 'Operator error'),
-  ('owner_s_request', 'Demande du propriétaire', 'Owner''s request'),
+  ('owners_request', 'Demande du propriétaire', 'Owner''s request'),
   ('paid_by_mobile_money', 'Versé par mobile money', 'Paid by mobile money'),
   ('paid_by_transfer', 'Versé par virement', 'Paid by transfer'),
   ('personal_data_exposed', 'Donnée personnelle exposée', 'Personal data exposed'),
@@ -120,7 +125,7 @@ INSERT INTO "audit_reason" ("code", "label_fr", "label_en") VALUES
   ('users_asked_for_it', 'Demande des utilisateurs', 'Users asked for it'),
   ('warning', 'Avertissement', 'Warning'),
   ('wrong_first_name', 'Erreur sur le prénom', 'Wrong first name')
-ON CONFLICT ("code") DO UPDATE SET "label_fr" = EXCLUDED."label_fr", "label_en" = EXCLUDED."label_en";
+ON CONFLICT ("code") DO UPDATE SET "label_fr" = EXCLUDED."label_fr", "label_en" = EXCLUDED."label_en", "is_active" = true;
 
 DELETE FROM "audit_reason_scope";
 INSERT INTO "audit_reason_scope" ("reason_id", "geste", "position")
@@ -131,7 +136,7 @@ SELECT r.id, v.geste, v.position FROM (VALUES
   ('accounts_on_the_same_device', 'referral_correct', 0),
   ('acquisition_campaign', 'parameter_update', 1),
   ('age_verified_another_way', 'refund_block_lift', 1),
-  ('aligning_with_the_brand_s_tone', 'studio_ambiance_retone', 3),
+  ('aligning_with_the_brands_tone', 'studio_ambiance_retone', 3),
   ('back_after_a_trial', 'studio_option_enable', 2),
   ('back_on_the_team', 'admin_reactivate', 0),
   ('back_to_normal', 'ai_model_enable', 0),
@@ -158,14 +163,14 @@ SELECT r.id, v.geste, v.position FROM (VALUES
   ('fixing_an_error', 'credit_adjust', 2),
   ('fixing_an_error', 'parameter_update', 2),
   ('generation_not_refunded', 'credit_adjust', 1),
-  ('goodwill', 'credit_adjust', 1),
-  ('goodwill', 'payment_refund', 3),
-  ('goodwill', 'portrait_redo', 4),
+  ('goodwill_gesture', 'credit_adjust', 1),
+  ('goodwill_gesture', 'payment_refund', 3),
+  ('goodwill_gesture', 'portrait_redo', 4),
   ('handed_over_in_person', 'refund_settle', 2),
   ('hateful_speech', 'moderation_hide', 0),
-  ('holder_s_request', 'account_suspend', 2),
-  ('holder_s_request', 'credit_adjust', 0),
-  ('holder_s_request', 'deletion_cancel', 0),
+  ('holders_request', 'account_suspend', 2),
+  ('holders_request', 'credit_adjust', 0),
+  ('holders_request', 'deletion_cancel', 0),
   ('impersonation', 'moderation_revoke_link', 1),
   ('information_about_a_hidden_item', 'moderation_notify', 0),
   ('inquiry_closed', 'admin_reactivate', 1),
@@ -181,8 +186,8 @@ SELECT r.id, v.geste, v.position FROM (VALUES
   ('on_call', 'admin_promote', 2),
   ('operation_seen_at_the_operator', 'payment_confirm', 0),
   ('operator_error', 'payment_refund', 2),
-  ('owner_s_request', 'moderation_disable', 2),
-  ('owner_s_request', 'moderation_revoke_link', 2),
+  ('owners_request', 'moderation_disable', 2),
+  ('owners_request', 'moderation_revoke_link', 2),
   ('paid_by_mobile_money', 'refund_settle', 0),
   ('paid_by_transfer', 'refund_settle', 1),
   ('personal_data_exposed', 'moderation_hide', 3),
@@ -237,20 +242,107 @@ SELECT r.id, v.geste, v.position FROM (VALUES
 ) AS v(code, geste, position)
 JOIN "audit_reason" r ON r.code = v.code;
 
--- Quatre codes de la première semence quittent le jeu : trois sont les
--- doublons anglais qu'on vient de trancher (« Demande du titulaire » s'écrivait
--- `Holder's request` ici et `Account holder's request` là), le quatrième a
--- changé de libellé.
---
--- Ils se RETIRENT, ils ne s'effacent pas — la règle du module, et elle vaut
--- pour une migration comme pour l'écran. Ils n'ont rien justifié à ce jour,
--- donc le retrait ne coûte rien ; c'est le dernier moment où ce sera vrai. Une
--- fois qu'un code aura servi, le retirer sera la seule option, et l'effacer
--- rendrait illisible ce qu'il expliquait.
-UPDATE "audit_reason" SET "is_active" = false
-WHERE "code" IN (
-  'account_holder_s_request',
+-- Tout ce qui n'est plus au jeu du kit se RETIRE, jamais ne s'efface.
+UPDATE "audit_reason" SET "is_active" = false WHERE "code" NOT IN (
+  'abuse_found',
+  'access_compromised',
+  'access_from_an_unusual_place',
+  'accounts_on_the_same_device',
+  'acquisition_campaign',
+  'age_verified_another_way',
+  'aligning_with_the_brands_tone',
+  'back_after_a_trial',
+  'back_on_the_team',
+  'back_to_normal',
+  'backup_on_finances',
+  'campaign_over',
+  'change_of_post',
+  'charged_twice',
+  'code_spread_off_target',
+  'content_complies',
+  'contract_ended',
+  'correcting_a_grant',
+  'cost_too_high',
+  'deletion_triggered_by_mistake',
+  'device_lost',
+  'disabled_by_mistake',
+  'disputed_purchase',
+  'duplicate',
+  'duplicate_payment',
+  'end_of_on_call',
+  'explicit_request_from_the_holder',
+  'failed_generation',
+  'failure_rate_too_high',
+  'fixing_an_error',
+  'generation_not_refunded',
   'goodwill_gesture',
-  'fixing_a_mistake',
-  'failed_generation_not_refunded'
+  'handed_over_in_person',
+  'hateful_speech',
+  'holders_request',
+  'impersonation',
+  'information_about_a_hidden_item',
+  'inquiry_closed',
+  'instruction_to_rewrite',
+  'internal_report',
+  'left_the_team',
+  'legal_obligation',
+  'link_spread_outside_the_circle',
+  'load_test',
+  'margin_decision',
+  'new_contract',
+  'notification_lost',
+  'on_call',
+  'operation_seen_at_the_operator',
+  'operator_error',
+  'owners_request',
+  'paid_by_mobile_money',
+  'paid_by_transfer',
+  'personal_data_exposed',
+  'pricing_adjustment',
+  'product_decision',
+  'production_unusable',
+  'provider_down',
+  'provider_incident',
+  'pulled_during_an_incident',
+  'reducing_access',
+  'referee_already_signed_up',
+  'referral_dispute',
+  'referral_never_completed',
+  'render_degraded_by_a_fallback',
+  'rendering_fixed',
+  'repeated_reports',
+  'replaced_by_another_address',
+  'report_without_merit',
+  'request_to_comply',
+  'routine_check',
+  'series_of_refusals',
+  'setup_mistake',
+  'sexual_content',
+  'support_decision',
+  'suspected_fraud',
+  'suspended_pending_an_inquiry',
+  'taking_responsibility',
+  'test_account',
+  'the_account_gives_up_on_the_portrait',
+  'the_holder_waived_it',
+  'the_message_is_off_the_requested_tone',
+  'the_occasion_was_cancelled',
+  'the_page_is_gone',
+  'the_portrait_does_not_look_like_them',
+  'the_same_turns_of_phrase_kept_coming_back',
+  'the_tone_was_too_cold',
+  'the_tone_was_too_familiar',
+  'third_party_report',
+  'too_little_use',
+  'tool_error',
+  'unknown_account_targeted',
+  'unlawful_content',
+  'unsatisfying_result',
+  'unusual_access',
+  'unusually_long_wait',
+  'user_feedback',
+  'user_identified',
+  'users_asked_for_it',
+  'warning',
+  'wrong_first_name'
 );

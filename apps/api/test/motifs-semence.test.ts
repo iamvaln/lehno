@@ -19,9 +19,9 @@ describe("la semence des motifs", () => {
 
     it("porte les cent un motifs du kit, dans les deux langues", async () => {
     expect(await db.prisma.auditReason.count({ where: { isActive: true } })).toBe(101);
-    const g = await db.prisma.auditReason.findUniqueOrThrow({ where: { code: "goodwill" } });
+    const g = await db.prisma.auditReason.findUniqueOrThrow({ where: { code: "goodwill_gesture" } });
     expect(g.labelFr).toBe("Geste commercial");
-    expect(g.labelEn).toBe("Goodwill");
+    expect(g.labelEn).toBe("Goodwill gesture");
   });
 
   /* Le kit et le serveur écrivaient deux jeux de codes sans un seul en
@@ -38,7 +38,7 @@ describe("la semence des motifs", () => {
      règle ne dépend pas de ça — c'est elle qui rend un historique relisible
      quand elle s'applique au cas où ça compte. */
   it("retire les doublons anglais sans les effacer", async () => {
-    for (const code of ["goodwill_gesture", "fixing_a_mistake", "account_holder_s_request"]) {
+    for (const code of ["fixing_a_mistake", "account_holder_s_request", "holder_s_request"]) {
       const m = await db.prisma.auditReason.findUnique({ where: { code } });
       expect(m).not.toBeNull();
       expect(m!.isActive).toBe(false);
