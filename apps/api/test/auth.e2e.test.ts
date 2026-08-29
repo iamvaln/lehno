@@ -253,6 +253,46 @@ describe("authentification", () => {
       .rejects.toMatchObject({ code: "account_suspended" });
   });
 
+  /* LE TROU QU'ON VIENT DE FERMER : `deleted` n'était pas dans la liste des
+     refus, donc un compte marqué effacé ouvrait une session — jusqu'au passage
+     de nuit qui vide la ligne. La fenêtre durait toute une journée. */
+  it("un compte marqué effacé ne peut pas ouvrir de session", async () => {
+    await inscrire("awa@example.com", "dev-1");
+    await db.prisma.user.update({ where: { email: "awa@example.com" }, data: { status: "deleted" } });
+    const next = await otp.issue("awa@example.com", "login");
+    await expect(auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" }))
+      .rejects.toMatchObject({ code: "account_pending_deletion" });
+  });
+
+  /* Le cas qui tiendra quand un état s'ajoutera. Il n'énumère pas les refus —
+     il exige que SEUL `active` passe. Une valeur nouvelle sera donc refusée
+     tant que personne n'aura décidé de l'admettre, ce qui est le seul sens dans
+     lequel un oubli soit sans danger. */
+  it("seul un compte actif ouvre une session, quel que soit l'état", async () => {
+    for (const statut of ["suspended", "pending_deletion", "deleted"] as const) {
+      await db.prisma.user.deleteMany({});
+      await db.prisma.loginActivity.deleteMany({});
+      await inscrire("awa@example.com", "dev-1");
+      await db.prisma.user.update({ where: { email: "awa@example.com" }, data: { status: statut } });
+      const next = await otp.issue("awa@example.com", "login");
+      await expect(
+        auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" }),
+        `l'état « ${statut} » ne doit pas ouvrir de session`,
+      ).rejects.toThrow();
+    }
+  });
+
+  // Le refus laisse une trace, comme un succès. Sans elle, un porteur de code
+  // valide peut buter sur ce mur sans qu'il en reste rien.
+  it("le refus d'un compte effacé laisse sa trace", async () => {
+    await inscrire("awa@example.com", "dev-1");
+    await db.prisma.user.update({ where: { email: "awa@example.com" }, data: { status: "deleted" } });
+    const avant = await db.prisma.loginActivity.count({ where: { result: "failure" } });
+    const next = await otp.issue("awa@example.com", "login");
+    await auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" }).catch(() => {});
+    expect(await db.prisma.loginActivity.count({ where: { result: "failure" } })).toBe(avant + 1);
+  });
+
   it("chaque tentative laisse une trace, réussie comme échouée", async () => {
     await inscrire("awa@example.com", "dev-1");
     await auth.verifyOtp({ email: "awa@example.com", code: "000000", deviceId: "dev-1" }).catch(() => {});
