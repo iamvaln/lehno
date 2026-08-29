@@ -114,6 +114,18 @@ import { ProgrammationService } from "./me/programmation.service.js";
 import { RelancesService } from "./me/relances.service.js";
 import { EnvoiService } from "./me/envoi.service.js";
 import { OrdonnanceurService } from "./me/ordonnanceur.service.js";
+import {
+  WallController, WishLinkController, CollectionLinksController,
+  SubmissionsController, ReceivedWishesController,
+} from "./mur/mur.controller.js";
+import {
+  PublicWallController, PublicCollectController, PublicWishesController,
+} from "./mur/public-mur.controller.js";
+import { MurService } from "./mur/mur.service.js";
+import { CollecteService } from "./mur/collecte.service.js";
+import { SubmissionService } from "./mur/submission.service.js";
+import { VoeuxService } from "./mur/voeux.service.js";
+import { SurfacePubliqueService } from "./mur/jetons.js";
 import { EffacementService } from "./me/effacement.service.js";
 import { TrackingService } from "./tracking/tracking.service.js";
 import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
@@ -129,7 +141,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
   imports: [ScheduleModule.forRoot()],
   controllers: [
     AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, NotificationController, ConfigController, LegalController,
-    AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, SecurityController, ConfigController, LegalController,
+    SecurityController,
     AccountController, DeviceController, DataExportController, SupportController,
     OccurrenceWishesController, WishController,
     WishlistsController, OwnerWishController, MyReservationsController,
@@ -137,6 +149,8 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
+    WallController, WishLinkController, CollectionLinksController, SubmissionsController, ReceivedWishesController,
+    PublicWallController, PublicCollectController, PublicWishesController,
     AdminAuthController, ParametersController, AdminFeatureFlagsController, ReasonsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, AdminMaintenanceController, StudioController, PortraitStudioController, StudioOptionsController, MeController,
   ],
   providers: [
@@ -175,6 +189,12 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
       },
     },
     TrackingService,
+    // Le Mur et la collecte (§5.3, §5.5, §7).
+    SurfacePubliqueService,
+    MurService,
+    CollecteService,
+    SubmissionService,
+    VoeuxService,
     // useFactory : la valeur se lit à l'INSTANCIATION du provider, pas à
     // l'évaluation du décorateur (qui n'a lieu qu'une fois, au chargement du
     // module). Sans ça, une valeur d'environnement posée ou retirée après
@@ -226,15 +246,20 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     // affichée ailleurs sur le site (voir apps/web/messages). Une variable
     // d'environnement, quand elle est posée, la remplace.
     { provide: "CONTACT_TO_EMAIL", useFactory: () => process.env.CONTACT_TO_EMAIL ?? "hello@lehno.app" },
-    /* L'adresse du site public, dont le serveur compose les liens de partage.
-     * Ce n'est pas un secret — juste un domaine — donc un repli documenté
-     * plutôt qu'un refus de démarrer, comme CONTACT_TO_EMAIL.
-     *
-     * Elle vit au SERVEUR et non au client : deux versions du parc
-     * fabriqueraient deux adresses différentes pour la même liste, et celle
-     * qu'un utilisateur a collée dans un groupe cesserait de marcher au
-     * changement de domaine. */
-    { provide: "PUBLIC_WEB_URL", useFactory: () => process.env.PUBLIC_WEB_URL ?? "https://lehno.app" },
+    /* L'adresse du site public, celle où vivent les Murs, les formulaires de
+       collecte et les liens de partage.
+       Ce n'est pas un secret — le domaine s'affiche sur chaque lien — donc un
+       repli documenté plutôt qu'un refus de démarrer, comme CONTACT_TO_EMAIL.
+       Elle vit au SERVEUR et non au client : deux versions du parc
+       fabriqueraient deux adresses différentes pour la même liste, et celle
+       qu'un utilisateur a collée dans un groupe cesserait de marcher au
+       changement de domaine.
+       Sans barre oblique finale : les chemins la posent eux-mêmes, et
+       « https://lehno.app//valentine » n'est pas la même adresse. */
+    {
+      provide: "PUBLIC_WEB_URL",
+      useFactory: () => (process.env.PUBLIC_WEB_URL ?? "https://lehno.app").replace(/\/+$/, ""),
+    },
     OtpService,
     TokenService,
     RateLimitService,

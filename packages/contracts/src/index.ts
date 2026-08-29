@@ -2,6 +2,7 @@ export * from "./errors.js";
 export * from "./auth.js";
 export * from "./profile.js";
 export * from "./public.js";
+export * from "./public-mur.js";
 export * from "./admin.js";
 export * from "./admin-studio.js";
 export * from "./flags.js";

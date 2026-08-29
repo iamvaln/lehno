@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   resumableSchema, searchResultSchema, updateWallSchema, wallSchema,
+  NATURES_EXPOSABLES,
 } from "./me-app.js";
 
 const ID = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
@@ -13,6 +14,7 @@ describe("le Mur", () => {
     welcomeMessage: null,
     publicUrl: "https://lehno.app/valentine",
     wishLinkUrl: null,
+    interests: [],
   };
 
   it("se lit non publié, avec son adresse déjà connue", () => {
@@ -30,6 +32,23 @@ describe("le Mur", () => {
   it("refuse un PATCH vide", () => {
     expect(() => updateWallSchema.parse({})).toThrow();
     expect(() => updateWallSchema.parse({ isEnabled: true })).not.toThrow();
+  });
+
+  // Garde le défaut privé : un Mur sans rien de coché est un état normal, pas
+  // un défaut à corriger. Une liste vide doit donc passer.
+  it("accepte de n'exposer aucun goût", () => {
+    expect(() => updateWallSchema.parse({ publicInterestIds: [] })).not.toThrow();
+  });
+
+  /* Garde le tri des natures exposables. Les tailles servent à choisir un
+     cadeau sur une liste partagée, pas à se présenter à un inconnu qui passe :
+     les laisser publiables reviendrait à s'en remettre au discernement de
+     chacun au moment où il coche — et l'écran les afficherait toutes. */
+  it("n'expose ni les tailles ni les « à éviter »", () => {
+    expect(NATURES_EXPOSABLES).not.toContain("clothing_size");
+    expect(NATURES_EXPOSABLES).not.toContain("shoe_size");
+    expect(NATURES_EXPOSABLES).not.toContain("avoid");
+    expect(NATURES_EXPOSABLES).toContain("hobby");
   });
 });
 
