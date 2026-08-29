@@ -20,6 +20,44 @@ les 72, c'est le genre de décalage qui ne se voit qu'en production.
 **Dix-sept écrans sur dix-sept l'instancient.** Les onze autres sont en lecture
 seule — tableau de bord, métriques, journal, essais, statistiques — sauf une.
 
+### Décision : le motif est un champ libre, et rien d'autre
+
+Les motifs préréglés partent, la zone de saisie reste. Ce n'est pas un
+appauvrissement — c'est le retrait d'une chose qui ne tenait pas.
+
+**Le serveur ne connaît aucune liste.** Ni énumération, ni table, ni validation :
+`motifSchema` accepte du texte de 6 à 500 caractères, un point. Les 72 listes
+vivent dans le dictionnaire du back-office et nulle part ailleurs.
+
+**Et ce sont des chaînes d'interface, donc bilingues.** Le même geste s'inscrit
+au journal `"Fraude suspectée"` ou `"Suspected fraud"` selon la langue de
+l'administrateur au moment du clic. Deux textes pour un motif : le journal
+devient inclassable, et « combien de suspensions pour fraude » n'a pas de
+réponse — pas parce que la donnée manque, mais parce qu'elle existe en deux
+orthographes qu'aucune requête ne rapproche.
+
+Un menu déroulant **promet** une nomenclature. Celle-ci n'existe pas. Mieux vaut
+une phrase écrite à la main, qu'on lit, qu'une catégorie apparente qu'on ne peut
+ni compter ni retirer sans redéployer l'interface.
+
+**Ce que ça change** : rien au serveur — il reçoit déjà du texte libre. Une seule
+chose à l'écran : le `<select>` de `ConfirmWithReason` disparaît, la zone de
+saisie devient le champ principal, obligatoire, et la mention « inscrit au
+journal d'audit avec votre nom » reste.
+
+**Si un jour on veut de vrais motifs préréglés**, la leçon est déjà payée : ce
+qu'on enregistre doit être un **code stable** — `fraud_suspected` — accompagné du
+texte libre, jamais le libellé affiché. Un libellé stocké est intraduisible après
+coup, et il change dès que quelqu'un corrige une faute d'orthographe. C'est un
+module — une table, un écran pour l'administrer, une colonne de plus sur le
+journal et sur chaque table d'historique. À faire quand on saura ce qu'on veut
+compter, pas avant.
+
+**Le prix à payer, dit franchement** : un journal en texte libre ne s'agrège pas.
+Le minimum de six caractères n'empêche pas « erreur » ou « demande ». Ce qui le
+tient, c'est que chaque ligne porte le nom de son auteur — pas une contrainte de
+forme.
+
 ### Le seul écran d'écriture sans motif : les paramètres système
 
 `EditPage.jsx` — c'est l'écran branché sur `parametres`. Deux boutons
@@ -117,10 +155,12 @@ deux ambiances.
 
 **Pour le designer** — quatre points, tous dans le paiement :
 
-1. Une fenêtre de motif sur l'enregistrement des **paramètres système**.
-2. Une dimension **manuel / automatique** sur les barèmes par pays.
-3. Le **plancher** et **qui porte les frais** dans le formulaire de barème.
-4. Le **solde acheté** en colonne des suppressions, et la file des
+1. **Retirer le menu déroulant de motifs** dans `ConfirmWithReason` — le champ
+   libre devient le seul, et reste obligatoire.
+2. Une fenêtre de motif sur l'enregistrement des **paramètres système**.
+3. Une dimension **manuel / automatique** sur les barèmes par pays.
+4. Le **plancher** et **qui porte les frais** dans le formulaire de barème.
+5. Le **solde acheté** en colonne des suppressions, et la file des
    remboursements à verser.
 
 **Pour moi** — `motifSchema` sur les paramètres, `mode` sur le canal, et le
