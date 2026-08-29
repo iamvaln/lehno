@@ -106,10 +106,32 @@ export const metadataSchema = z.object({
   scheduleUnits: z.array(z.enum(SCHEDULE_UNITS)),
   personRelations: z.array(z.enum(PERSON_RELATIONS)),
   personRegisters: z.array(z.enum(PERSON_REGISTERS)),
-  // `personGenders` n'y figure pas : il alimenterait un sélecteur que le carnet
-  // ne dessine pas. Servir la liste des valeurs, c'est inviter à poser la
-  // question — voir la note de `personSchema`.
+  // `personGenders` n'y figure pas : deux valeurs seulement, et l'écran
+  // d'identité les porte déjà dans sa copy. Servir une liste de deux éléments
+  // fixes ferait un aller-retour pour rien.
   contactChannels: z.array(z.enum(CONTACT_CHANNELS)),
+
+  /**
+   * Ce que chaque action payante coûte, **lu en base**.
+   *
+   * Le prix se règle en administration sans livraison : une constante côté
+   * client afficherait l'ancien tarif sur tout un parc jusqu'à la mise à jour
+   * suivante — et un écran qui annonce un prix avant de débiter ne peut pas se
+   * tromper.
+   *
+   * **Une action absente n'est pas disponible.** Même convention que les
+   * drapeaux : ce qui n'est pas là est éteint, et « absent » se confond avec
+   * « inconnu » à dessein — un client d'une version antérieure ignore un code
+   * qu'il ne connaît pas au lieu de refuser la réponse entière.
+   *
+   * C'est ici et non dans `/me/studio/options`, qui ne sert que le portrait :
+   * le message et les idées ont aussi un prix à annoncer, et ils n'ouvrent
+   * aucun studio.
+   */
+  premiumActions: z.array(z.object({
+    code: z.string(),
+    credits: z.number().int().min(0),
+  }).strict()),
 }).strict();
 
 export type Metadata = z.infer<typeof metadataSchema>;

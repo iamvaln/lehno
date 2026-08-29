@@ -15,6 +15,10 @@ type AuthedRequest = { userId: string };
 
 type LigneExecution = {
   id: string; status: string; creditsSpent: number; failureCode: string | null;
+  /* Portée par l'exécution elle-même, et pas seulement par le message produit :
+     une génération qui a échoué n'a pas de message, et l'écran doit quand même
+     savoir de quelle occasion il s'agit pour proposer de refaire. */
+  eventOccurrenceId: string | null;
   createdAt: Date;
   premiumAction: { code: string };
   generatedMessage: {
@@ -28,13 +32,23 @@ type LigneExecution = {
  * FeatureGuard AVANT AuthGuard : une surface éteinte l'est pour tout le monde,
  * y compris pour un jeton invalide. Dans l'autre ordre, le statut distinguerait
  * « éteinte » de « non authentifiée », et raconterait donc quelque chose. */
+/* LE DRAPEAU EST SUR LE LANCEMENT, PAS SUR LA LECTURE.
+ *
+ * Posé sur la classe, `generation.message` fermait aussi la liste et le suivi —
+ * alors qu'ils portent TOUTES les natures. Un profil où seul
+ * `generation.portrait` est allumé rendait donc `404` sur la liste de ses
+ * propres portraits.
+ *
+ * Et le raisonnement vaut au-delà de ce cas : éteindre une nature doit empêcher
+ * d'en PRODUIRE de nouvelles, jamais de relire ce qu'on a déjà payé. C'est la
+ * même règle que pour `/me/messages/{id}`. */
 @Controller("me/generations")
 @UseGuards(FeatureGuard, AuthGuard)
-@Feature("generation.message")
 export class GenerationController {
   constructor(@Inject(GenerationService) private readonly generation: GenerationService) {}
 
   @Post()
+  @Feature("generation.message")
   async lancer(
     @Req() req: AuthedRequest,
     @Body(new ZodValidationPipe(startGenerationSchema)) corps: StartGenerationInput,
@@ -85,6 +99,12 @@ export class GenerationController {
     const generation: Generation = {
       id: l.id,
       kind: l.premiumAction.code as Generation["kind"],
+      /* La cible, pour que l'écran d'attente ait un nom et un décompte à
+         montrer. Un portrait vise un proche, un message une occasion — l'une
+         des deux est donc toujours nulle, et le client affiche celle qui est
+         là plutôt que d'en déduire laquelle attendre. */
+      personId: null,
+      occurrenceId: l.generatedMessage?.eventOccurrenceId ?? l.eventOccurrenceId ?? null,
       status: GenerationService.ETAT[l.status] ?? "failed",
       creditsSpent: l.creditsSpent,
       /* Le CODE, jamais un message de fournisseur : ceux-là recopient parfois

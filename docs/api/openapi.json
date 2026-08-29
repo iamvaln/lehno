@@ -14968,6 +14968,26 @@
                           "autre"
                         ]
                       }
+                    },
+                    "premiumActions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "credits": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "credits"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -14977,7 +14997,8 @@
                     "scheduleUnits",
                     "personRelations",
                     "personRegisters",
-                    "contactChannels"
+                    "contactChannels",
+                    "premiumActions"
                   ],
                   "additionalProperties": false
                 }
@@ -19312,6 +19333,16 @@
                             "wish_message"
                           ]
                         },
+                        "personId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "occurrenceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -19340,6 +19371,8 @@
                       "required": [
                         "id",
                         "kind",
+                        "personId",
+                        "occurrenceId",
                         "status",
                         "creditsSpent",
                         "failureReason",
@@ -19623,6 +19656,16 @@
                                   "wish_message"
                                 ]
                               },
+                              "personId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              },
+                              "occurrenceId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              },
                               "status": {
                                 "type": "string",
                                 "enum": [
@@ -19651,6 +19694,8 @@
                             "required": [
                               "id",
                               "kind",
+                              "personId",
+                              "occurrenceId",
                               "status",
                               "creditsSpent",
                               "failureReason",
@@ -19939,6 +19984,16 @@
                             "wish_message"
                           ]
                         },
+                        "personId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "occurrenceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -19967,6 +20022,8 @@
                       "required": [
                         "id",
                         "kind",
+                        "personId",
+                        "occurrenceId",
                         "status",
                         "creditsSpent",
                         "failureReason",

@@ -105,6 +105,7 @@ import { ProgrammationService } from "./me/programmation.service.js";
 import { RelancesService } from "./me/relances.service.js";
 import { EnvoiService } from "./me/envoi.service.js";
 import { OrdonnanceurService } from "./me/ordonnanceur.service.js";
+import { EffacementService } from "./me/effacement.service.js";
 import { TrackingService } from "./tracking/tracking.service.js";
 import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
 import { PostHogAdapter } from "./tracking/posthog.adapter.js";
@@ -142,6 +143,12 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     RelancesService,
     EnvoiService,
     OrdonnanceurService,
+    /* Sa propre tâche, à sa propre heure : l'effacement ne rejoint pas les
+       étapes de l'ordonnanceur. Il n'a rien à voir avec la file des rappels, il
+       tourne plus tôt pour qu'un compte effacé ne reçoive pas le courrier du
+       matin, et une nuit où il déborderait n'a aucune raison de retarder des
+       envois qui, eux, ont une heure à tenir. */
+    EffacementService,
     // La mesure, derrière son port (§16.5). Sans clé PostHog et sans adhésion
     // explicite à la console, l'adaptateur ne fait RIEN — contrairement au
     // courrier, l'absence de mesure n'est pas une raison de refuser de

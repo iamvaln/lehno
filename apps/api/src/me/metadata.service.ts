@@ -23,10 +23,25 @@ export class MetadataService {
     // La table est semée par la migration `20260822154334_content` — jamais
     // recopiée en constante, qui finirait par diverger de ce qu'elle écrit
     // réellement.
-    const rangees = await this.prisma.category.findMany({
-      orderBy: { code: "asc" },
-      select: { code: true, kind: true, isConstraint: true },
-    });
+    const [rangees, actions] = await Promise.all([
+      this.prisma.category.findMany({
+        orderBy: { code: "asc" },
+        select: { code: true, kind: true, isConstraint: true },
+      }),
+      /* Le prix des actions payantes, lu en base à chaque appel.
+       *
+       * Sans cache, comme les drapeaux : un écran qui annonce un prix avant de
+       * débiter ne peut pas se tromper, et un délai entre « j'ai changé le
+       * tarif » et « c'est changé » se paierait en réclamations.
+       *
+       * Seules les actions ACTIVES sont rendues — une action absente n'est pas
+       * disponible, même convention que les drapeaux. */
+      this.prisma.premiumAction.findMany({
+        where: { enabled: true },
+        orderBy: { code: "asc" },
+        select: { code: true, creditCost: true },
+      }),
+    ]);
     // `code` est un VARCHAR en base — rien n'y garantit à la compilation
     // qu'elle ne porte que les sept codes du socle. C'est le prix d'une table
     // éditable en administration plutôt que d'une énumération figée ; la
@@ -35,6 +50,7 @@ export class MetadataService {
 
     return {
       categories,
+      premiumActions: actions.map((a) => ({ code: a.code, credits: a.creditCost })),
       // Le reste est figé, servi avec les catégories pour que le client
       // n'aille pas chercher la même chose à deux endroits.
       //

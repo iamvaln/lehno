@@ -2,11 +2,11 @@ import { Controller, Get, Inject, Injectable, Query, UseGuards } from "@nestjs/c
 import { z } from "zod";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
+import { delaiDeGraceEnJours } from "../common/delai-de-grace.js";
 import { AdminGuard } from "./admin.guard.js";
 import { RoleGuard } from "./role.guard.js";
 
 const JOUR_MS = 24 * 60 * 60_000;
-const DELAI_DEFAUT = 30;
 const LIMITE_DEFAUT = 25;
 const LIMITE_MAX = 200;
 
@@ -29,20 +29,14 @@ export type DemandeSuppression = {
 export class DeletionsService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  // L'échéance ne vit pas en colonne : elle se calcule depuis la demande et le
-  // délai réglé en base. La figer à l'écriture la rendrait fausse dès que le
-  // paramètre change — et c'est précisément un paramètre qu'on règle depuis le
-  // back-office.
-  private async delaiEnJours(): Promise<number> {
-    const ligne = await this.prisma.systemParameter.findUnique({
-      where: { key: "account_grace_period_days" },
-    });
-    const valeur = Number(ligne?.value);
-    return Number.isFinite(valeur) && valeur > 0 ? valeur : DELAI_DEFAUT;
-  }
-
   async lister(requete: z.infer<typeof requeteSchema>): Promise<{ items: DemandeSuppression[]; nextCursor: string | null }> {
-    const delai = await this.delaiEnJours();
+    // L'échéance ne vit pas en colonne : elle se calcule depuis la demande et le
+    // délai réglé en base. La figer à l'écriture la rendrait fausse dès que le
+    // paramètre change — et c'est précisément un paramètre qu'on règle depuis le
+    // back-office. La lecture est PARTAGÉE avec la tâche d'effacement : l'écran
+    // qui annonce « restaurable encore trois jours » et la tâche qui efface
+    // doivent lire la même borne, sans quoi l'un promet ce que l'autre défait.
+    const delai = await delaiDeGraceEnJours(this.prisma);
     const limite = requete.limit ?? LIMITE_DEFAUT;
     const maintenant = Date.now();
 
