@@ -40,10 +40,14 @@ le détail de la suppression et du paiement qui l'a accompagnée.
 
 ### Ce que le serveur a, et ce qu'il n'a pas
 
-**Rien pour la voie automatique.** `topup.provider` est un drapeau sans
-implémentation, et le `providerRef` de la recharge est une référence que le
-CLIENT déclare — aucune intégration fournisseur n'existe, ni en entrée ni en
-sortie. La voie automatique est à écrire entièrement.
+**La voie automatique attend son intégration, et c'est une DÉCISION, pas un
+manque.** Le registre des drapeaux le dit : *« Éteint, on encaisse par versement
+manuel pendant que l'intégration opérateur attend »*. `topup.provider` ne dépend
+de rien, précisément pour que le manuel tienne sans lui — « lancer en manuel
+seul » est le profil retenu.
+
+Elle est donc hors de ce lot. Il n'y a rien à rattraper, seulement une phase à
+venir.
 
 **La voie manuelle, elle, a son modèle** : `Payment` porte `direction: refund` et
 `mode: manual`, et l'unicité partielle sur `credit_transaction.payment_id`
@@ -63,17 +67,15 @@ parti.
 
 ## Le risque qui subsiste
 
-**Un compte peut rester en sursis si le versement n'aboutit pas.** La voie
-automatique réduit le risque, elle ne l'annule pas : un numéro fermé, un
-fournisseur en panne, un versement rejeté laissent la demande en attente.
+**Un compte reste en sursis tant que le versement n'a pas abouti**, et c'est le
+comportement voulu. Ce qu'il faut, c'est qu'on le VOIE.
 
-Deux choses le tiennent :
-
-1. **L'écran des suppressions distingue cet état.** « En attente de
-   remboursement » n'est pas « délai de grâce en cours » : le premier attend un
-   geste ou un flux, le second attend une date.
-2. **Une alerte au-delà d'un seuil.** Un remboursement qui dort depuis plusieurs
-   jours est un incident, pas un encours.
+Les deux listes existent déjà — les demandes de suppression et les paiements —
+et le blocage anti-fraude a son verdict rendu par le serveur. Il manque une
+chose, et une seule : **l'écran des suppressions doit distinguer « en attente de
+remboursement » de « délai de grâce en cours »**. Le premier attend un geste de
+notre part, le second attend une date. Les confondre ferait passer pour patient
+ce qui est en retard.
 
 ---
 
@@ -91,9 +93,8 @@ effacer, il règle le remboursement d'abord — et ce n'est pas une contrainte, 
 l'ordre des choses.
 
 Le versement manuel s'écrit en miroir de la saisie d'un paiement entrant : mêmes
-gardes, sens inverse. La voie automatique demande d'abord une intégration
-fournisseur, qui n'existe pas — c'est le vrai coût de ce lot, et il est distinct
-du reste.
+gardes, sens inverse. C'est tout le lot — la voie automatique viendra avec
+l'intégration opérateur, quand elle viendra.
 
 **Rien de tout cela n'est encore écrit** : la chaîne du remboursement n'existe
 pas, et aucune route utilisateur ne crée de demande. Cette décision fixe la
