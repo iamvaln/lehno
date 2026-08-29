@@ -230,4 +230,5 @@ describe("le module des motifs", () => {
       expect(await db.prisma.auditLog.count()).toBe(1);
     });
   });
+
 });
