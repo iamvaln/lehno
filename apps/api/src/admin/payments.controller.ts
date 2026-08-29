@@ -205,7 +205,16 @@ export class AdminPaymentsService {
         await this.journal.consigner({
           auteurId,
           action: "payment_decision",
+          /* Confirmer et rejeter sont deux gestes, et l'action journalisée est
+             la même pour les deux. « Opération vue chez l'opérateur »
+             n'explique pas un rejet — d'où deux gestes, et non un.
+
+             Le rejet n'a aucun motif préréglé : le kit n'en propose pas, et
+             c'est cohérent — on rejette pour une raison qui tient à ce
+             versement-là, pas à une catégorie. La phrase suffit. */
+          geste: entree.decision === "confirmer" ? "payment_confirm" : "payment_reject",
           motif: entree.reason,
+          ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
           cibleType: "payment",
           cibleId: id,
           details: { decision: entree.decision, expected: attendu, received: recu, gap: ecart },
@@ -278,7 +287,9 @@ export class AdminPaymentsService {
       await this.journal.consigner({
         auteurId,
         action: "credit_adjustment",
+        geste: "credit_adjust",
         motif: entree.reason,
+        ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
         cibleType: "user",
         cibleId: utilisateurId,
         details: { amount: entree.montant, nature: entree.nature, from: avant, to: apres },

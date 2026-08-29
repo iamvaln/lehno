@@ -149,7 +149,7 @@ describe("administration — les demandes de suppression", () => {
         status: "active", reason: "Demande retirée par le titulaire",
         // Renoncer à une suppression n'est pas lever une suspension : ce geste
         // a ses propres motifs.
-        reasonCode: "holder_s_request",
+        reasonCode: "holders_request",
       }),
     });
 
