@@ -16,6 +16,8 @@ import { AttributsService } from "./me/attributs.service.js";
 import { GenerationService } from "./me/generation.service.js";
 import { GenerationController, MessagesController } from "./me/generation.controller.js";
 import { RechargeService } from "./payments/recharge.service.js";
+import { MethodesService } from "./payments/methodes.service.js";
+import { MethodesController } from "./payments/methodes.controller.js";
 import {
   CreditBundlesController, PaymentChannelsController,
   CollectionAccountsController, PaymentsController,
@@ -151,7 +153,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     WaitlistController, ContactController,
     WallController, WishLinkController, CollectionLinksController, SubmissionsController, ReceivedWishesController,
     PublicWallController, PublicCollectController, PublicWishesController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, ReasonsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, AdminMaintenanceController, StudioController, PortraitStudioController, StudioOptionsController, MeController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, ReasonsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, MethodesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, AdminMaintenanceController, StudioController, PortraitStudioController, StudioOptionsController, MeController,
   ],
   providers: [
     PrismaService,
@@ -272,6 +274,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     AttributsService,
     GenerationService,
     RechargeService,
+    MethodesService,
     CatalogueIAService,
     RouteurIAService,
     // Construits une fois, au démarrage : les instancier à chaque génération
