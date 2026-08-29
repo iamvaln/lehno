@@ -129,6 +129,19 @@ export class EffacementService {
              jamais eu de délai. */
           { status: "pending_deletion", deletionRequestedAt: { not: null, lte: echu } },
         ],
+        /* L'EFFACEMENT ATTEND LE VERSEMENT (décision du 29 août).
+         *
+         * Un compte dont un remboursement est encore dû ne part pas : son
+         * numéro s'efface avec lui, et après ça il n'existe plus aucune
+         * coordonnée où verser. La demande resterait en attente pour toujours,
+         * et le titulaire — qui croit avoir supprimé son compte — n'aurait
+         * jamais son argent.
+         *
+         * L'exclusion vaut pour les DEUX portes, effacement immédiat par
+         * l'administration compris : forcer un effacement ne doit pas faire
+         * disparaître la coordonnée d'une dette par inadvertance. Qui veut
+         * vraiment effacer règle le remboursement d'abord. */
+        payments: { none: { direction: "refund", status: "pending" } },
       },
       // Le plus ancien d'abord : c'est une file d'attente, pas un annuaire.
       orderBy: [{ deletionRequestedAt: "asc" }, { id: "asc" }],
