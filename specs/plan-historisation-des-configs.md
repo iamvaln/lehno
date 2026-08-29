@@ -195,6 +195,39 @@ borne.
 5. **Les liens sur `payment` et `credit_transaction`**, et le passage de
    `Restrict` à `SetNull` sur le canal.
 
+### Ce que le premier lot a coûté, mesuré et non estimé
+
+Le déclencheur mord les fixtures de test, et c'est normal : une fixture écrit
+dans une table de configuration comme le ferait un administrateur. Pour le seul
+`payment_channel`, **onze sites** dans cinq fichiers, repris avec un `avecMotif`
+posé dans le harnais.
+
+Le relevé complet des six tables restantes donne **une soixantaine de sites de
+plus**, répartis sur une trentaine de fichiers — `feature_flag` et
+`system_parameter` en concentrent l'essentiel, parce que presque chaque test
+allume un drapeau avant de commencer.
+
+Ce chiffre change la question, et il ne faut pas la trancher d'avance. Deux
+voies :
+
+- **Reprendre chaque fixture**, comme ici. Honnête, mais soixante `avecMotif`
+  qui portent tous le même motif factice n'éprouvent rien — et le prochain test
+  écrit butera sur une erreur incompréhensible.
+- **Poser un motif par défaut sur la connexion du harnais**
+  (`?options=-c app.reason=fixture`). Les fixtures redeviennent muettes, mais
+  un chemin d'écriture applicatif qui oublierait le motif ne tomberait plus en
+  test.
+
+La seconde voie ne se défend qu'accompagnée : **un cas par table historisée qui
+vérifie que la raison écrite par l'administrateur arrive jusqu'à la ligne de
+version**, et non le motif du harnais. Ce cas existe déjà pour les canaux — sept
+cas de ce genre garantissent plus que soixante fixtures bavardes.
+
+Ma recommandation est la seconde, mais elle se décide au lot 2, sur ce
+chiffre-là.
+
+---
+
 **Rien de tout ceci ne remplit l'historique du passé.** Les configurations
 d'aujourd'hui entrent avec `valid_from` = date de la migration et
 `reason = 'migration'`. Ce qui les précède est perdu, et le prétendre serait

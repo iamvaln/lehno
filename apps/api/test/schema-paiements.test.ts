@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
-import { withDatabase, resetDatabase, type TestDb } from "./db.js";
+import { withDatabase, resetDatabase, avecMotif, type TestDb } from "./db.js";
 
 /**
  * Ce que la base garantit, indépendamment du service qui écrit.
@@ -262,27 +262,30 @@ describe("schéma — les paiements", () => {
   // saurait lequel a servi.
   it("un opérateur n'a qu'un barème par pays", async () => {
     const canal = { kind: "mobile_money" as const, operator: "mtn_momo", country: "CM", label: "MTN MoMo" };
-    await db.prisma.paymentChannel.create({ data: canal });
+    await avecMotif(db.prisma, "fixture de test", (tx) => tx.paymentChannel.create({ data: canal }));
 
-    await expect(db.prisma.paymentChannel.create({ data: { ...canal, label: "MTN MoMo bis" } })).rejects.toThrow();
+    // Le motif est posé : le refus attendu est bien celui de l'unicité, pas
+    // celui de l'historisation.
+    await expect(avecMotif(db.prisma, "fixture de test", (tx) =>
+      tx.paymentChannel.create({ data: { ...canal, label: "MTN MoMo bis" } }))).rejects.toThrow();
   });
 
   it("le même opérateur a un barème par pays différent", async () => {
     const canal = { kind: "mobile_money" as const, operator: "mtn_momo", label: "MTN MoMo" };
-    await db.prisma.paymentChannel.create({ data: { ...canal, country: "CM" } });
+    await avecMotif(db.prisma, "fixture de test", (tx) => tx.paymentChannel.create({ data: { ...canal, country: "CM" } }));
 
-    await db.prisma.paymentChannel.create({ data: { ...canal, country: "CI" } });
+    await avecMotif(db.prisma, "fixture de test", (tx) => tx.paymentChannel.create({ data: { ...canal, country: "CI" } }));
 
     expect(await db.prisma.paymentChannel.count()).toBe(2);
   });
 
   it("un plafond de frais sous son plancher est refusé", async () => {
-    await expect(db.prisma.paymentChannel.create({
+    await expect(avecMotif(db.prisma, "fixture de test", (tx) => tx.paymentChannel.create({
       data: {
         kind: "mobile_money", operator: "mtn_momo", country: "CM", label: "MTN MoMo",
         feeMin: 100, feeMax: 50,
       },
-    })).rejects.toThrow();
+    }))).rejects.toThrow();
   });
 
   it("un palier sans crédit n'existe pas", async () => {

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import { withDatabase, resetDatabase, type TestDb } from "./db.js";
+import { withDatabase, resetDatabase, avecMotif, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 import { AdminTokenService } from "../src/admin/admin-token.service.js";
@@ -49,9 +49,9 @@ describe("administration — la décision sur un paiement", () => {
       db.prisma.collectionAccount.create({
         data: { label: "Orange Money principal", operator: "orange_money", number: "690000000" },
       }),
-      db.prisma.paymentChannel.create({
+      avecMotif(db.prisma, "fixture de test", (tx) => tx.paymentChannel.create({
         data: { kind: "mobile_money", operator: "orange_money", country: "CM", label: "Orange Money", feePercent: 2 },
-      }),
+      })),
     ]);
     const res = await fetch(`${baseUrl}/v1/admin/payments`, {
       method: "POST",
