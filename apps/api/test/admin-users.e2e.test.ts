@@ -366,4 +366,28 @@ describe("administration — les comptes", () => {
     expect(trace.reasonCode).toBe("third_party_report");
     expect(trace.reason).toBe("Contenu signalé à répétition");
   });
+
+  /* Deux gestes mènent à `active` : lever une suspension, et renoncer à une
+     suppression. Le second a ses propres motifs — « demande du titulaire » y
+     est proposé, pas sur le premier.
+
+     Ce cas éprouve que l'état QUITTÉ compte : le même corps de requête est
+     accepté ou refusé selon d'où l'on vient. Sans lui, une table geste-par-état
+     passerait, et « suppression déclenchée par erreur » s'enregistrerait sur un
+     compte qu'on vient de suspendre. */
+  it("distingue lever une suspension de renoncer à une suppression", async () => {
+    const { entete } = await session("support");
+
+    const enSuppression = await creerUtilisateur(1, { status: "pending_deletion" });
+    expect((await changer(entete, enSuppression.id, {
+      status: "active", reason: "Demande retirée par le titulaire",
+      reasonCode: "holder_s_request",
+    })).status).toBe(200);
+
+    const suspendu = await creerUtilisateur(2, { status: "suspended" });
+    expect((await changer(entete, suspendu.id, {
+      status: "active", reason: "Signalement infondé après examen",
+      reasonCode: "holder_s_request",
+    })).status).toBe(422);
+  });
 });
