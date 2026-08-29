@@ -191,6 +191,21 @@ export default function Accueil() {
                   countdownLabel={decompte(e)}
                   today={e.daysUntil === 0}
                   featured={rang === 0}
+                  /* TOUTE carte ouvre son occasion. C'est la seule route qui
+                     porte l'occurrence, et préparer en a besoin : jusqu'ici
+                     l'accueil ne menait nulle part depuis une échéance. */
+                  onPress={() => routeur.push({
+                    pathname: "/(app)/occasion", params: { occurrenceId: e.id },
+                  })}
+                  {...(rang === 0 && preparer ? {
+                    /* « Préparer » sur la PREMIÈRE seulement. Le geste coûte un
+                       crédit : le proposer sur trois cartes d'affilée en ferait
+                       une barre d'outils au lieu d'une invitation. */
+                    prepareLabel: t.preparer,
+                    onPrepare: () => routeur.push({
+                      pathname: "/(app)/preparation", params: { occurrenceId: e.id },
+                    }),
+                  } : {})}
                   {...(rang === 0 && preparer && !envoyes[e.id] ? {
                     /* « Marquer envoyé » ne mène à aucun écran : c'est un état
                        qui change ici, et l'accusé dit à qui. La carte cesse

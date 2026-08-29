@@ -71,7 +71,11 @@ export default function Dates() {
   useFocusEffect(useCallback(() => { void charge(); }, [charge]));
 
   const ouvre = (e: Occurrence): void => {
-    routeur.push({ pathname: "/(app)/proches/[id]", params: { id: e.personId } });
+    /* L'OCCASION, pas le proche. On appuie sur une date parce qu'on veut cette
+       date-là — la fiche du proche est un détour qui oblige à la retrouver
+       parmi les autres. C'est ce que dessine le kit, et c'est aussi la seule
+       route depuis laquelle on peut préparer : préparer vise une occurrence. */
+    routeur.push({ pathname: "/(app)/occasion", params: { occurrenceId: e.id } });
   };
 
   const quoi = (e: Occurrence): string =>
