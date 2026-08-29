@@ -46,6 +46,14 @@ import { NoteController, NotesController } from "./me/note.controller.js";
 import { NoteService } from "./me/note.service.js";
 import { OccurrenceWishesController, WishController } from "./me/wish.controller.js";
 import { WishService } from "./me/wish.service.js";
+import {
+  WishlistsController, OwnerWishController, MyReservationsController,
+} from "./me/wishlist.controller.js";
+import { WishlistService } from "./me/wishlist.service.js";
+import {
+  SharedWishlistController, ReserveWishController,
+} from "./public/shared-wishlist.controller.js";
+import { SharedWishlistService } from "./public/shared-wishlist.service.js";
 import { HomeController } from "./me/home.controller.js";
 import { HomeService } from "./me/home.service.js";
 import { MetadataController } from "./me/metadata.controller.js";
@@ -99,6 +107,7 @@ import { ProgrammationService } from "./me/programmation.service.js";
 import { RelancesService } from "./me/relances.service.js";
 import { EnvoiService } from "./me/envoi.service.js";
 import { OrdonnanceurService } from "./me/ordonnanceur.service.js";
+import { EffacementService } from "./me/effacement.service.js";
 import { TrackingService } from "./tracking/tracking.service.js";
 import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
 import { PostHogAdapter } from "./tracking/posthog.adapter.js";
@@ -115,6 +124,8 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, NotificationController, ConfigController, LegalController,
     AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, SecurityController, ConfigController, LegalController,
     OccurrenceWishesController, WishController,
+    WishlistsController, OwnerWishController, MyReservationsController,
+    SharedWishlistController, ReserveWishController,
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
@@ -134,6 +145,12 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     RelancesService,
     EnvoiService,
     OrdonnanceurService,
+    /* Sa propre tâche, à sa propre heure : l'effacement ne rejoint pas les
+       étapes de l'ordonnanceur. Il n'a rien à voir avec la file des rappels, il
+       tourne plus tôt pour qu'un compte effacé ne reçoive pas le courrier du
+       matin, et une nuit où il déborderait n'a aucune raison de retarder des
+       envois qui, eux, ont une heure à tenir. */
+    EffacementService,
     // La mesure, derrière son port (§16.5). Sans clé PostHog et sans adhésion
     // explicite à la console, l'adaptateur ne fait RIEN — contrairement au
     // courrier, l'absence de mesure n'est pas une raison de refuser de
@@ -201,6 +218,15 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     // affichée ailleurs sur le site (voir apps/web/messages). Une variable
     // d'environnement, quand elle est posée, la remplace.
     { provide: "CONTACT_TO_EMAIL", useFactory: () => process.env.CONTACT_TO_EMAIL ?? "hello@lehno.app" },
+    /* L'adresse du site public, dont le serveur compose les liens de partage.
+     * Ce n'est pas un secret — juste un domaine — donc un repli documenté
+     * plutôt qu'un refus de démarrer, comme CONTACT_TO_EMAIL.
+     *
+     * Elle vit au SERVEUR et non au client : deux versions du parc
+     * fabriqueraient deux adresses différentes pour la même liste, et celle
+     * qu'un utilisateur a collée dans un groupe cesserait de marcher au
+     * changement de domaine. */
+    { provide: "PUBLIC_WEB_URL", useFactory: () => process.env.PUBLIC_WEB_URL ?? "https://lehno.app" },
     OtpService,
     TokenService,
     RateLimitService,
@@ -228,6 +254,8 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     PersonService,
     NoteService,
     WishService,
+    WishlistService,
+    SharedWishlistService,
     HomeService,
     MetadataService,
     NotificationPreferencesService,

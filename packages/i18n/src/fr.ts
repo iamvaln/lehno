@@ -34,6 +34,9 @@ export const fr = {
     waitlist_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
     contact_invalid: "Ce formulaire n'est pas valide. Vérifiez les champs et réessayez.",
     contact_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
+    // Un seul message pour les deux filtres à robots, comme les deux
+    // au-dessus : dire lequel a mordu l'apprendrait au robot.
+    reservation_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
     maintenance: "Lehno est momentanément fermé pour une intervention. Réessayez dans un instant.",
     // Pas « une erreur est survenue » : rien n'a échoué de notre côté, et le
     // dire enverrait chercher une faute qu'on n'a pas commise. §4.5 : ce qui

@@ -143,10 +143,14 @@ describe("administration — les paramètres du système", () => {
 
   // « Sans motif, la requête échoue » (spec §7). Le service refuse avant la
   // base, pour rendre une erreur propre plutôt qu'une violation de contrainte.
-  it("une écriture sans motif est refusée, et n'écrit rien", async () => {
+  /* Le code est asserté, et non « au moins 400 ». Un refus vague passait des
+     deux côtés : celui du schéma comme celui du journal. C'est ce qui a laissé
+     cet écran garder un `z.string()` libre là où tous les autres portent
+     `motifSchema` — le test était vert dans les deux mondes. */
+  it("une écriture sans motif est refusée par le schéma, et n'écrit rien", async () => {
     const { entete } = await session("admin");
     const res = await patch(entete, { key: "credit_unit_price", value: "150" });
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(400);
     const apres = await db.prisma.systemParameter.findUniqueOrThrow({ where: { key: "credit_unit_price" } });
     expect(apres.value).toBe("100");
     expect(await db.prisma.auditLog.count()).toBe(0);
@@ -155,7 +159,7 @@ describe("administration — les paramètres du système", () => {
   it("un motif trop court est refusé comme un motif absent", async () => {
     const { entete } = await session("admin");
     const res = await patch(entete, { key: "credit_unit_price", value: "150", reason: "non" });
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(400);
     expect(await db.prisma.auditLog.count()).toBe(0);
   });
 

@@ -124,8 +124,10 @@ L'application mobile du propriétaire. Toutes les ressources sont **cloisonnées
 | `/me/wishes/{id}` | PATCH, DELETE | Un souhait de proche : état, repère personnel |
 | `/me/wishlists` | GET, POST | **Mes** listes, une par occasion à moi |
 | `/me/wishlists/{id}/wishes` | GET, POST | Les souhaits d'une de mes listes |
-| `/me/wishlists/{id}/share` | GET | L'adresse publique de la liste, à partager |
+| `/me/wishlists/{id}/share` | GET, DELETE | L'adresse publique de la liste, à partager ; la révoquer |
 | `/me/owner-wishes/{id}` | PATCH, DELETE | Un de mes souhaits |
+
+**Le partage se révoque, et un lien mort le dit.** `GET /me/wishlists/{id}/share` est **idempotent** : il rend le même jeton tant qu'un lien actif existe — en frapper un neuf à chaque appel ferait cesser de valoir celui qu'on vient de coller dans un groupe. `DELETE` éteint le lien sans l'effacer : la ligne survit pour que `/public/wishlists/{token}` réponde `{ "state": "revoked" }`, « ce lien n'est plus actif », plutôt qu'un `404` qui ferait croire à une panne. Un jeton **inconnu**, lui, rend bien `404` — dire « révoqué » apprendrait qu'il a un jour été valide.
 
 **Listes d'échéances.** `/me/occurrences` accepte une fenêtre de dates et un plafond : l'accueil en demande trois, l'écran Dates un mois. C'est le même appel, paramétré — les deux surfaces ne divergent pas.
 
