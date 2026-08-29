@@ -22,10 +22,24 @@ export function originsAutorisees(
     origines.push(`https://${domaine}`, `https://www.${domaine}`);
   }
 
-  // En développement, le site tourne sur 3000 et l'API sur 3001 : même
-  // franchissement d'origine, mêmes requêtes préalables.
+  // En développement, deux outils appellent l'API depuis un navigateur, et ils
+  // ne peuvent pas tenir sur le même port :
+  //
+  // - la **landing** sur 3000, défaut de Next ;
+  // - le **back-office** sur 5173, défaut de Vite.
+  //
+  // Le second manquait. L'outil se chargeait, mais chaque appel était refusé
+  // par le navigateur avant de partir — il n'était pas utilisable en local.
+  // Même défaut que celui qui a valu ce fichier, et pour la même raison : les
+  // essais se faisaient en curl, qui n'envoie pas de requête préalable.
+  //
+  // En développement seulement : la garde de production est juste en dessous,
+  // et ces origines n'y entrent jamais.
   if (environnement !== "production") {
-    origines.push("http://localhost:3000", "http://127.0.0.1:3000");
+    origines.push(
+      "http://localhost:3000", "http://127.0.0.1:3000",
+      "http://localhost:5173", "http://127.0.0.1:5173",
+    );
   }
 
   return origines;

@@ -133,6 +133,32 @@ export type ContexteMessage = {
   readonly texteLibre: string | null;
   /** L'âge, seulement si l'utilisateur l'a demandé. */
   readonly age: number | null;
+  /* La consigne d'orientation, quand elle vient d'AILLEURS que de ce fichier.
+   *
+   * C'est la couture par laquelle le Studio reprend la main : la §8 veut que
+   * les consignes vivent en base, et une configuration publiée en porte une
+   * par orientation. Absente, on retombe sur ORIENTATION_CONSIGNE — ce qui
+   * garde ce fichier utilisable seul, au premier démarrage comme dans les
+   * tests.
+   *
+   * Un champ plutôt qu'une seconde fonction d'invite : deux assemblages
+   * différents rendraient un essai d'administration non comparable à ce que la
+   * production produit, et c'est justement ce que l'établi prétend montrer. */
+  readonly consigneOrientation?: { readonly fr: string; readonly en: string } | null;
+
+  /* Ce que l'administration ajoute à la consigne système, publié depuis
+     l'atelier. Même raisonnement que ci-dessus : absent, on s'en passe, et le
+     gabarit reste utilisable seul. */
+  readonly consigneCommune?: string | null;
+
+  /* Les garde-fous publiés : ce qui est écarté — symboles, formules, tournures.
+   *
+   * Ils S'AJOUTENT aux règles absolues du gabarit, ils ne les remplacent pas.
+   * Une configuration publiée ne doit pas pouvoir lever l'interdiction
+   * d'inventer ou celle de nommer Lehno : ce sont les seules règles dont le
+   * produit répond, et les laisser réglables reviendrait à confier à un écran
+   * d'administration le soin de ne pas se tirer dans le pied. */
+  readonly gardeFous?: readonly string[];
 };
 
 const ACCORDS = {
@@ -202,7 +228,25 @@ export function consigneSysteme(c: ContexteMessage): string {
   /* La contrainte de l'occasion sensible passe EN TÊTE, avant tout le reste.
      Enfouie au milieu d'une longue consigne, elle se dilue — et c'est la seule
      erreur de ce gabarit qui ne se rattrape pas. */
-  return [...(c.occasionSensible ? sensible.slice(1) : []), ...(c.occasionSensible ? [""] : []), ...regles].join("\n");
+  /* Ce que l'administration publie s'AJOUTE, en queue, après les règles
+     absolues. En tête, une consigne publiée pourrait contredire ce qui précède
+     — et un modèle suit plus volontiers ce qu'il lit en dernier. Les règles du
+     produit doivent rester les dernières à s'appliquer, pas les premières à
+     être oubliées. */
+  const publie: string[] = [];
+  if (c.consigneCommune && c.consigneCommune.trim().length > 0) {
+    publie.push("", fr ? "CONSIGNE DE LA MAISON" : "HOUSE INSTRUCTION", c.consigneCommune.trim());
+  }
+  if (c.gardeFous && c.gardeFous.length > 0) {
+    publie.push("", fr ? "À ÉCARTER" : "TO AVOID", ...c.gardeFous.map((g) => `- ${g}`));
+  }
+
+  return [
+    ...(c.occasionSensible ? sensible.slice(1) : []),
+    ...(c.occasionSensible ? [""] : []),
+    ...regles,
+    ...publie,
+  ].join("\n");
 }
 
 /* La demande : la matière, et ce qu'on attend en retour.
@@ -223,7 +267,8 @@ export function invite(c: ContexteMessage): string {
     : `AGREEMENT — recipient: ${accords[c.genreDuProche]} · writer: ${accords[c.genreDeLAuteur]}`);
   if (c.age !== null) l.push(fr ? `ÂGE : ${c.age}` : `AGE: ${c.age}`);
 
-  l.push("", fr ? `CE QU'IL FAUT DIRE : ${ORIENTATION_CONSIGNE[c.orientation].fr}` : `WHAT TO SAY: ${ORIENTATION_CONSIGNE[c.orientation].en}`);
+  const consigne = c.consigneOrientation ?? ORIENTATION_CONSIGNE[c.orientation];
+  l.push("", fr ? `CE QU'IL FAUT DIRE : ${consigne.fr}` : `WHAT TO SAY: ${consigne.en}`);
 
   /* `dislikes_nogo` part À PART, comme une interdiction.
    *

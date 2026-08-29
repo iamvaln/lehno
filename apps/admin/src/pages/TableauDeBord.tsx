@@ -38,8 +38,8 @@ export interface TableauDeBordProps {
  *  distinguent qu'à l'œil. */
 function Rang({ id, titre, children }: { id: string; titre: string; children: ReactNode }) {
   return (
-    <section className="admin-accueil-rang" aria-labelledby={id}>
-      <h2 id={id} className="admin-accueil-titre">
+    <section className="admin-section" aria-labelledby={id}>
+      <h2 id={id} className="admin-section-titre">
         {titre}
       </h2>
       {children}
@@ -93,7 +93,7 @@ export function TableauDeBord({ donnees, t, onAller }: TableauDeBordProps) {
       </Rang>
 
       <Rang id="tdb-indicateurs" titre={t.tableau.indicateursTitre}>
-        <div className="admin-accueil-indicateurs">
+        <div className="admin-section-cartes">
           {donnees.indicateurs.map((i) => {
             // Un chiffre qui ne mène nulle part reste une carte : en faire un
             // bouton promettrait un écran qui n'existe pas.

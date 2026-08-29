@@ -7,6 +7,8 @@ import { RelancesService } from "../src/me/relances.service.js";
 import { EnvoiService } from "../src/me/envoi.service.js";
 import { GenerationService } from "../src/me/generation.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
+import { AuditService } from "../src/admin/audit.service.js";
+import { StudioConfigurationService } from "../src/studio/configuration.service.js";
 import { RouteurIAService } from "../src/ia/routeur.service.js";
 import { OrdonnanceurService } from "../src/me/ordonnanceur.service.js";
 import type { Mail, MailPort } from "../src/mail/mail.port.js";
@@ -30,7 +32,7 @@ describe("le passage quotidien", () => {
       new RelancesService(p), new EnvoiService(p, poste),
       // Le rattrapage des générations abandonnées : sans fournisseur d'IA, il
       // ne produit rien mais rembourse ce qui traîne — c'est bien son rôle.
-      new GenerationService(p, new TenantRepository(p), new RouteurIAService(p), {}),
+      new GenerationService(p, new TenantRepository(p), new RouteurIAService(p), {}, new StudioConfigurationService(p, new AuditService(p))),
     );
   });
 
@@ -73,7 +75,7 @@ describe("le passage quotidien", () => {
     const p = db.prisma as never;
     const avecPanne = new OrdonnanceurService(
       casse, new ProgrammationService(p), new RelancesService(p), new EnvoiService(p, poste),
-      new GenerationService(p, new TenantRepository(p), new RouteurIAService(p), {}),
+      new GenerationService(p, new TenantRepository(p), new RouteurIAService(p), {}, new StudioConfigurationService(p, new AuditService(p))),
     );
     await expect(avecPanne.executer()).resolves.toBeUndefined();
   });

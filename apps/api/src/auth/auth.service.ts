@@ -23,6 +23,22 @@ type VerifyInput = {
   userAgent?: string; ip?: string;
 };
 
+/* Le refus qui correspond à un état, nommé une seule fois pour les deux voies —
+ * le code à usage unique et l'identité fédérée. Deux tables des mêmes états
+ * finiraient par diverger, et c'est exactement ainsi que `deleted` a été oublié
+ * d'un côté.
+ *
+ * `deleted` rend le même code que `pending_deletion`, et ce n'est pas un
+ * raccourci : entre le geste d'effacement et le passage de nuit qui vide la
+ * ligne, « marqué effacé » et « en cours d'effacement » ne se distinguent pas
+ * du dehors. Une fois la ligne vidée, l'adresse ne se trouve plus du tout — et
+ * le chemin d'inscription reprend, comme pour une adresse inconnue. C'est ce
+ * que l'effacement doit produire. */
+export function refusDe(statut: string): AppError {
+  if (statut === "suspended") return new AppError("account_suspended", "account suspended");
+  return new AppError("account_pending_deletion", "account is being deleted");
+}
+
 @Injectable()
 export class AuthService {
   // @Inject explicite sur chaque paramètre typé par une classe : ce projet
@@ -267,13 +283,16 @@ export class AuthService {
       user = await this.prisma.user.update({ where: { id: user.id }, data: { emailVerified: true } });
     }
 
-    if (user.status === "suspended") {
+    /* REFUS PAR DÉFAUT : seul `active` passe.
+     *
+     * L'énumération listait trois refus et en oubliait un — `deleted`, qui
+     * ouvrait donc une session sur un compte marqué effacé, jusqu'au passage de
+     * nuit qui le vide. Écrit ainsi, un état ajouté demain sera refusé tant que
+     * personne n'aura décidé de l'admettre. C'est l'inverse de ce qui vient
+     * d'arriver, et c'est le seul sens dans lequel un oubli soit sans danger. */
+    if (user.status !== "active") {
       await this.recordAttempt(input, user.id, "failure");
-      throw new AppError("account_suspended", "account suspended");
-    }
-    if (user.status === "pending_deletion") {
-      await this.recordAttempt(input, user.id, "failure");
-      throw new AppError("account_pending_deletion", "account is being deleted");
+      throw refusDe(user.status);
     }
 
     await this.recordAttempt(input, user.id, "success");
