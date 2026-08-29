@@ -63,7 +63,7 @@ async function ouvrir(section: string, role: "admin" | "support" = "admin") {
   magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role, email: "sam@lehno.app" });
   render(<App />);
   const utilisateur = userEvent.setup({ delay: null });
-  await utilisateur.click(within(screen.getByRole("navigation")).getByText(t.sections[section as "comptes"]));
+  await allerA(utilisateur, section);
   return utilisateur;
 }
 
@@ -73,6 +73,29 @@ async function ouvrir(section: string, role: "admin" | "support" = "admin") {
  * les paiements et les mouvements de crédits sont ce qu'on demande le jour d'un
  * contrôle, et n'avaient rien.
  */
+/* Ouvrir l'entrée d'une section : les paiements vivent désormais dans un
+   accordéon, et l'entrée est repliée tant qu'on n'a pas déplié son intitulé.
+   Le geste est celui d'un humain — on ouvre, puis on choisit. */
+async function allerA(utilisateur: ReturnType<typeof userEvent.setup>, section: string): Promise<void> {
+  // Le fil d'Ariane est lui aussi une région de navigation : on vise la
+  // première, celle de la barre latérale.
+  const nav = screen.getAllByRole("navigation")[0] as HTMLElement;
+  const t2 = t as unknown as { sections: Record<string, string> };
+  const PARENTS: Record<string, string> = {
+    credits: "paiements", transactionsToutes: "paiements",
+    versementsManuels: "paiements", canauxPaiement: "paiements",
+  };
+  /* On OUVRE si besoin, on ne bascule pas : l'intitulé est un interrupteur, et
+     le cliquer alors que la section est déjà ouverte la referme — le deuxième
+     écran d'une même section devenait alors introuvable. */
+  const parent = PARENTS[section];
+  if (parent && !within(nav).queryByText(t2.sections[section] as string)) {
+    const intitule = within(nav).queryByText(t2.sections[parent] as string);
+    if (intitule) await utilisateur.click(intitule);
+  }
+  await utilisateur.click(within(nav).getByText(t2.sections[section] as string));
+}
+
 describe("l'export emporte la sélection affichée", () => {
   beforeEach(() => {
     localStorage.clear();
