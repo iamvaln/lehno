@@ -74,6 +74,21 @@ model User {
   status                   UserStatus      @default(active)
   deletionRequestedAt      DateTime?       @map("deletion_requested_at") @db.Timestamptz
   deletionReason           String?         @map("deletion_reason")
+  /**
+   * Quand la ligne a été VIDÉE, pas quand la suppression a été demandée.
+   *
+   * C'est le seul marqueur d'idempotence de la tâche d'effacement, et il ne
+   * peut pas être `status` : la ligne reste `deleted` avant comme après, parce
+   * qu'elle n'est jamais supprimée — les paiements et les mouvements de crédits
+   * la référencent en `Cascade`, et les effacer avec elle emporterait des
+   * pièces comptables que la loi impose de garder.
+   *
+   * Il s'écrit EN DERNIER, une fois toutes les étapes passées. Un passage
+   * interrompu le laisse donc nul, et le suivant reprend le compte du début :
+   * c'est ce qui rend l'effacement reprenable sans qu'aucune étape n'ait à
+   * savoir où la précédente s'est arrêtée.
+   */
+  erasedAt                 DateTime?       @map("erased_at") @db.Timestamptz
   uiLanguage               String          @default("fr") @map("ui_language") @db.VarChar(10)
   theme                    UiTheme         @default(system)
   timezone                 String          @default("UTC") @db.VarChar(64)
