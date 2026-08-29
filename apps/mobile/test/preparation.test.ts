@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { startGenerationSchema } from "@lehno/contracts";
 import {
-  cleDeDemande, composeLaDemande, etatDeLaPiste, pistesOffertes,
+  cleDeDemande, composeLaDemande, coutDe, etatDeLaPiste, pistesOffertes,
 } from "../lib/preparation.js";
 
 const OCCASION = "11111111-1111-4111-8111-111111111111";
@@ -121,5 +121,43 @@ describe("ce qui existe ne se redemande pas", () => {
   it("bascule sur « voir » quand la production existe", () => {
     expect(etatDeLaPiste(true)).toBe("a_voir");
     expect(etatDeLaPiste(false)).toBe("a_faire");
+  });
+});
+
+describe("ce que l'action coûte", () => {
+  const PRIX = [
+    { code: "wish_message", credits: 1 },
+    { code: "gift_ideas", credits: 2 },
+  ];
+
+  /* Le prix est LU EN BASE. Une constante côté client afficherait l'ancien
+     tarif sur tout un parc jusqu'à la mise à jour suivante — et « rien ne se
+     paie en silence » veut dire que le coût annoncé est le coût débité, sinon
+     la phrase ne vaut rien. */
+  it("lit le prix servi, quel qu'il soit", () => {
+    expect(coutDe(PRIX, "wish_message")).toBe(1);
+    expect(coutDe(PRIX, "gift_ideas")).toBe(2);
+  });
+
+  /* UNE ACTION ABSENTE N'EST PAS DISPONIBLE — même convention que les
+     drapeaux. Le portrait n'est pas dans la liste : on ne l'annonce pas, on ne
+     le lance pas. */
+  it("rend rien pour une action absente", () => {
+    expect(coutDe(PRIX, "portrait")).toBeNull();
+  });
+
+  /* `null` plutôt que zéro, et ce n'est pas un détail : un zéro veut dire
+     GRATUIT, ce qui est un état LÉGITIME — les générations le deviennent quand
+     `credits` est éteint. Les confondre ferait lancer une action qu'on ne sait
+     pas facturer, ou refuser une action qui ne coûte rien. */
+  it("distingue le gratuit de l'indisponible", () => {
+    expect(coutDe([{ code: "wish_message", credits: 0 }], "wish_message")).toBe(0);
+    expect(coutDe([], "wish_message")).toBeNull();
+  });
+
+  // Tant que les métadonnées ne sont pas arrivées, on n'annonce aucun coût
+  // plutôt qu'un coût supposé.
+  it("n'invente rien avant d'avoir lu", () => {
+    expect(coutDe([], "gift_ideas")).toBeNull();
   });
 });

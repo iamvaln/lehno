@@ -83,3 +83,26 @@ export type EtatDePiste = "a_faire" | "a_voir";
 export function etatDeLaPiste(dejaProduite: boolean): EtatDePiste {
   return dejaProduite ? "a_voir" : "a_faire";
 }
+
+/* CE QUE L'ACTION COÛTE — lu en base, jamais écrit ici.
+ *
+ * Le prix se règle en administration sans livraison. Une constante côté client
+ * afficherait l'ancien tarif sur tout un parc jusqu'à la mise à jour suivante,
+ * et « rien ne se paie en silence » veut dire que le coût annoncé est le coût
+ * débité — sinon la phrase ne vaut rien.
+ *
+ * UNE ACTION ABSENTE N'EST PAS DISPONIBLE. Même convention que les drapeaux :
+ * ce qui n'est pas là est éteint, et « absent » se confond avec « inconnu » à
+ * dessein — une version antérieure ignore un code qu'elle ne connaît pas au
+ * lieu de refuser la réponse entière.
+ *
+ * `null` plutôt que zéro : un zéro voudrait dire GRATUIT, ce qui est un état
+ * légitime — les générations le deviennent quand `credits` est éteint. Les
+ * confondre ferait lancer une action qu'on ne sait pas facturer.
+ */
+export function coutDe(
+  actions: readonly { code: string; credits: number }[],
+  kind: GenerationKind,
+): number | null {
+  return actions.find((a) => a.code === kind)?.credits ?? null;
+}

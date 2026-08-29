@@ -3,20 +3,21 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  occurrenceSchema, type GenerationKind, type Occurrence,
+  creditBalanceSchema, occurrenceSchema, type GenerationKind, type Occurrence,
 } from "@lehno/contracts";
 import {
   nativeBorder, nativeFont, nativeLetterSpacing, nativeRadius, nativeSpace,
   nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
 import {
-  Banner, Button, Icon, LoadingState, SensitiveBanner, useCouleurs,
+  Banner, Button, Icon, LoadingState, PaidActionSheet, SensitiveBanner, useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
-import { composeLaDemande, pistesOffertes } from "../../lib/preparation.js";
+import { useActionsPayantes } from "../../lib/MetadonneesProvider.js";
+import { composeLaDemande, coutDe, pistesOffertes } from "../../lib/preparation.js";
 
 /* Préparer une occasion — §3.7.
  *
@@ -34,14 +35,28 @@ export default function Preparation() {
   const routeur = useRouter();
   const { occurrenceId } = useLocalSearchParams<{ occurrenceId: string }>();
   const { actives } = useDrapeaux();
+  const prix = useActionsPayantes();
 
   const [occasion, setOccasion] = useState<Occurrence | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState<GenerationKind | null>(null);
+  /* RIEN NE SE PAIE EN SILENCE : le coût s'annonce sur place, passe par la
+     feuille de confirmation, et ce qui est produit se relit. La piste choisie
+     attend donc la confirmation avant de partir. */
+  const [aConfirmer, setAConfirmer] = useState<GenerationKind | null>(null);
+  const [solde, setSolde] = useState<number | null>(null);
 
   const charge = useCallback(async () => {
     try {
-      setOccasion(occurrenceSchema.parse(await appel<unknown>(`/me/occurrences/${occurrenceId}`)));
+      /* Le solde vient avec l'occasion : la feuille l'annonce à côté du coût,
+         et l'aller chercher au moment du geste ferait attendre devant une
+         question qu'on vient de poser. */
+      const [occ, credits] = await Promise.all([
+        appel<unknown>(`/me/occurrences/${occurrenceId}`),
+        appel<unknown>("/me/credits"),
+      ]);
+      setOccasion(occurrenceSchema.parse(occ));
+      setSolde(creditBalanceSchema.parse(credits).balance);
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
@@ -153,14 +168,39 @@ export default function Preparation() {
               variant="primary"
               full
               icon="sparkles"
-              disabled={envoi !== null}
-              onPress={() => void lance(kind)}
+              disabled={envoi !== null || coutDe(prix, kind) === null}
+              onPress={() => setAConfirmer(kind)}
             >
               {t.preparer}
             </Button>
           </View>
         </View>
       ))}
+      {/* Le coût est LU EN BASE, jamais écrit ici : il se règle en
+          administration sans livraison, et un écran qui annonce un prix avant
+          de débiter ne peut pas se tromper. Une action dont le prix n'est pas
+          servi ne se lance pas — son bouton reste éteint plutôt que d'ouvrir
+          une feuille qui ne saurait quoi annoncer. */}
+      {aConfirmer !== null && coutDe(prix, aConfirmer) !== null ? (
+        <PaidActionSheet
+          surTitre={t.prepPour(occasion.personDisplayName)}
+          titre={detail[aConfirmer].titre}
+          resultat={detail[aConfirmer].texte}
+          coutLibelle={t.creditUnite(coutDe(prix, aConfirmer) ?? 0)}
+          soldeLibelle={t.creditReste(solde ?? 0)}
+          lancer={t.feuilleLancer}
+          recharger={t.feuilleRecharger}
+          pasMaintenant={t.feuillePasMaintenant}
+          cout={coutDe(prix, aConfirmer) ?? 0}
+          solde={solde ?? 0}
+          onConfirmer={() => {
+            const kind = aConfirmer;
+            setAConfirmer(null);
+            void lance(kind);
+          }}
+          onAnnuler={() => setAConfirmer(null)}
+        />
+      ) : null}
     </ScrollView>
   );
 }

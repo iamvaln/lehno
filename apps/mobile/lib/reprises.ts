@@ -54,16 +54,20 @@ export interface Reprise {
   icone: string;
   /* Pour QUI, et dans combien de jours.
    *
-   * Nuls quand on ne sait pas, et c'est fréquent : le contrat ne dit ce que
-   * vise une exécution qu'à travers son résultat (`message.occurrenceId`), et
-   * ce résultat est « nul tant que l'exécution n'a pas abouti ». Une reprise
-   * `running` n'a donc ni nom ni décompte — la carte se replie plutôt que
-   * d'inventer une cible. */
+   * La cible vient de l'EXÉCUTION depuis que le contrat la porte —
+   * `occurrenceId` sur la génération elle-même, et non plus seulement sur son
+   * résultat. C'est ce qui change tout pour une reprise `running` : son
+   * résultat est « nul tant que l'exécution n'a pas abouti », mais sa cible,
+   * elle, est connue dès le lancement. Une production en cours peut donc dire
+   * pour qui elle travaille — c'est justement le moment où on se le demande.
+   *
+   * Nuls quand la jointure manque : l'échéance visée peut tomber hors de la
+   * fenêtre demandée. Mieux vaut une carte sans nom qu'un nom emprunté. */
   qui: string | null;
   jours: number | null;
   extrait: string | null;
-  /* Le serveur produit encore. La carte ne montre alors pas de décompte : il
-     n'y a rien à décompter tant que la cible est inconnue. */
+  /* Le serveur produit encore. La carte le dit — et peut désormais dire pour
+     qui, la cible étant portée par l'exécution. */
   enCours: boolean;
 }
 
@@ -182,10 +186,13 @@ export function composeLesReprises(
     const nature = NATURES[generation.kind];
     if (!estActive(actives, nature.drapeau)) continue;
 
-    /* La jointure peut manquer sans que ce soit un défaut : l'échéance visée
-       peut tomber hors de la fenêtre demandée, ou au-delà du plafond de la
-       page. Mieux vaut une carte sans nom qu'un nom emprunté à une autre. */
-    const echeance = message === null ? undefined : parEcheance.get(message.occurrenceId);
+    /* On vise d'abord l'EXÉCUTION, puis son résultat en second — l'un vaut
+       dès le lancement, l'autre seulement à l'arrivée. La jointure peut
+       manquer sans que ce soit un défaut : l'échéance visée peut tomber hors
+       de la fenêtre demandée, ou au-delà du plafond de la page. Mieux vaut une
+       carte sans nom qu'un nom emprunté à une autre. */
+    const vise = generation.occurrenceId ?? message?.occurrenceId ?? null;
+    const echeance = vise === null ? undefined : parEcheance.get(vise);
 
     retenues.push({
       id: generation.id,

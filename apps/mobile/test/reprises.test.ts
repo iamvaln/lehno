@@ -42,7 +42,11 @@ function execution(
     texte?: string;
   } = {},
 ): GenerationResult {
-  const message: GeneratedMessage | null = vise === null ? null : {
+  /* Le résultat n'existe qu'une fois l'exécution aboutie — le contrat le dit
+     nul tant qu'elle tourne. La fixture le tient, sans quoi elle modèlerait un
+     état que le serveur ne sert jamais, et cacherait ce que l'écran doit
+     savoir dire pendant l'attente. */
+  const message: GeneratedMessage | null = vise === null || status !== "succeeded" ? null : {
     id: uuid(700 + n),
     occurrenceId: uuid(vise),
     content: texte, contentShort: null, status: "generated",
@@ -51,6 +55,10 @@ function execution(
   return {
     generation: {
       id: uuid(100 + n), kind, status, creditsSpent: 1,
+      /* La cible vient désormais de l'EXÉCUTION, plus seulement du message
+         produit : c'est ce qui donne un nom à une reprise encore en cours. */
+      personId: kind === "portrait" && vise !== null ? uuid(vise) : null,
+      occurrenceId: kind !== "portrait" && vise !== null ? uuid(vise) : null,
       failureReason: status === "failed" ? "provider_error" : null,
       resultId: message?.id ?? null,
       createdAt: "2026-08-01T10:00:00.000Z",
@@ -288,5 +296,44 @@ describe("la fenêtre d'échéances", () => {
      reprend pas. */
   it("remonte d'un an et descend d'un an", () => {
     expect(fenetreDesReprises("2026-08-27")).toEqual({ from: "2025-08-27", to: "2027-08-27" });
+  });
+});
+
+describe("une production en cours dit pour qui elle travaille", () => {
+  /* LE DÉFAUT QUE LA CORRECTION DU CONTRAT A LEVÉ.
+   *
+   * La cible ne se lisait qu'à travers le résultat — `message.occurrenceId` —,
+   * et « ce résultat est nul tant que l'exécution n'a pas abouti ». Une reprise
+   * `running` n'avait donc ni nom ni décompte : l'écran disait qu'une
+   * production était en cours sans dire pour qui, et la liste devenait une
+   * liste d'identifiants.
+   *
+   * `occurrenceId` est désormais porté par l'EXÉCUTION, connu dès le
+   * lancement. C'est justement au moment où l'on attend qu'on se demande pour
+   * qui — et ce test rougirait si l'on revenait à ne lire que le résultat. */
+  it("nomme sa cible avant d'avoir produit", () => {
+    const [reprise] = composeLesReprises(
+      [execution(1, { kind: "wish_message", status: "running", vise: 1 })],
+      [echeance(1, 3)],
+      LANCEMENT,
+    );
+    expect(reprise?.enCours).toBe(true);
+    expect(reprise?.extrait).toBeNull();
+    expect(reprise?.qui).toBe("Proche 1");
+    expect(reprise?.jours).toBe(3);
+  });
+
+  /* Une cible qu'on ne sait pas joindre reste sans nom : l'échéance peut
+     tomber hors de la fenêtre demandée. Mieux vaut une carte muette qu'un nom
+     emprunté à quelqu'un d'autre — ce serait proposer de reprendre un mot au
+     nom d'un tiers. */
+  it("reste muette plutôt que d'emprunter un nom", () => {
+    const [reprise] = composeLesReprises(
+      [execution(1, { kind: "wish_message", status: "running", vise: 1 })],
+      [echeance(2, 3)],
+      LANCEMENT,
+    );
+    expect(reprise?.qui).toBeNull();
+    expect(reprise?.jours).toBeNull();
   });
 });
