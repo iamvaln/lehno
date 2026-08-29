@@ -29,6 +29,13 @@ enum DigestFrequency {
 enum OtpReason {
   email_verification
   login
+  // La confirmation d'une suppression de compte (spec mobile §3.24, troisième
+  // temps). Une RAISON À PART, et pas `login` réemployé : les codes s'annulent
+  // entre eux par (adresse, raison) dans OtpService.issue, donc partager la
+  // raison ferait qu'ouvrir l'écran de suppression invaliderait le code de
+  // connexion qu'on venait de demander — et, plus grave, qu'un code obtenu
+  // pour se connecter suffirait à effacer le compte.
+  account_deletion
 }
 
 enum IdentityProvider {
@@ -157,6 +164,12 @@ model User {
   payments                Payment[]
   paymentStatusChanges    PaymentStatusHistory[]
   generatedMessages       GeneratedMessage[]
+  wall                    Wall?
+  collectionLinks         CollectionLink[]
+  wishCollectionLinks     WishCollectionLink[]
+  submissions             Submission[]
+  receivedWishes          ReceivedWish[]
+  authoredReceivedWishes  ReceivedWish[]           @relation("voeux_ecrits")
 
   @@map("user")
 }
@@ -543,11 +556,12 @@ model Person {
   createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz
 
-  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  events        Event[]
-  notes         Note[]
-  attributes    PersonAttribute[]
-  notifications Notification[]
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events          Event[]
+  notes           Note[]
+  attributes      PersonAttribute[]
+  notifications   Notification[]
+  collectionLinks CollectionLink[]
 
   @@index([userId])
   @@map("person")
@@ -603,8 +617,8 @@ model EventOccurrence {
   status         OccurrenceStatus @default(upcoming)
   createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
 
-  event             Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event             Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   notes             Note[]
   wishes            WishlistItem[]
   ownerWishes       OwnerWish[]
@@ -612,6 +626,8 @@ model EventOccurrence {
   notifications     Notification[]
   actionRuns        ActionRun[]
   generatedMessages GeneratedMessage[]
+  wishLink          WishCollectionLink?
+  receivedWishes    ReceivedWish[]
 
   @@unique([eventId, occurrenceDate])
   @@index([userId, occurrenceDate])
@@ -693,6 +709,21 @@ model PersonAttribute {
   noteId     String?  @map("note_id") @db.Uuid
   observedAt DateTime @map("observed_at") @db.Date
 
+  /**
+   * Exposé sur le Mur de son propriétaire. FAUX par défaut, et c'est la règle
+   * entière : « rien ne s'expose sans opt-in » (UX publiques §1). Un attribut
+   * est EXTRAIT d'une note — personne ne l'a écrit pour être lu par des
+   * inconnus —, donc le défaut ne peut pas être l'exposition.
+   * La visibilité vit ICI plutôt que sur le `Wall`, comme le dictionnaire le
+   * demande : une liste d'identifiants rangée sur le Mur survivrait à la
+   * suppression de l'attribut qu'elle désigne, et le jour où une valeur
+   * reviendrait sur le même identifiant, elle reparaîtrait publique sans que
+   * personne l'ait décidé.
+   * Ne concerne que la self-Person : rien de ce qu'on note sur un PROCHE ne
+   * s'expose, et le réglage n'est offert que sur son propre Mur.
+   */
+  isPublic Boolean @default(false) @map("is_public")
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -753,6 +784,7 @@ model WishlistItem {
 
   occurrence EventOccurrence @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
   author     User?           @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  collected  SubmittedWish[]
 
   @@index([eventOccurrenceId])
   @@map("wishlist_item")
@@ -2110,4 +2142,209 @@ model PaymentStatusHistory {
 
   @@index([paymentId, startedAt])
   @@map("payment_status_history")
+}
+
+// ─── Le Mur et la collecte ──────────────────────────────────────────────────
+//
+// La boucle d'acquisition : ce qui fait connaître Lehno à des gens qui n'ont
+// pas de compte. Tout ce qui entre par ces tables vient de l'extérieur, et
+// RIEN n'en sort vers une fiche sans une décision du propriétaire.
+
+enum CollectionLinkType {
+  nominatif
+  public
+
+  @@map("collection_link_type")
+}
+
+enum SubmissionStatus {
+  pending
+  validated
+  rejected
+
+  @@map("submission_status")
+}
+
+enum SubmittedWishReview {
+  pending
+  retained
+  discarded
+
+  @@map("submitted_wish_review")
+}
+
+enum ReceivedWishStatus {
+  pending
+  approved
+  rejected
+
+  @@map("received_wish_status")
+}
+
+/**
+ * Vue publique curée sur la self-Person de l'utilisateur.
+ * PAS DE COLONNE `slug`, contrairement au dictionnaire — et c'est la seule
+ * différence assumée avec lui. L'adresse du Mur EST le pseudo
+ * (`lehno.app/valentine`), déjà unique sur `user.username`. Une seconde
+ * colonne devrait rester égale à la première : le jour où quelqu'un se
+ * renomme, l'ancienne adresse continuerait d'être servie et personne ne s'en
+ * apercevrait avant qu'un proche ne se plaigne. Le contrat rend toujours un
+ * `slug` — il se LIT sur le compte, il ne se range pas ici.
+ * La ligne naît à la première lecture de `/me/wall`, éteinte : un Mur n'existe
+ * pour le public que si son propriétaire l'a publié.
+ */
+model Wall {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @unique @map("user_id") @db.Uuid
+  isEnabled        Boolean  @default(false) @map("is_enabled")
+  showBirthdayDate Boolean  @default(true) @map("show_birthday_date")
+  welcomeMessage   String?  @map("welcome_message")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wall")
+}
+
+/**
+ * Lien de collecte, nominatif ou public. DURABLE et RÉVOCABLE : pas de colonne
+ * d'expiration, `is_active` seul le ferme. Le proche « peut revenir quand il
+ * veut ajouter un souhait ou un mot » (UX publiques §3.2), et une date de
+ * péremption ferait mourir le lien un jour où personne ne regarde.
+ */
+model CollectionLink {
+  id        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String             @map("user_id") @db.Uuid
+  type      CollectionLinkType
+  // Le jeton VAUT permission : c'est la seule identification d'une surface
+  // sans session. Unique, donc, et tiré au hasard — jamais dérivé de l'id.
+  token     String             @unique @db.VarChar(32)
+  personId  String?            @map("person_id") @db.Uuid
+  isActive  Boolean            @default(true) @map("is_active")
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person      Person?      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@index([userId])
+  @@index([personId])
+  @@map("collection_link")
+}
+
+/**
+ * Canal DISTINCT dédié aux messages de vœux, rattaché à une occurrence.
+ * Distinct de `CollectionLink` parce qu'il ne recueille pas la même chose et
+ * ne vit pas le même temps : un lien de collecte est durable, celui-ci vaut
+ * pour une année — « une nouvelle occurrence chaque année ⇒ un nouveau lien ».
+ */
+model WishCollectionLink {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventOccurrenceId String   @map("event_occurrence_id") @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  token             String   @unique @db.VarChar(32)
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  occurrence EventOccurrence @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wishes     ReceivedWish[]
+
+  // Un seul lien par occasion : deux jetons vivants pour la même année
+  // feraient deux adresses à partager, dont une que le propriétaire aurait
+  // oubliée et ne saurait plus révoquer.
+  @@unique([eventOccurrenceId])
+  @@index([userId])
+  @@map("wish_collection_link")
+}
+
+/**
+ * Soumission entrante, en attente de validation. Un lien en produit plusieurs.
+ * `userId` est porté ICI plutôt que déduit du lien à chaque lecture : c'est la
+ * colonne de cloisonnement, et la faire passer par une jointure la rendrait
+ * facultative dans un `where` distrait.
+ */
+model Submission {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String           @map("user_id") @db.Uuid
+  collectionLinkId  String           @map("collection_link_id") @db.Uuid
+  submitterName     String?          @map("submitter_name")
+  submitterEmail    String?          @map("submitter_email")
+  // Pseudo Lehno AUTO-DÉCLARÉ sur un formulaire sans connexion. Il n'est pas
+  // résolu à l'arrivée : le résoudre en `author_user_id` ferait d'un inconnu
+  // l'auteur d'une contribution qu'il n'a pas écrite. Il se confirme à la
+  // validation, sous les yeux du propriétaire.
+  submitterUsername String?          @map("submitter_username")
+  relationHint      String?          @map("relation_hint")
+  birthDate         DateTime?        @map("birth_date") @db.Date
+  personalNote      String?          @map("personal_note")
+  status            SubmissionStatus @default(pending)
+  reviewedAt        DateTime?        @map("reviewed_at") @db.Timestamptz
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  link   CollectionLink  @relation(fields: [collectionLinkId], references: [id], onDelete: Cascade)
+  wishes SubmittedWish[]
+
+  @@index([userId, status])
+  @@index([collectionLinkId])
+  @@map("submission")
+}
+
+/**
+ * Souhait individuel d'une soumission, EN LIGNE plutôt qu'en bloc : chacun
+ * reçoit son propre sort, et c'est ce sort que le répondant relit à la
+ * réouverture de son lien nominatif. Un champ texte unique ne le permettrait
+ * pas — il faudrait trancher la contribution entière, ou rien.
+ */
+model SubmittedWish {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  submissionId   String              @map("submission_id") @db.Uuid
+  label          String
+  link           String?
+  price          Decimal?            @db.Decimal(12, 2)
+  currency       String?             @db.VarChar(3)
+  reviewStatus   SubmittedWishReview @default(pending) @map("review_status")
+  // Renseigné quand `retained` a produit le souhait dans la fiche. Il rend la
+  // validation VÉRIFIABLE : sans lui, on ne saurait pas dire ce qu'une
+  // décision a réellement écrit.
+  wishlistItemId String?             @map("wishlist_item_id") @db.Uuid
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  submission   Submission    @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  wishlistItem WishlistItem? @relation(fields: [wishlistItemId], references: [id], onDelete: SetNull)
+
+  @@index([submissionId])
+  @@map("submitted_wish")
+}
+
+/**
+ * Message d'anniversaire reçu d'un tiers. ENTRANT — à ne pas confondre avec le
+ * message sortant que le propriétaire écrit (`GeneratedMessage`).
+ * `is_public` et `show_author` figurent au dictionnaire en étant dits
+ * INACTIFS : « les vœux reçus restent privés, le Mur n'a pas de livre d'or ».
+ * Ils ne sont donc pas posés ici. Une colonne écrite est une colonne qu'on
+ * finit par lire : quelqu'un l'exposerait un jour sur la seule foi de son nom,
+ * et la page publique gagnerait un livre d'or que personne n'a décidé.
+ */
+model ReceivedWish {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventOccurrenceId    String             @map("event_occurrence_id") @db.Uuid
+  userId               String             @map("user_id") @db.Uuid
+  wishCollectionLinkId String?            @map("wish_collection_link_id") @db.Uuid
+  authorUserId         String?            @map("author_user_id") @db.Uuid
+  authorName           String?            @map("author_name")
+  content              String
+  status               ReceivedWishStatus @default(pending)
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz
+
+  occurrence EventOccurrence     @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  link       WishCollectionLink? @relation(fields: [wishCollectionLinkId], references: [id], onDelete: SetNull)
+  author     User?               @relation("voeux_ecrits", fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([eventOccurrenceId])
+  @@map("received_wish")
 }

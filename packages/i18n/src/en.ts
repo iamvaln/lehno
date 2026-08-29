@@ -34,6 +34,12 @@ export const en = {
     waitlist_rejected: "That didn't go through. Try again in a moment.",
     contact_invalid: "This form isn't valid. Check the fields and try again.",
     contact_rejected: "That didn't go through. Try again in a moment.",
+    // We SAY the link existed: "page not found" would make the visitor think
+    // they mistyped an address someone actually sent them.
+    link_revoked: "This link is no longer active.",
+    wish_window_closed: "Wishes aren't open right now.",
+    // Same wording as the other two bot refusals: it doesn't say which filter bit.
+    collect_rejected: "That didn't go through. Try again in a moment.",
     // One message for both bot filters, like the two above: telling the
     // visitor which one caught would tell a robot how to adjust.
     reservation_rejected: "That didn't go through. Try again in a moment.",
