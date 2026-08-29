@@ -96,9 +96,9 @@ export function etatDeLaPiste(dejaProduite: boolean): EtatDePiste {
  * dessein — une version antérieure ignore un code qu'elle ne connaît pas au
  * lieu de refuser la réponse entière.
  *
- * `null` plutôt que zéro : un zéro voudrait dire GRATUIT, ce qui est un état
- * légitime — les générations le deviennent quand `credits` est éteint. Les
- * confondre ferait lancer une action qu'on ne sait pas facturer.
+ * `null` plutôt que zéro : un zéro voudrait dire GRATUIT — un prix que la
+ * table porte, pas une absence de prix. Les confondre ferait lancer une action
+ * qu'on ne sait pas facturer, en la disant offerte.
  */
 export function coutDe(
   actions: readonly { code: string; credits: number }[],
@@ -107,20 +107,15 @@ export function coutDe(
   return actions.find((a) => a.code === kind)?.credits ?? null;
 }
 
-/* SE PAIE-T-IL QUELQUE CHOSE ? — la question qui décide de la feuille.
- *
- * `premiumActions` suit `PremiumAction.enabled` en base, PAS le drapeau
- * `credits` : le prix reste servi quand l'achat est éteint. Or « l'achat éteint
- * ne ferme pas les générations, il les rend gratuites ». Lire le prix sans
- * lire le drapeau ferait donc annoncer un coût que rien ne prélève, rappeler
- * un solde que rien n'entame, et — le vrai dégât — basculer le bouton sur
- * « Recharger » dès que ce solde est à zéro : un geste GRATUIT refusé, et un
- * renvoi vers une boutique qui n'ouvre même pas au lancement.
- *
- * Quand rien ne se paie, il n'y a rien à confirmer : le geste part
- * directement. « Rien ne se paie en silence » parle de ce qui se paie ; le
- * gratuit n'a pas de silence à rompre.
- */
-export function passeParLaFeuille(actives: readonly string[]): boolean {
-  return estActive(actives, "credits");
-}
+/* LA FEUILLE S'OUVRE TOUJOURS, et c'est pour ça qu'il n'y a pas de fonction
+   ici pour en décider.
+   
+   Il a existé un `passeParLaFeuille(actives)` gouverné par un drapeau
+   `credits`, écrit pour un « achat éteint » qui rendrait les générations
+   gratuites. CE DRAPEAU N'EXISTE PAS, et le contrat l'interdit nommément :
+   l'éteindre « laissait des soldes indépensables ». La fonction rendait donc
+   `false` en permanence, et la génération partait au premier appui — un crédit
+   débité sans que rien ne soit annoncé, l'inverse exact de ce qu'elle croyait
+   garantir.
+   
+   Rien ne se paie en silence : il n'y a pas d'exception à ménager. */

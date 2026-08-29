@@ -209,10 +209,12 @@ export function offreDeRefaire(actives: readonly string[]): boolean {
   return estActive(actives, "generation.message");
 }
 
-/* LE PIÈGE DU BRIEF : « l'achat éteint ne ferme pas les générations, il les
-   rend gratuites ». Un coût annoncé ou un solde rappelé mentirait à quelqu'un
-   qui vient de recevoir quelque chose sans payer — les deux sortent de
-   l'écran. */
-export function montreLeCout(actives: readonly string[]): boolean {
-  return estActive(actives, "credits");
-}
+/* LE COÛT S'AFFICHE TOUJOURS, et c'est pour ça qu'il n'y a pas de fonction
+   ici pour en décider.
+   
+   Il a existé un `montreLeCout(actives)` gouverné par un drapeau `credits`.
+   Ce drapeau N'EXISTE PAS — le registre l'interdit nommément : « les actions
+   payantes consomment du crédit, toujours ». La fonction rendait donc `false`
+   en permanence, et le coût d'une génération n'a jamais paru à l'écran.
+   
+   Il n'y a pas de mode gratuit à ménager. Ce qui se paie s'annonce. */

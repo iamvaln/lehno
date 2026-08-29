@@ -5,8 +5,8 @@ import {
 } from "@lehno/contracts";
 import {
   DELAI_MAX, LIMITE_DU_MESSAGE, PREMIER_DELAI, correctionDuMessage, creditRendu,
-  delaiAvantLaProchaine, doitInterroger, marquageEnvoye, montreLeCout,
-  offreDeRefaire, ouverture, peutEnregistrerLAjustement, phaseDuResultat,
+  delaiAvantLaProchaine, doitInterroger, marquageEnvoye, offreDeRefaire,
+  ouverture, peutEnregistrerLAjustement, phaseDuResultat,
   relanceDuMessage, texteUtile,
 } from "../lib/generation.js";
 
@@ -265,12 +265,13 @@ describe("les drapeaux", () => {
     expect(marquageEnvoye(MESSAGE, "generated", "sharedAction")).not.toBeNull();
   });
 
-  /* LE PIÈGE DU BRIEF : « l'achat éteint ne ferme pas les générations, il les
-     rend gratuites ». Rappeler un coût à quelqu'un qui vient de recevoir
-     quelque chose sans payer serait un prix affiché sur un cadeau. */
-  it("tait le coût quand les crédits sont fermés", () => {
-    expect(montreLeCout([])).toBe(false);
-    expect(montreLeCout(["generation.message"])).toBe(false);
-    expect(montreLeCout(["credits"])).toBe(true);
-  });
+  /* CE QU'IL N'Y A PLUS À ÉPROUVER, et pourquoi c'est écrit ici.
+     Un test tenait que le coût se tait « quand les crédits sont fermés », et
+     il passait au vert en affirmant `montreLeCout(["credits"]) === true`.
+     Cette liste-là n'arrive jamais : `credits` n'est pas un drapeau, le
+     registre l'interdit. Le test éprouvait une fiction, et la fiction cachait
+     que le coût ne s'affichait jamais.
+     La règle tient maintenant sans fonction : ce qui se paie s'annonce, et
+     `test/drapeaux.test.ts` refuse toute décision qui interrogerait à nouveau
+     une clé qui n'existe pas. */
 });

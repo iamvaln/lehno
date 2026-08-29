@@ -22,11 +22,10 @@ import { useDrapeaux } from "../lib/DrapeauxProvider.js";
 import { dateCourte } from "../lib/carnet.js";
 import {
   correctionDuMessage, creditRendu, delaiAvantLaProchaine, doitInterroger,
-  marquageEnvoye, montreLeCout, offreDeRefaire, ouverture, phaseDuResultat,
-  relanceDuMessage,
+  marquageEnvoye, offreDeRefaire, ouverture, phaseDuResultat, relanceDuMessage,
 } from "../lib/generation.js";
 import { useActionsPayantes } from "../lib/MetadonneesProvider.js";
-import { coutDe, passeParLaFeuille } from "../lib/preparation.js";
+import { coutDe } from "../lib/preparation.js";
 
 /* « Ce que Lehno a écrit » — §3.7, le résultat d'une génération.
  *
@@ -80,8 +79,6 @@ export default function Generation() {
   const routeur = useRouter();
   const { actives } = useDrapeaux();
   const prix = useActionsPayantes();
-  /* Rien ne se paie quand l'achat est éteint : ni feuille, ni solde à lire. */
-  const avecFeuille = passeParLaFeuille(actives);
   /* `id` : la génération à observer, déjà lancée. `qui` : le nom d'usage du
      proche, que l'appelant connaît — l'accusé d'envoi le nomme, et aller le
      rechercher ferait un appel pour une phrase. */
@@ -170,7 +167,7 @@ export default function Generation() {
      qu'on vient de poser, et le chercher toujours ferait un appel pour un
      bouton qui n'apparaît pas. */
   useEffect(() => {
-    if (!peutRefaire || !avecFeuille || solde !== null) return;
+    if (!peutRefaire || solde !== null) return;
     let vivant = true;
     void (async () => {
       try {
@@ -182,7 +179,7 @@ export default function Generation() {
       }
     })();
     return () => { vivant = false; };
-  }, [peutRefaire, avecFeuille, solde]);
+  }, [peutRefaire, solde]);
 
   /* REDEMANDER, c'est repartir de zéro sur la même occasion : nouvelle
      exécution, nouveau crédit, et l'écran suit la nouvelle plutôt que de
@@ -212,12 +209,6 @@ export default function Generation() {
     }
   };
 
-  /* Un seul chemin pour les deux boutons : la feuille quand quelque chose se
-     paie, le geste direct sinon. */
-  const demandeARefaire = (): void => {
-    if (avecFeuille) setConfirmeLaRelance(true);
-    else void refais();
-  };
 
   const patche = async (envoi: { chemin: string; corps: unknown }): Promise<boolean> => {
     setEnCours(true);
@@ -340,7 +331,7 @@ export default function Generation() {
                   éteint, l'écran n'offre que sa sortie — mieux qu'un bouton
                   qui échouerait, et pas de bouton grisé. */}
               {peutRefaire ? (
-                <Button full icon="refresh-cw" disabled={enCours} onPress={demandeARefaire}>
+                <Button full icon="refresh-cw" disabled={enCours} onPress={() => setConfirmeLaRelance(true)}>
                   {t.genReessayer}
                 </Button>
               ) : null}
@@ -433,7 +424,7 @@ export default function Generation() {
                       variant="text"
                       icon="refresh-cw"
                       disabled={enCours}
-                      onPress={demandeARefaire}
+                      onPress={() => setConfirmeLaRelance(true)}
                     >
                       {t.resRegenerer}
                     </Button>
@@ -446,10 +437,10 @@ export default function Generation() {
               <Text style={[styles.rappel, { color: couleurs.textMention }]}>{t.envoiRappel}</Text>
             ) : null}
 
-            {/* LE PIÈGE DU BRIEF : l'achat éteint ne ferme pas les
-                générations, il les rend gratuites. Un coût rappelé mentirait à
-                quelqu'un qui vient de recevoir quelque chose sans payer. */}
-            {!ajuste && montreLeCout(actives) ? (
+            {/* Ce qui a été dépensé, dit après coup. Toujours : il n'y a pas
+                de mode gratuit à ménager, le crédit se consomme quoi qu'il
+                arrive. */}
+            {!ajuste ? (
               <CreditIndicator
                 label={t.creditDepense(resultat?.generation.creditsSpent ?? 0)}
                 cost={resultat?.generation.creditsSpent ?? 0}

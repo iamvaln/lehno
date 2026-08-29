@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DELAI_DE_GRACE, doitRecharger, etatDeRepli } from "../lib/drapeaux.js";
-import { estActive, SOCLE } from "@lehno/contracts";
+import { readdirSync, readFileSync } from "node:fs";
+import { estActive, CLES_DRAPEAUX, SOCLE } from "@lehno/contracts";
 
 describe("quand recharger la liste", () => {
   // Le premier appel n'a rien à comparer : il part toujours.
@@ -82,5 +83,52 @@ describe("le trou reste habitable", () => {
   it("ne déduit aucune dépendance", () => {
     expect(estActive(["credits"], "topup.provider")).toBe(false);
     expect(estActive(["credits", "topup.manual"], "topup.manual")).toBe(true);
+  });
+});
+
+/* LA GARDE QUI MANQUAIT, et qui a coûté cher.
+ *
+ * `credits` a été codé ici comme un drapeau. Il n'en est pas un : les actions
+ * payantes consomment du crédit TOUJOURS, et le contrat l'interdit
+ * explicitement au registre. `estActive` rendait donc `false` en permanence —
+ * un drapeau inconnu vaut éteint, à dessein, pour qu'une version installée
+ * ignore une clé créée après elle.
+ *
+ * Le résultat ne ressemblait pas à une panne : la feuille de confirmation ne
+ * s'ouvrait jamais, et une génération partait au premier appui. Un crédit
+ * débité sans que rien ne soit annoncé — l'inverse exact de ce que le code
+ * croyait garantir. RIEN NE LE SIGNALAIT : ni le typage (`estActive` prend une
+ * `string`, et ce n'est pas un oubli — le type serait circulaire), ni les
+ * tests, qui éprouvaient consciencieusement une clé imaginaire.
+ *
+ * On lit donc la SOURCE plutôt que d'énumérer à la main ce qu'on interroge :
+ * une liste tenue en double finirait par ne plus décrire le code. */
+describe("aucune décision n'interroge une clé qui n'existe pas", () => {
+  const CONNUES = new Set<string>([...CLES_DRAPEAUX, ...SOCLE]);
+
+  const interrogees = (): { fichier: string; cle: string }[] => {
+    const trouvees: { fichier: string; cle: string }[] = [];
+    for (const nom of readdirSync("lib")) {
+      if (!nom.endsWith(".ts")) continue;
+      const source = readFileSync(`lib/${nom}`, "utf8");
+      // Les deux formes employées : l'appel direct, et le raccourci local que
+      // `ecranEteint` se donne pour ne pas répéter `actives`.
+      for (const forme of [/estActive\([A-Za-z]+,\s*"([a-z.]+)"\)/g, /ouvert\("([a-z.]+)"\)/g]) {
+        for (const m of source.matchAll(forme)) trouvees.push({ fichier: nom, cle: m[1]! });
+      }
+    }
+    return trouvees;
+  };
+
+  it("trouve bien des clés à vérifier", () => {
+    // Sans ça, une expression rationnelle cassée rendrait le test vert à vide.
+    expect(interrogees().length).toBeGreaterThan(8);
+  });
+
+  it("chaque clé interrogée est un drapeau du registre ou une capacité du socle", () => {
+    for (const { fichier, cle } of interrogees()) {
+      expect(CONNUES, `lib/${fichier} interroge « ${cle} », qui n'est ni un drapeau ni du socle`)
+        .toContain(cle);
+    }
   });
 });
