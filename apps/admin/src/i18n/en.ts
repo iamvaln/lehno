@@ -766,6 +766,7 @@ export const en: typeof fr = {
     etats: {
       enCours: "Grace period",
       echue: "To erase",
+      attendRemboursement: "Refund to pay",
       efface: "Erased",
     },
     col: {

@@ -111,6 +111,51 @@ describe("administration — les demandes de suppression", () => {
     expect(corps.items[0]?.joursRestants).toBeLessThanOrEqual(0);
   });
 
+  /* « Attend un remboursement » n'est pas un raffinement de « échue ».
+   *
+   * Le premier attend un GESTE de notre part, le second une DATE. Les
+   * confondre ferait passer pour patient ce qui est en retard : « échue »
+   * annonce que l'effacement va suivre, alors qu'il est retenu tant que
+   * l'argent n'est pas parti (décision du 29/08). */
+  const remboursementDu = (userId: string) =>
+    db.prisma.payment.create({
+      data: {
+        userId, direction: "refund", status: "pending", mode: "provider",
+        amount: 1000, currency: "XAF", credits: 0,
+      },
+    });
+
+  it("distingue un compte qui attend un remboursement d'un délai échu", async () => {
+    const u = await enAttente(1, 40);
+    await remboursementDu(u.id);
+    const { entete } = await session("support");
+
+    const corps = (await (await lister(entete)).json()) as { items: { etat: string }[] };
+    expect(corps.items[0]?.etat).toBe("attend_remboursement");
+  });
+
+  // Il prime aussi sur un délai qui court encore : ce qui retient l'effacement
+  // se voit avant ce qui l'attend.
+  it("le dit même pendant le délai de grâce", async () => {
+    const u = await enAttente(1, 5);
+    await remboursementDu(u.id);
+    const { entete } = await session("support");
+
+    const corps = (await (await lister(entete)).json()) as { items: { etat: string }[] };
+    expect(corps.items[0]?.etat).toBe("attend_remboursement");
+  });
+
+  // Un remboursement déjà versé ne retient plus rien.
+  it("revient à l'échéance une fois le remboursement versé", async () => {
+    const u = await enAttente(1, 40);
+    const r = await remboursementDu(u.id);
+    await db.prisma.payment.update({ where: { id: r.id }, data: { status: "succeeded" } });
+    const { entete } = await session("support");
+
+    const corps = (await (await lister(entete)).json()) as { items: { etat: string }[] };
+    expect(corps.items[0]?.etat).toBe("echue");
+  });
+
   it("filtre les échéances du jour et de la semaine", async () => {
     await enAttente(1, 30);  // échoit aujourd'hui
     await enAttente(2, 26);  // dans 4 jours
