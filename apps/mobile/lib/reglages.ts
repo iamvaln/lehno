@@ -18,7 +18,7 @@ import { ecranEteint } from "./navigation.js";
    n'ouvre rien est pire qu'un rang absent — il apprend à ne pas croire les
    rangs. */
 export type RouteDeReglage =
-  | "/(app)/profil" | "/(app)/securite" | "/(app)/rappels" | null;
+  | "/(app)/profil" | "/(app)/securite" | "/(app)/rappels" | "/(app)/donnees" | null;
 
 export interface Rang {
   cle: string;
@@ -62,7 +62,7 @@ const PLAN: readonly { cle: Section["cle"]; rangs: readonly Rang[] }[] = [
     cle: "alertes",
     rangs: [
       { cle: "rappels", icone: "bell", drapeau: null, route: "/(app)/rappels" },
-      { cle: "donnees", icone: "database", drapeau: null, route: null },
+      { cle: "donnees", icone: "database", drapeau: null, route: "/(app)/donnees" },
     ],
   },
   {
