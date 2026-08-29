@@ -501,8 +501,12 @@ export const fr = {
   rechargeEchecTitre: "Le paiement n'a pas abouti",
   rechargeEchecTexte: "Rien n'a été prélevé.",
   parrainageTitre: "Invitez, et gagnez tous les deux",
-  parrainageTexte: "Votre code donne 2 crédits à qui s'inscrit, et 2 crédits à vous.",
-  parrainageCode: "VAL-4KX2",
+  /* Les deux montants sont SERVIS : celui de l'invité par `/public/config`,
+     celui du parrain par `/me/referral`. Écrits en dur, ils promettraient
+     l'ancien barème sur tout un parc le jour où l'administration le change. */
+  parrainageTexte: (pourEux: number, pourMoi: number) => "Votre code donne "
+    + pourEux + (pourEux <= 1 ? " crédit" : " crédits") + " à qui s'inscrit, et "
+    + pourMoi + (pourMoi <= 1 ? " crédit" : " crédits") + " à vous.",
   parrainagePartager: "Partager mon code",
   parrainageFilleuls: (n: number) => n === 1 ? "Une personne a utilisé votre code" : n + " personnes ont utilisé votre code",
   parrainageAucun: "Personne encore.",

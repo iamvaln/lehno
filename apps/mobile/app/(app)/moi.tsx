@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { creditBalanceSchema, profileSchema, type Profile } from "@lehno/contracts";
 import {
-  nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin, nativeTracking,
+  nativeBorder, nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin,
+  nativeTracking,
 } from "@lehno/tokens";
 import {
   Avatar, Banner, Button, Card, CreditIndicator, Icon, LoadingState, useCouleurs,
@@ -12,6 +13,7 @@ import {
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
+import { estActive } from "@lehno/contracts";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
 import { sectionsDeMoi } from "../../lib/navigation.js";
 
@@ -132,10 +134,23 @@ export default function Moi() {
         </Card>
       ) : null}
 
-      {/* LE PARRAINAGE ATTEND SON ÉCRAN. Il est ouvert au lancement et le
-          handoff le veut à deux endroits — ici et sur §3.9 sous « Sans
-          payer » — mais §3.29 n'est pas portée. Une ligne qui n'ouvre rien
-          vaut moins qu'une ligne absente ; elle arrive avec lui. */}
+      {/* LE SECOND CHEMIN VERS DES CRÉDITS, et le seul qui n'en coûte pas. Il
+          suit son drapeau ici comme sur §3.9 : `referral` est ouvert au
+          lancement, et il compte d'autant plus quand l'achat passe par un
+          versement manuel. */}
+      {estActive(actives, "referral") ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => routeur.push("/(app)/parrainage")}
+          style={[styles.rang, { borderTopColor: couleurs.borderHairline }]}
+        >
+          <Icon name="user-plus" size={17} color={couleurs.textMention} />
+          <Text style={[styles.libelle, { color: couleurs.textBody }]} numberOfLines={1}>
+            {t.parrainageTitre}
+          </Text>
+          <Icon name="chevron-right" size={15} color={couleurs.textMention} />
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }
@@ -155,4 +170,10 @@ const styles = StyleSheet.create({
   soldeLigne: { flexDirection: "row", alignItems: "flex-end", gap: nativeSpace[12] },
   pleine: { flex: 1 },
   mention: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5 },
+  rang: {
+    flexDirection: "row", alignItems: "center", gap: nativeSpace[10],
+    paddingVertical: nativeSpace[12], minHeight: nativeTouchMin,
+    marginTop: nativeSpace[20], borderTopWidth: nativeBorder.width,
+  },
+  libelle: { flex: 1, fontFamily: nativeFont.bodyRegular, fontSize: 14.5 },
 });

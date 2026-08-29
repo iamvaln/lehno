@@ -469,8 +469,9 @@ export const en = {
   rechargeEchecTitre: "The payment didn't go through",
   rechargeEchecTexte: "Nothing was taken.",
   parrainageTitre: "Invite someone, you both gain",
-  parrainageTexte: "Your code gives 2 credits to whoever signs up, and 2 credits to you.",
-  parrainageCode: "VAL-4KX2",
+  parrainageTexte: (pourEux: number, pourMoi: number) => "Your code gives "
+    + pourEux + (pourEux <= 1 ? " credit" : " credits") + " to whoever signs up, and "
+    + pourMoi + (pourMoi <= 1 ? " credit" : " credits") + " to you.",
   parrainagePartager: "Share my code",
   parrainageFilleuls: (n: number) => n === 1 ? "One person used your code" : n + " people used your code",
   parrainageAucun: "Nobody yet.",
