@@ -49,13 +49,21 @@ const changementSchema = z.object({
  *
  * C'est toute la raison pour laquelle les motifs se rangent par geste :
  * proposer « Compte de test » au moment de suspendre quelqu'un, ou « Fraude
- * suspectée » au moment de le rétablir, serait absurde dans les deux sens. */
-const GESTE_PAR_ETAT: Record<z.infer<typeof changementSchema>["status"], string> = {
-  suspended: "account_suspend",
-  active: "account_restore",
-  pending_deletion: "account_erase",
-  deleted: "account_erase",
-};
+ * suspectée » au moment de le rétablir, serait absurde dans les deux sens.
+ *
+ * ET L'ÉTAT VISÉ NE SUFFIT PAS À LE DIRE. Deux gestes différents mènent tous
+ * deux à `active` : lever une suspension, et renoncer à une suppression. Le
+ * second a ses propres motifs — « suppression déclenchée par erreur » n'a
+ * aucun sens sur un compte qu'on vient de suspendre. Il faut donc l'état
+ * QUITTÉ autant que l'état visé. */
+function gesteDe(avant: UserStatus, apres: z.infer<typeof changementSchema>["status"]): string {
+  if (apres === "suspended") return "account_suspend";
+  if (apres === "deleted") return "account_erase";
+  // Demander la suppression n'est pas l'exécuter : aucun motif préréglé, la
+  // phrase suffit.
+  if (apres === "pending_deletion") return "deletion_request";
+  return avant === "pending_deletion" ? "deletion_cancel" : "account_restore";
+}
 
 @Injectable()
 export class AdminUsersService {
@@ -193,7 +201,7 @@ export class AdminUsersService {
       await this.journal.consigner({
         auteurId,
         action: "user_status_update",
-        geste: GESTE_PAR_ETAT[entree.status],
+        geste: gesteDe(avant.status, entree.status),
         motif: entree.reason,
         ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
         cibleType: "user",

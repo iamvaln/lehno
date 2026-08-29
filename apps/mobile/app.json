@@ -8,7 +8,10 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "icon": "./assets/icone.png",
-    "ios": { "supportsTablet": true, "bundleIdentifier": "com.lehno.app" },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lehno.app"
+    },
     "android": {
       "package": "com.lehno.app",
       "adaptiveIcon": {
@@ -18,17 +21,26 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-font", { "fonts": [
-        "./polices/Fraunces-Regular.ttf",
-        "./polices/Fraunces-Medium.ttf",
-        "./polices/Fraunces-Italic.ttf",
-        "./polices/Fraunces-MediumItalic.ttf",
-        "./polices/Karla-Regular.ttf",
-        "./polices/Karla-Medium.ttf",
-        "./polices/Karla-Semibold.ttf",
-        "./polices/Karla-Bold.ttf"
-      ]}]
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./polices/Fraunces-Regular.ttf",
+            "./polices/Fraunces-Medium.ttf",
+            "./polices/Fraunces-Italic.ttf",
+            "./polices/Fraunces-MediumItalic.ttf",
+            "./polices/Karla-Regular.ttf",
+            "./polices/Karla-Medium.ttf",
+            "./polices/Karla-Semibold.ttf",
+            "./polices/Karla-Bold.ttf"
+          ]
+        }
+      ],
+      "expo-secure-store",
+      "expo-localization"
     ],
-    "experiments": { "typedRoutes": true }
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

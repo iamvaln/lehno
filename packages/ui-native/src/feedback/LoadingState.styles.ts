@@ -1,6 +1,6 @@
 import type { TextStyle, ViewStyle } from "react-native";
 import {
-  nativeFont, nativeRadius, nativeSize, nativeSpace,
+  nativeBorder, nativeFont, nativeRadius, nativeSize, nativeSpace,
 } from "@lehno/tokens";
 import type { Couleurs } from "../theme.js";
 
@@ -32,7 +32,7 @@ export function styleDAttente({
       /* Les lignes du squelette se posent sur un filet, pas sur un fond : un
          bloc gris plein annoncerait du contenu là où il n'y en a pas encore. */
       carte: {
-        borderWidth: 1,
+        borderWidth: nativeBorder.width,
         borderColor: couleurs.borderHairline,
         borderRadius: nativeRadius.lg,
         padding: 15,

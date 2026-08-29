@@ -1,5 +1,7 @@
 import type { TextStyle, ViewStyle } from "react-native";
-import { nativeFont, nativeRadius, nativeTouchMin } from "@lehno/tokens";
+import {
+  nativeBorder, nativeFont, nativeRadius, nativeTouchMin,
+} from "@lehno/tokens";
 import type { Couleurs } from "../theme.js";
 
 /* L'étiquette de catégorie d'une note.
@@ -26,7 +28,7 @@ export function styleDeCategorie({
       paddingLeft: 12,
       paddingRight: reclassable ? 10 : 12,
       borderRadius: nativeRadius.pill,
-      borderWidth: 1,
+      borderWidth: nativeBorder.width,
       // Une note non classée se signale par un trait interrompu : elle attend
       // une décision, elle n'affirme rien.
       borderStyle: aClasser ? "dashed" : "solid",

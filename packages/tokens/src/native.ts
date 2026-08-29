@@ -71,6 +71,21 @@ export const nativeRadius = Object.fromEntries(
     .map(([cle, valeur]) => [cle.slice(6, 7).toLowerCase() + cle.slice(7), sansUnite(valeur)]),
 ) as Record<NomDeRayon, number>;
 
+/* Les deux épaisseurs de trait. Elles ont l'air d'aller de soi — « 1 », c'est
+   un filet — et c'est exactement pour ça qu'elles se sont écrites en dur dans
+   neuf primitives avant d'exister ici. Le jour où la charte passe le filet à
+   0,5, neuf endroits seraient restés à 1.
+
+   La densité (hauteur de contrôle, hauteur de ligne, largeur de barre latérale)
+   décrit un outil qui se manipule à la souris : sur un téléphone, c'est la
+   cible tactile qui commande. L'anneau de focus n'a pas d'objet non plus — il
+   n'existe que pour un clavier, et le port ne vise pas ce cas. Les deux
+   omissions sont des décisions, et le test les tient comme telles. */
+export const nativeBorder = {
+  width: sansUnite(shape.borderWidth),
+  widthFirm: sansUnite(shape.borderWidthFirm),
+} as const;
+
 // ── Mouvement ───────────────────────────────────────────────────────────────
 
 export const nativeDuration = Object.fromEntries(
