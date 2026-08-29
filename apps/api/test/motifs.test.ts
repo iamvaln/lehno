@@ -215,6 +215,15 @@ describe("le module des motifs", () => {
       expect((await db.prisma.auditLog.findFirstOrThrow({})).reasonCode).toBe(CODE_AUTRE);
     });
 
+    /* C'EST CE REFUS QUI REND LE CÂBLAGE OBLIGATOIRE. Sans lui, un geste qu'on
+       oublie de brancher continuerait d'écrire une phrase libre, et son
+       comptage resterait muet sans que rien ne le signale — le module aurait
+       l'air posé et ne servirait qu'aux gestes déjà corrects. */
+    it("exige un code quand le geste en propose", async () => {
+      await expect(consigner(undefined, "account_suspend")).rejects.toThrow();
+      expect(await db.prisma.auditLog.count()).toBe(0);
+    });
+
     // Huit gestes n'ont aucun préréglage : la phrase seule doit suffire.
     it("accepte un geste sans code, quand aucun n'est proposé", async () => {
       await consigner(undefined, "feature_flag_toggle");

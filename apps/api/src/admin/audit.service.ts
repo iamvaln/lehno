@@ -91,7 +91,29 @@ export class AuditService {
     client: Prisma.TransactionClient | PrismaService,
   ): Promise<void> {
     const code = geste.codeMotif?.trim();
-    if (!code || code === CODE_AUTRE) return;
+
+    /* `other` — « aucun de ceux-là » — passe partout, et sa phrase reste
+       obligatoire comme les autres. C'est la soupape : elle évite qu'un motif
+       manquant à la liste bloque un geste urgent. */
+    if (code === CODE_AUTRE) return;
+
+    if (!code) {
+      /* Un geste qui PROPOSE des motifs en exige un. La règle vient de la
+         table, pas du schéma : celui-ci ne peut pas savoir si le geste qu'il
+         valide a une liste, et l'exiger partout obligerait les huit gestes sans
+         préréglage à envoyer `other` pour rien.
+
+         Sans ce refus, le câblage serait facultatif en pratique : un geste
+         qu'on oublie de brancher continuerait d'écrire une phrase libre, et son
+         comptage resterait muet sans que rien ne le signale. */
+      if (!geste.geste) return;
+      const proposes = await client.auditReasonScope.count({
+        where: { geste: geste.geste, reason: { isActive: true } },
+      });
+      if (proposes > 0)
+        throw new AppError("reason_code_unknown", `gesture ${geste.geste} requires a reason code`);
+      return;
+    }
 
     const motif = await client.auditReason.findUnique({
       where: { code },
