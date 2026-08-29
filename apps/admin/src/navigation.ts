@@ -20,7 +20,7 @@ export type Famille = "exploitation" | "economie" | "supervision" | "outils";
  * dépense de l'argent réel à chaque essai.
  */
 export const SECTIONS_ECONOMIE = [
-  "parametres", "fonctionnalites", "modeles", "studio", "offres",
+  "parametres", "fonctionnalites", "modeles", "studio",
 ] as const;
 
 /**
@@ -28,7 +28,18 @@ export const SECTIONS_ECONOMIE = [
  * porte le travail du support : le lui ouvrir lui retirerait sa valeur de
  * contrôle. Les accès vont avec — qui peut voir le journal peut voir qui le lit.
  */
-const SECTIONS_ADMIN = ["audit", "acces"] as const;
+/* Réservées aux administrateurs sans appartenir à Économie.
+ *
+ * « offres » y rejoint le journal et les accès : le lot de conception la range
+ * sous Crédits, avec la transaction manuelle — l'argent qui entre d'un côté,
+ * les crédits qu'on distribue de l'autre. Elle quitte donc la FAMILLE Économie
+ * sans quitter la fermeture au support : un code promotionnel distribue des
+ * crédits, c'est un levier qui engage le service.
+ *
+ * « transactionManuelle » l'est aussi, et pour une raison plus directe : le
+ * serveur réserve `POST /admin/users/:id/credits` aux administrateurs. Offrir
+ * l'écran au support lui montrerait un geste que l'API refuse. */
+const SECTIONS_ADMIN = ["audit", "acces", "offres", "transactionManuelle"] as const;
 
 const FERMEES_AU_SUPPORT = new Set<string>([...SECTIONS_ECONOMIE, ...SECTIONS_ADMIN]);
 
@@ -84,6 +95,9 @@ export const NAVIGATION: { famille: Famille | null; items: readonly Entree[] }[]
     items: [
       "comptes",
       { id: "paiements", enfants: ["credits", "transactionsToutes", "versementsManuels", "canauxPaiement"] },
+      /* L'argent qui ENTRE d'un côté, les crédits qu'on DISTRIBUE de l'autre :
+         les deux ne se surveillent pas au même moment ni par les mêmes gens. */
+      { id: "creditsSection", enfants: ["transactionManuelle", "offres"] },
       "assistance",
       "moderation",
     ],
