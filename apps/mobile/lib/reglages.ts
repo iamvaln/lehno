@@ -19,7 +19,7 @@ import { ecranEteint } from "./navigation.js";
    rangs. */
 export type RouteDeReglage =
   | "/(app)/profil" | "/(app)/securite" | "/(app)/rappels"
-  | "/(app)/donnees" | "/(app)/aide" | null;
+  | "/(app)/donnees" | "/(app)/aide" | "/(app)/recharge" | null;
 
 export interface Rang {
   cle: string;
@@ -45,7 +45,12 @@ const PLAN: readonly { cle: Section["cle"]; rangs: readonly Rang[] }[] = [
   {
     cle: "argent",
     rangs: [
-      { cle: "recharge", icone: "wallet", drapeau: null, route: null },
+      /* §3.9 EST DU SOCLE, et un test le tenait avant moi : je l'avais gouverné
+         par `topup.manual`, à tort. Les deux voies de versement fermées,
+         l'écran montre encore le SOLDE et les MOUVEMENTS — qui ne s'éteignent
+         jamais. C'est la section du versement qui suit le drapeau, à
+         l'intérieur, pas l'écran qui la porte. */
+      { cle: "recharge", icone: "wallet", drapeau: null, route: "/(app)/recharge" },
       // Le parrainage est OUVERT au lancement, mais son écran n'est pas porté.
       { cle: "parrainage", icone: "user-plus", drapeau: "referral", route: null },
       // Les méthodes enregistrées n'ont de sens qu'avec le paiement automatique.

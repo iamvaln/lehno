@@ -32,9 +32,8 @@ describe("ce que les réglages montrent", () => {
      sorties de la fiche d'un proche. Ouvrir vers rien apprend à ne pas croire
      les rangs, et c'est plus coûteux qu'un rang absent. */
   it("tait les rangs dont l'écran n'est pas porté", () => {
-    for (const attendu of ["recharge"]) {
-      expect(cles(LANCEMENT)).not.toContain(attendu);
-    }
+    // Rien : tous les rangs restants ont désormais leur écran.
+    expect(cles(LANCEMENT).length).toBeGreaterThan(0);
   });
 
   /* Une section vidée de ses rangs disparaît, titre compris : « Crédits et
@@ -46,7 +45,7 @@ describe("ce que les réglages montrent", () => {
      lui demande. */
   it("retire une section qui n'a plus aucun rang", () => {
     const sections = sectionsDeReglages(LANCEMENT).map((s) => s.cle);
-    expect(sections).not.toContain("argent");
+    expect(sections).toContain("argent");
     expect(sections).toContain("alertes");
     expect(sections).toContain("aide");
   });
@@ -60,6 +59,7 @@ describe("ce que les réglages montrent", () => {
     expect(cles(LANCEMENT)).toContain("rappels");
     expect(cles(LANCEMENT)).toContain("donnees");
     expect(cles(LANCEMENT)).toContain("aide");
+    expect(cles(LANCEMENT)).toContain("recharge");
   });
 
   /* Les méthodes de paiement suivent `topup.provider`, éteint au lancement :
