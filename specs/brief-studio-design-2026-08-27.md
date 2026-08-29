@@ -1,4 +1,15 @@
-# Lehno — Le Studio du portrait, un établi plutôt qu'un formulaire
+# Lehno — Le Studio du portrait, un atelier plutôt qu'un formulaire
+
+> **Le mot a changé.** Ce document disait « l'établi ». Personne ne le
+> reconnaissait sans explication — et un nom qu'il faut expliquer a déjà échoué.
+> « Atelier » dit la même chose : un endroit où l'on bricole jusqu'à ce que ça
+> tienne, par opposition à un formulaire qu'on remplit et qu'on valide.
+>
+> Le nom de la section reste **Studio du portrait**, et ses deux écrans sont
+> **Réglages en service** et **Atelier**. « Studio » ne peut pas servir aux
+> deux : il désigne déjà la section, et le studio de l'UTILISATEUR — celui où
+> l'on règle sa propre génération — porte le même mot. Trois « studios » dans un
+> même produit ne se distinguent plus.
 
 Le Studio est la section du back-office où l'on règle **ce que le portrait propose** et **ce qu'on demande au modèle** pour le produire. C'est la section qui bougera le plus : on ajuste, on essaie, on ajuste encore.
 
@@ -31,13 +42,13 @@ Trois conséquences, et il faut les tenir toutes les trois :
 | Écran | Ce qu'on y fait | Mode |
 |---|---|---|
 | **Réglages en service** | Lire ce qui tourne aujourd'hui, l'historique des publications, revenir en arrière | Lecture |
-| **L'établi** | Composer, essayer, comparer, publier | Travail |
+| **L'atelier** | Composer, essayer, comparer, publier | Travail |
 
 La composition et le banc d'essai **ne sont pas deux onglets**. Un administrateur compose, essaie, recompose, réessaie — dix fois de suite. Deux onglets font payer un aller-retour à chaque tour, et surtout : au moment où il regarde le résultat, il ne voit plus ce qu'il a écrit pour l'obtenir.
 
 ---
 
-## 3. L'établi
+## 3. L'atelier
 
 Le brouillon d'un côté, le résultat de l'autre, **visibles ensemble**.
 
@@ -105,7 +116,7 @@ L'écran doit montrer **ce qui manque**, pas des rangs à lire un par un. *« Se
 
 ## 7. Le journal du jour
 
-Un coin de l'établi, pas une page.
+Un coin de l'atelier, pas une page.
 
 **Chaque ligne dit ce qui a changé, pas ce qui s'est passé.** *« Modèle 2 · garde-fou raccourci »*, jamais *« 10 h 51 — appel modèle 2 »*. Un horodatage n'apprend rien et, au bout de trente essais, ne fait que du bruit.
 
@@ -153,7 +164,7 @@ C'est le déclencheur naturel du retour arrière, et il doit être à portée de
 
 ## 10. La publication
 
-**Elle se fait depuis l'établi**, jamais depuis un écran de réglage : on publie après avoir vu un résultat, pas après avoir tapé un texte.
+**Elle se fait depuis l'atelier**, jamais depuis un écran de réglage : on publie après avoir vu un résultat, pas après avoir tapé un texte.
 
 **Rien ne se publie sans essai de l'état qu'on publie.** Pas « sans essai » au sens large : l'essai qui autorise doit porter sur exactement ce qui part. Sans cette précision, la règle se contourne sans mauvaise intention — on essaie, on corrige un détail, on publie, et l'essai qui a servi de caution ne parle plus de ce qui est en production.
 
@@ -171,7 +182,7 @@ Le principe du §1 rend cette garantie automatique : puisque le moindre changeme
 | **Génération en cours** | Elle prend du temps réel ; l'attente doit rester habitable, et le brouillon lisible pendant |
 | **Résultat affiché**, sans comparatif | |
 | **Face-à-face** brouillon / en service | Deux portraits côte à côte, sur un écran d'ordinateur |
-| **Journal vide** *(début de séance)* et **journal chargé** *(trentième essai)* | Le second ne doit pas noyer l'établi |
+| **Journal vide** *(début de séance)* et **journal chargé** *(trentième essai)* | Le second ne doit pas noyer l'atelier |
 | **Publication refusée** faute d'essai | Dire quoi faire, pas seulement que c'est fermé |
 | **Retour arrière** depuis les réglages en service | Demande un motif |
 | **Version publiée à l'instant**, aucun taux de régénération encore | Le rang existe mais n'a rien à dire : il ne doit pas se lire comme 0 % — un zéro sans explication se prend pour une mesure |
@@ -184,7 +195,7 @@ Le principe du §1 rend cette garantie automatique : puisque le moindre changeme
 Le catalogue, le routage par tâche et le disjoncteur existent maintenant en base
 et à l'écran d'administration. Trois choses de ce brief s'en trouvent précisées.
 
-### L'établi n'a pas de repli — et ce n'est pas un détail d'ergonomie
+### L'atelier n'a pas de repli — et ce n'est pas un détail d'ergonomie
 
 Le repli automatique d'un modèle sur le suivant vaut pour **ce qui tourne sans
 témoin** : les passes d'arrière-plan, et les générations lancées par un
@@ -200,7 +211,7 @@ ce qui tournera en production.
 Ce serait l'exact contraire du §1. « On ne garde que ce qu'on a vu tourner »
 suppose qu'on sache **ce qu'on a vu tourner**.
 
-Donc, à l'établi : **le modèle demandé, ou l'échec dit franchement**, en le
+Donc, à l'atelier : **le modèle demandé, ou l'échec dit franchement**, en le
 nommant. Jamais un repli muet.
 
 ### L'échec d'une génération est un état à dessiner
@@ -234,7 +245,7 @@ couple consigne + modèle.**
 Et ce que l'administrateur retient à la fin d'une séance, ce n'est pas *un*
 couple mais **deux** : celui qu'on essaie en premier, et celui qui prend le
 relais s'il ne répond pas. Choisir le primaire et le secondaire est le geste qui
-clôt la séance d'essais — l'établi sert à comparer, la chaîne sert à exécuter.
+clôt la séance d'essais — l'atelier sert à comparer, la chaîne sert à exécuter.
 
 **Ce que ça demande à l'écran** : après le comparatif, un geste qui range la
 combinaison gagnante en premier rang et une autre en second. Pas un formulaire à
