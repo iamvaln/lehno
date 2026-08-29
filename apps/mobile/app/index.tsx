@@ -1,82 +1,36 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { nativeFont, nativeLeading, nativeLineHeight, nativeSize, nativeSpace } from "@lehno/tokens";
-import { Button, useTheme } from "@lehno/ui-native";
+import { useCallback, useState } from "react";
+import { View } from "react-native";
+import { Redirect, useFocusEffect } from "expo-router";
+import { useCouleurs } from "@lehno/ui-native";
+import { litLesJetons } from "../lib/jetons.js";
 
-/* Écran de contrôle du socle — il ne survivra pas au lot 4, qui pose l'accueil.
+/* La porte. Elle ne montre rien : elle regarde s'il y a une session et envoie
+ * où il faut. L'accueil viendra la remplacer au lot des onglets.
  *
- * Il ne prouve qu'une chose, mais elle ne se prouve pas autrement qu'à l'œil :
- * que les huit instances cuites se chargent, que le thème suit le système, et
- * que les jetons dérivés rendent les mêmes valeurs que le web. Une police qui
- * ne se charge pas ne lève aucune erreur — elle rend en police système, et seul
- * un écran qui montre les deux familles côte à côte le fait voir. */
+ * Rien ne s'affiche pendant la lecture du trousseau — elle prend quelques
+ * millisecondes, et faire clignoter un écran d'attente pour cela coûterait plus
+ * que d'attendre.
+ */
+export default function Porte() {
+  const couleurs = useCouleurs();
+  const [session, setSession] = useState<boolean | null>(null);
 
-const ECHANTILLONS = [
-  { police: nativeFont.displayMedium, taille: nativeSize.displayS, texte: "Bonjour, Valentine" },
-  { police: nativeFont.displayRegular, taille: nativeSize.displayXs, texte: "J−12" },
-  { police: nativeFont.displayItalic, taille: nativeSize.bodyL, texte: "« ce qu'on a partagé »" },
-  { police: nativeFont.bodyRegular, taille: nativeSize.bodyM, texte: "Une date cette semaine." },
-  { police: nativeFont.bodySemibold, taille: nativeSize.bodyS, texte: "Laisser une note" },
-  { police: nativeFont.bodyBold, taille: nativeSize.bodyXs, texte: "Marquer envoyé" },
-];
+  /* À CHAQUE FOIS qu'elle reprend la main, pas seulement au montage.
+     La porte est la première route de la pile : elle reste montée pendant tout
+     le parcours d'entrée. Une lecture au montage seul lui laissait sa réponse
+     d'alors — « pas de session » — et le `replace("/")` de l'écran de bienvenue
+     retombait aussitôt sur la connexion, compte créé et jetons en poche. */
+  useFocusEffect(useCallback(() => {
+    let vivant = true;
+    setSession(null);
+    litLesJetons().then((j) => { if (vivant) setSession(j !== null); });
+    return () => { vivant = false; };
+  }, []));
 
-export default function Controle() {
-  const { theme, couleurs } = useTheme();
-  const insets = useSafeAreaInsets();
+  if (session === null) return <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }} />;
+  if (!session) return <Redirect href="/(connexion)" />;
 
-  return (
-    <ScrollView
-      style={{ backgroundColor: couleurs.surfacePage }}
-      contentContainerStyle={[
-        styles.contenu,
-        { paddingTop: insets.top + nativeSpace[24], paddingBottom: insets.bottom + nativeSpace[24] },
-      ]}
-    >
-      <Text style={[styles.titre, { color: couleurs.textMention }]}>
-        socle · thème {theme}
-      </Text>
-
-      {ECHANTILLONS.map((e) => (
-        <Text
-          key={e.police + e.texte}
-          style={{
-            fontFamily: e.police,
-            fontSize: e.taille,
-            lineHeight: nativeLineHeight(e.taille, nativeLeading.title),
-            color: couleurs.textBody,
-            marginBottom: nativeSpace[8],
-          }}
-        >
-          {e.texte}
-        </Text>
-      ))}
-
-      <View style={{ gap: nativeSpace[8], marginTop: nativeSpace[16] }}>
-        <Button variant="primary" full icon="sparkles">Préparer</Button>
-        <Button variant="outline" icon="chevron-right" iconAfter="chevron-right">Contour</Button>
-        <Button variant="text">Laisser une note</Button>
-        <Button variant="destructive" icon="trash-2">Supprimer</Button>
-        <Button variant="neutral" disabled>Désactivé</Button>
-      </View>
-
-      <View style={styles.nuancier}>
-        {(["action", "celebrate", "feedbackError", "feedbackErrorPress"] as const).map((role) => (
-          <View key={role} style={[styles.pastille, { backgroundColor: couleurs[role] }]} />
-        ))}
-      </View>
-    </ScrollView>
-  );
+  // La coquille, et l'accueil qui l'ouvre. La porte ne connaît qu'elle : quels
+  // onglets s'y montrent est une affaire de drapeaux, décidée là-bas.
+  return <Redirect href="/(app)/accueil" />;
 }
-
-const styles = StyleSheet.create({
-  contenu: { paddingHorizontal: nativeSpace[16] },
-  titre: {
-    fontFamily: nativeFont.bodySemibold,
-    fontSize: nativeSize.kicker,
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-    marginBottom: nativeSpace[16],
-  },
-  nuancier: { flexDirection: "row", gap: nativeSpace[8], marginTop: nativeSpace[16] },
-  pastille: { width: nativeSpace[40], height: nativeSpace[40], borderRadius: nativeSpace[8] },
-});

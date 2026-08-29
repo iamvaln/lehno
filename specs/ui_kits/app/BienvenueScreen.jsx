@@ -35,10 +35,10 @@ export function BienvenueScreen({
       padding: "20px", display: "flex", flexDirection: "column",
       alignItems: "center", textAlign: "center", minHeight: "100%"
     }}>
-      <Illustration nom="bienvenue-credits" largeur={148} style={{ marginTop: 10 }} />
+      <Illustration nom="bienvenue-credits" largeur={140} style={{ marginTop: 4 }} />
 
       <h1 className="lehno-display" style={{
-        fontSize: 26, letterSpacing: "-.025em", margin: "18px 0 8px", fontWeight: 500, maxWidth: "22ch"
+        fontSize: 26, letterSpacing: "-.025em", margin: "14px 0 8px", fontWeight: 500, maxWidth: "22ch"
       }}>{t.bienvenueTitre(prenom)}</h1>
       <p style={{
         margin: 0, fontSize: 15, color: "var(--text-secondary)", maxWidth: "32ch", lineHeight: 1.5
@@ -52,7 +52,7 @@ export function BienvenueScreen({
         ) : null}
       </div>
 
-      <div style={{ width: "100%", display: "grid", gap: 8, marginTop: "auto", paddingTop: 24 }}>
+      <div style={{ width: "100%", display: "grid", gap: 8, marginTop: "auto", paddingTop: 18 }}>
         <Button platform="mobile" full onClick={onSuite}>{t.commencer}</Button>
         <Button platform="mobile" full variant="text" icon="user-plus"
           onClick={onInviter}>{t.inviterAmi}</Button>

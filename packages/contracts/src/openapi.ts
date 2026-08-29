@@ -19,6 +19,7 @@ import {
   verifyOutcomeSchema,
   registerSchema,
   registeredSchema,
+  requestOtpResultSchema,
 } from "./auth.js";
 import { profileSchema, updateProfileSchema, usernameSchema } from "./profile.js";
 import { errorEnvelopeSchema } from "./errors.js";
@@ -83,9 +84,7 @@ const schema = (s: ZodTypeAny): object => zodToJsonSchema(s, { target: "openApi3
  * rebours ; s'il codait la formule de son côté, deux versions du parc
  * appliqueraient deux règles différentes, celle du serveur restant la seule
  * qui compte. Un refus porte le même champ dans ses détails. */
-const sentResponseSchema = z
-  .object({ sent: z.literal(true), retryAfterSeconds: z.number().int().positive() })
-  .strict();
+const sentResponseSchema = requestOtpResultSchema;
 const usernameAvailableResponseSchema = z.object({ available: z.boolean() }).strict();
 
 /* La couverture des drapeaux, ENGENDRÉE depuis le registre.

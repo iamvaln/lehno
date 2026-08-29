@@ -1,5 +1,7 @@
 import type { TextStyle, ViewStyle } from "react-native";
-import { nativeFont, nativeRadius } from "@lehno/tokens";
+import {
+  nativeBorder, nativeFont, nativeRadius,
+} from "@lehno/tokens";
 import type { Couleurs } from "../theme.js";
 
 export const TONS_D_ETIQUETTE = ["outline", "quiet", "celebrate"] as const;
@@ -27,7 +29,7 @@ export function styleDEtiquette({
       paddingVertical: 5,
       paddingHorizontal: 12,
       borderRadius: nativeRadius.pill,
-      borderWidth: 1,
+      borderWidth: nativeBorder.width,
       borderColor: t.bord,
       backgroundColor: t.fond,
     },
