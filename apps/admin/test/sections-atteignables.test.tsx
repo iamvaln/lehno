@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "../src/App.js";
 import { magasinLocal } from "../src/api/session.js";
 import { messages } from "../src/i18n/index.js";
 import { NAVIGATION, sectionsVisibles } from "../src/navigation.js";
 import { dashboard } from "../src/fixtures/index.js";
+import { allerA } from "./aide-navigation.js";
 
 const t = messages("fr");
 
@@ -35,28 +36,6 @@ function ouvrir(role: "support" | "admin") {
  * qu'aucune entrée ne mène nulle part, et qu'aucune section livrée ne se
  * présente encore comme à venir.
  */
-/* Ouvrir l'entrée d'une section : les paiements vivent désormais dans un
-   accordéon, et l'entrée est repliée tant qu'on n'a pas déplié son intitulé.
-   Le geste est celui d'un humain — on ouvre, puis on choisit. */
-async function allerA(utilisateur: ReturnType<typeof userEvent.setup>, section: string): Promise<void> {
-  // Le fil d'Ariane est lui aussi une région de navigation : on vise la
-  // première, celle de la barre latérale.
-  const nav = screen.getAllByRole("navigation")[0] as HTMLElement;
-  const t2 = t as unknown as { sections: Record<string, string> };
-  const PARENTS: Record<string, string> = {
-    credits: "paiements", transactionsToutes: "paiements",
-    versementsManuels: "paiements", canauxPaiement: "paiements",
-  };
-  /* On OUVRE si besoin, on ne bascule pas : l'intitulé est un interrupteur, et
-     le cliquer alors que la section est déjà ouverte la referme — le deuxième
-     écran d'une même section devenait alors introuvable. */
-  const parent = PARENTS[section];
-  if (parent && !within(nav).queryByText(t2.sections[section] as string)) {
-    const intitule = within(nav).queryByText(t2.sections[parent] as string);
-    if (intitule) await utilisateur.click(intitule);
-  }
-  await utilisateur.click(within(nav).getByText(t2.sections[section] as string));
-}
 
 describe("ce que le menu promet, l'écran le tient", () => {
   beforeEach(() => {

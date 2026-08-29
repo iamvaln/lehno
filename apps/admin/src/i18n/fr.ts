@@ -69,6 +69,8 @@ export const fr = {
     transactionsToutes: "Toutes les transactions",
     versementsManuels: "Versements manuels",
     canauxPaiement: "Canaux et barèmes",
+    creditsSection: "Crédits",
+    transactionManuelle: "Transaction manuelle",
     acces: "Accès administrateurs",
     parametres: "Paramètres",
     fonctionnalites: "Fonctionnalités",
@@ -1121,6 +1123,45 @@ export const fr = {
         "Intervention reportée",
       ],
     },
+  },
+
+  transactionManuelle: {
+    titre: "Transaction manuelle",
+    sous: "Écrire un mouvement de crédits sur un compte. Le geste est journalisé avec son auteur et son motif.",
+    compte: "Le compte",
+    // Un compte ne se tape pas : « valentine@ » et « valentin@ » se ressemblent,
+    // et rien ne dirait ensuite lequel a été servi.
+    chercher: "Chercher un compte",
+    chercherPlaceholder: "Pseudo ou adresse",
+    aucunCompte: "Aucun compte ne correspond",
+    solde: "Solde",
+    changer: "Changer",
+    nature: "Ce que c'est",
+    // Chaque option dit son sens : une liste fermée cacherait ce qu'on doit
+    // voir avant d'écrire de l'argent.
+    natures: {
+      gift: "Cadeau — au crédit",
+      reward: "Récompense — au crédit",
+      correctionPlus: "Correction — au crédit",
+      correctionMoins: "Reprise de crédits — au débit",
+    },
+    // Redit une fois la nature retenue : l'option a défilé, la ligne reste.
+    sensCredit: "Le compte recevra {n} crédits.",
+    sensDebit: "Le compte perdra {n} crédits.",
+    montant: "Combien",
+    montantAide: "Un nombre entier de crédits, supérieur à zéro.",
+    ecrire: "Écrire le mouvement",
+    annuler: "Annuler",
+    dialogue: {
+      titre: "Écrire ce mouvement",
+      consequence: "Le solde change immédiatement, et le client le voit. Le journal d'audit garde le geste, son auteur et son motif.",
+      motifs: [
+        "Geste commercial",
+        "Correction d'une erreur",
+        "Compensation d'un incident",
+      ],
+    },
+    fait: "Mouvement écrit.",
   },
 
   metriques: {
