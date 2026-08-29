@@ -7,10 +7,19 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   // Le motif manque ou ne dit rien : la requête est bien formée, la règle non
   // satisfaite — 422, comme les autres règles métier.
   reason_required: 422,
+  // Le code retenu n'existe pas, ne se propose plus, ou ne s'applique pas à ce
+  // geste. Distinct de `validation_failed` : la requête est bien formée, c'est
+  // la valeur qui ne veut rien dire là où elle est posée.
+  reason_code_unknown: 422,
   unauthorized: 401, session_expired: 401, refresh_reused: 401, federated_token_invalid: 401,
   forbidden: 403, account_suspended: 403, account_pending_deletion: 403,
   not_found: 404,
   conflict: 409, username_taken: 409, federated_already_linked: 409,
+  // 410, seul de tout le contrat. Un lien de collecte révoqué a existé : le
+  // visiteur l'a reçu de quelqu'un, et un 404 lui ferait croire qu'il a mal
+  // recopié l'adresse. Un jeton INCONNU, lui, reste un 404 — dire « révoqué »
+  // sur un jeton tiré au hasard ferait de ce chemin un oracle à jetons.
+  link_revoked: 410,
   rate_limited: 429, otp_rate_limited: 429,
   internal_error: 500,
   // 503 : la ressource existe, elle est momentanément fermée. Voir

@@ -11,6 +11,11 @@ export const ERROR_CODES = [
   // Un code à part plutôt que validation_failed — l'interface doit pouvoir dire
   // « il manque le motif » et non « la requête est mal formée ».
   "reason_required",
+  /* Le code du motif retenu n'existe pas, ne se propose plus, ou ne s'applique
+     pas à ce geste. À part de `reason_required` : la phrase est bien là, c'est
+     la catégorie qui ne veut rien dire à cet endroit. L'écran doit pouvoir
+     recharger sa liste plutôt que réclamer un texte qu'il a déjà. */
+  "reason_code_unknown",
   /* Une configuration de studio qu'on veut publier sans qu'aucun essai réussi
      ne porte son empreinte. 422, et un code à part de `validation_failed` :
      l'écran doit pouvoir dire « essayez-la d'abord » plutôt que « la requête
@@ -65,6 +70,26 @@ export const ERROR_CODES = [
   // Même raisonnement que waitlist_rejected, pour les deux mêmes filtres :
   // un seul code, pour ne pas apprendre au robot lequel a mordu.
   "contact_rejected",
+  /* Les surfaces de collecte et de dépôt de vœux.
+   *
+   * `link_revoked` est un 410, et c'est le seul de tout ce contrat. Un lien de
+   * collecte révoqué N'EST PAS un 404 : le visiteur de bonne foi a reçu ce lien
+   * de quelqu'un, il l'ouvre parce qu'on le lui a demandé, et « page
+   * introuvable » lui ferait croire qu'il a mal recopié l'adresse. 410 dit
+   * « c'était là, ce n'est plus ouvert » — la page traduit, elle n'invente pas.
+   *
+   * Un jeton INCONNU, lui, reste un 404 : dire « révoqué » sur un jeton tiré au
+   * hasard ferait de ce chemin un oracle à jetons.
+   */
+  "link_revoked",
+  /* Le dépôt de vœux hors de sa fenêtre. 422 : le chemin existe, le lien est
+     vivant, c'est la date qui ne s'y prête pas — et le message doit le dire,
+     jamais un formulaire qui échoue en silence (UX publiques §6). */
+  "wish_window_closed",
+  // Même raisonnement que waitlist_rejected et contact_rejected, pour les deux
+  // mêmes filtres posés sur les formulaires publics de collecte et de vœux :
+  // UN SEUL code, sinon le robot apprend lequel a mordu et s'ajuste.
+  "collect_rejected",
   // Réservation d'un souhait par un visiteur sans compte : troisième surface
   // publique sans session, mêmes deux filtres, même code unique. En donner un
   // par filtre dirait au robot lequel a mordu, et il s'ajusterait.

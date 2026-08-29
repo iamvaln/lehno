@@ -13,6 +13,7 @@ export const en = {
     otp_expired: "That code has expired. Ask for a new one.",
     otp_too_many_attempts: "Too many wrong tries. That code's done — ask for a new one.",
     reason_required: "This action needs a reason — the audit log keeps it.",
+    reason_code_unknown: "That reason no longer applies to this action. Reload the list.",
     // Le studio : on ne publie que ce qu'on a vu tourner. Le message dit le
     // geste qui manque, pas seulement le refus — un bouton grisé sans
     // explication se lit comme une panne.
@@ -33,6 +34,12 @@ export const en = {
     waitlist_rejected: "That didn't go through. Try again in a moment.",
     contact_invalid: "This form isn't valid. Check the fields and try again.",
     contact_rejected: "That didn't go through. Try again in a moment.",
+    // We SAY the link existed: "page not found" would make the visitor think
+    // they mistyped an address someone actually sent them.
+    link_revoked: "This link is no longer active.",
+    wish_window_closed: "Wishes aren't open right now.",
+    // Same wording as the other two bot refusals: it doesn't say which filter bit.
+    collect_rejected: "That didn't go through. Try again in a moment.",
     // One message for both bot filters, like the two above: telling the
     // visitor which one caught would tell a robot how to adjust.
     reservation_rejected: "That didn't go through. Try again in a moment.",
