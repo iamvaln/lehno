@@ -91,9 +91,11 @@ export async function avecMotif<T>(
   prisma: PrismaClient,
   motif: string,
   ecriture: (tx: Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">) => Promise<T>,
+  code?: string,
 ): Promise<T> {
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`select set_config('app.reason', ${motif}, true)`;
+    await tx.$queryRaw`select set_config('app.reason', ${motif}, true),
+                              set_config('app.reason_code', ${code ?? ""}, true)`;
     return ecriture(tx);
   });
 }

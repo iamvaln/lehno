@@ -103,6 +103,35 @@ describe("le module des motifs", () => {
       expect(versions[0]!.code).toBe(versions[1]!.code);
     });
 
+    /* Le code voyage jusqu'à la ligne de version, à côté de la phrase. Sans
+       lui, l'historique d'une configuration serait comptable comme le journal
+       ne l'était pas — on retomberait sur des phrases libres à agréger. */
+    it("porte le code retenu jusqu'à la version, à côté de la phrase", async () => {
+      const motif = await db.prisma.auditReason.findUniqueOrThrow({ where: { code: "suspected_fraud" } });
+      await avecMotif(db.prisma, "retiré de la liste", (tx) =>
+        tx.auditReason.update({ where: { id: motif.id }, data: { isActive: false } }),
+        "product_decision");
+
+      const derniere = await db.prisma.auditReasonHistory.findFirstOrThrow({
+        where: { auditReasonId: motif.id, validTo: null },
+      });
+      expect(derniere.reason).toBe("retiré de la liste");
+      expect(derniere.reasonCode).toBe("product_decision");
+    });
+
+    // Un geste sans motif préréglé n'en a pas : la phrase suffit, et le code
+    // reste nul plutôt que de valoir une chaîne vide qu'on croirait remplie.
+    it("laisse le code nul quand aucun n'a été retenu", async () => {
+      const motif = await db.prisma.auditReason.findUniqueOrThrow({ where: { code: "abuse_found" } });
+      await avecMotif(db.prisma, "sans code", (tx) =>
+        tx.auditReason.update({ where: { id: motif.id }, data: { isActive: false } }));
+
+      const derniere = await db.prisma.auditReasonHistory.findFirstOrThrow({
+        where: { auditReasonId: motif.id, validTo: null },
+      });
+      expect(derniere.reasonCode).toBeNull();
+    });
+
     it("historise aussi les portées", async () => {
       const p = await db.prisma.auditReasonScope.findFirstOrThrow({ where: { geste: "account_suspend" } });
       const n = await db.prisma.auditReasonScopeHistory.count({ where: { auditReasonScopeId: p.id } });
