@@ -81,7 +81,7 @@ describe("administration — les paramètres du système", () => {
     await fetch(`${baseUrl}/v1/admin/parameters`, {
       method: "PATCH",
       headers: { ...entete, "content-type": "application/json" },
-      body: JSON.stringify({ key: "signup_free_credits", value: "9", reason: "promotion de lancement" }),
+      body: JSON.stringify({ key: "signup_free_credits", value: "9", reason: "promotion de lancement", reasonCode: "pricing_adjustment" }),
     });
 
     const corps = (await (await fetch(`${baseUrl}/v1/admin/parameters`, { headers: entete })).json()) as {
@@ -135,7 +135,7 @@ describe("administration — les paramètres du système", () => {
   // L'interface le masque, mais c'est le serveur qui refuse.
   it("un support ne peut pas écrire", async () => {
     const { entete } = await session("support");
-    const res = await patch(entete, { key: "credit_unit_price", value: "150", reason: "Hausse décidée en comité" });
+    const res = await patch(entete, { key: "credit_unit_price", value: "150", reason: "Hausse décidée en comité", reasonCode: "pricing_adjustment" });
     expect(res.status).toBe(403);
     const apres = await db.prisma.systemParameter.findUniqueOrThrow({ where: { key: "credit_unit_price" } });
     expect(apres.value).toBe("100");
@@ -166,7 +166,7 @@ describe("administration — les paramètres du système", () => {
   it("un administrateur écrit, et le journal garde la valeur quittée", async () => {
     const { compte, entete } = await session("admin");
     const res = await patch(entete, {
-      key: "credit_unit_price", value: "150", reason: "Hausse décidée en comité",
+      key: "credit_unit_price", value: "150", reason: "Hausse décidée en comité", reasonCode: "pricing_adjustment",
     });
     expect(res.status).toBe(200);
 
@@ -187,7 +187,7 @@ describe("administration — les paramètres du système", () => {
   it("une clé inconnue est refusée, et ne crée pas de paramètre", async () => {
     const { entete } = await session("admin");
     const avant = await db.prisma.systemParameter.count();
-    const res = await patch(entete, { key: "clef_inventee", value: "1", reason: "Essai de création" });
+    const res = await patch(entete, { key: "clef_inventee", value: "1", reason: "Essai de création", reasonCode: "pricing_adjustment" });
     expect(res.status).toBe(404);
     expect(await db.prisma.systemParameter.count()).toBe(avant);
   });
@@ -196,9 +196,51 @@ describe("administration — les paramètres du système", () => {
   // /v1/public/config incapable de servir un nombre.
   it("une valeur qui ne tient pas dans son type est refusée", async () => {
     const { entete } = await session("admin");
-    const res = await patch(entete, { key: "credit_unit_price", value: "beaucoup", reason: "Essai de valeur libre" });
+    const res = await patch(entete, { key: "credit_unit_price", value: "beaucoup", reason: "Essai de valeur libre", reasonCode: "pricing_adjustment" });
     expect(res.status).toBeGreaterThanOrEqual(400);
     const apres = await db.prisma.systemParameter.findUniqueOrThrow({ where: { key: "credit_unit_price" } });
     expect(apres.value).toBe("100");
+  });
+
+  /* Le kit propose désormais quatre motifs sur cet écran — ajustement
+     tarifaire, campagne d'acquisition, correction d'une erreur, arbitrage de
+     marge. Le geste en exige donc un.
+
+     C'est l'écran qui porte les crédits offerts à chaque inscription : changer
+     ce qu'on donne à tout nouveau compte sans dire pourquoi était le trou le
+     plus large du panneau. */
+  it("exige un code de motif, comme le kit en propose", async () => {
+    const { entete } = await session("admin");
+    const res = await patch(entete, {
+      key: "credit_unit_price", value: "150", reason: "Le coût des modèles a monté",
+    });
+    expect(res.status).toBe(422);
+    expect((await db.prisma.systemParameter.findUniqueOrThrow({
+      where: { key: "credit_unit_price" },
+    })).value).toBe("100");
+  });
+
+  it("refuse un code emprunté à un autre geste", async () => {
+    const { entete } = await session("admin");
+    const emprunte = await db.prisma.auditReasonScope.findFirstOrThrow({
+      where: { geste: "account_suspend", reason: { code: "suspected_fraud", isActive: true } },
+    });
+    expect(emprunte.geste).toBe("account_suspend");
+
+    const res = await patch(entete, {
+      key: "credit_unit_price", value: "150", reason: "Le coût des modèles a monté",
+      reasonCode: "suspected_fraud",
+    });
+    expect(res.status).toBe(422);
+  });
+
+  it("garde le code à côté de la phrase", async () => {
+    const { entete } = await session("admin");
+    await patch(entete, {
+      key: "credit_unit_price", value: "150", reason: "Le coût des modèles a monté",
+      reasonCode: "margin_decision",
+    });
+    const trace = await db.prisma.auditLog.findFirstOrThrow({ where: { action: "parameter_update" } });
+    expect(trace.reasonCode).toBe("margin_decision");
   });
 });
