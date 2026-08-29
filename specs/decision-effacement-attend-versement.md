@@ -24,24 +24,56 @@ remboursement versé »*.
 
 ---
 
-## Le risque qu'elle crée, et qui doit être tenu
+## Le versement a deux voies, choisies au moment de régler
 
-**Un compte peut rester en sursis indéfiniment si personne ne verse.**
+L'administration ouvre la demande, et l'écran de confirmation montre **le montant
+à verser et le numéro** qui le recevra. Puis elle choisit :
 
-Ce n'est pas théorique : le versement est un geste manuel, il n'y a pas de
-paiement automatique au lancement, et rien ne rappelle qu'une demande dort. Un
-compte qui attend son remboursement depuis trois mois est un engagement non
-tenu — et l'utilisateur, lui, croit avoir supprimé son compte.
+**Manuelle** — on paie depuis son téléphone, on enregistre la transaction au
+niveau des paiements, on confirme avec la référence de l'opérateur. C'est le
+miroir exact de ce que `admin/payments.controller.saisir` fait déjà pour l'argent
+qui ENTRE, en sens inverse.
 
-Trois choses le tiennent, et aucune n'est facultative :
+**Automatique** — le versement part chez le fournisseur. Quand le flux aboutit,
+il met à jour l'état de la suppression **et** un courrier part au titulaire, avec
+le détail de la suppression et du paiement qui l'a accompagnée.
 
-1. **L'écran des suppressions doit distinguer cet état.** « En attente de
+### Ce que le serveur a, et ce qu'il n'a pas
+
+**Rien pour la voie automatique.** `topup.provider` est un drapeau sans
+implémentation, et le `providerRef` de la recharge est une référence que le
+CLIENT déclare — aucune intégration fournisseur n'existe, ni en entrée ni en
+sortie. La voie automatique est à écrire entièrement.
+
+**La voie manuelle, elle, a son modèle** : `Payment` porte `direction: refund` et
+`mode: manual`, et l'unicité partielle sur `credit_transaction.payment_id`
+réserve depuis le début la place d'une reprise de crédits rattachée au même
+paiement.
+
+### L'ordre des trois gestes n'est pas indifférent
+
+Le courrier part **avant** l'effacement, forcément : l'adresse est effacée avec
+le compte. La séquence est donc versement abouti → courrier → effacement, et
+elle doit être tenue explicitement. L'ordonnanceur d'effacement tourne de son
+côté ; s'il passait entre le versement et l'envoi, le courrier n'aurait plus de
+destinataire et le titulaire n'apprendrait jamais que son remboursement est
+parti.
+
+---
+
+## Le risque qui subsiste
+
+**Un compte peut rester en sursis si le versement n'aboutit pas.** La voie
+automatique réduit le risque, elle ne l'annule pas : un numéro fermé, un
+fournisseur en panne, un versement rejeté laissent la demande en attente.
+
+Deux choses le tiennent :
+
+1. **L'écran des suppressions distingue cet état.** « En attente de
    remboursement » n'est pas « délai de grâce en cours » : le premier attend un
-   geste de NOTRE part, le second attend une date.
-2. **Le tableau de bord doit compter les remboursements dus**, et le plus ancien.
-   Une file qu'on ne voit pas est une file qui ne se draine pas.
-3. **Une alerte au-delà d'un seuil.** Un remboursement qui dort depuis plus de
-   quelques jours est un incident, pas un encours.
+   geste ou un flux, le second attend une date.
+2. **Une alerte au-delà d'un seuil.** Un remboursement qui dort depuis plusieurs
+   jours est un incident, pas un encours.
 
 ---
 
@@ -57,6 +89,11 @@ l'administration : un administrateur qui force l'effacement ne doit pas pouvoir
 faire disparaître la coordonnée d'une dette par inadvertance. S'il veut vraiment
 effacer, il règle le remboursement d'abord — et ce n'est pas une contrainte, c'est
 l'ordre des choses.
+
+Le versement manuel s'écrit en miroir de la saisie d'un paiement entrant : mêmes
+gardes, sens inverse. La voie automatique demande d'abord une intégration
+fournisseur, qui n'existe pas — c'est le vrai coût de ce lot, et il est distinct
+du reste.
 
 **Rien de tout cela n'est encore écrit** : la chaîne du remboursement n'existe
 pas, et aucune route utilisateur ne crée de demande. Cette décision fixe la
