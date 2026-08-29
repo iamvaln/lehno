@@ -120,6 +120,22 @@ export async function appelPublic<T>(chemin: string, options: OptionsDAppel = {}
   return reponse.status === 204 ? (undefined as T) : ((await reponse.json()) as T);
 }
 
+/* LE TEXTE D'UNE SURFACE PUBLIQUE, et non du JSON.
+ *
+ * Les documents légaux sont servis en `text/markdown` : les passer par
+ * `appelPublic` les ferait analyser comme du JSON et tomber sur le premier
+ * caractère. Ils sont PUBLICS à dessein — l'écran de connexion doit les ouvrir
+ * avant qu'aucune session n'existe, puisque c'est là qu'on les accepte.
+ *
+ * L'échec passe par le même chemin que les autres : un document manquant est un
+ * 404 comme un autre, et l'écran doit pouvoir le dire.
+ */
+export async function texteDunePagePublique(chemin: string): Promise<string> {
+  const reponse = await envoie(chemin, {});
+  if (!reponse.ok) signaleLEchec(new ErreurDApi(reponse.status, await litLEnveloppe(reponse)));
+  return reponse.text();
+}
+
 /* UN SEUL RENOUVELLEMENT À LA FOIS, partagé par tous ceux qui l'attendent.
  *
  * Le serveur fait TOURNER le jeton de rafraîchissement : chaque usage rend une

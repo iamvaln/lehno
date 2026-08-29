@@ -13,7 +13,14 @@ import { describe, expect, it } from "vitest";
  * faire tomber l'écran — et le trou ne se verrait qu'à l'usage.
  */
 
-const SOURCES = ["app", "components", "../../packages/ui-native/src"];
+/* `composants` et non « components » : le dossier est en français, et la faute
+   passait inaperçue parce que le `try/catch` plus bas avale un dossier
+   introuvable. Une source qu'on croit balayer et qui ne l'est pas est pire
+   qu'une source oubliée — on la croit couverte.
+
+   `lib` en est : les écrans ne nomment pas toutes leurs icônes en JSX, certains
+   les portent en DONNÉES — la table des rangs des réglages, par exemple. */
+const SOURCES = ["app", "composants", "lib", "../../packages/ui-native/src"];
 
 function fichiers(racine: string): string[] {
   let trouves: string[] = [];
@@ -34,6 +41,10 @@ function nomsDemandes(): Set<string> {
       const source = readFileSync(chemin, "utf-8");
       for (const [, nom] of source.matchAll(/\b(?:icon|iconAfter)="([a-z0-9-]+)"/g)) noms.add(nom!);
       for (const [, nom] of source.matchAll(/<Icon\s+name="([a-z0-9-]+)"/g)) noms.add(nom!);
+      /* Les icônes portées en données — `{ cle: "profil", icone: "user", … }` —
+         n'apparaissent dans aucune balise. Sans cette forme, une table entière
+         de rangs échappait au contrôle, et chaque nom faux y rendait un blanc. */
+      for (const [, nom] of source.matchAll(/\bicone:\s*"([a-z0-9-]+)"/g)) noms.add(nom!);
     }
   }
   return noms;
@@ -46,6 +57,11 @@ function nomsDuTableau(): Set<string> {
 }
 
 describe("les icônes embarquées", () => {
+  // Sans ça, un chemin de source cassé rendrait le contrôle vert à vide.
+  it("trouve bien des icônes à vérifier", () => {
+    expect(nomsDemandes().size).toBeGreaterThan(15);
+  });
+
   it("le tableau couvre chaque icône que le code demande", () => {
     const tableau = nomsDuTableau();
     const manquantes = [...nomsDemandes()].filter((nom) => !tableau.has(nom)).sort();
