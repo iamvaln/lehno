@@ -5,6 +5,7 @@ import { SignupService } from "../onboarding/signup.service.js";
 import { TrackingService } from "../tracking/tracking.service.js";
 import type { VerifyOutcome } from "@lehno/contracts";
 import { TokenService } from "./token.service.js";
+import { refusDe } from "./auth.service.js";
 import { AppError } from "../common/errors.js";
 
 export interface IdentityVerifier {
@@ -39,8 +40,10 @@ export class FederatedService {
   // chemin le plus emprunté (celui de la reconnexion). Même distinction que
   // AuthService.verifyOtp entre les deux statuts.
   private assertActive(user: Pick<User, "status">): void {
-    if (user.status === "suspended") throw new AppError("account_suspended", "account suspended");
-    if (user.status === "pending_deletion") throw new AppError("account_pending_deletion", "account is being deleted");
+    // REFUS PAR DÉFAUT, et la table des refus est partagée avec la voie du code
+    // à usage unique : deux tables des mêmes états finiraient par diverger,
+    // et c'est ainsi que `deleted` a été oublié ici même.
+    if (user.status !== "active") throw refusDe(user.status);
   }
 
   // Revue tour 1, point 4 : la voie du code à usage unique laisse une trace

@@ -49,6 +49,11 @@ describe("le suivi d'une génération", () => {
     id: CIBLE,
     kind: "portrait" as const,
     status: "running" as const,
+    // La cible : sans elle, l'écran d'attente n'a ni nom à afficher ni décompte
+    // à montrer. Un portrait vise un proche, un message une occasion — l'une
+    // des deux est donc toujours nulle.
+    personId: CIBLE,
+    occurrenceId: null,
     creditsSpent: 1,
     failureReason: null,
     resultId: null,
@@ -67,6 +72,25 @@ describe("le suivi d'une génération", () => {
     expect(generationSchema.parse(echoue).failureReason).toBe("model_unavailable");
   });
 
+  /* Une génération qui a ÉCHOUÉ n'a pas de résultat, et c'est précisément là
+     que la cible compte : l'écran doit savoir pour qui refaire. */
+  it("garde sa cible même sans résultat", () => {
+    const echoue = generationSchema.parse({
+      ...EN_COURS, status: "failed" as const, failureReason: "model_unavailable",
+    });
+    expect(echoue.resultId).toBeNull();
+    expect(echoue.personId).toBe(CIBLE);
+  });
+
+  // L'une des deux est nulle selon la nature. Le client n'a rien à en déduire :
+  // il affiche celle qui est là.
+  it("vise une occasion pour un message, un proche pour un portrait", () => {
+    const message = generationSchema.parse({
+      ...EN_COURS, kind: "wish_message" as const, personId: null, occurrenceId: CIBLE,
+    });
+    expect(message.occurrenceId).toBe(CIBLE);
+    expect(message.personId).toBeNull();
+  });
   it("ne porte le résultat qu'une fois abouti", () => {
     expect(generationSchema.parse({ ...EN_COURS, status: "succeeded", resultId: CIBLE }).resultId).toBe(CIBLE);
   });
@@ -102,4 +126,5 @@ describe("le portrait produit", () => {
   it("refuse un champ que le serveur ne connaît pas", () => {
     expect(() => portraitSchema.parse({ ...PORTRAIT, ambiance: "encre" })).toThrow();
   });
+
 });
