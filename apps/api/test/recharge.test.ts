@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
-import { withDatabase, resetDatabase, type TestDb } from "./db.js";
+import { withDatabase, resetDatabase, avecMotif, type TestDb } from "./db.js";
 import { RechargeService } from "../src/payments/recharge.service.js";
 
 /* La recharge par palier, voie semi-manuelle.
@@ -32,14 +32,14 @@ describe("la recharge", () => {
     });
 
   const canal = (over: Record<string, unknown> = {}) =>
-    db.prisma.paymentChannel.create({
+    avecMotif(db.prisma, "fixture de test", (tx) => tx.paymentChannel.create({
       data: {
         kind: "mobile_money", operator: `op-${randomBytes(3).toString("hex")}`,
         country: "CM", label: "Un opérateur",
         feePercent: 2, feeFixed: 0, feeBorneBy: "payer", currency: "XAF",
         isActive: true, ...over,
       },
-    });
+    }));
 
   // Chaque déclaration cite un versement distinct : la base refuse deux fois la
   // même référence, et c'est exactement ce qu'on veut.
@@ -170,7 +170,8 @@ describe("la recharge", () => {
       });
       expect(r.fee).toBe(20);
 
-      await db.prisma.paymentChannel.update({ where: { id: c.id }, data: { feePercent: 10 } });
+      await avecMotif(db.prisma, "nouveau barème", (tx) =>
+        tx.paymentChannel.update({ where: { id: c.id }, data: { feePercent: 10 } }));
 
       const relu = await recharge.lire(awa, r.id);
       expect(relu.fee).toBe(20);
