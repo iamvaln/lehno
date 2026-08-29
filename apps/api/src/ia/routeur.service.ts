@@ -58,6 +58,38 @@ type Candidat = {
   costInput: unknown; costOutput: unknown;
 };
 
+/* Le coût d'un appel, au tarif du catalogue AU MOMENT de l'appel.
+ *
+ * Exporté, et non recopié chez l'appelant : l'essai d'administration a besoin
+ * du même chiffre que la production, et deux formules donneraient deux
+ * factures pour un seul appel. Les tarifs sont par MILLION de jetons — c'est
+ * ainsi que les fournisseurs les publient, et les convertir à la saisie ferait
+ * diverger l'écran de la page tarifaire qu'on recopie.
+ *
+ * Nul quand le modèle n'est pas tarifé, ou quand on ne connaît pas les jetons :
+ * « on ne sait pas », jamais « gratuit ». */
+export function coutDeLAppel(
+  tarifs: { costInput: unknown; costOutput: unknown },
+  jetonsEntree: number | null,
+  jetonsSortie: number | null,
+): number | null {
+  const tarifEntree = tarifs.costInput === null || tarifs.costInput === undefined ? null : Number(tarifs.costInput);
+  const tarifSortie = tarifs.costOutput === null || tarifs.costOutput === undefined ? null : Number(tarifs.costOutput);
+  if (tarifEntree === null && tarifSortie === null) return null;
+  if (jetonsEntree === null && jetonsSortie === null) return null;
+  return ((jetonsEntree ?? 0) * (tarifEntree ?? 0) + (jetonsSortie ?? 0) * (tarifSortie ?? 0)) / 1_000_000;
+}
+
+/* Ce que rend un appel SANS REPLI. Un résultat plutôt qu'une exception, parce
+ * que l'appelant doit consigner l'échec autant que le succès : un essai raté
+ * laisse une ligne — c'est ce qui distingue « le modèle a refusé » de « le
+ * modèle n'a pas répondu », et le brief de design §12 en fait deux gestes
+ * différents. Une exception ferait perdre cette distinction au premier
+ * `catch` un peu large. */
+export type ResultatDirect =
+  | { readonly etat: "success"; readonly contenu: string; readonly cout: number | null; readonly latenceMs: number }
+  | { readonly etat: "error" | "timeout" | "refused"; readonly code: string; readonly cout: null; readonly latenceMs: number };
+
 @Injectable()
 export class RouteurIAService {
   private readonly logger = new Logger("ia");
@@ -206,15 +238,7 @@ export class RouteurIAService {
   ): Promise<void> {
     const entree = reponse?.jetonsEntree ?? null;
     const sortie = reponse?.jetonsSortie ?? null;
-    const tarifEntree = c.costInput === null ? null : Number(c.costInput);
-    const tarifSortie = c.costOutput === null ? null : Number(c.costOutput);
-
-    // Les tarifs sont par million de jetons — c'est ainsi que les fournisseurs
-    // les publient, et les convertir à la saisie ferait diverger l'écran de la
-    // page tarifaire qu'on recopie.
-    const cout = (tarifEntree === null && tarifSortie === null) || (entree === null && sortie === null)
-      ? null
-      : ((entree ?? 0) * (tarifEntree ?? 0) + (sortie ?? 0) * (tarifSortie ?? 0)) / 1_000_000;
+    const cout = coutDeLAppel(c, entree, sortie);
 
     try {
       await this.prisma.aIUsage.create({
@@ -237,6 +261,59 @@ export class RouteurIAService {
       this.logger.error(
         `mesure d'usage perdue : ${err instanceof Error ? err.message : "cause inconnue"}`,
       );
+    }
+  }
+
+  /* UN SEUL MODÈLE, NOMMÉ, SANS REPLI — pour l'essai d'administration.
+   *
+   * `executer` replie parce qu'il sert ce qui tourne SANS TÉMOIN : une passe
+   * d'arrière-plan, une génération lancée par un utilisateur qui n'attend pas
+   * de savoir quel modèle a répondu. L'établi, lui, essaie *celle-là*.
+   *
+   * Si un repli muet servait l'essai, on enregistrerait un `StudioTrial` en
+   * `success` portant une empreinte qui désigne un modèle qui n'a rien produit
+   * — et la règle « rien ne se publie sans essai » autoriserait une mise en
+   * service sur la foi d'un résultat obtenu ailleurs. La garantie serait vraie
+   * au dossier et fausse en fait (brief fonctionnel §11.1).
+   *
+   * IL NE NOURRIT PAS LE DISJONCTEUR, ni au succès ni à l'échec. Le
+   * disjoncteur protège le routage AUTOMATIQUE, et il se nourrit du trafic
+   * réel. Un administrateur qui éprouve une consigne bancale sur le modèle de
+   * premier rang écarterait sinon ce modèle de la PRODUCTION pour cinq
+   * minutes — trois essais suffisent — sans rien avoir dit à personne. */
+  async appelerUnSeulModele(
+    tache: TacheIA,
+    demande: DemandeIA,
+    adaptateur: Adaptateur,
+    modele: { id: string; provider: string; modelKey: string; costInput: unknown; costOutput: unknown },
+    contexte: ContexteAppel = {},
+  ): Promise<ResultatDirect> {
+    /* `attempt: 1` : c'est le premier essai, et il n'y en aura pas d'autre.
+       Recopier un rang de chaîne serait faux — le modèle demandé n'est pas
+       forcément dans la chaîne de la tâche, et c'est même souvent la raison
+       pour laquelle on l'essaie. */
+    const candidat: Candidat = { ...modele, rank: 1 };
+    const debut = Date.now();
+
+    try {
+      const reponse = await adaptateur.appeler(modele.modelKey, demande);
+      const latenceMs = Date.now() - debut;
+      await this.consigner(candidat, tache, contexte, "success", reponse, latenceMs, null);
+      return {
+        etat: "success",
+        contenu: reponse.contenu,
+        cout: coutDeLAppel(modele, reponse.jetonsEntree ?? null, reponse.jetonsSortie ?? null),
+        latenceMs,
+      };
+    } catch (err: unknown) {
+      const latenceMs = Date.now() - debut;
+      const refus = err instanceof RefusModele;
+      const code = err instanceof RefusModele || err instanceof PanneFournisseur
+        ? err.code
+        : (err instanceof Error ? err.name : "unknown");
+      const etat = refus ? "refused" : (code === "timeout" ? "timeout" : "error");
+      await this.consigner(candidat, tache, contexte, etat, null, latenceMs, code);
+      return { etat, code, cout: null, latenceMs };
     }
   }
 }

@@ -11,6 +11,13 @@ export const ERROR_CODES = [
   // Un code à part plutôt que validation_failed — l'interface doit pouvoir dire
   // « il manque le motif » et non « la requête est mal formée ».
   "reason_required",
+  /* Une configuration de studio qu'on veut publier sans qu'aucun essai réussi
+     ne porte son empreinte. 422, et un code à part de `validation_failed` :
+     l'écran doit pouvoir dire « essayez-la d'abord » plutôt que « la requête
+     est mal formée » — c'est la même raison qui a fait exister
+     `reason_required`. Un bouton grisé sans explication s'interprète comme une
+     panne. */
+  "trial_required",
   // Un palier retiré, un canal fermé, un compte de collecte désactivé : la
   // requête est bien formée, la règle ne l'est pas. 422, pas 400 — et un code
   // à part de validation_failed, pour que l'écran puisse dire « ce palier n'est

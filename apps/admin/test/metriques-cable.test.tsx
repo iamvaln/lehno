@@ -20,7 +20,11 @@ const METRIQUES = (over: Record<string, unknown> = {}) => ({
     parPalier: [{ credits: 500, achats: 9 }, { credits: 2000, achats: 15 }],
   },
   consommation: { credits: 8400, mouvements: 512 },
-  manques: ["usage_par_fonctionnalite", "issue_des_actions", "contributions"],
+  actions: [
+    { code: "wish_message", lancements: 40, reussies: 36, echouees: 3, enAttente: 1 },
+    { code: "portrait", lancements: 0, reussies: 0, echouees: 0, enAttente: 0 },
+  ],
+  manques: ["usage_par_fonctionnalite", "contributions"],
   ...over,
 });
 
@@ -115,7 +119,6 @@ describe("les métriques à l'écran", () => {
     await screen.findByText(t.metriques.manques.titre);
     for (const manque of [
       t.metriques.manques.usage_par_fonctionnalite.quoi,
-      t.metriques.manques.issue_des_actions.quoi,
       t.metriques.manques.contributions.quoi,
     ]) expect(screen.getByText(manque)).toBeTruthy();
   });
@@ -148,5 +151,40 @@ describe("les métriques à l'écran", () => {
     await utilisateur.click(screen.getByRole("button", { name: new RegExp(t.exporter.bouton, "i") }));
 
     await waitFor(() => expect(sorties(appels).some((u) => u.includes("periode=7j"))).toBe(true));
+  });
+});
+
+/* §5.11 demande « les exécutions des actions payantes et LEUR ISSUE ». La
+   section le déclarait non mesurable ; `ActionRun` existe désormais. */
+describe("les actions payantes", () => {
+  beforeEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
+
+  it("rend chaque action avec le libellé de son code", async () => {
+    serveur();
+    await ouvrir();
+
+    await screen.findByText(t.metriques.actionsPayantes.titre);
+    expect(screen.getByText(t.metriques.actionsPayantes.codes.wish_message)).toBeTruthy();
+  });
+
+  // 3 échecs sur 40 lancements.
+  it("rend le taux d'échec", async () => {
+    serveur();
+    await ouvrir();
+
+    await screen.findByText(t.metriques.actionsPayantes.titre);
+    expect(screen.getByText("8 %")).toBeTruthy();
+  });
+
+  /* Aucun lancement ne donne pas « 0 % » : zéro pour cent se lirait « rien
+     n'échoue », ce qui est une mesure — et c'est faux tant que rien n'a tourné.
+     Le portrait du jeu d'essai n'a jamais été lancé. */
+  it("n'annonce pas zéro pour cent quand rien n'a tourné", async () => {
+    serveur();
+    await ouvrir();
+
+    await screen.findByText(t.metriques.actionsPayantes.codes.portrait);
+    expect(screen.getByText(t.metriques.actionsPayantes.sansTaux)).toBeTruthy();
+    expect(screen.queryByText("0 %")).toBeNull();
   });
 });

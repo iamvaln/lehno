@@ -1145,6 +1145,23 @@ export const fr = {
       credits: "{n} crédits",
       sansPalier: "Aucun achat rattaché à un palier sur la période.",
     },
+    actionsPayantes: {
+      titre: "Actions payantes",
+      sous: "Ce qui se lance, et ce que ça donne. Une action que personne n'emploie figure à zéro : ne pas la voir et ne pas l'avoir se ressembleraient trop.",
+      col: {
+        action: "Action", lancements: "Lancements", reussies: "Réussies",
+        echouees: "Échouées", enAttente: "En attente", echec: "Taux d'échec",
+      },
+      // Aucun lancement ne donne pas zéro pour cent : c'est un taux qui n'a
+      // rien à mesurer. « 0 % » se lirait comme « rien n'échoue ».
+      sansTaux: "—",
+      vide: "Aucune action payante déclarée.",
+      codes: {
+        gift_ideas: "Des idées de cadeaux",
+        portrait: "Un portrait",
+        wish_message: "Un message",
+      },
+    },
     consommation: {
       titre: "Consommation",
       credits: "Crédits consommés",
@@ -1156,10 +1173,6 @@ export const fr = {
       usage_par_fonctionnalite: {
         quoi: "Usage par fonctionnalité",
         bloque: "Le marquage part vers l'outil d'analyse sans que rien n'en soit conservé ici.",
-      },
-      issue_des_actions: {
-        quoi: "Exécutions des actions payantes et leur issue",
-        bloque: "Le registre des exécutions n'existe pas encore en base.",
       },
       contributions: {
         quoi: "Contributions reçues et validées",

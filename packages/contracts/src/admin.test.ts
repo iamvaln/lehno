@@ -3,7 +3,7 @@ import {
   adminRoleSchema, motifSchema, pageDeSchema, dashboardSchema,
   compteLigneSchema, compteDetailSchema, parametresSchema,
   demandeSuppressionSchema, interventionSchema, profilAdminSchema,
-  metriquesSchema, cohorteSchema, conversionSchema,
+  metriquesSchema, cohorteSchema, conversionSchema, actionPayanteSchema,
 } from "./admin.js";
 import { z } from "zod";
 
@@ -95,6 +95,7 @@ const metriques = {
     parPalier: [{ credits: 1000, achats: 7 }],
   },
   consommation: { credits: 4200, mouvements: 310 },
+  actions: [{ code: "message", lancements: 40, reussies: 36, echouees: 3, enAttente: 1 }],
   manques: ["usage_par_fonctionnalite"],
 };
 
@@ -155,5 +156,37 @@ describe("les paliers d'une conversion", () => {
   it("se désignent par leur nombre de crédits, pas par une phrase", () => {
     const enMots = { ...metriques.conversion, parPalier: [{ palier: "1 000 crédits", achats: 7 }] };
     expect(conversionSchema.safeParse(enMots).success).toBe(false);
+  });
+});
+
+/* ——— Les exécutions des actions payantes ——————————————————————
+ *
+ * §5.11 demande « les exécutions des actions payantes et LEUR ISSUE ». La
+ * section le déclarait non mesurable ; `ActionRun` existe désormais, avec son
+ * statut et son code d'échec. */
+describe("les actions payantes", () => {
+  const action = { code: "message", lancements: 40, reussies: 36, echouees: 3, enAttente: 1 };
+
+  it("accepte une ligne complète", () => {
+    expect(actionPayanteSchema.safeParse(action).success).toBe(true);
+  });
+
+  /* Les trois issues doivent redonner le total. Un lancement qui n'est ni
+     réussi, ni échoué, ni en attente n'existe pas — l'enum n'en a que trois —,
+     et un écart signale une requête qui compte deux fois ou en oublie une.
+     Refusé à la frontière : à l'écran, « 41 lancements · 36 réussies » avec une
+     colonne manquante se lit comme un taux d'échec faux et crédible. */
+  it("refuse un total qui ne se retrouve pas dans les issues", () => {
+    expect(actionPayanteSchema.safeParse({ ...action, lancements: 41 }).success).toBe(false);
+  });
+
+  it("admet une action jamais lancée", () => {
+    const jamais = { code: "portrait", lancements: 0, reussies: 0, echouees: 0, enAttente: 0 };
+    expect(actionPayanteSchema.safeParse(jamais).success).toBe(true);
+  });
+
+  // « issue_des_actions » n'est plus un manque : la source existe.
+  it("ne compte plus l'issue des actions parmi les manques", () => {
+    expect(metriquesSchema.safeParse({ ...metriques, manques: ["issue_des_actions"] }).success).toBe(false);
   });
 });
