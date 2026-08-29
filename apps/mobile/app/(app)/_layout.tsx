@@ -2,8 +2,6 @@ import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TabBar, useCouleurs, type Onglet } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
-import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
-import { moiVisible } from "../../lib/navigation.js";
 
 /* L'application connectée, et sa barre.
  *
@@ -20,39 +18,30 @@ import { moiVisible } from "../../lib/navigation.js";
  */
 export default function Application() {
   const { t } = useLangue();
-  const { actives } = useDrapeaux();
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
 
-  /* « Moi » n'est pas un drapeau, c'est une conséquence — l'onglet part quand
-     ses cinq sections sont fermées, ce qui est le cas au lancement. La barre
-     passe alors à quatre, et se redistribue : aucune largeur figée.
+  /* Les onglets dont l'écran n'existe pas encore ne sont pas ici : un onglet
+     qui mène à une page vide est pire qu'un onglet absent, et la règle vaut
+     aussi pendant qu'on construit.
 
-     Les onglets dont l'écran n'existe pas encore ne sont pas ici. Un onglet qui
-     mène à une page vide est pire qu'un onglet absent — c'est la règle du
-     handoff, et elle vaut aussi pendant qu'on construit. */
+     Aucune largeur n'est figée — la barre se redistribue de trois à cinq. */
   const onglets: Onglet[] = [
     { id: "accueil", label: t.ongletAccueil, icon: "house" },
     { id: "dates", label: t.ongletDates, icon: "calendar" },
     { id: "proches", label: t.ongletProches, icon: "heart" },
-    /* RÉGLAGES NE SUIT AUCUN DRAPEAU, et c'est tout l'intérêt. Il porte ce que
-       la disparition de « Moi » emportait — le solde, le profil, la sécurité,
-       et se déconnecter : rien de tout cela n'est une fonctionnalité qu'on
-       allume. C'est le quatrième onglet du lancement, celui qui rend la barre
-       complète quand « Moi » n'est pas là. */
+    /* CINQ ONGLETS, ET AUCUN NE SUIT DE DRAPEAU.
+     
+       « Moi » reste au lancement, ses sections éteintes retirées : il porte le
+       nom, l'adresse publique et le solde, dont rien ne s'éteint. Réglages
+       porte ce qui règle le produit. La barre tient donc toujours à cinq —
+       « et à cinq elle tient sans trou », dit la charte.
+     
+       C'est la liste elle-même qui n'a plus de condition : les écrans gouvernés
+       sortent par `ecranEteint`, jamais par un onglet qu'on retire. */
+    { id: "moi", label: t.ongletMoi, icon: "user" },
     { id: "reglages", label: t.ongletReglages, icon: "settings" },
   ];
-  /* « MOI » RESTE AU LANCEMENT — décidé le 29/08 — et son onglet arrive avec
-     son écran, pas avant : un onglet qui ne mène nulle part est exactement le
-     geste muet qu'on refuse partout ailleurs.
-
-     Il attend §3.9 : Moi porte « Recharger » et le parrainage, et les poser
-     sans destination ferait deux impasses sur l'écran qu'on ouvre le plus
-     souvent. D'ici là, c'est le hub des Réglages qui porte le solde — sans
-     quoi il ne serait atteignable nulle part. */
-  if (moiVisible(actives)) {
-    // Réservé.
-  }
 
   return (
     <Tabs
@@ -72,6 +61,7 @@ export default function Application() {
       <Tabs.Screen name="accueil" />
       <Tabs.Screen name="dates" />
       <Tabs.Screen name="proches" />
+      <Tabs.Screen name="moi" />
       <Tabs.Screen name="reglages" />
     </Tabs>
   );

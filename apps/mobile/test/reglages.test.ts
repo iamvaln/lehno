@@ -32,22 +32,28 @@ describe("ce que les réglages montrent", () => {
      sorties de la fiche d'un proche. Ouvrir vers rien apprend à ne pas croire
      les rangs, et c'est plus coûteux qu'un rang absent. */
   it("tait les rangs dont l'écran n'est pas porté", () => {
-    // Rien : tous les rangs restants ont désormais leur écran.
-    expect(cles(LANCEMENT).length).toBeGreaterThan(0);
+    // Les méthodes de paiement suivent `topup.provider`, éteint au lancement.
+    expect(cles(LANCEMENT)).not.toContain("paiement");
   });
 
-  /* Une section vidée de ses rangs disparaît, titre compris : « Crédits et
-     paiements » seul annoncerait un contenu qui ne vient pas.
-     
-     Au lancement elle l'est entièrement : la recharge n'est pas portée, le
-     parrainage non plus, et les méthodes de paiement suivent un drapeau
-     éteint. Ce test rougira quand l'une des trois arrivera — c'est ce qu'on
-     lui demande. */
+  /* « Crédits et paiements » DISPARAÎT AU LANCEMENT, et c'est voulu : il ne
+     lui reste que les méthodes de paiement, gouvernées par `topup.provider`.
+     Le solde, la recharge et le parrainage ont quitté cet écran pour « Moi » —
+     « on ouvre le solde plusieurs fois par semaine ; les réglages se
+     consultent deux fois par an ». Une section vidée part avec son titre. */
   it("retire une section qui n'a plus aucun rang", () => {
     const sections = sectionsDeReglages(LANCEMENT).map((s) => s.cle);
-    expect(sections).toContain("argent");
+    expect(sections).not.toContain("argent");
     expect(sections).toContain("alertes");
     expect(sections).toContain("aide");
+  });
+
+  /* Elle reste absente MÊME drapeau allumé, et pour l'autre raison : §3.25
+     n'est pas portée. Les deux filtres se cumulent, et ce test tient qu'on ne
+     les confonde pas — le jour où l'écran arrive, seul le drapeau décidera. */
+  it("reste absente même quand le paiement automatique tient", () => {
+    expect(sectionsDeReglages([...LANCEMENT, "topup.provider"]).map((s) => s.cle))
+      .not.toContain("argent");
   });
 
   /* Un écran qui arrive n'a qu'à renseigner sa route : le rang paraît alors
@@ -59,7 +65,6 @@ describe("ce que les réglages montrent", () => {
     expect(cles(LANCEMENT)).toContain("rappels");
     expect(cles(LANCEMENT)).toContain("donnees");
     expect(cles(LANCEMENT)).toContain("aide");
-    expect(cles(LANCEMENT)).toContain("recharge");
   });
 
   /* Les méthodes de paiement suivent `topup.provider`, éteint au lancement :
@@ -68,7 +73,7 @@ describe("ce que les réglages montrent", () => {
      retient, pas le drapeau. Les deux filtres ne disent pas la même chose. */
   it("distingue « le serveur a fermé » de « ce n'est pas encore construit »", () => {
     expect(cles(LANCEMENT)).not.toContain("paiement");
-    expect(cles(LANCEMENT)).not.toContain("parrainage");
+    expect(cles([...LANCEMENT, "topup.provider"])).not.toContain("paiement");
   });
 });
 
