@@ -15,13 +15,18 @@ import type { Couleurs } from "../theme.js";
 export const ACTIONS_PAYANTES = ["lancer", "recharger"] as const;
 export type ActionPayante = (typeof ACTIONS_PAYANTES)[number];
 
-/* Le solde suffit quand il ATTEINT le coût, pas quand il le dépasse.
+/* UN COÛT INCONNU NE SUFFIT JAMAIS. Le défaut valait `1`, et c'était un prix
+ * inventé : il rendait un solde de 1 « suffisant » pour une action dont
+ * personne n'avait servi le tarif. L'infini se retient au lieu de deviner —
+ * même esprit que le solde inconnu, qui vaut zéro et n'ouvre rien.
+ *
+ * Le solde suffit quand il ATTEINT le coût, pas quand il le dépasse.
  *
  * Le dernier crédit est justement celui qu'on veut dépenser : `solde > cout`
  * l'aurait gelé sur le compte, et la feuille aurait envoyé recharger quelqu'un
  * qui pouvait payer. */
 export function soldeSuffisant(
-  { cout = 1, solde = 0 }: { cout?: number; solde?: number } = {},
+  { cout = Number.POSITIVE_INFINITY, solde = 0 }: { cout?: number; solde?: number } = {},
 ): boolean {
   return solde >= cout;
 }
@@ -35,7 +40,7 @@ export function soldeSuffisant(
  * Un coût nul passe par « Lancer », même avec un compte vide — une action
  * gratuite n'a rien à recharger, et l'envoyer à la boutique serait absurde. */
 export function actionPrincipale(
-  { cout = 1, solde = 0 }: { cout?: number; solde?: number } = {},
+  { cout = Number.POSITIVE_INFINITY, solde = 0 }: { cout?: number; solde?: number } = {},
 ): ActionPayante {
   return soldeSuffisant({ cout, solde }) ? "lancer" : "recharger";
 }

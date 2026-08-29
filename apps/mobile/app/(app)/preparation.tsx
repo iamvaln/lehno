@@ -107,6 +107,11 @@ export default function Preparation() {
     );
   }
 
+  /* Le coût de la piste qu'on s'apprête à confirmer, NARROWÉ une fois pour
+     toutes : un `?? 0` au moment de l'affichage recopierait un prix — zéro —
+     que le serveur n'a pas servi. Nul, la feuille ne s'ouvre pas. */
+  const coutARegler = aConfirmer === null ? null : coutDe(prix, aConfirmer);
+
   const pistes = pistesOffertes(occasion, actives);
   const sensible = occasion.nature === "sensitive";
 
@@ -185,18 +190,18 @@ export default function Preparation() {
           ET ELLE S'OUVRE TOUJOURS : il n'y a pas de mode gratuit. Le crédit se
           consomme quoi qu'il arrive, donc le coût s'annonce quoi qu'il
           arrive. */}
-      {aConfirmer !== null && coutDe(prix, aConfirmer) !== null ? (
+      {aConfirmer !== null && coutARegler !== null && solde !== null ? (
         <PaidActionSheet
           surTitre={t.prepPour(occasion.personDisplayName)}
           titre={detail[aConfirmer].titre}
           resultat={detail[aConfirmer].texte}
-          coutLibelle={t.creditUnite(coutDe(prix, aConfirmer) ?? 0)}
-          soldeLibelle={t.creditReste(solde ?? 0)}
+          coutLibelle={t.creditUnite(coutARegler)}
+          soldeLibelle={t.creditReste(solde)}
           lancer={t.feuilleLancer}
           recharger={t.feuilleRecharger}
           pasMaintenant={t.feuillePasMaintenant}
-          cout={coutDe(prix, aConfirmer) ?? 0}
-          solde={solde ?? 0}
+          cout={coutARegler}
+          solde={solde}
           onConfirmer={() => {
             const kind = aConfirmer;
             setAConfirmer(null);

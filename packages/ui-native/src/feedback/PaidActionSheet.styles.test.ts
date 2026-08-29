@@ -52,6 +52,18 @@ describe("ce que la feuille payante décide", () => {
     expect(actionPrincipale({ cout: 1 })).toBe("recharger");
   });
 
+  /* LE DÉFAUT QUI INVENTAIT UN PRIX. Le coût valait `1` faute de mieux : un
+     solde de 1 « suffisait » alors pour une action dont personne n'avait servi
+     le tarif, et la feuille proposait de lancer. Le tarif se règle en
+     administration sans livraison — le deviner, c'est annoncer l'ancien.
+
+     Un coût inconnu ne suffit désormais jamais, même à quelqu'un qui a de
+     quoi : mieux vaut renvoyer vers la recharge que débiter un prix supposé. */
+  it("ne lance rien quand le coût n'est pas servi, si riche soit-on", () => {
+    expect(actionPrincipale({ solde: 999 })).toBe("recharger");
+    expect(soldeSuffisant({ solde: 999 })).toBe(false);
+  });
+
   // Un solde négatif — un remboursement repris, un ajustement — ne doit jamais
   // ouvrir la génération.
   it("ne lance rien sur un solde négatif", () => {

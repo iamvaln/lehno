@@ -20,7 +20,16 @@ export interface PaidActionSheetProps {
   lancer: string;
   recharger: string;
   pasMaintenant: string;
-  cout?: number | undefined;
+  /* LE COÛT EST OBLIGATOIRE, et il n'a pas de valeur par défaut.
+     
+     Il en a porté une — `1` —, et c'était un prix écrit dans le client. Le
+     tarif se règle en administration sans livraison : un appelant qui oublie
+     de passer celui que le serveur sert annoncerait l'ancien, et déciderait
+     « Lancer » ou « Recharger » sur un chiffre que personne n'a servi.
+     
+     Le rendre obligatoire fait porter la garde au compilateur : on ne peut
+     plus ouvrir cette feuille sans dire ce qu'elle coûte. */
+  cout: number;
   solde?: number | undefined;
   onConfirmer?: (() => void) | undefined;
   onRecharger?: (() => void) | undefined;
@@ -31,7 +40,7 @@ export interface PaidActionSheetProps {
 export function PaidActionSheet({
   surTitre, titre, resultat, coutLibelle, soldeLibelle,
   lancer, recharger, pasMaintenant,
-  cout = 1, solde = 0, onConfirmer, onRecharger, onAnnuler, insetBas,
+  cout, solde = 0, onConfirmer, onRecharger, onAnnuler, insetBas,
 }: PaidActionSheetProps) {
   const couleurs = useCouleurs();
   const c = chassisDeFeuille({ couleurs, ...(insetBas !== undefined ? { insetBas } : {}) });
