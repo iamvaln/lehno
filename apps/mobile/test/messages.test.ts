@@ -113,6 +113,20 @@ describe("aucun texte ne fige ce que le serveur sert", () => {
       expect(fautives, "l'adresse de l'assistance est servie par le contrat").toEqual([]);
     });
 
+    /* LE PLUS GRAVE DES TROIS. Le numéro du compte de collecte est celui SUR
+       LEQUEL ON VERSE DE L'ARGENT ; il vient de `/me/collection-accounts`, qui
+       ne rend que les comptes visibles ET actifs — « sinon un client qui garde
+       son écran ouvert verserait sur un compte qu'on vient de retirer ».
+
+       La copie du 29/08 le portait en dur : « +237 6 91 00 00 00 ». Figé, il
+       envoie l'argent au mauvais endroit le jour où le compte change, et
+       personne ne s'en aperçoit avant de chercher un versement qui n'est jamais
+       arrivé. */
+    it(`${langue} ne porte aucun numéro de téléphone`, () => {
+      const fautives = valeurs(dico).filter((v) => /\+\s?\d[\d\s.-]{7,}/.test(v));
+      expect(fautives, "les comptes de collecte sont servis par le contrat").toEqual([]);
+    });
+
     /* Le délai de grâce vient de `gracePeriodDays`. Un nombre écrit en toutes
        lettres est le plus dur à retrouver ensuite — on cherche « 30 ». */
     it(`${langue} n'écrit pas le délai de grâce en toutes lettres`, () => {
