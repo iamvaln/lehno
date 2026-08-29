@@ -33,6 +33,9 @@ export const en = {
     waitlist_rejected: "That didn't go through. Try again in a moment.",
     contact_invalid: "This form isn't valid. Check the fields and try again.",
     contact_rejected: "That didn't go through. Try again in a moment.",
+    // One message for both bot filters, like the two above: telling the
+    // visitor which one caught would tell a robot how to adjust.
+    reservation_rejected: "That didn't go through. Try again in a moment.",
     maintenance: "Lehno is briefly closed for maintenance. Try again in a moment.",
     // Not "something went wrong": nothing is wrong on our side, and saying so
     // would send people looking for a mistake they did not make.

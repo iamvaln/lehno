@@ -21,3 +21,5 @@ export * from "./me-security.js";
 export * from "./me-studio.js";
 export * from "./studio.js";
 export * from "./me-wishes.js";
+export * from "./me-wishlists.js";
+export * from "./public-wishlists.js";
