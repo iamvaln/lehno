@@ -131,8 +131,13 @@ La fiche récupère « Préparer » : **quatre des cinq sorties mènent quelque 
     ouvert. Pas d'écran de détail : une notification est un chemin, pas une
     destination.
 15. **Recharger (3.9)** dans son état de lancement : **le solde, les mouvements,
-    le versement manuel**. Pas de paliers, pas de moyens de paiement, pas
-    d'attente opérateur.
+    le versement manuel**, et **les paliers** — décidé le 29/08. Le contrat les
+    imposait : `declarePaymentSchema` exige `bundleId` et `channelId`, on ne
+    déclare pas un versement sans citer le palier acheté et le canal employé.
+    « Pas de paliers » était intenable, et c'est cette phrase qui tombe.
+    Restent dehors : les moyens de paiement automatiques et l'attente
+    opérateur — `topup.provider` est éteint, rien ne pousse de demande sur le
+    téléphone.
 16. **Parrainage (3.9)** — la ligne vit à deux endroits et suit le drapeau aux
     deux.
 17. **À valider (3.8)**, **Lien de collecte (3.20)**, **Un lien public (3.12)** —
