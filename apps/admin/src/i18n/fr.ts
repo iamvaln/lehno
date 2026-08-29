@@ -831,6 +831,10 @@ export const fr = {
     etats: {
       enCours: "Délai de grâce",
       echue: "À effacer",
+      // Ce n'est pas un raffinement de « à effacer » : celui-là attend une
+      // date, celui-ci attend un geste de notre part. Les confondre ferait
+      // passer pour patient ce qui est en retard.
+      attendRemboursement: "Remboursement à verser",
       efface: "Effacé",
     },
     col: {
