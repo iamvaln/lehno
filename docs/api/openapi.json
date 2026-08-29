@@ -20657,7 +20657,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -20717,7 +20718,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -20777,7 +20779,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -20939,7 +20942,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -20999,7 +21003,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -21059,7 +21064,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -21135,7 +21141,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -21195,7 +21202,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
@@ -21255,7 +21263,8 @@
                         "maintenance",
                         "generation_unavailable",
                         "contact_invalid",
-                        "contact_rejected"
+                        "contact_rejected",
+                        "reservation_rejected"
                       ]
                     },
                     "message": {
