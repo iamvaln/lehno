@@ -78,6 +78,7 @@ describe("administration — les deux listes du paiement", () => {
       body: JSON.stringify({
         decision: "confirmer", montantRecu,
         reference: `MP${Math.floor(montantRecu)}`, reason: "Réception constatée sur le compte",
+        reasonCode: "operation_seen_at_the_operator",
       }),
     });
 
