@@ -1705,6 +1705,42 @@ model PaymentChannel {
   @@map("payment_channel")
 }
 
+/// Les versions successives d'un canal, avec leur période de validité.
+///
+/// ALIMENTÉE PAR DÉCLENCHEUR, jamais par l'application : c'est ce qui garantit
+/// qu'aucun chemin d'écriture ne l'esquive — y compris ceux qu'on n'a pas
+/// écrits. Voir `prisma/migrations/…_historisation_des_canaux`.
+///
+/// Aucune clé étrangère vers le canal, à dessein : la ligne doit lui SURVIVRE,
+/// pour qu'un paiement garde son explication quand le canal disparaît.
+model PaymentChannelHistory {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentChannelId String            @map("payment_channel_id") @db.Uuid
+  kind             PaymentMethodKind
+  operator         String            @db.VarChar(40)
+  country          String            @db.VarChar(2)
+  label            String            @db.VarChar(80)
+  feePercent       Decimal           @map("fee_percent") @db.Decimal(5, 2)
+  feeFixed         Decimal           @map("fee_fixed") @db.Decimal(12, 2)
+  feeMin           Decimal?          @map("fee_min") @db.Decimal(12, 2)
+  feeMax           Decimal?          @map("fee_max") @db.Decimal(12, 2)
+  feeBorneBy       FeeBearer         @map("fee_borne_by")
+  currency         String            @db.VarChar(3)
+  isActive         Boolean           @map("is_active")
+  position         Int?              @db.SmallInt
+  updatedAt        DateTime          @map("updated_at") @db.Timestamptz
+  validFrom        DateTime          @map("valid_from") @db.Timestamptz
+  /// Nulle veut dire « en vigueur ». Un index unique partiel garantit qu'il n'y
+  /// en a jamais deux à la fois pour un même canal.
+  validTo          DateTime?         @map("valid_to") @db.Timestamptz
+  /// Nul pour une migration, qui n'a pas d'administrateur.
+  changedBy        String?           @map("changed_by") @db.Uuid
+  reason           String
+
+  @@index([paymentChannelId, validFrom])
+  @@map("payment_channel_history")
+}
+
 /// Un compte d'opérateur sur lequel les clients versent. Jamais supprimé,
 /// seulement désactivé : un paiement passé le référence, et l'effacer rendrait
 /// ce paiement inexplicable.
