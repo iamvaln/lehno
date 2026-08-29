@@ -17,7 +17,7 @@ import { ecranEteint } from "./navigation.js";
    ligne disparaît alors, comme les sorties de la fiche d'un proche. Un rang qui
    n'ouvre rien est pire qu'un rang absent — il apprend à ne pas croire les
    rangs. */
-export type RouteDeReglage = "/(app)/profil" | null;
+export type RouteDeReglage = "/(app)/profil" | "/(app)/securite" | null;
 
 export interface Rang {
   cle: string;
@@ -54,7 +54,7 @@ const PLAN: readonly { cle: Section["cle"]; rangs: readonly Rang[] }[] = [
     cle: "compte",
     rangs: [
       { cle: "profil", icone: "user", drapeau: null, route: "/(app)/profil" },
-      { cle: "securite", icone: "shield", drapeau: null, route: null },
+      { cle: "securite", icone: "shield", drapeau: null, route: "/(app)/securite" },
     ],
   },
   {

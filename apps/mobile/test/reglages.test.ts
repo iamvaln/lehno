@@ -32,7 +32,7 @@ describe("ce que les réglages montrent", () => {
      sorties de la fiche d'un proche. Ouvrir vers rien apprend à ne pas croire
      les rangs, et c'est plus coûteux qu'un rang absent. */
   it("tait les rangs dont l'écran n'est pas porté", () => {
-    for (const attendu of ["securite", "rappels", "donnees", "aide", "recharge"]) {
+    for (const attendu of ["rappels", "donnees", "aide", "recharge"]) {
       expect(cles(LANCEMENT)).not.toContain(attendu);
     }
   });
@@ -48,8 +48,9 @@ describe("ce que les réglages montrent", () => {
   /* Un écran qui arrive n'a qu'à renseigner sa route : le rang paraît alors
      de lui-même, sans qu'on touche à l'écran des réglages. Le profil est le
      premier à faire le chemin. */
-  it("montre le profil, dont l'écran est porté", () => {
+  it("montre les rangs dont l'écran est porté", () => {
     expect(cles(LANCEMENT)).toContain("profil");
+    expect(cles(LANCEMENT)).toContain("securite");
   });
 
   /* Les méthodes de paiement suivent `topup.provider`, éteint au lancement :
