@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { Note } from "@lehno/contracts";
 import { MESSAGES } from "../messages/index.js";
 import { libelleDeLEcheance } from "../lib/libelles.js";
-import type { TableDesCategories } from "../lib/carnet.js";
+import type { TableDesCategories, Tri } from "../lib/carnet.js";
 import {
-  PAGE, basculeDeTri, dateCourte, interetsEtNotes, parametresDuCarnet,
+  PAGE, basculeDeTri, chercheVraiment, dateCourte, interetsEtNotes,
+  parametresDeRecherche, parametresDuCarnet,
   categoriesDeLaNote, estUnGardeFou, offreLeType, presseAssezPourSAfficher,
   resteACharger, sousTitreDuProche, TOPO_VISIBLE, topoReplie,
 } from "../lib/carnet.js";
@@ -291,5 +292,52 @@ describe("le topo se replie", () => {
       expect(vus.length + reste, `${n}`).toBe(n);
       expect(vus.length, `${n}`).toBeLessThanOrEqual(TOPO_VISIBLE);
     }
+  });
+});
+
+describe("la recherche passe par le serveur", () => {
+  const tri: Tri = { cle: "date", sens: "asc" };
+
+  /* Elle filtrait la page chargée, et pour l'éviter l'écran tirait le carnet
+     ENTIER par pages de cent. Quatre allers-retours avant la première lettre
+     tapée, refaits à chaque ouverture. */
+  it("ajoute la requête aux paramètres de la liste", () => {
+    expect(parametresDeRecherche(tri, 0, "ana"))
+      .toBe("?sort=date&direction=asc&offset=0&limit=20&q=ana");
+  });
+
+  /* LE TRI COURANT SE GARDE. Le contrat veut que la recherche « se combine au
+     tri et à la pagination » — §3.15 demande des résultats classés par
+     proximité, qui est le tri de la liste. Forcer l'alphabétique changerait
+     l'ordre sous les yeux de quelqu'un qui vient de taper une lettre. */
+  it("n'impose pas son tri", () => {
+    expect(parametresDeRecherche({ cle: "alpha", sens: "desc" }, 40, "ana"))
+      .toContain("sort=alpha&direction=desc&offset=40");
+  });
+
+  /* Un nom porte des espaces, des apostrophes, parfois une esperluette. Sans
+     encodage, « Marie & Ana » couperait l'URL en deux. */
+  it("encode ce qu'on tape", () => {
+    expect(parametresDeRecherche(tri, 0, "Marie & Ana")).toContain("q=Marie%20%26%20Ana");
+    expect(parametresDeRecherche(tri, 0, "N'Dour")).toContain("q=N'Dour");
+  });
+
+  // Sans requête, c'est la liste — pas une recherche vide.
+  it("retombe sur les paramètres de la liste quand rien n'est tapé", () => {
+    expect(parametresDeRecherche(tri, 0, "   ")).toBe(parametresDuCarnet(tri, 0));
+  });
+});
+
+describe("quand on cherche vraiment", () => {
+  /* Le contrat borne à un caractère, mais une seule lettre rend presque tout
+     le carnet : l'appel coûte autant que la liste et n'apprend rien. */
+  it("attend deux caractères", () => {
+    expect(chercheVraiment("a")).toBe(false);
+    expect(chercheVraiment("an")).toBe(true);
+  });
+
+  it("ne compte pas les espaces", () => {
+    expect(chercheVraiment("  a  ")).toBe(false);
+    expect(chercheVraiment("")).toBe(false);
   });
 });
