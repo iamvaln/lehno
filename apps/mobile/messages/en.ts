@@ -341,7 +341,7 @@ export const en = {
   moiListesUne: "1 wishlist",
   moiListesN: (n: number) => n + " wishlists",
   moiLienVoeux: "My wishes link",
-  moiLienVoeuxOuvert: "Until 3 Sept.",
+  moiLienVoeuxOuvert: (date: string) => "Until " + date,
   moiLienVoeuxFerme: "Closed",
   moiMotsRecus: "Words received",
   moiMotsAucun: "No words",

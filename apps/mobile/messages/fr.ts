@@ -365,7 +365,9 @@ export const fr = {
   moiListesUne: "1 wishlist",
   moiListesN: (n: number) => n + " wishlists",
   moiLienVoeux: "Mon lien de vœux",
-  moiLienVoeuxOuvert: "Jusqu'au 3 sept.",
+  /* La date vient de `closesOn`, jamais de la copie : figée, elle annoncerait
+     une fermeture qui n'est plus la bonne dès la deuxième occasion. */
+  moiLienVoeuxOuvert: (date: string) => "Jusqu'au " + date,
   moiLienVoeuxFerme: "Fermé",
   moiMotsRecus: "Les mots reçus",
   moiMotsAucun: "Aucun mot",
