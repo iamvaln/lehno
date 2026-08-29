@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Inject, Injectable, Param, Patch, Query, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
 import type { UserStatus } from "@prisma/client";
+import { motifSchema } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -36,8 +37,25 @@ const requeteSchema = z.object({
 
 const changementSchema = z.object({
   status: z.enum(["active", "suspended", "pending_deletion", "deleted"]),
-  reason: z.string().max(500).optional(),
+  reason: motifSchema,
+  /* Facultatif au schéma, exigé par le service quand le geste propose des
+     motifs. Le schéma ne peut pas trancher : c'est l'état visé qui décide du
+     geste, donc de la liste — et suspendre a une liste quand rétablir n'en a
+     pas. */
+  reasonCode: z.string().max(48).optional(),
 }).strict();
+
+/* L'action journalisée est la même pour les quatre états ; le GESTE, non.
+ *
+ * C'est toute la raison pour laquelle les motifs se rangent par geste :
+ * proposer « Compte de test » au moment de suspendre quelqu'un, ou « Fraude
+ * suspectée » au moment de le rétablir, serait absurde dans les deux sens. */
+const GESTE_PAR_ETAT: Record<z.infer<typeof changementSchema>["status"], string> = {
+  suspended: "account_suspend",
+  active: "account_restore",
+  pending_deletion: "account_erase",
+  deleted: "account_erase",
+};
 
 @Injectable()
 export class AdminUsersService {
@@ -175,7 +193,9 @@ export class AdminUsersService {
       await this.journal.consigner({
         auteurId,
         action: "user_status_update",
-        motif: entree.reason ?? "",
+        geste: GESTE_PAR_ETAT[entree.status],
+        motif: entree.reason,
+        ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
         cibleType: "user",
         cibleId: id,
         details: { from: avant.status, to: entree.status },
