@@ -1209,6 +1209,13 @@ model AuditLog {
   // qui le tient est posée en migration, la base refusant l'écriture plutôt que
   // le service. Un utilisateur agissant chez lui n'a rien à justifier.
   reason     String?
+  /// Le code du motif retenu, stable et jamais traduit.
+  ///
+  /// `reason` porte ce que l'administrateur a écrit ; celui-ci porte ce qu'on
+  /// peut COMPTER. Sans lui on n'agrégeait rien : les libellés d'interface sont
+  /// bilingues, et le même geste s'inscrivait « Fraude suspectée » ou
+  /// « Suspected fraud » selon la langue au moment du clic.
+  reasonCode String?    @map("reason_code") @db.VarChar(48)
   targetType String?    @map("target_type") @db.VarChar(40)
   targetId   String?    @map("target_id") @db.Uuid
   metadata   Json?
@@ -1220,6 +1227,49 @@ model AuditLog {
   @@index([targetType, targetId])
   @@index([createdAt])
   @@map("audit_log")
+}
+
+/// Un motif d'administration : un code stable, un libellé par langue.
+///
+/// LE CODE NE CHANGE JAMAIS ; le libellé, si — on corrige une faute, on
+/// retraduit. C'est toute la raison d'être de cette table : ce qui est
+/// enregistré sur un geste doit survivre à la réécriture de son libellé, et
+/// rester comptable dans les deux langues.
+///
+/// Normalisée plutôt qu'une ligne par (geste, motif) : un même motif sert
+/// plusieurs gestes, et deux lignes finiraient par porter deux libellés pour un
+/// seul code — le défaut exact que cette table répare.
+model AuditReason {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String   @unique @db.VarChar(48)
+  labelFr   String   @map("label_fr") @db.VarChar(120)
+  labelEn   String   @map("label_en") @db.VarChar(120)
+  /// Retiré de la liste proposée, sans effacer ce qu'il a déjà justifié.
+  isActive  Boolean  @default(true) @map("is_active")
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  scopes AuditReasonScope[]
+
+  @@map("audit_reason")
+}
+
+/// À quels gestes un motif se propose.
+///
+/// Le geste, et non l'action journalisée : le vocabulaire du journal est plus
+/// GROSSIER que celui des écrans — `user_status_update` couvre la suspension et
+/// le rétablissement. Ranger les motifs par action proposerait « Compte de
+/// test » au moment de suspendre quelqu'un.
+model AuditReasonScope {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reasonId String @map("reason_id") @db.Uuid
+  geste    String @db.VarChar(48)
+  position Int?   @db.SmallInt
+
+  reason AuditReason @relation(fields: [reasonId], references: [id], onDelete: Cascade)
+
+  @@unique([reasonId, geste])
+  @@index([geste, position])
+  @@map("audit_reason_scope")
 }
 
 // Le catalogue des modèles et leur ordre de repli. La priorité gouverne le
