@@ -981,3 +981,37 @@ export type Conversion = z.infer<typeof conversionSchema>;
 export type Metriques = z.infer<typeof metriquesSchema>;
 export type ManqueMetrique = z.infer<typeof manqueMetriqueSchema>;
 export type ActionPayante = z.infer<typeof actionPayanteSchema>;
+
+// ——— Les motifs d'administration ——————————————————————————————
+
+/**
+ * Un motif proposé pour un geste.
+ *
+ * **Les deux langues voyagent ensemble**, et ce n'est pas un oubli de
+ * négociation : le back-office change de langue depuis le menu de compte, sans
+ * recharger. Rendre un seul libellé obligerait à refaire l'appel à chaque
+ * bascule — et à ré-ouvrir la fenêtre de confirmation en cours.
+ *
+ * Le `code` est ce qui part au journal ; les libellés ne servent qu'à l'écran.
+ * C'est la distinction qui rend les comptages possibles : corriger une faute
+ * d'orthographe ne doit pas couper en deux l'historique d'un motif.
+ */
+export const motifPropositionSchema = z.object({
+  code: z.string(),
+  fr: z.string(),
+  en: z.string(),
+}).strict();
+
+/**
+ * Les motifs d'un geste. La liste peut être **vide**, et c'est un état normal :
+ * huit gestes n'ont aucun préréglage et n'attendent qu'une phrase. Un écran qui
+ * traiterait le vide comme une panne afficherait une erreur là où il faut une
+ * zone de saisie.
+ */
+export const motifsDuGesteSchema = z.object({
+  geste: z.string(),
+  motifs: z.array(motifPropositionSchema),
+}).strict();
+
+export type MotifProposition = z.infer<typeof motifPropositionSchema>;
+export type MotifsDuGeste = z.infer<typeof motifsDuGesteSchema>;
