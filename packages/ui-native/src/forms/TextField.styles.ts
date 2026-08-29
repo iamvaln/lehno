@@ -1,6 +1,6 @@
 import type { TextStyle, ViewStyle } from "react-native";
 import {
-  nativeFont, nativeRadius, nativeSize, nativeSpace, nativeTouchMin,
+  nativeBorder, nativeFont, nativeRadius, nativeSize, nativeSpace, nativeTouchMin,
 } from "@lehno/tokens";
 import type { Couleurs } from "../theme.js";
 
@@ -27,7 +27,7 @@ export function styleDeChamp({
       fontSize: nativeSize.bodyM,
       color: couleurs.textBody,
       backgroundColor: couleurs.surfaceCard,
-      borderWidth: 1,
+      borderWidth: nativeBorder.width,
       // L'erreur se voit sur le contour ET sur l'aide : le contour seul ne dit
       // pas ce qui ne va pas, l'aide seule se lit trop tard.
       borderColor: invalide ? couleurs.feedbackError : couleurs.borderObject,

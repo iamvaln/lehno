@@ -1,7 +1,6 @@
 import type { TextStyle, ViewStyle } from "react-native";
 import {
-  nativeFont, nativeLeading, nativeLineHeight, nativeRadius, nativeSize,
-  nativeSpace, nativeTouchMin,
+  nativeBorder, nativeFont, nativeLeading, nativeLineHeight, nativeRadius, nativeSize, nativeSpace, nativeTouchMin,
 } from "@lehno/tokens";
 import type { Couleurs } from "../theme.js";
 
@@ -102,7 +101,7 @@ export function styleDuBouton({
       borderRadius: nativeRadius.md,
       // 1 pt, pas hairlineWidth × 2 : celui-ci rend 0,67 sur un écran 3x et 1
       // sur un 2x, donc la bordure changerait d'épaisseur selon l'appareil.
-      borderWidth: 1,
+      borderWidth: nativeBorder.width,
       borderColor: r.bord,
       backgroundColor: enfonce ? r.fondPresse : r.fond,
       opacity: desactive ? 0.45 : 1,
