@@ -3,6 +3,11 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider, useCouleurs } from "@lehno/ui-native";
+import { LangueProvider } from "../lib/langue.js";
+import { DrapeauxProvider } from "../lib/DrapeauxProvider.js";
+import { MetadonneesProvider } from "../lib/MetadonneesProvider.js";
+import { ArretProvider, useArret } from "../lib/ArretProvider.js";
+import Maintenance from "./maintenance.js";
 import { POLICES } from "../polices/index.js";
 
 /* La coquille. Trois choses s'y posent, et l'ordre compte : la zone sûre doit
@@ -12,6 +17,14 @@ import { POLICES } from "../polices/index.js";
    Les polices se chargent avant tout rendu. Rendre pendant le chargement
    montrerait un premier écran dans la police système, puis un saut : c'est le
    défaut le plus visible d'une application qui porte une identité. */
+/* L'écran d'attente REMPLACE l'application, il ne s'y superpose pas : ni
+   en-tête, ni barre d'onglets. Et il ne déconnecte personne — un arrêt n'est
+   pas une invalidation de session, on reprend où l'on était. */
+function SousArret() {
+  const { enCours } = useArret();
+  return enCours ? <Maintenance /> : <Coquille />;
+}
+
 function Coquille() {
   const couleurs = useCouleurs();
   return (
@@ -22,7 +35,25 @@ function Coquille() {
           headerShown: false,
           contentStyle: { backgroundColor: couleurs.surfacePage },
         }}
-      />
+      >
+        {/* CE QUI POUSSE, ET CE QUI MONTE — décisions natives, §1.
+            Une SAISIE qui revient d'où elle vient monte en feuille : elle
+            s'écrit à propos de ce qu'on a sous les yeux, la feuille laisse voir
+            l'écran derrière, et le geste qui la ferme est celui qui l'annule.
+            Une DESTINATION, elle, remplace ce qu'on regardait.
+
+            La note et l'ajout d'une date sont des saisies. Elles vivent donc
+            au-dessus des onglets, pas dedans : un onglet les rendrait
+            atteignables sans qu'on ait rien à écrire. */}
+        <Stack.Screen
+          name="note"
+          options={{ presentation: "transparentModal", animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="evenement"
+          options={{ presentation: "transparentModal", animation: "slide_from_bottom" }}
+        />
+      </Stack>
     </>
   );
 }
@@ -33,7 +64,27 @@ export default function Racine() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <Coquille />
+        {/* La langue enveloppe la navigation : un écran qui se monte avant elle
+            afficherait « undefined » à chaque libellé. */}
+        <LangueProvider>
+          {/* Les drapeaux enveloppent la navigation : un écran qui se monte
+              avant eux montrerait ce que le serveur refuse. Sans session, la
+              liste vient de `/public/features` : le parcours d'entrée a la
+              sienne, il n'appelle pas un chemin authentifié pour rien. */}
+          {/* L'arrêt enveloppe TOUT, drapeaux compris : pendant une
+              intervention, /auth/* et /public/config répondent 503 eux aussi.
+              Un écran d'attente posé seulement après la connexion laisserait
+              quelqu'un devant un formulaire qui échoue sans dire pourquoi. */}
+          <ArretProvider>
+            <DrapeauxProvider>
+              {/* Les listes de valeurs et leur SENS : ce qu'aucune énumération
+                  ne porte. Elles se lisent une fois, après la connexion. */}
+              <MetadonneesProvider>
+                <SousArret />
+              </MetadonneesProvider>
+            </DrapeauxProvider>
+          </ArretProvider>
+        </LangueProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

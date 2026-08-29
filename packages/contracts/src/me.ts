@@ -283,6 +283,15 @@ export const noteSchema = z.object({
 
 export type Note = z.infer<typeof noteSchema>;
 
+/* Ce que `/me/persons/{id}/notes` rend. Un tableau nu n'a pas de nom, et sans
+   nom chaque appelant refait le sien — le client mobile embarquait zod pour
+   écrire `z.array(noteSchema)` que voici. Pas d'enveloppe ici, contrairement au
+   carnet : les notes d'un proche se comptent en dizaines, elles ne paginent
+   pas, et un total n'apprendrait rien qu'on ne voie déjà. */
+export const noteListSchema = z.array(noteSchema);
+
+export type NoteList = z.infer<typeof noteListSchema>;
+
 export const createNoteSchema = z.object({
   content: z.string().trim().min(1).max(4000),
   eventOccurrenceId: z.string().uuid().optional(),

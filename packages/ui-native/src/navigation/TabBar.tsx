@@ -14,11 +14,14 @@ export interface TabBarProps {
   tabs: readonly Onglet[];
   active: string;
   onSelect?: ((id: string) => void) | undefined;
+  /* Le retrait du bas — encoche, poignée. Il appartient à la BARRE : un écran
+     qui l'ajouterait aussi laisserait un trou blanc au-dessus du menu système. */
+  insetBas?: number | undefined;
 }
 
-export function TabBar({ tabs, active, onSelect }: TabBarProps) {
+export function TabBar({ tabs, active, onSelect, insetBas = 0 }: TabBarProps) {
   const couleurs = useCouleurs();
-  const barre = styleDOnglets({ couleurs }).barre;
+  const barre = styleDOnglets({ couleurs, insetBas }).barre;
 
   return (
     <View style={barre} accessibilityRole="tablist">
