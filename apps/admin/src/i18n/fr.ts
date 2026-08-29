@@ -61,7 +61,14 @@ export const fr = {
     suppressions: "Demandes de suppression",
     assistance: "Assistance",
     comptes: "Comptes",
-    credits: "Crédits et paiements",
+    // La section groupe les quatre cadrages ; l'entrée qui hérite du
+    // comportement actuel devient « À vérifier », puisqu'elle s'ouvre sur ce
+    // qui attend une décision.
+    paiements: "Paiements",
+    credits: "À vérifier",
+    transactionsToutes: "Toutes les transactions",
+    versementsManuels: "Versements manuels",
+    canauxPaiement: "Canaux et barèmes",
     acces: "Accès administrateurs",
     parametres: "Paramètres",
     fonctionnalites: "Fonctionnalités",

@@ -77,7 +77,30 @@ async function ouvrir(utilisateur: ReturnType<typeof userEvent.setup>, role: "ad
   localStorage.clear();
   magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role });
   render(<App />);
-  await utilisateur.click(within(screen.getByRole("navigation")).getByText(t.sections.credits));
+  await allerA(utilisateur, "credits");
+}
+
+/* Ouvrir l'entrée d'une section : les paiements vivent désormais dans un
+   accordéon, et l'entrée est repliée tant qu'on n'a pas déplié son intitulé.
+   Le geste est celui d'un humain — on ouvre, puis on choisit. */
+async function allerA(utilisateur: ReturnType<typeof userEvent.setup>, section: string): Promise<void> {
+  // Le fil d'Ariane est lui aussi une région de navigation : on vise la
+  // première, celle de la barre latérale.
+  const nav = screen.getAllByRole("navigation")[0] as HTMLElement;
+  const t2 = t as unknown as { sections: Record<string, string> };
+  const PARENTS: Record<string, string> = {
+    credits: "paiements", transactionsToutes: "paiements",
+    versementsManuels: "paiements", canauxPaiement: "paiements",
+  };
+  /* On OUVRE si besoin, on ne bascule pas : l'intitulé est un interrupteur, et
+     le cliquer alors que la section est déjà ouverte la referme — le deuxième
+     écran d'une même section devenait alors introuvable. */
+  const parent = PARENTS[section];
+  if (parent && !within(nav).queryByText(t2.sections[section] as string)) {
+    const intitule = within(nav).queryByText(t2.sections[parent] as string);
+    if (intitule) await utilisateur.click(intitule);
+  }
+  await utilisateur.click(within(nav).getByText(t2.sections[section] as string));
 }
 
 describe("les crédits et paiements", () => {
@@ -277,9 +300,14 @@ describe("les crédits et paiements", () => {
 
     await utilisateur.click(screen.getByRole("tab", { name: new RegExp(t.credits.onglets.reglages) }));
 
-    expect(await screen.findByText(t.credits.reglages.paliers.titre)).toBeInTheDocument();
-    expect(screen.getByText(t.credits.reglages.canaux.titre)).toBeInTheDocument();
-    expect(screen.getByText(t.credits.reglages.comptes.titre)).toBeInTheDocument();
+    /* Borné au contenu : « Canaux et barèmes » nomme désormais AUSSI l'entrée
+       de menu qui ouvre cet onglet. Chercher dans tout le document trouverait
+       les deux — et le test échouerait pour une raison qui n'est pas la
+       sienne. */
+    const contenu = screen.getByRole("main");
+    expect(await within(contenu).findByText(t.credits.reglages.paliers.titre)).toBeInTheDocument();
+    expect(within(contenu).getByText(t.credits.reglages.canaux.titre)).toBeInTheDocument();
+    expect(within(contenu).getByText(t.credits.reglages.comptes.titre)).toBeInTheDocument();
   });
 
   // Le numéro d'un compte de collecte est un compte du SERVICE : il se dicte à
@@ -314,5 +342,77 @@ describe("les crédits et paiements", () => {
     await screen.findByText("awa");
 
     expect(screen.queryByRole("tab", { name: new RegExp(t.credits.onglets.reglages) })).not.toBeInTheDocument();
+  });
+});
+
+/* Les quatre entrées de la section « Paiements » ouvrent le MÊME écran avec un
+   cadrage différent. Sans ces cas, rien ne distinguerait quatre entrées qui
+   mènent au même endroit d'une seule entrée répétée quatre fois. */
+describe("les quatre cadrages de la section Paiements", () => {
+  beforeEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
+
+  const lectures = (appels: ReturnType<typeof vi.fn>): string[] =>
+    appels.mock.calls.map(([u]) => String(u)).filter((u) => u.includes("/admin/payments?") || u.endsWith("/admin/payments"));
+
+  async function entrer(section: string) {
+    const utilisateur = userEvent.setup({ delay: null });
+    localStorage.clear();
+    magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role: "admin" });
+    render(<App />);
+    await allerA(utilisateur, section);
+    return utilisateur;
+  }
+
+  // C'est là qu'on ouvre la section : ce qui attend une décision.
+  it("« À vérifier » demande les paiements en attente", async () => {
+    const appels = serveur();
+    await entrer("credits");
+
+    await waitFor(() => expect(lectures(appels).some((u) => u.includes("etat=pending"))).toBe(true));
+  });
+
+  /* Les DEUX voies humaines, pas une : au lancement c'est la seule façon de
+     recharger, et n'en montrer qu'une moitié ferait manquer des versements. */
+  it("« Versements manuels » demande les deux voies humaines", async () => {
+    const appels = serveur();
+    await entrer("versementsManuels");
+
+    await waitFor(() => expect(lectures(appels).some((u) => u.includes("mode=manuel"))).toBe(true));
+  });
+
+  it("« Toutes les transactions » ne pose aucun filtre", async () => {
+    const appels = serveur();
+    await entrer("transactionsToutes");
+
+    await waitFor(() => expect(lectures(appels).length).toBeGreaterThan(0));
+    const derniere = lectures(appels).at(-1) ?? "";
+    expect(derniere).not.toContain("etat=");
+    expect(derniere).not.toContain("mode=");
+  });
+
+  it("« Canaux et barèmes » ouvre l'onglet des réglages", async () => {
+    serveur();
+    await entrer("canauxPaiement");
+
+    const contenu = screen.getByRole("main");
+    expect(await within(contenu).findByText(t.credits.reglages.canaux.titre)).toBeInTheDocument();
+  });
+
+  /* Le cadrage est un point de départ, pas une prison. Changer de filtre ensuite
+     ne fait pas quitter l'entrée : on n'a pas changé de page, on l'a réglée. */
+  it("changer de filtre ne quitte pas l'entrée", async () => {
+    const appels = serveur();
+    const utilisateur = await entrer("versementsManuels");
+    await screen.findByText("awa");
+
+    await utilisateur.selectOptions(
+      screen.getByLabelText(t.credits.paiements.filtreEtat),
+      "succeeded",
+    );
+
+    await waitFor(() => expect(lectures(appels).some((u) => u.includes("etat=succeeded"))).toBe(true));
+    // L'entrée reste celle où l'on est : le filtre a changé, pas la section.
+    const nav = screen.getAllByRole("navigation")[0] as HTMLElement;
+    expect(within(nav).getByText(t.sections.versementsManuels)).toBeInTheDocument();
   });
 });
