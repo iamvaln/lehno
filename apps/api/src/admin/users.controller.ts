@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Inject, Injectable, Param, Patch, Query, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
 import type { UserStatus } from "@prisma/client";
+import { motifSchema } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -36,8 +37,33 @@ const requeteSchema = z.object({
 
 const changementSchema = z.object({
   status: z.enum(["active", "suspended", "pending_deletion", "deleted"]),
-  reason: z.string().max(500).optional(),
+  reason: motifSchema,
+  /* Facultatif au schéma, exigé par le service quand le geste propose des
+     motifs. Le schéma ne peut pas trancher : c'est l'état visé qui décide du
+     geste, donc de la liste — et suspendre a une liste quand rétablir n'en a
+     pas. */
+  reasonCode: z.string().max(48).optional(),
 }).strict();
+
+/* L'action journalisée est la même pour les quatre états ; le GESTE, non.
+ *
+ * C'est toute la raison pour laquelle les motifs se rangent par geste :
+ * proposer « Compte de test » au moment de suspendre quelqu'un, ou « Fraude
+ * suspectée » au moment de le rétablir, serait absurde dans les deux sens.
+ *
+ * ET L'ÉTAT VISÉ NE SUFFIT PAS À LE DIRE. Deux gestes différents mènent tous
+ * deux à `active` : lever une suspension, et renoncer à une suppression. Le
+ * second a ses propres motifs — « suppression déclenchée par erreur » n'a
+ * aucun sens sur un compte qu'on vient de suspendre. Il faut donc l'état
+ * QUITTÉ autant que l'état visé. */
+function gesteDe(avant: UserStatus, apres: z.infer<typeof changementSchema>["status"]): string {
+  if (apres === "suspended") return "account_suspend";
+  if (apres === "deleted") return "account_erase";
+  // Demander la suppression n'est pas l'exécuter : aucun motif préréglé, la
+  // phrase suffit.
+  if (apres === "pending_deletion") return "deletion_request";
+  return avant === "pending_deletion" ? "deletion_cancel" : "account_restore";
+}
 
 @Injectable()
 export class AdminUsersService {
@@ -175,7 +201,9 @@ export class AdminUsersService {
       await this.journal.consigner({
         auteurId,
         action: "user_status_update",
-        motif: entree.reason ?? "",
+        geste: gesteDe(avant.status, entree.status),
+        motif: entree.reason,
+        ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
         cibleType: "user",
         cibleId: id,
         details: { from: avant.status, to: entree.status },

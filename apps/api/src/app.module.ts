@@ -44,6 +44,14 @@ import { NoteController, NotesController } from "./me/note.controller.js";
 import { NoteService } from "./me/note.service.js";
 import { OccurrenceWishesController, WishController } from "./me/wish.controller.js";
 import { WishService } from "./me/wish.service.js";
+import {
+  WishlistsController, OwnerWishController, MyReservationsController,
+} from "./me/wishlist.controller.js";
+import { WishlistService } from "./me/wishlist.service.js";
+import {
+  SharedWishlistController, ReserveWishController,
+} from "./public/shared-wishlist.controller.js";
+import { SharedWishlistService } from "./public/shared-wishlist.service.js";
 import { HomeController } from "./me/home.controller.js";
 import { HomeService } from "./me/home.service.js";
 import { MetadataController } from "./me/metadata.controller.js";
@@ -69,6 +77,7 @@ import { RoleGuard } from "./admin/role.guard.js";
 import { AuditService } from "./admin/audit.service.js";
 import { ParametersController, ParametersService } from "./admin/parameters.controller.js";
 import { AdminFeatureFlagsController, AdminFeatureFlagsService } from "./admin/feature-flags.controller.js";
+import { ReasonsController, ReasonsService } from "./admin/reasons.controller.js";
 import { PaymentSettingsController, PaymentSettingsService } from "./admin/payment-settings.controller.js";
 import { AdminPaymentsController, AdminCreditsController, AdminPaymentsService } from "./admin/payments.controller.js";
 import { PaymentListsController, PaymentListsService } from "./admin/payment-lists.controller.js";
@@ -109,6 +118,7 @@ import { CollecteService } from "./mur/collecte.service.js";
 import { SubmissionService } from "./mur/submission.service.js";
 import { VoeuxService } from "./mur/voeux.service.js";
 import { SurfacePubliqueService } from "./mur/jetons.js";
+import { EffacementService } from "./me/effacement.service.js";
 import { TrackingService } from "./tracking/tracking.service.js";
 import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
 import { PostHogAdapter } from "./tracking/posthog.adapter.js";
@@ -125,12 +135,14 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, NotificationController, ConfigController, LegalController,
     SecurityController,
     OccurrenceWishesController, WishController,
+    WishlistsController, OwnerWishController, MyReservationsController,
+    SharedWishlistController, ReserveWishController,
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
     WallController, WishLinkController, CollectionLinksController, SubmissionsController, ReceivedWishesController,
     PublicWallController, PublicCollectController, PublicWishesController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, AdminMaintenanceController, StudioController, PortraitStudioController, StudioOptionsController, MeController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, ReasonsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, AdminMaintenanceController, StudioController, PortraitStudioController, StudioOptionsController, MeController,
   ],
   providers: [
     PrismaService,
@@ -146,6 +158,12 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     RelancesService,
     EnvoiService,
     OrdonnanceurService,
+    /* Sa propre tâche, à sa propre heure : l'effacement ne rejoint pas les
+       étapes de l'ordonnanceur. Il n'a rien à voir avec la file des rappels, il
+       tourne plus tôt pour qu'un compte effacé ne reçoive pas le courrier du
+       matin, et une nuit où il déborderait n'a aucune raison de retarder des
+       envois qui, eux, ont une heure à tenir. */
+    EffacementService,
     // La mesure, derrière son port (§16.5). Sans clé PostHog et sans adhésion
     // explicite à la console, l'adaptateur ne fait RIEN — contrairement au
     // courrier, l'absence de mesure n'est pas une raison de refuser de
@@ -219,13 +237,16 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     // affichée ailleurs sur le site (voir apps/web/messages). Une variable
     // d'environnement, quand elle est posée, la remplace.
     { provide: "CONTACT_TO_EMAIL", useFactory: () => process.env.CONTACT_TO_EMAIL ?? "hello@lehno.app" },
-    /* L'adresse du site public, celle ou vivent les Murs et les formulaires de
-       collecte. Ce n'est pas un secret — le domaine s'affiche sur chaque
-       lien — donc un repli documente plutot qu'un refus de demarrer, comme
-       CONTACT_TO_EMAIL. Elle vit ici et non dans le code des services : le
-       jour ou l'on sert un domaine de recette, un seul endroit change.
-       Sans barre oblique finale : les chemins la posent eux-memes, et
-       « https://lehno.app//valentine » n'est pas la meme adresse. */
+    /* L'adresse du site public, celle où vivent les Murs, les formulaires de
+       collecte et les liens de partage.
+       Ce n'est pas un secret — le domaine s'affiche sur chaque lien — donc un
+       repli documenté plutôt qu'un refus de démarrer, comme CONTACT_TO_EMAIL.
+       Elle vit au SERVEUR et non au client : deux versions du parc
+       fabriqueraient deux adresses différentes pour la même liste, et celle
+       qu'un utilisateur a collée dans un groupe cesserait de marcher au
+       changement de domaine.
+       Sans barre oblique finale : les chemins la posent eux-mêmes, et
+       « https://lehno.app//valentine » n'est pas la même adresse. */
     {
       provide: "PUBLIC_WEB_URL",
       useFactory: () => (process.env.PUBLIC_WEB_URL ?? "https://lehno.app").replace(/\/+$/, ""),
@@ -256,6 +277,8 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     PersonService,
     NoteService,
     WishService,
+    WishlistService,
+    SharedWishlistService,
     HomeService,
     MetadataService,
     NotificationPreferencesService,
@@ -271,7 +294,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     RoleGuard,
     AuditService,
     ParametersService,
-    AdminFeatureFlagsService,
+    AdminFeatureFlagsService, ReasonsService,
     PaymentSettingsService,
     AdminPaymentsService,
     PaymentListsService,

@@ -687,6 +687,37 @@ Ce qui a été offert à un proche, une année donnée. **Sans cette trace, rien
 - La génération d'idées **lit cet historique** et écarte ce qui a déjà été offert.
 - La fiche d'un proche affiche cet historique par année.
 
+## Wishlist
+
+**La liste elle-même**, une par occasion de l'utilisateur. Elle existe comme table à part alors qu'`OwnerWish` porte déjà `event_occurrence_id` : sans elle, « j'ai ouvert ma liste et je n'ai pas encore ajouté de souhait » ne s'écrit nulle part, et l'écran de §3.29 ne distinguerait pas une **liste vide** — où il invite à ajouter un premier souhait — d'une **occasion sans liste**, où il propose d'en ouvrir une.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| event_occurrence_id | uuid | non | **oui** | — | FK → event_occurrence(id) on delete cascade ; une occasion de l'utilisateur **lui-même** |
+| created_at | timestamptz | non | — | now() | |
+| updated_at | timestamptz | non | — | now() | |
+
+- **Une seule liste par occasion** : deux listes sur la même occasion rendraient le partage ambigu — lequel des deux liens l'ouvrirait ?
+- **L'occasion doit être celle de la self-Person.** Le serveur le vérifie par `person.is_self` avant d'écrire ; `event_occurrence.user_id` ne suffit pas, cette colonne valant aussi pour l'anniversaire d'un proche. Ouvrir une liste dessus publierait ce que ce proche a confié en privé.
+- **Aucun jeton ici** : le lien de partage vit à côté (voir `WishlistShareLink`).
+
+## WishlistShareLink
+
+Le lien public d'une liste, sur le modèle de `CollectionLink` : durable, révocable, sans expiration automatique.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| wishlist_id | uuid | non | — | — | FK → wishlist(id) on delete cascade |
+| token | varchar(32) | non | oui | — | Jeton d'accès dans l'URL |
+| is_active | boolean | non | — | true | Révocable (pas d'expiration automatique) |
+| created_at | timestamptz | non | — | now() | |
+
+- **Plusieurs lignes par liste, et c'est l'intérêt.** Faire tourner un jeton unique porté par la `Wishlist` effacerait l'ancien, et le lien déjà partagé — sur un statut, dans un groupe — rendrait `404` : « cette page n'existe pas » là où il faut dire « ce lien n'est plus actif » (surfaces publiques §3.9). La ligne révoquée **survit** pour pouvoir le dire.
+- **Un jeton inconnu, lui, rend bien `404`** : rien n'a jamais existé, et répondre « révoqué » apprendrait qu'un jeton a un jour été valide.
+- Le partage est **idempotent** : redemander l'adresse rend le même jeton tant qu'un lien actif existe. En frapper un neuf à chaque appel ferait cesser de valoir celui qu'on vient de coller dans un groupe.
+
 ## OwnerWish
 
 **Mon** souhait, sur **ma** liste. Rattaché à une `EventOccurrence` qui m'appartient — mon anniversaire, mon mariage, ma crémaillère : un cadeau de Noël n'est pas un cadeau de mariage.

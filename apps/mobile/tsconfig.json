@@ -16,7 +16,9 @@
     "fixtures",
     "messages",
     "polices",
-    "test"
+    "test",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ],
   "exclude": [
     "node_modules"

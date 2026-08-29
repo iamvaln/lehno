@@ -3,6 +3,23 @@ import { usernameSchema } from "./profile.js";
 
 export const requestOtpSchema = z.object({ email: z.string().email().max(254) }).strict();
 
+/* Ce que la demande rend. Toujours `sent: true`, adresse connue ou non — dire
+ * le contraire apprendrait qui a un compte.
+ *
+ * `retryAfterSeconds` porte le délai avant d'en redemander un, et il CROÎT —
+ * cinq secondes, puis vingt-cinq, puis cent vingt-cinq. Il vient donc du
+ * serveur : une formule recopiée côté client ferait appliquer deux règles au
+ * parc, et celle du serveur resterait la seule qui compte.
+ *
+ * Il vivait en ligne dans le constructeur du contrat publié, où le client ne
+ * pouvait pas l'importer. Ici, les deux le lisent au même endroit. */
+export const requestOtpResultSchema = z.object({
+  sent: z.literal(true),
+  retryAfterSeconds: z.number().int().positive(),
+}).strict();
+
+export type RequestOtpResult = z.infer<typeof requestOtpResultSchema>;
+
 export const verifyOtpSchema = z.object({
   email: z.string().email().max(254),
   code: z.string().regex(/^\d{6}$/),

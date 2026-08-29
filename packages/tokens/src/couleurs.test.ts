@@ -58,6 +58,26 @@ describe("couleurs", () => {
     }
   });
 
+  /* Les illustrations ont leurs propres rôles, et ce n'est pas de la
+     redondance. En thème clair, la masse tombe sur le même violet que l'action ;
+     les confondre ferait repeindre vingt-six illustrations le jour où la couleur
+     d'action bouge. Une masse d'illustration n'est pas une action. */
+  it("les illustrations nomment leurs trois rôles, dans les deux thèmes", () => {
+    for (const theme of ["light", "dark"] as const) {
+      const c = resolve(theme);
+      for (const role of ["illusMass", "illusForm", "illusWarm"] as const) {
+        expect(c[role], `${theme}.${role}`).toMatch(/^#[0-9A-F]{6}$/i);
+      }
+    }
+  });
+
+  // L'accent chaud de l'illustration est l'abricot, la seule couleur chaude du
+  // système — la même dans les deux thèmes, comme partout où elle paraît.
+  it("l'accent chaud des illustrations est l'abricot des deux thèmes", () => {
+    expect(resolve("light").illusWarm).toBe(resolve("light").celebrate);
+    expect(resolve("dark").illusWarm).toBe(resolve("dark").celebrate);
+  });
+
   it("l'anneau de focus se distingue du fond qu'il entoure", () => {
     for (const theme of ["light", "dark"] as const) {
       const c = resolve(theme);

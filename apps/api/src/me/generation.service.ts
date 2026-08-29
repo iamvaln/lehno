@@ -76,7 +76,7 @@ export class GenerationService {
         `orientation "${orientation}" does not suit a sensitive occasion`,
       );
 
-    const { execution, dejaLancee } = await this.debiter(userId, orientation, options.cle ?? null);
+    const { execution, dejaLancee } = await this.debiter(userId, occurrence.id, orientation, options.cle ?? null);
 
     /* La demande avait déjà été lancée sous cette clé : on REJOINT plutôt que
        de recommencer. Rien n'a été débité une seconde fois — l'unicité en base
@@ -107,7 +107,9 @@ export class GenerationService {
    * Le solde se relit DANS la transaction, pas avant : entre une lecture et une
    * écriture séparées, deux demandes simultanées liraient toutes deux un solde
    * suffisant et débiteraient deux fois un crédit qui n'existait qu'une. */
-  private async debiter(userId: string, orientation: Orientation, cle: string | null) {
+  private async debiter(
+    userId: string, occurrenceId: string, orientation: Orientation, cle: string | null,
+  ) {
     try {
       const execution = await this.prisma.$transaction(async (tx) => {
         const action = await tx.premiumAction.findUnique({ where: { code: ACTION_MESSAGE } });
@@ -134,6 +136,12 @@ export class GenerationService {
           data: {
             userId, premiumActionId: action.id, creditsSpent: action.creditCost,
             status: "pending", orientation,
+            /* LA CIBLE, écrite dès le lancement et non seulement sur le message
+               produit. Une génération qui échoue n'a pas de message : sans
+               elle, l'écran d'attente n'aurait ni nom à afficher ni de quoi
+               proposer de refaire — il dirait « une production a échoué » sans
+               dire pour qui. */
+            eventOccurrenceId: occurrenceId,
             ...(cle === null ? {} : { idempotencyKey: cle }),
           },
           select: { id: true },

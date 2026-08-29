@@ -13,6 +13,7 @@ export const fr = {
     otp_expired: "Ce code a expiré. Demandez-en un nouveau.",
     otp_too_many_attempts: "Trop d'essais. Demandez un nouveau code.",
     reason_required: "Ce geste demande un motif : il sera gardé au journal.",
+    reason_code_unknown: "Ce motif ne se propose plus pour ce geste. Rechargez la liste.",
     // Le studio : on ne publie que ce qu'on a vu tourner. Le message dit le
     // geste qui manque, pas seulement le refus — un bouton grisé sans
     // explication se lit comme une panne.
@@ -41,6 +42,9 @@ export const fr = {
     // Même formule que les deux autres refus de robot : elle ne dit pas
     // lequel des filtres a mordu.
     collect_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
+    // Un seul message pour les deux filtres à robots, comme les deux
+    // au-dessus : dire lequel a mordu l'apprendrait au robot.
+    reservation_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
     maintenance: "Lehno est momentanément fermé pour une intervention. Réessayez dans un instant.",
     // Pas « une erreur est survenue » : rien n'a échoué de notre côté, et le
     // dire enverrait chercher une faute qu'on n'a pas commise. §4.5 : ce qui
