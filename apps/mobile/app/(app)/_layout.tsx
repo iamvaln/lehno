@@ -35,10 +35,17 @@ export default function Application() {
     { id: "accueil", label: t.ongletAccueil, icon: "house" },
     { id: "dates", label: t.ongletDates, icon: "calendar" },
     { id: "proches", label: t.ongletProches, icon: "heart" },
+    /* RÉGLAGES NE SUIT AUCUN DRAPEAU, et c'est tout l'intérêt. Il porte ce que
+       la disparition de « Moi » emportait — le solde, le profil, la sécurité,
+       et se déconnecter : rien de tout cela n'est une fonctionnalité qu'on
+       allume. C'est le quatrième onglet du lancement, celui qui rend la barre
+       complète quand « Moi » n'est pas là. */
+    { id: "reglages", label: t.ongletReglages, icon: "settings" },
   ];
   if (moiVisible(actives)) {
-    // Réservé : l'écran arrivera avec son lot. La règle est écrite ici pour
-    // qu'elle ne s'invente pas ailleurs.
+    // Réservé : « Moi » (3.17) arrivera avec son lot, en cinquième onglet. Il
+    // ne remplace pas Réglages — les deux coexistent, l'un pour ce qu'on
+    // montre, l'autre pour ce qui nous concerne.
   }
 
   return (
@@ -59,6 +66,7 @@ export default function Application() {
       <Tabs.Screen name="accueil" />
       <Tabs.Screen name="dates" />
       <Tabs.Screen name="proches" />
+      <Tabs.Screen name="reglages" />
     </Tabs>
   );
 }

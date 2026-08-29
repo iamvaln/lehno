@@ -51,5 +51,21 @@ export const updateProfileSchema = profileSchema
   .partial()
   .strict();
 
+/* Ce que `/me/profile/username-available` rend.
+ *
+ * Une forme d'un seul champ mérite quand même son nom : sans lui, chaque
+ * appelant refait le sien — et le jour où la réponse portera aussi une
+ * suggestion (« valentine2 est libre », que la maquette annonce déjà), les
+ * copies ne l'apprendront pas toutes en même temps.
+ *
+ * La disponibilité dépend du DEMANDEUR : garder son propre pseudo n'est jamais
+ * un conflit. C'est pour cela que la route est sous garde, et que le client ne
+ * peut pas y répondre lui-même. */
+export const usernameAvailabilitySchema = z.object({
+  available: z.boolean(),
+}).strict();
+
+export type UsernameAvailability = z.infer<typeof usernameAvailabilitySchema>;
+
 export type Profile = z.infer<typeof profileSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
