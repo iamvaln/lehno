@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Icon } from "../base/Icon.js";
 
 export interface SidebarItem {
@@ -8,6 +8,14 @@ export interface SidebarItem {
   icon: string;
   /** « alerte » pose un point : un délai court. Les chiffres restent au tableau de bord. */
   ton?: "alerte";
+  /**
+   * Les écrans d'une section. Présents, l'entrée **ouvre au lieu de mener** :
+   * elle ne désigne aucun écran, donc le clic ne change pas de page.
+   *
+   * Une section ne se crée que lorsqu'elle a plusieurs écrans à porter : un
+   * accordéon à un seul enfant ajoute un geste sans rien ranger.
+   */
+  enfants?: SidebarItem[];
 }
 
 export interface SidebarFamille {
@@ -73,7 +81,10 @@ const TITRE_FAMILLE: CSSProperties = {
 
 const ETAT = "var(--duration-state) var(--ease-state)";
 
-function styleItem(actif: boolean): CSSProperties {
+/* `dedans` : l'intitulé d'une section qui contient l'écran courant. Il n'est pas
+   ACTIF — il ne mène nulle part —, mais il se distingue : sans ça, une section
+   repliée et une section dont on lit un écran auraient la même voix. */
+function styleItem(actif: boolean, dedans = false): CSSProperties {
   return {
     all: "unset",
     boxSizing: "border-box",
@@ -87,12 +98,20 @@ function styleItem(actif: boolean): CSSProperties {
     marginBottom: "var(--space-2)",
     fontFamily: "var(--font-body)",
     fontSize: "var(--text-body-s)",
-    fontWeight: actif ? "var(--font-body-semibold)" : "var(--font-body-regular)",
+    fontWeight: actif || dedans ? "var(--font-body-semibold)" : "var(--font-body-regular)",
     background: actif ? "var(--action-quiet-bg)" : "transparent",
-    color: actif ? "var(--text-accent)" : "var(--text-secondary)",
+    color: actif ? "var(--text-accent)" : dedans ? "var(--text-body)" : "var(--text-secondary)",
     transition: `background ${ETAT}, color ${ETAT}`,
   };
 }
+
+/* Les enfants s'alignent sur le libellé du parent, sous un filet qui les
+   rattache : décalés sans filet, ils flotteraient sans qu'on voie à quoi. */
+const ENFANTS: CSSProperties = {
+  marginLeft: "var(--space-16)",
+  paddingLeft: "var(--space-10)",
+  borderLeft: "1px solid var(--border-hairline)",
+};
 
 const POINT: CSSProperties = {
   flex: "0 0 auto",
@@ -140,27 +159,89 @@ export function Sidebar({ familles, marque, active, onSelect, role }: SidebarPro
             <div className="coquille-famille-titre" style={TITRE_FAMILLE}>{famille.titre}</div>
           ) : null}
 
-          {famille.items.map((item) => {
-            const actif = item.id === active;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className="coquille-item"
-                onClick={onSelect ? () => onSelect(item.id) : undefined}
-                aria-current={actif ? "page" : undefined}
-                style={styleItem(actif)}
-              >
-                <Icon name={item.icon} size={17} />
-                <span style={{ flex: 1, minWidth: 0 }}>{item.label}</span>
-                {item.ton === "alerte" ? (
-                  <span data-ton="alerte" aria-hidden="true" style={POINT} />
-                ) : null}
-              </button>
-            );
-          })}
+          {famille.items.map((item) => (
+            item.enfants && item.enfants.length > 0 ? (
+              <Section key={item.id} item={item} active={active} {...(onSelect ? { onSelect } : {})} />
+            ) : (
+              <Entree key={item.id} item={item} active={active} {...(onSelect ? { onSelect } : {})} />
+            )
+          ))}
         </div>
       ))}
     </nav>
+  );
+}
+
+/**
+ * Une section et ses écrans.
+ *
+ * **Elle s'ouvre d'elle-même quand l'écran courant est dedans**, et le reste :
+ * sans ça, arriver sur un écran par un autre chemin — un chiffre du tableau de
+ * bord, un retour d'historique — le montrerait replié, et la barre ne dirait
+ * plus où l'on est.
+ *
+ * L'intitulé n'est pas un lien : il n'a pas d'écran à lui. Le rendre cliquable
+ * vers « le premier de ses enfants » ferait deux entrées pour un même écran, et
+ * la seconde changerait de destination le jour où l'ordre change.
+ */
+function Section({ item, active, onSelect }: {
+  item: SidebarItem;
+  active?: string | undefined;
+  onSelect?: ((id: string) => void) | undefined;
+}) {
+  const dedans = (item.enfants ?? []).some((e) => e.id === active);
+  const [ouvert, setOuvert] = useState(dedans);
+  useEffect(() => { if (dedans) setOuvert(true); }, [dedans]);
+  const idListe = `nav-${item.id}`;
+
+  return (
+    <div className="coquille-section">
+      <button
+        type="button"
+        className="coquille-item"
+        onClick={() => setOuvert((v) => !v)}
+        aria-expanded={ouvert}
+        aria-controls={idListe}
+        style={styleItem(false, dedans)}
+      >
+        <Icon name={item.icon} size={17} />
+        <span style={{ flex: 1, minWidth: 0 }}>{item.label}</span>
+        {item.ton === "alerte" ? (
+          <span data-ton="alerte" aria-hidden="true" style={POINT} />
+        ) : null}
+        <Icon name={ouvert ? "chevron-down" : "chevron-right"} size={14} />
+      </button>
+      {ouvert ? (
+        <div id={idListe} className="coquille-enfants" style={ENFANTS}>
+          {item.enfants?.map((enfant) => (
+            <Entree key={enfant.id} item={enfant} active={active} {...(onSelect ? { onSelect } : {})} sansIcone />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function Entree({ item, active, onSelect, sansIcone }: {
+  item: SidebarItem;
+  active?: string | undefined;
+  onSelect?: ((id: string) => void) | undefined;
+  sansIcone?: boolean;
+}) {
+  const actif = item.id === active;
+  return (
+    <button
+      type="button"
+      className="coquille-item"
+      onClick={onSelect ? () => onSelect(item.id) : undefined}
+      aria-current={actif ? "page" : undefined}
+      style={styleItem(actif)}
+    >
+      {sansIcone ? null : <Icon name={item.icon} size={17} />}
+      <span style={{ flex: 1, minWidth: 0 }}>{item.label}</span>
+      {item.ton === "alerte" ? (
+        <span data-ton="alerte" aria-hidden="true" style={POINT} />
+      ) : null}
+    </button>
   );
 }

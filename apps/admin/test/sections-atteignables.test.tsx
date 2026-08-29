@@ -9,6 +9,20 @@ import { dashboard } from "../src/fixtures/index.js";
 
 const t = messages("fr");
 
+/* Le menu a deux étages depuis que les paiements se groupent. Un intitulé de
+   section n'est PAS un écran : il ouvre l'accordéon et ne mène nulle part.
+   Les distinguer ici évite deux contresens — chercher un chemin pour un
+   intitulé, et croire qu'un écran replié n'existe pas. */
+const ECRANS_DU_MENU = new Set(
+  NAVIGATION.flatMap(({ items }) =>
+    items.flatMap((i) => (typeof i === "string" ? [i] : [...i.enfants]))),
+);
+
+const INTITULES_DE_SECTION = new Set(
+  NAVIGATION.flatMap(({ items }) =>
+    items.flatMap((i) => (typeof i === "string" ? [] : [i.id]))),
+);
+
 function ouvrir(role: "support" | "admin") {
   localStorage.clear();
   magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role });
@@ -21,6 +35,29 @@ function ouvrir(role: "support" | "admin") {
  * qu'aucune entrée ne mène nulle part, et qu'aucune section livrée ne se
  * présente encore comme à venir.
  */
+/* Ouvrir l'entrée d'une section : les paiements vivent désormais dans un
+   accordéon, et l'entrée est repliée tant qu'on n'a pas déplié son intitulé.
+   Le geste est celui d'un humain — on ouvre, puis on choisit. */
+async function allerA(utilisateur: ReturnType<typeof userEvent.setup>, section: string): Promise<void> {
+  // Le fil d'Ariane est lui aussi une région de navigation : on vise la
+  // première, celle de la barre latérale.
+  const nav = screen.getAllByRole("navigation")[0] as HTMLElement;
+  const t2 = t as unknown as { sections: Record<string, string> };
+  const PARENTS: Record<string, string> = {
+    credits: "paiements", transactionsToutes: "paiements",
+    versementsManuels: "paiements", canauxPaiement: "paiements",
+  };
+  /* On OUVRE si besoin, on ne bascule pas : l'intitulé est un interrupteur, et
+     le cliquer alors que la section est déjà ouverte la referme — le deuxième
+     écran d'une même section devenait alors introuvable. */
+  const parent = PARENTS[section];
+  if (parent && !within(nav).queryByText(t2.sections[section] as string)) {
+    const intitule = within(nav).queryByText(t2.sections[parent] as string);
+    if (intitule) await utilisateur.click(intitule);
+  }
+  await utilisateur.click(within(nav).getByText(t2.sections[section] as string));
+}
+
 describe("ce que le menu promet, l'écran le tient", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -31,13 +68,13 @@ describe("ce que le menu promet, l'écran le tient", () => {
   // annonce, c'est un trou dans une phrase.
   it("une section encore à venir nomme le gabarit qu'elle emploiera", async () => {
     const utilisateur = userEvent.setup({ delay: null });
-    const nav = ouvrir("admin");
+    ouvrir("admin");
     const annonces = Object.values(t.gabarits).map((nom) =>
       t.attente.gabarit.replace("{gabarit}", nom),
     );
 
     for (const section of sectionsVisibles("admin")) {
-      await utilisateur.click(within(nav).getByText(t.sections[section as keyof typeof t.sections]));
+      await allerA(utilisateur, section);
       const contenu = screen.getByRole("main").textContent ?? "";
       if (!contenu.includes(t.attente.titre)) continue; // la section est livrée
       expect(
@@ -52,10 +89,10 @@ describe("ce que le menu promet, l'écran le tient", () => {
   // dans un remaniement se lirait « Section à venir » sans que rien n'échoue.
   it("une section livrée ne se présente plus comme à venir", async () => {
     const utilisateur = userEvent.setup({ delay: null });
-    const nav = ouvrir("admin");
+    ouvrir("admin");
 
     for (const section of ["comptes", "credits", "assistance", "acces", "audit", "connexions", "parametres", "fonctionnalites", "modeles", "liens", "studio"]) {
-      await utilisateur.click(within(nav).getByText(t.sections[section as keyof typeof t.sections]));
+      await allerA(utilisateur, section);
       expect(
         screen.getByRole("main").textContent ?? "",
         `« ${section} » a un écran et se présente pourtant comme à venir`,
@@ -69,7 +106,6 @@ describe("ce que le menu promet, l'écran le tient", () => {
   // se faire désigner — c'est ainsi qu'une donnée d'aperçu s'est mise à mener
   // vers « transactions », une section qui n'a jamais existé.
   it("toute section qui porte un libellé a un chemin, menu ou non", () => {
-    const auMenu = new Set(NAVIGATION.flatMap(({ items }) => items));
     const horsMenu: Record<string, string> = {
       profil: "le menu de compte de la barre haute",
       suppressions: "une file « à traiter » du tableau de bord",
@@ -77,7 +113,7 @@ describe("ce que le menu promet, l'écran le tient", () => {
 
     for (const section of Object.keys(t.sections)) {
       expect(
-        auMenu.has(section) || section in horsMenu,
+        ECRANS_DU_MENU.has(section) || INTITULES_DE_SECTION.has(section) || section in horsMenu,
         `« ${section} » porte un libellé sans qu'aucun chemin n'y mène`,
       ).toBe(true);
     }
@@ -88,7 +124,7 @@ describe("ce que le menu promet, l'écran le tient", () => {
   // clic mène à « Section à venir » pour un écran parfois déjà livré ailleurs.
   it("les données d'aperçu ne désignent que des sections qu'on peut ouvrir", () => {
     const ouvrables = new Set([
-      ...NAVIGATION.flatMap(({ items }) => items),
+      ...ECRANS_DU_MENU,
       // Les files du tableau de bord, hors menu mais bien rendues.
       "suppressions",
     ]);
