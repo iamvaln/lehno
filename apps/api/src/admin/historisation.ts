@@ -17,9 +17,11 @@ export async function poserLAuteurEtLeMotif(
   tx: Prisma.TransactionClient,
   auteurId: string | null,
   motif: string,
+  codeMotif?: string,
 ): Promise<void> {
   await tx.$queryRaw`
     select set_config('app.actor_id', ${auteurId ?? ""}, true),
-           set_config('app.reason', ${motif}, true)
+           set_config('app.reason', ${motif}, true),
+           set_config('app.reason_code', ${codeMotif ?? ""}, true)
   `;
 }

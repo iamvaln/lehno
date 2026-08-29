@@ -79,6 +79,7 @@ import { RoleGuard } from "./admin/role.guard.js";
 import { AuditService } from "./admin/audit.service.js";
 import { ParametersController, ParametersService } from "./admin/parameters.controller.js";
 import { AdminFeatureFlagsController, AdminFeatureFlagsService } from "./admin/feature-flags.controller.js";
+import { ReasonsController, ReasonsService } from "./admin/reasons.controller.js";
 import { PaymentSettingsController, PaymentSettingsService } from "./admin/payment-settings.controller.js";
 import { AdminPaymentsController, AdminCreditsController, AdminPaymentsService } from "./admin/payments.controller.js";
 import { PaymentListsController, PaymentListsService } from "./admin/payment-lists.controller.js";
@@ -129,7 +130,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     MeFeaturesController, PublicFeaturesController, MaintenanceController,
     CreditsController, ReferralController, InvitationController,
     WaitlistController, ContactController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, MethodesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, AdminMaintenanceController, StudioController, PortraitStudioController, StudioOptionsController, MeController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, ReasonsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, MethodesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, AdminMaintenanceController, StudioController, PortraitStudioController, StudioOptionsController, MeController,
   ],
   providers: [
     PrismaService,
@@ -271,7 +272,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     RoleGuard,
     AuditService,
     ParametersService,
-    AdminFeatureFlagsService,
+    AdminFeatureFlagsService, ReasonsService,
     PaymentSettingsService,
     AdminPaymentsService,
     PaymentListsService,
