@@ -62,3 +62,23 @@ export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const list = toTruncate.map((t) => `"public"."${t.tablename}"`).join(", ");
   await prisma.$executeRawUnsafe(`truncate table ${list} restart identity cascade`);
 }
+
+/**
+ * Écrit une configuration en posant le motif que le déclencheur d'historisation
+ * exige.
+ *
+ * Les fixtures en ont besoin depuis que les tables de configuration sont
+ * historisées : sans motif, la base REFUSE l'écriture. On ne pose pas de motif
+ * par défaut sur la connexion de test — ce serait masquer, dans les tests
+ * mêmes, l'oubli qu'on veut voir tomber en production.
+ */
+export async function avecMotif<T>(
+  prisma: PrismaClient,
+  motif: string,
+  ecriture: (tx: Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">) => Promise<T>,
+): Promise<T> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`select set_config('app.reason', ${motif}, true)`;
+    return ecriture(tx);
+  });
+}

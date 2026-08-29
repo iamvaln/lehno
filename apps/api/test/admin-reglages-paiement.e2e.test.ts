@@ -165,6 +165,31 @@ describe("administration — les réglages du paiement", () => {
     expect(trace.reason).toBe("MTN a relevé son barème");
   });
 
+  /* Le journal et l'historique ne disent pas la même chose, et c'est pour ça
+     qu'il faut les deux : le premier raconte le changement, le second établit
+     l'état. Ce cas éprouve le raccord entre les gestes de l'administration et
+     le déclencheur — la raison écrite par l'administrateur doit arriver
+     jusqu'à la ligne de version, pas une valeur posée par le harnais. */
+  it("la raison de l'administrateur arrive jusqu'à la version", async () => {
+    const { entete } = await session("admin");
+    const cree = (await (await appeler("payment-channels", entete, "POST", CANAL)).json()) as { id: string };
+
+    await appeler(`payment-channels/${cree.id}`, entete, "PATCH", {
+      fraisPourcent: 2.5, reason: "MTN a relevé son barème",
+    });
+
+    const versions = await db.prisma.paymentChannelHistory.findMany({
+      where: { paymentChannelId: cree.id }, orderBy: { validFrom: "asc" },
+    });
+    expect(versions).toHaveLength(2);
+    expect(versions[0]!.reason).toBe(CANAL.reason);
+    expect(versions[0]!.validTo).not.toBeNull();
+    expect(versions[1]!.reason).toBe("MTN a relevé son barème");
+    expect(versions[1]!.validTo).toBeNull();
+    // L'auteur aussi : un historique sans auteur ne règle aucun différend.
+    expect(versions[1]!.changedBy).not.toBeNull();
+  });
+
   // ─── Les comptes de collecte ───────────────────────────────────────────────
 
   const COMPTE = {

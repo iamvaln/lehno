@@ -8,6 +8,7 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AdminGuard } from "./admin.guard.js";
 import { Role, RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
+import { poserLAuteurEtLeMotif } from "./historisation.js";
 
 /**
  * Les trois tables que l'administration règle : paliers, canaux, comptes de
@@ -101,6 +102,7 @@ export class PaymentSettingsService {
     insertion: (tx: Prisma.TransactionClient) => Promise<{ id: string }>,
   ): Promise<{ id: string }> {
     return this.prisma.$transaction(async (tx) => {
+      await poserLAuteurEtLeMotif(tx, auteurId, motif);
       const cree = await insertion(tx);
       await this.journal.consigner(
         { auteurId, action, motif, cibleType, cibleId: cree.id, details }, tx,
@@ -115,6 +117,7 @@ export class PaymentSettingsService {
     ecriture: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
     return this.prisma.$transaction(async (tx) => {
+      await poserLAuteurEtLeMotif(tx, auteurId, motif);
       await this.journal.consigner({ auteurId, action, motif, cibleType, cibleId, details }, tx);
       return ecriture(tx);
     });
