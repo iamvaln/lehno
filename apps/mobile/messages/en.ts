@@ -395,7 +395,7 @@ export const en = {
   supprPartLiens: "The links you shared — they will stop answering",
   supprCeQuiReste: "What others reserved stays with them.",
   supprSolde: (n: number) => n <= 1 ? "You have " + n + " credit left." : "You have " + n + " credits left.",
-  supprSoldeRemboursable: "The balance goes back to the payment method on file.",
+  supprSoldeRemboursable: "Only purchased credits are refunded, to the payment method on file — gifted credits are not.",
   supprSoldeVide: "There is no credit left to refund.",
   supprRaison: "What makes you leave",
   supprRaisonFacultatif: "Optional.",
@@ -404,7 +404,7 @@ export const en = {
   supprRaisonAutre: "Anything else?",
   supprConfirmer: "One last thing",
   supprPseudo: "Your handle",
-  supprCode: "The code sent by SMS",
+  supprCode: "The code sent by email",
   supprCodeRenvoyer: "Send the code again",
   supprCodeRenvoye: "Code sent again.",
   supprSuivant: "Continue",
@@ -412,7 +412,9 @@ export const en = {
   supprRenoncer: "Never mind",
   supprFait: "Your account is closed.",
   supprRevenir: "Back to Lehno",
-  supprGrace: "Thirty days to come back: write to bonjour@lehno.cm from this address. After that, everything is erased.",
+  supprGrace: (jours: number, adresse: string) => jours
+    + " days to come back: write to " + adresse
+    + " from your account address. After that, everything is erased.",
   versementTitre: "The transfer",
   versementTexte: "Send the amount to this number, then upload the receipt.",
   versementCompte: "The Lehno account",

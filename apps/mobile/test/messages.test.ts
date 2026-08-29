@@ -78,3 +78,46 @@ describe("le genre d'un tiers n'existe pas", () => {
     expect(fautes).toEqual([]);
   });
 });
+
+/* CE QUE LE SERVEUR SERT NE SE RECOPIE PAS DANS LA COPIE.
+ *
+ * Trois valeurs sont servies expressément pour ne pas être figées côté client :
+ * l'adresse de l'assistance et le délai de grâce (`supportEmail`,
+ * `gracePeriodDays`), et le prix des actions payantes. Le contrat le dit
+ * nommément — « une adresse codée en dur dans le client vieillirait sans qu'on
+ * le sache », et un prix figé « afficherait l'ancien tarif sur tout un parc
+ * jusqu'à la mise à jour suivante ».
+ *
+ * Le dictionnaire les a portées en dur — « Trente jours pour revenir : écrivez
+ * à bonjour@lehno.cm ». Personne ne l'aurait vu : la phrase est juste le jour
+ * où on l'écrit, et devient fausse en silence le jour où le back-office change.
+ * Ces tests rougissent si elle revient, notamment au prochain import de copie.
+ */
+describe("aucun texte ne fige ce que le serveur sert", () => {
+  const valeurs = (dico: Record<string, unknown>): string[] =>
+    Object.values(dico).flatMap((v) => {
+      if (typeof v === "string") return [v];
+      // Les tableaux de libellés — heures d'envoi, rythmes, motifs de départ.
+      if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string");
+      return [];
+    });
+
+  for (const [langue, dico] of [["fr", fr], ["en", en]] as const) {
+    /* Les adresses d'EXEMPLE restent permises — `exemple.fr` et `example.com`
+       sont réservées à cet usage et ne joignent personne. C'est une vraie
+       adresse de service qu'on interdit. */
+    it(`${langue} ne porte aucune adresse de service`, () => {
+      const fautives = valeurs(dico).filter(
+        (v) => /[\w.-]+@[\w.-]+/.test(v) && !/@(exemple\.fr|example\.com)\b/.test(v),
+      );
+      expect(fautives, "l'adresse de l'assistance est servie par le contrat").toEqual([]);
+    });
+
+    /* Le délai de grâce vient de `gracePeriodDays`. Un nombre écrit en toutes
+       lettres est le plus dur à retrouver ensuite — on cherche « 30 ». */
+    it(`${langue} n'écrit pas le délai de grâce en toutes lettres`, () => {
+      const fautives = valeurs(dico).filter((v) => /\b(trente jours|thirty days)\b/i.test(v));
+      expect(fautives, "le délai est servi par le contrat").toEqual([]);
+    });
+  }
+});

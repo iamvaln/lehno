@@ -425,7 +425,7 @@ export const fr = {
   supprPartLiens: "Les liens que vous avez partagés — ils cesseront de répondre",
   supprCeQuiReste: "Ce que d'autres ont réservé chez eux ne bouge pas.",
   supprSolde: (n: number) => n <= 1 ? "Il vous reste " + n + " crédit." : "Il vous reste " + n + " crédits.",
-  supprSoldeRemboursable: "Le solde vous est remboursé sur le moyen de paiement enregistré.",
+  supprSoldeRemboursable: "Seuls les crédits achetés sont remboursés, sur le moyen de paiement enregistré — les crédits offerts ne le sont pas.",
   supprSoldeVide: "Vous n'avez plus de crédit à rembourser.",
   supprRaison: "Ce qui vous fait partir",
   supprRaisonFacultatif: "Facultatif.",
@@ -434,7 +434,7 @@ export const fr = {
   supprRaisonAutre: "Autre chose ?",
   supprConfirmer: "Pour finir",
   supprPseudo: "Votre pseudo",
-  supprCode: "Le code envoyé par SMS",
+  supprCode: "Le code envoyé par e-mail",
   supprCodeRenvoyer: "Renvoyer le code",
   supprCodeRenvoye: "Code renvoyé.",
   supprSuivant: "Continuer",
@@ -442,7 +442,9 @@ export const fr = {
   supprRenoncer: "Renoncer",
   supprFait: "Votre compte est fermé.",
   supprRevenir: "Revenir à Lehno",
-  supprGrace: "Trente jours pour revenir : écrivez à bonjour@lehno.cm depuis cette adresse. Après, tout est effacé.",
+  supprGrace: (jours: number, adresse: string) => jours
+    + " jours pour revenir : écrivez à " + adresse
+    + " depuis l'adresse de votre compte. Après, tout est effacé.",
 
   /* ─── État de lancement (drapeaux éteints) ─── */
   versementTitre: "Le versement",
