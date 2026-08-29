@@ -11,6 +11,11 @@ export const ERROR_CODES = [
   // Un code à part plutôt que validation_failed — l'interface doit pouvoir dire
   // « il manque le motif » et non « la requête est mal formée ».
   "reason_required",
+  /* Le code du motif retenu n'existe pas, ne se propose plus, ou ne s'applique
+     pas à ce geste. À part de `reason_required` : la phrase est bien là, c'est
+     la catégorie qui ne veut rien dire à cet endroit. L'écran doit pouvoir
+     recharger sa liste plutôt que réclamer un texte qu'il a déjà. */
+  "reason_code_unknown",
   /* Une configuration de studio qu'on veut publier sans qu'aucun essai réussi
      ne porte son empreinte. 422, et un code à part de `validation_failed` :
      l'écran doit pouvoir dire « essayez-la d'abord » plutôt que « la requête
