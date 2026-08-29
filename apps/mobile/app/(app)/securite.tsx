@@ -94,7 +94,7 @@ export default function Securite() {
     mobile: "smartphone",
     ordinateur: "monitor",
     // Rien de reconnu : un point d'interrogation plutôt qu'un appareil inventé.
-    inconnu: "circle-help",
+    inconnu: "circle-question-mark",
   };
 
   return (

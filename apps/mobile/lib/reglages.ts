@@ -18,7 +18,8 @@ import { ecranEteint } from "./navigation.js";
    n'ouvre rien est pire qu'un rang absent — il apprend à ne pas croire les
    rangs. */
 export type RouteDeReglage =
-  | "/(app)/profil" | "/(app)/securite" | "/(app)/rappels" | "/(app)/donnees" | null;
+  | "/(app)/profil" | "/(app)/securite" | "/(app)/rappels"
+  | "/(app)/donnees" | "/(app)/aide" | null;
 
 export interface Rang {
   cle: string;
@@ -68,7 +69,7 @@ const PLAN: readonly { cle: Section["cle"]; rangs: readonly Rang[] }[] = [
   {
     cle: "aide",
     rangs: [
-      { cle: "aide", icone: "circle-help", drapeau: null, route: null },
+      { cle: "aide", icone: "circle-question-mark", drapeau: null, route: "/(app)/aide" },
       /* SE DÉCONNECTER, et c'est aujourd'hui le seul rang qui fasse quelque
          chose. Un geste, pas une destination — d'où `geste`, sans quoi le
          filtre sur `route` l'emporterait avec les écrans à venir, et l'écran

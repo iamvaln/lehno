@@ -32,7 +32,7 @@ describe("ce que les réglages montrent", () => {
      sorties de la fiche d'un proche. Ouvrir vers rien apprend à ne pas croire
      les rangs, et c'est plus coûteux qu'un rang absent. */
   it("tait les rangs dont l'écran n'est pas porté", () => {
-    for (const attendu of ["aide", "recharge"]) {
+    for (const attendu of ["recharge"]) {
       expect(cles(LANCEMENT)).not.toContain(attendu);
     }
   });
@@ -59,6 +59,7 @@ describe("ce que les réglages montrent", () => {
     expect(cles(LANCEMENT)).toContain("securite");
     expect(cles(LANCEMENT)).toContain("rappels");
     expect(cles(LANCEMENT)).toContain("donnees");
+    expect(cles(LANCEMENT)).toContain("aide");
   });
 
   /* Les méthodes de paiement suivent `topup.provider`, éteint au lancement :
