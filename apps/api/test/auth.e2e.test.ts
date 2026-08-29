@@ -268,8 +268,12 @@ describe("authentification", () => {
      il exige que SEUL `active` passe. Une valeur nouvelle sera donc refusée
      tant que personne n'aura décidé de l'admettre, ce qui est le seul sens dans
      lequel un oubli soit sans danger. */
-  it("seul un compte actif ouvre une session, quel que soit l'état", async () => {
-    for (const statut of ["suspended", "pending_deletion", "deleted"] as const) {
+  /* La liste de CE QUI PASSE, jamais de ce qui bloque : `pending_deletion` a
+     été admis par décision — il entre dans une pièce vide, pour pouvoir revenir
+     sur sa décision (voir `OuvertEnSuppression`). Les autres restent dehors, et
+     un statut ajouté demain arrivera dehors aussi. */
+  it("seuls les états admis ouvrent une session", async () => {
+    for (const statut of ["suspended", "deleted"] as const) {
       await db.prisma.user.deleteMany({});
       await db.prisma.loginActivity.deleteMany({});
       await inscrire("awa@example.com", "dev-1");
@@ -421,14 +425,37 @@ describe("authentification", () => {
     expect(rows.map((r) => r.result).sort()).toEqual(["failure", "success", "success"]);
   });
 
-  it("un compte en attente de suppression ne peut pas ouvrir de session, et le refus laisse une trace", async () => {
+  /* Un compte en attente de suppression OUVRE une session, et la session dit
+     jusqu'à quand.
+     
+     Sans elle, le délai de grâce ne protégeait que de notre lenteur : la
+     personne qui changeait d'avis ne pouvait pas se connecter, et seul un
+     administrateur pouvait la rétablir. La session ouverte n'ouvre pourtant
+     qu'une porte — c'est la garde qui le tient, éprouvé dans
+     `compte-annulation`.
+
+     Et la DATE voyage avec : sans elle le client afficherait son accueil
+     habituel, dont tout échouerait en 403 — ce qui se lit comme une panne et
+     non comme un état. */
+  it("un compte en attente de suppression ouvre une session qui dit jusqu'à quand", async () => {
     await inscrire("awa@example.com", "dev-1");
-    await db.prisma.user.update({ where: { email: "awa@example.com" }, data: { status: "pending_deletion" } });
+    await db.prisma.user.update({
+      where: { email: "awa@example.com" },
+      data: { status: "pending_deletion", deletionRequestedAt: new Date() },
+    });
     const next = await otp.issue("awa@example.com", "login");
-    await expect(auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" }))
-      .rejects.toMatchObject({ code: "account_pending_deletion" });
-    const rows = await db.prisma.loginActivity.findMany({ where: { attemptedEmail: "awa@example.com" } });
-    expect(rows.map((r) => r.result).sort()).toEqual(["failure", "success", "success"]);
+    const session = await auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" });
+
+    expect(session.outcome).toBe("session");
+    expect((session as { deletionPendingUntil: string | null }).deletionPendingUntil).toBeTruthy();
+  });
+
+  // Le compte ordinaire, lui, n'a pas d'échéance à annoncer.
+  it("un compte actif n'annonce aucune échéance de suppression", async () => {
+    await inscrire("awa@example.com", "dev-1");
+    const next = await otp.issue("awa@example.com", "login");
+    const session = await auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" });
+    expect((session as { deletionPendingUntil: string | null }).deletionPendingUntil).toBeNull();
   });
 
   // Le pseudo n'est plus tiré au sort : il est choisi. La collision qui compte

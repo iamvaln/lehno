@@ -2776,6 +2776,11 @@
                         },
                         "isNewAccount": {
                           "type": "boolean"
+                        },
+                        "deletionPendingUntil": {
+                          "type": "string",
+                          "nullable": true,
+                          "default": null
                         }
                       },
                       "required": [
@@ -3418,6 +3423,11 @@
                         },
                         "isNewAccount": {
                           "type": "boolean"
+                        },
+                        "deletionPendingUntil": {
+                          "type": "string",
+                          "nullable": true,
+                          "default": null
                         }
                       },
                       "required": [
@@ -3710,6 +3720,11 @@
                     },
                     "isNewAccount": {
                       "type": "boolean"
+                    },
+                    "deletionPendingUntil": {
+                      "type": "string",
+                      "nullable": true,
+                      "default": null
                     }
                   },
                   "required": [

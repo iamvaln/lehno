@@ -32,6 +32,18 @@ export const sessionSchema = z.object({
   refreshToken: z.string(),
   expiresIn: z.number().int().positive(),
   isNewAccount: z.boolean(),
+  /* La suppression demandée, et la date où elle s'exécute.
+   *
+   * Nulle dans le cas ordinaire. Renseignée, la session est OUVERTE MAIS
+   * VIDE : le seul chemin qu'elle ouvre est l'annulation. Le client doit donc
+   * afficher un écran unique, et non son accueil habituel amputé — un accueil
+   * dont tout échoue en 403 se lit comme une panne, pas comme un état.
+   *
+   * On rend la date plutôt qu'un simple drapeau : « votre compte sera supprimé
+   * le 12 septembre » est ce que la personne a besoin de lire pour décider,
+   * et la lui faire redemander par un second appel retarderait la seule
+   * information qui compte à cet instant. */
+  deletionPendingUntil: z.string().nullable().default(null),
 }).strict();
 
 /* Ce que rend une vérification réussie : une session, ou une INVITATION À

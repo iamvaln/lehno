@@ -1,3 +1,4 @@
+import { Reflector } from "@nestjs/core";
 import { describe, expect, it } from "vitest";
 import jwt from "jsonwebtoken";
 import type { ExecutionContext } from "@nestjs/common";
@@ -30,12 +31,17 @@ function contextWithAuthHeader(header?: string): { context: ExecutionContext; re
   };
   const context = {
     switchToHttp: () => ({ getRequest: () => req }),
+    /* La garde lit les marqueurs de route (OuvertEnSuppression) : un contexte
+       sans ces deux fonctions la ferait échouer sur un défaut du simulacre, pas
+       du code. */
+    getHandler: () => function sansMarqueur(): void {},
+    getClass: () => class SansMarqueur {},
   } as unknown as ExecutionContext;
   return { context, req };
 }
 
 describe("AuthGuard", () => {
-  const guard = new AuthGuard(new TokenService({} as never, SECRET), prismaAvecStatut("active"));
+  const guard = new AuthGuard(new TokenService({} as never, SECRET), prismaAvecStatut("active"), new Reflector());
 
   it("refuse une requête sans en-tête Authorization", async () => {
     const { context } = contextWithAuthHeader(undefined);
@@ -74,7 +80,7 @@ describe("AuthGuard", () => {
      effacé. 401 et non 404 : c'est la session qui ne vaut plus rien, pas la
      ressource demandée qui manque. */
   it("refuse un jeton valide dont le compte n'existe plus", async () => {
-    const orphelin = new AuthGuard(new TokenService({} as never, SECRET), prismaAvecStatut(null));
+    const orphelin = new AuthGuard(new TokenService({} as never, SECRET), prismaAvecStatut(null), new Reflector());
     const token = jwt.sign({ sub: "11111111-1111-1111-1111-111111111111" }, SECRET, { algorithm: "HS256", expiresIn: 900 });
     const { context } = contextWithAuthHeader(`Bearer ${token}`);
     await expect(orphelin.canActivate(context)).rejects.toMatchObject({ code: "unauthorized" });

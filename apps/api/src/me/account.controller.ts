@@ -1,8 +1,10 @@
 import { Body, Controller, Delete, Get, HttpCode, Inject, Post, Req, UseGuards } from "@nestjs/common";
 import { confirmDeletionSchema } from "@lehno/contracts";
 import type {
+  DeletionCancelled,
   ConfirmDeletionInput, DeletionAccepted, DeletionPreview,
 } from "@lehno/contracts";
+import { OuvertEnSuppression } from "../auth/ouvert-en-suppression.decorator.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { RateLimitService } from "../common/rate-limit.service.js";
@@ -57,4 +59,17 @@ export class AccountController {
   ): Promise<DeletionAccepted> {
     return this.account.confirmer(req.userId, body);
   }
+
+  /* LA SEULE PORTE d'un compte en suppression.
+   *
+   * `@OuvertEnSuppression` est ce qui la distingue : la garde refuse tout le
+   * reste pour ce statut, et une route ajoutée demain arrivera fermée. C'est
+   * délibérément l'exception qui se déclare, jamais la règle. */
+  @Post("cancel-deletion")
+  @HttpCode(200)
+  @OuvertEnSuppression()
+  annulerSuppression(@Req() req: AuthedRequest): Promise<DeletionCancelled> {
+    return this.account.annulerSuppression(req.userId);
+  }
+
 }
