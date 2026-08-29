@@ -275,7 +275,10 @@ describe("administration — les comptes", () => {
     const u = await creerUtilisateur(1);
     const { compte, entete } = await session("support");
 
-    const res = await changer(entete, u.id, { status: "suspended", reason: "Contenu signalé à répétition" });
+    const res = await changer(entete, u.id, {
+      status: "suspended", reason: "Contenu signalé à répétition",
+      reasonCode: "third_party_report",
+    });
     expect(res.status).toBe(200);
 
     expect((await db.prisma.user.findUniqueOrThrow({ where: { id: u.id } })).status).toBe("suspended");
@@ -303,5 +306,88 @@ describe("administration — les comptes", () => {
     const res = await changer(entete, u.id, { status: "deleted", reason: "Demande du titulaire par courriel" });
     expect(res.status).toBe(403);
     expect((await db.prisma.user.findUniqueOrThrow({ where: { id: u.id } })).status).toBe("pending_deletion");
+  });
+
+  /* Suspendre PROPOSE des motifs ; rétablir n'en propose aucun. C'est le même
+     `user_status_update` au journal, et deux gestes différents — la raison pour
+     laquelle les motifs se rangent par geste et non par action.
+
+     Le premier cas est celui qui rend le câblage obligatoire : sans lui, un
+     geste qu'on oublie de brancher continuerait d'écrire une phrase libre. */
+  it("refuse une suspension sans code de motif", async () => {
+    const u = await creerUtilisateur(1);
+    const { entete } = await session("support");
+
+    const res = await changer(entete, u.id, {
+      status: "suspended", reason: "Contenu signalé à répétition",
+    });
+    expect(res.status).toBe(422);
+    expect((await db.prisma.user.findUniqueOrThrow({ where: { id: u.id } })).status).toBe("active");
+    expect(await db.prisma.auditLog.count()).toBe(0);
+  });
+
+  it("accepte un rétablissement sans code : ce geste n'en propose pas", async () => {
+    const u = await creerUtilisateur(1, { status: "suspended" });
+    const { entete } = await session("support");
+
+    const res = await changer(entete, u.id, { status: "active", reason: "Signalement infondé après examen" });
+    expect(res.status).toBe(200);
+  });
+
+  /* LE cas qui ne se verrait pas autrement : le code existe, il est actif,
+     mais il appartient à `account_erase`. On vérifie d'abord qu'il existe —
+     sans quoi ce cas passerait pour « code inconnu » et n'éprouverait rien. */
+  it("refuse un code emprunté à un autre geste", async () => {
+    const u = await creerUtilisateur(1);
+    const { entete } = await session("support");
+
+    const emprunte = await db.prisma.auditReasonScope.findFirstOrThrow({
+      where: { geste: "account_erase", reason: { code: "test_account", isActive: true } },
+    });
+    expect(emprunte.geste).toBe("account_erase");
+
+    const res = await changer(entete, u.id, {
+      status: "suspended", reason: "Contenu signalé à répétition",
+      reasonCode: "test_account",
+    });
+    expect(res.status).toBe(422);
+    expect(await db.prisma.auditLog.count()).toBe(0);
+  });
+
+  it("garde le code à côté de la phrase", async () => {
+    const u = await creerUtilisateur(1);
+    const { entete } = await session("support");
+
+    await changer(entete, u.id, {
+      status: "suspended", reason: "Contenu signalé à répétition",
+      reasonCode: "third_party_report",
+    });
+    const trace = await db.prisma.auditLog.findFirstOrThrow();
+    expect(trace.reasonCode).toBe("third_party_report");
+    expect(trace.reason).toBe("Contenu signalé à répétition");
+  });
+
+  /* Deux gestes mènent à `active` : lever une suspension, et renoncer à une
+     suppression. Le second a ses propres motifs — « demande du titulaire » y
+     est proposé, pas sur le premier.
+
+     Ce cas éprouve que l'état QUITTÉ compte : le même corps de requête est
+     accepté ou refusé selon d'où l'on vient. Sans lui, une table geste-par-état
+     passerait, et « suppression déclenchée par erreur » s'enregistrerait sur un
+     compte qu'on vient de suspendre. */
+  it("distingue lever une suspension de renoncer à une suppression", async () => {
+    const { entete } = await session("support");
+
+    const enSuppression = await creerUtilisateur(1, { status: "pending_deletion" });
+    expect((await changer(entete, enSuppression.id, {
+      status: "active", reason: "Demande retirée par le titulaire",
+      reasonCode: "holder_s_request",
+    })).status).toBe(200);
+
+    const suspendu = await creerUtilisateur(2, { status: "suspended" });
+    expect((await changer(entete, suspendu.id, {
+      status: "active", reason: "Signalement infondé après examen",
+      reasonCode: "holder_s_request",
+    })).status).toBe(422);
   });
 });

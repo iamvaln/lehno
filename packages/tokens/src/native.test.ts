@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   nativeColors, nativeDuration, nativeEasing, nativeFont, nativeLeading,
-  nativeLetterSpacing, nativeTracking,
+  nativeBorder, nativeLetterSpacing, nativeTracking,
   nativeLineHeight, nativeRadius, nativeSize, nativeSpace, nativeTouchMin,
   resolve, SEMANTIC_ROLES, spacing, typography,
 } from "./index.js";
@@ -71,6 +71,28 @@ describe("émission React Native", () => {
     expect(nativeRadius).not.toHaveProperty("tile");
     // Le châssis d'appareil est un décor d'aperçu, explicitement hors produit.
     expect(nativeRadius).not.toHaveProperty("device");
+  });
+
+  /* L'épaisseur d'un trait est un jeton, pas un chiffre évident. Elle a été
+     écrite « 1 » en dur dans neuf primitives avant que ce test n'existe — et
+     c'est précisément la dérive que ce fichier doit empêcher : le jour où la
+     charte passe le filet à 0,5, neuf endroits resteraient à 1. */
+  it("dérive les deux épaisseurs de trait", () => {
+    expect(nativeBorder.width).toBe(1);
+    expect(nativeBorder.widthFirm).toBe(2);
+  });
+
+  /* Ce que le natif écarte doit être écarté PAR DÉCISION, pas par oubli. La
+     densité décrit un outil qui se manipule à la souris — hauteur de contrôle,
+     hauteur de ligne, largeur de barre latérale, que le produit met d'ailleurs
+     à zéro. Sur un téléphone, c'est la cible tactile qui commande.
+     L'anneau de focus n'a pas d'objet non plus : il n'existe que pour un
+     clavier, et le port ne vise pas ce cas. */
+  it("laisse au web la densité de souris et l'anneau de focus", () => {
+    for (const absent of ["controlHeight", "controlPadX", "rowHeight", "focusWidth", "focusOffset"]) {
+      expect(Object.keys(nativeBorder), absent).not.toContain(absent);
+    }
+    expect(nativeBorder).toEqual({ width: 1, widthFirm: 2 });
   });
 
   it("dérive les durées en millisecondes nues", () => {

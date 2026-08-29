@@ -1,16 +1,17 @@
 import React from "react";
 import { Button } from "../../components/core/Button.jsx";
 import { TextField } from "../../components/forms/TextField.jsx";
-import { BrandMark } from "../../components/brand/BrandMark.jsx";
 import { Wordmark } from "../../components/brand/Wordmark.jsx";
 import { Banner } from "../../components/feedback/Banner.jsx";
 
 export function ConnexionScreen({ t, etat = "nominal", base = "../../", onSuite }) {
   return (
     <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", minHeight: "100%" }}>
-      <div style={{ display: "grid", justifyItems: "center", gap: 14, margin: "28px 0 26px" }}>
-        <BrandMark base={base} size={58} />
-        <Wordmark base={base} variant={t.nuit ? "blanc" : "couleur"} height={24} />
+      {/* Le logotype seul. La pastille au-dessus du mot répète le h que le mot
+          contient déjà, et c'est l'icône qu'on vient de toucher pour arriver ici :
+          l'écran n'a pas à redire par quelle porte on est entré. */}
+      <div style={{ display: "grid", justifyItems: "center", margin: "20px 0 22px" }}>
+        <Wordmark base={base} variant={t.nuit ? "blanc" : "couleur"} height={30} />
       </div>
 
       <h1 className="lehno-display" style={{
@@ -31,7 +32,7 @@ export function ConnexionScreen({ t, etat = "nominal", base = "../../", onSuite 
       </div>
 
       <div style={{
-        display: "flex", alignItems: "center", gap: 12, margin: "20px 0",
+        display: "flex", alignItems: "center", gap: 12, margin: "16px 0",
         color: "var(--text-mention)", fontSize: 12.5
       }}>
         <span style={{ flex: 1, height: 1, background: "var(--border-hairline)" }} />
@@ -43,7 +44,7 @@ export function ConnexionScreen({ t, etat = "nominal", base = "../../", onSuite 
       <Button platform="mobile" full style={{ marginTop: 12 }} onClick={onSuite}>{t.recevoirCode}</Button>
 
       <p style={{
-        marginTop: "auto", paddingTop: 24, fontSize: 12, color: "var(--text-mention)",
+        marginTop: "auto", paddingTop: 16, fontSize: 12, color: "var(--text-mention)",
         textAlign: "center", lineHeight: 1.5
       }}>
         {t.connexionPiedAvant}

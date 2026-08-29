@@ -1,5 +1,7 @@
 import type { ViewStyle } from "react-native";
-import { nativeRadius, type NomDeRayon } from "@lehno/tokens";
+import {
+  nativeBorder, nativeRadius, type NomDeRayon,
+} from "@lehno/tokens";
 import type { Couleurs } from "../theme.js";
 
 export const SURFACES_DE_CARTE = ["card", "panel", "plain"] as const;
@@ -29,7 +31,7 @@ export function styleDeCarte({
   return {
     padding: rembourrage,
     borderRadius: nativeRadius[rayon],
-    borderWidth: 1,
+    borderWidth: nativeBorder.width,
     borderColor: s.bord,
     backgroundColor: s.fond,
   };

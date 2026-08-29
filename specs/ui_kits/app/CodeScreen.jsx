@@ -21,6 +21,24 @@ function duree(total, langue) {
   return m + " min " + String(s).padStart(2, "0") + " s";
 }
 
+/* Sur un SE, la page dépassait de quatre-vingts pixels : on faisait défiler
+   pour atteindre « Valider », sur l'écran le plus court du parcours. Rien n'est
+   retiré — l'illustration, le titre et les blancs se resserrent, ce qui suffit.
+   Les cases restent à 44 px de côté : c'est la cible tactile, pas une marge. */
+const SERRE = `
+.lehno-code-ill { width: 140px; margin: 10px auto 0; line-height: 0; }
+.lehno-code-ill svg, .lehno-code-ill img { width: 100%; height: auto; }
+.lehno-code-titre { font-size: 23px; margin: 10px 0 6px; }
+.lehno-code-texte { margin-bottom: 22px; }
+.lehno-code-case { width: 42px; height: 52px; font-size: 24px; }
+.lehno-code-valider { margin-top: 18px; }
+[data-modele="se"] .lehno-code-ill { width: 84px; margin-top: 0; }
+[data-modele="se"] .lehno-code-titre { font-size: 21px; margin-top: 6px; }
+[data-modele="se"] .lehno-code-texte { margin-bottom: 12px; }
+[data-modele="se"] .lehno-code-case { width: 38px; height: 44px; font-size: 22px; }
+[data-modele="se"] .lehno-code-valider { margin-top: 10px; }
+`;
+
 export function CodeScreen({ t, etat = "nominal", onRetour, onSuite }) {
   const expire = etat === "expire";
   const [reste, setReste] = React.useState(expire ? 0 : VALIDITE);
@@ -43,23 +61,26 @@ export function CodeScreen({ t, etat = "nominal", onRetour, onSuite }) {
     <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", minHeight: "100%" }}>
       <button type="button" onClick={onRetour} aria-label={t.retour} className="lehno-focusable"
         style={{
-          all: "unset", cursor: "pointer", padding: "8px 8px 8px 0",
-          color: "var(--text-body)", alignSelf: "flex-start"
+          all: "unset", cursor: "pointer", color: "var(--text-body)", alignSelf: "flex-start",
+          minWidth: "var(--touch-min)", minHeight: "var(--touch-min)",
+          display: "grid", placeItems: "center", marginLeft: -11
         }}>
         <Icon name="chevron-left" size={22} />
       </button>
 
-      <div style={{ display: "grid", justifyItems: "center", margin: "10px 0 4px" }}>
+      <style>{SERRE}</style>
+
+      <div className="lehno-code-ill">
         <Illustration nom="verification-code" largeur={140} />
       </div>
 
-      <h1 className="lehno-display" style={{
-        fontSize: 23, letterSpacing: "-.02em", margin: "10px 0 6px", fontWeight: 500, textAlign: "center"
+      <h1 className="lehno-display lehno-code-titre" style={{
+        letterSpacing: "-.02em", fontWeight: 500, textAlign: "center"
       }}>{t.codeTitre}</h1>
       <p style={{
-        margin: "0 0 22px", fontSize: 14.5, color: "var(--text-secondary)",
+        margin: 0, fontSize: 14.5, color: "var(--text-secondary)",
         textAlign: "center", maxWidth: "32ch", marginInline: "auto"
-      }}>{t.codeTexte}</p>
+      }} className="lehno-code-texte">{t.codeTexte}</p>
 
       {etat === "erreur" ? (
         <Banner intent="error" style={{ margin: "0 -20px 18px" }}>{t.codeErreur}</Banner>
@@ -69,8 +90,8 @@ export function CodeScreen({ t, etat = "nominal", onRetour, onSuite }) {
 
       <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
         {chiffres.map((c, i) => (
-          <div key={i} style={{
-            width: 42, height: 52, borderRadius: "var(--radius-sm)",
+          <div key={i} className="lehno-code-case" style={{
+            borderRadius: "var(--radius-sm)",
             border: "1px solid " + (etat === "erreur" ? "var(--feedback-error)"
               : c ? "var(--action)" : "var(--border-object)"),
             display: "grid", placeItems: "center",
@@ -89,8 +110,10 @@ export function CodeScreen({ t, etat = "nominal", onRetour, onSuite }) {
         }}>{t.codeValidite(duree(reste, t.langue))}</p>
       )}
 
-      <Button platform="mobile" full style={{ marginTop: 18 }} disabled={perime}
-        onClick={onSuite}>{t.valider}</Button>
+      <div className="lehno-code-valider">
+        <Button platform="mobile" full disabled={perime}
+          onClick={onSuite}>{t.valider}</Button>
+      </div>
 
       <Button platform="mobile" full variant="text" style={{ marginTop: 4 }}
         disabled={avantRenvoi > 0} onClick={renvoyer}>

@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Injectable, Patch, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
+import { motifSchema } from "@lehno/contracts";
 import { EventKind } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
@@ -8,10 +9,15 @@ import { AdminGuard } from "./admin.guard.js";
 import { Role, RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
 
+/* Le motif emploie `motifSchema`, comme partout ailleurs en administration, et
+   non un `z.string()` libre. Sans son minimum, le contrat acceptait une chaîne
+   vide que le journal refusait ensuite : le refus venait du service au lieu de
+   la validation, avec une erreur qui ne nommait pas la cause. Et c'est ici
+   qu'il compte le plus — cet écran porte les crédits offerts à l'inscription. */
 const ecritureSchema = z.object({
   key: z.string().max(64),
   value: z.string().max(500),
-  reason: z.string().max(500),
+  reason: motifSchema,
 }).strict();
 
 // Ce que la base sait d'un paramètre. Le libellé et l'unité n'y sont pas, et

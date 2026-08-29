@@ -16,7 +16,11 @@ export default tseslint.config(
   {
     ignores: [
       "**/dist/**", "**/.next/**", "**/.turbo/**", "**/node_modules/**",
-      "**/next-env.d.ts",
+      // Engendrés : `next-env.d.ts` par Next, `.expo/types` par expo-router à
+      // chaque démarrage du serveur. Les relire reviendrait à faire relire au
+      // linteur ce qu'un outil vient d'écrire, et à porter ses avertissements
+      // sans pouvoir les corriger.
+      "**/next-env.d.ts", "**/.expo/**",
     ],
   },
   js.configs.recommended,

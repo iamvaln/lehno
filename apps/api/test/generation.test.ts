@@ -481,6 +481,31 @@ describe("la génération d'un message", () => {
     });
   });
 
+  /* Trois manques signalés par le mobile, et les trois sont réels. */
+  describe("ce que l'écran d'attente a besoin de savoir", () => {
+    /* Sans la cible, une génération en cours n'a ni nom à afficher ni décompte
+       à montrer : l'écran dirait « une production est en cours » sans dire pour
+       qui, et la liste des reprises serait une liste d'identifiants. */
+    it("porte l'occurrence visée dès le lancement", async () => {
+      await crediter(5);
+      await lancer({ anthropic: repond() });
+      const run = await db.prisma.actionRun.findFirstOrThrow({ where: { userId: awa } });
+      expect(run.eventOccurrenceId).toBe(occurrence);
+    });
+
+    /* LE cas qui compte : une génération ÉCHOUÉE n'a pas de message produit.
+       Si la cible ne vivait que sur le message, l'écran ne saurait pas pour qui
+       refaire — c'est-à-dire précisément quand il en a besoin. */
+    it("la porte encore quand la génération a échoué", async () => {
+      await crediter(5);
+      await lancer({ anthropic: tombe(), deepseek: tombe(), xai: tombe() }).catch(() => {});
+      const run = await db.prisma.actionRun.findFirstOrThrow({ where: { userId: awa } });
+      expect(run.status).toBe("failure");
+      expect(await db.prisma.generatedMessage.count({ where: { actionRunId: run.id } })).toBe(0);
+      expect(run.eventOccurrenceId).toBe(occurrence);
+    });
+  });
+
   /* TOUT L'OBJET DU STUDIO.
    *
    * Sans ces cas, on aurait construit un écran de réglage qui ne règle rien :

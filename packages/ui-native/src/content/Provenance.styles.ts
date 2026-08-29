@@ -1,5 +1,7 @@
 import type { TextStyle, ViewStyle } from "react-native";
-import { nativeFont, nativeSize, nativeSpace } from "@lehno/tokens";
+import {
+  nativeBorder, nativeFont, nativeSize, nativeSpace,
+} from "@lehno/tokens";
 import type { Couleurs } from "../theme.js";
 
 /* D'où vient une note, et quand. Une provenance à moitié connue reste utile —
@@ -20,7 +22,7 @@ export function styleDeProvenance(couleurs: Couleurs): { conteneur: ViewStyle; t
       paddingTop: nativeSpace[8],
       // Elle se rattache à la note du dessus par un filet, jamais par une marge
       // seule.
-      borderTopWidth: 1,
+      borderTopWidth: nativeBorder.width,
       borderTopColor: couleurs.borderHairline,
     },
     texte: {

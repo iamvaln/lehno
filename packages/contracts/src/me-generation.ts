@@ -86,6 +86,19 @@ export type GenerationStatus = (typeof GENERATION_STATUSES)[number];
 export const generationSchema = z.object({
   id: z.string().uuid(),
   kind: z.enum(GENERATION_KINDS),
+  /**
+   * **La cible, et elle est indispensable à l'écran d'attente.**
+   *
+   * Sans elle, une génération en cours n'a ni nom à afficher ni décompte à
+   * montrer — l'écran dirait « une production est en cours » sans dire pour
+   * qui, et la liste des reprises serait une liste d'identifiants.
+   *
+   * L'une des deux est nulle selon la nature : un portrait vise un proche, un
+   * message et des idées visent une occasion. Le client n'a pas à en déduire
+   * laquelle — il affiche celle qui est là.
+   */
+  personId: z.string().uuid().nullable(),
+  occurrenceId: z.string().uuid().nullable(),
   status: z.enum(GENERATION_STATUSES),
   creditsSpent: z.number().int().min(0),
   // « En cas d'échec, le crédit est rendu au solde et la raison portée par la

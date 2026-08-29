@@ -145,7 +145,12 @@ describe("administration — les demandes de suppression", () => {
     await fetch(`${baseUrl}/v1/admin/users/${u.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json", ...entete },
-      body: JSON.stringify({ status: "active", reason: "Demande retirée par le titulaire" }),
+      body: JSON.stringify({
+        status: "active", reason: "Demande retirée par le titulaire",
+        // Renoncer à une suppression n'est pas lever une suspension : ce geste
+        // a ses propres motifs.
+        reasonCode: "holder_s_request",
+      }),
     });
 
     const corps = (await (await lister(entete)).json()) as { items: unknown[] };
@@ -159,7 +164,10 @@ describe("administration — les demandes de suppression", () => {
     const refus = await fetch(`${baseUrl}/v1/admin/users/${u.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json", ...support.entete },
-      body: JSON.stringify({ status: "deleted", reason: "Délai échu, effacement demandé" }),
+      body: JSON.stringify({
+        status: "deleted", reason: "Délai échu, effacement demandé",
+        reasonCode: "legal_obligation",
+      }),
     });
     expect(refus.status).toBe(403);
 
@@ -167,7 +175,10 @@ describe("administration — les demandes de suppression", () => {
     const accepte = await fetch(`${baseUrl}/v1/admin/users/${u.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json", ...admin.entete },
-      body: JSON.stringify({ status: "deleted", reason: "Délai échu, effacement demandé" }),
+      body: JSON.stringify({
+        status: "deleted", reason: "Délai échu, effacement demandé",
+        reasonCode: "legal_obligation",
+      }),
     });
     expect(accepte.status).toBe(200);
   });

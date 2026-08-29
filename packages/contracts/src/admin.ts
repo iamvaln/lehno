@@ -981,3 +981,90 @@ export type Conversion = z.infer<typeof conversionSchema>;
 export type Metriques = z.infer<typeof metriquesSchema>;
 export type ManqueMetrique = z.infer<typeof manqueMetriqueSchema>;
 export type ActionPayante = z.infer<typeof actionPayanteSchema>;
+
+// ——— Les motifs d'administration ——————————————————————————————
+
+/**
+ * Un motif proposé pour un geste.
+ *
+ * **Les deux langues voyagent ensemble**, et ce n'est pas un oubli de
+ * négociation : le back-office change de langue depuis le menu de compte, sans
+ * recharger. Rendre un seul libellé obligerait à refaire l'appel à chaque
+ * bascule — et à ré-ouvrir la fenêtre de confirmation en cours.
+ *
+ * Le `code` est ce qui part au journal ; les libellés ne servent qu'à l'écran.
+ * C'est la distinction qui rend les comptages possibles : corriger une faute
+ * d'orthographe ne doit pas couper en deux l'historique d'un motif.
+ */
+export const motifPropositionSchema = z.object({
+  code: z.string(),
+  fr: z.string(),
+  en: z.string(),
+}).strict();
+
+/**
+ * Les motifs d'un geste. La liste peut être **vide**, et c'est un état normal :
+ * huit gestes n'ont aucun préréglage et n'attendent qu'une phrase. Un écran qui
+ * traiterait le vide comme une panne afficherait une erreur là où il faut une
+ * zone de saisie.
+ */
+export const motifsDuGesteSchema = z.object({
+  geste: z.string(),
+  motifs: z.array(motifPropositionSchema),
+}).strict();
+
+export type MotifProposition = z.infer<typeof motifPropositionSchema>;
+export type MotifsDuGeste = z.infer<typeof motifsDuGesteSchema>;
+
+/**
+ * Un motif tel que l'administration le voit : avec son identifiant, son état, et
+ * les gestes auxquels il se propose.
+ */
+export const motifAdminSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  fr: z.string(),
+  en: z.string(),
+  actif: z.boolean(),
+  gestes: z.array(z.string()),
+}).strict();
+
+export const motifsAdminSchema = z.object({
+  motifs: z.array(motifAdminSchema),
+}).strict();
+
+/**
+ * Le code est **contraint de forme** : minuscules, chiffres et tirets bas.
+ *
+ * Ce n'est pas de la coquetterie. Sans cette règle, quelqu'un collerait un
+ * libellé — « Fraude suspectée » — dans le champ du code, et on serait revenu au
+ * point de départ : un texte d'affichage en guise de clé de comptage, qu'une
+ * correction d'orthographe coupe en deux.
+ */
+export const codeMotifSchema = z.string().regex(/^[a-z][a-z0-9_]{2,47}$/);
+
+export const creationMotifSchema = z.object({
+  code: codeMotifSchema,
+  fr: z.string().trim().min(1).max(120),
+  en: z.string().trim().min(1).max(120),
+  gestes: z.array(z.string().min(1).max(48)),
+  reason: motifSchema,
+}).strict();
+
+/**
+ * Le code **n'y figure pas**, et c'est l'invariant du module.
+ *
+ * Le renommer couperait en deux l'historique de tout ce qu'il a justifié : les
+ * gestes d'hier garderaient l'ancien code, ceux de demain le nouveau, et aucun
+ * comptage ne les rapprocherait. Un code se retire ; il ne se renomme pas.
+ */
+export const modificationMotifSchema = z.object({
+  fr: z.string().trim().min(1).max(120).optional(),
+  en: z.string().trim().min(1).max(120).optional(),
+  actif: z.boolean().optional(),
+  gestes: z.array(z.string().min(1).max(48)).optional(),
+  reason: motifSchema,
+}).strict();
+
+export type MotifAdmin = z.infer<typeof motifAdminSchema>;
+export type MotifsAdmin = z.infer<typeof motifsAdminSchema>;

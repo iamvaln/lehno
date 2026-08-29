@@ -30,14 +30,23 @@ export * from "./content/Quote.styles.js";
 
 export * from "./feedback/Banner.js";
 export * from "./feedback/Banner.styles.js";
+export * from "./feedback/ConfirmSheet.js";
+export * from "./feedback/ConfirmSheet.styles.js";
 export * from "./feedback/EmptyState.js";
 export * from "./feedback/EmptyState.styles.js";
 export * from "./feedback/LoadingState.js";
 export * from "./feedback/LoadingState.styles.js";
 export * from "./feedback/OfflineBanner.js";
 export * from "./feedback/OfflineBanner.styles.js";
+export * from "./feedback/PaidActionSheet.js";
+export * from "./feedback/PaidActionSheet.styles.js";
 export * from "./feedback/SensitiveBanner.js";
 export * from "./feedback/SensitiveBanner.styles.js";
+// Le châssis que les deux feuilles partagent : voile, poignée, coins hauts,
+// retrait du bas. Il n'a pas de composant à lui.
+export * from "./feedback/Sheet.styles.js";
+export * from "./feedback/Toast.js";
+export * from "./feedback/Toast.styles.js";
 
 export * from "./forms/TextField.js";
 export * from "./forms/TextField.styles.js";
@@ -45,3 +54,17 @@ export * from "./navigation/NotificationBell.js";
 export * from "./navigation/NotificationBell.styles.js";
 export * from "./navigation/TabBar.js";
 export * from "./navigation/TabBar.styles.js";
+export * from "./brand/BrandMark.js";
+export * from "./brand/BrandMark.styles.js";
+export * from "./brand/Illustration.js";
+export * from "./brand/Illustration.data.js";
+export * from "./brand/Illustration.styles.js";
+export * from "./brand/PortraitComposition.js";
+export * from "./brand/PortraitComposition.data.js";
+export * from "./brand/PortraitComposition.styles.js";
+export * from "./brand/SocialGlyph.js";
+export * from "./brand/SocialGlyph.data.js";
+export * from "./brand/SocialGlyph.styles.js";
+export * from "./brand/Wordmark.js";
+export * from "./brand/Wordmark.data.js";
+export * from "./forms/TextField.nature.js";

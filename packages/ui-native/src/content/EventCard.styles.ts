@@ -1,7 +1,6 @@
 import type { TextStyle, ViewStyle } from "react-native";
 import {
-  nativeFont, nativeLeading, nativeLetterSpacing, nativeLineHeight, nativeRadius,
-  nativeSize, nativeSpace, nativeTouchMin, nativeTracking,
+  nativeBorder, nativeFont, nativeLeading, nativeLetterSpacing, nativeLineHeight, nativeRadius, nativeSize, nativeSpace, nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
 import type { Couleurs } from "../theme.js";
 
@@ -25,7 +24,7 @@ export function styleDeCarteDEcheance({
   return {
     enveloppe: {
       borderRadius: nativeRadius.lg,
-      borderWidth: 1,
+      borderWidth: nativeBorder.width,
       borderColor: enAvant ? "transparent" : couleurs.borderObject,
       backgroundColor: enAvant ? couleurs.surfacePanel : couleurs.surfaceCard,
     },

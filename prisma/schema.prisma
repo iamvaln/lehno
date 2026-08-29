@@ -81,6 +81,21 @@ model User {
   status                   UserStatus      @default(active)
   deletionRequestedAt      DateTime?       @map("deletion_requested_at") @db.Timestamptz
   deletionReason           String?         @map("deletion_reason")
+  /**
+   * Quand la ligne a été VIDÉE, pas quand la suppression a été demandée.
+   *
+   * C'est le seul marqueur d'idempotence de la tâche d'effacement, et il ne
+   * peut pas être `status` : la ligne reste `deleted` avant comme après, parce
+   * qu'elle n'est jamais supprimée — les paiements et les mouvements de crédits
+   * la référencent en `Cascade`, et les effacer avec elle emporterait des
+   * pièces comptables que la loi impose de garder.
+   *
+   * Il s'écrit EN DERNIER, une fois toutes les étapes passées. Un passage
+   * interrompu le laisse donc nul, et le suivant reprend le compte du début :
+   * c'est ce qui rend l'effacement reprenable sans qu'aucune étape n'ait à
+   * savoir où la précédente s'est arrêtée.
+   */
+  erasedAt                 DateTime?       @map("erased_at") @db.Timestamptz
   uiLanguage               String          @default("fr") @map("ui_language") @db.VarChar(10)
   theme                    UiTheme         @default(system)
   timezone                 String          @default("UTC") @db.VarChar(64)
@@ -132,6 +147,7 @@ model User {
   authoredEvents          Event[]
   authoredNotes           Note[]
   authoredWishes          WishlistItem[]
+  wishReservations        WishReservation[]
   eventOccurrences        EventOccurrence[]
   notifications           Notification[]
   notificationPreferences NotificationPreference[]
@@ -598,6 +614,8 @@ model EventOccurrence {
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   notes             Note[]
   wishes            WishlistItem[]
+  ownerWishes       OwnerWish[]
+  wishlist          Wishlist?
   notifications     Notification[]
   actionRuns        ActionRun[]
   generatedMessages GeneratedMessage[]
@@ -747,12 +765,168 @@ model WishlistItem {
   @@map("wishlist_item")
 }
 
+/**
+ * LA LISTE elle-même, une par occasion de l'utilisateur.
+ * Elle existe comme ligne à part alors qu'`OwnerWish` porte déjà
+ * `event_occurrence_id` : sans elle, « j'ai créé ma liste et je n'ai pas encore
+ * ajouté de souhait » ne s'écrit nulle part, et l'écran de §3.29 ne saurait pas
+ * distinguer une liste vide — où il invite à ajouter un premier souhait — d'une
+ * occasion sans liste, où il propose d'en ouvrir une.
+ * Elle ne porte AUCUN jeton : le lien de partage vit à côté (voir
+ * WishlistShareLink), pour qu'une révocation laisse le lien mort répondre
+ * « révoqué » plutôt que de disparaître.
+ */
+model Wishlist {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Une seule liste par occasion : « un cadeau de Noël n'est pas un cadeau de
+  /// mariage », et deux listes sur la même occasion rendraient le partage
+  /// ambigu — laquelle le lien ouvrirait-il ?
+  eventOccurrenceId String   @unique @map("event_occurrence_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  occurrence EventOccurrence     @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  shareLinks WishlistShareLink[]
+
+  @@map("wishlist")
+}
+
+/**
+ * Le lien public d'une liste, sur le modèle de `CollectionLink` : durable,
+ * révocable, sans expiration automatique.
+ * PLUSIEURS lignes par liste, et c'est tout l'intérêt. Faire tourner un jeton
+ * unique porté par la liste effacerait l'ancien, et le lien déjà partagé — sur
+ * un statut, dans un groupe — rendrait `404` : « cette page n'existe pas »
+ * là où il faut dire « ce lien n'est plus actif » (surfaces publiques §3.9).
+ * La ligne révoquée survit donc pour pouvoir le dire.
+ */
+model WishlistShareLink {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wishlistId String   @map("wishlist_id") @db.Uuid
+  token      String   @unique @db.VarChar(32)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  wishlist Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+
+  @@index([wishlistId])
+  @@map("wishlist_share_link")
+}
+
+/**
+ * MON souhait, sur MA liste — à ne pas confondre avec `WishlistItem`, qui est
+ * ce qu'un proche m'a confié.
+ * La différence n'est pas de nuance : `WishlistItem` est PRIVÉ et ne se partage
+ * pas ; `OwnerWish` a pour raison d'être d'être partagé, et lui seul se
+ * réserve. Les avoir confondus a déjà coûté une correction (`wish_reservation`
+ * a un temps visé `wishlist_item`).
+ */
+model OwnerWish {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Une occasion de l'utilisateur LUI-MÊME (son anniversaire, son mariage).
+  /// Le service le vérifie par `person.is_self` avant d'écrire : rien dans la
+  /// colonne ne l'impose, et une liste ouverte sur l'occasion d'un proche
+  /// publierait ce que ce proche n'a jamais accepté de publier.
+  eventOccurrenceId String         @map("event_occurrence_id") @db.Uuid
+  label             String
+  link              String?
+  imageUrl          String?        @map("image_url")
+  details           String?
+  price             Decimal?       @db.Decimal(12, 2)
+  currency          String?        @db.VarChar(3)
+  /// `reserved` est DÉRIVÉ d'une réservation confirmée, jamais posé à la main :
+  /// le laisser écrire permettrait de retirer un cadeau de la liste partagée
+  /// sans qu'aucune réservation ne l'explique. `fulfilled` reste la décision du
+  /// propriétaire — c'est lui qui sait.
+  status            WishlistStatus @default(available)
+  /// Ce qui paraît sur la liste partagée. Ici le nom dit vrai, contrairement à
+  /// l'`is_public` qu'on a retiré de `WishlistItem` : c'est bien la visibilité
+  /// publique, et un souhait peut rester à soi.
+  isPublic          Boolean        @default(true) @map("is_public")
+  /// L'ordre voulu par le propriétaire. « Il a rangé sa liste ; la page
+  /// respecte ce rangement » (brief de la liste partagée §3).
+  position          Int?           @db.SmallInt
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  occurrence   EventOccurrence   @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  reservations WishReservation[]
+
+  @@index([eventOccurrenceId])
+  @@map("owner_wish")
+}
+
+enum ReservationStatus {
+  pending
+  confirmed
+  cancelled
+  expired
+
+  @@map("reservation_status")
+}
+
+/**
+ * La réservation d'un souhait public par un visiteur, avec ou sans compte.
+ * L'unicité « une seule réservation CONFIRMÉE par souhait » est un index unique
+ * PARTIEL, écrit à la main dans la migration : Prisma ne sait pas l'exprimer.
+ * Elle ne porte que sur `confirmed`, jamais sur `pending` — inclure `pending`
+ * laisserait la première demande occuper le souhait, donc une adresse inventée
+ * suffirait à bloquer un cadeau. Plusieurs demandes en attente coexistent, la
+ * première confirmée l'emporte, les autres deviennent caduques.
+ */
+model WishReservation {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerWishId      String            @map("owner_wish_id") @db.Uuid
+  /// Renseigné quand le réservant a un compte Lehno. `SetNull` : la
+  /// suppression d'un compte ne doit pas rendre un cadeau réservé à nouveau
+  /// disponible — l'engagement d'offrir tient à l'adresse, pas au compte.
+  userId           String?           @map("user_id") @db.Uuid
+  /// C'est L'ADRESSE qui fait l'identité, le jeton n'étant qu'un raccourci.
+  email            String            @db.Citext
+  /// Le nom, seulement si le visiteur a accepté d'être connu du propriétaire.
+  displayName      String?           @map("display_name") @db.VarChar(80)
+  /// Par défaut la réservation reste ANONYME aux yeux du propriétaire : celui
+  /// qui veut se nommer coche.
+  showIdentity     Boolean           @default(false) @map("show_identity")
+  status           ReservationStatus @default(pending)
+  /// HMAC-SHA-256 sous clé du code à usage unique — même règle que
+  /// `otp_code.code_hash`, préfixe de version compris, pour que la rotation de
+  /// clé reste indolore. Nul quand le réservant est connecté : son adresse est
+  /// déjà vérifiée par son compte, et lui envoyer un code n'apprendrait rien.
+  codeHash         String?           @map("code_hash")
+  attempts         Int               @default(0) @db.SmallInt
+  /// SHA-256 du jeton remis après confirmation. Un condensé nu suffit ici :
+  /// 256 bits tirés au hasard ne s'énumèrent pas (voir TokenService).
+  sessionTokenHash String?           @unique @map("session_token_hash") @db.VarChar(64)
+  confirmedAt      DateTime?         @map("confirmed_at") @db.Timestamptz
+  cancelledAt      DateTime?         @map("cancelled_at") @db.Timestamptz
+  /// Une réservation non confirmée se libère au terme du délai.
+  expiresAt        DateTime          @map("expires_at") @db.Timestamptz
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  ownerWish OwnerWish @relation(fields: [ownerWishId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([ownerWishId])
+  @@index([userId])
+  @@index([email])
+  @@map("wish_reservation")
+}
+
 enum NotificationType {
   event_reminder
   event_day_of
   digest
   contribution_received
   wish_received
+  /**
+   * Une réservation confirmée sur MA liste — « c'est ce qui rend la liste
+   * vivante après le partage » (dictionnaire, OwnerWish).
+   * Elle dit QUE quelqu'un a réservé, et le nom SEULEMENT si le réservant l'a
+   * autorisé : sans cette réserve, la notification gâcherait la surprise que
+   * l'écran prend soin de préserver.
+   */
+  wish_reserved
   enrichment_nudge_global
   enrichment_nudge_person
   /**
@@ -1042,6 +1216,13 @@ model AuditLog {
   // qui le tient est posée en migration, la base refusant l'écriture plutôt que
   // le service. Un utilisateur agissant chez lui n'a rien à justifier.
   reason     String?
+  /// Le code du motif retenu, stable et jamais traduit.
+  ///
+  /// `reason` porte ce que l'administrateur a écrit ; celui-ci porte ce qu'on
+  /// peut COMPTER. Sans lui on n'agrégeait rien : les libellés d'interface sont
+  /// bilingues, et le même geste s'inscrivait « Fraude suspectée » ou
+  /// « Suspected fraud » selon la langue au moment du clic.
+  reasonCode String?    @map("reason_code") @db.VarChar(48)
   targetType String?    @map("target_type") @db.VarChar(40)
   targetId   String?    @map("target_id") @db.Uuid
   metadata   Json?
@@ -1053,6 +1234,89 @@ model AuditLog {
   @@index([targetType, targetId])
   @@index([createdAt])
   @@map("audit_log")
+}
+
+/// Un motif d'administration : un code stable, un libellé par langue.
+///
+/// LE CODE NE CHANGE JAMAIS ; le libellé, si — on corrige une faute, on
+/// retraduit. C'est toute la raison d'être de cette table : ce qui est
+/// enregistré sur un geste doit survivre à la réécriture de son libellé, et
+/// rester comptable dans les deux langues.
+///
+/// Normalisée plutôt qu'une ligne par (geste, motif) : un même motif sert
+/// plusieurs gestes, et deux lignes finiraient par porter deux libellés pour un
+/// seul code — le défaut exact que cette table répare.
+model AuditReason {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String   @unique @db.VarChar(48)
+  labelFr   String   @map("label_fr") @db.VarChar(120)
+  labelEn   String   @map("label_en") @db.VarChar(120)
+  /// Retiré de la liste proposée, sans effacer ce qu'il a déjà justifié.
+  isActive  Boolean  @default(true) @map("is_active")
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  scopes AuditReasonScope[]
+
+  @@map("audit_reason")
+}
+
+/// À quels gestes un motif se propose.
+///
+/// Le geste, et non l'action journalisée : le vocabulaire du journal est plus
+/// GROSSIER que celui des écrans — `user_status_update` couvre la suspension et
+/// le rétablissement. Ranger les motifs par action proposerait « Compte de
+/// test » au moment de suspendre quelqu'un.
+model AuditReasonScope {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reasonId String @map("reason_id") @db.Uuid
+  geste    String @db.VarChar(48)
+  position Int?   @db.SmallInt
+
+  reason AuditReason @relation(fields: [reasonId], references: [id], onDelete: Cascade)
+
+  @@unique([reasonId, geste])
+  @@index([geste, position])
+  @@map("audit_reason_scope")
+}
+
+/// Les versions successives d'un motif. Alimentée par déclencheur.
+///
+/// Elle répond à la question que le code stable ne suffit pas à régler : quel
+/// LIBELLÉ portait ce code le jour où quelqu'un l'a retenu. Un libellé corrigé
+/// deux ans plus tard ne doit pas réécrire ce qu'on a fait lire à l'époque.
+model AuditReasonHistory {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auditReasonId String    @map("audit_reason_id") @db.Uuid
+  code          String    @db.VarChar(48)
+  labelFr       String    @map("label_fr") @db.VarChar(120)
+  labelEn       String    @map("label_en") @db.VarChar(120)
+  isActive      Boolean   @map("is_active")
+  updatedAt     DateTime  @map("updated_at") @db.Timestamptz
+  validFrom     DateTime  @map("valid_from") @db.Timestamptz
+  validTo       DateTime? @map("valid_to") @db.Timestamptz
+  changedBy     String?   @map("changed_by") @db.Uuid
+  reason        String
+  reasonCode    String?   @map("reason_code") @db.VarChar(48)
+
+  @@index([auditReasonId, validFrom])
+  @@map("audit_reason_history")
+}
+
+/// Les versions successives d'une portée : à quels gestes un motif s'est
+/// proposé, et entre quelles dates.
+model AuditReasonScopeHistory {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auditReasonScopeId String    @map("audit_reason_scope_id") @db.Uuid
+  reasonId           String    @map("reason_id") @db.Uuid
+  geste              String    @db.VarChar(48)
+  position           Int?      @db.SmallInt
+  validFrom          DateTime  @map("valid_from") @db.Timestamptz
+  validTo            DateTime? @map("valid_to") @db.Timestamptz
+  changedBy          String?   @map("changed_by") @db.Uuid
+  reason             String
+  reasonCode         String?   @map("reason_code") @db.VarChar(48)
+
+  @@map("audit_reason_scope_history")
 }
 
 // Le catalogue des modèles et leur ordre de repli. La priorité gouverne le
@@ -1695,6 +1959,43 @@ model PaymentChannel {
   // rendraient l'aperçu indéterminé.
   @@unique([operator, country, kind])
   @@map("payment_channel")
+}
+
+/// Les versions successives d'un canal, avec leur période de validité.
+///
+/// ALIMENTÉE PAR DÉCLENCHEUR, jamais par l'application : c'est ce qui garantit
+/// qu'aucun chemin d'écriture ne l'esquive — y compris ceux qu'on n'a pas
+/// écrits. Voir `prisma/migrations/…_historisation_des_canaux`.
+///
+/// Aucune clé étrangère vers le canal, à dessein : la ligne doit lui SURVIVRE,
+/// pour qu'un paiement garde son explication quand le canal disparaît.
+model PaymentChannelHistory {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentChannelId String            @map("payment_channel_id") @db.Uuid
+  kind             PaymentMethodKind
+  operator         String            @db.VarChar(40)
+  country          String            @db.VarChar(2)
+  label            String            @db.VarChar(80)
+  feePercent       Decimal           @map("fee_percent") @db.Decimal(5, 2)
+  feeFixed         Decimal           @map("fee_fixed") @db.Decimal(12, 2)
+  feeMin           Decimal?          @map("fee_min") @db.Decimal(12, 2)
+  feeMax           Decimal?          @map("fee_max") @db.Decimal(12, 2)
+  feeBorneBy       FeeBearer         @map("fee_borne_by")
+  currency         String            @db.VarChar(3)
+  isActive         Boolean           @map("is_active")
+  position         Int?              @db.SmallInt
+  updatedAt        DateTime          @map("updated_at") @db.Timestamptz
+  validFrom        DateTime          @map("valid_from") @db.Timestamptz
+  /// Nulle veut dire « en vigueur ». Un index unique partiel garantit qu'il n'y
+  /// en a jamais deux à la fois pour un même canal.
+  validTo          DateTime?         @map("valid_to") @db.Timestamptz
+  /// Nul pour une migration, qui n'a pas d'administrateur.
+  changedBy        String?           @map("changed_by") @db.Uuid
+  reason           String
+  reasonCode       String?           @map("reason_code") @db.VarChar(48)
+
+  @@index([paymentChannelId, validFrom])
+  @@map("payment_channel_history")
 }
 
 /// Un compte d'opérateur sur lequel les clients versent. Jamais supprimé,
