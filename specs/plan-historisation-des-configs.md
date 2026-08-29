@@ -199,3 +199,52 @@ borne.
 d'aujourd'hui entrent avec `valid_from` = date de la migration et
 `reason = 'migration'`. Ce qui les précède est perdu, et le prétendre serait
 exactement le mensonge que ce chantier existe pour empêcher.
+
+---
+
+## Le remboursement : rien à concevoir, tout à câbler
+
+J'ai écrit que « personne ne paie le remboursement » comme s'il manquait une
+décision. Il ne manque que du code : la chaîne est spécifiée en entier, et le
+modèle la porte déjà.
+
+**Un remboursement est un paiement manuel en sens inverse.** `Payment` a
+`direction: refund` et `mode: manual`. Le geste de l'administrateur est celui
+qu'il connaît — il verse par mobile money, puis il constate. C'est
+`payments.controller.ts` en miroir, pas une mécanique nouvelle.
+
+### Ce qui existe et n'attend que d'être appelé
+
+- `PaymentDirection.refund` — **jamais écrit nulle part aujourd'hui.**
+- L'unicité partielle sur `credit_transaction.payment_id` porte **là où `type`
+  vaut `purchase`**, et le dictionnaire dit pourquoi : pour qu'un remboursement
+  puisse citer **le même paiement** que l'achat qu'il annule. La place est
+  gardée depuis le début.
+- La reprise des crédits est une transaction de type `adjustment` qui **désigne
+  l'achat** — sans quoi *« une ligne de −20 crédits ne se rattache à rien […] et
+  un litige se règlerait à l'estime »*.
+
+### Ce qui manque
+
+1. **Rien ne crée la demande.** `effacement.service.ts` ne regarde pas le solde.
+   La suppression avec un solde acheté doit poser un `Payment`
+   `direction=refund, mode=manual, status=pending` — visible dans le panneau, au
+   même endroit que les versements manuels à constater.
+2. **Aucun geste ne la fait aboutir** : un `décider` en miroir, réservé au rôle
+   `admin` et non `support` — le dictionnaire range explicitement les
+   remboursements avec les paramètres globaux.
+3. **Le montant remboursable n'est calculé nulle part.** Les crédits offerts ne
+   se remboursent pas, et le registre porte la `source` de chaque ligne. La
+   règle qui se tient sans suivi de lots : **le minimum entre le solde actuel et
+   la somme des crédits acquis par achat**. Qui a acheté 100, reçu 20 et
+   consommé 90 ne détient plus 100 crédits achetés ; qui a acheté 100, reçu 20
+   et rien consommé n'en détient pas 120.
+
+### Un défaut dans ce que je viens de livrer
+
+`methodes.service.ts` porte `DELAI_AVANT_REMBOURSEMENT_MS = 14 jours` **en dur**.
+Le dictionnaire est formel : *« Le délai est porté par un `SystemParameter`
+(`refund_method_min_age_days`), réglable par l'`Admin` »*. Une constante
+compilée n'est pas réglable — et c'est précisément une configuration
+d'administration, donc l'une de celles que ce chantier doit historiser. À
+corriger dans le même lot.
