@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { startGenerationSchema } from "@lehno/contracts";
 import {
-  cleDeDemande, composeLaDemande, coutDe, etatDeLaPiste, pistesOffertes,
+  cleDeDemande, composeLaDemande, coutDe, etatDeLaPiste, passeParLaFeuille, pistesOffertes,
 } from "../lib/preparation.js";
 
 const OCCASION = "11111111-1111-4111-8111-111111111111";
@@ -159,5 +159,29 @@ describe("ce que l'action coûte", () => {
   // plutôt qu'un coût supposé.
   it("n'invente rien avant d'avoir lu", () => {
     expect(coutDe([], "gift_ideas")).toBeNull();
+  });
+});
+
+describe("la feuille de confirmation ne s'ouvre que si quelque chose se paie", () => {
+  const PAYANT = ["credits", "generation.message"];
+  const GRATUIT = ["generation.message"];
+
+  it("s'ouvre quand l'achat est allumé", () => {
+    expect(passeParLaFeuille(PAYANT)).toBe(true);
+  });
+
+  /* LE PIÈGE DU BRIEF, tenu ici. `premiumActions` continue de servir le prix
+     quand `credits` est éteint — il suit `enabled` en base, pas le drapeau.
+     Sans cette décision, la feuille annoncerait « 1 crédit » sur un geste
+     gratuit et, le solde étant à zéro, offrirait « Recharger » à la place de
+     « Lancer » : elle REFUSERAIT ce qui ne coûte rien. */
+  it("reste fermée quand l'achat est éteint, même si le prix est encore servi", () => {
+    expect(coutDe([{ code: "wish_message", credits: 1 }], "wish_message")).toBe(1);
+    expect(passeParLaFeuille(GRATUIT)).toBe(false);
+  });
+
+  // Absent vaut éteint — même convention que partout ailleurs.
+  it("reste fermée quand on ne sait pas", () => {
+    expect(passeParLaFeuille([])).toBe(false);
   });
 });

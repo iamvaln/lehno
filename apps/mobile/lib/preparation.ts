@@ -106,3 +106,21 @@ export function coutDe(
 ): number | null {
   return actions.find((a) => a.code === kind)?.credits ?? null;
 }
+
+/* SE PAIE-T-IL QUELQUE CHOSE ? — la question qui décide de la feuille.
+ *
+ * `premiumActions` suit `PremiumAction.enabled` en base, PAS le drapeau
+ * `credits` : le prix reste servi quand l'achat est éteint. Or « l'achat éteint
+ * ne ferme pas les générations, il les rend gratuites ». Lire le prix sans
+ * lire le drapeau ferait donc annoncer un coût que rien ne prélève, rappeler
+ * un solde que rien n'entame, et — le vrai dégât — basculer le bouton sur
+ * « Recharger » dès que ce solde est à zéro : un geste GRATUIT refusé, et un
+ * renvoi vers une boutique qui n'ouvre même pas au lancement.
+ *
+ * Quand rien ne se paie, il n'y a rien à confirmer : le geste part
+ * directement. « Rien ne se paie en silence » parle de ce qui se paie ; le
+ * gratuit n'a pas de silence à rompre.
+ */
+export function passeParLaFeuille(actives: readonly string[]): boolean {
+  return estActive(actives, "credits");
+}

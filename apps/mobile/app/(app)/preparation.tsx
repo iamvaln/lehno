@@ -17,7 +17,9 @@ import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
 import { useActionsPayantes } from "../../lib/MetadonneesProvider.js";
-import { composeLaDemande, coutDe, pistesOffertes } from "../../lib/preparation.js";
+import {
+  composeLaDemande, coutDe, passeParLaFeuille, pistesOffertes,
+} from "../../lib/preparation.js";
 
 /* Préparer une occasion — §3.7.
  *
@@ -36,6 +38,10 @@ export default function Preparation() {
   const { occurrenceId } = useLocalSearchParams<{ occurrenceId: string }>();
   const { actives } = useDrapeaux();
   const prix = useActionsPayantes();
+  /* Rien ne se paie quand l'achat est éteint — et alors il n'y a rien à
+     confirmer. Cette seule réponse décide du solde chargé, de la feuille
+     ouverte, et du chemin que prend le geste. */
+  const avecFeuille = passeParLaFeuille(actives);
 
   const [occasion, setOccasion] = useState<Occurrence | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
@@ -50,18 +56,22 @@ export default function Preparation() {
     try {
       /* Le solde vient avec l'occasion : la feuille l'annonce à côté du coût,
          et l'aller chercher au moment du geste ferait attendre devant une
-         question qu'on vient de poser. */
+         question qu'on vient de poser.
+   
+         Mais seulement s'il y a quelque chose à payer. Achat éteint, le geste
+         est gratuit : demander un solde qu'on n'affichera pas ferait un appel
+         pour rien, et sur un compte qui n'a peut-être aucun crédit. */
       const [occ, credits] = await Promise.all([
         appel<unknown>(`/me/occurrences/${occurrenceId}`),
-        appel<unknown>("/me/credits"),
+        avecFeuille ? appel<unknown>("/me/credits") : Promise.resolve(null),
       ]);
       setOccasion(occurrenceSchema.parse(occ));
-      setSolde(creditBalanceSchema.parse(credits).balance);
+      setSolde(credits === null ? null : creditBalanceSchema.parse(credits).balance);
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
     }
-  }, [occurrenceId, langue]);
+  }, [occurrenceId, langue, avecFeuille]);
 
   useEffect(() => { void charge(); }, [charge]);
 
@@ -169,7 +179,7 @@ export default function Preparation() {
               full
               icon="sparkles"
               disabled={envoi !== null || coutDe(prix, kind) === null}
-              onPress={() => setAConfirmer(kind)}
+              onPress={() => { if (avecFeuille) setAConfirmer(kind); else void lance(kind); }}
             >
               {t.preparer}
             </Button>
@@ -180,8 +190,13 @@ export default function Preparation() {
           administration sans livraison, et un écran qui annonce un prix avant
           de débiter ne peut pas se tromper. Une action dont le prix n'est pas
           servi ne se lance pas — son bouton reste éteint plutôt que d'ouvrir
-          une feuille qui ne saurait quoi annoncer. */}
-      {aConfirmer !== null && coutDe(prix, aConfirmer) !== null ? (
+          une feuille qui ne saurait quoi annoncer.
+
+          ACHAT ÉTEINT, PAS DE FEUILLE. Le prix reste servi — il suit la table,
+          pas le drapeau — mais plus rien ne le prélève. L'annoncer, rappeler
+          un solde, et basculer sur « Recharger » quand ce solde est à zéro
+          reviendrait à refuser un geste gratuit. Il part alors directement. */}
+      {avecFeuille && aConfirmer !== null && coutDe(prix, aConfirmer) !== null ? (
         <PaidActionSheet
           surTitre={t.prepPour(occasion.personDisplayName)}
           titre={detail[aConfirmer].titre}

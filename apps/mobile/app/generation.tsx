@@ -5,14 +5,15 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  generatedMessageSchema, generationResultSchema, type GenerationResult,
+  creditBalanceSchema, generatedMessageSchema, generationResultSchema,
+  type GenerationResult,
 } from "@lehno/contracts";
 import {
   nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
 import {
   Banner, Button, Card, CreditIndicator, Icon, Illustration, LoadingState,
-  Provenance, Quote, TextField, Toast, useCouleurs,
+  PaidActionSheet, Provenance, Quote, TextField, Toast, useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../lib/langue.js";
 import { appel, ErreurDApi } from "../lib/api.js";
@@ -21,8 +22,11 @@ import { useDrapeaux } from "../lib/DrapeauxProvider.js";
 import { dateCourte } from "../lib/carnet.js";
 import {
   correctionDuMessage, creditRendu, delaiAvantLaProchaine, doitInterroger,
-  marquageEnvoye, montreLeCout, ouverture, phaseDuResultat,
+  marquageEnvoye, montreLeCout, offreDeRefaire, ouverture, phaseDuResultat,
+  relanceDuMessage,
 } from "../lib/generation.js";
+import { useActionsPayantes } from "../lib/MetadonneesProvider.js";
+import { coutDe, passeParLaFeuille } from "../lib/preparation.js";
 
 /* « Ce que Lehno a écrit » — §3.7, le résultat d'une génération.
  *
@@ -53,17 +57,20 @@ import {
  * message d'erreur.
  */
 
-/* CE QUE CET ÉCRAN NE FAIT PAS : « Refaire » et « Réessayer ».
+/* « REFAIRE » ET « RÉESSAYER » SONT LE MÊME GESTE : une NOUVELLE demande, donc
+ * un nouveau crédit. Ils ne diffèrent que par ce qu'on avait sous les yeux —
+ * un texte qu'on n'aime pas, ou une écriture qui n'a pas abouti.
  *
- * Les deux sont le même geste — une NOUVELLE demande, donc un nouveau crédit.
- * « Rien ne se paie en silence » : le coût s'annonce sur place et passe par la
- * feuille de confirmation, qui vit sur la composition (§3.7 amont) avec le
- * solde et le renvoi vers la recharge (§3.9). Ni l'une ni l'autre n'est dans ce
- * lot ; poser le bouton ici débiterait sans rien annoncer, et un geste qui
- * n'ouvre rien ment davantage qu'un geste absent.
+ * Le geste ne part donc jamais nu : le coût s'annonce sur place et se
+ * confirme, avec le solde à côté. C'est ce que la feuille de §3.7 fait déjà en
+ * amont, et c'est la même ici — un bouton qui débiterait sans rien dire
+ * romprait « rien ne se paie en silence ».
  *
- * Ce qu'il reste à câbler le jour où la composition arrive : `relanceDuMessage`
- * et `offreDeRefaire` sont déjà écrits et éprouvés dans `lib/generation.ts`.
+ * QUATRE RAISONS DE NE PAS L'OFFRIR, et l'écran se tait plutôt que de griser :
+ * le drapeau `generation.message` éteint, l'occasion inconnue (on ne saurait
+ * pas quoi redemander), le prix non servi (l'action n'est pas disponible), et
+ * — cas du lancement — l'achat éteint, où il n'y a rien à confirmer et le
+ * geste part directement.
  */
 
 export default function Generation() {
@@ -72,6 +79,9 @@ export default function Generation() {
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
   const { actives } = useDrapeaux();
+  const prix = useActionsPayantes();
+  /* Rien ne se paie quand l'achat est éteint : ni feuille, ni solde à lire. */
+  const avecFeuille = passeParLaFeuille(actives);
   /* `id` : la génération à observer, déjà lancée. `qui` : le nom d'usage du
      proche, que l'appelant connaît — l'accusé d'envoi le nomme, et aller le
      rechercher ferait un appel pour une phrase. */
@@ -88,6 +98,8 @@ export default function Generation() {
   const [enCours, setEnCours] = useState(false);
   const [accuse, setAccuse] = useState<string | null>(null);
   const [echecDuGeste, setEchecDuGeste] = useState<string | null>(null);
+  const [confirmeLaRelance, setConfirmeLaRelance] = useState(false);
+  const [solde, setSolde] = useState<number | null>(null);
 
   const chemin = ouvre.sorte === "observer" ? ouvre.chemin : null;
 
@@ -144,6 +156,68 @@ export default function Generation() {
 
   const message = resultat?.message ?? null;
   const phase = phaseDuResultat(resultat);
+
+  /* CE QU'IL FAUT POUR REDEMANDER : l'occasion visée. Elle vient de
+     l'EXÉCUTION, connue dès le lancement — la lire sur le message produit ne
+     marcherait pas ici, puisqu'un échec n'en produit aucun, et c'est justement
+     l'échec qui offre « Réessayer ». */
+  const relance = relanceDuMessage(resultat?.generation.occurrenceId ?? undefined);
+  const cout = coutDe(prix, "wish_message");
+  const peutRefaire = offreDeRefaire(actives) && relance !== null && cout !== null;
+
+  /* Le solde n'est lu QUE si une feuille va l'annoncer, et une seule fois :
+     l'aller chercher au moment du geste ferait attendre devant une question
+     qu'on vient de poser, et le chercher toujours ferait un appel pour un
+     bouton qui n'apparaît pas. */
+  useEffect(() => {
+    if (!peutRefaire || !avecFeuille || solde !== null) return;
+    let vivant = true;
+    void (async () => {
+      try {
+        const lu = creditBalanceSchema.parse(await appel<unknown>("/me/credits"));
+        if (vivant) setSolde(lu.balance);
+      } catch {
+        /* Sans solde, pas de feuille — donc pas de bouton. Le silence vaut
+           mieux qu'une confirmation qui annoncerait un reste inventé. */
+      }
+    })();
+    return () => { vivant = false; };
+  }, [peutRefaire, avecFeuille, solde]);
+
+  /* REDEMANDER, c'est repartir de zéro sur la même occasion : nouvelle
+     exécution, nouveau crédit, et l'écran suit la nouvelle plutôt que de
+     rester sur l'ancienne. `replace` et non `push` — revenir en arrière sur
+     une génération qu'on vient de refaire n'a pas de sens.
+     La clé d'idempotence rend deux appuis maladroits reconnaissables comme
+     une seule demande ; sans elle, deux débits. */
+  const refais = async (): Promise<void> => {
+    if (!relance) return;
+    setEnCours(true);
+    setEchecDuGeste(null);
+    try {
+      const brut = await appel<unknown>(relance.chemin, {
+        method: "POST",
+        body: JSON.stringify(relance.corps),
+        gouvernee: true,
+      });
+      const lu = generationResultSchema.parse(brut);
+      routeur.replace({
+        pathname: "/generation",
+        params: qui === undefined ? { id: lu.generation.id } : { id: lu.generation.id, qui },
+      });
+    } catch (e) {
+      setEchecDuGeste(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  /* Un seul chemin pour les deux boutons : la feuille quand quelque chose se
+     paie, le geste direct sinon. */
+  const demandeARefaire = (): void => {
+    if (avecFeuille) setConfirmeLaRelance(true);
+    else void refais();
+  };
 
   const patche = async (envoi: { chemin: string; corps: unknown }): Promise<boolean> => {
     setEnCours(true);
@@ -259,10 +333,17 @@ export default function Generation() {
               <Text style={[styles.titreEchec, { color: couleurs.textBody }]} accessibilityRole="header">
                 {t.genErreurTitre}
               </Text>
-              {/* Refaire coûte un crédit : le geste part de la composition, où
-                  le prix s'annonce et se confirme. Tant qu'elle n'est pas là,
-                  l'écran n'offre que sa sortie — mieux qu'un bouton qui
-                  débiterait sans rien dire. */}
+              {/* Réessayer coûte un crédit comme la première fois : c'est une
+                  NOUVELLE demande, pas une reprise de celle qui a échoué. Le
+                  prix s'annonce donc et se confirme, exactement comme en
+                  amont. Sans occasion connue, sans prix servi ou drapeau
+                  éteint, l'écran n'offre que sa sortie — mieux qu'un bouton
+                  qui échouerait, et pas de bouton grisé. */}
+              {peutRefaire ? (
+                <Button full icon="refresh-cw" disabled={enCours} onPress={demandeARefaire}>
+                  {t.genReessayer}
+                </Button>
+              ) : null}
               <Button variant="outline" full icon="corner-up-left" onPress={sors}>
                 {t.retour}
               </Button>
@@ -343,6 +424,20 @@ export default function Generation() {
                   >
                     {t.resAjuster}
                   </Button>
+                  {/* « Refaire » JETTE ce texte-ci pour en redemander un autre,
+                      et le paie. Il vient donc après « Ajuster », qui ne coûte
+                      rien : le geste gratuit se propose avant le payant. */}
+                  {peutRefaire ? (
+                    <Button
+                      full
+                      variant="text"
+                      icon="refresh-cw"
+                      disabled={enCours}
+                      onPress={demandeARefaire}
+                    >
+                      {t.resRegenerer}
+                    </Button>
+                  ) : null}
                 </>
               )}
             </View>
@@ -367,6 +462,27 @@ export default function Generation() {
       {/* Les accusés se posent au bas de l'ÉCRAN, pas au bas de la liste :
           en natif il n'y a pas de `position: fixed`, donc c'est le parent qui
           les monte au bon niveau — sinon ils défileraient avec le texte. */}
+      {/* La feuille n'ouvre que si tout ce qu'elle doit annoncer est là : un
+          prix servi et un solde lu. Une confirmation qui devinerait l'un des
+          deux annoncerait un chiffre que le débit démentirait. */}
+      {confirmeLaRelance && cout !== null && solde !== null ? (
+        <PaidActionSheet
+          surTitre={qui === undefined ? t.resMessageTitre : t.prepPour(qui)}
+          titre={t.prepMessageTitre}
+          resultat={t.prepMessageTexte}
+          coutLibelle={t.creditUnite(cout)}
+          soldeLibelle={t.creditReste(solde)}
+          lancer={t.feuilleLancer}
+          recharger={t.feuilleRecharger}
+          pasMaintenant={t.feuillePasMaintenant}
+          cout={cout}
+          solde={solde}
+          insetBas={insets.bottom}
+          onConfirmer={() => { setConfirmeLaRelance(false); void refais(); }}
+          onAnnuler={() => setConfirmeLaRelance(false)}
+        />
+      ) : null}
+
       {echecDuGeste ? (
         <Toast intent="error" insetBas={insets.bottom} onDismiss={() => setEchecDuGeste(null)}>
           {echecDuGeste}
