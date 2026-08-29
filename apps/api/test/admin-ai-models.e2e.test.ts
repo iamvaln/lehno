@@ -98,7 +98,7 @@ describe("administration — les modèles d'IA", () => {
 
     expect((await lire(support.entete)).status).toBe(200);
     expect((await lireChaines(support.entete)).status).toBe(200);
-    const res = await ecrire(support.entete, { id: m.id, enabled: false, reason: "Essai depuis le support" });
+    const res = await ecrire(support.entete, { id: m.id, enabled: false, reason: "Essai depuis le support", reasonCode: "failure_rate_too_high" });
     expect(res.status).toBe(403);
   });
 
@@ -125,7 +125,7 @@ describe("administration — les modèles d'IA", () => {
       });
       const { entete } = await session("admin");
 
-      const res = await ecrire(entete, { id: a.id, clearOutage: true, reason: "Le fournisseur est revenu" });
+      const res = await ecrire(entete, { id: a.id, clearOutage: true, reason: "Le fournisseur est revenu", reasonCode: "back_to_normal" });
       expect(res.status).toBe(200);
 
       const apres = await db.prisma.aIModel.findUniqueOrThrow({ where: { id: a.id } });
@@ -146,7 +146,7 @@ describe("administration — les modèles d'IA", () => {
       });
       const { entete } = await session("admin");
 
-      await ecrire(entete, { id: a.id, clearOutage: true, reason: "Le fournisseur est revenu" });
+      await ecrire(entete, { id: a.id, clearOutage: true, reason: "Le fournisseur est revenu", reasonCode: "back_to_normal" });
       expect((await db.prisma.aIModel.findUniqueOrThrow({ where: { id: a.id } })).consecutiveFailures).toBe(0);
     });
 
@@ -174,7 +174,7 @@ describe("administration — les modèles d'IA", () => {
       await ranger("message", [seul.id]);
       const { entete } = await session("admin");
 
-      const res = await ecrire(entete, { id: seul.id, enabled: false, reason: "Essai de coupure totale" });
+      const res = await ecrire(entete, { id: seul.id, enabled: false, reason: "Essai de coupure totale", reasonCode: "failure_rate_too_high" });
       expect(((await res.json()) as { code: string }).code).toBe("validation_failed");
       expect((await db.prisma.aIModel.findUniqueOrThrow({ where: { id: seul.id } })).enabled).toBe(true);
     });
@@ -185,7 +185,7 @@ describe("administration — les modèles d'IA", () => {
       await ranger("message", [a.id, b.id]);
       const { entete } = await session("admin");
 
-      const res = await ecrire(entete, { id: a.id, enabled: false, reason: "Taux d'échec au-dessus du seuil" });
+      const res = await ecrire(entete, { id: a.id, enabled: false, reason: "Taux d'échec au-dessus du seuil", reasonCode: "failure_rate_too_high" });
       expect(res.status).toBe(200);
       expect((await db.prisma.aIModel.findUniqueOrThrow({ where: { id: a.id } })).enabled).toBe(false);
     });
@@ -201,7 +201,7 @@ describe("administration — les modèles d'IA", () => {
       await ranger("illustration", [img.id]);
       const { entete } = await session("admin");
 
-      const res = await ecrire(entete, { id: img.id, enabled: false, reason: MOTIF });
+      const res = await ecrire(entete, { id: img.id, enabled: false, reason: MOTIF, reasonCode: "failure_rate_too_high" });
       expect(((await res.json()) as { code: string }).code).toBe("validation_failed");
       expect((await db.prisma.aIModel.findUniqueOrThrow({ where: { id: img.id } })).enabled).toBe(true);
     });
@@ -300,6 +300,42 @@ describe("administration — les modèles d'IA", () => {
       };
       const msg = corps.items.find((c) => c.tache === "message")!;
       expect(msg.avertissements.map((a) => a.code)).toContain("fournisseur_repete");
+    });
+  });
+
+  /* Le câblage du motif, éprouvé là où il se joue : allumer et éteindre sont
+     deux gestes sous une même action journalisée, et leurs listes n'ont aucun
+     motif en commun. Sans cette distinction, « taux d'échec trop haut »
+     expliquerait une remise en service. */
+  describe("le code du motif", () => {
+    it("refuse une coupure sans code", async () => {
+      const { entete } = await session("admin");
+      const a = await modele("anthropic", true);
+      const res = await ecrire(entete, { id: a.id, enabled: false, reason: "Taux d'échec au-dessus du seuil" });
+      expect(res.status).toBe(422);
+      expect((await db.prisma.aIModel.findUniqueOrThrow({ where: { id: a.id } })).enabled).toBe(true);
+    });
+
+    it("refuse le code de l'allumage sur une coupure", async () => {
+      const { entete } = await session("admin");
+      const a = await modele("anthropic", true);
+      const res = await ecrire(entete, {
+        id: a.id, enabled: false, reason: "Taux d'échec au-dessus du seuil",
+        reasonCode: "back_to_normal",
+      });
+      expect(res.status).toBe(422);
+    });
+
+    it("garde le code à côté de la phrase", async () => {
+      const { entete } = await session("admin");
+      const a = await modele("anthropic", true);
+      await ecrire(entete, {
+        id: a.id, enabled: false, reason: "Taux d'échec au-dessus du seuil",
+        reasonCode: "failure_rate_too_high",
+      });
+      const trace = await db.prisma.auditLog.findFirstOrThrow({ where: { action: "ai_model_update" } });
+      expect(trace.reasonCode).toBe("failure_rate_too_high");
+      expect(trace.reason).toBe("Taux d'échec au-dessus du seuil");
     });
   });
 });

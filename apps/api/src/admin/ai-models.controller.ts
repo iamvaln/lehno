@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Injectable, Patch, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
+import { motifSchema } from "@lehno/contracts";
 import {
   CAPACITE_REQUISE, RANGS_RECOMMANDES, TACHES_IA, type TacheIA,
 } from "@lehno/contracts";
@@ -21,7 +22,8 @@ const modeleSchema = z.object({
      une panne à la main reviendrait à couper un modèle, et couper un modèle a
      déjà son interrupteur — celui qui, lui, résiste à la reprise automatique. */
   clearOutage: z.boolean().optional(),
-  reason: z.string().max(500),
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
 }).strict();
 
 // Une chaîne se règle ENTIÈRE : le tableau EST l'ordre. Promouvoir et déclasser
@@ -31,7 +33,8 @@ const modeleSchema = z.object({
 const chaineSchema = z.object({
   task: z.enum(TACHES_IA),
   modelIds: z.array(z.string().uuid()).min(1).max(10),
-  reason: z.string().max(500),
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
 }).strict();
 
 type ModeleLu = {
@@ -137,7 +140,14 @@ export class AIModelsService {
 
     return this.prisma.$transaction(async (tx) => {
       await this.journal.consigner({
-        auteurId, action: "ai_model_update", motif: entree.reason,
+        auteurId, action: "ai_model_update",
+        /* Allumer et éteindre sont deux gestes sous une même action : « taux
+           d'échec trop haut » n'explique pas une remise en service, et « retour
+           à la normale » n'explique pas une coupure. Lever une panne à la main
+           se range avec l'allumage — c'est le même « il est revenu ». */
+        geste: entree.enabled === false ? "ai_model_disable" : "ai_model_enable",
+        motif: entree.reason,
+        ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
         cibleType: "ai_model", cibleId: avant.id,
         details: { provider: avant.provider, modelKey: avant.modelKey, ...details },
       }, tx);

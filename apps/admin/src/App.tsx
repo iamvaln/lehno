@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Metriques, Studio, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, Studio, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -96,6 +96,32 @@ function themeInitial(): boolean {
   return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
+
+/**
+ * Les quatre entrées de la section « Paiements » ouvrent le MÊME écran avec un
+ * cadrage différent.
+ *
+ * Le cadrage est un point de départ, pas une prison : l'administrateur change
+ * d'onglet ou de filtre ensuite, et l'entrée reste allumée — il n'a pas quitté
+ * la page, il l'a réglée.
+ *
+ * « credits » garde son identifiant : le tableau de bord y pointe déjà, et le
+ * renommer aurait cassé ce chemin sans rien changer à l'écran.
+ */
+const CADRAGES: Record<string, {
+  onglet: "paiements" | "mouvements" | "reglages";
+  etat: string;
+  mode: string;
+}> = {
+  // Ce qui attend une décision : c'est là qu'on ouvre la section.
+  credits: { onglet: "paiements", etat: "pending", mode: "tous" },
+  transactionsToutes: { onglet: "paiements", etat: "tous", mode: "tous" },
+  // « manuel » et non « manual » : les DEUX voies humaines. Au lancement c'est
+  // la seule façon de recharger, et n'en montrer qu'une moitié ferait manquer
+  // des versements à traiter.
+  versementsManuels: { onglet: "paiements", etat: "tous", mode: "manuel" },
+  canauxPaiement: { onglet: "reglages", etat: "tous", mode: "tous" },
+};
 
 const ICONES: Record<string, string> = {
   tableau: "layout-dashboard", alertes: "triangle-alert", moderation: "shield",
@@ -222,13 +248,20 @@ export function App(): ReactNode {
     setNavOuverte(false);
   };
 
+  // Une entrée du menu, écran ou section : le libellé et l'icône se posent de la
+  // même façon aux deux étages, sinon un enfant s'afficherait sans nom.
+  const habiller = (id: string) => ({
+    id,
+    label: t.sections[id as keyof typeof t.sections] ?? id,
+    icon: ICONES[id] ?? "circle",
+    ...(PRESSEES.has(id) ? { ton: "alerte" as const } : {}),
+  });
+
   const familles = famillesDuRole(role).map(({ famille, items }) => ({
     titre: famille ? t.familles[famille] : "",
-    items: items.map((id) => ({
-      id,
-      label: t.sections[id as keyof typeof t.sections],
-      icon: ICONES[id] ?? "circle",
-      ...(PRESSEES.has(id) ? { ton: "alerte" as const } : {}),
+    items: items.map((item) => ({
+      ...habiller(item.id),
+      ...(item.enfants ? { enfants: item.enfants.map(habiller) } : {}),
     })),
   }));
 
@@ -395,6 +428,21 @@ export function App(): ReactNode {
 
   const [tourArret, setTourArret] = useState(0);
 
+  /* La recherche de comptes du mouvement manuel. Le terme vit ici parce que
+     c'est l'écran qui interroge : le sélecteur montre ce qu'on lui donne, il ne
+     connaît pas la liste entière. */
+  const [termeCompte, setTermeCompte] = useState("");
+
+  /* Changer d'entrée repose le cadrage. Sans ça, arriver par « Versements
+     manuels » après avoir filtré ailleurs montrerait la liste précédente sous
+     un intitulé qui promet autre chose. */
+  useEffect(() => {
+    const cadrage = CADRAGES[section];
+    if (!cadrage) return;
+    setOngletCredits(cadrage.onglet);
+    setFiltresPaiements({ etat: cadrage.etat, mode: cadrage.mode });
+  }, [section]);
+
   const etatParametres = useRessource(
     () => (section === "parametres"
       ? api.appeler("/admin/parameters", { schema: parametresSchema })
@@ -405,6 +453,19 @@ export function App(): ReactNode {
   // L'arrêt se lit à part des paramètres : c'est le même écran, mais pas la
   // même chose. Un réglage se modifie et s'enregistre ; l'arrêt se déclenche et
   // se lève, et il doit se relire après chaque geste sans recharger le reste.
+  const etatComptesMouvement = useRessource(
+    () => (section === "transactionManuelle" && termeCompte.trim().length > 0
+      ? api.appeler("/admin/users", {
+        schema: pageComptesSchema,
+        requete: { q: termeCompte.trim(), limit: "8" },
+      })
+      : Promise.resolve(null)),
+    // Rien ne part tant que rien n'est cherché : ouvrir l'écran ne doit pas
+    // rapatrier une page de comptes qu'on n'a pas demandée.
+    [section, termeCompte],
+    { garderAncien: true },
+  );
+
   const etatArret = useRessource(
     () => (section === "parametres"
       ? api.appeler("/admin/maintenance", { schema: maintenanceStatusSchema })
@@ -521,7 +582,7 @@ export function App(): ReactNode {
     [section, tourDrapeaux],
   );
 
-  const surCredits = section === "credits";
+  const surCredits = CADRAGES[section] !== undefined;
   const requetePaiements = {
     ...(filtresPaiements.etat !== "tous" ? { etat: filtresPaiements.etat } : {}),
     ...(filtresPaiements.mode !== "tous" ? { mode: filtresPaiements.mode } : {}),
@@ -748,7 +809,39 @@ export function App(): ReactNode {
         ) : null)}
       />
     );
-  } else if (section === "credits") {
+  } else if (section === "transactionManuelle") {
+    vue = (
+      <TransactionManuelle
+        langue={langue}
+        comptes={(etatComptesMouvement.statut === "pret" && etatComptesMouvement.donnees
+          ? etatComptesMouvement.donnees.items
+          : []
+        ).map((c) => ({ id: c.id, pseudo: c.pseudo, email: c.email, solde: c.credits }))}
+        onChercher={setTermeCompte}
+        onEcrire={(mouvement) => {
+          void (async () => {
+            try {
+              await api.appeler(`/admin/users/${mouvement.utilisateurId}/credits`, {
+                methode: "POST",
+                corps: {
+                  montant: mouvement.montant,
+                  nature: mouvement.nature,
+                  reason: mouvement.reason,
+                },
+              });
+              setAvisExport(t.transactionManuelle.fait);
+              // La recherche se vide : l'écran est prêt pour le mouvement
+              // suivant, et le compte précédent ne reste pas sous la main.
+              setTermeCompte("");
+            } catch (echec) {
+              if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+            }
+          })();
+        }}
+        onRetour={(id) => aller(id ?? "tableau")}
+      />
+    );
+  } else if (CADRAGES[section]) {
     // Une enveloppe par onglet plutôt qu'une union : les trois ressources n'ont
     // pas la même forme, et les faire passer par un seul canal obligerait à
     // deviner laquelle on tient à chaque lecture.

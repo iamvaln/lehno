@@ -381,13 +381,13 @@ describe("administration — les comptes", () => {
     const enSuppression = await creerUtilisateur(1, { status: "pending_deletion" });
     expect((await changer(entete, enSuppression.id, {
       status: "active", reason: "Demande retirée par le titulaire",
-      reasonCode: "holder_s_request",
+      reasonCode: "holders_request",
     })).status).toBe(200);
 
     const suspendu = await creerUtilisateur(2, { status: "suspended" });
     expect((await changer(entete, suspendu.id, {
       status: "active", reason: "Signalement infondé après examen",
-      reasonCode: "holder_s_request",
+      reasonCode: "holders_request",
     })).status).toBe(422);
   });
 });

@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Inject, Injectable, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
+import { motifSchema } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -10,15 +11,20 @@ import { AuditService } from "./audit.service.js";
 const invitationSchema = z.object({
   email: z.string().email().max(254),
   displayName: z.string().max(120).optional(),
-  reason: z.string().max(500),
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
 }).strict();
 
 const roleSchema = z.object({
   role: z.enum(["support", "admin"]),
-  reason: z.string().max(500),
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
 }).strict();
 
-const revocationSchema = z.object({ reason: z.string().max(500) }).strict();
+const revocationSchema = z.object({
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
+}).strict();
 
 @Injectable()
 export class AdminsService {
@@ -60,7 +66,10 @@ export class AdminsService {
       });
 
       await this.journal.consigner({
-        auteurId, action: "admin_invite", motif: entree.reason,
+        /* Inviter n'a aucun motif préréglé, et c'est cohérent : on invite
+           quelqu'un de nommé, pour une raison qui tient à lui. */
+        auteurId, action: "admin_invite", geste: "admin_invite", motif: entree.reason,
+        ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
         cibleType: "admin", cibleId: cree.id,
         details: { email: cree.email, role: cree.role },
       }, tx);
@@ -80,7 +89,11 @@ export class AdminsService {
 
     return this.prisma.$transaction(async (tx) => {
       await this.journal.consigner({
-        auteurId, action: "admin_role_update", motif: entree.reason,
+        auteurId, action: "admin_role_update",
+        // Monter et descendre quelqu'un ne s'expliquent pas pareil.
+        geste: entree.role === "admin" ? "admin_promote" : "admin_demote",
+        motif: entree.reason,
+        ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
         cibleType: "admin", cibleId: id,
         details: { from: avant.role, to: entree.role },
       }, tx);
@@ -103,7 +116,8 @@ export class AdminsService {
 
     return this.prisma.$transaction(async (tx) => {
       await this.journal.consigner({
-        auteurId, action: "admin_revoke", motif: entree.reason,
+        auteurId, action: "admin_revoke", geste: "admin_deactivate", motif: entree.reason,
+        ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
         cibleType: "admin", cibleId: id,
       }, tx);
 

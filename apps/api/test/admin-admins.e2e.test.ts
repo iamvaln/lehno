@@ -100,7 +100,7 @@ describe("administration — les comptes d'exploitation", () => {
     const { entete } = await session("admin");
     const dora = await db.prisma.admin.create({ data: { email: "dora@lehno.app" } });
 
-    const res = await appeler("PATCH", `/${dora.id}`, entete, { role: "admin", reason: "Prend les paramètres en charge" });
+    const res = await appeler("PATCH", `/${dora.id}`, entete, { role: "admin", reason: "Prend les paramètres en charge", reasonCode: "taking_responsibility" });
     expect(res.status).toBe(200);
 
     expect((await db.prisma.admin.findUniqueOrThrow({ where: { id: dora.id } })).role).toBe("admin");
@@ -112,7 +112,7 @@ describe("administration — les comptes d'exploitation", () => {
     const { entete } = await session("admin");
     const dora = await db.prisma.admin.create({ data: { email: "dora@lehno.app" } });
 
-    const res = await appeler("DELETE", `/${dora.id}`, entete, { reason: "A quitté l'équipe" });
+    const res = await appeler("DELETE", `/${dora.id}`, entete, { reason: "A quitté l'équipe", reasonCode: "left_the_team" });
     expect(res.status).toBe(200);
 
     // Effacer la ligne emporterait ses gestes passés hors de portée : le
@@ -125,14 +125,14 @@ describe("administration — les comptes d'exploitation", () => {
   // cassé : plus personne ne peut rétablir qui que ce soit.
   it("on ne se révoque pas soi-même", async () => {
     const { compte, entete } = await session("admin");
-    const res = await appeler("DELETE", `/${compte.id}`, entete, { reason: "Essai de révocation de soi" });
+    const res = await appeler("DELETE", `/${compte.id}`, entete, { reason: "Essai de révocation de soi", reasonCode: "left_the_team" });
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect((await db.prisma.admin.findUniqueOrThrow({ where: { id: compte.id } })).isActive).toBe(true);
   });
 
   it("on ne se rétrograde pas soi-même", async () => {
     const { compte, entete } = await session("admin");
-    const res = await appeler("PATCH", `/${compte.id}`, entete, { role: "support", reason: "Essai de rétrogradation" });
+    const res = await appeler("PATCH", `/${compte.id}`, entete, { role: "support", reason: "Essai de rétrogradation", reasonCode: "change_of_post" });
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect((await db.prisma.admin.findUniqueOrThrow({ where: { id: compte.id } })).role).toBe("admin");
   });
@@ -143,7 +143,7 @@ describe("administration — les comptes d'exploitation", () => {
     const { entete } = await session("admin");
     const dora = await session("admin", "dora@lehno.app");
 
-    await appeler("DELETE", `/${dora.compte.id}`, entete, { reason: "A quitté l'équipe" });
+    await appeler("DELETE", `/${dora.compte.id}`, entete, { reason: "A quitté l'équipe", reasonCode: "left_the_team" });
 
     expect((await appeler("GET", "", dora.entete)).status).toBe(401);
   });

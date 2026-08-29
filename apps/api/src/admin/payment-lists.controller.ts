@@ -1,4 +1,5 @@
 import { Controller, Get, Inject, Injectable, Param, Query, UseGuards } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
@@ -22,9 +23,25 @@ const requetePaiements = z.object({
   limit: z.coerce.number().int().min(1).max(LIMITE_MAX).optional(),
   cursor: z.string().uuid().optional(),
   etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]).optional(),
-  mode: z.enum(["provider", "semi_manual", "manual"]).optional(),
+  /* « manuel » n'est pas un mode de paiement, c'est une FAMILLE : les deux
+     voies où un humain intervient. L'écran des versements manuels les demande
+     ensemble — au lancement c'est la seule façon de recharger, et n'en montrer
+     qu'une moitié ferait manquer des versements à traiter.
+     Le distinguer d'un mode évite d'inventer une quatrième valeur en base. */
+  mode: z.enum(["provider", "semi_manual", "manual", "manuel"]).optional(),
   utilisateurId: z.string().uuid().optional(),
 }).strict();
+
+/** Le filtre de mode, où « manuel » couvre les deux voies humaines.
+ *
+ *  Typé par Prisma plutôt qu'à la main : un fragment de `where` écrit en
+ *  `unknown` se compose sans broncher et fait perdre le type du résultat trois
+ *  lignes plus bas, là où l'erreur n'a plus rien à voir avec sa cause. */
+function filtreMode(mode: string | undefined): Prisma.PaymentWhereInput {
+  if (!mode) return {};
+  if (mode === "manuel") return { mode: { in: ["semi_manual", "manual"] } };
+  return { mode: mode as "provider" | "semi_manual" | "manual" };
+}
 
 const requeteMouvements = z.object({
   limit: z.coerce.number().int().min(1).max(LIMITE_MAX).optional(),
@@ -57,7 +74,7 @@ export class PaymentListsService {
     const lignes = await this.prisma.payment.findMany({
       where: {
         ...(requete.etat ? { status: requete.etat } : {}),
-        ...(requete.mode ? { mode: requete.mode } : {}),
+        ...filtreMode(requete.mode),
         ...(requete.utilisateurId ? { userId: requete.utilisateurId } : {}),
       },
       // Le plus récent d'abord ; l'identifiant départage deux paiements de la

@@ -641,12 +641,17 @@ export const decisionPaiementSchema = z.discriminatedUnion("decision", [
     /** La référence chez l'opérateur, consignée au moment de confirmer. */
     reference: z.string().min(1).max(200),
     reason: motifSchema,
+    /* Le code du motif retenu. Facultatif au schéma, exigé par le service
+       quand le geste propose des motifs — le schéma ne peut pas le savoir,
+       c'est la table qui le dit. */
+    reasonCode: z.string().max(48).optional(),
   }).strict(),
   z.object({
     decision: z.literal("rejeter"),
     /** Renseigné quand on a regardé et constaté un manque ; nul sinon. */
     montantRecu: z.number().nonnegative().nullable().optional(),
     reason: motifSchema,
+    reasonCode: z.string().max(48).optional(),
   }).strict(),
 ]);
 
@@ -759,6 +764,7 @@ export const ajustementCreditsSchema = z.object({
    */
   nature: z.enum(["gift", "reward", "correction"]),
   reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
 }).strict();
 
 export const soldeApresAjustementSchema = z.object({

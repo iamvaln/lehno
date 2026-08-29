@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { App } from "../src/App.js";
 import { magasinLocal } from "../src/api/session.js";
 import { messages } from "../src/i18n/index.js";
+import { allerA } from "./aide-navigation.js";
 
 const t = messages("fr");
 
@@ -58,9 +59,10 @@ async function ouvrirSaisie(utilisateur: ReturnType<typeof userEvent.setup>, rol
   localStorage.clear();
   magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role });
   render(<App />);
-  await utilisateur.click(within(screen.getByRole("navigation")).getByText(t.sections.credits));
+  await allerA(utilisateur, "credits");
   await screen.findByRole("tab", { name: new RegExp(t.credits.onglets.paiements) });
 }
+
 
 describe("la saisie manuelle d'un paiement", () => {
   beforeEach(() => {
