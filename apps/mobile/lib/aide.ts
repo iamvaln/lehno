@@ -21,24 +21,24 @@ export function cheminDuDocument(document: LegalDocument, langue: string): strin
   return `/public/legal/${document}?lang=${lang}`;
 }
 
-/* LES DOCUMENTS QU'ON SAIT NOMMER, dans l'ordre où on les cherche : ce qu'on a
- * accepté d'abord, ce qui touche aux données ensuite.
+/* LES DOCUMENTS QU'ON LIT DANS L'APPLICATION.
  *
- * `mentions` n'y est pas, et ce n'est pas un oubli : la copie ne porte aucun
- * libellé pour lui — seuls `connexionPiedCgu` et `connexionPiedConf` existent,
- * écrits pour le pied de l'écran de connexion. Écrire « Mentions légales »
- * moi-même serait rédiger à la place de qui rédige.
+ * Ceux qu'on a acceptés en entrant : on les cherche justement APRÈS, quand une
+ * question se pose, et les rouvrir ne doit demander ni réseau ni navigateur de
+ * plus que le reste.
  *
- * Le LECTEUR, lui, sait afficher les trois : le jour où le libellé arrive, il
- * suffit d'ajouter la ligne ici.
+ * `mentions` n'en est pas, et ce n'est plus faute de libellé : les mentions
+ * légales vivent sur la page d'accueil du site, et c'est ce lien-là qu'on
+ * pose. Les dupliquer dans l'application créerait un second endroit où
+ * l'éditeur se décrit, et l'un des deux finirait périmé.
  */
-export const DOCUMENTS_ETIQUETES: readonly LegalDocument[] = ["cgu", "confidentialite"];
+export const DOCUMENTS_INTERNES: readonly LegalDocument[] = ["cgu", "confidentialite"];
 
-/* Ce que le contrat sert et que l'écran ne propose pas encore. Rendu visible
-   par un test plutôt que perdu dans un commentaire — un document légal qu'on
-   ne montre pas ne protège personne. */
-export function documentsSansLibelle(): LegalDocument[] {
-  return LEGAL_DOCUMENTS.filter((d) => !DOCUMENTS_ETIQUETES.includes(d));
+/* Ce qui se lit ailleurs qu'ici. Existe pour qu'un test dise POURQUOI un
+   document servi n'est pas dans la liste — sans quoi la prochaine personne le
+   prendrait pour un oubli et l'ajouterait. */
+export function documentsHorsApplication(): LegalDocument[] {
+  return LEGAL_DOCUMENTS.filter((d) => !DOCUMENTS_INTERNES.includes(d));
 }
 
 /* NOTER L'APPLICATION MÈNE AU MAGASIN, et l'URL se DÉCLARE — elle ne se déduit
@@ -58,11 +58,27 @@ export function lienDuMagasin(
   extra: { appStoreUrl?: unknown; playStoreUrl?: unknown } | null | undefined,
   plateforme: "ios" | "android" | string,
 ): string | null {
-  const brut = plateforme === "ios" ? extra?.appStoreUrl : extra?.playStoreUrl;
+  return lienDeclare(plateforme === "ios" ? extra?.appStoreUrl : extra?.playStoreUrl);
+}
+
+/* LES MENTIONS LÉGALES SONT SUR LE SITE, et c'est ce lien qu'on pose.
+ *
+ * Déclarée entière, jamais composée : le chemin de cette page est DANS SA
+ * LANGUE — `/fr/mentions-legales` — et n'existe qu'en français ; « /en/… »
+ * répond 404. Fabriquer l'adresse depuis la langue de l'interface enverrait
+ * donc la moitié des gens sur une page absente.
+ */
+export function lienDesMentions(
+  extra: { mentionsUrl?: unknown } | null | undefined,
+): string | null {
+  return lienDeclare(extra?.mentionsUrl);
+}
+
+/* Une valeur vide, mal recopiée, ou qui ne sort pas en `https` ne s'ouvre pas :
+   la configuration est éditée à la main, et une valeur laissée à moitié
+   remplie ne doit pas ouvrir n'importe quoi. */
+function lienDeclare(brut: unknown): string | null {
   if (typeof brut !== "string") return null;
   const url = brut.trim();
-  /* Une URL vide ou qui ne sort pas en `https` ne s'ouvre pas : la
-     configuration est éditée à la main, et une valeur laissée à moitié
-     remplie ne doit pas ouvrir n'importe quoi. */
   return url.startsWith("https://") ? url : null;
 }

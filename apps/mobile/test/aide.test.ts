@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  cheminDuDocument, DOCUMENTS_ETIQUETES, documentsSansLibelle, lienDuMagasin,
+  cheminDuDocument, DOCUMENTS_INTERNES, documentsHorsApplication, lienDesMentions,
+  lienDuMagasin,
 } from "../lib/aide.js";
 
 describe("le chemin d'un document légal", () => {
@@ -18,19 +19,38 @@ describe("le chemin d'un document légal", () => {
   });
 });
 
-describe("les documents proposés", () => {
-  // Dans l'ordre où on les cherche : ce qu'on a accepté, puis les données.
-  it("ne propose que ceux qu'on sait nommer", () => {
-    expect(DOCUMENTS_ETIQUETES).toEqual(["cgu", "confidentialite"]);
+describe("les documents lus dans l'application", () => {
+  // Ceux qu'on a acceptés en entrant, dans l'ordre où on les cherche.
+  it("porte ce qu'on a accepté", () => {
+    expect(DOCUMENTS_INTERNES).toEqual(["cgu", "confidentialite"]);
   });
 
-  /* `mentions` est servi et n'a AUCUN libellé — la copie n'en porte que deux,
-     écrits pour le pied de l'écran de connexion. L'écrire moi-même serait
-     rédiger à la place de qui rédige. Ce test le nomme plutôt que de le laisser
-     se perdre : un document légal qu'on ne montre pas ne protège personne, et
-     c'est le genre d'oubli qui dure des années. */
-  it("nomme celui qui attend un libellé", () => {
-    expect(documentsSansLibelle()).toEqual(["mentions"]);
+  /* `mentions` se lit SUR LE SITE, et ce test dit pourquoi — sans quoi la
+     prochaine personne le prendrait pour un oubli et l'ajouterait ici, créant
+     un second endroit où l'éditeur se décrit dont l'un finirait périmé. */
+  it("laisse les mentions légales au site", () => {
+    expect(documentsHorsApplication()).toEqual(["mentions"]);
+  });
+});
+
+describe("le lien des mentions légales", () => {
+  /* DÉCLARÉ ENTIER, jamais composé : le chemin de cette page est dans SA
+     LANGUE — `/fr/mentions-legales` — et n'existe qu'en français ; « /en/… »
+     répond 404. Le fabriquer depuis la langue de l'interface enverrait la
+     moitié des gens sur une page absente. */
+  it("ne rend rien tant que rien n'est déclaré", () => {
+    expect(lienDesMentions(undefined)).toBeNull();
+    expect(lienDesMentions({})).toBeNull();
+  });
+
+  it("rend l'adresse déclarée", () => {
+    expect(lienDesMentions({ mentionsUrl: "https://lehno.cm/fr/mentions-legales" }))
+      .toBe("https://lehno.cm/fr/mentions-legales");
+  });
+
+  it("refuse ce qui n'est pas une adresse sûre", () => {
+    expect(lienDesMentions({ mentionsUrl: "lehno.cm/fr/mentions-legales" })).toBeNull();
+    expect(lienDesMentions({ mentionsUrl: "  " })).toBeNull();
   });
 });
 

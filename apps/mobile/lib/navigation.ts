@@ -11,13 +11,33 @@ import { estActive } from "@lehno/contracts";
  * la même façon pour la même raison.
  */
 
-/* « Moi » N'EST PAS UN DRAPEAU, c'est une conséquence. Le serveur n'enverra
-   jamais `moi` — l'onglet part quand ses cinq sections sont toutes fermées.
-   Un onglet qui ne mène qu'à un écran vide est pire qu'un onglet absent. */
+/* « MOI » RESTE, MÊME QUAND SES SECTIONS FERMENT — décidé le 29/08.
+ *
+ * Il a d'abord été calculé comme une conséquence : l'onglet partait quand
+ * `wall`, `wishlist.own`, `wishes` et `reservation` étaient tous éteints, au
+ * motif qu'un onglet menant à un écran vide est pire qu'un onglet absent.
+ *
+ * Le raisonnement était juste et la prémisse fausse. Moi ne porte pas QUE ces
+ * quatre sections : il porte le SOLDE, la recharge et le parrainage, qui ne
+ * suivent aucun drapeau. Au lancement — les quatre éteintes — l'onglet partait
+ * donc avec eux, et le seul chemin restant vers son solde passait par l'écran
+ * de préparation d'un message, via un lien qu'il fallait remarquer.
+ *
+ * Moi n'est donc jamais vide : il garde son socle et perd ses sections. C'est
+ * ce qui distingue un onglet dont le CONTENU varie d'un onglet dont
+ * l'EXISTENCE dépend d'un drapeau — les autres écrans gouvernés, eux, sortent
+ * toujours de la navigation.
+ */
+export function moiVisible(_actives: readonly string[]): boolean {
+  return true;
+}
+
+/* Les sections de Moi qui, elles, suivent leurs drapeaux. L'écran les demande
+   pour savoir ce qu'il montre SOUS le socle. */
 const SECTIONS_DE_MOI = ["wall", "wishlist.own", "wishes", "reservation"] as const;
 
-export function moiVisible(actives: readonly string[]): boolean {
-  return SECTIONS_DE_MOI.some((clé) => estActive(actives, clé));
+export function sectionsDeMoi(actives: readonly string[]): string[] {
+  return SECTIONS_DE_MOI.filter((clé) => estActive(actives, clé));
 }
 
 /* §3.7 s'ouvre dès qu'UNE des deux natures qu'il propose tient, et chaque piste

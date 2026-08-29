@@ -297,6 +297,7 @@ export const fr = {
   aideQuestions: "Questions fréquentes",
   aideContact: "Nous écrire",
   aideNoter: "Noter l'application",
+  mentionsLegales: "Mentions légales",
   aideVersion: "Version",
   reservIntro: "Les cadeaux que vous vous êtes réservés sur le Mur de vos proches.",
   reservVideTitre: "Aucune réservation",

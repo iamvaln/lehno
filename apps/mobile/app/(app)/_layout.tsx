@@ -42,10 +42,16 @@ export default function Application() {
        complète quand « Moi » n'est pas là. */
     { id: "reglages", label: t.ongletReglages, icon: "settings" },
   ];
+  /* « MOI » RESTE AU LANCEMENT — décidé le 29/08 — et son onglet arrive avec
+     son écran, pas avant : un onglet qui ne mène nulle part est exactement le
+     geste muet qu'on refuse partout ailleurs.
+
+     Il attend §3.9 : Moi porte « Recharger » et le parrainage, et les poser
+     sans destination ferait deux impasses sur l'écran qu'on ouvre le plus
+     souvent. D'ici là, c'est le hub des Réglages qui porte le solde — sans
+     quoi il ne serait atteignable nulle part. */
   if (moiVisible(actives)) {
-    // Réservé : « Moi » (3.17) arrivera avec son lot, en cinquième onglet. Il
-    // ne remplace pas Réglages — les deux coexistent, l'un pour ce qu'on
-    // montre, l'autre pour ce qui nous concerne.
+    // Réservé.
   }
 
   return (

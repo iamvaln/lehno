@@ -11,7 +11,7 @@ import {
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
-import { DOCUMENTS_ETIQUETES, lienDuMagasin } from "../../lib/aide.js";
+import { DOCUMENTS_INTERNES, lienDesMentions, lienDuMagasin } from "../../lib/aide.js";
 
 /* Aide — §3.26.
  *
@@ -75,9 +75,12 @@ export default function Aide() {
   const libelleDuDocument: Record<LegalDocument, string> = {
     cgu: t.connexionPiedCgu,
     confidentialite: t.connexionPiedConf,
-    // Sans libellé : il n'est pas dans la liste proposée. Voir `lib/aide.ts`.
-    mentions: "",
+    // Lues sur le site, pas ici — voir `lib/aide.ts`.
+    mentions: t.mentionsLegales,
   };
+  const mentions = lienDesMentions(
+    Constants.expoConfig?.extra as { mentionsUrl?: unknown } | undefined,
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
@@ -129,7 +132,7 @@ export default function Aide() {
             pose. */}
         <View style={styles.bloc}>
           <SectionLabel>{t.aideQuestions}</SectionLabel>
-          {DOCUMENTS_ETIQUETES.map((document, i) => (
+          {DOCUMENTS_INTERNES.map((document: LegalDocument, i: number) => (
             <Pressable
               key={document}
               accessibilityRole="button"
@@ -145,6 +148,25 @@ export default function Aide() {
               <Icon name="chevron-right" size={15} color={couleurs.textMention} />
             </Pressable>
           ))}
+
+          {/* LES MENTIONS LÉGALES SONT SUR LE SITE. Les dupliquer ici créerait un
+              second endroit où l'éditeur se décrit, et l'un des deux finirait
+              périmé. La flèche sortante le dit : on quitte l'application. */}
+          {mentions ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void Linking.openURL(mentions)}
+              style={[styles.rang, {
+                borderTopWidth: nativeBorder.width, borderTopColor: couleurs.borderHairline,
+              }]}
+            >
+              <Icon name="file-text" size={17} color={couleurs.textMention} />
+              <Text style={[styles.libelle, { color: couleurs.textBody }]}>
+                {t.mentionsLegales}
+              </Text>
+              <Icon name="external-link" size={15} color={couleurs.textMention} />
+            </Pressable>
+          ) : null}
         </View>
 
         {/* LE RANG DU MAGASIN NE PARAÎT QUE SI L'URL EST DÉCLARÉE. Un paquet

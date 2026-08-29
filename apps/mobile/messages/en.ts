@@ -285,6 +285,7 @@ export const en = {
   aideQuestions: "Common questions",
   aideContact: "Write to us",
   aideNoter: "Rate the app",
+  mentionsLegales: "Legal notice",
   aideVersion: "Version",
   reservIntro: "The gifts you reserved on other people's Walls.",
   reservVideTitre: "No reservations",
