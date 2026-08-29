@@ -6,6 +6,7 @@ import {
   type ContexteMessage, type Orientation,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { StudioConfigurationService } from "../studio/configuration.service.js";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
 import { AppError } from "../common/errors.js";
 import { RouteurIAService, RefusModele, type Adaptateur } from "../ia/routeur.service.js";
@@ -43,6 +44,7 @@ export class GenerationService {
     @Inject(TenantRepository) private readonly depot: TenantRepository,
     @Inject(RouteurIAService) private readonly routeur: RouteurIAService,
     @Inject(FOURNISSEURS_IA) private readonly adaptateurs: Record<string, Adaptateur>,
+    @Inject(StudioConfigurationService) private readonly configs: StudioConfigurationService,
   ) {}
 
   /* Lancer une génération de message.
@@ -415,9 +417,31 @@ export class GenerationService {
       });
     }
 
+    /* CE QUE L'ATELIER A PUBLIÉ, et c'est tout l'intérêt du Studio : sans cette
+     * lecture, publier une consigne ne changerait rien à ce que les
+     * utilisateurs reçoivent — on aurait construit un écran de réglage qui ne
+     * règle rien.
+     *
+     * On ne lit que l'état `published`, jamais un brouillon : un essai en cours
+     * de composition ne doit atteindre personne.
+     *
+     * ET ON N'ÉCHOUE PAS SANS LUI. Le gabarit du code reste le repli, à la
+     * différence de `/me/studio/options` qui refuse — et l'asymétrie est
+     * délibérée. Là-bas, un repli silencieux ferait réapparaître des
+     * orientations qu'on venait de désactiver, donc mentirait sur ce qui est
+     * en service. Ici, il n'y a rien à cacher : le repli produit un message
+     * correct au lieu de reprendre un crédit à quelqu'un parce qu'une table
+     * d'administration était vide. */
+    const publie = await this.configs.enService().catch(() => null);
+    const reglages = publie === null ? null : this.configs.reglagesDe(publie);
+    const orientationPubliee = reglages?.orientations.find((o) => o.id === orientation);
+
     return {
       langue: options.langue ?? (proche.language === "en" ? "en" : "fr"),
       orientation,
+      ...(orientationPubliee ? { consigneOrientation: orientationPubliee.consigne } : {}),
+      ...(reglages?.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
+      ...(reglages && reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
       // Le nom par lequel le message s'adresse à lui, jamais le nom de liste.
       nomDUsage: proche.callingName ?? proche.displayName,
       registre: proche.register ?? "amical",
