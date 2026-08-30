@@ -70,7 +70,11 @@ describe("la méthode par défaut", () => {
   /* Le défaut est une CONSÉQUENCE de l'usage — « la plus récente » —, pas un
      réglage. La maquette pose un interrupteur « En faire ma méthode par
      défaut » que le contrat n'a pas ; l'envoyer ferait échouer
-     l'enregistrement, `registerPaymentMethodSchema` étant strict. */
+     l'enregistrement, `registerPaymentMethodSchema` étant strict.
+
+     ET IL NE DOIT PAS Y EN AVOIR : deux façons de décider du défaut — l'usage
+     et un choix explicite — finiraient par se contredire, et personne ne
+     saurait laquelle l'achat va suivre. */
   it("est la plus récemment employée", () => {
     expect(methodeParDefaut([
       methode({ id: ID(1), lastUsedAt: "2026-01-02T10:00:00.000Z" }),
