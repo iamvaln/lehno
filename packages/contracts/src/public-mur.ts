@@ -155,6 +155,8 @@ export const publicSubmissionSchema = z.object({
   }).strict()),
 }).strict();
 
+export type PublicSubmission = z.infer<typeof publicSubmissionSchema>;
+
 export const publicSubmissionsSchema = z.object({
   submissions: z.array(publicSubmissionSchema),
 }).strict();
