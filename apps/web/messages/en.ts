@@ -283,4 +283,36 @@ export const en: typeof fr = {
   acqCollecteTexte: "Their dates, what they like, what they told you once. Lehno reminds you when it matters.",
   acqCollecteAction: "Try Lehno",
 
+
+  // ——— La liste partagée ——————————————————————————————————————
+  listeTitre: "Here is what would make me happy",
+  listeOccasion: "{occasion}, on {date}",
+  listeFermee: "The occasion has passed. The list stays visible, but nothing can be taken now.",
+  listeVide: "Nothing has been added here yet.",
+  listeAnonymat: "What you reserve stays anonymous: nobody else sees who took what.",
+  listeRevoqueTitre: "This link is no longer active",
+  listeRevoqueTexte: "The list was unpublished or the link withdrawn. Nothing to do on your side.",
+  listeFaireMaPart: "Make your own",
+  listeFaireMaPartTexte: "Your people know what to give you, and you never had to ask.",
+  listeFaireMaPartAction: "Create my list",
+
+  // ——— Un souhait ——————————————————————————————————————————————
+  souhaitReserver: "I'll take this one",
+  souhaitReserve: "Already taken",
+  souhaitReserveAide: "Someone is on it.",
+  souhaitMien: "You are on it",
+  souhaitOffert: "Given",
+  souhaitPourquoiAdresse: "Your email confirms it is really you, and finds you again if you come back. No account to create.",
+  souhaitLabelEmail: "Your email",
+  souhaitSeFaireConnaitre: "Let them know it is me",
+  souhaitLabelNom: "Your name",
+  souhaitContinuer: "Continue",
+  souhaitAnnulerGeste: "Never mind",
+  souhaitCodeEnvoye: "A six-digit code is on its way to that address. It lasts ten minutes.",
+  souhaitLabelCode: "The code",
+  souhaitConfirmer: "Confirm",
+  souhaitErreur: "That did not work. Try again in a moment.",
+  souhaitCodeFaux: "That code does not match, or it has expired.",
+  souhaitDejaPris: "Someone was faster: this wish has just been taken.",
+
 };

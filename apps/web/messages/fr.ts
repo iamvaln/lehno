@@ -326,4 +326,48 @@ export const fr = {
   acqCollecteTexte: "Leurs dates, ce qu'ils aiment, ce qu'ils vous ont dit un jour. Lehno vous le rappelle le moment venu.",
   acqCollecteAction: "Essayer Lehno",
 
+
+  // ——— La liste partagée ——————————————————————————————————————
+  //
+  // La page la plus exigeante du produit : vue par des gens qui ne connaissent
+  // pas Lehno, souvent une seule fois. La personne avant les objets — une page
+  // qui ouvre sur une grille ressemble à un catalogue, et le lien n'était pas
+  // un catalogue.
+  listeTitre: "Voilà ce qui me ferait plaisir",
+  listeOccasion: "{occasion}, le {date}",
+  listeFermee: "L'occasion est passée. La liste reste visible, mais on ne peut plus s'en occuper.",
+  listeVide: "Rien n'est encore posé ici.",
+  // L'anonymat se dit UNE FOIS, en pied de liste. Répété sur chaque carte, un
+  // rappel devient du bruit.
+  listeAnonymat: "Ce que vous réservez reste anonyme : personne d'autre ne voit qui a pris quoi.",
+  listeRevoqueTitre: "Ce lien n'est plus actif",
+  listeRevoqueTexte: "La liste a été dépubliée ou le lien retiré. Rien à faire de votre côté.",
+  // Après le geste seulement : quelqu'un qui vient de réserver a compris à
+  // quoi ça sert.
+  listeFaireMaPart: "Faites la vôtre",
+  listeFaireMaPartTexte: "Vos proches savent quoi vous offrir, et vous n'avez rien eu à demander.",
+  listeFaireMaPartAction: "Créer ma liste",
+
+  // ——— Un souhait ——————————————————————————————————————————————
+  //
+  // Ce qui n'apparaît JAMAIS : qui a réservé. Un souhait réservé se dit
+  // réservé, et rien de plus.
+  souhaitReserver: "Je m'en occupe",
+  souhaitReserve: "Déjà pris",
+  souhaitReserveAide: "Quelqu'un s'en occupe.",
+  souhaitMien: "Vous vous en occupez",
+  souhaitOffert: "Offert",
+  souhaitPourquoiAdresse: "Votre adresse sert à confirmer que c'est bien vous, et à vous retrouver si vous revenez. Pas de compte à créer.",
+  souhaitLabelEmail: "Votre adresse",
+  souhaitSeFaireConnaitre: "Dire à qui de droit que c'est moi",
+  souhaitLabelNom: "Votre nom",
+  souhaitContinuer: "Continuer",
+  souhaitAnnulerGeste: "Laisser tomber",
+  souhaitCodeEnvoye: "Un code à six chiffres part à cette adresse. Il vaut dix minutes.",
+  souhaitLabelCode: "Le code",
+  souhaitConfirmer: "Confirmer",
+  souhaitErreur: "Ça n'a pas marché. Réessayez dans un instant.",
+  souhaitCodeFaux: "Ce code ne correspond pas, ou il a expiré.",
+  souhaitDejaPris: "Quelqu'un a été plus rapide : ce souhait vient d'être pris.",
+
 };
