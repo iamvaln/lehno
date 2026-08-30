@@ -124,6 +124,10 @@ export type EvenementsMesure = {
   "shared_list.viewed": { authenticated: boolean; wishCount: number };
   "reservation.started": { authenticated: boolean };
   "reservation.confirmed": { identityRevealed: boolean; secondsToConfirm: number };
+  /* Ce que la mesure doit dire : combien de visiteurs SE RAVISENT. Un taux
+     d'annulation élevé n'est pas un incident, c'est le signe que le geste part
+     trop vite — trois clics, sans confirmation. */
+  "reservation.cancelled": { authenticated: boolean };
 };
 
 export type NomEvenement = keyof EvenementsMesure;
@@ -136,6 +140,7 @@ export const NOMS_EVENEMENTS = [
   "wish.added",
   "wishlist.created", "wishlist.wish_added", "wishlist.shared",
   "shared_list.viewed", "reservation.started", "reservation.confirmed",
+  "reservation.cancelled",
 ] as const satisfies readonly NomEvenement[];
 
 // La forme qu'un adaptateur reçoit. Le nom, ses propriétés propres, et les

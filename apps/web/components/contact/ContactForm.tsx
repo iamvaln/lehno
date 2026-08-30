@@ -72,7 +72,7 @@ export function ContactForm({ t }: { t: Messages }): ReactNode {
   }
 
   return (
-    <form onSubmit={envoyer} style={{ display: "grid", gap: "var(--space-18)" }}>
+    <form onSubmit={envoyer} style={{ display: "grid", gap: "var(--space-20)" }}>
       <TextField
         label={t.contactLabelNom}
         value={nom}

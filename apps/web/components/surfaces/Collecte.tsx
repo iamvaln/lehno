@@ -150,17 +150,17 @@ export function Collecte(
       >
         {envoye ? (
           <>
-            <div style={{ marginBottom: "var(--space-22)" }}>
+            <div style={{ marginBottom: "var(--space-24)" }}>
               <Banner intent="success">{t.collecteConfirmeTitre}</Banner>
             </div>
-            <p style={{ margin: "0 0 var(--space-22)", textWrap: "pretty" }}>
+            <p style={{ margin: "0 0 var(--space-24)", textWrap: "pretty" }}>
               {interpoler(t.collecteConfirmeTexte, { nom: ownerDisplayName })}
             </p>
             <Button variant="outline" onClick={recommencer}>{t.collecteAjouterEncore}</Button>
           </>
         ) : (
           <>
-            <header style={{ marginBottom: "var(--space-30)" }}>
+            <header style={{ marginBottom: "var(--space-32)" }}>
               <h1
                 className="titre"
                 style={{
@@ -177,11 +177,11 @@ export function Collecte(
                   : t.collecteSalutPublic}
               </h1>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-12)", marginTop: "var(--space-18)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-12)", marginTop: "var(--space-20)" }}>
                 <Avatar name={ownerDisplayName} size={42} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: "var(--font-body-semibold)" }}>{ownerDisplayName}</div>
-                  <div style={{ fontSize: "var(--text-mention-m)", color: "var(--text-mention)" }}>
+                  <div style={{ fontSize: "var(--text-mention-s)", color: "var(--text-mention)" }}>
                     {ouvert ? t.collecteDemandePublic : t.collecteDemandeNominatif}
                   </div>
                 </div>
@@ -200,14 +200,14 @@ export function Collecte(
                   lien vers une page dépubliée apprendrait qu'elle existe. */}
               {ownerWallUsername ? (
                 <p style={{ margin: "var(--space-14) 0 0" }}>
-                  <a href={`/${langue}/m/${ownerWallUsername}`}>
+                  <a className="lien" href={`/${langue}/m/${ownerWallUsername}`}>
                     {interpoler(t.collecteVoirMur, { nom: ownerDisplayName })}
                   </a>
                 </p>
               ) : null}
             </header>
 
-            <form onSubmit={envoyer} style={{ display: "grid", gap: "var(--space-22)" }}>
+            <form onSubmit={envoyer} style={{ display: "grid", gap: "var(--space-24)" }}>
               {ouvert ? (
                 <>
                   <TextField
@@ -313,9 +313,9 @@ export function Collecte(
 
               <div
                 style={{
-                  paddingTop: "var(--space-18)",
+                  paddingTop: "var(--space-20)",
                   borderTop: "var(--border-width) solid var(--border-hairline)",
-                  display: "grid", gap: "var(--space-22)",
+                  display: "grid", gap: "var(--space-24)",
                 }}
               >
                 {ouvert ? null : (

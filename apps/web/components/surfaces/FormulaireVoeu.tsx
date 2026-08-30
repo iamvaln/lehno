@@ -97,10 +97,10 @@ export function FormulaireVoeu(
             display: "flex", alignItems: "center", gap: "var(--space-10)", flexWrap: "wrap",
             borderTop: "var(--border-width) solid var(--border-hairline)",
             margin: "0 calc(-1 * var(--space-6))",
-            padding: "var(--space-10) var(--space-22) var(--space-12)",
+            padding: "var(--space-10) var(--space-24) var(--space-12)",
           }}
         >
-          <label htmlFor="voeu-signature" style={{ fontSize: "var(--text-mention-m)", color: "var(--text-mention)" }}>
+          <label htmlFor="voeu-signature" style={{ fontSize: "var(--text-mention-s)", color: "var(--text-mention)" }}>
             {t.voeuxLabelSignature}
           </label>
           <input
@@ -128,7 +128,7 @@ export function FormulaireVoeu(
       <div
         style={{
           display: "flex", gap: "var(--space-14)", alignItems: "center",
-          flexWrap: "wrap", marginTop: "var(--space-18)",
+          flexWrap: "wrap", marginTop: "var(--space-20)",
         }}
       >
         <Button type="submit" disabled={!complet || etat === "envoi"}>{t.voeuxEnvoyer}</Button>

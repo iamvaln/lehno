@@ -156,3 +156,21 @@
   .marque-verrouillage { display: none; }
   .marque-pastille { display: block; }
 }
+
+/* Un lien DANS LE TEXTE.
+ *
+ * Le site n'en avait pas de style commun : la landing habille les siens un par
+ * un, et les surfaces publiques — qui en posent au fil des phrases — tombaient
+ * sur le bleu du navigateur. Étranger à la marque en clair, et presque illisible
+ * sur l'aplat sombre, où un bleu roi sur un fond nuit ne passe aucun contraste.
+ *
+ * Le soulignement reste : c'est ce qui distingue un lien d'un mot en couleur
+ * pour qui ne perçoit pas la teinte. Il s'épaissit au survol plutôt que de
+ * disparaître — un lien qui perd son trait au passage se dérobe. */
+.lien {
+  color: var(--text-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.lien:hover { text-decoration-thickness: 2px; }

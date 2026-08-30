@@ -952,6 +952,14 @@ enum NotificationType {
    * l'écran prend soin de préserver.
    */
   wish_reserved
+  /**
+   * Une réservation ANNULÉE sur ma liste. Elle existe parce que `wish_reserved`
+   * existe : quelqu'un a été prévenu qu'un cadeau était couvert, et il
+   * planifierait autour de lui. Ne rien dire quand il se libère laisserait
+   * attendre un cadeau que personne n'apporte.
+   * Comme sa jumelle, elle ne nomme le réservant que s'il l'avait autorisé.
+   */
+  wish_reservation_cancelled
   enrichment_nudge_global
   enrichment_nudge_person
   /**

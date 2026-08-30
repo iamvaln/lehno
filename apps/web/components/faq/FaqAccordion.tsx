@@ -47,7 +47,7 @@ function FaqEntry({ item }: { item: Item }): ReactNode {
         style={{ display: "grid", gridTemplateRows: ouvert ? "1fr" : "0fr", transition: OUVERTURE }}
       >
         <div style={{ overflow: "hidden" }}>
-          <div style={{ paddingBottom: "var(--space-18)" }}>
+          <div style={{ paddingBottom: "var(--space-20)" }}>
                           <p
                 style={{
                   margin: 0, fontSize: "var(--text-body-m)", lineHeight: "var(--leading-roomy)",
