@@ -5,7 +5,7 @@ import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { nombreDeRelaisDeConfiance } from "./common/trust-proxy.js";
 import { portDecoute } from "./common/port.js";
-import { originsAutorisees } from "./common/cors.js";
+import { ENTETES_AUTORISES, originsAutorisees } from "./common/cors.js";
 import { AppModule } from "./app.module.js";
 import { AppExceptionFilter } from "./common/errors.js";
 
@@ -31,7 +31,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: origines,
     methods: ["GET", "POST", "PATCH", "DELETE"],
-    allowedHeaders: ["content-type", "authorization"],
+    allowedHeaders: [...ENTETES_AUTORISES],
     credentials: true,
     maxAge: 86_400,
   });
