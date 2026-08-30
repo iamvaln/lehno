@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
-import { homeSchema, type Home, type Occurrence } from "@lehno/contracts";
+import {
+  generationsSchema, homeSchema, type Home, type Occurrence,
+} from "@lehno/contracts";
 import {
   nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
@@ -14,7 +18,8 @@ import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
-import { preparationOuverte } from "../../lib/navigation.js";
+import { ecranEteint, preparationOuverte } from "../../lib/navigation.js";
+import { composeLesReprises } from "../../lib/reprises.js";
 import {
   REMPLISSAGE_PLEIN, composeLAccueil, doitRepartirDuMaximum, etatDeLAccueil,
   resumeDeLAccueil,
@@ -49,6 +54,7 @@ export default function Accueil() {
   const [rafraichit, setRafraichit] = useState(false);
   const [envoyes, setEnvoyes] = useState<Record<string, true>>({});
   const [accuse, setAccuse] = useState<string | null>(null);
+  const [reprises, setReprises] = useState(0);
 
   /* Le remplissage ne se calcule pas, il se mesure — et la mesure NE FAIT QUE
      RÉTRÉCIR. Repartir du maximum à chaque rendu faisait osciller les deux
@@ -56,14 +62,45 @@ export default function Accueil() {
   const [remplissage, setRemplissage] = useState<Remplissage>(REMPLISSAGE_PLEIN);
   const [hauteur, setHauteur] = useState<number | null>(null);
 
+  /* CE QUI ATTEND SE COMPTE AVEC LE MÊME PRÉDICAT QUE L'ÉCRAN QUI LE MONTRE.
+     `composeLesReprises` décide de ce qui compte comme « en cours » — un
+     lancement raté n'y est pas, une nature éteinte non plus. Recompter ici à la
+     main donnerait deux vérités, et la bannière annoncerait deux choses là où
+     l'écran n'en montrerait qu'une.
+
+     Les ÉCHÉANCES ne sont pas demandées : elles ne servent qu'à nommer les
+     cartes — « mieux vaut une carte sans nom qu'un nom emprunté ». Le COMPTE,
+     lui, n'en a pas besoin, et les charger doublerait le coût de l'accueil pour
+     une information qu'il n'affiche pas. */
+  const compteLesReprises = useCallback(async (): Promise<number> => {
+    if (ecranEteint("reprises", actives)) return 0;
+    try {
+      const brutes = await appel<unknown>("/me/generations", { gouvernee: true });
+      return composeLesReprises(generationsSchema.parse(brutes).generations, [], actives).length;
+    } catch {
+      /* Le compte n'est pas la raison d'être de l'écran : son échec ne doit pas
+         empêcher l'accueil de s'afficher. Sans bannière, on perd un rappel ;
+         avec une erreur, on perd l'écran. */
+      return 0;
+    }
+  }, [actives]);
+
   const charge = useCallback(async () => {
     try {
-      setHome(homeSchema.parse(await appel<unknown>("/me/home")));
+      /* En PARALLÈLE : l'accueil est l'écran qu'on ouvre le plus, et deux
+         allers-retours en file l'un derrière l'autre doubleraient son attente
+         pour une bannière. */
+      const [brut, combien] = await Promise.all([
+        appel<unknown>("/me/home"),
+        compteLesReprises(),
+      ]);
+      setHome(homeSchema.parse(brut));
+      setReprises(combien);
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
     }
-  }, [langue]);
+  }, [langue, compteLesReprises]);
 
   useEffect(() => { void charge(); }, [charge]);
   // Au retour d'un autre onglet : une date ajoutée ailleurs doit se voir ici.
@@ -141,6 +178,25 @@ export default function Accueil() {
           onPress={() => routeur.push("/(app)/notifications")}
         />
       </View>
+
+      {/* CE QUI ATTEND PASSE AVANT CE QUI VIENT. Un brouillon commencé et
+          jamais fini est une dette qu'on a contractée soi-même : la rappeler
+          sous la liste des dates la ferait rater par ceux qui s'arrêtent au
+          premier écran, c'est-à-dire presque tout le monde.
+
+          La bannière ne paraît QUE s'il y a quelque chose — « 0 chose vous
+          attend » apprendrait à ne plus la lire. */}
+      {reprises > 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => routeur.push("/(app)/reprises")}
+          style={styles.rappel}
+        >
+          <Banner intent="info">
+            {reprises === 1 ? t.reprisesUne : t.reprisesN(reprises)}
+          </Banner>
+        </Pressable>
+      ) : null}
 
       {etat === "vide" ? (
         <>
@@ -294,6 +350,7 @@ function phraseDuResume(
 
 const styles = StyleSheet.create({
   page: { flex: 1, paddingHorizontal: nativeSpace[16] },
+  rappel: { marginBottom: nativeSpace[12] },
   resume: {
     fontFamily: nativeFont.bodyRegular, fontSize: 14,
     marginTop: nativeSpace[4], marginBottom: nativeSpace[16],
