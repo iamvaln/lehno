@@ -117,6 +117,24 @@ export class EffacementService {
       where: {
         // Le marqueur d'idempotence : ce qui est déjà vidé ne repasse jamais.
         erasedAt: null,
+        /* L'EFFACEMENT ATTEND LE VERSEMENT (décision du 29/08).
+         *
+         * `effacerUn` supprime les méthodes de paiement. Après lui, il n'existe
+         * plus aucune coordonnée où verser, et personne ne peut en ajouter
+         * puisque le compte est vidé : la file des remboursements attendrait
+         * pour toujours. Le compte reste donc en sursis tant que l'argent n'est
+         * pas parti.
+         *
+         * `direction: refund` et non tout paiement en attente : une recharge qui
+         * n'a pas abouti n'est pas une dette envers le titulaire, et bloquer
+         * là-dessus retiendrait des comptes sans raison.
+         *
+         * L'exclusion porte sur les DEUX portes ci-dessous, l'effacement forcé
+         * par l'administration compris : forcer ne doit pas faire disparaître
+         * par inadvertance la coordonnée d'une dette. S'il faut vraiment
+         * effacer, on règle le remboursement d'abord.
+         */
+        payments: { none: { direction: "refund", status: "pending" } },
         OR: [
           /* La porte de l'administration. Marquer `deleted` est réservé au rôle
              admin et exige un motif au journal (voir AdminUsersController) :

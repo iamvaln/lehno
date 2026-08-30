@@ -40,6 +40,21 @@ interface LigneDemande extends DemandeSuppression {
 const TON_ETAT: Record<EtatDemande, TonPastille> = {
   en_cours: "attente",
   echue: "arrete",
+  /* Ni l'ambre de l'attente, ni le rouge de « à effacer ».
+     Le rouge dirait que l'heure est venue de vider le compte — c'est exactement
+     la confusion à écarter, puisque l'effacement est RETENU. L'ambre dirait
+     qu'on attend une date, alors qu'on attend un virement de notre part.
+     Le violet les distingue des deux sans annoncer ni l'un ni l'autre. */
+  attend_remboursement: "info",
+};
+
+/* Le libellé se lit dans le dictionnaire, indexé par l'état — plutôt qu'un
+   ternaire qui grandit d'une branche à chaque état ajouté, et dont on oublie
+   la dernière. */
+const CLE_LIBELLE: Record<EtatDemande, "enCours" | "echue" | "attendRemboursement"> = {
+  en_cours: "enCours",
+  echue: "echue",
+  attend_remboursement: "attendRemboursement",
 };
 
 export interface SuppressionsProps {
@@ -100,7 +115,7 @@ export function Suppressions({
     demandeeTexte: date.format(new Date(demande.demandeeLe)),
     echeanceTexte: date.format(new Date(demande.echeance)),
     restantTexte: restant(demande.joursRestants),
-    etatLibelle: demande.etat === "en_cours" ? t.suppressions.etats.enCours : t.suppressions.etats.echue,
+    etatLibelle: t.suppressions.etats[CLE_LIBELLE[demande.etat]],
     ton: TON_ETAT[demande.etat],
   }));
 
