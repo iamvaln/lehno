@@ -239,6 +239,28 @@ champs que le contrat garde inactifs est précisément ce qu'il interdit.
 
 ---
 
+## 3 quater. Le banc d'essai des surfaces de lien fige quatre phrases (30/08)
+
+Le LISEZ-MOI prévient que « son dictionnaire de démonstration et ses données
+d'exemple restent dans ce fichier » — c'est donc attendu. Mais la session qui
+portera le web doit savoir lesquelles paramétrer, sans quoi elles partiront
+telles quelles :
+
+- `murTitre` — « Bienvenue chez **Valentine** »
+- `murDate` — « Mon anniversaire, c'est le **25 août** »
+- `murJourJ` — « Le **25 août** »
+- `murMotFerme` — « Les mots pour mon anniversaire s'ouvrent le **18 août**. »
+
+Les trois dernières viennent de `publicWallSchema.birthday`, servi en `MM-DD` —
+« jamais l'année : elle dirait l'âge à tout visiteur ».
+
+**Une bonne nouvelle du même document** : le LISEZ-MOI porte désormais « aucune
+valeur servie par le serveur n'est écrite dans un texte — les montants, les
+numéros de compte et les codes descendent en données ». Le brief est devenu une
+règle du kit.
+
+---
+
 ## 4. Ce qui m'attend, moi
 
 - **La recherche du carnet n'emploie pas `?q=`** alors qu'il existe désormais au

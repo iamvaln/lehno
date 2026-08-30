@@ -141,14 +141,29 @@ export default function MonMur() {
             actif={mur.isEnabled}
             onBascule={(v) => void regle({ isEnabled: v }, () => undefined)}
           />
+          {/* L'APERÇU se lit toujours, même Mur éteint : c'est justement
+              avant de publier qu'on veut savoir ce qu'on s'apprête à ouvrir. */}
+          <Button
+            full
+            variant="outline"
+            icon="eye"
+            onPress={() => routeur.push({
+              pathname: "/(app)/apercu", params: { url: mur.publicUrl },
+            })}
+          >
+            {t.murPrivApercu}
+          </Button>
+          {/* LE PARTAGE, LUI, ATTEND LA PUBLICATION : `publicUrl` existe même
+              éteint — c'est l'adresse qu'il AURA — et la faire circuler avant
+              que la page ne réponde enverrait des gens sur un refus. */}
           {peutPartager(mur) ? (
             <Button
               full
-              variant="outline"
+              variant="text"
               icon="send"
               onPress={() => void Share.share({ message: mur.publicUrl })}
             >
-              {t.murPrivVoir}
+              {t.moiPartager}
             </Button>
           ) : null}
         </View>
