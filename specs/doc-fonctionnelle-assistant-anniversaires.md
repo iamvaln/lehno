@@ -1,6 +1,6 @@
 # Lehno — Documentation fonctionnelle
 
-*lehno.app — assistant personnel des dates qui comptent*
+*lehno.io — assistant personnel des dates qui comptent*
 
 ## Sommaire
 
@@ -30,7 +30,7 @@
 
 ### Contexte
 
-**Lehno** (lehno.app) est un **assistant personnel des dates qui comptent**. Il est né d'un besoin propre : ne plus laisser passer les anniversaires et jalons des proches, ne plus oublier de leur envoyer un mot le jour venu, et disposer au bon moment d'une matière déjà prête pour célébrer chaque personne de façon juste.
+**Lehno** (lehno.io) est un **assistant personnel des dates qui comptent**. Il est né d'un besoin propre : ne plus laisser passer les anniversaires et jalons des proches, ne plus oublier de leur envoyer un mot le jour venu, et disposer au bon moment d'une matière déjà prête pour célébrer chaque personne de façon juste.
 
 Le nom recouvre l'ensemble des dates traitées par l'application — anniversaire, mais aussi rencontre, mariage, lancement, tout jalon important. Lehno retient au fil de l'année ce qui concerne chaque proche et prépare, le moment venu, de quoi agir : idées de célébration, brouillon de message.
 
