@@ -29,6 +29,13 @@ import {
  * Les cartes déjà enregistrées se LISENT quand même dans la liste : elles
  * existent, elles servent, et une carte absente de l'écran ne se retirerait
  * plus. On sait donc en montrer une sans savoir en créer une.
+ *
+ * ET LA COPIE DU FORMULAIRE EST SUPPRIMÉE, pas seulement inemployée. « Le
+ * numéro de carte », « Expire », « Carte bancaire » : tant qu'elles existaient,
+ * elles se traduisaient, se relisaient, et pouvaient se retrouver posées sur un
+ * écran par quelqu'un qui les croyait prévues. Un formulaire de carte
+ * promettrait un moyen de payer qui n'existe pas — `topup.provider` est éteint,
+ * et aucun prestataire n'est intégré.
  */
 export const SORTE_AJOUTABLE = "mobile_money" as const;
 
@@ -79,12 +86,21 @@ export function methodeRemplacee(
   ) ?? null;
 }
 
-/* CE QUI EST « PAR DÉFAUT » NE SE DÉCIDE PAS ICI.
+/* CE QUI EST « PAR DÉFAUT » NE SE DÉCIDE PAS, IL S'OBSERVE.
  *
  * La maquette pose un interrupteur « En faire ma méthode par défaut ». Il n'a
  * rien à régler : le contrat n'a pas de champ pour ça, et
  * `registerPaymentMethodSchema` étant `strict`, l'envoyer ferait échouer
  * l'enregistrement au lieu de l'orienter.
+ *
+ * ET IL NE DOIT PAS Y AVOIR DE ROUTE POUR ÇA. Deux façons de décider du défaut
+ * — l'usage et un choix explicite — finiraient par se contredire : quelqu'un
+ * désignerait une méthode, en emploierait une autre, et personne ne saurait
+ * laquelle l'achat va proposer. Une seule source, et c'est l'usage.
+ *
+ * L'écran DIT donc le défaut, il ne l'offre pas : « Proposée par défaut » est
+ * une information sur ce qui se passera, pas un interrupteur. Le libellé le
+ * porte — « Par défaut » se lisait comme un état qu'on aurait posé.
  *
  * Le défaut est une CONSÉQUENCE — `lastUsedAt` porte la règle, « la méthode
  * proposée par défaut à l'achat : la plus récente ». On la calcule donc pour
