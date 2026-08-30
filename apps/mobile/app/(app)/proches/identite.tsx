@@ -10,11 +10,12 @@ import {
   type PersonRelation,
 } from "@lehno/contracts";
 import {
-  nativeBorder, nativeFont, nativeRadius, nativeSpace,
+  nativeBorder, nativeFont, nativeSpace,
 } from "@lehno/tokens";
 import {
   Avatar, Button, Icon, SectionLabel, TextField, useCouleurs,
 } from "@lehno/ui-native";
+import { Choix } from "../../../composants/Choix.js";
 import { useLangue } from "../../../lib/langue.js";
 import { appel, ErreurDApi } from "../../../lib/api.js";
 import { messageDErreur } from "../../../lib/session.js";
@@ -268,42 +269,6 @@ export default function Identite() {
   );
 }
 
-/* Un choix unique en pastilles. Pas de liste déroulante : trois à sept valeurs
-   se lisent d'un coup, et un sélecteur natif cacherait le choix derrière un
-   geste de plus. Réappuyer sur la pastille active la retire — un lien choisi
-   par erreur doit pouvoir se défaire sans vider la fiche. */
-function Choix<T extends string>({ options, libelle, valeur, pose }: {
-  options: readonly T[];
-  libelle: (valeur: T) => string;
-  valeur: T | null;
-  pose: (valeur: T | null) => void;
-}) {
-  const couleurs = useCouleurs();
-  return (
-    <View style={[styles.pastilles]}>
-      {options.map((o) => {
-        const actif = valeur === o;
-        return (
-          <Pressable
-            key={o}
-            accessibilityRole="button"
-            accessibilityState={{ selected: actif }}
-            onPress={() => pose(actif ? null : o)}
-            style={[styles.pastille, {
-              borderColor: actif ? "transparent" : couleurs.borderObject,
-              backgroundColor: actif ? couleurs.action : "transparent",
-            }]}
-          >
-            <Text style={[styles.pastilleTexte, {
-              color: actif ? couleurs.textOnAccent : couleurs.textSecondary,
-            }]}>{libelle(o)}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   retour: { width: 44, height: 44, marginLeft: -nativeSpace[12], alignItems: "center", justifyContent: "center" },
   entete: { flexDirection: "row", alignItems: "center", gap: nativeSpace[12], marginBottom: nativeSpace[16] },
@@ -314,12 +279,6 @@ const styles = StyleSheet.create({
   bloc: { marginTop: nativeSpace[20] },
   aide: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[8] },
   aideCentre: { fontFamily: nativeFont.bodyRegular, fontSize: 12, textAlign: "center", marginTop: nativeSpace[8] },
-  pastilles: { flexDirection: "row", flexWrap: "wrap", gap: nativeSpace[6], marginTop: nativeSpace[8] },
-  pastille: {
-    minHeight: 38, paddingHorizontal: nativeSpace[14], justifyContent: "center",
-    borderRadius: nativeRadius.pill, borderWidth: nativeBorder.width,
-  },
-  pastilleTexte: { fontFamily: nativeFont.bodySemibold, fontSize: 13 },
   erreur: { fontFamily: nativeFont.bodyRegular, fontSize: 13.5, marginTop: nativeSpace[12] },
   danger: { marginTop: nativeSpace[28], paddingTop: nativeSpace[24], borderTopWidth: nativeBorder.width },
 });

@@ -205,6 +205,21 @@ export const dataExportRequestSchema = z.object({
 
 export type DataExportRequest = z.infer<typeof dataExportRequestSchema>;
 
+/* Ce que `GET /me/data-export` rend : la DERNIÈRE demande, ou rien.
+ *
+ * Nul est une réponse, pas une absence — d'où le 200 à corps nul plutôt qu'un
+ * 404 : « vous n'avez jamais demandé d'export » se dit, et l'écran affiche un
+ * bouton dans les deux cas.
+ *
+ * L'enveloppe porte un nom pour la même raison que `noteListSchema` : sans lui
+ * chaque appelant refait le sien, et le jour où la réponse portera aussi le
+ * nombre de demandes restantes, les copies ne l'apprendront pas ensemble. */
+export const lastDataExportSchema = z.object({
+  request: dataExportRequestSchema.nullable(),
+}).strict();
+
+export type LastDataExport = z.infer<typeof lastDataExportSchema>;
+
 // ── Écrire à l'équipe, donner un avis (§3.26, §5.9) ─────────────────────────
 
 export const createSupportRequestSchema = z.object({

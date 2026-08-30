@@ -153,7 +153,20 @@ export const demandeSuppressionSchema = z.object({
   echeance: z.string(),
   /** Le délai de grâce est de trente jours (dictionnaire de données, User). */
   joursRestants: z.number().int(),
-  etat: z.enum(["en_cours", "echue"]),
+  /**
+   * Trois états, et le troisième n'est pas un raffinement.
+   *
+   * - `en_cours` — le délai court. **Ça attend une date.**
+   * - `echue` — le délai est passé, l'effacement va suivre.
+   * - `attend_remboursement` — un versement est dû au titulaire. **Ça attend un
+   *   geste de notre part**, et l'effacement est retenu tant qu'il n'est pas
+   *   parti (décision du 29/08 : après l'effacement il n'existe plus de
+   *   coordonnée où verser).
+   *
+   * Les confondre ferait passer pour patient ce qui est en retard : un compte
+   * qui attend notre virement se lirait comme un compte qui attend le calendrier.
+   */
+  etat: z.enum(["en_cours", "echue", "attend_remboursement"]),
 }).strict();
 
 export type DemandeSuppression = z.infer<typeof demandeSuppressionSchema>;

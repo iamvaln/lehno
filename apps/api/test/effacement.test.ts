@@ -129,6 +129,77 @@ describe("l'effacement des comptes supprimés", () => {
     expect((await relu(u.id)).erasedAt).not.toBeNull();
   });
 
+  /* L'EFFACEMENT ATTEND LE VERSEMENT (décision du 29/08).
+   *
+   * Un compte dont un remboursement est en attente reste en sursis. Sans cette
+   * exclusion, `effacerUn` supprime les méthodes de paiement — et il n'existe
+   * plus aucune coordonnée où verser, ni personne pour en ajouter puisque le
+   * compte est vidé. La file des remboursements attendrait pour toujours.
+   *
+   * L'autre issue était de GARDER le numéro visé : écartée, parce qu'elle fait
+   * survivre à l'effacement la donnée que §9.11 désigne comme la plus à
+   * protéger, pour un montant souvent de quelques centaines de francs. */
+  const remboursementEnAttente = (userId: string) =>
+    db.prisma.payment.create({
+      data: {
+        userId, direction: "refund", status: "pending", mode: "provider",
+        amount: 1000, currency: "XAF", credits: 0,
+      },
+    });
+
+  it("n'efface pas un compte dont un remboursement est en attente", async () => {
+    const u = await enSuppression(40);
+    await carnet(u.id);
+    await remboursementEnAttente(u.id);
+
+    await service.executer();
+
+    expect((await relu(u.id)).erasedAt).toBeNull();
+    expect(await db.prisma.person.count({ where: { userId: u.id } })).toBeGreaterThan(0);
+  });
+
+  /* L'exclusion vaut pour LES DEUX portes, y compris l'effacement immédiat par
+     l'administration : forcer l'effacement ne doit pas faire disparaître par
+     inadvertance la coordonnée d'une dette. S'il faut vraiment effacer, on règle
+     le remboursement d'abord — ce n'est pas une contrainte, c'est l'ordre des
+     choses. */
+  it("retient aussi l'effacement forcé par l'administration", async () => {
+    const u = await compte({ status: "deleted" });
+    await carnet(u.id);
+    await remboursementEnAttente(u.id);
+
+    await service.executer();
+
+    expect((await relu(u.id)).erasedAt).toBeNull();
+  });
+
+  // Un remboursement DÉJÀ versé ne retient rien : la dette est réglée.
+  it("efface une fois le remboursement abouti", async () => {
+    const u = await enSuppression(40);
+    const r = await remboursementEnAttente(u.id);
+    await db.prisma.payment.update({ where: { id: r.id }, data: { status: "succeeded" } });
+
+    await service.executer();
+
+    expect((await relu(u.id)).erasedAt).not.toBeNull();
+  });
+
+  // Et un paiement ENTRANT en attente ne retient rien : ce n'est pas une dette
+  // envers le titulaire, c'est une recharge qui n'a pas abouti.
+  it("n'est pas retenu par un paiement entrant en attente", async () => {
+    const u = await enSuppression(40);
+    await db.prisma.payment.create({
+      data: {
+        userId: u.id, direction: "charge", status: "pending", mode: "provider",
+        amount: 1000, currency: "XAF", credits: 10,
+      },
+    });
+
+    await service.executer();
+
+    expect((await relu(u.id)).erasedAt).not.toBeNull();
+  });
+
   /* PIÈGE : un compte marqué `pending_deletion` sans date de demande. Sans le
      `not: null` du filtre, il passerait la comparaison d'échéance et partirait
      sans avoir jamais eu de délai. */

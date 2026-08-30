@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Metriques, Studio, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, Studio, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -428,6 +428,11 @@ export function App(): ReactNode {
 
   const [tourArret, setTourArret] = useState(0);
 
+  /* La recherche de comptes du mouvement manuel. Le terme vit ici parce que
+     c'est l'écran qui interroge : le sélecteur montre ce qu'on lui donne, il ne
+     connaît pas la liste entière. */
+  const [termeCompte, setTermeCompte] = useState("");
+
   /* Changer d'entrée repose le cadrage. Sans ça, arriver par « Versements
      manuels » après avoir filtré ailleurs montrerait la liste précédente sous
      un intitulé qui promet autre chose. */
@@ -448,6 +453,19 @@ export function App(): ReactNode {
   // L'arrêt se lit à part des paramètres : c'est le même écran, mais pas la
   // même chose. Un réglage se modifie et s'enregistre ; l'arrêt se déclenche et
   // se lève, et il doit se relire après chaque geste sans recharger le reste.
+  const etatComptesMouvement = useRessource(
+    () => (section === "transactionManuelle" && termeCompte.trim().length > 0
+      ? api.appeler("/admin/users", {
+        schema: pageComptesSchema,
+        requete: { q: termeCompte.trim(), limit: "8" },
+      })
+      : Promise.resolve(null)),
+    // Rien ne part tant que rien n'est cherché : ouvrir l'écran ne doit pas
+    // rapatrier une page de comptes qu'on n'a pas demandée.
+    [section, termeCompte],
+    { garderAncien: true },
+  );
+
   const etatArret = useRessource(
     () => (section === "parametres"
       ? api.appeler("/admin/maintenance", { schema: maintenanceStatusSchema })
@@ -789,6 +807,38 @@ export function App(): ReactNode {
             }}
           />
         ) : null)}
+      />
+    );
+  } else if (section === "transactionManuelle") {
+    vue = (
+      <TransactionManuelle
+        langue={langue}
+        comptes={(etatComptesMouvement.statut === "pret" && etatComptesMouvement.donnees
+          ? etatComptesMouvement.donnees.items
+          : []
+        ).map((c) => ({ id: c.id, pseudo: c.pseudo, email: c.email, solde: c.credits }))}
+        onChercher={setTermeCompte}
+        onEcrire={(mouvement) => {
+          void (async () => {
+            try {
+              await api.appeler(`/admin/users/${mouvement.utilisateurId}/credits`, {
+                methode: "POST",
+                corps: {
+                  montant: mouvement.montant,
+                  nature: mouvement.nature,
+                  reason: mouvement.reason,
+                },
+              });
+              setAvisExport(t.transactionManuelle.fait);
+              // La recherche se vide : l'écran est prêt pour le mouvement
+              // suivant, et le compte précédent ne reste pas sous la main.
+              setTermeCompte("");
+            } catch (echec) {
+              if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+            }
+          })();
+        }}
+        onRetour={(id) => aller(id ?? "tableau")}
       />
     );
   } else if (CADRAGES[section]) {
