@@ -48,14 +48,46 @@ describe("les écrans gouvernés se gardent eux-mêmes", () => {
     });
   }
 
-  /* LIRE LE VERDICT NE SUFFIT PAS, IL FAUT S'Y TENIR. Un écran qui calcule
-     `eteint` et charge quand même part chercher sa route pendant qu'il affiche
-     son état fermé : le 404 revient et se pose en bandeau par-dessus. La garde
-     doit donc paraître dans une position de CONTRÔLE, pas seulement dans une
-     affectation. */
+  /* DEUX GARDES, ET IL EN FAUT DEUX.
+   *
+   * Une seule ne suffit pas, et je l'ai éprouvé : la première version de ce
+   * test acceptait l'une OU l'autre, et retirer la garde de RENDU la laissait
+   * passer sans un mot — l'écran s'ouvrait entier, vide, avec ses boutons.
+   *
+   * La garde de CHARGEMENT empêche la requête : sans elle, le 404 revient se
+   * poser en bandeau par-dessus l'état fermé.
+   *
+   * La garde de RENDU empêche l'écran : sans elle, on voit la coquille d'une
+   * fonctionnalité qui n'existe pas, avec des gestes qui échoueront tous.
+   *
+   * Elles ne se remplacent pas, chacune ferme ce que l'autre laisse ouvert. */
   for (const ecran of Object.keys(GOUVERNÉS)) {
-    it(`${ecran} agit sur son verdict, il ne se contente pas de le lire`, () => {
-      expect(source(ecran)).toMatch(/if \(eteint\)|!eteint/);
+    it(`${ecran} refuse de charger tant qu'il est éteint`, () => {
+      /* DEUX FORMES ACCEPTÉES, parce qu'elles ferment la même porte.
+       *
+       * Soit l'EFFET n'appelle pas — `if (!eteint) void charge()` ; soit la
+       * FONCTION qui charge sort d'elle-même avant son premier appel. La
+       * seconde est la meilleure : elle couvre aussi le tirer-pour-rafraîchir
+       * et le rechargement au retour sur l'écran, que l'effet ne voit pas. Le
+       * test ne l'impose pas, mais il ne doit pas la refuser.
+       *
+       * On ne se contente PAS de chercher `eteint` avant le premier `appel<`
+       * dans le fichier : l'ordre du TEXTE n'est pas l'ordre de l'EXÉCUTION —
+       * la fonction de chargement est déclarée avant l'effet qui la garde, et
+       * ce test-là passait pour de mauvaises raisons.
+       */
+      const s = source(ecran);
+      const parEffet = /use(?:Focus)?Effect\([^;]*!eteint/.test(s);
+      const debut = s.indexOf("useCallback(async () => {");
+      const parLaFonction = debut > -1
+        && /^\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(eteint\)/.test(
+          s.slice(debut + "useCallback(async () => {".length),
+        );
+      expect(parEffet || parLaFonction).toBe(true);
+    });
+
+    it(`${ecran} refuse de se rendre tant qu'il est éteint`, () => {
+      expect(source(ecran)).toContain("if (eteint) return <EcranFerme />;");
     });
   }
 });
