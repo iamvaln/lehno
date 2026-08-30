@@ -15,6 +15,9 @@ import { useLangue } from "../../lib/langue.js";
 import { appel, appelPublic, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { annonceUnGain, codePartageable, filleulsAboutis } from "../../lib/parrainage.js";
+import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
+import { ecranEteint } from "../../lib/navigation.js";
+import { EcranFerme } from "../../composants/EcranFerme.js";
 
 /* Parrainage — §3.29.
  *
@@ -35,6 +38,11 @@ export default function Parrainage() {
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
+  const { actives } = useDrapeaux();
+  /* UNE ROUTE RESTE UNE ROUTE. La navigation ne propose plus cet écran
+     quand son drapeau est éteint, mais un lien profond l'atteint encore :
+     il se garde donc lui-même plutôt que de compter sur celui qui l'ouvre. */
+  const eteint = ecranEteint("parrainage", actives);
 
   const [resume, setResume] = useState<ReferralSummary | null>(null);
   const [pourEux, setPourEux] = useState<number | null>(null);
@@ -58,7 +66,7 @@ export default function Parrainage() {
     }
   }, [langue]);
 
-  useEffect(() => { void charge(); }, [charge]);
+  useEffect(() => { if (!eteint) void charge(); }, [charge, eteint]);
 
   if (echec && !resume) {
     return (
@@ -87,6 +95,8 @@ export default function Parrainage() {
      serveur et celui de la configuration. Il en manque un, on présente le
      parrainage sans promesse plutôt qu'avec une moitié de promesse. */
   const chiffre = annonceUnGain(resume) && pourEux !== null;
+
+  if (eteint) return <EcranFerme />;
 
   return (
     <ScrollView

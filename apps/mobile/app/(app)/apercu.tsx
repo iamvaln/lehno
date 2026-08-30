@@ -15,6 +15,9 @@ import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { accepteDesVoeux, anniversaireSansAnnee, pageVide } from "../../lib/apercu.js";
+import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
+import { ecranEteint } from "../../lib/navigation.js";
+import { EcranFerme } from "../../composants/EcranFerme.js";
 
 /* L'aperçu de mon Mur — §3.12, vu depuis l'application.
  *
@@ -43,6 +46,11 @@ export default function Apercu() {
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
+  const { actives } = useDrapeaux();
+  /* UNE ROUTE RESTE UNE ROUTE. La navigation ne propose plus cet écran
+     quand son drapeau est éteint, mais un lien profond l'atteint encore :
+     il se garde donc lui-même plutôt que de compter sur celui qui l'ouvre. */
+  const eteint = ecranEteint("monmur", actives);
   /* L'ADRESSE VIENT DU SERVEUR, JAMAIS DE LA NAVIGATION.
      
      Elle arrivait en paramètre de route, et c'était une faille : les routes
@@ -71,7 +79,7 @@ export default function Apercu() {
     }
   }, [langue]);
 
-  useEffect(() => { void charge(); }, [charge]);
+  useEffect(() => { if (!eteint) void charge(); }, [charge, eteint]);
 
   const retour = (
     <Pressable
@@ -108,6 +116,8 @@ export default function Apercu() {
   }
 
   const anniversaire = mur.birthday ? anniversaireSansAnnee(mur.birthday, langue) : null;
+
+  if (eteint) return <EcranFerme />;
 
   return (
     <ScrollView

@@ -13,6 +13,9 @@ import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { dateCourte } from "../../lib/carnet.js";
+import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
+import { ecranEteint } from "../../lib/navigation.js";
+import { EcranFerme } from "../../composants/EcranFerme.js";
 import {
   aTrancher, corpsDeDecision, corpsDeRejet, pretAEnvoyer,
   type SaisieDuSas, type Sort,
@@ -40,6 +43,11 @@ export default function Valider() {
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
+  const { actives } = useDrapeaux();
+  /* UNE ROUTE RESTE UNE ROUTE. La navigation ne propose plus cet écran
+     quand son drapeau est éteint, mais un lien profond l'atteint encore :
+     il se garde donc lui-même plutôt que de compter sur celui qui l'ouvre. */
+  const eteint = ecranEteint("valider", actives);
 
   const [contributions, setContributions] = useState<Submission[] | null>(null);
   const [saisies, setSaisies] = useState<Record<string, SaisieDuSas>>({});
@@ -63,7 +71,7 @@ export default function Valider() {
     }
   }, [langue]);
 
-  useFocusEffect(useCallback(() => { void charge(); }, [charge]));
+  useFocusEffect(useCallback(() => { if (!eteint) void charge(); }, [charge, eteint]));
 
   const pose = (id: string, quoi: Partial<SaisieDuSas>): void => {
     setSaisies((v) => ({ ...v, [id]: { ...v[id]!, ...quoi } }));
@@ -139,6 +147,8 @@ export default function Valider() {
       </View>
     );
   }
+
+  if (eteint) return <EcranFerme />;
 
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
