@@ -15,7 +15,7 @@ const REPLI_PAR_LANGUE: Record<Langue, DocumentLegal> = {
     maj: "",
     chapeau: [
       { type: "texte", valeur: "Ce texte n'a pas pu être chargé pour le moment. Réessayez dans un instant, ou écrivez à " },
-      { type: "lien", texte: "hello@lehno.app", href: "mailto:hello@lehno.app" },
+      { type: "lien", texte: "hello@lehno.io", href: "mailto:hello@lehno.io" },
       { type: "texte", valeur: "." },
     ],
     sections: [],
@@ -25,7 +25,7 @@ const REPLI_PAR_LANGUE: Record<Langue, DocumentLegal> = {
     maj: "",
     chapeau: [
       { type: "texte", valeur: "This text could not be loaded right now. Try again in a moment, or write to " },
-      { type: "lien", texte: "hello@lehno.app", href: "mailto:hello@lehno.app" },
+      { type: "lien", texte: "hello@lehno.io", href: "mailto:hello@lehno.io" },
       { type: "texte", valeur: "." },
     ],
     sections: [],

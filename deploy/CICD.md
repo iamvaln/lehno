@@ -41,10 +41,10 @@ Inlinées dans le bundle client au build de l'image web (voir
 
 | Variable | Valeur (exemple) |
 | --- | --- |
-| `NEXT_PUBLIC_API_URL` | `https://api.lehno.app` |
+| `NEXT_PUBLIC_API_URL` | `https://api.lehno.io` |
 
 ```bash
-gh variable set NEXT_PUBLIC_API_URL --body "https://api.lehno.app"
+gh variable set NEXT_PUBLIC_API_URL --body "https://api.lehno.io"
 ```
 
 La bascule de lancement (pré-lancement ↔ liens de magasins) n'est plus une
@@ -104,7 +104,7 @@ directement.
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | identifiants de la base (service `db`) |
 | `DATABASE_URL` | `postgresql://<user>:<mdp>@db:5432/<db>` — lue par `api` et `migrate` |
 | `OTP_PEPPER`, `JWT_SECRET` | secrets applicatifs — l'api refuse de démarrer si absents (générer avec `openssl rand -base64 32`) |
-| `RESEND_API_KEY`, `RESEND_FROM` | envoi de courriel — l'api refuse de démarrer sans les deux. `RESEND_FROM` doit porter un domaine vérifié chez Resend, par exemple `Lehno <no-reply@lehno.app>` |
+| `RESEND_API_KEY`, `RESEND_FROM` | envoi de courriel — l'api refuse de démarrer sans les deux. `RESEND_FROM` doit porter un domaine vérifié chez Resend, par exemple `Lehno <no-reply@lehno.io>` |
 | `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID` | connexion fédérée, optionnels, vérifiés à l'usage |
 | `TRUST_PROXY_HOPS` | déjà posé à `1` par `docker-compose.yml`, rien à écrire ici. Ne le relevez que si un relais s'ajoute devant Traefik — voir l'encadré ci-dessous |
 | `SENTRY_DSN` | suivi des erreurs, optionnel |

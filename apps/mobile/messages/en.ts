@@ -44,7 +44,7 @@ export const en = {
   maintEtat: "Service status",
   pseudoTitre: "Pick your handle",
   champPseudo: "Handle",
-  pseudoAdresse: (pseudo: string) => "lehno.app/" + pseudo,
+  pseudoAdresse: (pseudo: string) => "lehno.io/" + pseudo,
   pseudoPris: "That one's taken. \u201Cvalentine2\u201D is free.",
   champParrain: "Referral code (optional)",
   parrainValide: "Valid code",

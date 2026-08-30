@@ -1,13 +1,13 @@
 # Legal Notice
 
-_Version 2026-08-23 · Last updated: 23 August 2026_
+_Version 2026-08-30 · Last updated: 30 August 2026_
 
 ## Service provider
 
 **Proxia Digital**
 Akwa, Douala, Cameroon
 Phone: +237 691 980 189
-Email: hello@lehno.app
+Email: hello@lehno.io
 
 A limited liability company (SARL) under Cameroonian law.
 
@@ -24,7 +24,7 @@ of Cameroon, and is treated as such in section 6 of the
 
 ## Data protection
 
-Data Protection Officer: Valentine Nguemne — hello@lehno.app
+Data Protection Officer: Valentine Nguemne — hello@lehno.io
 The role is held by the company's leadership.
 
 The processing carried out as part of Lehno is described in the
@@ -32,7 +32,7 @@ The processing carried out as part of Lehno is described in the
 
 ## Contact
 
-Any question about the service can be sent to hello@lehno.app.
+Any question about the service can be sent to hello@lehno.io.
 A reply is provided within **five business days**. Requests concerning your
 personal data fall under the period stated in section 8 of the
 [privacy policy](/v1/public/legal/confidentialite?lang=en).

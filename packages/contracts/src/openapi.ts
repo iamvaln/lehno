@@ -2717,7 +2717,7 @@ export function construireOpenApi(): object {
         "l'identifiant de compte prend le relais après.",
       ].join("\n"),
     },
-    servers: [{ url: "https://api.lehno.app/v1" }, { url: "http://localhost:3001/v1", description: "développement" }],
+    servers: [{ url: "https://api.lehno.io/v1" }, { url: "http://localhost:3001/v1", description: "développement" }],
     components: {
       securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" } },
     },

@@ -980,7 +980,7 @@ export const fr = {
     titre: "Connexion",
     sous: "Réservée aux comptes d'administration.",
     adresse: "Adresse e-mail",
-    adressePlaceholder: "vous@lehno.app",
+    adressePlaceholder: "vous@lehno.io",
     envoyer: "Recevoir un code",
     titreCode: "Le code",
     envoye: "Un code vient de partir vers {adresse}.",
