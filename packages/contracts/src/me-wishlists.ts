@@ -164,3 +164,13 @@ export const myReservationSchema = z.object({
 }).strict();
 
 export type MyReservation = z.infer<typeof myReservationSchema>;
+
+/* Les listes nues portent enfin un nom, pour la raison que `noteListSchema`
+   donne déjà : « un tableau nu n'a pas de nom, et sans nom chaque appelant
+   refait le sien ». Le client mobile ne peut pas se le refaire — il n'embarque
+   pas zod, précisément parce que le contrat est censé nommer ses réponses. */
+export const wishlistListSchema = z.array(wishlistSchema);
+export type WishlistList = z.infer<typeof wishlistListSchema>;
+
+export const myReservationListSchema = z.array(myReservationSchema);
+export type MyReservationList = z.infer<typeof myReservationListSchema>;

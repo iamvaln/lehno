@@ -145,6 +145,11 @@ export const receivedWishSchema = z.object({
 
 export type ReceivedWish = z.infer<typeof receivedWishSchema>;
 
+// Même raison que `wishlistListSchema` : une liste servie nue se relit chez
+// chaque appelant, et le mobile n'a pas de quoi la décrire.
+export const receivedWishListSchema = z.array(receivedWishSchema);
+export type ReceivedWishList = z.infer<typeof receivedWishListSchema>;
+
 export const receivedWishDecisionSchema = z.object({
   decision: z.enum(["approved", "rejected"]),
 }).strict();

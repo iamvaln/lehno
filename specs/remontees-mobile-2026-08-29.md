@@ -170,6 +170,42 @@ le manque est donc réparable.
 
 ---
 
+## 3 bis. Ce que le portage des surfaces publiques a trouvé (30/08)
+
+- **`collectionLinkSchema` ne sert pas son URL.** Il porte un `token`, et rien
+  d'autre. `wishlistShareSchema`, lui, sert l'adresse complète — avec cette
+  raison écrite : « le client ne la reconstitue pas ; le domaine public change,
+  et deux versions du parc en fabriqueraient deux différentes ». Deux
+  mécanismes de partage, un seul sert son adresse. En attendant, §3.20 montre
+  le jeton et n'offre pas de partage : composer `…/c/<token>` serait deviner un
+  chemin que personne n'a arrêté.
+- **Aucune surface publique n'a de page web.** Le site n'a que l'accueil, la
+  FAQ, le contact et les quatre documents légaux — aucune route dynamique.
+  L'API sert pourtant `/public/walls/:slug`, `/public/collect/:token` et
+  `/public/wishlists/:token`, en JSON. Conséquence : le « Partager » du Mur
+  donne une adresse qui ne répond pas. Décidé le 30/08 de le garder — une autre
+  session portera le web public.
+- **Trois gestes de la copie que le contrat ne sert pas**, sur les
+  réservations : « Libérer », « Marquer comme offert », et l'état « Retiré par
+  son propriétaire ». On réserve depuis la liste publique, et rien ne défait ni
+  ne conclut ensuite.
+- **Un interrupteur « Ma wishlist » sur le Mur** que `updateWallSchema`
+  n'accepte pas. Et « Mes goûts » y est une LISTE, pas une bascule — un seul
+  bouton pour tous exposerait d'un coup ce qu'on avait trié.
+- **Le formulaire de création d'une wishlist** demande un nom, une option
+  « sans occasion » et une clôture ; `createWishlistSchema` ne prend qu'une
+  `occurrenceId` obligatoire. Une liste EST son occasion.
+- **La copie de §3.20 se contredit** : « Réactiver un lien » d'un côté, « vous
+  pouvez en créer un autre » deux lignes plus bas. Le contrat n'offre que créer
+  et révoquer — c'est la seconde qui dit vrai.
+
+Et deux valeurs figées de plus, portant le compte à **dix** :
+`murPrivAdresse` (`lehno.app/valentine` — l'adresse de quelqu'un d'autre pour
+tout le monde), `moiLienVoeuxOuvert` (« Jusqu'au 3 sept. ») et `collecteLien`
+(`lehno.app/c/8Kd2p`).
+
+---
+
 ## 4. Ce qui m'attend, moi
 
 - **La recherche du carnet n'emploie pas `?q=`** alors qu'il existe désormais au

@@ -221,7 +221,6 @@ export const fr = {
   ongletReglages: "Réglages",
 
   /* ─── Mon Mur côté privé (3.10), profil, réglages, sécurité, aide ─── */
-  murPrivAdresse: "lehno.app/valentine",
   murPrivPublie: "Publié",
   murPrivPrive: "Hors ligne",
   murPrivBascule: "Rendre mon Mur public",
@@ -365,7 +364,9 @@ export const fr = {
   moiListesUne: "1 wishlist",
   moiListesN: (n: number) => n + " wishlists",
   moiLienVoeux: "Mon lien de vœux",
-  moiLienVoeuxOuvert: "Jusqu'au 3 sept.",
+  /* La date vient de `closesOn`, jamais de la copie : figée, elle annoncerait
+     une fermeture qui n'est plus la bonne dès la deuxième occasion. */
+  moiLienVoeuxOuvert: (date: string) => "Jusqu'au " + date,
   moiLienVoeuxFerme: "Fermé",
   moiMotsRecus: "Les mots reçus",
   moiMotsAucun: "Aucun mot",
@@ -540,7 +541,6 @@ export const fr = {
   /* ─── Lien de collecte (3.20) ─── */
   collecteTitre: (qui: string) => "Laissez " + qui + " compléter",
   collecteIntro: "Envoyez ce lien : ce qui en revient passe par votre validation avant d'entrer dans la fiche.",
-  collecteLien: "lehno.app/c/8Kd2p",
   collectePartager: "Partager le lien",
   collecteCopier: "Copier le lien",
   collecteRevoquer: "Révoquer le lien",
