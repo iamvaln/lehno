@@ -13,6 +13,9 @@ describe("les deux issues de la vérification", () => {
     const r = verifyOutcomeSchema.parse({
       outcome: "session", accessToken: JETON, refreshToken: JETON,
       expiresIn: 900, isNewAccount: false,
+      // La lignée qui parle, sans quoi le client ne se reconnaît pas dans sa
+      // propre liste de sessions.
+      sessionId: "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
     });
     expect(r.outcome).toBe("session");
   });
