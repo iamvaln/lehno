@@ -1,4 +1,6 @@
 import * as SecureStore from "expo-secure-store";
+import { videLeCoffre } from "./coffre.js";
+import { videLaFile } from "./fileStockee.js";
 import type { Session } from "@lehno/contracts";
 
 /* Les deux jetons de la session, au trousseau de l'appareil.
@@ -61,6 +63,23 @@ export async function effaceLesJetons(): Promise<void> {
   await Promise.all([
     SecureStore.deleteItemAsync(ACCES),
     SecureStore.deleteItemAsync(RAFRAICHISSEMENT),
+    /* LE CACHE PART AVEC LA SESSION, et c'est ici qu'il faut le faire — pas
+       dans l'écran des réglages. Ce chemin couvre les QUATRE sorties : la
+       déconnexion volontaire, la fermeture du compte, la session invalidée par
+       le serveur, et le renouvellement qui échoue. Posé dans un écran, il
+       manquerait les deux dernières — celles qu'on ne choisit pas.
+
+       Le cache garde des noms, des dates de naissance et des notes intimes :
+       un compte quitté sur un téléphone prêté ne laisse rien derrière lui, et
+       un second compte ouvert sur le même appareil ne voit pas le carnet du
+       premier. */
+    videLeCoffre(),
+    /* LA FILE AUSSI. Elle porte les corps des requêtes — le texte d'une note,
+       le nom d'un proche — et ses actions ne se rejoueraient de toute façon
+       pas : le jeton qui les autorisait vient de disparaître, et les rejouer
+       sous le compte SUIVANT écrirait les notes de quelqu'un dans le carnet
+       d'un autre. */
+    videLaFile(),
   ]);
   annonce();
 }
