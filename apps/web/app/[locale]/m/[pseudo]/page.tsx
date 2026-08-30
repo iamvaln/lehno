@@ -13,7 +13,7 @@ import { messages } from "../../../../messages/index.js";
  * arrive depuis le site ; celui-ci arrive par un message. Un mot français dans
  * la barre d'adresse d'un lecteur anglophone, ou l'inverse, se lirait comme une
  * erreur. La spécification a déjà tranché ainsi pour l'invitation
- * (`lehno.app/i/<code>`) : une lettre, opaque, courte dans un message. */
+ * (`lehno.io/i/<code>`) : une lettre, opaque, courte dans un message. */
 
 type Proprietes = { params: Promise<{ locale: string; pseudo: string }> };
 

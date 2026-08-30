@@ -102,7 +102,7 @@ Deux motifs, deux emplois, **jamais les deux sur un même portrait** :
 
 ### 3.5 Ce que porte la bande
 
-Dans cet ordre : **le nom du proche** · **le message** · **la note de l'expéditeur** · **le pied de marque** (lehno.app et les identifiants sociaux, discrets).
+Dans cet ordre : **le nom du proche** · **le message** · **la note de l'expéditeur** · **le pied de marque** (lehno.io et les identifiants sociaux, discrets).
 
 ### 3.6 Les formats
 

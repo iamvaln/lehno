@@ -2,8 +2,8 @@ import { ENTETE_JETON_RESERVATION } from "@lehno/contracts";
 
 // Les origines autorisées à appeler l'API depuis un navigateur.
 //
-// Le site public et l'API vivent sur deux domaines — lehno.app et
-// api.lehno.app —, donc chaque envoi de formulaire déclenche une requête
+// Le site public et l'API vivent sur deux domaines — lehno.io et
+// api.lehno.io —, donc chaque envoi de formulaire déclenche une requête
 // préalable. Sans cette liste, elle répond 404 et rien ne part : ni la liste
 // d'attente, ni le formulaire de contact.
 //

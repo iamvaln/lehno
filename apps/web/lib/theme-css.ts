@@ -20,6 +20,21 @@ const pontDesPolices = `
   --font-body: var(--font-texte), system-ui, -apple-system, "Segoe UI", sans-serif;
 `.trim();
 
+/* Le thème sombre POUR UNE PAGE SANS SCRIPT.
+ *
+ * `not-found` est servi par Next dans sa propre coquille : `<html>` n'y porte
+ * pas `suppressHydrationWarning`, et React remet donc son `className` à
+ * l'hydratation — emportant la classe `lehno-nuit` que le script venait de
+ * poser. La page repassait en clair sous les yeux du visiteur.
+ *
+ * Une requête média ne se défait pas. Elle ignore le choix explicite rangé dans
+ * le stockage local — sur une page d'erreur, la préférence du système suffit. */
+export const themeSansScript = `
+@media (prefers-color-scheme: dark) {
+  :root { ${cssVariables("dark")} }
+}
+`.trim();
+
 export const themeCss = `
 :root {
   ${cssTokens()}

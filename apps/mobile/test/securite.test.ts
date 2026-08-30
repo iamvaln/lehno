@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ExternalIdentity, SessionSummary } from "@lehno/contracts";
 import {
-  appareils, estCetAppareil, moyensDeConnexion, natureDeLAppareil,
+  appareils, autresAppareils, estCetAppareil, moyensDeConnexion, natureDeLAppareil,
 } from "../lib/securite.js";
 
 const identite = (provider: ExternalIdentity["provider"]): ExternalIdentity => ({
@@ -75,15 +75,49 @@ describe("l'icône d'un appareil", () => {
   });
 });
 
-describe("« cet appareil » ne se désigne pas", () => {
-  /* LE MANQUE, TENU PAR UN TEST. La maquette coche la lignée courante ; ni le
-     contrat ni le client ne peuvent la nommer — `/me/sessions` ne reçoit qu'un
-     jeton d'accès qui ne dit pas de quelle lignée il descend, et la réponse de
-     connexion ne rend aucun identifiant de session.
+/* La lignée que `session(1, …)` porte : on la nomme plutôt que de la recopier,
+   pour qu'un changement du fabricant ne fasse pas passer le test à côté. */
+const LIGNEE_1 = "00000001-0000-4000-8000-000000000000";
 
-     Deviner par le `User-Agent` tomberait sur la mauvaise dès qu'un téléphone
-     a deux sessions ouvertes : on garderait celle qu'on croyait fermer. */
-  it("ne prétend jamais reconnaître la session courante", () => {
-    expect(estCetAppareil()).toBe(false);
+describe("« cet appareil »", () => {
+  /* CE QUI ÉTAIT IMPOSSIBLE ET NE L'EST PLUS. La réponse de connexion ne
+     rendait aucun identifiant de session ; elle rend maintenant `sessionId`,
+     la LIGNÉE — celle-là même que `/me/sessions` porte comme `id`. */
+  it("reconnaît la lignée d'où l'on regarde", () => {
+    expect(estCetAppareil(session(1, "2026-08-30T10:00:00.000Z"), LIGNEE_1)).toBe(true);
+    expect(estCetAppareil(session(2, "2026-08-29T10:00:00.000Z"), LIGNEE_1)).toBe(false);
+  });
+
+  /* SANS LIGNÉE CONNUE, ON NE COCHE RIEN. Une session ouverte par une version
+     qui ne la gardait pas encore reste valide et n'en a pas. Cocher au hasard
+     ferait révoquer la mauvaise en croyant garder la sienne — et deviner par le
+     `User-Agent` tomberait sur la mauvaise dès qu'un téléphone a deux sessions
+     ouvertes, qui portent le même. */
+  it("ne coche rien plutôt que de deviner", () => {
+    expect(estCetAppareil(session(1, "2026-08-30T10:00:00.000Z"), null)).toBe(false);
+  });
+});
+
+describe("« déconnecter les autres appareils »", () => {
+  /* LE LIBELLÉ DIT « LES AUTRES », et la route l'honore enfin : elle épargne la
+     lignée appelante — le service nomme son paramètre `sauf`. Auparavant elle
+     révoquait tout, celle qui appelle comprise : le bouton promettait de rester
+     connecté ici, et déconnectait. */
+  it("compte les autres, sans la nôtre", () => {
+    expect(autresAppareils([session(1, "2026-08-30T10:00:00.000Z"), session(2, "2026-08-29T10:00:00.000Z")], LIGNEE_1)).toBe(1);
+  });
+
+  /* On ne retranche PAS un aveuglément : sans lignée connue, on ne sait pas si
+     la nôtre est dans la liste, et `length - 1` annoncerait une session de
+     moins qu'il n'y en a. */
+  it("ne retranche rien quand la nôtre est inconnue", () => {
+    expect(autresAppareils([session(1, "2026-08-30T10:00:00.000Z"), session(2, "2026-08-29T10:00:00.000Z")], null)).toBe(2);
+  });
+
+  /* Zéro : le bouton ne paraît pas. Un bouton qui ne fait rien, sur un écran
+     qu'on ouvre par inquiétude, se presse quand même — et son silence se lit
+     comme une panne plutôt que comme « il n'y avait rien à fermer ». */
+  it("ne trouve personne d'autre quand on est seul", () => {
+    expect(autresAppareils([session(1, "2026-08-30T10:00:00.000Z")], LIGNEE_1)).toBe(0);
   });
 });

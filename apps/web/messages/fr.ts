@@ -407,4 +407,7 @@ export const fr = {
   lienRetireTitre: "Ce lien n'est plus actif",
   lienRetireTexte: "Il a été retiré par la personne qui vous l'a envoyé. Il n'y a rien à faire de votre côté.",
 
+  souhaitAnnuler: "Annuler",
+  souhaitAnnulerErreur: "L'annulation n'a pas abouti. Réessayez dans un instant.",
+
 };

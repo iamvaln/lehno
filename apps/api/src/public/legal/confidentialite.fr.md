@@ -1,6 +1,6 @@
 # Politique de confidentialité
 
-_Version 2026-08-23 · Dernière mise à jour : 23 août 2026_
+_Version 2026-08-30 · Dernière mise à jour : 30 août 2026_
 
 La présente politique décrit comment **Proxia Digital** (l'« Éditeur ») collecte,
 utilise et protège les données personnelles dans le cadre du service Lehno
@@ -33,9 +33,9 @@ décret à venir.
 Proxia Digital
 Akwa, Douala, Cameroun
 Téléphone : +237 691 980 189
-Courriel : hello@lehno.app
+Courriel : hello@lehno.io
 
-Délégué à la protection des données (DPO) : Valentine Nguemne — hello@lehno.app
+Délégué à la protection des données (DPO) : Valentine Nguemne — hello@lehno.io
 La fonction est tenue par la direction de l'entreprise ; elle n'est pas déléguée
 à un tiers.
 
@@ -127,7 +127,7 @@ publiez : il ne montre que ce que vous y avez mis sur **vous-même**. Aucune fic
 de proche n'y paraît. Les vœux que l'on vous laisse ne s'affichent jamais.
 
 **Les droits d'un proche non-utilisateur.** Une personne qui figure dans une
-fiche sans avoir de compte peut écrire au DPO (hello@lehno.app) pour savoir ce
+fiche sans avoir de compte peut écrire au DPO (hello@lehno.io) pour savoir ce
 qui la concerne, le faire corriger ou le faire effacer. Nous traitons la demande
 directement lorsque la personne est identifiable dans nos données ; sinon nous la
 relayons au propriétaire de la fiche, qui reste maître de son carnet. Une demande
@@ -213,7 +213,7 @@ de portabilité, d'opposition, du droit de retirer votre consentement à tout
 moment sans effet sur les traitements antérieurs, et du droit de donner des
 directives sur le sort de vos données après votre décès.
 
-Ces droits s'exercent auprès du DPO : hello@lehno.app. Une réponse est
+Ces droits s'exercent auprès du DPO : hello@lehno.io. Une réponse est
 apportée dans un délai d'un mois au plus. La suppression du compte est également
 possible depuis l'application, sans passer par nous.
 
@@ -280,4 +280,4 @@ officiel._
 Délégué à la protection des données : Valentine Nguemne
 Proxia Digital — Akwa, Douala, Cameroun
 Téléphone : +237 691 980 189
-Courriel : hello@lehno.app
+Courriel : hello@lehno.io

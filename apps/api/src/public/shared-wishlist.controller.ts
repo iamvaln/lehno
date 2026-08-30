@@ -1,10 +1,11 @@
 import {
-  Body, Controller, Get, Headers, HttpCode, Inject, Param, ParseUUIDPipe,
+  Body, Controller, Delete, Get, Headers, HttpCode, Inject, Param, ParseUUIDPipe,
   Post, Ip, UseGuards,
 } from "@nestjs/common";
 import {
   ENTETE_JETON_RESERVATION, reserveWishSchema, verifyReservationSchema,
-  type ReserveOutcome, type ReservationConfirmed, type SharedWishlist,
+  type CancelReservationResponse, type ReserveOutcome, type ReservationConfirmed,
+  type SharedWishlist,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { Feature } from "../flags/feature.decorator.js";
@@ -97,6 +98,30 @@ export class ReserveWishController {
       });
     }
     return issue;
+  }
+
+  /* DELETE, et sur le MÊME chemin que la réservation : c'est la même ressource
+     qu'on défait. Une route « /cancel » en ferait un geste à part, alors que
+     c'est exactement l'inverse du POST juste au-dessus.
+
+     200 et non 204 : la réponse porte `cancelled: true`, comme le dépôt porte
+     `submitted: true`. Un 204 muet dirait seulement que rien n'a cassé. */
+  @Delete(":id/reserve")
+  @HttpCode(200)
+  async annuler(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Headers("authorization") autorisation?: string,
+    @Headers(ENTETE_JETON_RESERVATION) jetonVisite?: string,
+  ): Promise<CancelReservationResponse> {
+    const compte = await identifier(this.jetons, this.prisma, autorisation);
+    await this.listes.annuler(id, {
+      ...compte,
+      ...(jetonVisite ? { jetonVisite } : {}),
+    });
+    this.mesure.emettre(compte.userId ?? null, "reservation.cancelled", {
+      authenticated: compte.userId !== undefined,
+    });
+    return { cancelled: true };
   }
 
   @Post(":id/reserve/verify")

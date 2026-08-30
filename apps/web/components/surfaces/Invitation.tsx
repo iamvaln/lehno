@@ -39,7 +39,7 @@ export function Invitation(
         style={{
           maxWidth: "40rem", margin: "0 auto",
           padding: "clamp(40px,7vw,72px) var(--page-gutter)",
-          display: "grid", gap: "var(--space-30)",
+          display: "grid", gap: "var(--space-32)",
         }}
       >
         {parrainage === null ? <Banner intent="warning">{t.inviteSansCode}</Banner> : null}
@@ -99,7 +99,7 @@ export function Invitation(
         <div style={{ display: "grid", gap: "var(--space-14)", justifyItems: "start" }}>
           <BadgesMagasins t={t} langue={langue} />
           {parrainage ? (
-            <div style={{ fontSize: "var(--text-mention-m)", color: "var(--text-mention)" }}>
+            <div style={{ fontSize: "var(--text-mention-s)", color: "var(--text-mention)" }}>
               {t.inviteCodeLabel}{" "}
               <span style={{ fontWeight: "var(--font-body-bold)", letterSpacing: ".08em", color: "var(--text-accent)" }}>
                 {parrainage.code}

@@ -1,6 +1,6 @@
 # Terms of Service
 
-_Version 2026-08-27 · Last updated: 27 August 2026_
+_Version 2026-08-30 · Last updated: 30 August 2026_
 
 ## 1. Purpose
 
@@ -206,7 +206,7 @@ Each acceptance is timestamped and kept.
 ## 15. Governing law and disputes
 
 These Terms are governed by **Cameroonian law**. In the event of a disagreement,
-an amicable solution is sought by writing to hello@lehno.app before any legal
+an amicable solution is sought by writing to hello@lehno.io before any legal
 action. Failing agreement, the dispute falls to the **competent courts of
 Cameroon**.
 

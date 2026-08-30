@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import jwt from "jsonwebtoken";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { ownerWishSchema, sharedWishlistSchema, wishlistSchema } from "@lehno/contracts";
 import { WishlistService } from "../src/me/wishlist.service.js";
@@ -834,6 +834,118 @@ describe("mes listes de souhaits, leur partage et leur réservation", () => {
         method: "POST", headers: { "content-type": "application/json" }, body: "{}",
       });
       expect(r.status).toBe(400);
+    });
+
+    /* ── Annuler ─────────────────────────────────────────────────────────
+       C'était le SEUL geste irréversible qu'un visiteur sans compte pouvait
+       faire : trois clics bloquaient un cadeau jusqu'à la date, sans recours. */
+
+    // Le jeton de visite ne fait que désigner une adresse, et c'est l'adresse
+    // qui possède la réservation — même règle que la relecture.
+    const reserverPour = async (
+      souhaitId: string, email = "kine@example.com",
+    ): Promise<string> => {
+      const jetonVisite = randomBytes(32).toString("hex");
+      await db.prisma.wishReservation.create({
+        data: {
+          ownerWishId: souhaitId, email, status: "confirmed",
+          sessionTokenHash: createHash("sha256").update(jetonVisite).digest("hex"),
+          confirmedAt: new Date(), expiresAt: new Date(),
+        },
+      });
+      await db.prisma.ownerWish.update({
+        where: { id: souhaitId }, data: { status: "reserved" },
+      });
+      return jetonVisite;
+    };
+
+    const annuler = (souhaitId: string, jetonVisite?: string): Promise<Response> =>
+      fetch(`${baseUrl}/v1/public/owner-wishes/${souhaitId}/reserve`, {
+        method: "DELETE",
+        headers: jetonVisite ? { "x-lehno-reservation": jetonVisite } : {},
+      });
+
+    it("rend le cadeau à la liste", async () => {
+      const { souhaitId, token } = await listePartagee(awa);
+      const jetonVisite = await reserverPour(souhaitId);
+
+      const r = await annuler(souhaitId, jetonVisite);
+      expect(r.status).toBe(200);
+      expect(await r.json()).toEqual({ cancelled: true });
+
+      // Le schéma sert de garde : la vue publique doit rester conforme après
+      // l'annulation, pas seulement porter le bon booléen.
+      const vue = sharedWishlistSchema.parse(
+        await (await fetch(`${baseUrl}/v1/public/wishlists/${token}`)).json(),
+      );
+      expect(vue.state === "ok" && vue.wishes[0]?.isReserved).toBe(false);
+      const ligne = await db.prisma.wishReservation.findFirstOrThrow();
+      expect(ligne.status).toBe("cancelled");
+      expect(ligne.cancelledAt).not.toBeNull();
+    });
+
+    /* 404 quand rien ne correspond, jamais un refus explicite : la page dit
+       déjà qu'un souhait est réservé, et « vous n'avez pas le droit d'annuler
+       celle-là » confirmerait à un curieux qu'une réservation est bien là. */
+    it("ne laisse pas un inconnu annuler la réservation d'un autre", async () => {
+      const { souhaitId, token } = await listePartagee(awa);
+      await reserverPour(souhaitId);
+
+      const autre = randomBytes(32).toString("hex");
+      expect((await annuler(souhaitId, autre)).status).toBe(404);
+      expect((await annuler(souhaitId)).status).toBe(404);
+
+      const vue = sharedWishlistSchema.parse(
+        await (await fetch(`${baseUrl}/v1/public/wishlists/${token}`)).json(),
+      );
+      expect(vue.state === "ok" && vue.wishes[0]?.isReserved).toBe(true);
+    });
+
+    /* Un cadeau déjà OFFERT ne revient pas à la liste : le propriétaire l'a
+       marqué reçu, et le rendre disponible ferait acheter à un autre ce qui est
+       déjà sur la table. La réservation, elle, s'annule quand même. */
+    it("n'exhume pas un cadeau déjà offert", async () => {
+      const { souhaitId } = await listePartagee(awa);
+      const jetonVisite = await reserverPour(souhaitId);
+      await db.prisma.ownerWish.update({
+        where: { id: souhaitId }, data: { status: "fulfilled" },
+      });
+
+      expect((await annuler(souhaitId, jetonVisite)).status).toBe(200);
+      const souhait = await db.prisma.ownerWish.findUniqueOrThrow({ where: { id: souhaitId } });
+      expect(souhait.status).toBe("fulfilled");
+      const ligne = await db.prisma.wishReservation.findFirstOrThrow();
+      expect(ligne.status).toBe("cancelled");
+    });
+
+    /* Le propriétaire avait appris que ce cadeau était couvert ; il planifie
+       autour. Ne rien dire quand il se libère laisserait attendre un cadeau que
+       personne n'apporte. */
+    it("prévient le propriétaire, sans nommer l'anonyme", async () => {
+      const { souhaitId } = await listePartagee(awa);
+      const jetonVisite = await reserverPour(souhaitId);
+
+      await annuler(souhaitId, jetonVisite);
+      const avis = await db.prisma.notification.findFirstOrThrow({
+        where: { type: "wish_reservation_cancelled" },
+      });
+      expect(avis.userId).toBe(awa);
+      expect(JSON.stringify(avis.bodyParams)).not.toContain("kine");
+    });
+
+    // Le cadeau rendu redevient réservable : sans quoi l'annulation ne servirait
+    // qu'à celui qui se ravise, pas à celui qui voulait offrir.
+    it("rouvre le cadeau à quelqu'un d'autre", async () => {
+      const { souhaitId } = await listePartagee(awa);
+      const jetonVisite = await reserverPour(souhaitId);
+      await annuler(souhaitId, jetonVisite);
+
+      const r = await fetch(`${baseUrl}/v1/public/owner-wishes/${souhaitId}/reserve`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "fatou@example.com" }),
+      });
+      expect(r.status).toBe(200);
     });
   });
 });

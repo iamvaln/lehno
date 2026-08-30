@@ -952,6 +952,14 @@ enum NotificationType {
    * l'écran prend soin de préserver.
    */
   wish_reserved
+  /**
+   * Une réservation ANNULÉE sur ma liste. Elle existe parce que `wish_reserved`
+   * existe : quelqu'un a été prévenu qu'un cadeau était couvert, et il
+   * planifierait autour de lui. Ne rien dire quand il se libère laisserait
+   * attendre un cadeau que personne n'apporte.
+   * Comme sa jumelle, elle ne nomme le réservant que s'il l'avait autorisé.
+   */
+  wish_reservation_cancelled
   enrichment_nudge_global
   enrichment_nudge_person
   /**
@@ -2226,7 +2234,7 @@ enum ReceivedWishStatus {
  * Vue publique curée sur la self-Person de l'utilisateur.
  * PAS DE COLONNE `slug`, contrairement au dictionnaire — et c'est la seule
  * différence assumée avec lui. L'adresse du Mur EST le pseudo
- * (`lehno.app/valentine`), déjà unique sur `user.username`. Une seconde
+ * (`lehno.io/valentine`), déjà unique sur `user.username`. Une seconde
  * colonne devrait rester égale à la première : le jour où quelqu'un se
  * renomme, l'ancienne adresse continuerait d'être servie et personne ne s'en
  * apercevrait avant qu'un proche ne se plaigne. Le contrat rend toujours un

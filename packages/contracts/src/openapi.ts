@@ -69,6 +69,7 @@ import {
 import {
   sharedWishlistSchema, reserveWishSchema, reserveOutcomeSchema,
   verifyReservationSchema, reservationConfirmedSchema,
+  cancelReservationResponseSchema,
   ENTETE_JETON_RESERVATION,
 } from "./public-wishlists.js";
 import {
@@ -1275,6 +1276,40 @@ const CHEMINS: Chemin[] = [
     parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
     corps: verifyReservationSchema,
     reponse: reservationConfirmedSchema,
+  },
+  {
+    chemin: "/public/owner-wishes/{id}/reserve",
+    methode: "delete",
+    resume: "Rendre un cadeau à la liste",
+    note: [
+      "**Gouverné par le drapeau `reservation`.** Sans session.",
+      "",
+      "C'était le seul geste irréversible qu'un visiteur sans compte pouvait",
+      "faire : trois clics bloquaient un cadeau jusqu'à la date, et celui qui",
+      "se trompait — ou qui ne pouvait plus offrir — n'avait aucun recours.",
+      "",
+      "**Pas de corps.** Le souhait est dans le chemin, et l'identité vient du",
+      `jeton de visite (\`${ENTETE_JETON_RESERVATION}\`) ou de la session.`,
+      "L'autorisation tient à l'**adresse** : le jeton ne fait que la désigner,",
+      "comme pour la relecture.",
+      "",
+      "**404 quand rien ne correspond**, jamais un refus explicite. La page dit",
+      "déjà qu'un souhait est réservé ; répondre « vous n'avez pas le droit",
+      "d'annuler celle-là » confirmerait à un curieux qu'une réservation est",
+      "bien là, et par qui elle ne l'est pas.",
+      "",
+      "Un cadeau **déjà offert** ne revient pas à la liste : le propriétaire l'a",
+      "marqué reçu, et le rendre disponible ferait acheter à un autre ce qui est",
+      "déjà sur la table. La réservation, elle, s'annule quand même — elle a",
+      "cessé d'être vraie.",
+      "",
+      "Le propriétaire est **prévenu**. Il avait appris que ce cadeau était",
+      "couvert ; ne rien dire quand il se libère laisserait attendre un cadeau",
+      "que personne n'apporte. Le nom n'y paraît que s'il avait été autorisé —",
+      "une annulation ne défait pas l'anonymat consenti.",
+    ].join("\n"),
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    reponse: cancelReservationResponseSchema,
   },
   // ——— me/metadata (apps/api/src/me) ——————————————————————————————
   {
@@ -2682,7 +2717,7 @@ export function construireOpenApi(): object {
         "l'identifiant de compte prend le relais après.",
       ].join("\n"),
     },
-    servers: [{ url: "https://api.lehno.app/v1" }, { url: "http://localhost:3001/v1", description: "développement" }],
+    servers: [{ url: "https://api.lehno.io/v1" }, { url: "http://localhost:3001/v1", description: "développement" }],
     components: {
       securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" } },
     },

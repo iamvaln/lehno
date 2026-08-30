@@ -94,7 +94,7 @@ export function Mur(
           <p style={{ margin: 0, color: "var(--text-mention)" }}>{t.murVoeuxFermes}</p>
         )}
 
-        <a href={`/${langue}`} style={{ fontWeight: "var(--font-body-semibold)" }}>
+        <a className="lien" href={`/${langue}`} style={{ fontWeight: "var(--font-body-semibold)" }}>
           {t.murInvitation}
         </a>
       </section>

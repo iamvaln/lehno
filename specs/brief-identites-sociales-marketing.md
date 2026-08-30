@@ -25,7 +25,7 @@ Trois principes le gouvernent :
 | WhatsApp Business | numéro dédié | à décider |
 | Threads | suit Instagram | — |
 
-**Une adresse de contact** distincte de l'adresse personnelle : `bonjour@lehno.app`, plus `support@lehno.app` déjà appelée par l'écran d'aide et par la suppression de compte.
+**Une adresse de contact** distincte de l'adresse personnelle : `bonjour@lehno.io`, plus `support@lehno.io` déjà appelée par l'écran d'aide et par la suppression de compte.
 
 **Cohérence du handle.** Mieux vaut un même handle partout, même imparfait, qu'un handle idéal sur un réseau et trois variantes ailleurs — les gens recopient ce qu'ils ont vu.
 
@@ -88,7 +88,7 @@ Chaque capture porte **une phrase courte au-dessus**, dans le caractère de titr
 - **L'écran** — une capture détachée sur fond teinté, avec une phrase. Sert les annonces de fonctionnalité.
 - **Le repère** — une date ou un chiffre en grand, dans le caractère de titre. Sert les publications de saison.
 
-**La bio**, dans les deux langues, avec le lien vers `lehno.app`.
+**La bio**, dans les deux langues, avec le lien vers `lehno.io`.
 
 > FR : *Retenez les dates qui comptent et ce que vous savez de vos proches. Le moment venu, vous avez déjà tout pour bien faire.*
 > EN : *Keep the dates that matter and what you know about the people you love.*
@@ -123,7 +123,7 @@ Le produit en envoie beaucoup : code de connexion, rappels, récapitulatif, reç
 
 ## 7. Le matériel de lancement
 
-- **Une page de presse** sur `lehno.app` : le pitch, les captures, le dossier des logotypes, les contacts.
+- **Une page de presse** sur `lehno.io` : le pitch, les captures, le dossier des logotypes, les contacts.
 - **Un dossier de marque téléchargeable** — les fichiers listés dans la charte, plus les règles d'emploi.
 - **Une vidéo de démonstration** de 30 à 45 secondes, sans parole, sous-titrée dans les deux langues.
 - **Le logo animé** — la partition existe déjà dans la charte (le mot s'écrit, puis le `h` prend le violet).

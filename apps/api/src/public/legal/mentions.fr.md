@@ -1,13 +1,13 @@
 # Mentions légales
 
-_Version 2026-08-23 · Dernière mise à jour : 23 août 2026_
+_Version 2026-08-30 · Dernière mise à jour : 30 août 2026_
 
 ## Éditeur du service
 
 **Proxia Digital**
 Akwa, Douala, Cameroun
 Téléphone : +237 691 980 189
-Courriel : hello@lehno.app
+Courriel : hello@lehno.io
 
 Société à responsabilité limitée (SARL) de droit camerounais.
 
@@ -24,7 +24,7 @@ constitue un transfert hors du Cameroun, traité comme tel à la section 6 de la
 
 ## Protection des données
 
-Délégué à la protection des données : Valentine Nguemne — hello@lehno.app
+Délégué à la protection des données : Valentine Nguemne — hello@lehno.io
 La fonction est tenue par la direction de l'entreprise.
 
 Les traitements réalisés dans le cadre de Lehno sont décrits dans la
@@ -32,7 +32,7 @@ Les traitements réalisés dans le cadre de Lehno sont décrits dans la
 
 ## Contact
 
-Toute question relative au service peut être adressée à hello@lehno.app.
+Toute question relative au service peut être adressée à hello@lehno.io.
 Une réponse est apportée sous **cinq jours ouvrés**. Les demandes portant sur vos
 données personnelles relèvent du délai indiqué à la section 8 de la
 [politique de confidentialité](/v1/public/legal/confidentialite).
