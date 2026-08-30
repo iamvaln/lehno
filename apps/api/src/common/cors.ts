@@ -1,3 +1,5 @@
+import { ENTETE_JETON_RESERVATION } from "@lehno/contracts";
+
 // Les origines autorisées à appeler l'API depuis un navigateur.
 //
 // Le site public et l'API vivent sur deux domaines — lehno.app et
@@ -44,3 +46,26 @@ export function originsAutorisees(
 
   return origines;
 }
+
+/* Les en-têtes qu'un navigateur a le droit d'envoyer.
+ *
+ * `content-type` et `authorization` ne suffisent pas : la liste partagée
+ * reconnaît un visiteur revenu à `x-lehno-reservation`, et un en-tête absent de
+ * cette liste est refusé À LA REQUÊTE PRÉALABLE — la requête ne part jamais.
+ * « Le visiteur revenu retrouve les siens, signalés à lui seul » était donc
+ * impossible depuis un navigateur, et l'échec est silencieux : la page se
+ * charge, elle dit seulement « déjà pris » là où elle aurait dit « par vous ».
+ *
+ * Le nom vient du CONTRAT, jamais recopié : le jour où il change, les deux
+ * bouts changent ensemble.
+ *
+ * C'est la TROISIÈME fois que ce fichier se fait prendre par la requête
+ * préalable — la liste d'attente, puis le back-office sur 5173, puis ceci. À
+ * chaque fois pour la même raison, écrite en tête : les essais se faisaient en
+ * curl, qui n'en envoie pas.
+ */
+export const ENTETES_AUTORISES = [
+  "content-type",
+  "authorization",
+  ENTETE_JETON_RESERVATION,
+] as const;

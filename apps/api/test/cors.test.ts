@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { originsAutorisees } from "../src/common/cors.js";
+import { ENTETE_JETON_RESERVATION } from "@lehno/contracts";
+import { ENTETES_AUTORISES, originsAutorisees } from "../src/common/cors.js";
 
 // Le navigateur poste depuis lehno.app vers api.lehno.app : deux origines
 // distinctes, donc une requête préalable. Sans CORS configuré, elle répond 404
@@ -51,5 +52,25 @@ describe("origines autorisées", () => {
   // Sans domaine configuré, rien n'est autorisé : fermé par défaut.
   it("n'autorise rien sans domaine configuré", () => {
     expect(originsAutorisees(undefined, "production")).toEqual([]);
+  });
+});
+
+/* Une origine autorisée ne suffit pas : la requête préalable liste aussi les
+ * EN-TÊTES, et un en-tête absent la fait refuser avant que rien ne parte. */
+describe("en-têtes autorisés", () => {
+  /* La liste partagée reconnaît un visiteur revenu à ce seul en-tête. Sans lui
+     dans la liste, « le visiteur revenu retrouve les siens » est impossible
+     depuis un navigateur — et l'échec est SILENCIEUX : la page se charge, elle
+     dit seulement « déjà pris » là où elle aurait dit « par vous ».
+     Trouvé le 30/08 en réservant pour de vrai dans Chrome, contre la vraie API.
+     Troisième fois que la requête préalable prend ce fichier, et toujours pour
+     la même raison : les essais se faisaient en curl, qui n'en envoie pas. */
+  it("laisse passer le jeton de visite de la liste partagée", () => {
+    expect(ENTETES_AUTORISES).toContain(ENTETE_JETON_RESERVATION);
+  });
+
+  it("garde ce dont tous les envois dépendent", () => {
+    expect(ENTETES_AUTORISES).toContain("content-type");
+    expect(ENTETES_AUTORISES).toContain("authorization");
   });
 });
