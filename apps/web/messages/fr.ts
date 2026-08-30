@@ -278,4 +278,52 @@ export const fr = {
   acqVoeuxTexte: "Vos proches y trouvent votre date, ce que vous aimez, et un endroit pour vous écrire.",
   acqVoeuxAction: "Créer le mien",
 
+
+  // ——— La collecte ————————————————————————————————————————————
+  //
+  // On salue d'abord la personne — un lien nominatif désigne quelqu'un —, et
+  // c'est seulement après qu'on dit de qui vient l'invitation. L'inverse,
+  // c'est une machine qui se présente avant de dire bonjour.
+  collecteSalut: "Bonjour {nom}",
+  collecteSalutPublic: "Bonjour",
+  collecteDemandeNominatif: "vous a écrit",
+  collecteDemandePublic: "a ouvert un lien",
+  collecteChapeauNominatif: "{nom} garde les dates et les envies de ses proches au même endroit. Ce que vous écrivez ici n'est vu que par {nom}.",
+  collecteChapeauPublic: "{nom} garde les dates et les envies de ses proches au même endroit. Dites-lui qui vous êtes, et ce qui vous ferait plaisir.",
+  collecteChapeauRetour: "Vous avez déjà répondu. Vous pouvez compléter : ce que vous ajoutez s'ajoute, rien ne s'efface.",
+  collecteLabelNom: "Votre nom",
+  collecteLabelRelation: "On se connaît d'où ?",
+  collecteAideRelation: "Un mot suffit : collègue, cousine, voisin de palier.",
+  collecteLabelDate: "Votre date de naissance",
+  collecteAideDateNominatif: "Déjà connue de {nom} — corrigez-la si elle est fausse.",
+  collecteAideDatePublic: "Le jour et le mois suffisent à {nom} pour y penser.",
+  collecteLabelSouhaits: "Ce qui vous ferait plaisir",
+  collectePlaceholderSouhait: "Un livre, une soirée, un ustensile qui manque…",
+  collecteAjouterSouhait: "Ajouter un souhait",
+  collecteRetirerSouhait: "Retirer ce souhait",
+  collecteLabelPrix: "Prix indicatif ({devise})",
+  collecteLabelLien: "Un lien",
+  collecteLabelMot: "Un mot pour {nom}",
+  collecteAideMot: "Facultatif, et lu tel quel.",
+  collecteFacultatif: "Facultatif",
+  collecteLabelEmail: "Votre adresse",
+  collecteAideEmail: "Elle sert à {nom} pour vous demander une précision. Rien d'autre : pas d'inscription, pas de lettre.",
+  collecteAideEmailPublic: "Requise sur un lien ouvert : c'est ce qui permet à {nom} de savoir à qui il parle.",
+  collecteEnvoyer: "Envoyer à {nom}",
+  collecteConfirmeTitre: "C'est transmis.",
+  collecteConfirmeTexte: "{nom} le verra et décidera de ce qu'il garde. Rien n'entre dans une fiche sans sa décision.",
+  collecteAjouterEncore: "Ajouter autre chose",
+  collecteErreur: "Votre réponse n'est pas partie. Réessayez dans un instant.",
+  // Le sort de chaque souhait se montre SANS le commenter : « écarté » ne
+  // s'excuse pas et ne se justifie pas.
+  collecteDejaTitre: "Ce que vous avez déjà envoyé",
+  collecteRetenu: "Retenu",
+  collecteEcarte: "Écarté",
+  collecteEnAttente: "En attente",
+  collecteVoirMur: "Voir le mur de {nom}",
+  // Après le geste, l'exact retournement de ce qu'on vient de faire.
+  acqCollecteTitre: "Tenez la liste de vos proches",
+  acqCollecteTexte: "Leurs dates, ce qu'ils aiment, ce qu'ils vous ont dit un jour. Lehno vous le rappelle le moment venu.",
+  acqCollecteAction: "Essayer Lehno",
+
 };
