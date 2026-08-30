@@ -23,7 +23,8 @@ const DELAI_AVANT_REMBOURSEMENT_MS = 14 * 24 * 60 * 60 * 1000;
 const PLAFOND = 10;
 
 type LigneMethode = {
-  id: string; kind: string; brand: string | null; last4: string | null;
+  id: string; kind: string; brand: string | null; operator: string | null;
+  last4: string | null;
   expiresAt: Date | null; lastUsedAt: Date | null; createdAt: Date;
 };
 
@@ -161,6 +162,11 @@ export class MethodesService {
       id: l.id,
       kind: l.kind as PaymentMethod["kind"],
       brand: l.brand,
+      /* Servi parce que l'écran doit ANNONCER le remplacement : un second
+         numéro chez le même opérateur efface le premier et remet le délai de
+         remboursement à zéro. Sans cette clef, le client ne peut pas savoir
+         quel rang il est en train de remplacer. */
+      operator: l.operator,
       last4: l.last4,
       expiresAt: l.expiresAt === null ? null : l.expiresAt.toISOString().slice(0, 10),
       lastUsedAt: l.lastUsedAt === null ? null : l.lastUsedAt.toISOString(),

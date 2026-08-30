@@ -17,6 +17,7 @@ import { messageDErreur } from "../../lib/session.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
 import { ecranEteint } from "../../lib/navigation.js";
 import { composeLesReprises, fenetreDesReprises, type Reprise } from "../../lib/reprises.js";
+import { EcranFerme } from "../../composants/EcranFerme.js";
 
 /* Reprises en cours — §3.16.
  *
@@ -111,6 +112,13 @@ export default function Reprises() {
     () => (charge === null ? null : composeLesReprises(charge.generations, charge.echeances, actives)),
     [charge, actives],
   );
+
+  /* FERMÉ, PAS VIDE. L'écran se repliait sur son état vide — « rien à
+     reprendre » — et c'était une demi-vérité : ce n'est pas qu'on n'a rien
+     produit, c'est qu'on ne peut plus rien produire. Un état vide INVITE, il
+     montre le geste qui le remplirait ; ici tous ces gestes sont fermés, et
+     l'invitation ne mène qu'à des murs. */
+  if (eteint) return <EcranFerme />;
 
   return (
     <View style={[styles.page, { paddingTop: insets.top + nativeSpace[12] }]}>

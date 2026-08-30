@@ -22,6 +22,9 @@ import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { dateCourte } from "../../lib/carnet.js";
 import { libelleDeLEcheance } from "../../lib/libelles.js";
+import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
+import { ecranEteint } from "../../lib/navigation.js";
+import { EcranFerme } from "../../composants/EcranFerme.js";
 import {
   listesRangees, occasionsOuvrables, peutPartager, resteAOffrir,
 } from "../../lib/listes.js";
@@ -46,6 +49,11 @@ export default function Listes() {
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
+  const { actives } = useDrapeaux();
+  /* UNE ROUTE RESTE UNE ROUTE. La navigation ne propose plus cet écran
+     quand son drapeau est éteint, mais un lien profond l'atteint encore :
+     il se garde donc lui-même plutôt que de compter sur celui qui l'ouvre. */
+  const eteint = ecranEteint("listes", actives);
 
   const [listes, setListes] = useState<Wishlist[] | null>(null);
   const [miennes, setMiennes] = useState<Occurrence[]>([]);
@@ -75,7 +83,7 @@ export default function Listes() {
     }
   }, [langue]);
 
-  useFocusEffect(useCallback(() => { void charge(); }, [charge]));
+  useFocusEffect(useCallback(() => { if (!eteint) void charge(); }, [charge, eteint]));
 
   const ouvreUneListe = async (occurrenceId: string): Promise<void> => {
     setEnvoi(true);
@@ -132,6 +140,8 @@ export default function Listes() {
 
   const ouvrables = occasionsOuvrables(miennes, listes);
 
+  if (eteint) return <EcranFerme />;
+
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
       <ScrollView
@@ -158,7 +168,13 @@ export default function Listes() {
         {listes.length ? (
           listesRangees(listes).map((l) => (
             <Card key={l.id} surface="panel" padding={15} radius="lg" style={styles.carte}>
-              <View style={styles.entete}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => routeur.push({
+                  pathname: "/(app)/souhaits", params: { id: l.id },
+                })}
+                style={styles.entete}
+              >
                 <View style={styles.pleine}>
                   <Text style={[styles.titre, { color: couleurs.textBody }]} numberOfLines={1}>
                     {libelleDeLEcheance(
@@ -170,7 +186,8 @@ export default function Listes() {
                   </Text>
                 </View>
                 {l.isArchived ? <Tag tone="quiet">{t.listeArchivee}</Tag> : null}
-              </View>
+                <Icon name="chevron-right" size={15} color={couleurs.textMention} />
+              </Pressable>
 
               {/* COMBIEN, jamais LESQUELS ni PAR QUI : savoir qui a réservé quoi
                   gâcherait la surprise qu'on prépare. */}

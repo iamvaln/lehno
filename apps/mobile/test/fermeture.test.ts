@@ -21,7 +21,8 @@ const apercu = (refundable: number, methodes: number): DeletionPreview => ({
     eligibleMethods: Array.from({ length: methodes }, (_, i) => ({
       id: `${String(i + 1).padStart(8, "0")}-0000-4000-8000-000000000000`,
       kind: "mobile_money" as const,
-      brand: "MTN",
+      brand: null,
+      operator: "MTN",
       last4: null,
       expiresAt: null,
       lastUsedAt: null,

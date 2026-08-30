@@ -48,7 +48,7 @@ import { creditBalanceSchema, referralSummarySchema, invitationSchema,
   declarePaymentSchema,
   paymentDetailSchema,
   paymentsSchema,
-  paymentMethodSchema, registerPaymentMethodSchema,
+  paymentMethodListSchema, paymentMethodSchema, registerPaymentMethodSchema,
 } from "./me-credits.js";
 import { metadataSchema, wallSchema, updateWallSchema, wishLinkSchema } from "./me-app.js";
 import {
@@ -1878,7 +1878,7 @@ const CHEMINS: Chemin[] = [
       "dans la configuration même du lancement.",
     ].join("\n"),
     authentifie: true,
-    reponse: z.object({ paymentMethods: z.array(paymentMethodSchema) }).strict(),
+    reponse: paymentMethodListSchema,
   },
   {
     chemin: "/me/payment-methods",

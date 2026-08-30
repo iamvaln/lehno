@@ -7,7 +7,8 @@ import {
   nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
 import {
-  Banner, Button, EmptyState, EventCard, LoadingState, SectionLabel, Toast, useCouleurs,
+  Banner, Button, EmptyState, EventCard, LoadingState, NotificationBell,
+  SectionLabel, Toast, useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -121,7 +122,24 @@ export default function Accueil() {
 
   return (
     <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
-      <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.salut(home.firstName)}</Text>
+      <View style={styles.salutation}>
+        <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.salut(home.firstName)}</Text>
+        {/* LE DÉCOMPTE VIENT DE `/me/home`, jamais d'un second appel : le
+            contrat le sert là exprès, et « les deux passent par le même
+            prédicat côté serveur, donc ils ne peuvent pas se contredire ».
+            Deux `where` recopiés, eux, auraient divergé au premier ajout. */}
+        {/* LA CLOCHE VIENT DU KIT. J'en avais dessiné une seconde ici — une
+            pastille sans nombre —, et deux cloches auraient divergé à la
+            première retouche du design system, celle de l'accueil restant en
+            arrière sans que rien ne le signale. Celle du kit porte le NOMBRE,
+            et c'est mieux : « trois choses vous attendent » décide d'ouvrir,
+            « il y a quelque chose » fait seulement hésiter. */}
+        <NotificationBell
+          unread={home.unreadNotifications}
+          label={t.notifsCloche(home.unreadNotifications)}
+          onPress={() => routeur.push("/(app)/notifications")}
+        />
+      </View>
 
       {etat === "vide" ? (
         <>
@@ -241,7 +259,9 @@ export default function Accueil() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, paddingHorizontal: nativeSpace[16] },
+  salutation: { flexDirection: "row", alignItems: "center", gap: nativeSpace[8] },
   titre: {
+    flex: 1,
     fontFamily: nativeFont.displayMedium, fontSize: 27,
     letterSpacing: nativeLetterSpacing(27, nativeTracking.display),
     marginBottom: nativeSpace[16],

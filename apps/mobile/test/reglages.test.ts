@@ -30,10 +30,14 @@ describe("ce que les réglages montrent", () => {
 
   /* Un rang dont l'écran n'existe pas ne s'affiche pas — même règle que les
      sorties de la fiche d'un proche. Ouvrir vers rien apprend à ne pas croire
-     les rangs, et c'est plus coûteux qu'un rang absent. */
+     les rangs, et c'est plus coûteux qu'un rang absent. Aucun rang n'est
+     aujourd'hui dans ce cas : le filtre reste, parce que c'est lui qui rend
+     l'arrivée d'un écran indolore. */
   it("tait les rangs dont l'écran n'est pas porté", () => {
-    // Les méthodes de paiement suivent `topup.provider`, éteint au lancement.
-    expect(cles(LANCEMENT)).not.toContain("paiement");
+    const sansRoute = sectionsDeReglages(LANCEMENT)
+      .flatMap((s) => s.rangs)
+      .filter((r) => r.route === null && r.geste === undefined);
+    expect(sansRoute).toEqual([]);
   });
 
   /* « Crédits et paiements » DISPARAÎT AU LANCEMENT, et c'est voulu : il ne
@@ -48,12 +52,12 @@ describe("ce que les réglages montrent", () => {
     expect(sections).toContain("aide");
   });
 
-  /* Elle reste absente MÊME drapeau allumé, et pour l'autre raison : §3.25
-     n'est pas portée. Les deux filtres se cumulent, et ce test tient qu'on ne
-     les confonde pas — le jour où l'écran arrive, seul le drapeau décidera. */
-  it("reste absente même quand le paiement automatique tient", () => {
+  /* §3.25 EST PORTÉE désormais : seul le drapeau décide, et la section revient
+     entière quand le paiement automatique tient. C'est le chemin qu'on avait
+     préparé — « un écran qui arrive n'a qu'à renseigner sa route ». */
+  it("la rouvre quand le paiement automatique tient", () => {
     expect(sectionsDeReglages([...LANCEMENT, "topup.provider"]).map((s) => s.cle))
-      .not.toContain("argent");
+      .toContain("argent");
   });
 
   /* Un écran qui arrive n'a qu'à renseigner sa route : le rang paraît alors
@@ -68,12 +72,11 @@ describe("ce que les réglages montrent", () => {
   });
 
   /* Les méthodes de paiement suivent `topup.provider`, éteint au lancement :
-     il n'y a rien à enregistrer quand on verse à la main. Le parrainage, lui,
-     est OUVERT — mais son écran n'est pas porté, et c'est la route qui le
-     retient, pas le drapeau. Les deux filtres ne disent pas la même chose. */
-  it("distingue « le serveur a fermé » de « ce n'est pas encore construit »", () => {
+     il n'y a rien à enregistrer quand on verse à la main. Le drapeau seul les
+     retient maintenant — et le rang paraît dès qu'il tient. */
+  it("ouvre les méthodes de paiement avec le paiement automatique, jamais sans", () => {
     expect(cles(LANCEMENT)).not.toContain("paiement");
-    expect(cles([...LANCEMENT, "topup.provider"])).not.toContain("paiement");
+    expect(cles([...LANCEMENT, "topup.provider"])).toContain("paiement");
   });
 });
 

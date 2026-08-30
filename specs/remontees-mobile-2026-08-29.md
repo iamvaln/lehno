@@ -206,6 +206,61 @@ tout le monde), `moiLienVoeuxOuvert` (« Jusqu'au 3 sept. ») et `collecteLien`
 
 ---
 
+## 3 ter. L'épinglage des mots reçus — le contrat doit rattraper le kit (30/08)
+
+Le handoff des surfaces de lien **tranche une contradiction de la spec** — §3.4
+« ne s'affichent jamais sur le Mur », §3.5 « le propriétaire décide de les
+afficher » — et arbitre :
+
+> **Privé par défaut, épinglable un par un.** Rien ne paraît tout seul ; le
+> propriétaire choisit, geste par geste, **depuis `MonMurScreen`** — et un mot
+> sans signature s'épingle sans signature.
+
+La page n'est donc pas un livre d'or **parce que l'épinglage est sélectif**, et
+non parce qu'il n'existe pas. C'est un geste distinct de « Retenir / Écarter »
+du sas : retenir veut dire qu'on considère un cadeau pour l'achat, épingler
+qu'on garde un mot visible.
+
+**Trois manques au contrat**, sans lesquels l'écran ne peut pas le porter :
+
+- `receivedWishSchema` doit rendre `isPublic` — et `showAuthor` pour le mot
+  signé. Ils sont aujourd'hui « portés au dictionnaire en les disant
+  INACTIFS », gardés hors du contrat exprès. L'arbitrage du 30/08 les rend
+  nécessaires.
+- **Une route pour épingler et détacher**, distincte de
+  `POST /me/received-wishes/:id/decision` — qui, elle, tranche la considération
+  et non la visibilité.
+- `publicWallSchema` doit porter les mots épinglés : `WallPage` les attend en
+  `epingles`, et les place **avant** l'invitation à en laisser un — « on lit ce
+  que d'autres ont écrit, puis on écrit ».
+
+En attendant, `MonMurScreen` règle la page et ne montre aucun mot : câbler des
+champs que le contrat garde inactifs est précisément ce qu'il interdit.
+
+---
+
+## 3 quater. Le banc d'essai des surfaces de lien fige quatre phrases (30/08)
+
+Le LISEZ-MOI prévient que « son dictionnaire de démonstration et ses données
+d'exemple restent dans ce fichier » — c'est donc attendu. Mais la session qui
+portera le web doit savoir lesquelles paramétrer, sans quoi elles partiront
+telles quelles :
+
+- `murTitre` — « Bienvenue chez **Valentine** »
+- `murDate` — « Mon anniversaire, c'est le **25 août** »
+- `murJourJ` — « Le **25 août** »
+- `murMotFerme` — « Les mots pour mon anniversaire s'ouvrent le **18 août**. »
+
+Les trois dernières viennent de `publicWallSchema.birthday`, servi en `MM-DD` —
+« jamais l'année : elle dirait l'âge à tout visiteur ».
+
+**Une bonne nouvelle du même document** : le LISEZ-MOI porte désormais « aucune
+valeur servie par le serveur n'est écrite dans un texte — les montants, les
+numéros de compte et les codes descendent en données ». Le brief est devenu une
+règle du kit.
+
+---
+
 ## 4. Ce qui m'attend, moi
 
 - **La recherche du carnet n'emploie pas `?q=`** alors qu'il existe désormais au
