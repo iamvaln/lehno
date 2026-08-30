@@ -94,7 +94,13 @@ export const NAVIGATION: { famille: Famille | null; items: readonly Entree[] }[]
     famille: "exploitation",
     items: [
       "comptes",
-      { id: "paiements", enfants: ["credits", "transactionsToutes", "versementsManuels", "canauxPaiement"] },
+      {
+        id: "paiements",
+        enfants: [
+          "credits", "transactionsToutes", "versementsManuels",
+          "canauxPaiement", "transactionsStats",
+        ],
+      },
       /* L'argent qui ENTRE d'un côté, les crédits qu'on DISTRIBUE de l'autre :
          les deux ne se surveillent pas au même moment ni par les mêmes gens. */
       { id: "creditsSection", enfants: ["transactionManuelle", "offres"] },

@@ -69,6 +69,7 @@ export const fr = {
     transactionsToutes: "Toutes les transactions",
     versementsManuels: "Versements manuels",
     canauxPaiement: "Canaux et barèmes",
+    transactionsStats: "Statistiques",
     creditsSection: "Crédits",
     transactionManuelle: "Transaction manuelle",
     acces: "Accès administrateurs",
@@ -1166,6 +1167,48 @@ export const fr = {
       ],
     },
     fait: "Mouvement écrit.",
+  },
+
+  transactionsStats: {
+    titre: "Statistiques des transactions",
+    sous: "Ce qui est encaissé, ce que ça coûte, ce qui n'aboutit pas.",
+    devise: "F",
+    cartes: {
+      aboutis: "Paiements aboutis",
+      // Un ratio parle là où un pourcentage se lit sans se sentir : « un sur
+      // douze échoue » se retient, « 8 % » se survole.
+      aboutisRatio: "un sur {n} échoue",
+      aucunEchec: "aucun échec",
+      encaisse: "Encaissé",
+      frais: "Frais prélevés",
+      panier: "Paiement médian",
+      // Nul n'est pas zéro : « aucun paiement n'a abouti » et « le paiement
+      // médian vaut zéro franc » sont deux nouvelles opposées.
+      sansPanier: "Aucun paiement abouti",
+    },
+    graphe: {
+      titre: "Encaissé et échoué",
+      encaisse: "Encaissé",
+      echoue: "Échoué",
+      jour: "Jour",
+      vide: "Aucun paiement sur la période.",
+      periodeLabel: "La période",
+      periodes: { "7j": "7 jours", "30j": "30 jours", "90j": "3 mois" },
+      typeLabel: "Le sens",
+      types: { tous: "Dépôts et retraits", depot: "Dépôts", retrait: "Retraits" },
+      modeLabel: "Le mode",
+      modes: { tous: "Automatique et manuel", auto: "Automatique", manuel: "Manuel" },
+      // La mention nomme la coupe active : sans elle, le graphe ne dit plus ce
+      // qu'il montre dès qu'on a changé d'axe.
+      coupe: "{periode} · {sens} · {mode}",
+    },
+    parMoyen: "Par moyen de paiement",
+    noteMoyen: "Un moyen qui échoue plus que les autres est une décision de routage, pas de frais.",
+    parPays: "Aboutissement par pays",
+    notePays: "Un pays qui échoue plus révèle des frais mal réglés ou un opérateur mal choisi.",
+    col: { groupe: "Groupe", tentatives: "Tentatives", aboutis: "Aboutis", taux: "Taux" },
+    vide: "Aucun paiement rattaché à un canal sur la période.",
+    moyens: { mobile_money: "Mobile money", card: "Carte" },
   },
 
   metriques: {
