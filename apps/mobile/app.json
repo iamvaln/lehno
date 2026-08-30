@@ -14,6 +14,7 @@
     },
     "android": {
       "package": "com.lehno.app",
+      "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icone-adaptative.png",
         "backgroundColor": "#7B6BB7"
