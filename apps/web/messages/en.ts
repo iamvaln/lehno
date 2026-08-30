@@ -325,4 +325,11 @@ export const en: typeof fr = {
   inviteCodeLabel: "Your code:",
   inviteSansCode: "This invitation link is no longer valid. You can still install Lehno.",
 
+
+  // ——— La page introuvable ——————————————————————————————————
+  introuvableTitre: "This page does not exist",
+  introuvableTexte: "The link may be incomplete, or the page was withdrawn. There is nothing to fix on your side.",
+  introuvableRetour: "Go to the home page",
+  introuvableFaq: "See frequently asked questions",
+
 };

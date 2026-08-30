@@ -387,4 +387,15 @@ export const fr = {
   // employé » — la page ne l'invente pas.
   inviteSansCode: "Ce lien d'invitation n'est plus valable. Vous pouvez tout de même installer Lehno.",
 
+
+  // ——— La page introuvable ——————————————————————————————————
+  //
+  // Elle dit ce qui s'est passé et propose la suite. Pas d'excuse, pas
+  // d'illustration, pas d'« Oups » : quelqu'un arrivé là par le lien d'une
+  // amie n'a pas besoin d'être consolé.
+  introuvableTitre: "Cette page n'existe pas",
+  introuvableTexte: "Le lien est peut-être incomplet, ou la page a été retirée. Il n'y a rien à réparer de votre côté.",
+  introuvableRetour: "Aller à l'accueil",
+  introuvableFaq: "Voir les questions fréquentes",
+
 };

@@ -26,3 +26,10 @@ export function langueDemandee(acceptLanguage: string | null): Langue {
   }
   return "fr";
 }
+
+/* L'en-tête par lequel le middleware transmet la langue au rendu.
+ *
+ * Il n'existe que pour `not-found.tsx`, seul rendu du site à ne pas recevoir
+ * les paramètres de route. Partout ailleurs, la langue vient de `params` — et
+ * doit continuer d'en venir : un en-tête se perd au premier rendu statique. */
+export const ENTETE_LANGUE = "x-lehno-langue";
