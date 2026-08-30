@@ -3106,6 +3106,16 @@
                         true
                       ]
                     },
+                    "sessionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "deletionPendingUntil": {
+                      "enum": [
+                        "null"
+                      ],
+                      "nullable": true
+                    },
                     "signupCredits": {
                       "type": "integer",
                       "minimum": 0
@@ -3151,6 +3161,8 @@
                     "refreshToken",
                     "expiresIn",
                     "isNewAccount",
+                    "sessionId",
+                    "deletionPendingUntil",
                     "signupCredits",
                     "waitlistBonus",
                     "referral"

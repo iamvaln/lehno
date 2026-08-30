@@ -202,6 +202,8 @@ export class AuthService {
       outcome: "session" as const,
       ...pair,
       isNewAccount: true as const,
+      // Un compte qui vient de naître n'est jamais en cours de suppression.
+      deletionPendingUntil: null,
       signupCredits: creation.creditsOfferts,
       // Nul quand la personne n'attendait pas, ou quand le cadeau vaut zéro :
       // dans les deux cas l'écran ne doit rien annoncer.

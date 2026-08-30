@@ -127,6 +127,15 @@ export const registeredSchema = z.object({
   refreshToken: z.string(),
   expiresIn: z.number().int().positive(),
   isNewAccount: z.literal(true),
+  /* MÊME FORME QU'UNE SESSION ORDINAIRE, et ce n'est pas de la symétrie
+     décorative : l'inscription EST une ouverture de session, et le client la
+     traite comme telle. Deux formes voisines l'obligeraient à distinguer là où
+     il n'y a rien à distinguer — et c'est exactement ce qui a cassé le portage
+     mobile quand ces deux champs sont apparus d'un seul côté. */
+  sessionId: z.string().uuid(),
+  /* Toujours nulle : un compte qui vient de naître n'est pas en cours de
+     suppression. On la rend quand même pour que la forme soit une seule. */
+  deletionPendingUntil: z.null(),
   signupCredits: z.number().int().min(0),
   /* Le cadeau réservé à qui attendait sur la liste, EN PLUS du précédent.
    *
