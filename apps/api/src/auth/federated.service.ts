@@ -113,7 +113,10 @@ export class FederatedService {
       // Voir AuthService.verifyOtp : l'identifiant vient d'ici, il ne traverse
       // pas le contrat.
       this.mesure.emettre(existing.userId, "signin.completed", { method: input.provider });
-      return { outcome: "session" as const, ...pair, isNewAccount: false, deletionPendingUntil: null };
+      return {
+        outcome: "session" as const, ...pair, isNewAccount: false,
+        deletionPendingUntil: await this.echeanceDeSuppression(existing.user),
+      };
     }
 
     // Ensuite l'adresse, mais seulement si le fournisseur la dit vérifiée :
@@ -176,6 +179,9 @@ export class FederatedService {
     const pair = await this.tokens.issuePair(user.id, input.userAgent);
     await this.recordAttempt(claims.email, input.userAgent, user.id, "success", input.provider, input.ip);
     this.mesure.emettre(user.id, "signin.completed", { method: input.provider });
-    return { outcome: "session" as const, ...pair, isNewAccount: false, deletionPendingUntil: null };
+    return {
+      outcome: "session" as const, ...pair, isNewAccount: false,
+      deletionPendingUntil: await this.echeanceDeSuppression(user),
+    };
   }
 }
