@@ -77,6 +77,20 @@ export function ListePartagee(
 
   useEffect(() => { void relire(); }, []);
 
+  /* Le cadeau rendu se remet à l'écran TOUT DE SUITE, sans attendre la
+     relecture. Celle-ci ne part que si le jeton de visite est lisible — et il
+     ne l'est pas toujours (navigation privée, stockage bloqué). S'en remettre à
+     elle laisserait la carte dire « vous vous en occupez » après une annulation
+     réussie : le visiteur croirait avoir échoué et recommencerait. */
+  const apresAnnulation = (souhaitId: string): void => {
+    setEtat((vue) => ({
+      ...vue,
+      wishes: vue.wishes.map((s) =>
+        s.id === souhaitId ? { ...s, isReserved: false, reservedByMe: false } : s),
+    }));
+    void relire();
+  };
+
   const apresReservation = (jetonRendu: string): void => {
     garderJetonDeVisite(jetonRendu);
     setReserve(true);
@@ -157,6 +171,7 @@ export function ListePartagee(
                 t={t} langue={langue} souhait={souhait}
                 reservable={etat.acceptsReservations}
                 onReserve={apresReservation}
+                onAnnule={() => apresAnnulation(souhait.id)}
               />
             ))}
           </div>

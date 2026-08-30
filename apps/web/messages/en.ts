@@ -337,4 +337,7 @@ export const en: typeof fr = {
   lienRetireTitre: "This link is no longer active",
   lienRetireTexte: "It was withdrawn by the person who sent it to you. There is nothing to do on your side.",
 
+  souhaitAnnuler: "Cancel",
+  souhaitAnnulerErreur: "The cancellation did not go through. Try again in a moment.",
+
 };

@@ -219,4 +219,41 @@ describe("la liste partagée", () => {
     expect(large.querySelector<HTMLElement>("section > div")?.style.gridTemplateColumns)
       .toContain("auto-fill");
   });
+
+  /* Se raviser doit rester possible : sans cette route, trois clics bloquaient
+     un cadeau jusqu'à la date, sans recours. */
+  it("offre d'annuler ce qu'on a soi-même réservé, et rien d'autre", () => {
+    const { unmount } = poser({ wishes: [souhait({ isReserved: true, reservedByMe: true })] });
+    expect(screen.getByRole("button", { name: t.souhaitAnnuler })).toBeInTheDocument();
+    unmount();
+
+    // Réservé par quelqu'un d'autre : aucun bouton d'annulation ne paraît.
+    poser({ wishes: [souhait({ isReserved: true })] });
+    expect(screen.queryByRole("button", { name: t.souhaitAnnuler })).toBeNull();
+  });
+
+  it("rend le cadeau à la liste et relit l'état", async () => {
+    brancher([
+      { ok: true, charge: { cancelled: true } },
+      { ok: true, charge: liste({ wishes: [souhait()] }) },
+    ]);
+    poser({ wishes: [souhait({ isReserved: true, reservedByMe: true })] });
+
+    await userEvent.click(screen.getByRole("button", { name: t.souhaitAnnuler }));
+    await waitFor(() => expect(appels[0]?.url).toContain("/reserve"));
+    // Pas de corps : le souhait est dans le chemin, l'identité dans l'en-tête.
+    expect(appels[0]?.corps).toBeNull();
+    await waitFor(() => expect(screen.getByRole("button", { name: t.souhaitReserver })).toBeInTheDocument());
+  });
+
+  /* Une annulation qui échoue le dit : sans message, le visiteur croirait avoir
+     rendu un cadeau qu'il bloque encore. */
+  it("dit quand l'annulation n'aboutit pas", async () => {
+    brancher([{ ok: false, status: 404 }]);
+    poser({ wishes: [souhait({ isReserved: true, reservedByMe: true })] });
+
+    await userEvent.click(screen.getByRole("button", { name: t.souhaitAnnuler }));
+    await waitFor(() => expect(screen.getByText(t.souhaitAnnulerErreur)).toBeInTheDocument());
+    expect(screen.getByText(t.souhaitMien)).toBeInTheDocument();
+  });
 });

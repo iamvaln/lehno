@@ -7,9 +7,10 @@ import type { Messages } from "../../messages/index.js";
 import { formaterMontant } from "../../lib/montants.js";
 import { Banner, Button, Tag, TextField } from "../ui/index.js";
 import { codeDuRefus } from "../../lib/refus.js";
+import { jetonDeVisite } from "../../lib/jeton-visite.js";
 
 type Etape = null | "coordonnees" | "code";
-type Panne = null | "generale" | "code" | "pris";
+type Panne = null | "generale" | "code" | "pris" | "annulation";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -32,7 +33,7 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
  * avant de cliquer, et il s'ouvre en isolation (§9.7).
  */
 export function CarteSouhait(
-  { t, langue, souhait, reservable, onReserve }: {
+  { t, langue, souhait, reservable, onReserve, onAnnule }: {
     t: Messages; langue: Langue; souhait: PublicWish;
     /** Faux quand l'occasion est passée : la liste s'affiche, sans accepter de
      *  réservation. C'est le SERVEUR qui tranche — le client ne compare pas la
@@ -42,6 +43,8 @@ export function CarteSouhait(
     /** Appelé une fois la réservation confirmée, avec le jeton de visite : la
      *  liste s'en sert pour redemander l'état et retrouver les siens. */
     onReserve: (jetonDeVisite: string) => void;
+    /** Appelé une fois le cadeau rendu à la liste. */
+    onAnnule: () => void;
   },
 ): ReactNode {
   const [etape, setEtape] = useState<Etape>(null);
@@ -115,6 +118,27 @@ export function CarteSouhait(
       onReserve(sessionToken);
     } catch {
       setPanne("generale");
+    } finally {
+      setAttente(false);
+    }
+  };
+
+  /* Le lien d'annulation n'est offert QUE sur ce qu'on a soi-même réservé
+     (`reservedByMe`), et le serveur revérifie l'identité de son côté : la page
+     ne décide de rien, elle propose ce que le serveur accepterait. */
+  const annuler = async (): Promise<void> => {
+    setAttente(true);
+    setPanne(null);
+    try {
+      const visite = jetonDeVisite();
+      const reponse = await fetch(`${base}/v1/public/owner-wishes/${souhait.id}/reserve`, {
+        method: "DELETE",
+        ...(visite === null ? {} : { headers: { "x-lehno-reservation": visite } }),
+      });
+      if (!reponse.ok) { setPanne("annulation"); return; }
+      onAnnule();
+    } catch {
+      setPanne("annulation");
     } finally {
       setAttente(false);
     }
@@ -197,7 +221,14 @@ export function CarteSouhait(
         {souhait.isFulfilled ? (
           <Tag>{t.souhaitOffert}</Tag>
         ) : souhait.reservedByMe ? (
-          <Tag tone="quiet">{t.souhaitMien}</Tag>
+          <>
+            <Tag tone="quiet">{t.souhaitMien}</Tag>
+            {/* Se raviser doit rester possible, et discret : c'est un retour en
+                arrière, pas une action qu'on met en avant. */}
+            <Button variant="text" onClick={annuler} disabled={attente}>
+              {t.souhaitAnnuler}
+            </Button>
+          </>
         ) : souhait.isReserved ? (
           <>
             <Tag>{t.souhaitReserve}</Tag>
@@ -291,6 +322,7 @@ export function CarteSouhait(
       {panne === "code" ? <Banner intent="error">{t.souhaitCodeFaux}</Banner> : null}
       {/* Pris entre-temps : ce n'est pas une panne, c'est une nouvelle. */}
       {panne === "pris" ? <Banner intent="warning">{t.souhaitDejaPris}</Banner> : null}
+      {panne === "annulation" ? <Banner intent="error">{t.souhaitAnnulerErreur}</Banner> : null}
     </div>
   );
 }
