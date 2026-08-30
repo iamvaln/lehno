@@ -42,7 +42,7 @@ export class AuthGuard implements CanActivate {
     if (!header?.startsWith("Bearer "))
       throw new AppError("unauthorized", "missing bearer token");
 
-    const { userId } = this.tokens.verifyAccess(header.slice(7));
+    const { userId, sessionId } = this.tokens.verifyAccess(header.slice(7));
 
     const compte = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -64,6 +64,10 @@ export class AuthGuard implements CanActivate {
       throw new AppError("unauthorized", "account is not active");
 
     req.userId = userId;
+    /* La lignée qui appelle. Nulle sur un jeton d'avant ce changement — voir
+       `verifyAccess` : l'appelant décide alors, et pour la déconnexion ce sera
+       « tout révoquer ». */
+    req.sessionId = sessionId;
     return true;
   }
 }

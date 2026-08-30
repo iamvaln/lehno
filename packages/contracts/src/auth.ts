@@ -32,6 +32,17 @@ export const sessionSchema = z.object({
   refreshToken: z.string(),
   expiresIn: z.number().int().positive(),
   isNewAccount: z.boolean(),
+  /* L'identifiant de la LIGNÉE, celui que `/me/sessions` rend comme `id`.
+   *
+   * Il permet à l'application de reconnaître sa propre session dans la liste —
+   * ce qu'elle ne pouvait pas faire : une installation fraîche n'a rien à
+   * comparer, et le déduire du User-Agent désigne la mauvaise dès qu'un
+   * téléphone a deux sessions ouvertes.
+   *
+   * Deux gestes en dépendent : cocher « cet appareil », et « déconnecter les
+   * autres appareils » — dont le libellé promet aujourd'hui ce que le serveur
+   * ne sait pas tenir, puisqu'il révoque aussi celle qui appelle. */
+  sessionId: z.string().uuid(),
 }).strict();
 
 /* Ce que rend une vérification réussie : une session, ou une INVITATION À
