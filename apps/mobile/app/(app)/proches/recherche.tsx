@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -9,26 +9,26 @@ import {
 import { Avatar, Countdown, EmptyState, Icon, Tag, useCouleurs } from "@lehno/ui-native";
 import { useLangue } from "../../../lib/langue.js";
 import { appel } from "../../../lib/api.js";
-import { dateCourte, presseAssezPourSAfficher } from "../../../lib/carnet.js";
+import {
+  chercheVraiment, dateCourte, parametresDeRecherche, presseAssezPourSAfficher,
+} from "../../../lib/carnet.js";
 import { libelleDeLEcheance } from "../../../lib/libelles.js";
 
 /* La recherche.
  *
- * ELLE SE PARCOURT : sans saisie, elle montre le carnet entier plutôt qu'une
+ * ELLE SE PARCOURT : sans saisie, elle montre le début du carnet plutôt qu'une
  * page blanche — chercher commence souvent par parcourir.
  *
- * ELLE FILTRE CHEZ ELLE, et c'est une exception assumée : `/me/persons` n'a pas
- * de paramètre de recherche. Le carnet est personnel — quelques centaines de
- * fiches au plus —, donc on le charge en entier, par pages de cent, et on
- * filtre en mémoire. Un `?q=` au contrat rendrait ce chargement inutile ; c'est
- * demandé au serveur.
+ * ELLE CHERCHE AU SERVEUR. Elle a filtré en mémoire, faute de `?q=` : l'écran
+ * tirait le carnet ENTIER par pages de cent avant de chercher dedans. Tenable à
+ * dix fiches, plus à trois cents — quatre allers-retours avant la première
+ * lettre tapée, refaits à chaque ouverture. Le paramètre existe désormais, et
+ * il vit sur le même chemin que la liste pour se combiner au tri.
  *
- * Le tri est ALPHABÉTIQUE ici, pas par date : on cherche un nom.
+ * ON N'INTERROGE PAS À CHAQUE FRAPPE : une pause, et deux caractères au
+ * minimum — une seule lettre rend presque tout le carnet, l'appel coûte autant
+ * que la liste et n'apprend rien.
  */
-
-// Cent, le plafond du contrat. Un carnet de quatre cents fiches tient en
-// quatre appels — au-delà, c'est le `?q=` qu'il faudra, pas une page de plus.
-const PAR_APPEL = 100;
 
 export default function Recherche() {
   const { t, langue } = useLangue();
@@ -37,36 +37,42 @@ export default function Recherche() {
   const routeur = useRouter();
 
   const [saisie, setSaisie] = useState("");
-  const [carnet, setCarnet] = useState<Person[] | null>(null);
+  const [resultats, setResultats] = useState<Person[] | null>(null);
 
-  const charge = useCallback(async () => {
-    const tout: Person[] = [];
-    let total = Infinity;
-    while (tout.length < total) {
-      const page = personListSchema.parse(await appel<unknown>(
-        `/me/persons?sort=alpha&direction=asc&offset=${tout.length}&limit=${PAR_APPEL}`,
-      ));
-      total = page.total;
-      // Une page vide arrête la boucle : sans cette garde, un total qui ne
-      // descend jamais ferait tourner l'appel indéfiniment.
-      if (page.persons.length === 0) break;
-      tout.push(...page.persons);
-    }
-    setCarnet(tout);
-  }, []);
+  /* Le tri ALPHABÉTIQUE pour parcourir : sans saisie, on cherche un nom dans
+     une liste. La recherche le garde — le contrat veut qu'elle « se combine au
+     tri », et changer l'ordre au premier caractère tapé ferait sauter la ligne
+     qu'on visait. */
+  const tri = { cle: "alpha", sens: "asc" } as const;
 
-  useEffect(() => { void charge(); }, [charge]);
+  useEffect(() => {
+    let vivant = true;
+    /* La pause ne s'applique qu'à la RECHERCHE. Le premier chargement — sans
+       saisie — part tout de suite : attendre quatre cents millisecondes pour
+       montrer une liste qu'on a déjà demandée serait un blanc gratuit. */
+    const q = saisie.trim();
+    const attente = chercheVraiment(q) ? 400 : 0;
 
-  const resultats = useMemo(() => {
-    const q = saisie.trim().toLocaleLowerCase(langue);
-    if (!carnet) return [];
-    if (!q) return carnet;
-    /* Le nom d'usage compte autant que le nom des listes : qui cherche
-       « maman » doit trouver Marie-Ange. */
-    return carnet.filter((p) =>
-      p.displayName.toLocaleLowerCase(langue).includes(q)
-      || (p.callingName ?? "").toLocaleLowerCase(langue).includes(q));
-  }, [carnet, saisie, langue]);
+    const minuteur = setTimeout(() => {
+      void (async () => {
+        try {
+          const lu = personListSchema.parse(await appel<unknown>(
+            `/me/persons${parametresDeRecherche(tri, 0, chercheVraiment(q) ? q : "")}`,
+          ));
+          if (vivant) setResultats(lu.persons);
+        } catch {
+          /* On garde ce qu'on montrait : effacer la liste sur un échec de
+             réseau ferait croire à un carnet vide, et c'est la pire chose à
+             montrer à quelqu'un qui cherche quelqu'un. */
+        }
+      })();
+    }, attente);
+
+    /* Le nettoyage annule la demande en vol : sans lui, la réponse d'un mot
+       abandonné écraserait celle du mot qu'on vient de taper — et l'écran
+       montrerait les résultats d'une recherche qu'on ne fait plus. */
+    return () => { vivant = false; clearTimeout(minuteur); };
+  }, [saisie]);
 
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage, paddingTop: insets.top + nativeSpace[6] }}>
@@ -108,7 +114,7 @@ export default function Recherche() {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        {resultats.length ? (
+        {resultats?.length ? (
           resultats.map((p, rang) => {
             const jours = p.nextOccurrence?.daysUntil ?? null;
             return (
@@ -146,7 +152,7 @@ export default function Recherche() {
               </Pressable>
             );
           })
-        ) : carnet === null ? null : (
+        ) : resultats === null ? null : (
           <EmptyState
             illustration="recherche-sans-resultat"
             title={t.videRechercheTitre}

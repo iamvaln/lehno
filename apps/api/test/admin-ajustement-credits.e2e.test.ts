@@ -64,7 +64,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
     const id = await client();
 
-    const corps = await (await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident" })).json();
+    const corps = await (await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident", reasonCode: "goodwill_gesture" })).json();
 
     const valide = soldeApresAjustementSchema.safeParse(corps);
     expect(valide.success ? null : valide.error.issues).toBeNull();
@@ -75,7 +75,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
     const id = await client();
 
-    await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident" });
+    await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident", reasonCode: "goodwill_gesture" });
 
     const m = await db.prisma.creditTransaction.findFirstOrThrow();
     expect(m.type).toBe("adjustment");
@@ -90,7 +90,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
     const id = await client(10);
 
-    await ajuster(entete, id, { montant: -5, nature: "correction", reason: "Octroi en double repris" });
+    await ajuster(entete, id, { montant: -5, nature: "correction", reason: "Octroi en double repris", reasonCode: "goodwill_gesture" });
 
     expect((await db.prisma.creditTransaction.findFirstOrThrow({ where: { type: "adjustment" } })).source)
       .toBe("correction");
@@ -100,7 +100,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
     const id = await client();
 
-    await ajuster(entete, id, { montant: 3, nature: "reward", reason: "Gagnant du concours de janvier" });
+    await ajuster(entete, id, { montant: 3, nature: "reward", reason: "Gagnant du concours de janvier", reasonCode: "goodwill_gesture" });
 
     expect((await db.prisma.creditTransaction.findFirstOrThrow()).source).toBe("reward");
   });
@@ -111,7 +111,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
     const id = await client();
 
-    const res = await ajuster(entete, id, { montant: 5, reason: "Geste commercial après incident" });
+    const res = await ajuster(entete, id, { montant: 5, reason: "Geste commercial après incident", reasonCode: "goodwill_gesture" });
 
     expect(res.status).toBe(400);
     expect(await db.prisma.creditTransaction.count()).toBe(0);
@@ -121,7 +121,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
     const id = await client();
 
-    await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident" });
+    await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident", reasonCode: "goodwill_gesture" });
 
     expect((await db.prisma.creditTransaction.findFirstOrThrow()).reason)
       .toBe("Geste commercial après incident");
@@ -131,7 +131,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
     const id = await client(10);
 
-    const corps = (await (await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident" })).json()) as {
+    const corps = (await (await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident", reasonCode: "goodwill_gesture" })).json()) as {
       solde: number;
     };
 
@@ -144,7 +144,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
     const id = await client(10);
 
-    const corps = (await (await ajuster(entete, id, { montant: -4, nature: "correction", reason: "Correction d'un octroi en double" })).json()) as {
+    const corps = (await (await ajuster(entete, id, { montant: -4, nature: "correction", reason: "Correction d'un octroi en double", reasonCode: "goodwill_gesture" })).json()) as {
       solde: number;
     };
 
@@ -158,7 +158,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
     const id = await client(3);
 
-    const res = await ajuster(entete, id, { montant: -10, nature: "correction", reason: "Correction d'un octroi en double" });
+    const res = await ajuster(entete, id, { montant: -10, nature: "correction", reason: "Correction d'un octroi en double", reasonCode: "goodwill_gesture" });
 
     expect(res.status).toBe(422);
     expect(await db.prisma.creditTransaction.count({ where: { type: "adjustment" } })).toBe(0);
@@ -182,8 +182,8 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const id = await client(10);
 
     const [a, b] = await Promise.all([
-      ajuster(entete, id, { montant: -8, nature: "correction", reason: "Correction d'un octroi en double" }),
-      ajuster(entete, id, { montant: -8, nature: "correction", reason: "Correction d'un second octroi" }),
+      ajuster(entete, id, { montant: -8, nature: "correction", reason: "Correction d'un octroi en double", reasonCode: "goodwill_gesture" }),
+      ajuster(entete, id, { montant: -8, nature: "correction", reason: "Correction d'un second octroi", reasonCode: "goodwill_gesture" }),
     ]);
 
     // L'une passe, l'autre est refusée faute de provision.
@@ -196,7 +196,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
     const id = await client(3);
 
-    const corps = (await (await ajuster(entete, id, { montant: -3, nature: "correction", reason: "Correction d'un octroi en double" })).json()) as {
+    const corps = (await (await ajuster(entete, id, { montant: -3, nature: "correction", reason: "Correction d'un octroi en double", reasonCode: "goodwill_gesture" })).json()) as {
       solde: number;
     };
 
@@ -207,14 +207,14 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
     const id = await client(10);
 
-    expect((await ajuster(entete, id, { montant: 0, nature: "gift", reason: "Un ajustement sans effet" })).status).toBe(400);
+    expect((await ajuster(entete, id, { montant: 0, nature: "gift", reason: "Un ajustement sans effet", reasonCode: "goodwill_gesture" })).status).toBe(400);
   });
 
   it("un motif trop court est refusé, et rien n'est écrit", async () => {
     const { entete } = await session("admin");
     const id = await client();
 
-    const res = await ajuster(entete, id, { montant: 5, nature: "gift", reason: "court" });
+    const res = await ajuster(entete, id, { montant: 5, nature: "gift", reason: "court", reasonCode: "goodwill_gesture" });
 
     expect(res.status).toBe(400);
     expect(await db.prisma.creditTransaction.count()).toBe(0);
@@ -224,7 +224,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { compte, entete } = await session("admin");
     const id = await client();
 
-    await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident" });
+    await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident", reasonCode: "goodwill_gesture" });
 
     const trace = await db.prisma.auditLog.findFirstOrThrow({ where: { action: "credit_adjustment" } });
     expect(trace.actorId).toBe(compte.id);
@@ -235,7 +235,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("admin");
 
     const res = await ajuster(entete, "00000000-0000-0000-0000-000000000000", {
-      montant: 5, nature: "gift", reason: "Geste commercial après incident",
+      montant: 5, nature: "gift", reason: "Geste commercial après incident", reasonCode: "goodwill_gesture",
     });
 
     expect(res.status).toBe(404);
@@ -247,7 +247,7 @@ describe("administration — l'ajustement manuel d'un solde", () => {
     const { entete } = await session("support");
     const id = await client();
 
-    const res = await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident" });
+    const res = await ajuster(entete, id, { montant: 5, nature: "gift", reason: "Geste commercial après incident", reasonCode: "goodwill_gesture" });
 
     expect(res.status).toBe(403);
     expect(await db.prisma.creditTransaction.count()).toBe(0);

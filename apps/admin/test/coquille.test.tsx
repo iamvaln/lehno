@@ -276,3 +276,80 @@ describe("les trois composants ne s'écartent pas du système de design", () => 
     });
   }
 });
+
+/* Une section groupe ses écrans et se plie. Elle n'existe que lorsqu'elle en
+   porte plusieurs : un accordéon à un seul enfant ajoute un geste sans rien
+   ranger. */
+describe("Sidebar — les sections", () => {
+  const AVEC_SECTION: SidebarFamille[] = [
+    {
+      titre: "Exploitation",
+      items: [
+        { id: "comptes", label: "Utilisateurs", icon: "users" },
+        {
+          id: "paiementsSection", label: "Paiements", icon: "receipt-text",
+          enfants: [
+            { id: "transactions", label: "À vérifier", icon: "receipt-text", ton: "alerte" },
+            { id: "canauxPaiement", label: "Canaux et barèmes", icon: "receipt-text" },
+          ],
+        },
+      ],
+    },
+  ];
+
+  it("cache ses écrans tant qu'on ne l'a pas ouverte", () => {
+    render(<Sidebar familles={AVEC_SECTION} marque="Lehno" active="comptes" />);
+    expect(screen.queryByRole("button", { name: /À vérifier/ })).toBeNull();
+  });
+
+  it("les montre une fois ouverte", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    render(<Sidebar familles={AVEC_SECTION} marque="Lehno" active="comptes" />);
+
+    await utilisateur.click(screen.getByRole("button", { name: /Paiements/ }));
+
+    expect(screen.getByRole("button", { name: /À vérifier/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Canaux et barèmes/ })).toBeTruthy();
+  });
+
+  /* L'intitulé OUVRE, il ne mène pas. Le rendre cliquable vers « le premier de
+     ses enfants » ferait deux entrées pour un même écran, et la seconde
+     changerait de destination le jour où l'ordre change. */
+  it("son intitulé ne change pas d'écran", async () => {
+    const aller = vi.fn();
+    const utilisateur = userEvent.setup({ delay: null });
+    render(<Sidebar familles={AVEC_SECTION} marque="Lehno" active="comptes" onSelect={aller} />);
+
+    await utilisateur.click(screen.getByRole("button", { name: /Paiements/ }));
+
+    expect(aller).not.toHaveBeenCalled();
+  });
+
+  /* Arriver sur un écran par un autre chemin — un chiffre du tableau de bord,
+     un retour d'historique — ne doit pas le montrer replié : la barre ne dirait
+     plus où l'on est. */
+  it("s'ouvre d'elle-même quand l'écran courant est dedans", () => {
+    render(<Sidebar familles={AVEC_SECTION} marque="Lehno" active="canauxPaiement" />);
+    expect(screen.getByRole("button", { name: /Canaux et barèmes/ })).toBeTruthy();
+  });
+
+  it("dit son état d'ouverture aux technologies d'assistance", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    render(<Sidebar familles={AVEC_SECTION} marque="Lehno" active="comptes" />);
+    const intitule = screen.getByRole("button", { name: /Paiements/ });
+
+    expect(intitule.getAttribute("aria-expanded")).toBe("false");
+    await utilisateur.click(intitule);
+    expect(intitule.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("mène à l'écran qu'on choisit dans la section", async () => {
+    const aller = vi.fn();
+    const utilisateur = userEvent.setup({ delay: null });
+    render(<Sidebar familles={AVEC_SECTION} marque="Lehno" active="canauxPaiement" onSelect={aller} />);
+
+    await utilisateur.click(screen.getByRole("button", { name: /À vérifier/ }));
+
+    expect(aller).toHaveBeenCalledWith("transactions");
+  });
+});

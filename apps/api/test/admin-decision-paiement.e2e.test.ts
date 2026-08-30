@@ -75,7 +75,7 @@ describe("administration — la décision sur un paiement", () => {
 
   const CONFIRMER = {
     decision: "confirmer", montantRecu: 1000,
-    reference: "MP260826.1200.A11111", reason: "Réception constatée sur le compte",
+    reference: "MP260826.1200.A11111", reason: "Réception constatée sur le compte", reasonCode: "operation_seen_at_the_operator",
   };
 
   it("suit le contrat publié, au champ près", async () => {
@@ -145,7 +145,7 @@ describe("administration — la décision sur un paiement", () => {
     const { paiementId } = await enAttente(entete);
 
     const res = await decider(entete, paiementId, {
-      decision: "confirmer", reference: "MP260826.1200.D44444", reason: "Réception constatée",
+      decision: "confirmer", reference: "MP260826.1200.D44444", reason: "Réception constatée", reasonCode: "operation_seen_at_the_operator",
     });
 
     expect(res.status).toBe(400);

@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "../src/App.js";
 import { magasinLocal } from "../src/api/session.js";
 import { messages } from "../src/i18n/index.js";
+import { allerA } from "./aide-navigation.js";
 
 const t = messages("fr");
 
@@ -63,7 +64,7 @@ async function ouvrir(section: string, role: "admin" | "support" = "admin") {
   magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role, email: "sam@lehno.app" });
   render(<App />);
   const utilisateur = userEvent.setup({ delay: null });
-  await utilisateur.click(within(screen.getByRole("navigation")).getByText(t.sections[section as "comptes"]));
+  await allerA(utilisateur, section);
   return utilisateur;
 }
 
@@ -73,6 +74,7 @@ async function ouvrir(section: string, role: "admin" | "support" = "admin") {
  * les paiements et les mouvements de crédits sont ce qu'on demande le jour d'un
  * contrôle, et n'avaient rien.
  */
+
 describe("l'export emporte la sélection affichée", () => {
   beforeEach(() => {
     localStorage.clear();

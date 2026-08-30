@@ -4,6 +4,7 @@ import {
   compteLigneSchema, compteDetailSchema, parametresSchema,
   demandeSuppressionSchema, interventionSchema, profilAdminSchema,
   metriquesSchema, cohorteSchema, conversionSchema, actionPayanteSchema,
+  statsTransactionsSchema, aboutissementSchema,
 } from "./admin.js";
 import { z } from "zod";
 
@@ -188,5 +189,51 @@ describe("les actions payantes", () => {
   // « issue_des_actions » n'est plus un manque : la source existe.
   it("ne compte plus l'issue des actions parmi les manques", () => {
     expect(metriquesSchema.safeParse({ ...metriques, manques: ["issue_des_actions"] }).success).toBe(false);
+  });
+});
+
+// ——— Statistiques des transactions ————————————————————————————
+
+const stats = {
+  periode: "30j", sens: "tous", mode: "tous",
+  tentatives: 120, aboutis: 108, encaisse: 108000, frais: 4200, median: 1000,
+  jours: [{ jour: "2026-08-29", encaisse: 4000, echoue: 500 }],
+  parMoyen: [{ cle: "mobile_money", tentatives: 100, aboutis: 92 }],
+  parPays: [{ cle: "CM", tentatives: 100, aboutis: 92 }],
+};
+
+describe("les statistiques des transactions", () => {
+  it("accepte une réponse complète", () => {
+    expect(statsTransactionsSchema.safeParse(stats).success).toBe(true);
+  });
+
+  /* Plus d'aboutis que de tentatives n'est pas un chiffre surprenant, c'est une
+     requête fausse — et à l'écran, elle se lirait comme un taux de réussite
+     supérieur à cent pour cent, ce qu'on prendrait pour un défaut d'affichage. */
+  it("refuse plus d'aboutis que de tentatives", () => {
+    expect(statsTransactionsSchema.safeParse({ ...stats, aboutis: 121 }).success).toBe(false);
+    expect(aboutissementSchema.safeParse({ cle: "CM", tentatives: 10, aboutis: 11 }).success).toBe(false);
+  });
+
+  /* Nul et zéro ne disent pas la même chose : « aucun paiement n'a abouti » et
+     « le paiement médian vaut zéro franc » sont deux nouvelles opposées. */
+  it("distingue un panier médian inconnu d'un panier nul", () => {
+    expect(statsTransactionsSchema.safeParse({ ...stats, median: null }).success).toBe(true);
+    expect(statsTransactionsSchema.safeParse({ ...stats, median: 0 }).success).toBe(true);
+  });
+
+  it("n'admet que les trois périodes du graphe", () => {
+    expect(statsTransactionsSchema.safeParse({ ...stats, periode: "12m" }).success).toBe(false);
+  });
+
+  it("refuse un champ de trop", () => {
+    expect(statsTransactionsSchema.safeParse({ ...stats, solde: 3 }).success).toBe(false);
+  });
+
+  /* Encaissé et échoué ne s'additionnent pas : ce sont deux mesures du même
+     jour, pas les parts d'un total. Un jour porte donc les deux. */
+  it("garde les deux montants d'un jour séparés", () => {
+    const fondu = { ...stats, jours: [{ jour: "2026-08-29", encaisse: 4500 }] };
+    expect(statsTransactionsSchema.safeParse(fondu).success).toBe(false);
   });
 });

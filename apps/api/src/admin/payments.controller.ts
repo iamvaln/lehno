@@ -1,12 +1,17 @@
 import { Body, Controller, HttpCode, Inject, Injectable, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
-import { ajustementCreditsSchema, decisionPaiementSchema, saisiePaiementSchema } from "@lehno/contracts";
+import {
+  ajustementCreditsSchema, decisionPaiementSchema, saisiePaiementSchema,
+  versementRemboursementSchema, abandonRemboursementSchema,
+  type RemboursementRegle,
+} from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AdminGuard } from "./admin.guard.js";
 import { Role, RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
+import { poserLAuteurEtLeMotif } from "./historisation.js";
 import { fraisDe } from "../payments/frais.js";
 
 /**
@@ -142,6 +147,16 @@ export class AdminPaymentsService {
     // le rouvrir laisserait deux vérités sur le même versement.
     if (paiement.status !== "pending") throw new AppError("conflict", "payment is already settled");
 
+    /* CE GESTE NE VAUT QUE POUR L'ARGENT QUI ENTRE.
+     *
+     * Confirmer un remboursement par ici lui octroierait des crédits — `amount:
+     * paiement.credits`, positif, en `source: "purchase"` — soit l'inverse
+     * exact de ce qu'un remboursement doit faire : on rendrait l'argent ET on
+     * laisserait les crédits. Le versement a son propre geste, qui reprend les
+     * crédits en même temps qu'il constate le paiement. */
+    if (paiement.direction !== "charge")
+      throw new AppError("conflict", "a refund is settled by its own gesture");
+
     const confirme = entree.decision === "confirmer";
     const attendu = paiement.expectedAmount === null ? null : Number(paiement.expectedAmount);
     const recu = entree.montantRecu ?? null;
@@ -205,7 +220,16 @@ export class AdminPaymentsService {
         await this.journal.consigner({
           auteurId,
           action: "payment_decision",
+          /* Confirmer et rejeter sont deux gestes, et l'action journalisée est
+             la même pour les deux. « Opération vue chez l'opérateur »
+             n'explique pas un rejet — d'où deux gestes, et non un.
+
+             Le rejet n'a aucun motif préréglé : le kit n'en propose pas, et
+             c'est cohérent — on rejette pour une raison qui tient à ce
+             versement-là, pas à une catégorie. La phrase suffit. */
+          geste: entree.decision === "confirmer" ? "payment_confirm" : "payment_reject",
           motif: entree.reason,
+          ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
           cibleType: "payment",
           cibleId: id,
           details: { decision: entree.decision, expected: attendu, received: recu, gap: ecart },
@@ -234,6 +258,99 @@ export class AdminPaymentsService {
    * mouvement explique cette ligne-là, à qui lit l'historique d'un compte sans
    * ouvrir le journal.
    */
+  /* VERSER UN REMBOURSEMENT.
+   *
+   * Le miroir de `saisir`, en sens inverse. Deux gestes distincts plutôt qu'un
+   * drapeau sur le premier : ils ne gardent pas les mêmes choses, et confondre
+   * leurs contrôles est précisément ce qui ferait octroyer des crédits sur un
+   * remboursement.
+   *
+   * LES CRÉDITS SE REPRENNENT ICI, en même temps qu'on constate le versement.
+   * Ils n'ont pas été débités à la demande, et c'est voulu — le débit accompagne
+   * l'argent qui part. Les reprendre plus tôt aurait laissé quelqu'un sans
+   * crédits ET sans argent pendant tout le délai de grâce, avec la possibilité
+   * d'annuler entre-temps.
+   *
+   * Le montant ne se saisit pas : il a été fixé à la demande, et c'est celui
+   * qu'on a annoncé au titulaire.
+   */
+  async verser(auteurId: string, id: string, entree: z.infer<typeof versementRemboursementSchema>) {
+    return this.reglerRemboursement(auteurId, id, "succeeded", entree.reason, entree.reasonCode, entree.reference);
+  }
+
+  /* Renoncer. Sans cette porte, une demande qui ne peut pas aboutir — numéro
+     fermé, titulaire injoignable — retiendrait l'effacement du compte pour
+     toujours. */
+  async abandonner(auteurId: string, id: string, entree: z.infer<typeof abandonRemboursementSchema>) {
+    return this.reglerRemboursement(auteurId, id, "failed", entree.reason, entree.reasonCode);
+  }
+
+  private async reglerRemboursement(
+    auteurId: string, id: string, etat: "succeeded" | "failed",
+    motif: string, codeMotif?: string, reference?: string,
+  ): Promise<RemboursementRegle> {
+    const paiement = await this.prisma.payment.findUnique({ where: { id } });
+    if (!paiement) throw new AppError("not_found", "unknown payment");
+    // Le geste des paiements entrants a son propre chemin, et ses propres
+    // gardes. Les croiser ferait octroyer des crédits sur un remboursement.
+    if (paiement.direction !== "refund")
+      throw new AppError("conflict", "this payment is not a refund");
+    if (paiement.status !== "pending")
+      throw new AppError("conflict", "refund is already settled");
+
+    return this.prisma.$transaction(async (tx) => {
+      await poserLAuteurEtLeMotif(tx, auteurId, motif, codeMotif);
+      await this.journal.consigner({
+        auteurId,
+        action: "payment_decision",
+        /* UN SEUL geste pour verser et pour renoncer : le kit n'a qu'un
+           dialogue, et ses motifs couvrent les deux — « versé par mobile
+           money » comme « le titulaire y a renoncé ». Les séparer aurait
+           imposé deux listes là où l'écran n'en montre qu'une. */
+        geste: "refund_settle",
+        motif,
+        ...(codeMotif !== undefined ? { codeMotif } : {}),
+        cibleType: "payment", cibleId: id,
+        details: { direction: "refund", etat, amount: Number(paiement.amount) },
+      }, tx);
+
+      /* `updateMany` avec l'état attendu dans le `where` : deux administrateurs
+         qui règlent la même demande en même temps ne la règlent qu'une fois, et
+         les crédits ne se reprennent pas deux fois. Lire puis écrire aurait
+         laissé passer les deux. */
+      const { count } = await tx.payment.updateMany({
+        where: { id, status: "pending" },
+        data: {
+          status: etat,
+          ...(reference !== undefined ? { providerRef: reference } : {}),
+          ...(etat === "failed" ? { failureReason: motif } : {}),
+        },
+      });
+      if (count === 0) throw new AppError("conflict", "refund is already settled");
+
+      let creditsRepris = 0;
+      if (etat === "succeeded") {
+        /* La reprise est un AJUSTEMENT, jamais un `purchase` : l'unicité
+           partielle sur `credit_transaction.payment_id` ne porte que sur les
+           achats, et c'est ce qui laisse cette ligne citer le même paiement que
+           celui qui l'explique. */
+        await tx.creditTransaction.create({
+          data: {
+            userId: paiement.userId,
+            type: "adjustment",
+            source: "consumption",
+            amount: -paiement.credits,
+            paymentId: id,
+            reason: motif,
+          },
+        });
+        creditsRepris = paiement.credits;
+      }
+
+      return { id, etat, creditsRepris };
+    });
+  }
+
   async ajuster(auteurId: string, utilisateurId: string, entree: z.infer<typeof ajustementCreditsSchema>) {
     const client = await this.prisma.user.findUnique({
       where: { id: utilisateurId }, select: { id: true },
@@ -278,7 +395,9 @@ export class AdminPaymentsService {
       await this.journal.consigner({
         auteurId,
         action: "credit_adjustment",
+        geste: "credit_adjust",
         motif: entree.reason,
+        ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
         cibleType: "user",
         cibleId: utilisateurId,
         details: { amount: entree.montant, nature: entree.nature, from: avant, to: apres },
@@ -322,7 +441,32 @@ export class AdminPaymentsController {
   ) {
     return this.service.decider(requete.admin?.id ?? "", id, corps);
   }
+  /* Le versement d'un remboursement, et son abandon. Deux chemins et non un
+     drapeau : ce sont deux décisions différentes, et l'écran doit pouvoir
+     nommer celle qu'il prend. */
+  @Post(":id/refund")
+  @Role("admin")
+  @HttpCode(200)
+  verser(
+    @Req() req: { admin: { id: string } },
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(versementRemboursementSchema)) corps: z.infer<typeof versementRemboursementSchema>,
+  ): Promise<RemboursementRegle> {
+    return this.service.verser(req.admin.id, id, corps);
+  }
+
+  @Post(":id/refund-abandon")
+  @Role("admin")
+  @HttpCode(200)
+  abandonner(
+    @Req() req: { admin: { id: string } },
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(abandonRemboursementSchema)) corps: z.infer<typeof abandonRemboursementSchema>,
+  ): Promise<RemboursementRegle> {
+    return this.service.abandonner(req.admin.id, id, corps);
+  }
 }
+
 
 /**
  * L'ajustement d'un solde vit sous le compte qu'il touche, pas sous les
@@ -346,4 +490,5 @@ export class AdminCreditsController {
   ) {
     return this.service.ajuster(requete.admin?.id ?? "", id, corps);
   }
+
 }

@@ -61,7 +61,17 @@ export const fr = {
     suppressions: "Demandes de suppression",
     assistance: "Assistance",
     comptes: "Comptes",
-    credits: "Crédits et paiements",
+    // La section groupe les quatre cadrages ; l'entrée qui hérite du
+    // comportement actuel devient « À vérifier », puisqu'elle s'ouvre sur ce
+    // qui attend une décision.
+    paiements: "Paiements",
+    credits: "À vérifier",
+    transactionsToutes: "Toutes les transactions",
+    versementsManuels: "Versements manuels",
+    canauxPaiement: "Canaux et barèmes",
+    transactionsStats: "Statistiques",
+    creditsSection: "Crédits",
+    transactionManuelle: "Transaction manuelle",
     acces: "Accès administrateurs",
     parametres: "Paramètres",
     fonctionnalites: "Fonctionnalités",
@@ -822,6 +832,10 @@ export const fr = {
     etats: {
       enCours: "Délai de grâce",
       echue: "À effacer",
+      // Ce n'est pas un raffinement de « à effacer » : celui-là attend une
+      // date, celui-ci attend un geste de notre part. Les confondre ferait
+      // passer pour patient ce qui est en retard.
+      attendRemboursement: "Remboursement à verser",
       efface: "Effacé",
     },
     col: {
@@ -1114,6 +1128,87 @@ export const fr = {
         "Intervention reportée",
       ],
     },
+  },
+
+  transactionManuelle: {
+    titre: "Transaction manuelle",
+    sous: "Écrire un mouvement de crédits sur un compte. Le geste est journalisé avec son auteur et son motif.",
+    compte: "Le compte",
+    // Un compte ne se tape pas : « valentine@ » et « valentin@ » se ressemblent,
+    // et rien ne dirait ensuite lequel a été servi.
+    chercher: "Chercher un compte",
+    chercherPlaceholder: "Pseudo ou adresse",
+    aucunCompte: "Aucun compte ne correspond",
+    solde: "Solde",
+    changer: "Changer",
+    nature: "Ce que c'est",
+    // Chaque option dit son sens : une liste fermée cacherait ce qu'on doit
+    // voir avant d'écrire de l'argent.
+    natures: {
+      gift: "Cadeau — au crédit",
+      reward: "Récompense — au crédit",
+      correctionPlus: "Correction — au crédit",
+      correctionMoins: "Reprise de crédits — au débit",
+    },
+    // Redit une fois la nature retenue : l'option a défilé, la ligne reste.
+    sensCredit: "Le compte recevra {n} crédits.",
+    sensDebit: "Le compte perdra {n} crédits.",
+    montant: "Combien",
+    montantAide: "Un nombre entier de crédits, supérieur à zéro.",
+    ecrire: "Écrire le mouvement",
+    annuler: "Annuler",
+    dialogue: {
+      titre: "Écrire ce mouvement",
+      consequence: "Le solde change immédiatement, et le client le voit. Le journal d'audit garde le geste, son auteur et son motif.",
+      motifs: [
+        "Geste commercial",
+        "Correction d'une erreur",
+        "Compensation d'un incident",
+      ],
+    },
+    fait: "Mouvement écrit.",
+  },
+
+  transactionsStats: {
+    titre: "Statistiques des transactions",
+    sous: "Ce qui est encaissé, ce que ça coûte, ce qui n'aboutit pas.",
+    devise: "F",
+    cartes: {
+      aboutis: "Paiements aboutis",
+      // Un ratio parle là où un pourcentage se lit sans se sentir : « un sur
+      // douze échoue » se retient, « 8 % » se survole.
+      aboutisRatio: "un sur {n} échoue",
+      aucunEchec: "aucun échec",
+      encaisse: "Encaissé",
+      frais: "Frais prélevés",
+      panier: "Paiement médian",
+      // Nul n'est pas zéro : « aucun paiement n'a abouti » et « le paiement
+      // médian vaut zéro franc » sont deux nouvelles opposées.
+      sansPanier: "Aucun paiement abouti",
+    },
+    graphe: {
+      titre: "Encaissé et échoué",
+      encaisse: "Encaissé",
+      echoue: "Échoué",
+      jour: "Jour",
+      vide: "Aucun paiement sur la période.",
+      periodeLabel: "La période",
+      periodes: { "7j": "7 jours", "30j": "30 jours", "90j": "3 mois" },
+      typeLabel: "Le sens",
+      types: { tous: "Dépôts et retraits", depot: "Dépôts", retrait: "Retraits" },
+      modeLabel: "Le mode",
+      modes: { tous: "Automatique et manuel", auto: "Automatique", manuel: "Manuel" },
+      // La mention nomme la coupe active : sans elle, le graphe ne dit plus ce
+      // qu'il montre dès qu'on a changé d'axe.
+      coupe: "{periode} · {sens} · {mode}",
+    },
+    parMoyen: "Par moyen de paiement",
+    noteMoyen: "Un moyen qui échoue plus que les autres est une décision de routage, pas de frais.",
+    parPays: "Aboutissement par pays",
+    notePays: "Un pays qui échoue plus révèle des frais mal réglés ou un opérateur mal choisi.",
+    col: { groupe: "Groupe", tentatives: "Tentatives", aboutis: "Aboutis", taux: "Taux" },
+    vide: "Aucun paiement rattaché à un canal sur la période.",
+    moyens: { mobile_money: "Mobile money", card: "Carte" },
   },
 
   metriques: {

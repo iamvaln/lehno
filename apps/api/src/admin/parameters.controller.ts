@@ -18,6 +18,9 @@ const ecritureSchema = z.object({
   key: z.string().max(64),
   value: z.string().max(500),
   reason: motifSchema,
+  /* Facultatif au schéma, exigé par le service : c'est la table des motifs qui
+     dit si ce geste en propose, et un schéma ne peut pas le savoir. */
+  reasonCode: z.string().max(48).optional(),
 }).strict();
 
 // Ce que la base sait d'un paramètre. Le libellé et l'unité n'y sont pas, et
@@ -121,6 +124,12 @@ export class ParametersService {
       await this.journal.consigner({
         auteurId,
         action: "parameter_update",
+        /* Un seul geste pour tous les paramètres, et c'est voulu : les motifs
+           proposés — ajustement tarifaire, campagne d'acquisition, arbitrage de
+           marge — valent pour le prix du crédit comme pour les crédits offerts.
+           Découper par clé donnerait quarante gestes portant la même liste. */
+        geste: "parameter_update",
+        ...(entree.reasonCode !== undefined ? { codeMotif: entree.reasonCode } : {}),
         motif: entree.reason,
         cibleType: "system_parameter",
         cibleId: avant.id,

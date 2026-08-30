@@ -11,6 +11,7 @@ const FILE = {
   items: [
     { id: "u-1", compte: "awa", demandeeLe: "2026-08-01T09:00:00.000Z", echeance: "2026-08-31T09:00:00.000Z", joursRestants: 6, etat: "en_cours" },
     { id: "u-2", compte: "valery", demandeeLe: "2026-07-01T09:00:00.000Z", echeance: "2026-07-31T09:00:00.000Z", joursRestants: -25, etat: "echue" },
+    { id: "u-3", compte: "sam", demandeeLe: "2026-07-15T09:00:00.000Z", echeance: "2026-08-14T09:00:00.000Z", joursRestants: -11, etat: "attend_remboursement" },
   ],
   nextCursor: null,
 };
@@ -142,5 +143,36 @@ describe("les demandes de suppression, sur le serveur", () => {
     await utilisateur.click(await screen.findByText("Suppressions"));
 
     expect(await screen.findByText(t.echecs.chargement)).toBeInTheDocument();
+  });
+});
+
+/* Un compte retenu par un remboursement ne se lit pas comme un compte dont
+   l'heure est venue. L'un attend un GESTE de notre part, l'autre une DATE —
+   et « à effacer » annoncerait un effacement qui ne partira pas. */
+describe("le compte qui attend un remboursement", () => {
+  beforeEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
+
+  it("se distingue d'une échéance passée", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({
+      // La section ne figure pas au menu : on y arrive par la file « à traiter »
+      // du tableau de bord, qui doit donc la proposer.
+      "/admin/dashboard": () => reponse(200, {
+        alertes: [], indicateurs: [],
+        aTraiter: [{ id: "f1", element: "Suppressions", section: "suppressions", etat: "en attente", depuis: "2 jours" }],
+      }),
+      "/admin/deletions": () => reponse(200, FILE),
+    });
+    await ouvrirSuppressions(utilisateur);
+    await utilisateur.click(await screen.findByText("Suppressions"));
+
+    expect(await screen.findByText(t.suppressions.etats.attendRemboursement)).toBeInTheDocument();
+
+    /* Borné au tableau : « À effacer » nomme aussi une option du filtre d'état.
+       Ce qu'on vérifie ici est que les deux lignes portent des mots
+       DIFFÉRENTS — c'est toute la distinction. */
+    const table = screen.getByRole("table");
+    expect(within(table).getByText(t.suppressions.etats.attendRemboursement)).toBeInTheDocument();
+    expect(within(table).getByText(t.suppressions.etats.echue)).toBeInTheDocument();
   });
 });

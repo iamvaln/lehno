@@ -125,8 +125,12 @@ export class AuthController {
     // L'adresse de CE tour, pas celle de l'ouverture : c'est la suite des
     // adresses d'une lignée qui montre qu'une copie circule ailleurs.
     const pair = await this.tokens.rotate(body.refreshToken, userAgent, ip);
-    // Un renouvellement ne crée jamais de compte : la forme reste celle d'une session.
-    return { ...pair, isNewAccount: false };
+    /* Un renouvellement ne crée jamais de compte : la forme reste celle d'une
+       session. `deletionPendingUntil` reste nulle ici — c'est la CONNEXION qui
+       annonce l'état, et un jeton renouvelé l'a déjà fait à son ouverture. La
+       garde, elle, referme les portes à chaque appel : la session d'un compte
+       qui part reste vide même renouvelée. */
+    return { ...pair, isNewAccount: false, deletionPendingUntil: null };
   }
 
   @Delete("session")

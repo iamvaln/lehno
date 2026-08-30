@@ -32,6 +32,29 @@ export const sessionSchema = z.object({
   refreshToken: z.string(),
   expiresIn: z.number().int().positive(),
   isNewAccount: z.boolean(),
+  /* La suppression demandée, et la date où elle s'exécute.
+   *
+   * Nulle dans le cas ordinaire. Renseignée, la session est OUVERTE MAIS
+   * VIDE : le seul chemin qu'elle ouvre est l'annulation. Le client doit donc
+   * afficher un écran unique, et non son accueil habituel amputé — un accueil
+   * dont tout échoue en 403 se lit comme une panne, pas comme un état.
+   *
+   * On rend la date plutôt qu'un simple drapeau : « votre compte sera supprimé
+   * le 12 septembre » est ce que la personne a besoin de lire pour décider,
+   * et la lui faire redemander par un second appel retarderait la seule
+   * information qui compte à cet instant. */
+  deletionPendingUntil: z.string().nullable().default(null),
+  /* L'identifiant de la LIGNÉE, celui que `/me/sessions` rend comme `id`.
+   *
+   * Il permet à l'application de reconnaître sa propre session dans la liste —
+   * ce qu'elle ne pouvait pas faire : une installation fraîche n'a rien à
+   * comparer, et le déduire du User-Agent désigne la mauvaise dès qu'un
+   * téléphone a deux sessions ouvertes.
+   *
+   * Deux gestes en dépendent : cocher « cet appareil », et « déconnecter les
+   * autres appareils » — dont le libellé promet aujourd'hui ce que le serveur
+   * ne sait pas tenir, puisqu'il révoque aussi celle qui appelle. */
+  sessionId: z.string().uuid(),
 }).strict();
 
 /* Ce que rend une vérification réussie : une session, ou une INVITATION À
@@ -104,6 +127,15 @@ export const registeredSchema = z.object({
   refreshToken: z.string(),
   expiresIn: z.number().int().positive(),
   isNewAccount: z.literal(true),
+  /* MÊME FORME QU'UNE SESSION ORDINAIRE, et ce n'est pas de la symétrie
+     décorative : l'inscription EST une ouverture de session, et le client la
+     traite comme telle. Deux formes voisines l'obligeraient à distinguer là où
+     il n'y a rien à distinguer — et c'est exactement ce qui a cassé le portage
+     mobile quand ces deux champs sont apparus d'un seul côté. */
+  sessionId: z.string().uuid(),
+  /* Toujours nulle : un compte qui vient de naître n'est pas en cours de
+     suppression. On la rend quand même pour que la forme soit une seule. */
+  deletionPendingUntil: z.null(),
   signupCredits: z.number().int().min(0),
   /* Le cadeau réservé à qui attendait sur la liste, EN PLUS du précédent.
    *

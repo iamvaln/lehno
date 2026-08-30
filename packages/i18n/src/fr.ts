@@ -35,6 +35,13 @@ export const fr = {
     waitlist_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
     contact_invalid: "Ce formulaire n'est pas valide. Vérifiez les champs et réessayez.",
     contact_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
+    // On DIT que le lien a existé : « page introuvable » ferait croire au
+    // visiteur qu'il a mal recopié une adresse qu'on lui a pourtant envoyée.
+    link_revoked: "Ce lien n'est plus actif.",
+    wish_window_closed: "Les vœux ne sont pas ouverts en ce moment.",
+    // Même formule que les deux autres refus de robot : elle ne dit pas
+    // lequel des filtres a mordu.
+    collect_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",
     // Un seul message pour les deux filtres à robots, comme les deux
     // au-dessus : dire lequel a mordu l'apprendrait au robot.
     reservation_rejected: "Cet envoi n'a pas abouti. Réessayez dans un instant.",

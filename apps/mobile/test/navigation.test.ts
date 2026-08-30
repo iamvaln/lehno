@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ecranEteint, moiVisible, preparationOuverte } from "../lib/navigation.js";
+import {
+  ecranEteint, moiVisible, preparationOuverte, sectionsDeMoi,
+} from "../lib/navigation.js";
 
 /* Les cinq profils du handoff, exprimés comme le serveur les rend : la liste
    RÉSOLUE de ce qui est actif, jamais l'état brut. Ce sont les cinq états à
@@ -20,24 +22,36 @@ const CREDITS_ETEINTS = TOUT.filter((c) => !["credits", "topup.provider", "topup
 const IDEES_SEULES = [...LANCEMENT.filter((c) => c !== "generation.message"), "generation.ideas"];
 const RIEN: string[] = [];
 
-describe("l'onglet Moi est une conséquence, pas un drapeau", () => {
-  /* Le serveur n'enverra jamais `moi`. L'onglet part quand ses cinq sections
-     sont toutes fermées — un onglet qui ne mène qu'à un écran vide est pire
-     qu'un onglet absent. */
-  it("tient tant qu'une seule de ses sections tient", () => {
-    expect(moiVisible(["wall"])).toBe(true);
-    expect(moiVisible(["reservation"])).toBe(true);
+describe("l'onglet Moi reste, et ce sont ses sections qui varient", () => {
+  /* LE DÉFAUT QUE CE TEST TIENT DÉSORMAIS. Moi partait quand ses quatre
+     sections étaient fermées — c'est le cas au lancement. Sauf qu'il ne porte
+     pas QUE ces sections : il porte le solde, la recharge et le parrainage,
+     qui ne suivent aucun drapeau.
+
+     L'onglet emportait donc le solde avec lui, et le seul chemin restant pour
+     l'atteindre passait par l'écran de préparation d'un message, via un lien
+     qu'il fallait remarquer. Un écran qu'on n'atteint que par accident n'est
+     pas atteignable. */
+  it("tient au lancement, où ses quatre sections sont pourtant fermées", () => {
+    expect(moiVisible(LANCEMENT)).toBe(true);
   });
 
-  it("tombe au lancement, où ses cinq sections sont fermées", () => {
-    expect(moiVisible(LANCEMENT)).toBe(false);
-    expect(moiVisible(RIEN)).toBe(false);
+  it("tient même sans aucun drapeau", () => {
+    expect(moiVisible(RIEN)).toBe(true);
   });
 
-  // Un drapeau qui ne le concerne pas ne le rallume pas : `collect` et
-  // `referral` sont ouverts au lancement, et Moi tombe quand même.
-  it("ne se rallume pas sur un drapeau étranger", () => {
-    expect(moiVisible(["collect", "referral", "credits"])).toBe(false);
+  /* Ce qui varie, ce sont les SECTIONS. C'est la distinction qui compte : un
+     onglet dont le contenu se réduit n'est pas un onglet qui disparaît, et les
+     autres écrans gouvernés, eux, sortent bien de la navigation. */
+  it("ne montre que les sections dont le drapeau tient", () => {
+    expect(sectionsDeMoi(LANCEMENT)).toEqual([]);
+    expect(sectionsDeMoi(["wall", "reservation"])).toEqual(["wall", "reservation"]);
+  });
+
+  // Un drapeau étranger n'ouvre aucune section : `collect` et `referral` sont
+  // ouverts au lancement, et Moi reste sans section pour autant.
+  it("n'ouvre pas de section sur un drapeau étranger", () => {
+    expect(sectionsDeMoi(["collect", "referral"])).toEqual([]);
   });
 });
 
@@ -86,12 +100,16 @@ describe("les cinq profils", () => {
   /* Le lancement retire neuf écrans, et l'onglet qui menait à quatre d'entre
      eux avec. C'est cette liste-là qu'il faut voir juste : elle décide de
      l'ordre de construction. */
-  it("le lancement retire neuf écrans, et garde la promesse", () => {
+  /* HUIT, ET NON PLUS NEUF. « Moi » a quitté cette liste le 29/08 : il portait
+     le solde, la recharge et le parrainage, qui ne suivent aucun drapeau, et
+     son départ les emportait. Ce sont ses SECTIONS qui ferment, pas lui. */
+  it("le lancement retire huit écrans, et garde la promesse", () => {
     const sortis = ["souhait", "listes", "monmur", "reservations", "cadrage",
-      "portrait", "studio", "paiement", "moi"];
+      "portrait", "studio", "paiement"];
     for (const id of sortis) expect(ecranEteint(id, LANCEMENT), id).toBe(true);
 
-    const restent = ["valider", "collecte", "preparation", "generation", "reprises", "parrainage"];
+    const restent = ["valider", "collecte", "preparation", "generation", "reprises",
+      "parrainage", "moi"];
     for (const id of restent) expect(ecranEteint(id, LANCEMENT), id).toBe(false);
   });
 

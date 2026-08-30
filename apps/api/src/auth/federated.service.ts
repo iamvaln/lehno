@@ -5,7 +5,8 @@ import { SignupService } from "../onboarding/signup.service.js";
 import { TrackingService } from "../tracking/tracking.service.js";
 import type { VerifyOutcome } from "@lehno/contracts";
 import { TokenService } from "./token.service.js";
-import { refusDe } from "./auth.service.js";
+import { refusDe, STATUTS_ADMIS } from "./auth.service.js";
+import { delaiDeGraceEnJours } from "../common/delai-de-grace.js";
 import { AppError } from "../common/errors.js";
 
 export interface IdentityVerifier {
@@ -39,11 +40,26 @@ export class FederatedService {
   // reconnaissance par identité déjà liée y compris, alors même que c'est le
   // chemin le plus emprunté (celui de la reconnexion). Même distinction que
   // AuthService.verifyOtp entre les deux statuts.
+  /* L'échéance de suppression, comme sur la voie du code. La calculer ici
+     aussi plutôt que de rendre `null` : un compte inscrit par Google recevrait
+     sinon une session vide sans que l'écran sache pourquoi, et tomberait en 403
+     sur tout — ce qui se lit comme une panne. */
+  private async echeanceDeSuppression(
+    user: Pick<User, "status" | "deletionRequestedAt">,
+  ): Promise<string | null> {
+    if (user.status !== "pending_deletion" || user.deletionRequestedAt === null) return null;
+    const jours = await delaiDeGraceEnJours(this.prisma);
+    return new Date(user.deletionRequestedAt.getTime() + jours * 86_400_000).toISOString();
+  }
+
   private assertActive(user: Pick<User, "status">): void {
     // REFUS PAR DÉFAUT, et la table des refus est partagée avec la voie du code
     // à usage unique : deux tables des mêmes états finiraient par diverger,
     // et c'est ainsi que `deleted` a été oublié ici même.
-    if (user.status !== "active") throw refusDe(user.status);
+    /* Même règle que par code : un compte en suppression ouvre une session
+       vide, pour pouvoir revenir sur sa décision. La refuser ici laisserait
+       sans recours quiconque s'est inscrit par Google ou Apple. */
+    if (!STATUTS_ADMIS.has(user.status)) throw refusDe(user.status);
   }
 
   // Revue tour 1, point 4 : la voie du code à usage unique laisse une trace
@@ -97,7 +113,10 @@ export class FederatedService {
       // Voir AuthService.verifyOtp : l'identifiant vient d'ici, il ne traverse
       // pas le contrat.
       this.mesure.emettre(existing.userId, "signin.completed", { method: input.provider });
-      return { outcome: "session" as const, ...pair, isNewAccount: false };
+      return {
+        outcome: "session" as const, ...pair, isNewAccount: false,
+        deletionPendingUntil: await this.echeanceDeSuppression(existing.user),
+      };
     }
 
     // Ensuite l'adresse, mais seulement si le fournisseur la dit vérifiée :
@@ -160,6 +179,9 @@ export class FederatedService {
     const pair = await this.tokens.issuePair(user.id, input.userAgent);
     await this.recordAttempt(claims.email, input.userAgent, user.id, "success", input.provider, input.ip);
     this.mesure.emettre(user.id, "signin.completed", { method: input.provider });
-    return { outcome: "session" as const, ...pair, isNewAccount: false };
+    return {
+      outcome: "session" as const, ...pair, isNewAccount: false,
+      deletionPendingUntil: await this.echeanceDeSuppression(user),
+    };
   }
 }

@@ -32,11 +32,23 @@ describe("les méthodes de paiement", () => {
 
   // Un compte mobile money s'identifie par son numéro ; une carte par la
   // référence opaque que le prestataire rend. L'un n'a pas l'autre.
-  it("un compte mobile money s'enregistre par son numéro", () => {
+  /* Le numéro ET le canal : l'opérateur ne se tape pas, il se choisit. Sans le
+     canal, « MTN » et « MTN MoMo » feraient deux méthodes pour un opérateur, et
+     la règle « un seul numéro par opérateur » ne verrait rien. */
+  it("un compte mobile money s'enregistre par son numéro et son canal", () => {
+    const CANAL = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
     expect(() => registerPaymentMethodSchema.parse({
-      kind: "mobile_money", msisdn: "+237655554417",
+      kind: "mobile_money", msisdn: "+237655554417", channelId: CANAL,
     })).not.toThrow();
     expect(() => registerPaymentMethodSchema.parse({ kind: "mobile_money" })).toThrow();
+    // Sans canal, l'opérateur serait inconnu — donc la règle inapplicable.
+    expect(() => registerPaymentMethodSchema.parse({
+      kind: "mobile_money", msisdn: "+237655554417",
+    })).toThrow();
+    // Et l'opérateur ne se saisit pas à côté : il vient du canal, une seule fois.
+    expect(() => registerPaymentMethodSchema.parse({
+      kind: "mobile_money", msisdn: "+237655554417", channelId: CANAL, brand: "MTN MoMo",
+    })).toThrow();
   });
 
   it("une carte s'enregistre par sa référence, jamais par un numéro", () => {
@@ -55,7 +67,7 @@ describe("le lancement d'un achat", () => {
     expect(() => startPaymentSchema.parse({ credits: 10 })).not.toThrow();
     expect(() => startPaymentSchema.parse({ credits: 10, paymentMethodId: ID })).not.toThrow();
     expect(() => startPaymentSchema.parse({
-      credits: 10, newPaymentMethod: { kind: "mobile_money", msisdn: "+237655554417" },
+      credits: 10, newPaymentMethod: { kind: "mobile_money", msisdn: "+237655554417", channelId: ID },
     })).not.toThrow();
   });
 
@@ -64,7 +76,7 @@ describe("le lancement d'un achat", () => {
   it("refuse une méthode connue et une méthode neuve ensemble", () => {
     expect(() => startPaymentSchema.parse({
       credits: 10, paymentMethodId: ID,
-      newPaymentMethod: { kind: "mobile_money", msisdn: "+237655554417" },
+      newPaymentMethod: { kind: "mobile_money", msisdn: "+237655554417", channelId: ID },
     })).toThrow();
   });
 

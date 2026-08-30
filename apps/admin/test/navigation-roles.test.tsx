@@ -54,11 +54,16 @@ describe("la navigation suit le rôle, elle ne le grise pas", () => {
     expect(within(nav).queryByText(t.sections.acces)).not.toBeInTheDocument();
   });
 
+  /* « credits » vit désormais sous l'intitulé « Paiements », replié par défaut :
+     ce qu'on vérifie ici est que le support y a DROIT, pas qu'il le voie sans
+     rien ouvrir. On regarde donc l'intitulé de la section, et la liste des
+     écrans permis. */
   it("ce qui reste au support est bien là", () => {
     const nav = ouvrir("support");
-    for (const section of ["tableau", "comptes", "credits", "moderation", "metriques", "connexions", "liens"] as const) {
+    for (const section of ["tableau", "comptes", "paiements", "moderation", "metriques", "connexions", "liens"] as const) {
       expect(within(nav).getByText(t.sections[section])).toBeInTheDocument();
     }
+    expect(sectionsVisibles("support")).toContain("credits");
   });
 
   // Cacher l'entrée ne suffit pas : l'écran doit refuser de rendre la section,

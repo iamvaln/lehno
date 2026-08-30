@@ -93,12 +93,31 @@ export default function Connexion() {
         </Button>
 
         {/* Le pied s'écrit en morceaux nommés plutôt qu'en une phrase à trous :
-            l'ordre des liens n'est pas le même d'une langue à l'autre. */}
+            l'ordre des liens n'est pas le même d'une langue à l'autre.
+
+            ET ILS OUVRENT VRAIMENT LES DOCUMENTS. Ils étaient peints en couleur
+            d'accent sans aucun geste derrière : on faisait accepter un texte
+            qu'on ne donnait pas à lire. La route est publique de bout en bout —
+            on les ouvre ici, avant qu'aucune session n'existe. */}
         <Text style={[styles.pied, { color: couleurs.textMention }]}>
           {t.connexionPiedAvant}
-          <Text style={{ color: couleurs.textAccent }}>{t.connexionPiedCgu}</Text>
+          <Text
+            accessibilityRole="link"
+            style={{ color: couleurs.textAccent }}
+            onPress={() => routeur.push({ pathname: "/legal", params: { document: "cgu" } })}
+          >
+            {t.connexionPiedCgu}
+          </Text>
           {t.connexionPiedEntre}
-          <Text style={{ color: couleurs.textAccent }}>{t.connexionPiedConf}</Text>
+          <Text
+            accessibilityRole="link"
+            style={{ color: couleurs.textAccent }}
+            onPress={() => routeur.push({
+              pathname: "/legal", params: { document: "confidentialite" },
+            })}
+          >
+            {t.connexionPiedConf}
+          </Text>
           {t.connexionPiedApres}
         </Text>
       </ScrollView>

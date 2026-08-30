@@ -53,7 +53,7 @@ interface Sortie {
   // Le drapeau qui la gouverne, ou rien quand elle est du socle.
   drapeau: string | null;
   // La route, ou `null` tant que l'écran n'existe pas dans ce lot.
-  route: "/(app)/proches/identite" | null;
+  route: "/(app)/proches/identite" | "/(app)/collecte" | null;
 }
 
 export default function Proche() {
@@ -138,7 +138,7 @@ export default function Proche() {
   ]);
 
   const TOUTES: Sortie[] = [
-    { cle: "collecte", icone: "link", libelle: t.ficheCollecteCourt, drapeau: "collect", route: null },
+    { cle: "collecte", icone: "link", libelle: t.ficheCollecteCourt, drapeau: "collect", route: "/(app)/collecte" },
     { cle: "identite", icone: "user-pen", libelle: t.ficheIdentiteCourt, drapeau: null, route: "/(app)/proches/identite" },
     { cle: "portrait", icone: "sparkles", libelle: t.fichePortraitsCourt, drapeau: "generation.portrait", route: null },
   ];

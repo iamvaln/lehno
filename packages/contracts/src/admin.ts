@@ -153,7 +153,20 @@ export const demandeSuppressionSchema = z.object({
   echeance: z.string(),
   /** Le délai de grâce est de trente jours (dictionnaire de données, User). */
   joursRestants: z.number().int(),
-  etat: z.enum(["en_cours", "echue"]),
+  /**
+   * Trois états, et le troisième n'est pas un raffinement.
+   *
+   * - `en_cours` — le délai court. **Ça attend une date.**
+   * - `echue` — le délai est passé, l'effacement va suivre.
+   * - `attend_remboursement` — un versement est dû au titulaire. **Ça attend un
+   *   geste de notre part**, et l'effacement est retenu tant qu'il n'est pas
+   *   parti (décision du 29/08 : après l'effacement il n'existe plus de
+   *   coordonnée où verser).
+   *
+   * Les confondre ferait passer pour patient ce qui est en retard : un compte
+   * qui attend notre virement se lirait comme un compte qui attend le calendrier.
+   */
+  etat: z.enum(["en_cours", "echue", "attend_remboursement"]),
 }).strict();
 
 export type DemandeSuppression = z.infer<typeof demandeSuppressionSchema>;
@@ -641,12 +654,17 @@ export const decisionPaiementSchema = z.discriminatedUnion("decision", [
     /** La référence chez l'opérateur, consignée au moment de confirmer. */
     reference: z.string().min(1).max(200),
     reason: motifSchema,
+    /* Le code du motif retenu. Facultatif au schéma, exigé par le service
+       quand le geste propose des motifs — le schéma ne peut pas le savoir,
+       c'est la table qui le dit. */
+    reasonCode: z.string().max(48).optional(),
   }).strict(),
   z.object({
     decision: z.literal("rejeter"),
     /** Renseigné quand on a regardé et constaté un manque ; nul sinon. */
     montantRecu: z.number().nonnegative().nullable().optional(),
     reason: motifSchema,
+    reasonCode: z.string().max(48).optional(),
   }).strict(),
 ]);
 
@@ -759,6 +777,7 @@ export const ajustementCreditsSchema = z.object({
    */
   nature: z.enum(["gift", "reward", "correction"]),
   reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
 }).strict();
 
 export const soldeApresAjustementSchema = z.object({
@@ -1068,3 +1087,106 @@ export const modificationMotifSchema = z.object({
 
 export type MotifAdmin = z.infer<typeof motifAdminSchema>;
 export type MotifsAdmin = z.infer<typeof motifsAdminSchema>;
+
+// ——— Statistiques des transactions (lot du 29/08) ————————————————
+
+/** Les périodes du graphe. Fermée, comme celle des métriques : « choisir la
+ *  période » est un geste de lecture, pas la construction d'un intervalle. */
+export const periodeTransactionsSchema = z.enum(["7j", "30j", "90j"]);
+
+/** Le sens : ce qui entre, ce qui sort. `Payment.direction` les distingue. */
+export const sensTransactionSchema = z.enum(["tous", "depot", "retrait"]);
+
+/** Le mode : ce que le fournisseur encaisse, ce qu'un humain constate. Les deux
+ *  voies manuelles comptent pour une — « manuel » est une famille, pas un mode. */
+export const modeTransactionSchema = z.enum(["tous", "auto", "manuel"]);
+
+/** Un jour du graphe. Deux montants, jamais un solde : encaissé et échoué ne
+ *  s'additionnent pas, et les fondre cacherait ce qu'on vient regarder. */
+export const jourTransactionsSchema = z.object({
+  jour: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  encaisse: z.number().nonnegative(),
+  echoue: z.number().nonnegative(),
+}).strict();
+
+/** L'aboutissement d'un groupe — un moyen de paiement, un pays.
+ *
+ *  Le taux se calcule ici plutôt qu'à l'écran : deux calculs de la même chose
+ *  divergent, et celui-ci sert aussi à trier. */
+export const aboutissementSchema = z.object({
+  cle: z.string(),
+  tentatives: z.number().int().nonnegative(),
+  aboutis: z.number().int().nonnegative(),
+}).strict()
+  .refine((a) => a.aboutis <= a.tentatives, {
+    message: "il ne peut pas y avoir plus de paiements aboutis que de tentatives",
+  });
+
+export const statsTransactionsSchema = z.object({
+  periode: periodeTransactionsSchema,
+  sens: sensTransactionSchema,
+  mode: modeTransactionSchema,
+  /* Les quatre chiffres de tête. Ils suivent la période, comme le graphe :
+     une carte figée à côté d'un graphe qui bouge ment dès le premier
+     changement de période. */
+  tentatives: z.number().int().nonnegative(),
+  aboutis: z.number().int().nonnegative(),
+  encaisse: z.number().nonnegative(),
+  frais: z.number().nonnegative(),
+  /** Le paiement MÉDIAN, pas le moyen : un versement exceptionnel tirerait la
+   *  moyenne et ferait croire à un panier qui n'existe pour personne.
+   *  Nul quand rien n'a abouti — zéro dirait « on encaisse zéro franc ». */
+  median: z.number().nonnegative().nullable(),
+  jours: z.array(jourTransactionsSchema),
+  parMoyen: z.array(aboutissementSchema),
+  parPays: z.array(aboutissementSchema),
+}).strict()
+  .refine((s) => s.aboutis <= s.tentatives, {
+    message: "il ne peut pas y avoir plus de paiements aboutis que de tentatives",
+  });
+
+export type PeriodeTransactions = z.infer<typeof periodeTransactionsSchema>;
+export type SensTransaction = z.infer<typeof sensTransactionSchema>;
+export type ModeTransaction = z.infer<typeof modeTransactionSchema>;
+export type Aboutissement = z.infer<typeof aboutissementSchema>;
+export type StatsTransactions = z.infer<typeof statsTransactionsSchema>;
+// ——— Le versement d'un remboursement ——————————————————————————
+
+/**
+ * Constater qu'un remboursement a été versé.
+ *
+ * Le miroir de `saisiePaiementSchema`, en sens inverse : là on déclare l'argent
+ * qui entre, ici celui qui sort. La `reference` est celle de l'opérateur, comme
+ * pour un versement entrant — c'est elle qui permet de retrouver l'opération
+ * chez lui le jour d'une contestation.
+ *
+ * Aucun montant : il a été FIXÉ à la demande, et c'est ce montant-là qui a été
+ * annoncé au titulaire. Le laisser saisir ici inviterait à verser autre chose
+ * que ce qu'on a promis, sans que rien ne le signale.
+ */
+export const versementRemboursementSchema = z.object({
+  reference: z.string().trim().min(1).max(200),
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
+}).strict();
+
+/**
+ * Renoncer à un remboursement.
+ *
+ * Il faut ce geste : un numéro fermé, un titulaire injoignable, un montant
+ * contesté laissent une demande qui ne peut pas aboutir — et sans porte de
+ * sortie, elle retiendrait l'effacement du compte pour toujours.
+ */
+export const abandonRemboursementSchema = z.object({
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
+}).strict();
+
+export const remboursementRegleSchema = z.object({
+  id: z.string(),
+  etat: z.enum(["succeeded", "failed"]),
+  /** Les crédits repris. Nuls sur un abandon : rien n'est sorti. */
+  creditsRepris: z.number().int().min(0),
+}).strict();
+
+export type RemboursementRegle = z.infer<typeof remboursementRegleSchema>;

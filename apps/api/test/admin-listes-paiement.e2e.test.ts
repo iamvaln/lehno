@@ -78,6 +78,7 @@ describe("administration — les deux listes du paiement", () => {
       body: JSON.stringify({
         decision: "confirmer", montantRecu,
         reference: `MP${Math.floor(montantRecu)}`, reason: "Réception constatée sur le compte",
+        reasonCode: "operation_seen_at_the_operator",
       }),
     });
 
@@ -137,6 +138,65 @@ describe("administration — les deux listes du paiement", () => {
     };
 
     expect(corps.items.map((p) => p.id)).toEqual([a]);
+  });
+
+  /* « manuel » n'est pas un mode de paiement, c'est une FAMILLE : les deux voies
+     où un humain intervient. L'écran des versements manuels les demande
+     ensemble — au lancement c'est la seule façon de recharger, et n'en montrer
+     qu'une moitié ferait manquer des versements à traiter. */
+  it("« manuel » rassemble les deux voies humaines", async () => {
+    const { entete } = await session("admin");
+    const d = await decor();
+    const manuel = await saisir(entete, d);
+    const semi = await db.prisma.payment.create({
+      data: {
+        // Une voie manuelle DOIT désigner son compte de collecte — contrainte
+        // `payment_voie_manuelle_a_un_compte`. C'est ce compte qui a reçu
+        // l'argent : un versement manuel sans lui ne se vérifie nulle part.
+        userId: d.utilisateur.id, mode: "semi_manual", amount: 1000,
+        currency: "XAF", credits: 10, status: "pending",
+        collectionAccountId: d.compte.id,
+      },
+    });
+    const operateur = await db.prisma.payment.create({
+      data: {
+        userId: d.utilisateur.id, mode: "provider", amount: 1000,
+        currency: "XAF", credits: 10, status: "pending",
+      },
+    });
+
+    const corps = (await (await lire("payments?mode=manuel", entete)).json()) as {
+      items: { id: string }[];
+    };
+
+    const vus = new Set(corps.items.map((p) => p.id));
+    expect(vus.has(manuel)).toBe(true);
+    expect(vus.has(semi.id)).toBe(true);
+    expect(vus.has(operateur.id)).toBe(false);
+  });
+
+  // Et les modes seuls continuent de se demander un par un : la famille s'ajoute,
+  // elle ne remplace rien.
+  it("un mode seul reste un filtre exact", async () => {
+    const { entete } = await session("admin");
+    const d = await decor();
+    await saisir(entete, d);
+    const semi = await db.prisma.payment.create({
+      data: {
+        // Une voie manuelle DOIT désigner son compte de collecte — contrainte
+        // `payment_voie_manuelle_a_un_compte`. C'est ce compte qui a reçu
+        // l'argent : un versement manuel sans lui ne se vérifie nulle part.
+        userId: d.utilisateur.id, mode: "semi_manual", amount: 1000,
+        currency: "XAF", credits: 10, status: "pending",
+        collectionAccountId: d.compte.id,
+      },
+    });
+
+    const corps = (await (await lire("payments?mode=semi_manual", entete)).json()) as {
+      items: { id: string }[];
+    };
+
+    expect(corps.items.map((p) => p.id)).toEqual([semi.id]);
   });
 
   it("filtre par utilisateur", async () => {
