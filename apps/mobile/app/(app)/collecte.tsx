@@ -13,6 +13,9 @@ import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { corpsDeCreation, lienVivantPour } from "../../lib/collecte.js";
+import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
+import { ecranEteint } from "../../lib/navigation.js";
+import { EcranFerme } from "../../composants/EcranFerme.js";
 
 /* Le lien de collecte — §3.20.
  *
@@ -44,6 +47,11 @@ export default function Collecte() {
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
+  const { actives } = useDrapeaux();
+  /* UNE ROUTE RESTE UNE ROUTE. La navigation ne propose plus cet écran
+     quand son drapeau est éteint, mais un lien profond l'atteint encore :
+     il se garde donc lui-même plutôt que de compter sur celui qui l'ouvre. */
+  const eteint = ecranEteint("collecte", actives);
   const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [proche, setProche] = useState<Person | null>(null);
@@ -67,7 +75,7 @@ export default function Collecte() {
     }
   }, [id, langue]);
 
-  useFocusEffect(useCallback(() => { void charge(); }, [charge]));
+  useFocusEffect(useCallback(() => { if (!eteint) void charge(); }, [charge, eteint]));
 
   const cree = async (): Promise<void> => {
     if (!id) return;
@@ -135,6 +143,8 @@ export default function Collecte() {
   }
 
   const vivant = lienVivantPour(liens, proche.id);
+
+  if (eteint) return <EcranFerme />;
 
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>

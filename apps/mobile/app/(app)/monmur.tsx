@@ -12,6 +12,9 @@ import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { basculeLInteret, corpsDExposition, peutPartager } from "../../lib/mur.js";
+import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
+import { ecranEteint } from "../../lib/navigation.js";
+import { EcranFerme } from "../../composants/EcranFerme.js";
 
 /* Mon Mur — §3.10.
  *
@@ -37,6 +40,11 @@ export default function MonMur() {
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
+  const { actives } = useDrapeaux();
+  /* UNE ROUTE RESTE UNE ROUTE. La navigation ne propose plus cet écran
+     quand son drapeau est éteint, mais un lien profond l'atteint encore :
+     il se garde donc lui-même plutôt que de compter sur celui qui l'ouvre. */
+  const eteint = ecranEteint("monmur", actives);
 
   const [mur, setMur] = useState<Wall | null>(null);
   const [interets, setInterets] = useState<WallInterest[]>([]);
@@ -54,7 +62,7 @@ export default function MonMur() {
     }
   }, [langue]);
 
-  useEffect(() => { void charge(); }, [charge]);
+  useEffect(() => { if (!eteint) void charge(); }, [charge, eteint]);
 
   /* ON POSE L'ÉTAT AVANT LA RÉPONSE et on le remet si elle refuse : un
      interrupteur qui attend un aller-retour donne l'impression de ne pas avoir
@@ -100,6 +108,8 @@ export default function MonMur() {
       </View>
     );
   }
+
+  if (eteint) return <EcranFerme />;
 
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>

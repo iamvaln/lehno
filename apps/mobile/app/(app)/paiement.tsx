@@ -17,6 +17,7 @@ import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { ecranEteint } from "../../lib/navigation.js";
 import { Choix } from "../../composants/Choix.js";
+import { EcranFerme } from "../../composants/EcranFerme.js";
 import {
   canauxProposables, consequenceDuRetrait, corpsDEnregistrement,
   enregistrementComplet, estExpiree, methodeParDefaut, methodeRemplacee,
@@ -127,17 +128,7 @@ export default function Paiement() {
      enregistrer. Il reste atteignable par un lien profond — les réglages ne
      l'offrent plus, mais une route reste une route —, donc il se garde
      lui-même plutôt que de compter sur celui qui l'ouvre. */
-  if (eteint) {
-    return (
-      <View style={[styles.centre, { backgroundColor: couleurs.surfacePage }]}>
-        <EmptyState
-          illustration="page-introuvable"
-          title={t.introuvableTitre}
-          text={t.introuvableTexte}
-        />
-      </View>
-    );
-  }
+  if (eteint) return <EcranFerme />;
 
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
@@ -323,7 +314,6 @@ export default function Paiement() {
 
 const styles = StyleSheet.create({
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
-  centre: { flex: 1, alignItems: "center", justifyContent: "center", padding: nativeSpace[16] },
   retour: {
     width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
     alignItems: "center", justifyContent: "center",

@@ -12,6 +12,9 @@ import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { dateCourte } from "../../lib/carnet.js";
 import { reservationsQuiTiennent } from "../../lib/vitrine.js";
+import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
+import { ecranEteint } from "../../lib/navigation.js";
+import { EcranFerme } from "../../composants/EcranFerme.js";
 
 /* Mes réservations — §3.27.
  *
@@ -34,6 +37,11 @@ export default function Reservations() {
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
+  const { actives } = useDrapeaux();
+  /* UNE ROUTE RESTE UNE ROUTE. La navigation ne propose plus cet écran
+     quand son drapeau est éteint, mais un lien profond l'atteint encore :
+     il se garde donc lui-même plutôt que de compter sur celui qui l'ouvre. */
+  const eteint = ecranEteint("reservations", actives);
 
   const [reservations, setReservations] = useState<MyReservation[] | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
@@ -47,7 +55,7 @@ export default function Reservations() {
     }
   }, [langue]);
 
-  useEffect(() => { void charge(); }, [charge]);
+  useEffect(() => { if (!eteint) void charge(); }, [charge, eteint]);
 
   const retour = (
     <Pressable
@@ -95,6 +103,8 @@ export default function Reservations() {
       </View>
     );
   }
+
+  if (eteint) return <EcranFerme />;
 
   return (
     <ScrollView

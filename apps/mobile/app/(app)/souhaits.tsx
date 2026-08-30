@@ -12,6 +12,9 @@ import { Bascule } from "../../composants/Bascule.js";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
+import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
+import { ecranEteint } from "../../lib/navigation.js";
+import { EcranFerme } from "../../composants/EcranFerme.js";
 import {
   corpsDeCreation, corpsDeMarque, corpsDeVisibilite, etatDuSouhait,
   nomDuReserveur, type SaisieDeSouhait,
@@ -37,6 +40,11 @@ export default function Souhaits() {
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
+  const { actives } = useDrapeaux();
+  /* UNE ROUTE RESTE UNE ROUTE. La navigation ne propose plus cet écran
+     quand son drapeau est éteint, mais un lien profond l'atteint encore :
+     il se garde donc lui-même plutôt que de compter sur celui qui l'ouvre. */
+  const eteint = ecranEteint("listes", actives);
   const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [souhaits, setSouhaits] = useState<OwnerWish[] | null>(null);
@@ -59,7 +67,7 @@ export default function Souhaits() {
     }
   }, [id, langue]);
 
-  useFocusEffect(useCallback(() => { void charge(); }, [charge]));
+  useFocusEffect(useCallback(() => { if (!eteint) void charge(); }, [charge, eteint]));
 
   const ajoute = async (): Promise<void> => {
     if (!id) return;
@@ -137,6 +145,8 @@ export default function Souhaits() {
       </View>
     );
   }
+
+  if (eteint) return <EcranFerme />;
 
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
