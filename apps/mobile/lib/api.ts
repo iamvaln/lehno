@@ -8,6 +8,8 @@ import { unSeulALaFois } from "./verrou.js";
 import { estHorsConnexion } from "./reseau.js";
 import { estGarde } from "./cache.js";
 import { litLeCache, poseAuCache } from "./coffre.js";
+import { estDifferable } from "./file.js";
+import { litLaFile, poseLaFile } from "./fileStockee.js";
 
 /* Le seul endroit qui parle au serveur.
  *
@@ -75,6 +77,18 @@ export class SansAdresseDApi extends Error {
    les rares surfaces sous drapeau le déclarent. */
 export interface OptionsDAppel extends RequestInit {
   gouvernee?: boolean;
+  /* CE QUI SORT DE LA FILE N'Y RENTRE PAS.
+   *
+   * Sans ce drapeau, un réseau qui retombe PENDANT le rejeu ferait remettre en
+   * file l'action qu'on était en train d'en sortir — elle s'y trouverait deux
+   * fois, et partirait deux fois au retour suivant. C'est exactement la
+   * duplication que ce module existe pour empêcher, réintroduite par la porte
+   * de derrière.
+   *
+   * Un rejeu qui rencontre l'absence de réseau échoue simplement : l'action est
+   * toujours en tête de file, elle n'a pas bougé, et le prochain retour la
+   * reprendra. */
+  rejeu?: boolean;
 }
 
 export class ErreurDApi extends Error {
@@ -187,8 +201,34 @@ export class SansReseau extends Error {
   }
 }
 
+/* L'action a été RETENUE, pas perdue. Une classe à part de `SansReseau` :
+   l'écran doit pouvoir dire « c'est noté, ça partira » plutôt que « ça a
+   échoué ». Confondre les deux ferait recommencer quelqu'un dont le geste est
+   déjà en file — et il partirait deux fois au retour du réseau. */
+export class MiseEnFile extends Error {
+  constructor(public readonly enAttente: number) {
+    super("action retenue jusqu'au retour du réseau");
+    this.name = "MiseEnFile";
+  }
+}
+
+/* Ce qui change quand la file bouge. Le bandeau lit ce compte : sans témoin, il
+   afficherait « 2 actions » pendant qu'il y en a cinq, et la promesse
+   perdrait sa valeur au moment où elle rassure. */
+type TemoinDeFile = (enAttente: number) => void;
+const temoinsDeFile = new Set<TemoinDeFile>();
+
+export function surLaFile(observateur: TemoinDeFile): () => void {
+  temoinsDeFile.add(observateur);
+  return () => { temoinsDeFile.delete(observateur); };
+}
+
+function annonceLaFile(enAttente: number): void {
+  for (const t of temoinsDeFile) t(enAttente);
+}
+
 export async function appel<T>(chemin: string, options: OptionsDAppel = {}): Promise<T> {
-  const { gouvernee = false, ...requete } = options;
+  const { gouvernee = false, rejeu = false, ...requete } = options;
   const methode = (requete.method ?? "GET").toUpperCase();
 
   /* LE REPLI, AVANT TOUT LE RESTE.
@@ -205,6 +245,28 @@ export async function appel<T>(chemin: string, options: OptionsDAppel = {}): Pro
       const garde = await litLeCache(chemin);
       if (garde !== null) return JSON.parse(garde) as T;
     }
+
+    /* ON MET EN FILE ICI, ET NULLE PART AILLEURS — c'est le seul endroit où
+       l'on sait que la requête N'EST PAS PARTIE. C'est toute la sûreté du
+       dispositif : le serveur ne l'a pas vue, la rejouer ne peut rien
+       dupliquer, et il n'a pas fallu lui ajouter une clé d'idempotence qu'il
+       n'a que sur deux routes.
+
+       Une écriture qui échoue APRÈS être partie ne passe jamais par ici : son
+       issue est inconnue, le serveur l'a peut-être exécutée, et la rejouer
+       créerait la deuxième note. */
+    if (!rejeu && estDifferable(chemin, methode)) {
+      const file = await litLaFile();
+      const corps = typeof requete.body === "string" ? requete.body : null;
+      const suite = [...file, {
+        id: String(Date.now()) + ":" + String(file.length),
+        chemin, methode, corps, poseeLe: new Date().toISOString(),
+      }];
+      await poseLaFile(suite);
+      annonceLaFile(suite.length);
+      throw new MiseEnFile(suite.length);
+    }
+
     throw new SansReseau();
   }
 
@@ -243,3 +305,43 @@ export async function appel<T>(chemin: string, options: OptionsDAppel = {}): Pro
   if (estGarde(chemin, methode)) void poseAuCache(chemin, texte);
   return JSON.parse(texte) as T;
 }
+
+/* LE REJEU, au retour du réseau.
+ *
+ * UNE SEULE À LA FOIS, et dans l'ordre. Les envoyer en parallèle ferait
+ * arriver une note avant la fiche qu'elle vise : le serveur refuserait, et la
+ * note serait perdue pour une raison qui n'est pas la sienne.
+ *
+ * L'ÉCHEC ARRÊTE, IL NE SAUTE PAS. Voir `file.ts` : une file qui se vide en
+ * perdant la moitié de ce qu'elle portait ne le dit à personne. Une file
+ * bloquée, elle, se voit — le compte reste affiché sur le bandeau.
+ *
+ * ON NE REJOUE PAS DEUX FOIS EN MÊME TEMPS : `unSeulALaFois` garde l'entrée.
+ * Le réseau qui vacille — il revient, retombe, revient — déclencherait sinon
+ * deux rejeux concurrents sur la même file, et la même action partirait deux
+ * fois. C'est exactement la duplication que tout ce module existe pour éviter.
+ */
+export const rejoueLaFile = unSeulALaFois(async (): Promise<void> => {
+  if (estHorsConnexion()) return;
+
+  let file = await litLaFile();
+  while (file.length > 0) {
+    const tete = file[0]!;
+    try {
+      await appel<unknown>(tete.chemin, {
+        rejeu: true,
+        method: tete.methode,
+        ...(tete.corps === null ? {} : { body: tete.corps }),
+      });
+    } catch {
+      /* Arrêt, sans distinguer la cause. Un 4xx dit que l'action ne passera
+         jamais, un 5xx qu'elle passera peut-être — mais les trier ici ferait
+         jeter en silence le travail de quelqu'un sur un jugement automatique.
+         La file reste, le bandeau la compte, et rien ne se perd sans témoin. */
+      return;
+    }
+    file = file.slice(1);
+    await poseLaFile(file);
+    annonceLaFile(file.length);
+  }
+});

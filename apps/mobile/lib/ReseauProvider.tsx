@@ -3,6 +3,8 @@ import {
 } from "react";
 import * as Network from "expo-network";
 import { horsConnexion, poseLEtatDuReseau, type EtatDuReseau } from "./reseau.js";
+import { rejoueLaFile, surLaFile } from "./api.js";
+import { litLaFile } from "./fileStockee.js";
 
 /* L'ÉTAT DU RÉSEAU, lu à la source et partagé.
  *
@@ -20,10 +22,13 @@ import { horsConnexion, poseLEtatDuReseau, type EtatDuReseau } from "./reseau.js
  * consommerait de la donnée mobile en boucle, et confondrait à nouveau notre
  * panne avec l'absence de réseau.
  */
-const Contexte = createContext<{ horsLigne: boolean }>({ horsLigne: false });
+const Contexte = createContext<{ horsLigne: boolean; enAttente: number }>(
+  { horsLigne: false, enAttente: 0 },
+);
 
 export function ReseauProvider({ children }: { children: ReactNode }) {
   const [etat, setEtat] = useState<EtatDuReseau | null>(null);
+  const [enAttente, setEnAttente] = useState(0);
 
   /* On publie l'état hors de React à chaque changement : `appel` n'est pas un
      composant et ne peut pas lire ce contexte, alors que c'est lui qui décide
@@ -52,13 +57,38 @@ export function ReseauProvider({ children }: { children: ReactNode }) {
     return () => { vivant = false; abonnement.remove(); };
   }, []);
 
+  /* LE COMPTE VIENT DU DISQUE AU DÉMARRAGE, pas de zéro. L'application a pu
+     être tuée avec des actions en attente : partir de zéro afficherait une
+     bannière muette au-dessus d'une file pleine, et la personne croirait sa
+     note perdue. */
+  useEffect(() => {
+    const vivant = { oui: true };
+    void litLaFile().then((f) => { if (vivant.oui) setEnAttente(f.length); }).catch(() => {});
+    const detache = surLaFile((n) => { if (vivant.oui) setEnAttente(n); });
+    return () => { vivant.oui = false; detache(); };
+  }, []);
+
+  const horsLigne = horsConnexion(etat);
+
+  /* LE RETOUR DU RÉSEAU DÉCLENCHE LE REJEU. On le suspend à `horsLigne` plutôt
+     qu'à `etat` : deux mesures successives peuvent différer sans que la
+     conclusion change — passer du Wi-Fi aux données mobiles ne justifie pas de
+     rejouer une file qu'on est déjà en train de vider.
+
+     `rejoueLaFile` garde son entrée, donc un déclenchement de trop ne fait
+     rien. C'est voulu : mieux vaut appeler une fois de trop que manquer le
+     retour. */
+  useEffect(() => {
+    if (!horsLigne) void rejoueLaFile();
+  }, [horsLigne]);
+
   return (
-    <Contexte.Provider value={{ horsLigne: horsConnexion(etat) }}>
+    <Contexte.Provider value={{ horsLigne, enAttente }}>
       {children}
     </Contexte.Provider>
   );
 }
 
-export function useReseau(): { horsLigne: boolean } {
+export function useReseau(): { horsLigne: boolean; enAttente: number } {
   return useContext(Contexte);
 }

@@ -8,6 +8,7 @@ import { DrapeauxProvider } from "../lib/DrapeauxProvider.js";
 import { MetadonneesProvider } from "../lib/MetadonneesProvider.js";
 import { ArretProvider, useArret } from "../lib/ArretProvider.js";
 import { ReseauProvider, useReseau } from "../lib/ReseauProvider.js";
+import { messageDuBandeau } from "../lib/file.js";
 import { useLangue } from "../lib/langue.js";
 import Maintenance from "./maintenance.js";
 import { POLICES } from "../polices/index.js";
@@ -37,13 +38,14 @@ function SousArret() {
  * masquerait une ligne de liste, et c'est la ligne du haut — celle qu'on
  * regarde. */
 function BandeauReseau() {
-  const { horsLigne } = useReseau();
+  const { horsLigne, enAttente } = useReseau();
   const { t } = useLangue();
   if (!horsLigne) return null;
-  /* Le message SANS file pour l'instant : la file d'écritures n'existe pas
-     encore, et « 3 actions repartiront » compterait des actions que rien ne
-     retient. Promettre un retour qu'on ne tient pas est pire que se taire. */
-  return <OfflineBanner message={t.horsConnexion} />;
+  return (
+    <OfflineBanner
+      message={messageDuBandeau(enAttente, t.horsConnexion, t.horsConnexionFile)}
+    />
+  );
 }
 
 function Coquille() {
