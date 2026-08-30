@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import type { Invitation as Parrainage } from "@lehno/contracts";
 import type { Langue } from "../../lib/langues.js";
 import type { Messages } from "../../messages/index.js";
-import { interpoler } from "../../lib/texte.js";
 import { BadgesMagasins } from "../BadgesMagasins.js";
 import { PublicShell } from "../PublicShell.js";
 import { Avatar, Banner } from "../ui/index.js";
