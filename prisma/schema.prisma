@@ -2209,7 +2209,7 @@ enum ReceivedWishStatus {
  * Vue publique curée sur la self-Person de l'utilisateur.
  * PAS DE COLONNE `slug`, contrairement au dictionnaire — et c'est la seule
  * différence assumée avec lui. L'adresse du Mur EST le pseudo
- * (`lehno.app/valentine`), déjà unique sur `user.username`. Une seconde
+ * (`lehno.io/valentine`), déjà unique sur `user.username`. Une seconde
  * colonne devrait rester égale à la première : le jour où quelqu'un se
  * renomme, l'ancienne adresse continuerait d'être servie et personne ne s'en
  * apercevrait avant qu'un proche ne se plaigne. Le contrat rend toujours un

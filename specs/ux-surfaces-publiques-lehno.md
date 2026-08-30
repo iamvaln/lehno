@@ -168,7 +168,7 @@ Le reste est identique (date, souhait(s), mot, mêmes champs séparés, même pa
 
 **Rôle.** La page qu'ouvre le lien d'invitation partagé par un utilisateur. Elle présente Lehno à la personne invitée, annonce ce qu'elle y gagne, et la mène à l'installation.
 
-**Adresse.** Le lien porte le **code de parrainage** de celui qui invite (par exemple `lehno.app/i/<code>`).
+**Adresse.** Le lien porte le **code de parrainage** de celui qui invite (par exemple `lehno.io/i/<code>`).
 
 **Contenu.**
 - **Qui invite** — le prénom ou le pseudo du parrain, avec sa photo s'il en a une : l'invitation vient de quelqu'un, pas de la marque.

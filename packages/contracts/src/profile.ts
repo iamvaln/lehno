@@ -3,7 +3,7 @@ import { PERSON_GENDERS } from "./me.js";
 
 // LE pseudo, déclaré ICI et nulle part ailleurs.
 //
-// Il forme l'adresse du Mur — lehno.app/valentine — donc ce qui n'entre pas
+// Il forme l'adresse du Mur — lehno.io/valentine — donc ce qui n'entre pas
 // dans une URL n'a pas sa place ici : lettres, chiffres, point, tiret, tiret
 // bas. Il commence par une lettre ou un chiffre, pour qu'une adresse ne débute
 // jamais par un séparateur.

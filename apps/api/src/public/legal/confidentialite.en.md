@@ -1,6 +1,6 @@
 # Privacy Policy
 
-_Version 2026-08-23 · Last updated: 23 August 2026_
+_Version 2026-08-30 · Last updated: 30 August 2026_
 
 This policy describes how **Proxia Digital** (the "Provider") collects, uses and
 protects personal data in the Lehno service (the "Service").
@@ -30,9 +30,9 @@ law 2024/017; its operating arrangements await an implementing decree.
 Proxia Digital
 Akwa, Douala, Cameroon
 Phone: +237 691 980 189
-Email: hello@lehno.app
+Email: hello@lehno.io
 
-Data Protection Officer (DPO): Valentine Nguemne — hello@lehno.app
+Data Protection Officer (DPO): Valentine Nguemne — hello@lehno.io
 The role is held by the company's leadership; it is not delegated to a third
 party.
 
@@ -117,7 +117,7 @@ shows nothing but what you put there about **yourself**. No one else's page
 appears on it. Birthday notes left for you are never displayed.
 
 **Rights of someone without an account.** A person who appears on a page without
-having an account can write to the DPO (hello@lehno.app) to learn what
+having an account can write to the DPO (hello@lehno.io) to learn what
 concerns them, have it corrected, or have it erased. We handle the request
 directly when the person is identifiable in our data; otherwise we pass it to the
 owner of the page, who remains in charge of their own notebook. An erasure
@@ -198,7 +198,7 @@ and objection; the right to withdraw consent at any time without affecting
 processing already carried out; and the right to give directions about your data
 after your death.
 
-Exercise them with the DPO: hello@lehno.app. A reply is provided within one
+Exercise them with the DPO: hello@lehno.io. A reply is provided within one
 month at most. You can also delete your account from the app, without going
 through us.
 
@@ -259,4 +259,4 @@ Gazette._
 Data Protection Officer: Valentine Nguemne
 Proxia Digital — Akwa, Douala, Cameroon
 Phone: +237 691 980 189
-Email: hello@lehno.app
+Email: hello@lehno.io
