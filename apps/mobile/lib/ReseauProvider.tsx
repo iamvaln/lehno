@@ -2,7 +2,7 @@ import {
   createContext, useContext, useEffect, useState, type ReactNode,
 } from "react";
 import * as Network from "expo-network";
-import { horsConnexion, type EtatDuReseau } from "./reseau.js";
+import { horsConnexion, poseLEtatDuReseau, type EtatDuReseau } from "./reseau.js";
 
 /* L'ÉTAT DU RÉSEAU, lu à la source et partagé.
  *
@@ -24,6 +24,11 @@ const Contexte = createContext<{ horsLigne: boolean }>({ horsLigne: false });
 
 export function ReseauProvider({ children }: { children: ReactNode }) {
   const [etat, setEtat] = useState<EtatDuReseau | null>(null);
+
+  /* On publie l'état hors de React à chaque changement : `appel` n'est pas un
+     composant et ne peut pas lire ce contexte, alors que c'est lui qui décide
+     de se replier sur le cache. Un provider unique reste l'unique écrivain. */
+  useEffect(() => { poseLEtatDuReseau(etat); }, [etat]);
 
   useEffect(() => {
     let vivant = true;

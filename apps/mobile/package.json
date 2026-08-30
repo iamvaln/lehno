@@ -23,6 +23,7 @@
     "expo-network": "^57.0.1",
     "expo-router": "~57.0.16",
     "expo-secure-store": "~57.0.1",
+    "expo-sqlite": "^57.0.2",
     "expo-status-bar": "~57.0.1",
     "lucide-react-native": "^1.34.0",
     "react": "19.2.3",

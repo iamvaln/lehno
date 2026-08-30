@@ -5,6 +5,9 @@ import { adresseDeLApi } from "./adresse-api.js";
 import { doitRenouveler, sortDeLaSession } from "./session.js";
 import { effaceLesJetons, litLesJetons, poseLesJetons } from "./jetons.js";
 import { unSeulALaFois } from "./verrou.js";
+import { estHorsConnexion } from "./reseau.js";
+import { estGarde } from "./cache.js";
+import { litLeCache, poseAuCache } from "./coffre.js";
 
 /* Le seul endroit qui parle au serveur.
  *
@@ -172,8 +175,39 @@ async function demandeUnRenouvellement(rafraichissement: string): Promise<boolea
    rejoue. Efface la session quand le serveur dit qu'elle n'a plus lieu d'être —
    rester connecté sur un compte suspendu donnerait une application qui échoue à
    chaque geste sans dire pourquoi. */
+/* Hors connexion, et rien de gardé pour cette page. Ce n'est PAS une erreur du
+   serveur — il n'a rien répondu, il n'a rien reçu. Une classe à part pour que
+   l'écran puisse le distinguer d'une panne : la bannière du haut explique déjà
+   pourquoi, et confondre les deux ferait afficher « le service a un problème »
+   à quelqu'un qui est simplement dans un tunnel. */
+export class SansReseau extends Error {
+  constructor() {
+    super("hors connexion");
+    this.name = "SansReseau";
+  }
+}
+
 export async function appel<T>(chemin: string, options: OptionsDAppel = {}): Promise<T> {
   const { gouvernee = false, ...requete } = options;
+  const methode = (requete.method ?? "GET").toUpperCase();
+
+  /* LE REPLI, AVANT TOUT LE RESTE.
+   *
+   * Hors connexion, on ne part pas au réseau pour échouer : la requête ne peut
+   * pas aboutir, et l'attendre ferait patienter devant un délai qu'on sait
+   * inutile — le pire moment pour faire attendre est celui où l'on sait déjà.
+   *
+   * Ce chemin ne s'ouvre QUE hors connexion. En ligne, le cache n'est jamais
+   * lu : c'est ce qui dispense de l'invalider, et donc ce qui rend ce cache
+   * tenable du tout. Voir `cache.ts`. */
+  if (estHorsConnexion()) {
+    if (estGarde(chemin, methode)) {
+      const garde = await litLeCache(chemin);
+      if (garde !== null) return JSON.parse(garde) as T;
+    }
+    throw new SansReseau();
+  }
+
   const jetons = await litLesJetons();
   // Pas de session : rien à signaler, ce n'est pas un échec du serveur.
   if (!jetons) throw new ErreurDApi(401, null);
@@ -197,5 +231,15 @@ export async function appel<T>(chemin: string, options: OptionsDAppel = {}): Pro
     }
   }
 
-  return reponse.status === 204 ? (undefined as T) : ((await reponse.json()) as T);
+  if (reponse.status === 204) return undefined as T;
+
+  /* On lit le TEXTE, pas le JSON déjà analysé : c'est le corps brut qu'on garde,
+     pour pouvoir le repasser par le schéma à la relecture. Un corps gardé par
+     une version précédente que le contrat ne décrit plus tombe alors au parsage
+     et se jette, au lieu de remonter malformé jusqu'à l'écran. */
+  const texte = await reponse.text();
+  /* On garde APRÈS avoir servi, et sans attendre : une écriture au cache qui
+     traîne ne doit pas retarder l'affichage de ce qu'on vient de recevoir. */
+  if (estGarde(chemin, methode)) void poseAuCache(chemin, texte);
+  return JSON.parse(texte) as T;
 }

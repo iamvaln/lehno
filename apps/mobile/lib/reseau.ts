@@ -34,3 +34,24 @@ export function horsConnexion(etat: EtatDuReseau | null): boolean {
   if (etat.isConnected === false) return true;
   return etat.isInternetReachable === false;
 }
+
+/* L'ÉTAT COURANT, lisible HORS DE REACT.
+ *
+ * `appel` n'est pas un composant : il ne peut pas lire un contexte, et c'est
+ * pourtant lui qui doit savoir s'il faut se replier sur le cache. Le provider
+ * est l'unique écrivain — un second ferait deux vérités, et celle qui reste en
+ * arrière déciderait de se replier alors que le réseau est revenu.
+ *
+ * Par DÉFAUT en ligne : au tout premier appel, avant la moindre mesure, il vaut
+ * mieux essayer le réseau et échouer que se replier sur un cache vide en
+ * annonçant une panne qui n'existe pas.
+ */
+let courant: EtatDuReseau | null = null;
+
+export function poseLEtatDuReseau(etat: EtatDuReseau | null): void {
+  courant = etat;
+}
+
+export function estHorsConnexion(): boolean {
+  return horsConnexion(courant);
+}
