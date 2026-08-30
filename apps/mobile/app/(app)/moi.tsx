@@ -255,12 +255,13 @@ export default function Moi() {
       {montreCeQuiRevient(actives) ? (
         <View style={styles.groupe}>
           <SectionLabel>{t.moiRetour}</SectionLabel>
+          {/* LE DÉCOMPTE SE LIT, IL NE MÈNE PAS AU MUR. Les mots reçus restent
+              privés — « le Mur n'a pas de livre d'or » — et ce qu'on en fait se
+              décide dans le sas de §3.8, avec « Retenir » et « Écarter ». Le
+              rang attend cet écran plutôt que d'ouvrir celui qui ne les montre
+              pas. */}
           {mots !== null ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => routeur.push("/(app)/monmur")}
-              style={[styles.rang, { borderTopColor: couleurs.borderHairline }]}
-            >
+            <View style={[styles.rang, { borderTopColor: couleurs.borderHairline }]}>
               <Icon name="mail" size={17} color={couleurs.textMention} />
               <Text style={[styles.libelle, { color: couleurs.textBody }]} numberOfLines={1}>
                 {t.moiMotsRecus}
@@ -268,8 +269,7 @@ export default function Moi() {
               <Text style={[styles.valeur, { color: couleurs.textMention }]}>
                 {mots === 0 ? t.moiMotsAucun : t.moiMotsN(mots)}
               </Text>
-              <Icon name="chevron-right" size={15} color={couleurs.textMention} />
-            </Pressable>
+            </View>
           ) : null}
           {estActive(actives, "reservation") ? (
             <Pressable

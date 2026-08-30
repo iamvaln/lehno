@@ -2,11 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import {
-  receivedWishListSchema, wallSchema,
-  type ReceivedWish, type Wall, type WallInterest,
-} from "@lehno/contracts";
-import { nativeBorder, nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
+import { wallSchema, type Wall, type WallInterest } from "@lehno/contracts";
+import { nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
   Banner, Button, Icon, LoadingState, SectionLabel, Toast, useCouleurs,
 } from "@lehno/ui-native";
@@ -14,11 +11,7 @@ import { Bascule } from "../../composants/Bascule.js";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
-import { dateCourte } from "../../lib/carnet.js";
-import {
-  basculeLInteret, corpsDExposition, decisionInverse, etatDuMot, motsARegarder,
-  peutPartager,
-} from "../../lib/mur.js";
+import { basculeLInteret, corpsDExposition, peutPartager } from "../../lib/mur.js";
 
 /* Mon Mur — §3.10.
  *
@@ -47,7 +40,6 @@ export default function MonMur() {
 
   const [mur, setMur] = useState<Wall | null>(null);
   const [interets, setInterets] = useState<WallInterest[]>([]);
-  const [mots, setMots] = useState<ReceivedWish[]>([]);
   const [accuse, setAccuse] = useState<string | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
 
@@ -56,9 +48,6 @@ export default function MonMur() {
       const lu = wallSchema.parse(await appel<unknown>("/me/wall"));
       setMur(lu);
       setInterets(lu.interests);
-      try {
-        setMots(receivedWishListSchema.parse(await appel<unknown>("/me/received-wishes")));
-      } catch { /* Les mots se taisent, la page se règle quand même. */ }
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
@@ -90,20 +79,6 @@ export default function MonMur() {
     void regle(corpsDExposition(apres), () => setInterets(avant));
   };
 
-  const trancheUnMot = async (m: ReceivedWish): Promise<void> => {
-    const avant = mots;
-    const decision = decisionInverse(m);
-    setMots(mots.map((x) => (x.id === m.id ? { ...x, status: decision } : x)));
-    try {
-      await appel<unknown>(`/me/received-wishes/${m.id}/decision`, {
-        method: "POST",
-        body: JSON.stringify({ decision }),
-      });
-    } catch (e) {
-      setMots(avant);
-      setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
-    }
-  };
 
   if (echec && !mur) {
     return (
@@ -203,44 +178,23 @@ export default function MonMur() {
           ) : null}
         </View>
 
-        {/* LES MOTS REÇUS. « Épingler » et « détacher » sont les noms de la
-            maquette pour ce que le contrat appelle approuver et refuser — et ce
-            sont les siens qui parlent à qui lit l'écran. */}
-        <View style={styles.bloc}>
-          <SectionLabel>{t.murPrivMots}</SectionLabel>
-          <Text style={[styles.aide, { color: couleurs.textMention }]}>
-            {t.murPrivEpinglesAide}
-          </Text>
-          {mots.length ? (
-            motsARegarder(mots).map((m, i) => (
-              <View
-                key={m.id}
-                style={[styles.mot, i > 0 ? {
-                  borderTopWidth: nativeBorder.width, borderTopColor: couleurs.borderHairline,
-                } : null]}
-              >
-                <View style={styles.corps}>
-                  <Text style={[styles.texte, { color: couleurs.textBody }]}>{m.content}</Text>
-                  {/* Nul quand la contribution était anonyme — et « Sans nom »
-                      le dit plutôt que de laisser un blanc qu'on prendrait pour
-                      un défaut d'affichage. */}
-                  <Text style={[styles.aide, { color: couleurs.textMention }]} numberOfLines={1}>
-                    {m.authorName ?? t.murPrivSansNom}
-                    {" · "}
-                    {dateCourte(m.createdAt.slice(0, 10), langue)}
-                  </Text>
-                </View>
-                <Button variant="text" onPress={() => void trancheUnMot(m)}>
-                  {etatDuMot(m) === "affiche" ? t.murPrivDetacher : t.murPrivEpingler}
-                </Button>
-              </View>
-            ))
-          ) : (
-            <Text style={[styles.aide, { color: couleurs.textMention }]}>
-              {t.murPrivMotsCompte(0)}
-            </Text>
-          )}
-        </View>
+        {/* PAS DE MOTS ICI, ET C'EST LE CONTRAT QUI LE DIT.
+     
+            J'avais posé « Épingler » et « Détacher » en croyant que
+            `approved` / `rejected` réglait la visibilité. C'est faux, et deux
+            fois.
+     
+            D'abord parce que « LE MUR N'A PAS DE LIVRE D'OR » : le dictionnaire
+            porte `is_public` et `show_author` en les disant INACTIFS, et le
+            contrat les garde dehors précisément pour qu'on ne les rende pas
+            vivants — « un client les afficherait, puis quelqu'un les
+            câblerait ». C'est exactement ce que je faisais.
+     
+            Ensuite parce que retenir n'est pas afficher. Épingler garde un mot
+            VISIBLE ; retenir veut dire qu'on CONSIDÈRE un cadeau pour l'achat.
+            Deux gestes différents sous des mots voisins, et le sas de §3.8 est
+            le seul endroit où le second se pose — avec « Retenir » et
+            « Écarter », qui le disent sans ambiguïté. */}
       </ScrollView>
 
       {accuse ? (

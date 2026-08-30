@@ -1,4 +1,4 @@
-import type { UpdateWallInput, Wall, WallInterest, ReceivedWish } from "@lehno/contracts";
+import type { UpdateWallInput, Wall, WallInterest } from "@lehno/contracts";
 
 /* Mon Mur — §3.10.
  *
@@ -38,42 +38,4 @@ export function basculeLInteret(
  */
 export function peutPartager(mur: Wall): boolean {
   return mur.isEnabled;
-}
-
-export type EtatDuMot = "attend" | "affiche" | "garde";
-
-/* CE QU'UN MOT REÇU DEVIENT.
- *
- * Le contrat tranche en `approved` / `rejected` ; la maquette dit « épinglé » et
- * « détaché ». C'est le même geste sous deux noms — et c'est celui de la
- * maquette qui parle à qui lit l'écran : « un mot épinglé s'affiche sur votre
- * Mur, les autres ne sortent pas d'ici ».
- *
- * `pending` n'est pas un refus : c'est un mot qu'on n'a pas encore lu. Le
- * confondre avec « gardé » ferait disparaître de la file ce qui attend une
- * décision.
- */
-export function etatDuMot(mot: ReceivedWish): EtatDuMot {
-  if (mot.status === "approved") return "affiche";
-  if (mot.status === "rejected") return "garde";
-  return "attend";
-}
-
-/* CE QUI ATTEND UNE DÉCISION D'ABORD.
- *
- * On ouvre cet écran pour trancher ce qui est arrivé, pas pour relire ce qu'on
- * a déjà rangé. Les mots en attente montent donc en tête, et le reste suit du
- * plus récent au plus ancien.
- */
-export function motsARegarder(mots: readonly ReceivedWish[]): ReceivedWish[] {
-  const rang = (m: ReceivedWish): number => (etatDuMot(m) === "attend" ? 0 : 1);
-  return [...mots].sort(
-    (a, b) => rang(a) - rang(b) || b.createdAt.localeCompare(a.createdAt),
-  );
-}
-
-/* La décision inverse de l'état courant — c'est ce que le bouton propose.
-   Un mot en attente s'affiche ; un mot affiché se retire. */
-export function decisionInverse(mot: ReceivedWish): "approved" | "rejected" {
-  return etatDuMot(mot) === "affiche" ? "rejected" : "approved";
 }

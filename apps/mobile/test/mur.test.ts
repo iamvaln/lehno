@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  updateWallSchema, type ReceivedWish, type Wall, type WallInterest,
-} from "@lehno/contracts";
-import {
-  basculeLInteret, corpsDExposition, decisionInverse, etatDuMot, motsARegarder,
-  peutPartager,
-} from "../lib/mur.js";
+import { updateWallSchema, type Wall, type WallInterest } from "@lehno/contracts";
+import { basculeLInteret, corpsDExposition, peutPartager } from "../lib/mur.js";
 
 const uuid = (n: number): string =>
   `${String(n).padStart(8, "0")}-0000-4000-8000-000000000000`;
@@ -19,10 +14,6 @@ const mur = (isEnabled: boolean): Wall => ({
   publicUrl: "https://lehno.app/valentine", wishLinkUrl: null, interests: [],
 });
 
-const mot = (n: number, status: ReceivedWish["status"], quand: string): ReceivedWish => ({
-  id: uuid(100 + n), occurrenceId: uuid(1), authorName: "Ana",
-  content: "Bon anniversaire", status, createdAt: quand,
-});
 
 describe("ce qui est exposé", () => {
   /* EN ENTIER, jamais par ajout ni retrait : « un patch élément par élément
@@ -66,51 +57,5 @@ describe("l'adresse du Mur", () => {
   it("ne se partage qu'une fois le Mur allumé", () => {
     expect(peutPartager(mur(true))).toBe(true);
     expect(peutPartager(mur(false))).toBe(false);
-  });
-});
-
-describe("les mots reçus", () => {
-  /* `pending` N'EST PAS UN REFUS : c'est un mot qu'on n'a pas encore lu. Le
-     confondre avec « gardé » ferait disparaître de la file ce qui attend une
-     décision. */
-  it("distingue l'attente du refus", () => {
-    expect(etatDuMot(mot(1, "pending", "2026-01-01T00:00:00.000Z"))).toBe("attend");
-    expect(etatDuMot(mot(2, "rejected", "2026-01-01T00:00:00.000Z"))).toBe("garde");
-    expect(etatDuMot(mot(3, "approved", "2026-01-01T00:00:00.000Z"))).toBe("affiche");
-  });
-
-  /* On ouvre cet écran pour trancher ce qui est arrivé, pas pour relire ce
-     qu'on a rangé. */
-  it("met en tête ce qui attend une décision", () => {
-    const liste = motsARegarder([
-      mot(1, "approved", "2026-06-01T00:00:00.000Z"),
-      mot(2, "pending", "2026-01-01T00:00:00.000Z"),
-      mot(3, "rejected", "2026-05-01T00:00:00.000Z"),
-    ]);
-    expect(liste.map((m) => m.status)).toEqual(["pending", "approved", "rejected"]);
-  });
-
-  it("range le reste du plus récent au plus ancien", () => {
-    const liste = motsARegarder([
-      mot(1, "approved", "2026-01-01T00:00:00.000Z"),
-      mot(2, "approved", "2026-06-01T00:00:00.000Z"),
-    ]);
-    expect(liste.map((m) => m.createdAt)).toEqual([
-      "2026-06-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z",
-    ]);
-  });
-
-  it("ne modifie pas la liste reçue", () => {
-    const source = [mot(1, "approved", "2026-01-01T00:00:00.000Z"), mot(2, "pending", "2026-06-01T00:00:00.000Z")];
-    motsARegarder(source);
-    expect(source[0]?.status).toBe("approved");
-  });
-
-  /* Le bouton propose l'INVERSE de l'état courant : un mot en attente
-     s'affiche, un mot affiché se retire. Un mot gardé peut revenir. */
-  it("propose l'inverse de l'état courant", () => {
-    expect(decisionInverse(mot(1, "pending", "2026-01-01T00:00:00.000Z"))).toBe("approved");
-    expect(decisionInverse(mot(2, "rejected", "2026-01-01T00:00:00.000Z"))).toBe("approved");
-    expect(decisionInverse(mot(3, "approved", "2026-01-01T00:00:00.000Z"))).toBe("rejected");
   });
 });
