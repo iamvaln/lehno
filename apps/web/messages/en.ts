@@ -315,4 +315,14 @@ export const en: typeof fr = {
   souhaitCodeFaux: "That code does not match, or it has expired.",
   souhaitDejaPris: "Someone was faster: this wish has just been taken.",
 
+
+  // ——— L'invitation au parrainage ————————————————————————————
+  inviteMention: "invites you to Lehno",
+  inviteTitre: "The dates that matter, and what to give on the day",
+  inviteTitreSansCode: "Lehno, in two words",
+  invitePromesse: "Lehno remembers the birthdays of the people you care about, keeps what you know about them, and helps you find the right gift — without having to ask.",
+  inviteGainTexte: "credits when you open your account, because someone invited you.",
+  inviteCodeLabel: "Your code:",
+  inviteSansCode: "This invitation link is no longer valid. You can still install Lehno.",
+
 };
