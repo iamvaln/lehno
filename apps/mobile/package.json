@@ -7,7 +7,9 @@
     "dev": "expo start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "polices": "tsx polices/cuire.ts"
+    "polices": "tsx polices/cuire.ts",
+    "build:dev:android": "eas build --profile development --platform android",
+    "build:dev:ios": "eas build --profile development --platform ios"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.13",
@@ -33,7 +35,8 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
-    "react-native-worklets": "0.10.1"
+    "react-native-worklets": "0.10.1",
+    "expo-dev-client": "~6.0.13"
   },
   "devDependencies": {
     "@lehno/tsconfig": "workspace:*",
