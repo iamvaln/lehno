@@ -500,7 +500,6 @@ export const en = {
   videDatesTexte: "Add the first one: a birthday, a farewell, an anniversary.",
   collecteTitre: (qui: string) => "Let " + qui + " fill it in",
   collecteIntro: "Send this link: whatever comes back passes through your review before it enters the page.",
-  collecteLien: "lehno.app/c/8Kd2p",
   collectePartager: "Share the link",
   collecteCopier: "Copy the link",
   collecteRevoquer: "Revoke the link",

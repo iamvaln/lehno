@@ -541,7 +541,6 @@ export const fr = {
   /* ─── Lien de collecte (3.20) ─── */
   collecteTitre: (qui: string) => "Laissez " + qui + " compléter",
   collecteIntro: "Envoyez ce lien : ce qui en revient passe par votre validation avant d'entrer dans la fiche.",
-  collecteLien: "lehno.app/c/8Kd2p",
   collectePartager: "Partager le lien",
   collecteCopier: "Copier le lien",
   collecteRevoquer: "Révoquer le lien",
