@@ -332,4 +332,9 @@ export const en: typeof fr = {
   introuvableRetour: "Go to the home page",
   introuvableFaq: "See frequently asked questions",
 
+
+  // ——— Un lien retiré ———————————————————————————————————————
+  lienRetireTitre: "This link is no longer active",
+  lienRetireTexte: "It was withdrawn by the person who sent it to you. There is nothing to do on your side.",
+
 };

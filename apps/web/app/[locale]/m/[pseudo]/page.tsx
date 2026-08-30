@@ -33,6 +33,20 @@ export default async function Page({ params }: Proprietes): Promise<ReactNode> {
      dirait qui a un compte (§9.3 — 404, jamais 403). */
   if (etat.etat === "inconnu") notFound();
 
+  /* 410 : le lien a existé et ne mène plus. Le visiteur l'a reçu de quelqu'un ;
+     lui répondre « cette page n'existe pas » lui ferait croire qu'il a mal
+     recopié l'adresse, et « nous n'avons pas pu répondre » l'enverrait
+     réessayer une chose qui ne marchera jamais. */
+  if (etat.etat === "retire") {
+    return (
+      <AvisCourt
+        t={t} langue={langue}
+        titre={t.lienRetireTitre}
+        texte={t.lienRetireTexte}
+      />
+    );
+  }
+
   if (etat.etat === "indisponible") {
     return (
       <AvisCourt

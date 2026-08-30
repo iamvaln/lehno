@@ -9,15 +9,23 @@ type Analyseur<T> = { safeParse(valeur: unknown): { success: true; data: T } | {
 /**
  * Ce qu'on sait d'une surface publique, et ce qu'on n'en sait pas.
  *
- * **Trois issues, pas deux.** « Inconnu » et « indisponible » ne se confondent
- * pas : la première dit que la ressource n'existe pas — c'est une information —,
- * la seconde que nous n'avons pas pu répondre. Rendre la 404 du site sur une
- * panne dirait à un visiteur que son amie n'a pas de Mur, ce qui est faux, et
- * définitif pour lui.
+ * **Quatre issues, et aucune n'est de trop.**
+ *
+ * « Inconnu » et « indisponible » ne se confondent pas : la première dit que la
+ * ressource n'existe pas — c'est une information —, la seconde que nous n'avons
+ * pas pu répondre. Rendre la 404 du site sur une panne dirait à un visiteur que
+ * son amie n'a pas de Mur, ce qui est faux, et définitif pour lui.
+ *
+ * « Retiré » ne se confond avec ni l'un ni l'autre, et c'est le serveur qui l'a
+ * décidé : un lien de collecte ou de vœux révoqué rend **410**, seul de tout le
+ * contrat (`common/errors.ts`). Le visiteur l'a reçu de quelqu'un ; un 404 lui
+ * ferait croire qu'il a mal recopié l'adresse, et « nous n'avons pas pu
+ * répondre » l'enverrait réessayer une chose qui ne marchera jamais.
  */
 export type Etat<T> =
   | { etat: "trouve"; donnees: T }
   | { etat: "inconnu" }
+  | { etat: "retire" }
   | { etat: "indisponible" };
 
 /**
@@ -50,6 +58,8 @@ export async function chargerSurface<T>(
        formé (§9.3 : jamais 403). La page n'a donc aucune règle à connaître —
        et surtout, elle ne peut pas dire qui a un compte. */
     if (reponse.status === 404) return { etat: "inconnu" };
+    // 410 : le lien a existé et ne mène plus. Voir `Etat` ci-dessus.
+    if (reponse.status === 410) return { etat: "retire" };
     if (!reponse.ok) return { etat: "indisponible" };
 
     const analyse = forme.safeParse(await reponse.json());

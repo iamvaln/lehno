@@ -6,6 +6,7 @@ import type { Langue } from "../../lib/langues.js";
 import type { Messages } from "../../messages/index.js";
 import { formaterMontant } from "../../lib/montants.js";
 import { Banner, Button, Tag, TextField } from "../ui/index.js";
+import { codeDuRefus } from "../../lib/refus.js";
 
 type Etape = null | "coordonnees" | "code";
 type Panne = null | "generale" | "code" | "pris";
@@ -75,8 +76,12 @@ export function CarteSouhait(
           ...(rendu.current === null ? {} : { renderedAt: rendu.current }),
         }),
       });
-      if (reponse.status === 409) { setPanne("pris"); return; }
-      if (!reponse.ok) { setPanne("generale"); return; }
+      /* `conflict` — quelqu'un a été plus rapide. Reconnu à son code, comme
+         partout : c'est le contrat, et lui seul, qui dit ce qui s'est passé. */
+      if (!reponse.ok) {
+        setPanne(await codeDuRefus(reponse) === "conflict" ? "pris" : "generale");
+        return;
+      }
 
       const issue = await reponse.json() as
         | { state: "code_sent" }

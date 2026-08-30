@@ -398,4 +398,13 @@ export const fr = {
   introuvableRetour: "Aller à l'accueil",
   introuvableFaq: "Voir les questions fréquentes",
 
+
+  // ——— Un lien retiré ———————————————————————————————————————
+  //
+  // 410, seul statut de ce genre dans tout le contrat : le lien a existé. Le
+  // visiteur l'a reçu de quelqu'un — un 404 lui ferait croire qu'il a mal
+  // recopié l'adresse, et une panne l'enverrait réessayer pour rien.
+  lienRetireTitre: "Ce lien n'est plus actif",
+  lienRetireTexte: "Il a été retiré par la personne qui vous l'a envoyé. Il n'y a rien à faire de votre côté.",
+
 };
