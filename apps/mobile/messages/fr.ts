@@ -282,6 +282,7 @@ export const fr = {
   securiteAppareils: "Appareils connectés",
   securiteCetAppareil: "Cet appareil",
   securiteDeconnecterTout: "Déconnecter les autres appareils",
+  securiteDeconnecterTousTexte: "Les autres appareils devront se reconnecter. Celui-ci reste ouvert.",
   securiteSupprimer: "Supprimer mon compte",
   securiteSupprimerAide: "Vos fiches, vos notes et votre Mur partent avec.",
   securiteInhabituelle: "Une connexion inhabituelle a été détectée le 12 août.",

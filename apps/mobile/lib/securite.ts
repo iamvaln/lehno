@@ -61,22 +61,43 @@ export function appareils(sessions: readonly SessionSummary[]): SessionSummary[]
   return [...sessions].sort((a, b) => b.lastActiveAt.localeCompare(a.lastActiveAt));
 }
 
-/* CE QUE L'ÉCRAN NE PEUT PAS DIRE : « Cet appareil ».
+/* « CET APPAREIL » — la lignée d'où l'on regarde.
  *
- * La maquette coche la lignée courante. Personne ne peut la désigner : le
- * contrat ne porte pas de champ « courant » — délibérément, `/me/sessions` ne
- * reçoit qu'un jeton d'accès qui ne dit pas de quelle lignée il descend — et le
- * client ne le sait pas non plus, contrairement à ce que ce commentaire
- * suppose : la réponse de connexion ne rend que les deux jetons et une durée,
- * aucun identifiant de session.
+ * Elle était impossible à désigner : la réponse de connexion ne rendait aucun
+ * identifiant de session, et `/me/sessions` n'a pas de champ « courant » — à
+ * dessein, il ne reçoit qu'un jeton d'accès. Le serveur rend maintenant
+ * `sessionId`, la LIGNÉE, celle-là même que la liste porte comme `id`.
  *
- * Deviner par le `User-Agent` serait pire que se taire : deux sessions ouvertes
- * depuis le même téléphone portent le même, et la coche tomberait sur la
- * mauvaise — celle qu'on garderait en croyant fermer l'autre.
+ * Deviner par le `User-Agent` aurait été pire que se taire : deux sessions
+ * ouvertes depuis le même téléphone portent le même, et la coche serait tombée
+ * sur la mauvaise — celle qu'on aurait gardée en croyant fermer l'autre.
  *
- * La fonction existe pour porter cette impossibilité à un seul endroit, et pour
- * qu'elle devienne vraie le jour où le contrat rendra l'identifiant.
+ * SANS LIGNÉE CONNUE, ON NE COCHE RIEN. Une session ouverte par une version qui
+ * ne la gardait pas encore reste valide et n'en a pas ; cocher au hasard
+ * ferait révoquer la mauvaise en croyant garder la sienne.
  */
-export function estCetAppareil(): boolean {
-  return false;
+export function estCetAppareil(session: SessionSummary, lignee: string | null): boolean {
+  return lignee !== null && session.id === lignee;
+}
+
+/* CE QUE « DÉCONNECTER LES AUTRES APPAREILS » PEUT ENFIN PROMETTRE.
+ *
+ * Le libellé du kit dit « les AUTRES » dans les deux langues, et la route
+ * révoquait TOUT, celle qui appelle comprise : le bouton promettait de rester
+ * connecté ici, et déconnectait. Elle épargne désormais la lignée appelante —
+ * le service nomme son paramètre `sauf`.
+ *
+ * ON NE L'OFFRE QUE S'IL Y A DES AUTRES. Un bouton qui ne ferait rien, sur un
+ * écran qu'on ouvre par inquiétude, se presse quand même — et son silence se
+ * lit comme une panne plutôt que comme « il n'y avait rien à fermer ».
+ *
+ * Le compte ne se déduit PAS de `sessions.length - 1` : sans lignée connue, on
+ * ne sait pas si la nôtre est dans la liste, et retrancher un ferait annoncer
+ * une session de moins qu'il n'y en a.
+ */
+export function autresAppareils(
+  sessions: readonly SessionSummary[],
+  lignee: string | null,
+): number {
+  return sessions.filter((s) => !estCetAppareil(s, lignee)).length;
 }
