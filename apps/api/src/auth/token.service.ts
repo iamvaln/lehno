@@ -22,7 +22,11 @@ const PURPOSE_REGISTRATION = "registration";
 // vérifiée il y a longtemps.
 const REGISTRATION_TTL_SECONDS = 15 * 60;
 
-export type Pair = { accessToken: string; refreshToken: string; expiresIn: number };
+/* `sessionId` est la LIGNÉE, pas le jeton du moment : il traverse les
+   renouvellements, et c'est lui que `/me/sessions` rend comme `id`. Le
+   renouvellement le rend donc identique — sans quoi une application qui
+   rafraîchit croirait avoir changé de session. */
+export type Pair = { accessToken: string; refreshToken: string; expiresIn: number; sessionId: string };
 
 type RotateOutcome = { ok: true; pair: Pair } | { ok: false; reason: "session_expired" | "refresh_reused" };
 
@@ -44,10 +48,10 @@ export class TokenService {
     return createHash("sha256").update(token).digest("hex");
   }
 
-  verifyAccess(token: string): { userId: string } {
+  verifyAccess(token: string): { userId: string; sessionId: string | null } {
     try {
       const payload = jwt.verify(token, this.secret, { algorithms: [ALGORITHM] }) as {
-        sub?: unknown; purpose?: unknown;
+        sub?: unknown; purpose?: unknown; sid?: unknown;
       };
 
       // Deux vérifications que la signature ne fait PAS.
@@ -68,7 +72,15 @@ export class TokenService {
       if (payload.purpose !== undefined && payload.purpose !== PURPOSE_ACCESS) {
         throw new AppError("session_expired", "access token invalid or expired");
       }
-      return { userId: payload.sub };
+      /* Nulle sur un jeton émis AVANT ce changement : il en circulera pendant
+         les quinze minutes de vie d'un jeton d'accès. L'appelant décide alors
+         quoi faire — et pour la déconnexion, ce sera « tout révoquer », comme
+         avant. Épargner une session qu'on ne sait pas nommer serait le mauvais
+         côté du doute. */
+      return {
+        userId: payload.sub,
+        sessionId: typeof payload.sid === "string" && payload.sid.length > 0 ? payload.sid : null,
+      };
     } catch {
       throw new AppError("session_expired", "access token invalid or expired");
     }
@@ -128,8 +140,32 @@ export class TokenService {
         userAgent: userAgent ?? null,
       },
     });
-    const accessToken = jwt.sign({ sub: userId }, this.secret, { expiresIn: ACCESS_TTL_S, algorithm: ALGORITHM });
-    return { accessToken, refreshToken, expiresIn: ACCESS_TTL_S };
+    /* `sid` — la LIGNÉE — voyage dans le jeton d'accès.
+     *
+     * Sans elle, le serveur sait QUI l'appelle (`sub`, le compte) mais pas
+     * LAQUELLE de ses sessions. C'est pour ça que « déconnecter les autres
+     * appareils » les déconnectait toutes, celle qui appelle comprise : il ne
+     * pouvait pas l'épargner, faute de la reconnaître.
+     *
+     * Pourquoi pas un identifiant d'appareil en en-tête : il est déclaré et
+     * jamais vérifié, et il ne correspond pas à une session — réinstaller, ou
+     * se connecter deux fois sur le même téléphone, donne plusieurs lignées
+     * pour un même appareil. `sid` est signé par nous et en désigne
+     * exactement une. */
+    const accessToken = jwt.sign(
+      { sub: userId, sid: familyId }, this.secret,
+      { expiresIn: ACCESS_TTL_S, algorithm: ALGORITHM },
+    );
+    /* `sessionId` est le `familyId` — la LIGNÉE, pas le jeton du moment. C'est
+       ce que `/me/sessions` rend comme `id`, et c'est le seul identifiant stable
+       à travers les renouvellements.
+       
+       Sans lui, une installation fraîche lisant la liste de ses sessions n'a
+       rien à comparer : « cet appareil » ne se coche pas, et « déconnecter les
+       autres appareils » se déconnecte lui-même. Le deviner par le User-Agent
+       tomberait sur la mauvaise dès qu'un téléphone en a deux ouvertes — on
+       garderait celle qu'on croyait fermer. */
+    return { accessToken, refreshToken, expiresIn: ACCESS_TTL_S, sessionId: familyId };
   }
 
   issuePair(userId: string, userAgent?: string, ip?: string): Promise<Pair> {
@@ -222,9 +258,21 @@ export class TokenService {
   // est pire que n'en épargner aucune. Le contrat documente ce choix pour que
   // le client traite cet appel comme une déconnexion complète, y compris
   // localement.
-  async revokeAllForUser(userId: string): Promise<void> {
+  /* Révoque les lignées d'un compte, éventuellement SAUF une.
+   *
+   * `sauf` nul veut dire « toutes », et c'est ce qu'attendent les gestes qui
+   * ferment un compte — suppression, suspension : là, la lignée qui appelle
+   * doit tomber comme les autres.
+   *
+   * Un jeton d'accès reste valable jusqu'à quinze minutes après cet appel : il
+   * est autoportant, sa validité ne se vérifie pas en base. C'est au
+   * renouvellement suivant que l'appareil découvre la coupure. */
+  async revokeAllForUser(userId: string, sauf: string | null = null): Promise<void> {
     await this.prisma.refreshToken.updateMany({
-      where: { userId, revokedAt: null },
+      where: {
+        userId, revokedAt: null,
+        ...(sauf === null ? {} : { familyId: { not: sauf } }),
+      },
       data: { revokedAt: new Date() },
     });
   }

@@ -85,7 +85,7 @@ describe("sécurité et connexions", () => {
       const a = await tokens.issuePair(userId, "Chrome — macOS");
       const b = await tokens.issuePair(userId, "Safari — iOS");
 
-      await security.logoutEverywhere(userId);
+      await security.logoutEverywhere(userId, null);
 
       await expect(tokens.rotate(a.refreshToken)).rejects.toThrow();
       await expect(tokens.rotate(b.refreshToken)).rejects.toThrow();
@@ -94,7 +94,7 @@ describe("sécurité et connexions", () => {
     it("ne révoque pas les lignées d'un autre compte", async () => {
       const paireAutre = await tokens.issuePair(autreUserId, "Chrome — macOS");
 
-      await security.logoutEverywhere(userId);
+      await security.logoutEverywhere(userId, null);
 
       await expect(tokens.rotate(paireAutre.refreshToken)).resolves.toBeDefined();
     });
@@ -117,6 +117,47 @@ describe("sécurité et connexions", () => {
       });
 
       expect(await security.listIdentities(userId)).toHaveLength(0);
+    });
+  });
+
+  /* « Déconnecter les autres appareils » doit épargner celui qui le demande.
+   *
+   * Il les révoquait tous, y compris le sien — non par choix mais par
+   * ignorance : le jeton d'accès ne portait que le compte, jamais la session.
+   * Le libellé, lui, promettait « les autres » dans les deux langues. */
+  describe("déconnecter les autres appareils", () => {
+    it("épargne la lignée qui appelle", async () => {
+      const mienne = await tokens.issuePair(userId, "Chrome — macOS");
+      const autre = await tokens.issuePair(userId, "Safari — iOS");
+
+      await security.logoutEverywhere(userId, mienne.sessionId);
+
+      await expect(tokens.rotate(mienne.refreshToken)).resolves.toBeDefined();
+      await expect(tokens.rotate(autre.refreshToken)).rejects.toThrow();
+    });
+
+    /* Sur un jeton émis AVANT que `sid` n'y voyage, la lignée est inconnue : on
+       retombe sur l'ancien comportement. C'est le bon côté du doute — mieux
+       vaut déconnecter une session de trop que d'en laisser une ouverte parce
+       qu'on ne savait pas la nommer. */
+    it("révoque tout quand la lignée est inconnue", async () => {
+      const a = await tokens.issuePair(userId, "Chrome — macOS");
+      const b = await tokens.issuePair(userId, "Safari — iOS");
+
+      await security.logoutEverywhere(userId, null);
+
+      await expect(tokens.rotate(a.refreshToken)).rejects.toThrow();
+      await expect(tokens.rotate(b.refreshToken)).rejects.toThrow();
+    });
+
+    // Les lignées d'un AUTRE compte ne bougent pas.
+    it("ne touche pas aux sessions d'un autre compte", async () => {
+      const mienne = await tokens.issuePair(userId, "Chrome");
+      const ailleurs = await tokens.issuePair(autreUserId, "Firefox");
+
+      await security.logoutEverywhere(userId, mienne.sessionId);
+
+      await expect(tokens.rotate(ailleurs.refreshToken)).resolves.toBeDefined();
     });
   });
 });

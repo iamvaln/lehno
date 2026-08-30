@@ -479,4 +479,38 @@ describe("authentification", () => {
     const u = await db.prisma.user.findUniqueOrThrow({ where: { email: "nouveau@example.com" } });
     expect(u.referralCode).not.toBe("3q2+7w");
   });
+
+  /* L'identifiant de session, rendu à la connexion.
+   *
+   * Sans lui, une installation fraîche qui lit `/me/sessions` n'a rien à
+   * comparer : « cet appareil » ne se coche pas, et « déconnecter les autres
+   * appareils » se déconnecte lui-même. Le déduire du User-Agent désignerait la
+   * mauvaise dès qu'un téléphone a deux sessions ouvertes. */
+  describe("l'identifiant de session", () => {
+    it("désigne la même lignée que /me/sessions", async () => {
+      await inscrire("awa@example.com", "dev-1");
+      const next = await otp.issue("awa@example.com", "login");
+      const session = await auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" });
+      const sessionId = (session as { sessionId: string }).sessionId;
+
+      const lignees = await db.prisma.refreshToken.findMany({
+        where: { user: { email: "awa@example.com" } }, select: { familyId: true },
+      });
+      expect(lignees.map((l) => l.familyId)).toContain(sessionId);
+    });
+
+    /* LA propriété : la lignée traverse les renouvellements. Sans elle, une
+       application qui rafraîchit croirait avoir changé de session — et
+       décocherait « cet appareil » au pire moment, celui où elle vient de se
+       reconnecter. */
+    it("ne change pas au renouvellement", async () => {
+      await inscrire("awa@example.com", "dev-1");
+      const next = await otp.issue("awa@example.com", "login");
+      const session = await auth.verifyOtp({ email: "awa@example.com", code: next.code, deviceId: "dev-1" });
+      const avant = session as { sessionId: string; refreshToken: string };
+
+      const apres = await tokens.rotate(avant.refreshToken);
+      expect(apres.sessionId).toBe(avant.sessionId);
+    });
+  });
 });

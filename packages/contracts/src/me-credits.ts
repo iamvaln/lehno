@@ -36,15 +36,37 @@ export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
 
 /* Un compte mobile money s'identifie par son numéro ; une carte par la
    référence opaque que le prestataire rend. L'un n'a jamais l'autre. */
+/* L'OPÉRATEUR NE SE TAPE PAS, IL SE CHOISIT.
+ *
+ * `brand` était du texte libre, et la règle « un seul numéro par opérateur »
+ * reposait dessus. Une liste de choix à l'écran ne la ferait pas mordre : un
+ * client d'une version antérieure, ou un appel direct, enverrait « MTN MoMo »
+ * là où un autre envoie « MTN » — deux méthodes pour un même opérateur, et la
+ * règle ne verrait rien.
+ *
+ * La clé devient donc le CANAL, que le serveur connaît : il porte l'opérateur,
+ * le pays et la nature. Le client le lit déjà pour la recharge, il n'a rien de
+ * nouveau à aller chercher.
+ *
+ * `brand` reste pour les CARTES, et seulement pour elles : là il vient du
+ * prestataire — « Visa », « Mastercard » — et ne désigne pas un opérateur qu'on
+ * pourrait choisir dans une liste. */
 export const registerPaymentMethodSchema = z.object({
   kind: z.enum(PAYMENT_METHOD_KINDS),
   msisdn: z.string().trim().min(6).max(20).optional(),
+  channelId: z.string().uuid().optional(),
   providerRef: z.string().trim().min(1).max(255).optional(),
   brand: z.string().trim().max(40).optional(),
 }).strict().superRefine((v, ctx) => {
   if (v.kind === "mobile_money") {
     if (!v.msisdn) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["msisdn"], message: "un compte mobile money porte son numéro" });
+    }
+    if (!v.channelId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["channelId"], message: "un compte mobile money désigne son canal" });
+    }
+    if (v.brand) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brand"], message: "l'opérateur vient du canal, il ne se saisit pas" });
     }
     if (v.providerRef) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["providerRef"], message: "un compte mobile money n'a pas de référence prestataire" });
@@ -56,6 +78,9 @@ export const registerPaymentMethodSchema = z.object({
   }
   if (v.msisdn) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["msisdn"], message: "une carte ne porte aucun numéro de téléphone" });
+  }
+  if (v.channelId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["channelId"], message: "une carte ne passe pas par un canal d'opérateur" });
   }
 });
 
