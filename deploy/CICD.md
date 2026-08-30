@@ -105,6 +105,9 @@ directement.
 | `DATABASE_URL` | `postgresql://<user>:<mdp>@db:5432/<db>` — lue par `api` et `migrate` |
 | `OTP_PEPPER`, `JWT_SECRET` | secrets applicatifs — l'api refuse de démarrer si absents (générer avec `openssl rand -base64 32`) |
 | `RESEND_API_KEY`, `RESEND_FROM` | envoi de courriel — l'api refuse de démarrer sans les deux. `RESEND_FROM` doit porter un domaine vérifié chez Resend, par exemple `Lehno <no-reply@lehno.io>` |
+| `PUBLIC_WEB_URL` | adresse du site public — elle fabrique les liens de Mur et de partage. Un repli codé en dur existe (`https://lehno.io`), mais un domaine changé sans que cette variable suive rendrait des liens morts que des gens ont déjà collés ailleurs |
+| `CONTACT_TO_EMAIL` | destinataire du formulaire de contact. Repli `hello@lehno.io` |
+| `ADMIN_JWT_SECRET` | clé propre à l'administration, **distincte de `JWT_SECRET`** — deux mondes séparés jusque dans leurs signatures, sans quoi la séparation des tables ne serait qu'apparente. L'api refuse de démarrer sans elle (`AdminTokenService`) |
 | `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID` | connexion fédérée, optionnels, vérifiés à l'usage |
 | `TRUST_PROXY_HOPS` | déjà posé à `1` par `docker-compose.yml`, rien à écrire ici. Ne le relevez que si un relais s'ajoute devant Traefik — voir l'encadré ci-dessous |
 | `SENTRY_DSN` | suivi des erreurs, optionnel |
