@@ -1074,3 +1074,44 @@ export const modificationMotifSchema = z.object({
 
 export type MotifAdmin = z.infer<typeof motifAdminSchema>;
 export type MotifsAdmin = z.infer<typeof motifsAdminSchema>;
+
+// ——— Le versement d'un remboursement ——————————————————————————
+
+/**
+ * Constater qu'un remboursement a été versé.
+ *
+ * Le miroir de `saisiePaiementSchema`, en sens inverse : là on déclare l'argent
+ * qui entre, ici celui qui sort. La `reference` est celle de l'opérateur, comme
+ * pour un versement entrant — c'est elle qui permet de retrouver l'opération
+ * chez lui le jour d'une contestation.
+ *
+ * Aucun montant : il a été FIXÉ à la demande, et c'est ce montant-là qui a été
+ * annoncé au titulaire. Le laisser saisir ici inviterait à verser autre chose
+ * que ce qu'on a promis, sans que rien ne le signale.
+ */
+export const versementRemboursementSchema = z.object({
+  reference: z.string().trim().min(1).max(200),
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
+}).strict();
+
+/**
+ * Renoncer à un remboursement.
+ *
+ * Il faut ce geste : un numéro fermé, un titulaire injoignable, un montant
+ * contesté laissent une demande qui ne peut pas aboutir — et sans porte de
+ * sortie, elle retiendrait l'effacement du compte pour toujours.
+ */
+export const abandonRemboursementSchema = z.object({
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
+}).strict();
+
+export const remboursementRegleSchema = z.object({
+  id: z.string(),
+  etat: z.enum(["succeeded", "failed"]),
+  /** Les crédits repris. Nuls sur un abandon : rien n'est sorti. */
+  creditsRepris: z.number().int().min(0),
+}).strict();
+
+export type RemboursementRegle = z.infer<typeof remboursementRegleSchema>;
