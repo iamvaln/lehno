@@ -21,4 +21,5 @@ export { Assistance, type AssistanceProps } from "./Assistance.js";
 export { Liens, type LiensProps } from "./Liens.js";
 export { Studio, type StudioProps } from "./Studio.js";
 export { TransactionManuelle, type TransactionManuelleProps, type MouvementManuel } from "./TransactionManuelle.js";
+export { StatsTransactions, type StatsTransactionsProps } from "./StatsTransactions.js";
 export { Metriques, type MetriquesProps } from "./Metriques.js";

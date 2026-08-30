@@ -14,6 +14,8 @@ export {
 } from "./DataTable.js";
 export { Pagination, type PaginationProps, type LibellesPagination } from "./Pagination.js";
 export { FilterBar, type FilterBarProps, type FiltreSelect } from "./FilterBar.js";
+export { GrapheJours, type GrapheJoursProps, type JourGraphe, type LibellesGraphe }
+  from "./GrapheJours.js";
 export { SelecteurCompte, type SelecteurCompteProps, type CompteChoisi, type LibellesSelecteurCompte }
   from "./SelecteurCompte.js";
 export { EmptyState, type EmptyStateProps } from "./EmptyState.js";

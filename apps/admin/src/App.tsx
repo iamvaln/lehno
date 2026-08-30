@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Metriques, Studio, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, StatsTransactions, Studio, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -61,7 +61,11 @@ import {
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
 // branché ne s'en approche pas : ce qu'il montre vient du serveur ou n'est pas
 // montré du tout.
-import { demandeCodeReponseSchema, maintenanceStatusSchema, sessionAdminSchema, type AdminRole, type PeriodeMetriques } from "@lehno/contracts";
+import {
+  demandeCodeReponseSchema, maintenanceStatusSchema, sessionAdminSchema, statsTransactionsSchema,
+  type AdminRole, type ModeTransaction, type PeriodeMetriques, type PeriodeTransactions,
+  type SensTransaction,
+} from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
 
@@ -433,6 +437,12 @@ export function App(): ReactNode {
      connaît pas la liste entière. */
   const [termeCompte, setTermeCompte] = useState("");
 
+  /* La coupe des statistiques : trois axes, un seul état. Les tenir séparés
+     ferait trois rendus là où l'on change une lecture. */
+  const [coupeStats, setCoupeStats] = useState<{
+    periode: PeriodeTransactions; sens: SensTransaction; mode: ModeTransaction;
+  }>({ periode: "30j", sens: "tous", mode: "tous" });
+
   /* Changer d'entrée repose le cadrage. Sans ça, arriver par « Versements
      manuels » après avoir filtré ailleurs montrerait la liste précédente sous
      un intitulé qui promet autre chose. */
@@ -463,6 +473,17 @@ export function App(): ReactNode {
     // Rien ne part tant que rien n'est cherché : ouvrir l'écran ne doit pas
     // rapatrier une page de comptes qu'on n'a pas demandée.
     [section, termeCompte],
+    { garderAncien: true },
+  );
+
+  const etatStats = useRessource(
+    () => (section === "transactionsStats"
+      ? api.appeler("/admin/payment-stats", {
+        schema: statsTransactionsSchema,
+        requete: coupeStats as unknown as Record<string, string>,
+      })
+      : Promise.resolve(null)),
+    [section, coupeStats.periode, coupeStats.sens, coupeStats.mode],
     { garderAncien: true },
   );
 
@@ -805,6 +826,22 @@ export function App(): ReactNode {
                 }
               })();
             }}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "transactionsStats") {
+    vue = (
+      <Ressource
+        etat={etatStats}
+        t={t}
+        enfant={(donnees) => (donnees ? (
+          <StatsTransactions
+            langue={langue}
+            donnees={donnees}
+            coupe={coupeStats}
+            onCoupe={setCoupeStats}
+            onRetour={(id) => aller(id ?? "tableau")}
           />
         ) : null)}
       />
