@@ -17,6 +17,7 @@ import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
 import { preparationOuverte } from "../../lib/navigation.js";
 import {
   REMPLISSAGE_PLEIN, composeLAccueil, doitRepartirDuMaximum, etatDeLAccueil,
+  resumeDeLAccueil,
   retrecit, type Remplissage,
 } from "../../lib/accueil.js";
 import { dateCourte } from "../../lib/carnet.js";
@@ -155,6 +156,15 @@ export default function Accueil() {
         </>
       ) : (
         <>
+          {/* LE RÉSUMÉ, avant la liste. L'écran montrait ce qui vient sans
+              jamais le DIRE : sept phrases écrites au dictionnaire n'étaient
+              posées nulle part, et il fallait compter les cartes soi-même pour
+              savoir si la semaine était chargée. C'est ce qu'on vient lire en
+              premier, avant même de regarder qui. */}
+          <Text style={[styles.resume, { color: couleurs.textSecondary }]}>
+            {phraseDuResume(resumeDeLAccueil(home), t, langue)}
+          </Text>
+
           <View style={styles.entete}>
             <SectionLabel>{t.ceQuiApproche}</SectionLabel>
             {/* « Voir plus » quand il en reste, « Voir tout » sinon. Le compte
@@ -257,8 +267,37 @@ export default function Accueil() {
   );
 }
 
+/* La phrase, choisie hors du rendu : la décision est dans `resumeDeLAccueil`,
+   ici il ne reste qu'à la dire. Séparer les deux permet d'éprouver la table
+   sans rendu — `react-native` étant typé Flow, un test qui monterait l'écran ne
+   se compilerait pas. */
+function phraseDuResume(
+  resume: ReturnType<typeof resumeDeLAccueil>,
+  t: ReturnType<typeof useLangue>["t"],
+  langue: ReturnType<typeof useLangue>["langue"],
+): string {
+  switch (resume.sorte) {
+    case "rien": return t.etatRien;
+    case "lointain": return t.etatLointain(dateCourte(resume.date, langue));
+    case "aujourdhui": return t.etatUnAujourdhui;
+    case "aujourdhuiEtSemaine": return t.etatUnAujourdhuiEtSemaine(resume.autres);
+    case "semaine":
+      /* Le designer a écrit UNE et DEUX en toutes lettres, et le reste en
+         chiffre : « Une date », « Deux dates », puis « 5 dates ». On respecte
+         sa coupure plutôt que d'uniformiser — c'est ce qui fait qu'une phrase
+         se lit comme une phrase et non comme un compteur. */
+      if (resume.combien === 1) return t.etatUnSemaine;
+      if (resume.combien === 2) return t.etatDeuxSemaine;
+      return t.etatPlusieursSemaine(resume.combien);
+  }
+}
+
 const styles = StyleSheet.create({
   page: { flex: 1, paddingHorizontal: nativeSpace[16] },
+  resume: {
+    fontFamily: nativeFont.bodyRegular, fontSize: 14,
+    marginTop: nativeSpace[4], marginBottom: nativeSpace[16],
+  },
   salutation: { flexDirection: "row", alignItems: "center", gap: nativeSpace[8] },
   titre: {
     flex: 1,
