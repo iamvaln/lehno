@@ -309,7 +309,30 @@ export const createNotesSchema = z.object({
   // personnes, elle ne se diffuse pas.
   personIds: z.array(z.string().uuid()).min(1).max(20),
   eventOccurrenceId: z.string().uuid().optional(),
-}).strict();
+}).strict().superRefine((v, ctx) => {
+  /* UNE OCCASION APPARTIENT À UN SEUL PROCHE.
+   *
+   * Quand plusieurs proches partagent une date — un mariage, une sortie —, ce
+   * sont plusieurs occasions, une par personne : le rappel les nomme une à une,
+   * et la génération de message lit UN profil. Il n'existe donc aucune
+   * occurrence qui couvre vingt proches.
+   *
+   * Sans ce refus, dix-neuf notes se rattachaient à la date de quelqu'un
+   * d'autre. Elles ne partent nulle part — un proche n'est pas destinataire —,
+   * mais elles ressortent : ouvrir une occasion affiche ses notes, et on lirait
+   * là ce qui a été écrit sur d'autres.
+   *
+   * Le service le vérifie AUSSI, et pour une autre raison : le schéma sait que
+   * l'occurrence ne peut pas couvrir vingt proches, il ne sait pas si elle
+   * couvre CELUI-LÀ. */
+  if (v.eventOccurrenceId !== undefined && new Set(v.personIds).size > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["eventOccurrenceId"],
+      message: "une note de circonstance ne vaut que pour le proche dont c'est l'occasion",
+    });
+  }
+});
 
 export type CreateNotesInput = z.infer<typeof createNotesSchema>;
 

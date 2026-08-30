@@ -64,10 +64,56 @@ export class MethodesService {
     if (combien >= PLAFOND)
       throw new AppError("validation_failed", "too many registered payment methods");
 
+    /* L'opérateur vient du CANAL, jamais de la requête.
+     *
+     * Le canal est actif ou il n'est pas : enregistrer un numéro sur un
+     * opérateur qu'on ne sert plus donnerait une méthode que rien ne pourrait
+     * employer — ni pour payer, ni pour rembourser. */
+    const canal = entree.channelId === undefined
+      ? null
+      : await this.prisma.paymentChannel.findFirst({
+        where: { id: entree.channelId, isActive: true },
+        select: { operator: true },
+      });
+    if (entree.channelId !== undefined && canal === null)
+      throw new AppError("not_found", "no such payment channel");
+
+    /* UN SEUL NUMÉRO PAR OPÉRATEUR, et changer de numéro est le geste ordinaire
+       — pas ajouter. Refuser sèchement obligerait à supprimer puis
+       ré-enregistrer sans dire pourquoi.
+       
+       L'ancienne ligne part, la neuve arrive : le DÉLAI DE DEUX SEMAINES avant
+       qu'elle puisse recevoir un remboursement repart donc de zéro. C'est
+       voulu — hériter de l'ancienneté d'un numéro qu'on vient de changer
+       viderait la garde anti-fraude de son sens. L'écran doit l'annoncer AVANT
+       le remplacement, pas le laisser découvrir après. */
+    if (canal !== null) {
+      /* SAUF SI UN REMBOURSEMENT ATTEND DESSUS.
+       *
+       * `payment.payment_method_id` est en `SetNull` : supprimer la méthode
+       * viderait la destination du versement sans bruit, et l'argent n'aurait
+       * plus où aller. On refuse plutôt que de déplacer le remboursement vers
+       * le nouveau numéro — changer où part l'argent de quelqu'un ne se fait
+       * pas en silence, à l'occasion d'un autre geste. */
+      const attend = await this.prisma.payment.count({
+        where: {
+          userId, direction: "refund", status: "pending",
+          paymentMethod: { operator: canal.operator },
+        },
+      });
+      if (attend > 0)
+        throw new AppError("conflict", "a refund is pending on this operator's number");
+
+      await this.prisma.paymentMethod.deleteMany({
+        where: { userId, operator: canal.operator },
+      });
+    }
+
     const ligne = await this.prisma.paymentMethod.create({
       data: {
         userId,
         kind: entree.kind,
+        ...(canal === null ? {} : { operator: canal.operator }),
         ...(entree.brand === undefined ? {} : { brand: entree.brand }),
         /* Le numéro entier ne ressort JAMAIS — `paymentMethodSchema` est
            `strict` et ne le porte pas, donc un service qui le laisserait fuir
