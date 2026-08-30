@@ -21,7 +21,7 @@ export interface PortraitCompositionProps {
   messageCourt?: string | undefined;
   /** Le mot de qui offre le portrait. Facultatif ; le pied se comprime sans lui. */
   note?: string | undefined;
-  /** La mention du pied — « lehno.app · @lehno.app ». Elle vient de l'appel. */
+  /** La mention du pied — « lehno.io · @lehno.io ». Elle vient de l'appel. */
   mention: string;
   ambiance?: AmbianceDePortrait | undefined;
   format?: FormatDePortrait | undefined;

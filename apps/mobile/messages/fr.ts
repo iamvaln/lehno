@@ -48,7 +48,7 @@ export const fr = {
   maintEtat: "Voir l'état du service",
   pseudoTitre: "Choisissez votre pseudo",
   champPseudo: "Pseudo",
-  pseudoAdresse: (pseudo: string) => "lehno.app/" + pseudo,
+  pseudoAdresse: (pseudo: string) => "lehno.io/" + pseudo,
   pseudoPris: "Ce pseudo est pris. « valentine2 » est libre.",
   champParrain: "Code de parrainage (facultatif)",
   parrainValide: "Code valide",

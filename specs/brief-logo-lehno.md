@@ -8,7 +8,7 @@ Le principe qui la résume : **on capture quand on y pense, on retrouve quand ç
 
 **Le nom.** *Lehno* traduit « jour J » dans une langue locale. Il se prononce **lèh·noh**.
 
-**Le domaine.** lehno.app
+**Le domaine.** lehno.io
 
 **À qui il s'adresse.** Des personnes de vingt-cinq à quarante ans, à l'aise avec leur téléphone, qui tiennent à leurs proches et suivent trente à cinquante personnes. Trois profils guident les arbitrages : celle qui note volontiers et veut l'esprit libre ; celui qui sait qu'il faut y penser mais n'en a pas le réflexe — et qui paie pour le résultat ; celle qui aime autant célébrer qu'être célébrée, et qui fait connaître l'application autour d'elle.
 

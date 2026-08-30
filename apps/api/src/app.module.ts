@@ -245,10 +245,10 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     },
     // Adresse de destination du formulaire de contact. Ce n'est pas un secret
     // — juste l'adresse à laquelle écrire — donc un repli documenté plutôt
-    // qu'un refus de démarrer : hello@lehno.app est déjà l'adresse publique
+    // qu'un refus de démarrer : hello@lehno.io est déjà l'adresse publique
     // affichée ailleurs sur le site (voir apps/web/messages). Une variable
     // d'environnement, quand elle est posée, la remplace.
-    { provide: "CONTACT_TO_EMAIL", useFactory: () => process.env.CONTACT_TO_EMAIL ?? "hello@lehno.app" },
+    { provide: "CONTACT_TO_EMAIL", useFactory: () => process.env.CONTACT_TO_EMAIL ?? "hello@lehno.io" },
     /* L'adresse du site public, celle où vivent les Murs, les formulaires de
        collecte et les liens de partage.
        Ce n'est pas un secret — le domaine s'affiche sur chaque lien — donc un
@@ -258,10 +258,10 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
        qu'un utilisateur a collée dans un groupe cesserait de marcher au
        changement de domaine.
        Sans barre oblique finale : les chemins la posent eux-mêmes, et
-       « https://lehno.app//valentine » n'est pas la même adresse. */
+       « https://lehno.io//valentine » n'est pas la même adresse. */
     {
       provide: "PUBLIC_WEB_URL",
-      useFactory: () => (process.env.PUBLIC_WEB_URL ?? "https://lehno.app").replace(/\/+$/, ""),
+      useFactory: () => (process.env.PUBLIC_WEB_URL ?? "https://lehno.io").replace(/\/+$/, ""),
     },
     OtpService,
     TokenService,

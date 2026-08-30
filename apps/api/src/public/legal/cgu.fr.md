@@ -1,6 +1,6 @@
 # Conditions générales d'utilisation
 
-_Version 2026-08-27 · Dernière mise à jour : 27 août 2026_
+_Version 2026-08-30 · Dernière mise à jour : 30 août 2026_
 
 ## 1. Objet
 
@@ -213,7 +213,7 @@ conservée.
 ## 15. Droit applicable et litiges
 
 Les présentes CGU sont régies par le **droit camerounais**. En cas de différend,
-une solution amiable est recherchée en écrivant à hello@lehno.app avant toute
+une solution amiable est recherchée en écrivant à hello@lehno.io avant toute
 action contentieuse. À défaut d'accord, le litige relève des **juridictions
 compétentes du Cameroun**.
 

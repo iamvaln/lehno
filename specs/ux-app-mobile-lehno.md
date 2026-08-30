@@ -290,7 +290,7 @@ Loin de toute échéance, ce bloc se réduit à un rappel serein de la prochaine
 
 **Une question posée une fois.** À la première génération pour un proche, l'écran demande de quoi **accorder le texte** — « pour écrire correctement : fier ou fière ? » — pour lui et pour soi. En français, on n'écrit pas à quelqu'un sans le savoir. La question se pose là où elle sert, jamais dans le carnet, et se passe d'un geste : sans réponse, le texte emploie des tournures qui s'en dispensent.
 
-**Ce que la composition porte.** Le **nom** du proche, le **message** produit selon l'orientation, une **note de l'expéditeur** courte et discrète (« Fait avec soin par Valentine »), et un **pied de marque** — lehno.app et les identifiants sociaux — assez discret pour ne pas voler la place, assez présent pour faire connaître l'application. Le tout dans une bande basse lorsqu'il y a une image ; sur toute la surface lorsqu'il n'y en a pas.
+**Ce que la composition porte.** Le **nom** du proche, le **message** produit selon l'orientation, une **note de l'expéditeur** courte et discrète (« Fait avec soin par Valentine »), et un **pied de marque** — lehno.io et les identifiants sociaux — assez discret pour ne pas voler la place, assez présent pour faire connaître l'application. Le tout dans une bande basse lorsqu'il y a une image ; sur toute la surface lorsqu'il n'y en a pas.
 
 **Le portrait s'approuve** — l'image se compose alors —, puis **s'enregistre et s'envoie** comme n'importe quelle photo. Il ne s'expose à aucune adresse publique : c'est le pied de marque, inscrit dans l'image, qui fait connaître l'application.
 

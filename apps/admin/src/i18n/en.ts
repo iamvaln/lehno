@@ -907,7 +907,7 @@ export const en: typeof fr = {
     titre: "Sign in",
     sous: "Admin accounts only.",
     adresse: "Email address",
-    adressePlaceholder: "you@lehno.app",
+    adressePlaceholder: "you@lehno.io",
     envoyer: "Send me a code",
     titreCode: "The code",
     envoye: "A code just went out to {adresse}.",
