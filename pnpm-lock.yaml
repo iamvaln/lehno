@@ -258,6 +258,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@lehno/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@lehno/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens

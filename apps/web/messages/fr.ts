@@ -214,4 +214,35 @@ export const fr = {
   murIdee: "Une idée ? Voici ce qui me ferait plaisir.",
   murListe: "Voir ma liste",
   murMot: "Laisse-moi un mot",
+  // ——— L'acquisition, sur les surfaces publiques ———————————————
+  //
+  // Une phrase générique, servie partout où la surface n'en propose pas de
+  // meilleure. « Vous aussi, soyez là le jour J » est vrai partout, donc
+  // convaincant nulle part — mais c'est mieux que rien, et c'est ce qui évite
+  // qu'une page publique se termine sans porte de sortie.
+  acqTitre: "Vous aussi, soyez là le jour J",
+  acqTexte: "Lehno retient les dates qui comptent, garde ce que vous savez des gens, et écrit le mot le jour venu.",
+  acqAction: "Découvrir Lehno",
+
+  // ——— Le Mur ————————————————————————————————————————————————
+  //
+  // C'est la seule surface où la marque ne parle pas en son nom : le
+  // propriétaire s'adresse à ses proches. « Je », tutoiement.
+  murIntro: "Voilà ce qu'il faut savoir sur moi",
+  murAnniversaire: "Mon anniversaire",
+  murInterets: "Ce que j'aime",
+  murDeposer: "Me laisser un mot",
+  // Les vœux fermés retirent le bouton et gardent le fait. Un bouton qui
+  // n'ouvre rien serait pire que pas de bouton.
+  murVoeuxFermes: "Les mots ne sont pas ouverts en ce moment.",
+  murInvitation: "Avoir mon Mur",
+  murAlt: "Photo de {nom}",
+
+  // ——— Les avis courts ————————————————————————————————————————
+  //
+  // Ce qui s'est passé, et la suite. Pas d'illustration, pas d'« Oups ».
+  etatIndisponibleTitre: "Cette page n'a pas pu s'afficher",
+  etatIndisponibleTexte: "Ce n'est pas vous : nous n'avons pas réussi à joindre le service. Réessayez dans un instant.",
+  etatRetour: "Aller à l'accueil",
+
 };
