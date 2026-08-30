@@ -1,3 +1,4 @@
+import type { DeletionCancelled } from "@lehno/contracts";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import type {
@@ -326,4 +327,42 @@ export class AccountService {
     });
     return true;
   }
+
+  /* ANNULER SA PROPRE SUPPRESSION.
+   *
+   * C'est ce qui donne un sens au délai de grâce. Sans cette route il ne
+   * protégeait que de notre lenteur : la personne qui changeait d'avis ne
+   * pouvait pas se connecter, et seul un administrateur pouvait la rétablir.
+   *
+   * Le `updateMany` avec `status: "pending_deletion"` dans le `where` n'est pas
+   * décoratif : il rend le geste IDEMPOTENT et sûr à la course. Deux appels
+   * simultanés, ou un appel arrivé après que l'ordonnanceur a vidé le compte,
+   * ne rétablissent rien — le second ne trouve plus la ligne dans l'état
+   * attendu. Lire puis écrire aurait laissé passer les deux.
+   */
+  async annulerSuppression(userId: string): Promise<DeletionCancelled> {
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.user.updateMany({
+        where: { id: userId, status: "pending_deletion" },
+        data: { status: "active", deletionRequestedAt: null, deletionReason: null },
+      });
+      /* Rien à annuler : le compte n'était pas en suppression, ou il a déjà été
+         vidé. 404 plutôt qu'un succès silencieux — un écran qui affiche « votre
+         compte est rétabli » sur un compte effacé ment à la seule personne qui
+         ne peut plus le vérifier. */
+      if (count === 0) throw new AppError("not_found", "no deletion to cancel");
+
+      /* Le remboursement en attente tombe avec la suppression.
+         Le verser plus tard reviendrait à reprendre des crédits à quelqu'un qui
+         peut encore les dépenser — et l'administrateur, lui, n'aurait aucun
+         moyen de savoir que le compte est revenu. */
+      const { count: rembours } = await tx.payment.updateMany({
+        where: { userId, direction: "refund", status: "pending" },
+        data: { status: "failed", failureReason: "deletion_cancelled" },
+      });
+
+      return { status: "active" as const, refundCancelled: rembours > 0 };
+    });
+  }
+
 }
