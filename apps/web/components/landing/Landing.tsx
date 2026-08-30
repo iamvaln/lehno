@@ -25,7 +25,9 @@ export function Landing(
   },
 ): ReactNode {
   return (
-    <PublicShell t={t} langue={langue}>
+    // L'aplat de clôture ci-dessous porte déjà l'invitation, et avec plus de
+    // force : c'est la fin d'un argumentaire, pas une porte de sortie.
+    <PublicShell t={t} langue={langue} acquisition={false}>
         <Hero t={t} langue={langue} avantLancement={avantLancement} />
         <HowItWorks t={t} />
         <Content t={t} langue={langue} />
