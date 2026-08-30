@@ -229,13 +229,27 @@ function Calendrier({ mois, aujourdhui, echeances, langue, onMois, onOuvrir, quo
   return (
     <View>
       <View style={styles.navMois}>
-        <Pressable accessibilityRole="button" onPress={() => change(-1)} style={styles.fleche}>
+        {/* UN CHEVRON NE SE LIT PAS TOUT SEUL. Sans libellé, un lecteur
+            d'écran annonce « bouton » — deux fois, à l'identique, de part et
+            d'autre du titre : rien ne dit lequel avance et lequel recule. Le
+            dictionnaire portait les deux phrases sans que personne les pose. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t.moisPrecedent}
+          onPress={() => change(-1)}
+          style={styles.fleche}
+        >
           <Icon name="chevron-left" size={20} color={couleurs.textBody} />
         </Pressable>
         <Text style={[styles.moisTitre, { color: couleurs.textBody }]}>
           {titreDuMois(mois, langue, Number(aujourdhui.slice(0, 4)))}
         </Text>
-        <Pressable accessibilityRole="button" onPress={() => change(1)} style={styles.fleche}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t.moisSuivant}
+          onPress={() => change(1)}
+          style={styles.fleche}
+        >
           <Icon name="chevron-right" size={20} color={couleurs.textBody} />
         </Pressable>
       </View>

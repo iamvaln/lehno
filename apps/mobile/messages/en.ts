@@ -533,6 +533,8 @@ export const en = {
   portraitSignatureAide: (qui: string) => "\u201CMade with care by " + qui + "\u201D, under the message. The logotype always stays.",
   portraitAucunTitre: "No portrait yet",
   portraitAucunTexte: "The first one will come from what you noted.",
+  reprisesUne: "One thing you started is waiting.",
+  reprisesN: (n: number) => n + " things you started are waiting.",
   reprisesIntro: "Nothing gets lost. What you started is waiting here.",
   reprisesVideTitre: "All caught up",
   reprisesVideTexte: "Anything you start without finishing will wait for you here.",

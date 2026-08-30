@@ -580,6 +580,8 @@ export const fr = {
   portraitAucunTexte: "Le premier viendra de ce que vous avez noté.",
 
   /* ─── Reprises en cours (3.16) ─── */
+  reprisesUne: "Une chose que vous avez lancée vous attend.",
+  reprisesN: (n: number) => n + " choses que vous avez lancées vous attendent.",
   reprisesIntro: "Rien ne se perd. Ce que vous avez lancé vous attend ici.",
   reprisesVideTitre: "Tout est traité",
   reprisesVideTexte: "Ce que vous commencerez sans finir vous attendra ici.",

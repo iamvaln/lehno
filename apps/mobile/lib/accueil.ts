@@ -117,3 +117,61 @@ export function doitRepartirDuMaximum(
   if (derniere === null) return false;
   return Math.abs(hauteur - derniere) >= SEUIL_DE_REDIMENSIONNEMENT;
 }
+
+/* LE RÉSUMÉ DE CE QUI VIENT — §3.2, les sept phrases du dictionnaire.
+ *
+ * L'accueil montrait la LISTE sans jamais la RÉSUMER. Le designer a écrit sept
+ * phrases pour dire d'un coup d'œil comment les semaines qui viennent se
+ * présentent — « Une date aujourd'hui. », « Rien avant le 12 octobre. » — et
+ * aucune ne paraissait : `etatDeLAccueil` ne distinguait que trois états, et
+ * ceux-là servent à choisir une MISE EN PAGE, pas une phrase.
+ *
+ * `thisWeek` INCLUT AUJOURD'HUI, et c'est le fait qui gouverne toute la table :
+ * les deux décomptes partent du même jour au serveur — « Semaine = les 7
+ * prochains jours, aujourd'hui compris ». Les additionner compterait donc deux
+ * fois les dates du jour, et « une date aujourd'hui, une autre cette semaine »
+ * annoncerait deux dates là où il n'y en a qu'une.
+ *
+ * D'où la soustraction : ce qui vient « en plus » cette semaine est
+ * `thisWeek - today`.
+ */
+export type Resume =
+  | { sorte: "rien" }
+  | { sorte: "lointain"; date: string }
+  | { sorte: "aujourdhui" }
+  | { sorte: "aujourdhuiEtSemaine"; autres: number }
+  | { sorte: "semaine"; combien: number };
+
+export function resumeDeLAccueil(home: Home): Resume {
+  const { today, thisWeek } = home.counts;
+
+  /* RIEN CETTE SEMAINE : on nomme la prochaine date si on la connaît. « Rien
+     avant le 12 octobre » vaut mieux que « rien » — l'un rassure en situant,
+     l'autre laisse croire que le carnet est vide. La liste n'est pas triée ici :
+     le serveur la rend par date croissante, et la retrier donnerait deux
+     vérités sur ce qu'est « la prochaine ». */
+  if (thisWeek === 0) {
+    const prochaine = home.occurrences[0];
+    return prochaine === undefined
+      ? { sorte: "rien" }
+      : { sorte: "lointain", date: prochaine.occurrenceDate };
+  }
+
+  const autres = thisWeek - today;
+
+  /* LES PHRASES « AUJOURD'HUI » NE VALENT QUE POUR UNE SEULE DATE DU JOUR.
+   *
+   * Le designer n'a pas écrit de phrase pour « deux dates aujourd'hui » : les
+   * siennes disent toutes « UNE date aujourd'hui ». Plutôt que d'en inventer
+   * une — ce que la maquette tranche, et elle a raison contre moi — on retombe
+   * sur les phrases de la semaine, qui restent VRAIES puisque la semaine
+   * comprend aujourd'hui. « Deux dates cette semaine » ne ment pas quand les
+   * deux sont aujourd'hui ; elle dit seulement moins. */
+  if (today === 1) {
+    return autres === 0
+      ? { sorte: "aujourdhui" }
+      : { sorte: "aujourdhuiEtSemaine", autres };
+  }
+
+  return { sorte: "semaine", combien: thisWeek };
+}
