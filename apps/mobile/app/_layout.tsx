@@ -2,11 +2,13 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ThemeProvider, useCouleurs } from "@lehno/ui-native";
+import { OfflineBanner, ThemeProvider, useCouleurs } from "@lehno/ui-native";
 import { LangueProvider } from "../lib/langue.js";
 import { DrapeauxProvider } from "../lib/DrapeauxProvider.js";
 import { MetadonneesProvider } from "../lib/MetadonneesProvider.js";
 import { ArretProvider, useArret } from "../lib/ArretProvider.js";
+import { ReseauProvider, useReseau } from "../lib/ReseauProvider.js";
+import { useLangue } from "../lib/langue.js";
 import Maintenance from "./maintenance.js";
 import { POLICES } from "../polices/index.js";
 
@@ -25,11 +27,31 @@ function SousArret() {
   return enCours ? <Maintenance /> : <Coquille />;
 }
 
+/* LE BANDEAU SE POSE AU-DESSUS DE LA ZONE SÛRE, pas dans un écran.
+ *
+ * Dans un écran, il faudrait le recopier quarante fois — et il manquerait
+ * précisément là où on aurait oublié. Au-dessus de la pile, il tient quel que
+ * soit l'écran, y compris pendant une navigation.
+ *
+ * Il ne recouvre RIEN : il pousse le contenu vers le bas. Un bandeau flottant
+ * masquerait une ligne de liste, et c'est la ligne du haut — celle qu'on
+ * regarde. */
+function BandeauReseau() {
+  const { horsLigne } = useReseau();
+  const { t } = useLangue();
+  if (!horsLigne) return null;
+  /* Le message SANS file pour l'instant : la file d'écritures n'existe pas
+     encore, et « 3 actions repartiront » compterait des actions que rien ne
+     retient. Promettre un retour qu'on ne tient pas est pire que se taire. */
+  return <OfflineBanner message={t.horsConnexion} />;
+}
+
 function Coquille() {
   const couleurs = useCouleurs();
   return (
     <>
       <StatusBar style="auto" />
+      <BandeauReseau />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -75,7 +97,12 @@ export default function Racine() {
               intervention, /auth/* et /public/config répondent 503 eux aussi.
               Un écran d'attente posé seulement après la connexion laisserait
               quelqu'un devant un formulaire qui échoue sans dire pourquoi. */}
-          <ArretProvider>
+          {/* Le réseau enveloppe l'arrêt : sans lui, une application ouverte
+              hors connexion interrogerait `/public/maintenance` en boucle et
+              conclurait à une intervention là où il n'y a qu'un tunnel. Les
+              deux états se ressemblent et ne se disent pas pareil. */}
+          <ReseauProvider>
+            <ArretProvider>
             <DrapeauxProvider>
               {/* Les listes de valeurs et leur SENS : ce qu'aucune énumération
                   ne porte. Elles se lisent une fois, après la connexion. */}
@@ -83,7 +110,8 @@ export default function Racine() {
                 <SousArret />
               </MetadonneesProvider>
             </DrapeauxProvider>
-          </ArretProvider>
+            </ArretProvider>
+          </ReseauProvider>
         </LangueProvider>
       </ThemeProvider>
     </SafeAreaProvider>
