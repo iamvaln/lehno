@@ -43,5 +43,5 @@ export default async function Page({ params }: Proprietes): Promise<ReactNode> {
     );
   }
 
-  return <Mur t={t} langue={langue} mur={etat.mur} />;
+  return <Mur t={t} langue={langue} mur={etat.donnees} />;
 }

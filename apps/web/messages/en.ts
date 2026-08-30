@@ -216,4 +216,30 @@ export const en: typeof fr = {
   etatIndisponibleTexte: "It is not you: we could not reach the service. Try again in a moment.",
   etatRetour: "Go to the home page",
 
+
+  // ——— Le dépôt de vœux ————————————————————————————————————————
+  voeuxTitre: "A word for {nom}",
+  voeuxOccasion: "For {date}",
+  voeuxAvantOuverture: "Words open on {date}.",
+  voeuxApresFermeture: "Words closed on {date}.",
+  voeuxRevenir: "Come back then — the link stays the same.",
+  voeuxLabelMessage: "Your word",
+  voeuxAideMessage: "It will be read on the day, exactly as you write it.",
+  voeuxLabelSignature: "Signature",
+  voeuxAideSignature: "Optional. Without it, your word arrives anonymous.",
+  voeuxEnvoyer: "Send my word",
+  voeuxConfirme: "Sent. Your word will be waiting.",
+  voeuxErreur: "Your word did not go through. Try again in a moment.",
+  voeuxFermeErreur: "Words have just closed. Your text was not sent.",
+
+  voeuxContexte: "for {nom}'s birthday",
+  voeuxPlaceholderMessage: "Write what you have on your mind…",
+  voeuxPlaceholderSignature: "your name, or whatever you like",
+  voeuxMention: "Your word will reach them on the day, exactly as you write it.",
+  voeuxConfirmeTitre: "Sent.",
+  voeuxConfirmeTexte: "Your word will be waiting on the day. You can close this page.",
+  acqVoeuxTitre: "Get your own Wall",
+  acqVoeuxTexte: "Your people find your date there, what you like, and somewhere to write to you.",
+  acqVoeuxAction: "Create mine",
+
 };
