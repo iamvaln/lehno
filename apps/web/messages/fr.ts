@@ -370,4 +370,21 @@ export const fr = {
   souhaitCodeFaux: "Ce code ne correspond pas, ou il a expiré.",
   souhaitDejaPris: "Quelqu'un a été plus rapide : ce souhait vient d'être pris.",
 
+
+  // ——— L'invitation au parrainage ————————————————————————————
+  //
+  // Une invitation est INTIME : quelqu'un vous dit que ça vous servira. Une
+  // colonne, sur du blanc, sans aplat ni maquette. La page ne porte pas la
+  // clôture d'acquisition de la coquille — elle EST la page d'acquisition.
+  inviteMention: "vous invite sur Lehno",
+  inviteTitre: "Les dates qui comptent, et quoi offrir le jour venu",
+  inviteTitreSansCode: "Lehno, en deux mots",
+  invitePromesse: "Lehno retient les anniversaires de vos proches, garde ce que vous savez d'eux, et vous aide à trouver le bon cadeau — sans avoir à demander.",
+  inviteGainTexte: "crédits offerts à l'ouverture de votre compte, parce que quelqu'un vous a invité.",
+  inviteCodeLabel: "Votre code :",
+  // Sans code valable il n'y a pas de gain à annoncer : la ligne disparaît,
+  // les badges restent. Le contrat ne distingue pas « expiré » de « déjà
+  // employé » — la page ne l'invente pas.
+  inviteSansCode: "Ce lien d'invitation n'est plus valable. Vous pouvez tout de même installer Lehno.",
+
 };
