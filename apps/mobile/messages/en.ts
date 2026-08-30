@@ -274,7 +274,6 @@ export const en = {
   securiteSupprimerAide: "Your pages, your notes and your Wall go with it.",
   securiteInhabituelle: "An unusual sign-in was detected on 12 August.",
   paiementTitre: "Your payment methods",
-  paiementOperateur: "Operator",
   paiementRemboursable: "Refunds possible",
   paiementRetirer: "Remove",
   paiementRetraitTitre: "Remove this method?",

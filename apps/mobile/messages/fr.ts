@@ -286,7 +286,6 @@ export const fr = {
   securiteSupprimerAide: "Vos fiches, vos notes et votre Mur partent avec.",
   securiteInhabituelle: "Une connexion inhabituelle a été détectée le 12 août.",
   paiementTitre: "Vos méthodes de paiement",
-  paiementOperateur: "L'opérateur",
   paiementRemboursable: "Remboursement possible",
   paiementRetirer: "Retirer",
   paiementRetraitTitre: "Retirer cette méthode ?",
