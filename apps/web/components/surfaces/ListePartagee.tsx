@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { sharedWishlistSchema, type SharedWishlist } from "@lehno/contracts";
+import type { SharedWishlist } from "@lehno/contracts";
 import type { Langue } from "../../lib/langues.js";
 import type { Messages } from "../../messages/index.js";
 import { dateEnToutesLettres } from "../../lib/dates.js";
-import { garderJetonDeVisite, jetonDeVisite } from "../../lib/liste.js";
+import { garderJetonDeVisite, jetonDeVisite } from "../../lib/jeton-visite.js";
 import { interpoler } from "../../lib/texte.js";
 import { PublicShell } from "../PublicShell.js";
 import { Avatar, Banner, Countdown } from "../ui/index.js";
@@ -56,11 +56,19 @@ export function ListePartagee(
         cache: "no-store",
       });
       if (!reponse.ok) return;
-      const analyse = sharedWishlistSchema.safeParse(await reponse.json());
-      // Une liste révoquée entre-temps ne se substitue pas à celle qu'on lit :
-      // la page a déjà été rendue, et la remplacer par un vide sous les yeux du
-      // visiteur serait pire que de la laisser telle quelle.
-      if (analyse.success && analyse.data.state === "ok") setEtat(analyse.data);
+      /* On ne repasse PAS la réponse par le schéma Zod ici.
+         Le premier rendu, lui, l'a fait — c'est le serveur qui parle à un tiers.
+         Celui-ci relit la même route, sur la même API, une charge déjà validée
+         une fois : embarquer Zod au navigateur pour la revérifier coûtait 29 ko
+         de JS sur la page publique la plus visitée, vue par des gens qui ne
+         connaissent pas encore Lehno et souvent sur un forfait compté. On
+         vérifie donc le discriminant, qui est tout ce dont dépend la suite.
+
+         Une liste révoquée entre-temps ne se substitue pas à celle qu'on lit :
+         la page a déjà été rendue, et la remplacer par un vide sous les yeux du
+         visiteur serait pire que de la laisser telle quelle. */
+      const charge = await reponse.json() as SharedWishlist;
+      if (charge?.state === "ok" && Array.isArray(charge.wishes)) setEtat(charge);
     } catch {
       // Le premier rendu reste juste : il dit « déjà pris » au lieu de « par
       // vous ». C'est une nuance perdue, pas une page fausse.

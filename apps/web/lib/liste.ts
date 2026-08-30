@@ -23,30 +23,3 @@ export function chargerListe(jeton: string, revalidate: number): Promise<EtatLis
     revalidate,
   );
 }
-
-/* Le jeton de visite : présenté dans `x-lehno-reservation`, il fait reconnaître
- * SES réservations, et celles-là seulement.
- *
- * Il vit dans le stockage local plutôt que dans un cookie : il ne vaut pas
- * session de compte, et un cookie partirait avec chaque appel, y compris ceux
- * qui n'ont rien à voir. Un accès au stockage peut lever — navigation privée,
- * site data bloqué —, d'où les gardes : la page doit rester juste sans lui,
- * elle montrera seulement « réservé » là où elle aurait dit « par vous ». */
-const CLE_JETON = "lehno.reservation";
-
-export function jetonDeVisite(): string | null {
-  try {
-    return globalThis.localStorage?.getItem(CLE_JETON) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-export function garderJetonDeVisite(jeton: string): void {
-  try {
-    globalThis.localStorage?.setItem(CLE_JETON, jeton);
-  } catch {
-    // Rien à rattraper : le visiteur perdra la marque de ses réservations au
-    // rechargement, et c'est tout. La réservation, elle, est déjà prise.
-  }
-}
