@@ -153,7 +153,7 @@ export class PortraitStudioService {
   // ── Les essais ────────────────────────────────────────────────────────────
 
   async essayer(adminId: string, entree: z.infer<typeof lancementEssaiPortraitSchema>) {
-    return this.essais.essayer(adminId, entree.reglages, entree.profileId);
+    return this.essais.essayerPortrait(adminId, entree.reglages, entree.profileId, entree.ambianceId);
   }
 
   async listerEssais(configId?: string): Promise<{ items: EssaiStudio[] }> {

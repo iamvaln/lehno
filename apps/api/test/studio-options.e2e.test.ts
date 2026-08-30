@@ -8,7 +8,8 @@ import { AppExceptionFilter } from "../src/common/errors.js";
 import { AmorceStudioService } from "../src/studio/amorce.service.js";
 import { StudioConfigurationService } from "../src/studio/configuration.service.js";
 import {
-  ORIENTATIONS, studioOptionsSchema, reglagesDeDepart, type StudioReglages,
+  ORIENTATIONS, studioOptionsSchema, reglagesMessageDeDepart, reglagesPortraitDeDepart,
+  type ReglagesPortrait,
 } from "@lehno/contracts";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
@@ -76,17 +77,17 @@ describe("le studio de l'utilisateur", () => {
   const options = (entete: Record<string, string> = { authorization: `Bearer ${jeton}` }) =>
     fetch(`${baseUrl}/v1/me/studio/options`, { headers: entete });
 
-  const reglages = (f: (r: StudioReglages) => void): StudioReglages => {
-    const r = JSON.parse(JSON.stringify(reglagesDeDepart())) as StudioReglages;
+  const reglages = (f: (r: ReglagesPortrait) => void): ReglagesPortrait => {
+    const r = JSON.parse(JSON.stringify(reglagesPortraitDeDepart())) as ReglagesPortrait;
     f(r);
     return r;
   };
 
-  const publier = async (r: StudioReglages) => {
+  const publier = async (r: ReglagesPortrait) => {
     const admin = await db.prisma.admin.create({
       data: { email: `a${Date.now()}@lehno.app`, role: "admin" },
     });
-    const brouillon = await configs.deposerBrouillon(r);
+    const brouillon = await configs.deposerBrouillon("portrait", r);
     await db.prisma.studioTrial.create({
       data: { studioConfigId: brouillon.id, provider: "anthropic", modelKey: "x", status: "success" },
     });
@@ -123,7 +124,7 @@ describe("le studio de l'utilisateur", () => {
      une version de l'application pour en retirer une. */
   it("fait disparaître une orientation désactivée, sans livraison", async () => {
     await publier(reglages((r) => {
-      r.orientations.find((o) => o.id === "un_hommage")!.actif = false;
+      r.ambiances.find((a): boolean => a.id === "nature")!.actif = false;
     }));
 
     const page = studioOptionsSchema.parse(await (await options()).json());
@@ -137,14 +138,15 @@ describe("le studio de l'utilisateur", () => {
      cours de composition — et le libellé provisoire qui va avec — partirait
      chez tout le monde à la première prévisualisation. */
   it("ne rend jamais un brouillon", async () => {
-    await configs.deposerBrouillon(reglages((r) => {
-      r.orientations[0]!.libelle.fr = "LIBELLÉ EN COURS DE COMPOSITION";
+    await configs.deposerBrouillon("portrait", reglages((r) => {
+      r.ambiances[0]!.libelle.fr = "LIBELLÉ EN COURS DE COMPOSITION";
     }));
 
     const page = studioOptionsSchema.parse(await (await options()).json());
-    const premier = page.catalogue.groups[0]!.choices[0]!.label;
-    expect(premier).toBe("Notre relation");
-    expect(page.version).toBe(1);
+    const libelles = page.catalogue.groups.flatMap((g) => g.choices.map((c) => c.label));
+    expect(libelles).not.toContain("LIBELLÉ EN COURS DE COMPOSITION");
+    // Deux numéros désormais : le catalogue réunit les deux configurations.
+    expect(page.version.portrait).toBe(1);
   });
 
   /* Aucun repli sur les réglages du code. Il rendrait cette route increvable,

@@ -8,8 +8,8 @@ import { AdminTokenService } from "../src/admin/admin-token.service.js";
 import { AmorceStudioService } from "../src/studio/amorce.service.js";
 import { StudioConfigurationService } from "../src/studio/configuration.service.js";
 import {
-  candidatsStudioSchema, etatStudioSchema, historiqueStudioSchema,
-  profilsStudioSchema, reglagesDeDepart, type StudioReglages,
+  candidatsStudioSchema, etatPortraitSchema, historiquePortraitSchema,
+  profilsStudioSchema, reglagesPortraitDeDepart, type ReglagesPortrait,
 } from "@lehno/contracts";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
@@ -75,14 +75,14 @@ describe("administration — la configuration du studio", () => {
       ...(corps === undefined ? {} : { body: JSON.stringify(corps) }),
     });
 
-  const reglages = (f: (r: StudioReglages) => void = () => undefined): StudioReglages => {
-    const r = JSON.parse(JSON.stringify(reglagesDeDepart())) as StudioReglages;
+  const reglages = (f: (r: ReglagesPortrait) => void = () => undefined): ReglagesPortrait => {
+    const r = JSON.parse(JSON.stringify(reglagesPortraitDeDepart())) as ReglagesPortrait;
     f(r);
     return r;
   };
 
   /** Un brouillon posé directement : ces cas n'éprouvent pas l'appel au modèle. */
-  const brouillonner = async (r: StudioReglages) => configs.deposerBrouillon(r);
+  const brouillonner = async (r: ReglagesPortrait) => configs.deposerBrouillon("portrait", r);
 
   const essaiSur = (configId: string, status: "success" | "error" | "timeout" | "refused") =>
     db.prisma.studioTrial.create({
@@ -125,12 +125,12 @@ describe("administration — la configuration du studio", () => {
     const { entete } = await session("admin");
     await brouillonner(reglages());
 
-    const etat = etatStudioSchema.parse(await (await appeler("GET", "/config", entete)).json());
+    const etat = etatPortraitSchema.parse(await (await appeler("GET", "/config", entete)).json());
     expect(etat.enService?.version).toBe(1);
     expect(etat.enService?.parQui).toBeNull();
     expect(etat.brouillon?.etat).toBe("draft");
 
-    historiqueStudioSchema.parse(await (await appeler("GET", "/config/history", entete)).json());
+    historiquePortraitSchema.parse(await (await appeler("GET", "/config/history", entete)).json());
     profilsStudioSchema.parse(await (await appeler("GET", "/profiles", entete)).json());
     candidatsStudioSchema.parse(await (await appeler("GET", "/candidates", entete)).json());
   });
@@ -154,22 +154,22 @@ describe("administration — la configuration du studio", () => {
      grisrait alors un bouton que le serveur, lui, accepte. */
   it("compte les essais par empreinte, aussi dans l'historique", async () => {
     const { entete } = await session("admin");
-    const avant = await brouillonner(reglages((r) => { r.consigneCommune = "la même matière"; }));
+    const avant = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "la même matière"; }));
     await essaiSur(avant.id, "success");
     await essaiSur(avant.id, "error");
     const apres = await brouillonner(reglages((r) => {
-      r.consigneCommune = "la même matière";
-      r.orientations[0]!.libelle.fr = "Ce qui nous lie";
+      r.ambiances[0]!.consigne.fr = "la même matière";
+      r.ambiances[0]!.libelle.fr = "Une autre matière";
     }));
 
-    const page = historiqueStudioSchema.parse(await (await appeler("GET", "/config/history", entete)).json());
+    const page = historiquePortraitSchema.parse(await (await appeler("GET", "/config/history", entete)).json());
     const ligne = page.items.find((i) => i.id === apres.id);
     // Un seul essai RÉUSSI, hérité de l'état antérieur à même empreinte.
     expect(ligne?.essaisReussis).toBe(1);
     expect(ligne?.publiable).toBe(true);
     expect(ligne?.blocage).toBeNull();
     // Et la même ligne, lue en détail, dit exactement la même chose.
-    const etat = etatStudioSchema.parse(await (await appeler("GET", "/config", entete)).json());
+    const etat = etatPortraitSchema.parse(await (await appeler("GET", "/config", entete)).json());
     expect(etat.brouillon?.essaisReussis).toBe(1);
     expect(etat.brouillon?.publiable).toBe(true);
   });
@@ -181,7 +181,7 @@ describe("administration — la configuration du studio", () => {
      découvre le dégât par le service client. */
   it("refuse la publication tant qu'aucun essai réussi ne porte l'empreinte", async () => {
     const { entete } = await session("admin");
-    const brouillon = await brouillonner(reglages((r) => { r.consigneCommune = "jamais essayée"; }));
+    const brouillon = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "jamais essayée"; }));
 
     const res = await appeler("POST", "/config/publish", entete, { configId: brouillon.id, note: MOTIF });
     expect(res.status).toBe(422);
@@ -194,7 +194,7 @@ describe("administration — la configuration du studio", () => {
      vu. */
   it("ne compte pas un essai en échec", async () => {
     const { entete } = await session("admin");
-    const brouillon = await brouillonner(reglages((r) => { r.consigneCommune = "essayée en vain"; }));
+    const brouillon = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "essayée en vain"; }));
     await essaiSur(brouillon.id, "error");
     await essaiSur(brouillon.id, "timeout");
     await essaiSur(brouillon.id, "refused");
@@ -205,7 +205,7 @@ describe("administration — la configuration du studio", () => {
 
   it("publie dès qu'un essai réussi porte l'empreinte", async () => {
     const { entete, compte } = await session("admin");
-    const brouillon = await brouillonner(reglages((r) => { r.consigneCommune = "vue tourner"; }));
+    const brouillon = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "vue tourner"; }));
     await essaiSur(brouillon.id, "success");
 
     const res = await appeler("POST", "/config/publish", entete, { configId: brouillon.id, note: MOTIF });
@@ -228,12 +228,12 @@ describe("administration — la configuration du studio", () => {
      exigerait de régénérer — et on ferait valider une image identique. */
   it("accepte un essai réussi venu d'un état ANTÉRIEUR à empreinte identique", async () => {
     const { entete } = await session("admin");
-    const avant = await brouillonner(reglages((r) => { r.consigneCommune = "la même matière"; }));
+    const avant = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "la même matière"; }));
     await essaiSur(avant.id, "success");
     // Un simple changement de libellé : nouvelle ligne, même empreinte.
     const apres = await brouillonner(reglages((r) => {
-      r.consigneCommune = "la même matière";
-      r.orientations[0]!.libelle.fr = "Ce qui nous lie";
+      r.ambiances[0]!.consigne.fr = "la même matière";
+      r.ambiances[0]!.libelle.fr = "Une autre matière";
     }));
     expect(apres.fingerprint).toBe(avant.fingerprint);
 
@@ -246,7 +246,7 @@ describe("administration — la configuration du studio", () => {
      la transaction qui le garantit, et non l'ordre des lignes. */
   it("refuse une publication dont la note ne dit rien, et ne change rien", async () => {
     const { entete } = await session("admin");
-    const brouillon = await brouillonner(reglages((r) => { r.consigneCommune = "vue tourner"; }));
+    const brouillon = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "vue tourner"; }));
     await essaiSur(brouillon.id, "success");
 
     const res = await appeler("POST", "/config/publish", entete, { configId: brouillon.id, note: "ok" });
@@ -264,7 +264,7 @@ describe("administration — la configuration du studio", () => {
   it("republie une version antérieure sans en créer une nouvelle", async () => {
     const { entete } = await session("admin");
     const un = await db.prisma.studioConfig.findFirstOrThrow({ where: { state: "published" } });
-    const deux = await brouillonner(reglages((r) => { r.consigneCommune = "la seconde"; }));
+    const deux = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "la seconde"; }));
     await essaiSur(deux.id, "success");
     await appeler("POST", "/config/publish", entete, { configId: deux.id, note: MOTIF });
 
@@ -288,16 +288,16 @@ describe("administration — la configuration du studio", () => {
   it("ne touche pas au brouillon en cours", async () => {
     const { entete } = await session("admin");
     const un = await db.prisma.studioConfig.findFirstOrThrow({ where: { state: "published" } });
-    const deux = await brouillonner(reglages((r) => { r.consigneCommune = "la seconde"; }));
+    const deux = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "la seconde"; }));
     await essaiSur(deux.id, "success");
     await appeler("POST", "/config/publish", entete, { configId: deux.id, note: MOTIF });
-    const encours = await brouillonner(reglages((r) => { r.consigneCommune = "dix minutes de travail"; }));
+    const encours = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "dix minutes de travail"; }));
 
     await appeler("POST", "/config/rollback", entete, { configId: un.id, reason: "la seconde déçoit" });
 
     const apres = await db.prisma.studioConfig.findUniqueOrThrow({ where: { id: encours.id } });
     expect(apres.state).toBe("draft");
-    expect(configs.reglagesDe(apres).consigneCommune).toBe("dix minutes de travail");
+    expect(configs.reglagesPortraitDe(apres).ambiances[0]!.consigne.fr).toBe("dix minutes de travail");
   });
 
   /* Un brouillon abandonné n'a jamais servi personne. Y « revenir » le
@@ -305,7 +305,7 @@ describe("administration — la configuration du studio", () => {
      contournement exact que la règle de publication interdit. */
   it("refuse de revenir sur une configuration jamais publiée", async () => {
     const { entete } = await session("admin");
-    const brouillon = await brouillonner(reglages((r) => { r.consigneCommune = "jamais publiée"; }));
+    const brouillon = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "jamais publiée"; }));
 
     const res = await appeler("POST", "/config/rollback", entete, { configId: brouillon.id, reason: MOTIF });
     expect(res.status).toBe(409);
@@ -321,7 +321,7 @@ describe("administration — la configuration du studio", () => {
     const { entete } = await session("admin");
 
     const res = await appeler("PATCH", "/config", entete, {
-      reglages: reglages((r) => { r.consigneCommune = "une consigne toute neuve"; }),
+      reglages: reglages((r) => { r.ambiances[0]!.consigne.fr = "une consigne toute neuve"; }),
     });
     expect(res.status).toBe(422);
     expect(await codeDe(res)).toBe("trial_required");
@@ -335,9 +335,9 @@ describe("administration — la configuration du studio", () => {
 
     const res = await appeler("PATCH", "/config", entete, {
       reglages: reglages((r) => {
-        r.orientations.reverse();
-        r.orientations[0]!.libelle.fr = "Un autre mot";
-        r.orientations[4]!.actif = false;
+        r.ambiances.reverse();
+        r.ambiances[0]!.libelle.fr = "Un autre mot";
+        r.ambiances[1]!.actif = false;
       }),
     });
     expect(res.status).toBe(200);
@@ -364,7 +364,7 @@ describe("administration — la configuration du studio", () => {
      ménage d'hier et le refus d'aujourd'hui. */
   it("garde les essais quand on supprime le profil qui les a servis", async () => {
     const { entete } = await session("admin");
-    const brouillon = await brouillonner(reglages((r) => { r.consigneCommune = "vue tourner"; }));
+    const brouillon = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "vue tourner"; }));
     const profil = await db.prisma.studioProfile.findFirstOrThrow();
     await db.prisma.studioTrial.create({
       data: {

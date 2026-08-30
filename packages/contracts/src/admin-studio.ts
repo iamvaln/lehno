@@ -85,7 +85,11 @@ export const historiquePortraitSchema = z.object({
  * Il n'emporte pas de motif, et c'est cohérent avec la prévisualisation : un
  * brouillon ne change rien pour personne tant qu'il n'est pas publié. Exiger
  * une phrase à chaque réordonnancement la rendrait vide. */
-export const enregistrementDirectSchema = z.object({
+/* Nommé PORTRAIT, et pas « direct » : c'est la nature qui décide de ce que le
+   corps contient. Un atelier du message aura le sien le jour où il existera —
+   déclarer aujourd'hui un schéma que rien n'emploie donnerait l'illusion d'une
+   surface posée. */
+export const enregistrementPortraitSchema = z.object({
   reglages: reglagesPortraitSchema,
 }).strict();
 
@@ -225,9 +229,21 @@ export const essaisStudioSchema = z.object({
  * (brief §11.2). L'ordre inverse ferait perdre dix minutes de composition à
  * chaque fournisseur en panne, et l'essai porte une référence vers la
  * configuration, qui doit donc exister quand il commence. */
-export const lancementEssaiSchema = z.object({
+/* L'essai du PORTRAIT appelle un modèle d'IMAGE, et c'est tout le sujet du
+   découpage : avant lui, publier un changement de style de dessin se débloquait
+   avec un essai qui avait produit un texte. */
+export const lancementEssaiPortraitSchema = z.object({
   reglages: reglagesPortraitSchema,
   profileId: z.string().uuid(),
+  /* L'AMBIANCE ÉPROUVÉE, et il en faut une.
+   *
+   * C'est elle qui décide du modèle appelé : une famille d'illustration et un
+   * style de photo ne passent pas par le même. Sans elle, l'essai choisirait
+   * pour nous — et prouverait une voie qu'on ne voulait pas éprouver.
+   *
+   * C'est aussi ce que dit l'établi du kit : on compose POUR une ambiance, et
+   * la règle des deux rangs se compte par ambiance. */
+  ambianceId: z.string().min(1).max(60),
 }).strict();
 
 // ── Les valeurs candidates ──────────────────────────────────────────────────

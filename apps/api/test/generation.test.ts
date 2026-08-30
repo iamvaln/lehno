@@ -601,6 +601,9 @@ describe("la génération d'un message", () => {
          vérifie qu'un brouillon N'EST PAS LU, pas qu'il est publiable. */
       await db.prisma.studioConfig.create({
         data: {
+          // La nature est requise : un brouillon de message et un brouillon de
+          // portrait sont deux lignes distinctes, chacune avec son unicité.
+          kind: "message",
           state: "draft",
           settings: { ...reglages, consigneCommune: "BROUILLON EN COURS" } as never,
           fingerprint: "brouillon-de-test",

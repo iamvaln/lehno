@@ -4,7 +4,11 @@ import { PanneFournisseur, RefusModele, RouteurIAService, type Adaptateur, type 
 import { AuditService } from "../src/admin/audit.service.js";
 import { StudioConfigurationService } from "../src/studio/configuration.service.js";
 import { StudioEssaiService } from "../src/studio/essai.service.js";
-import { SEUIL_PANNE, reglagesDeDepart, type ProfilContenu, type StudioReglages } from "@lehno/contracts";
+import {
+  SEUIL_PANNE, reglagesMessageDeDepart,
+  type ProfilContenu, type ReglagesMessage,
+} from "@lehno/contracts";
+import { StockageMemoire } from "../src/stockage/memoire.adapter.js";
 
 /* L'essai d'administration.
  *
@@ -35,8 +39,12 @@ describe("l'essai du studio", () => {
 
   const monter = (adaptateurs: Record<string, Adaptateur>) => {
     configs = new StudioConfigurationService(db.prisma as never, new AuditService(db.prisma as never));
+    /* Le stockage en mémoire : un essai de portrait range son image, et
+       mille cinq cents tests ne peuvent pas dépendre d'un compartiment
+       distant. Il rend de vraies clés, de la même forme que R2. */
     essais = new StudioEssaiService(
       db.prisma as never, configs, new RouteurIAService(db.prisma as never), adaptateurs,
+      new StockageMemoire(),
     );
   };
 
@@ -55,9 +63,9 @@ describe("l'essai du studio", () => {
   const modele = (provider: string, modelKey: string) =>
     db.prisma.aIModel.create({ data: { provider, modelKey } });
 
-  const reglages = (f: (r: StudioReglages) => void = () => undefined): StudioReglages => {
-    const r = JSON.parse(JSON.stringify(reglagesDeDepart())) as StudioReglages;
-    r.modeles.message = "anthropic:demande";
+  const reglages = (f: (r: ReglagesMessage) => void = () => undefined): ReglagesMessage => {
+    const r = JSON.parse(JSON.stringify(reglagesMessageDeDepart())) as ReglagesMessage;
+    r.modele = "anthropic:demande";
     f(r);
     return r;
   };
@@ -110,9 +118,9 @@ describe("l'essai du studio", () => {
     }), (await profil()).id);
 
     expect(essai.etat).toBe("timeout");
-    const brouillon = await configs.brouillon();
+    const brouillon = await configs.brouillon("message");
     expect(brouillon?.id).toBe(configId);
-    expect(configs.reglagesDe(brouillon!).consigneCommune).toBe("dix minutes de composition");
+    expect(configs.reglagesMessageDe(brouillon!).consigneCommune).toBe("dix minutes de composition");
   });
 
   /* Un brouillon ne se MUTE pas, il se rejoue. Si la ligne était mutable, un
@@ -130,7 +138,7 @@ describe("l'essai du studio", () => {
     expect(deux.configId).not.toBe(un.configId);
     const premier = await db.prisma.studioConfig.findUniqueOrThrow({ where: { id: un.configId } });
     expect(premier.state).toBe("superseded");
-    expect(configs.reglagesDe(premier).consigneCommune).toBe("premier");
+    expect(configs.reglagesMessageDe(premier).consigneCommune).toBe("premier");
     expect(await db.prisma.studioConfig.count({ where: { state: "draft" } })).toBe(1);
   });
 
