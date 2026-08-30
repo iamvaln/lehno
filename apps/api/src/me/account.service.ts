@@ -155,6 +155,9 @@ export class AccountService {
         // /me/payment-methods, qui rend toutes les méthodes et distingue.
         refundEligible: true,
       })),
+      /* Le délai qui a servi à trancher, rendu tel quel. L'écran annonce
+         l'échéance au lieu d'un refus nu ; il ne le recalcule pas. */
+      refundMethodMinAgeDays: delaiMethode,
     };
   }
 
