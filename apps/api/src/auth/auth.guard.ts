@@ -1,8 +1,10 @@
 import type { CanActivate, ExecutionContext } from "@nestjs/common";
 import { Inject, Injectable } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
 import { TokenService } from "./token.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
+import { OUVERT_EN_SUPPRESSION } from "./ouvert-en-suppression.decorator.js";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -10,6 +12,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     @Inject(TokenService) private readonly tokens: TokenService,
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(Reflector) private readonly reflector: Reflector,
   ) {}
 
   /* DEUX vérifications, et la seconde a coûté une requête de base pour une
@@ -42,7 +45,7 @@ export class AuthGuard implements CanActivate {
     if (!header?.startsWith("Bearer "))
       throw new AppError("unauthorized", "missing bearer token");
 
-    const { userId } = this.tokens.verifyAccess(header.slice(7));
+    const { userId, sessionId } = this.tokens.verifyAccess(header.slice(7));
 
     const compte = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -52,7 +55,14 @@ export class AuthGuard implements CanActivate {
     // ne vaut plus rien, et c'est bien « non authentifié » qu'il faut dire —
     // un 404 laisserait croire à une ressource manquante sur le chemin appelé.
     if (!compte) throw new AppError("unauthorized", "no account for this token");
-    if (compte.status === "pending_deletion")
+    /* La pièce vide : un compte en suppression entre, mais seules les routes
+       explicitement ouvertes le laissent passer. Le marqueur se lit sur la
+       méthode ET sur la classe, pour qu'un contrôleur entier puisse s'ouvrir
+       sans qu'on ait à répéter la ligne. */
+    const ouvertEnSuppression = this.reflector.getAllAndOverride<boolean>(
+      OUVERT_EN_SUPPRESSION, [context.getHandler(), context.getClass()],
+    ) === true;
+    if (compte.status === "pending_deletion" && !ouvertEnSuppression)
       throw new AppError("account_pending_deletion", "account is being deleted");
     if (compte.status === "suspended")
       throw new AppError("account_suspended", "account is suspended");
@@ -60,10 +70,21 @@ export class AuthGuard implements CanActivate {
        ajoutera demain. Énumérer les états qui passent plutôt que ceux qui
        bloquent est ce qui fait qu'un statut nouveau arrive fermé : l'inverse
        le laisserait ouvert jusqu'à ce que quelqu'un pense à cette ligne. */
-    if (compte.status !== "active")
+    /* Le refus par défaut de la fin. Il rattrape tout ce qui n'est pas
+       `active` — y compris un `pending_deletion` qu'on vient d'admettre par le
+       marqueur, d'où la seconde condition.
+
+       On garde cette forme plutôt que d'énumérer les états qui passent : un
+       statut ajouté demain arrive fermé. Le laisser dépendre d'une liste de
+       refus le laisserait ouvert jusqu'à ce que quelqu'un pense à cette ligne. */
+    if (compte.status !== "active" && !(compte.status === "pending_deletion" && ouvertEnSuppression))
       throw new AppError("unauthorized", "account is not active");
 
     req.userId = userId;
+    /* La lignée qui appelle. Nulle sur un jeton d'avant ce changement — voir
+       `verifyAccess` : l'appelant décide alors, et pour la déconnexion ce sera
+       « tout révoquer ». */
+    req.sessionId = sessionId;
     return true;
   }
 }

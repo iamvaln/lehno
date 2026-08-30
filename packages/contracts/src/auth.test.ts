@@ -13,6 +13,9 @@ describe("les deux issues de la vérification", () => {
     const r = verifyOutcomeSchema.parse({
       outcome: "session", accessToken: JETON, refreshToken: JETON,
       expiresIn: 900, isNewAccount: false,
+      // La lignée qui parle, sans quoi le client ne se reconnaît pas dans sa
+      // propre liste de sessions.
+      sessionId: "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
     });
     expect(r.outcome).toBe("session");
   });
@@ -71,6 +74,10 @@ describe("ce que l'écran de bienvenue reçoit", () => {
   const NEE = {
     outcome: "session" as const, accessToken: JETON, refreshToken: JETON,
     expiresIn: 900, isNewAccount: true as const, signupCredits: 5,
+    /* Une inscription EST une ouverture de session : même forme, mêmes champs.
+       Les faire diverger obligerait le client à distinguer deux choses qui n'en
+       sont qu'une — et c'est ce qui a cassé le portage mobile. */
+    sessionId: "3f2504e0-4f89-11d3-9a0c-0305e82c3301", deletionPendingUntil: null,
     /* La liste d'attente : un TROISIÈME geste, distinct des deux autres. NUL
        quand la personne n'attendait pas — jamais zéro : un zéro se lirait comme
        un bonus qui n'a rien donné, là où il n'y a pas eu de geste du tout. */

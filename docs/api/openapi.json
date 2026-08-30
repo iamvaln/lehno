@@ -2776,6 +2776,15 @@
                         },
                         "isNewAccount": {
                           "type": "boolean"
+                        },
+                        "deletionPendingUntil": {
+                          "type": "string",
+                          "nullable": true,
+                          "default": null
+                        },
+                        "sessionId": {
+                          "type": "string",
+                          "format": "uuid"
                         }
                       },
                       "required": [
@@ -2783,7 +2792,8 @@
                         "accessToken",
                         "refreshToken",
                         "expiresIn",
-                        "isNewAccount"
+                        "isNewAccount",
+                        "sessionId"
                       ],
                       "additionalProperties": false
                     },
@@ -3096,6 +3106,16 @@
                         true
                       ]
                     },
+                    "sessionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "deletionPendingUntil": {
+                      "enum": [
+                        "null"
+                      ],
+                      "nullable": true
+                    },
                     "signupCredits": {
                       "type": "integer",
                       "minimum": 0
@@ -3141,6 +3161,8 @@
                     "refreshToken",
                     "expiresIn",
                     "isNewAccount",
+                    "sessionId",
+                    "deletionPendingUntil",
                     "signupCredits",
                     "waitlistBonus",
                     "referral"
@@ -3418,6 +3440,15 @@
                         },
                         "isNewAccount": {
                           "type": "boolean"
+                        },
+                        "deletionPendingUntil": {
+                          "type": "string",
+                          "nullable": true,
+                          "default": null
+                        },
+                        "sessionId": {
+                          "type": "string",
+                          "format": "uuid"
                         }
                       },
                       "required": [
@@ -3425,7 +3456,8 @@
                         "accessToken",
                         "refreshToken",
                         "expiresIn",
-                        "isNewAccount"
+                        "isNewAccount",
+                        "sessionId"
                       ],
                       "additionalProperties": false
                     },
@@ -3710,13 +3742,23 @@
                     },
                     "isNewAccount": {
                       "type": "boolean"
+                    },
+                    "deletionPendingUntil": {
+                      "type": "string",
+                      "nullable": true,
+                      "default": null
+                    },
+                    "sessionId": {
+                      "type": "string",
+                      "format": "uuid"
                     }
                   },
                   "required": [
                     "accessToken",
                     "refreshToken",
                     "expiresIn",
-                    "isNewAccount"
+                    "isNewAccount",
+                    "sessionId"
                   ],
                   "additionalProperties": false
                 }
@@ -21688,6 +21730,10 @@
                     "type": "string",
                     "minLength": 6,
                     "maxLength": 20
+                  },
+                  "channelId": {
+                    "type": "string",
+                    "format": "uuid"
                   },
                   "providerRef": {
                     "type": "string",

@@ -2053,6 +2053,22 @@ model PaymentMethod {
   providerRef              String?           @map("provider_ref")
   msisdn                   String?
   kind                     PaymentMethodKind
+  /**
+   * L'opérateur, RÉSOLU DEPUIS LE CANAL, jamais saisi.
+   *
+   * C'est la clé de « un seul numéro par opérateur ». Elle ne pouvait pas être
+   * `brand` : celui-ci est du texte libre, et « MTN » comme « MTN MoMo »
+   * auraient fait deux méthodes pour un même opérateur sans que la règle ne
+   * voie rien.
+   *
+   * Nul sur une CARTE, et seulement là : une carte ne passe pas par un canal
+   * d'opérateur, son réseau vient du prestataire. C'est la seule raison pour
+   * laquelle l'index unique est partiel — et c'est une règle du modèle, pas une
+   * commodité de reprise.
+   */
+  operator                 String?           @db.VarChar(40)
+  /// Le réseau de la carte, rendu par le prestataire. Jamais l'opérateur d'un
+  /// compte mobile money : celui-là vient du canal.
   brand                    String?           @db.VarChar(40)
   last4                    String?           @db.VarChar(4)
   expiresAt                DateTime?         @map("expires_at") @db.Date

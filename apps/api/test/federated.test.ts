@@ -118,14 +118,40 @@ describe("identités externes", () => {
       .rejects.toMatchObject({ code: "account_suspended" });
   });
 
-  it("un compte en cours de suppression ne reçoit jamais de jetons, même par une identité déjà liée", async () => {
+  /* Un compte en cours de suppression OUVRE une session par cette voie aussi.
+   *
+   * La refuser ici laisserait sans recours quiconque s'est inscrit par Google
+   * ou Apple : le délai de grâce ne protégerait alors que de notre lenteur, et
+   * seul un administrateur pourrait rétablir le compte.
+   *
+   * La session ouverte n'ouvre qu'une porte — la garde le tient, éprouvé dans
+   * `compte-annulation`. Et l'échéance voyage avec, sans quoi l'écran
+   * afficherait son accueil habituel dont tout échouerait en 403. */
+  it("un compte en cours de suppression ouvre une session, qui dit jusqu'à quand", async () => {
     await db.prisma.federatedIdentity.create({
       data: { userId, provider: "google", providerUserId: "g-1" },
     });
-    await db.prisma.user.update({ where: { id: userId }, data: { status: "pending_deletion" } });
+    await db.prisma.user.update({
+      where: { id: userId },
+      data: { status: "pending_deletion", deletionRequestedAt: new Date() },
+    });
+    const svc = build(verifier({ providerUserId: "g-1", email: "awa@example.com", emailVerified: true }));
+    const issue = await svc.signIn({ provider: "google", idToken: "x" });
+
+    expect(issue.outcome).toBe("session");
+    expect((issue as { deletionPendingUntil: string | null }).deletionPendingUntil).toBeTruthy();
+  });
+
+  // Un compte SUSPENDU, lui, n'a rien à faire dans l'application : la liste des
+  // états admis ne le porte pas, et un état ajouté demain arrivera dehors.
+  it("un compte suspendu ne reçoit jamais de jetons", async () => {
+    await db.prisma.federatedIdentity.create({
+      data: { userId, provider: "google", providerUserId: "g-1" },
+    });
+    await db.prisma.user.update({ where: { id: userId }, data: { status: "suspended" } });
     const svc = build(verifier({ providerUserId: "g-1", email: "awa@example.com", emailVerified: true }));
     await expect(svc.signIn({ provider: "google", idToken: "x" }))
-      .rejects.toMatchObject({ code: "account_pending_deletion" });
+      .rejects.toMatchObject({ code: "account_suspended" });
   });
 
   // Revue tour 1, point 4 : ni succès ni échec ne laissaient de trace sur

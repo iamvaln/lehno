@@ -86,6 +86,8 @@ export class NoteService {
       ? await this.prisma.category.findMany({ where: { code: { in: codes } } })
       : [];
 
+    await this.verifierLOccurrence(userId, personId, input.eventOccurrenceId);
+
     const ligne = await this.prisma.note.create({
       data: {
         personId,
@@ -107,6 +109,33 @@ export class NoteService {
   // vérification préalable, la première note partirait puis on découvrirait
   // que la seconde n'est pas permise : l'appelant recevrait une erreur en
   // croyant que rien n'a été écrit, alors qu'une note serait déjà posée sur
+
+  /* L'occurrence citée doit être CELLE DE CE PROCHE.
+   *
+   * `depot.occurrences(userId)` garantit qu'elle appartient au compte, pas
+   * qu'elle appartient à cette personne-là. Sans ce contrôle, une note se
+   * rattachait à la date de quelqu'un d'autre du même carnet — et ressortait en
+   * ouvrant cette occasion, mêlée à celles qui la concernent vraiment.
+   *
+   * Le commentaire de `listForOccurrence` promet précisément cette
+   * cohérence — « une note de circonstance appartient à un événement, qui
+   * appartient à un proche » — et rien ne la tenait.
+   */
+  private async verifierLOccurrence(
+    userId: string, personId: string, occurrenceId: string | undefined,
+  ): Promise<void> {
+    if (occurrenceId === undefined) return;
+    const occurrence = await this.depot.occurrences(userId).findOrThrow(occurrenceId);
+    const evenement = await this.prisma.event.findUnique({
+      where: { id: occurrence.eventId }, select: { personId: true },
+    });
+    /* 404 et non 403 : l'occasion d'un autre proche du même carnet existe bel
+       et bien, et le dire distinguerait « pas la vôtre » de « n'existe pas ».
+       C'est la règle du dépôt pour tout ce qui se désigne par identifiant. */
+    if (evenement?.personId !== personId)
+      throw new AppError("not_found", "resource not found");
+  }
+
   // la fiche de quelqu'un d'autre.
   async createForMany(userId: string, input: CreateNotesInput): Promise<Note[]> {
     // Dédoublonnés : le même proche cité deux fois ne mérite pas deux notes
@@ -122,6 +151,11 @@ export class NoteService {
       // identifiant d'autrui rendent donc la même chose.
       throw new AppError("not_found", "resource not found");
     }
+
+    /* Le contrat refuse déjà une occurrence avec plus d'un proche : il ne
+       reste donc ici qu'un seul destinataire possible quand elle est citée. */
+    if (input.eventOccurrenceId !== undefined && ids[0] !== undefined)
+      await this.verifierLOccurrence(userId, ids[0], input.eventOccurrenceId);
 
     const codes = classer(input.content);
     const categories = codes.length

@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import type { Locale } from "@lehno/i18n";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
+import { delaiDeGraceEnJours } from "../common/delai-de-grace.js";
 import { RateLimitService } from "../common/rate-limit.service.js";
 import { TrackingService } from "../tracking/tracking.service.js";
 import { assertUsableEmail, canonicalEmail } from "../common/email.js";
@@ -34,6 +35,13 @@ type VerifyInput = {
  * du dehors. Une fois la ligne vidée, l'adresse ne se trouve plus du tout — et
  * le chemin d'inscription reprend, comme pour une adresse inconnue. C'est ce
  * que l'effacement doit produire. */
+/* Ce qui ouvre une session. Une liste, et non une exclusion : un statut ajouté
+   demain arrive fermé tant que personne ne l'a inscrit ici. C'est le seul sens
+   dans lequel un oubli soit sans danger — l'énumération des refus en avait
+   oublié un, `deleted`, qui ouvrait donc une session sur un compte marqué
+   effacé jusqu'au passage de nuit. */
+export const STATUTS_ADMIS = new Set(["active", "pending_deletion"]);
+
 export function refusDe(statut: string): AppError {
   if (statut === "suspended") return new AppError("account_suspended", "account suspended");
   return new AppError("account_pending_deletion", "account is being deleted");
@@ -194,6 +202,8 @@ export class AuthService {
       outcome: "session" as const,
       ...pair,
       isNewAccount: true as const,
+      // Un compte qui vient de naître n'est jamais en cours de suppression.
+      deletionPendingUntil: null,
       signupCredits: creation.creditsOfferts,
       // Nul quand la personne n'attendait pas, ou quand le cadeau vaut zéro :
       // dans les deux cas l'écran ne doit rien annoncer.
@@ -283,14 +293,23 @@ export class AuthService {
       user = await this.prisma.user.update({ where: { id: user.id }, data: { emailVerified: true } });
     }
 
-    /* REFUS PAR DÉFAUT : seul `active` passe.
+    /* REFUS PAR DÉFAUT : la liste de CE QUI PASSE, jamais de ce qui bloque.
      *
      * L'énumération listait trois refus et en oubliait un — `deleted`, qui
      * ouvrait donc une session sur un compte marqué effacé, jusqu'au passage de
      * nuit qui le vide. Écrit ainsi, un état ajouté demain sera refusé tant que
      * personne n'aura décidé de l'admettre. C'est l'inverse de ce qui vient
      * d'arriver, et c'est le seul sens dans lequel un oubli soit sans danger. */
-    if (user.status !== "active") {
+    /* `pending_deletion` entre — et n'entre nulle part.
+     *
+     * Le délai de grâce ne protégeait que de NOTRE lenteur : la personne qui
+     * changeait d'avis ne pouvait pas se connecter, et rien ne lui offrait
+     * d'annuler. Seul un administrateur pouvait la rétablir. Le délai existe
+     * pourtant pour le regret, pas pour nous.
+     *
+     * Elle ouvre donc une session, et la garde ne lui laisse qu'un chemin :
+     * revenir sur sa décision. Voir `OuvertEnSuppression`. */
+    if (!STATUTS_ADMIS.has(user.status)) {
       await this.recordAttempt(input, user.id, "failure");
       throw refusDe(user.status);
     }
@@ -305,6 +324,23 @@ export class AuthService {
        incalculable, c'est-à-dire la moitié de ce pour quoi le plan existe. */
     this.mesure.emettre(user.id, "signin.completed", { method: "code" });
 
-    return { outcome: "session" as const, ...pair, isNewAccount };
+    /* La date d'effacement voyage avec la session, plutôt que par un second
+       appel : c'est la seule information dont la personne a besoin pour
+       décider, et la lui faire redemander la retarderait au pire moment. */
+    return {
+      outcome: "session" as const, ...pair, isNewAccount,
+      deletionPendingUntil: await this.echeanceDeSuppression(user),
+    };
+  }
+
+  /* Nulle dans le cas ordinaire. C'est ce qui dit au client d'ouvrir l'écran
+     unique plutôt que son accueil habituel : un accueil dont tout échoue en 403
+     se lit comme une panne, pas comme un état. */
+  private async echeanceDeSuppression(
+    user: { status: string; deletionRequestedAt: Date | null },
+  ): Promise<string | null> {
+    if (user.status !== "pending_deletion" || user.deletionRequestedAt === null) return null;
+    const jours = await delaiDeGraceEnJours(this.prisma);
+    return new Date(user.deletionRequestedAt.getTime() + jours * 86_400_000).toISOString();
   }
 }

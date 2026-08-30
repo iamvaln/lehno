@@ -65,8 +65,8 @@ export class SecurityService {
 
   // Voir TokenService.revokeAllForUser pour la décision sur l'appareil
   // courant : il tombe aussi, faute de moyen de le distinguer des autres.
-  logoutEverywhere(userId: string): Promise<void> {
-    return this.tokens.revokeAllForUser(userId);
+  logoutEverywhere(userId: string, sauf: string | null): Promise<void> {
+    return this.tokens.revokeAllForUser(userId, sauf);
   }
 
   // Les moyens de connexion EXTERNES seulement (§3.24) : la connexion par

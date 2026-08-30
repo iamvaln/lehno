@@ -257,3 +257,22 @@ export const createFeedbackSchema = z.object({
 );
 
 export type CreateFeedbackInput = z.infer<typeof createFeedbackSchema>;
+
+/* CE QUE REND L'ANNULATION d'une suppression.
+ *
+ * On rend l'état rétabli plutôt qu'un 204 : la personne vient de faire un geste
+ * dont elle doute, et l'écran doit pouvoir lui confirmer que son compte est
+ * revenu — pas seulement que la requête a abouti.
+ *
+ * `refundCancelled` dit si une demande de remboursement en attente a été
+ * annulée avec. Elle l'est forcément quand il y en avait une : rembourser un
+ * compte vivant reviendrait à lui reprendre des crédits qu'il peut encore
+ * dépenser. Mais l'écran doit pouvoir le DIRE — quelqu'un qui a demandé son
+ * argent et revient sur sa décision doit savoir que l'argent ne partira pas.
+ */
+export const deletionCancelledSchema = z.object({
+  status: z.literal("active"),
+  refundCancelled: z.boolean(),
+}).strict();
+
+export type DeletionCancelled = z.infer<typeof deletionCancelledSchema>;

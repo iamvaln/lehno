@@ -21,9 +21,26 @@ describe("sessions", () => {
     userId = u.id;
   });
 
-  it("le jeton d'accès porte le compte et se vérifie", async () => {
+  /* Le jeton porte le compte ET LA LIGNÉE.
+   *
+   * Sans `sid`, le serveur savait QUI l'appelait mais pas LAQUELLE de ses
+   * sessions — c'est pour ça que « déconnecter les autres appareils » les
+   * déconnectait toutes, celle qui appelle comprise : il ne pouvait pas
+   * l'épargner, faute de la reconnaître. */
+  it("le jeton d'accès porte le compte et sa lignée, et se vérifie", async () => {
     const pair = await tokens.issuePair(userId);
-    expect(tokens.verifyAccess(pair.accessToken)).toEqual({ userId });
+    expect(tokens.verifyAccess(pair.accessToken)).toEqual({
+      userId, sessionId: pair.sessionId,
+    });
+  });
+
+  /* La lignée traverse les renouvellements : c'est ce qui la distingue du jeton
+     du moment. Sans cette propriété, une application qui rafraîchit croirait
+     avoir changé de session. */
+  it("la lignée survit au renouvellement", async () => {
+    const pair = await tokens.issuePair(userId);
+    const suivant = await tokens.rotate(pair.refreshToken);
+    expect(suivant.sessionId).toBe(pair.sessionId);
   });
 
   it("le jeton de rafraîchissement n'est jamais stocké en clair", async () => {
