@@ -19,7 +19,8 @@ import { ecranEteint } from "./navigation.js";
    rangs. */
 export type RouteDeReglage =
   | "/(app)/profil" | "/(app)/securite" | "/(app)/rappels"
-  | "/(app)/donnees" | "/(app)/aide" | "/(app)/recharge" | null;
+  | "/(app)/donnees" | "/(app)/aide" | "/(app)/recharge" | "/(app)/paiement"
+  | null;
 
 export interface Rang {
   cle: string;
@@ -53,7 +54,7 @@ const PLAN: readonly { cle: Section["cle"]; rangs: readonly Rang[] }[] = [
          
          Ce qui reste ici règle COMMENT ON PAIE, pas ce qu'on possède. */
       // Les méthodes enregistrées n'ont de sens qu'avec le paiement automatique.
-      { cle: "paiement", icone: "credit-card", drapeau: "topup.provider", route: null },
+      { cle: "paiement", icone: "credit-card", drapeau: "topup.provider", route: "/(app)/paiement" },
     ],
   },
   {

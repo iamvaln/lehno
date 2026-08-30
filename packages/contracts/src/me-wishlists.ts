@@ -58,6 +58,11 @@ export const ownerWishSchema = z.object({
 
 export type OwnerWish = z.infer<typeof ownerWishSchema>;
 
+// Même raison que `wishlistListSchema` : une liste servie nue se relit chez
+// chaque appelant, et le mobile n'a pas de quoi la décrire.
+export const ownerWishListSchema = z.array(ownerWishSchema);
+export type OwnerWishList = z.infer<typeof ownerWishListSchema>;
+
 export const createOwnerWishSchema = prixEtDevise(z.object({
   label: z.string().trim().min(1).max(200),
   link: z.string().url().max(2048).optional(),

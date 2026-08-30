@@ -20,8 +20,20 @@ export type PaymentMethodKind = (typeof PAYMENT_METHOD_KINDS)[number];
 export const paymentMethodSchema = z.object({
   id: z.string().uuid(),
   kind: z.enum(PAYMENT_METHOD_KINDS),
-  // L'opérateur (« MTN MoMo », « Orange Money ») ou le réseau de la carte.
+  // Le réseau de la carte, tel que le prestataire le nomme. Nul sur un compte
+  // mobile money depuis que l'opérateur vient du canal : voir `operator`.
   brand: z.string().nullable(),
+  /* L'OPÉRATEUR, tel que le canal l'a nommé à l'enregistrement.
+   *
+   * Il ne s'agit pas d'un doublon de `brand` : celui-ci est saisi côté carte,
+   * celui-là est la clef par laquelle le serveur reconnaît « le numéro que
+   * cette personne a chez cet opérateur ». Elle n'en a qu'UN, et un nouvel
+   * enregistrement chez le même opérateur REMPLACE le précédent.
+   *
+   * Sans lui servi, le client ne peut pas prévenir : il montrerait « Ajouter »
+   * là où le geste efface un numéro et remet à zéro le délai de remboursement.
+   * Il l'apprendrait après coup, sur la seule liste qui a changé. */
+  operator: z.string().nullable(),
   last4: z.string().regex(/^\d{4}$/).nullable(),
   expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   // Détermine la méthode proposée par défaut à l'achat : la plus récente.
@@ -33,6 +45,17 @@ export const paymentMethodSchema = z.object({
 }).strict();
 
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
+
+/* La liste, NOMMÉE. Le contrôleur rendait `{ paymentMethods: [...] }` sans que
+ * rien ne le décrive : chaque appelant refaisait alors la sienne, et le mobile
+ * n'embarque pas zod — il ne PEUT pas se la refaire. C'est le onzième tableau
+ * du même motif, et c'est la raison d'être d'un contrat commun : une réponse
+ * qui n'a pas de nom n'a pas de forme. */
+export const paymentMethodListSchema = z.object({
+  paymentMethods: z.array(paymentMethodSchema),
+}).strict();
+
+export type PaymentMethodList = z.infer<typeof paymentMethodListSchema>;
 
 /* Un compte mobile money s'identifie par son numéro ; une carte par la
    référence opaque que le prestataire rend. L'un n'a jamais l'autre. */

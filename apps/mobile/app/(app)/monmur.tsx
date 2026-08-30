@@ -141,14 +141,27 @@ export default function MonMur() {
             actif={mur.isEnabled}
             onBascule={(v) => void regle({ isEnabled: v }, () => undefined)}
           />
+          {/* L'APERÇU se lit toujours, même Mur éteint : c'est justement
+              avant de publier qu'on veut savoir ce qu'on s'apprête à ouvrir. */}
+          <Button
+            full
+            variant="outline"
+            icon="eye"
+            onPress={() => routeur.push("/(app)/apercu")}
+          >
+            {t.murPrivApercu}
+          </Button>
+          {/* LE PARTAGE, LUI, ATTEND LA PUBLICATION : `publicUrl` existe même
+              éteint — c'est l'adresse qu'il AURA — et la faire circuler avant
+              que la page ne réponde enverrait des gens sur un refus. */}
           {peutPartager(mur) ? (
             <Button
               full
-              variant="outline"
+              variant="text"
               icon="send"
               onPress={() => void Share.share({ message: mur.publicUrl })}
             >
-              {t.murPrivVoir}
+              {t.moiPartager}
             </Button>
           ) : null}
         </View>
@@ -178,23 +191,31 @@ export default function MonMur() {
           ) : null}
         </View>
 
-        {/* PAS DE MOTS ICI, ET C'EST LE CONTRAT QUI LE DIT.
+        {/* L'ÉPINGLAGE SE FAIT ICI — MAIS LE CONTRAT NE LE SERT PAS ENCORE.
      
-            J'avais posé « Épingler » et « Détacher » en croyant que
-            `approved` / `rejected` réglait la visibilité. C'est faux, et deux
-            fois.
+            Deux corrections successives m'ont amené là, et la seconde annule à
+            moitié la première.
      
-            D'abord parce que « LE MUR N'A PAS DE LIVRE D'OR » : le dictionnaire
-            porte `is_public` et `show_author` en les disant INACTIFS, et le
-            contrat les garde dehors précisément pour qu'on ne les rende pas
-            vivants — « un client les afficherait, puis quelqu'un les
-            câblerait ». C'est exactement ce que je faisais.
+            J'avais posé « Épingler » en croyant que `approved` / `rejected`
+            réglait la visibilité. C'est faux : retenir veut dire qu'on
+            CONSIDÈRE un cadeau pour l'achat, épingler qu'on garde un mot
+            VISIBLE. Deux gestes sous des mots voisins, et le second n'a rien à
+            faire dans le sas de §3.8.
      
-            Ensuite parce que retenir n'est pas afficher. Épingler garde un mot
-            VISIBLE ; retenir veut dire qu'on CONSIDÈRE un cadeau pour l'achat.
-            Deux gestes différents sous des mots voisins, et le sas de §3.8 est
-            le seul endroit où le second se pose — avec « Retenir » et
-            « Écarter », qui le disent sans ambiguïté. */}
+            Mais j'en avais tiré que l'épinglage n'existait pas. Le handoff du
+            30 août dit l'inverse, et tranche une contradiction de la spec —
+            §3.4 « ne s'affichent jamais », §3.5 « le propriétaire décide » :
+            « PRIVÉ PAR DÉFAUT, ÉPINGLABLE UN PAR UN. Rien ne paraît tout seul ;
+            le propriétaire choisit, geste par geste, DEPUIS MonMurScreen. » La
+            page n'est pas un livre d'or parce que l'épinglage est SÉLECTIF, pas
+            parce qu'il n'existe pas.
+     
+            Ce qui manque est donc au CONTRAT : `receivedWishSchema` porte
+            `is_public` et `show_author` « en les disant inactifs », gardés
+            dehors, et aucune route ne les bascule. `publicWallSchema` n'a pas
+            non plus de mots épinglés, que `WallPage` attend en `epingles`.
+     
+            Le geste revient ici le jour où ces trois manques sont comblés. */}
       </ScrollView>
 
       {accuse ? (

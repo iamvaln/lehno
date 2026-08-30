@@ -24,6 +24,9 @@ export const fr = {
   connexionPiedConf: "politique de confidentialité",
   connexionPiedApres: ".",
   retour: "Retour",
+  annuler: "Annuler",
+  introuvableTitre: "Cette page n'est pas là",
+  introuvableTexte: "Elle n'existe pas, ou plus.",
   codeTitre: "Votre code est parti",
   codeTexte: "Regardez votre boîte de réception.",
   codeValidite: (duree: string) => "Encore " + duree + " pour le saisir.",
@@ -282,6 +285,15 @@ export const fr = {
   securiteSupprimer: "Supprimer mon compte",
   securiteSupprimerAide: "Vos fiches, vos notes et votre Mur partent avec.",
   securiteInhabituelle: "Une connexion inhabituelle a été détectée le 12 août.",
+  paiementTitre: "Vos méthodes de paiement",
+  paiementOperateur: "L'opérateur",
+  paiementRemboursable: "Remboursement possible",
+  paiementRetirer: "Retirer",
+  paiementRetraitTitre: "Retirer cette méthode ?",
+  paiementRetraitTexte: "Elle quitte votre compte. Vos paiements passés restent dans vos mouvements.",
+  paiementRetraitDerniere: "C'est aujourd'hui la seule qui puisse recevoir un remboursement.",
+  paiementRetraitDelai: "Une méthode réenregistrée repart de zéro : il lui faudra de nouveau attendre le délai et servir à un paiement avant de pouvoir en recevoir un.",
+  paiementRetire: "Méthode retirée.",
   paiementAucuneTitre: "Aucune méthode enregistrée",
   paiementAucuneTexte: "Elle s'enregistrera d'elle-même au premier achat.",
   paiementAjouter: "Ajouter une méthode",
@@ -293,6 +305,10 @@ export const fr = {
   paiementCarteExp: "Expire",
   paiementParDefaut: "En faire ma méthode par défaut",
   paiementAjoutFait: "Méthode enregistrée.",
+  paiementRemplacer: "Remplacer le numéro",
+  paiementRemplaceTitre: "Un numéro par opérateur",
+  paiementRemplace: (fin: string) => "Le numéro finissant par " + fin + " sera remplacé. Le nouveau devra de nouveau attendre le délai et servir à un paiement avant de pouvoir recevoir un remboursement.",
+  paiementRemplaceFait: "Numéro remplacé.",
   aideQuestions: "Questions fréquentes",
   aideContact: "Nous écrire",
   aideNoter: "Noter l'application",
@@ -621,6 +637,10 @@ export const fr = {
 
   /* ─── Centre de notifications (3.13) ─── */
   notifsTitre: "Ce que Lehno signale",
+  notifsCloche: (n: number) =>
+    n === 0 ? "Ce que Lehno signale"
+      : n === 1 ? "Ce que Lehno signale — 1 non lue"
+      : "Ce que Lehno signale — " + n + " non lues",
   notifsToutLu: "Tout marquer comme lu",
   notifsAujourdhui: "Aujourd'hui",
   notifsAvant: "Avant",

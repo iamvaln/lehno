@@ -10,15 +10,27 @@ describe("les méthodes de paiement", () => {
   const MOBILE = {
     id: ID,
     kind: "mobile_money" as const,
-    brand: "MTN MoMo",
+    brand: null,
+    operator: "MTN",
     last4: "4417",
     expiresAt: null,
     lastUsedAt: "2026-08-01T10:00:00.000Z",
     refundEligible: true,
   };
 
+  /* L'OPÉRATEUR SE LIT SUR `operator`, plus sur `brand`. Depuis que le canal le
+     porte, `brand` est refusé à l'enregistrement d'un mobile money et reste
+     donc nul : un écran qui l'afficherait ne montrerait que quatre chiffres
+     sans dire de qui — et c'est ce qu'on relit pour reconnaître son numéro.
+
+     C'est aussi la clef par laquelle le serveur reconnaît « le numéro de cette
+     personne chez cet opérateur » : elle n'en a qu'UN, et enregistrer chez le
+     même opérateur REMPLACE. Sans elle servie, le client montrerait « Ajouter »
+     là où le geste efface. */
   it("s'affiche par son opérateur et ses quatre derniers chiffres", () => {
-    expect(paymentMethodSchema.parse(MOBILE).brand).toBe("MTN MoMo");
+    const lu = paymentMethodSchema.parse(MOBILE);
+    expect(lu.operator).toBe("MTN");
+    expect(lu.last4).toBe("4417");
   });
 
   /* Le numéro mobile money est chiffré au repos, déchiffré pour la seule

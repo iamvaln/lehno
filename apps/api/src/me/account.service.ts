@@ -147,6 +147,7 @@ export class AccountService {
         id: m.id,
         kind: m.kind,
         brand: m.brand,
+        operator: m.operator,
         last4: m.last4,
         expiresAt: m.expiresAt ? m.expiresAt.toISOString().slice(0, 10) : null,
         lastUsedAt: m.lastUsedAt ? m.lastUsedAt.toISOString() : null,
