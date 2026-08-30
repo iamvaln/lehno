@@ -158,7 +158,13 @@ export default function Listes() {
         {listes.length ? (
           listesRangees(listes).map((l) => (
             <Card key={l.id} surface="panel" padding={15} radius="lg" style={styles.carte}>
-              <View style={styles.entete}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => routeur.push({
+                  pathname: "/(app)/souhaits", params: { id: l.id },
+                })}
+                style={styles.entete}
+              >
                 <View style={styles.pleine}>
                   <Text style={[styles.titre, { color: couleurs.textBody }]} numberOfLines={1}>
                     {libelleDeLEcheance(
@@ -170,7 +176,8 @@ export default function Listes() {
                   </Text>
                 </View>
                 {l.isArchived ? <Tag tone="quiet">{t.listeArchivee}</Tag> : null}
-              </View>
+                <Icon name="chevron-right" size={15} color={couleurs.textMention} />
+              </Pressable>
 
               {/* COMBIEN, jamais LESQUELS ni PAR QUI : savoir qui a réservé quoi
                   gâcherait la surprise qu'on prépare. */}
