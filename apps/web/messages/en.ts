@@ -216,4 +216,21 @@ export const en: typeof fr = {
   etatIndisponibleTexte: "It is not you: we could not reach the service. Try again in a moment.",
   etatRetour: "Go to the home page",
 
+
+  // ——— Le dépôt de vœux ————————————————————————————————————————
+  voeuxTitre: "A word for {nom}",
+  voeuxOccasion: "For {date}",
+  voeuxOuvertJusqu: "Words close on {date}.",
+  voeuxAvantOuverture: "Words open on {date}.",
+  voeuxApresFermeture: "Words closed on {date}.",
+  voeuxRevenir: "Come back then — the link stays the same.",
+  voeuxLabelMessage: "Your word",
+  voeuxAideMessage: "It will be read on the day, exactly as you write it.",
+  voeuxLabelSignature: "Signature",
+  voeuxAideSignature: "Optional. Without it, your word arrives anonymous.",
+  voeuxEnvoyer: "Send my word",
+  voeuxConfirme: "Sent. Your word will be waiting.",
+  voeuxErreur: "Your word did not go through. Try again in a moment.",
+  voeuxFermeErreur: "Words have just closed. Your text was not sent.",
+
 };

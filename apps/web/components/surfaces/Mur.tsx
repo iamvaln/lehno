@@ -4,18 +4,7 @@ import type { Langue } from "../../lib/langues.js";
 import type { Messages } from "../../messages/index.js";
 import { PublicShell } from "../PublicShell.js";
 import { Avatar, Tag } from "../ui/index.js";
-
-/** Le jour et le mois, dans la langue de lecture. L'année n'est pas rendue par
- *  le serveur : le Mur annonce un anniversaire, pas une date de naissance. */
-function jourEtMois(mmjj: string, langue: Langue): string {
-  const [mois, jour] = mmjj.split("-").map(Number);
-  // Une année quelconque, jamais affichée : elle ne sert qu'à composer une date
-  // valide pour la mise en forme. 2000 est bissextile — un 29 février existe.
-  const date = new Date(Date.UTC(2000, (mois ?? 1) - 1, jour ?? 1));
-  return new Intl.DateTimeFormat(langue === "en" ? "en-GB" : "fr-FR", {
-    day: "numeric", month: "long", timeZone: "UTC",
-  }).format(date);
-}
+import { jourEtMois } from "../../lib/dates.js";
 
 /**
  * Le Mur — la page publique d'un utilisateur.
