@@ -215,7 +215,11 @@ export default function Moi() {
             <Card surface="panel" padding={13} radius="lg" style={styles.carte}>
               <View style={styles.ligne}>
                 <Icon name="gift" size={17} color={couleurs.textMention} />
-                <View style={styles.pleine}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => routeur.push("/(app)/listes")}
+                  style={styles.pleine}
+                >
                   <Text style={[styles.surfaceTitre, { color: couleurs.textBody }]}>
                     {t.moiListes}
                   </Text>
@@ -223,7 +227,7 @@ export default function Moi() {
                     {listes === 0 ? t.moiListesAucune
                       : listes === 1 ? t.moiListesUne : t.moiListesN(listes)}
                   </Text>
-                </View>
+                </Pressable>
               </View>
             </Card>
           ) : null}
