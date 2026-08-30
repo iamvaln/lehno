@@ -29,6 +29,13 @@ import {
  * Les cartes déjà enregistrées se LISENT quand même dans la liste : elles
  * existent, elles servent, et une carte absente de l'écran ne se retirerait
  * plus. On sait donc en montrer une sans savoir en créer une.
+ *
+ * ET LA COPIE DU FORMULAIRE EST SUPPRIMÉE, pas seulement inemployée. « Le
+ * numéro de carte », « Expire », « Carte bancaire » : tant qu'elles existaient,
+ * elles se traduisaient, se relisaient, et pouvaient se retrouver posées sur un
+ * écran par quelqu'un qui les croyait prévues. Un formulaire de carte
+ * promettrait un moyen de payer qui n'existe pas — `topup.provider` est éteint,
+ * et aucun prestataire n'est intégré.
  */
 export const SORTE_AJOUTABLE = "mobile_money" as const;
 
