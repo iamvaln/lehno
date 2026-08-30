@@ -8,7 +8,7 @@ import { AppExceptionFilter } from "../src/common/errors.js";
 import { AmorceStudioService } from "../src/studio/amorce.service.js";
 import { StudioConfigurationService } from "../src/studio/configuration.service.js";
 import {
-  ORIENTATIONS, studioOptionsSchema, reglagesMessageDeDepart, reglagesPortraitDeDepart,
+  ORIENTATIONS, studioOptionsSchema, reglagesPortraitDeDepart,
   type ReglagesPortrait,
 } from "@lehno/contracts";
 

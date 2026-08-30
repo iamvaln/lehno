@@ -115,6 +115,43 @@ describe("l'empreinte de la partie lue par le modèle", () => {
   });
 });
 
+/* LES DEUX EMPREINTES SONT INDÉPENDANTES — c'est tout l'objet du découpage.
+ *
+ * Avant lui, une seule empreinte couvrait les deux natures : reformuler un
+ * garde-fou du message faisait retomber les essais du portrait, et modifier un
+ * style de dessin faisait retomber ceux du message. Chaque réglage rendait
+ * l'autre à éprouver alors qu'il n'avait pas bougé. */
+describe("l'empreinte du portrait", () => {
+  const depart = reglagesPortraitDeDepart();
+  const empreinte = (r: ReglagesPortrait): string => matierePourEmpreintePortrait(r);
+
+  it("bouge quand on change la consigne d'une ambiance", () => {
+    const apres = modifierPortrait((r) => { r.ambiances[0]!.consigne.fr = "Tout autre chose"; });
+    expect(empreinte(apres)).not.toBe(empreinte(depart));
+  });
+
+  // Le libellé est lu par l'ÉCRAN, pas par le modèle : le renommer ne doit pas
+  // redemander un essai.
+  it("ne bouge pas quand on renomme une ambiance", () => {
+    const apres = modifierPortrait((r) => { r.ambiances[0]!.libelle.fr = "Un autre nom"; });
+    expect(empreinte(apres)).toBe(empreinte(depart));
+  });
+
+  /* LA propriété du découpage : rien de ce qui touche au message ne doit
+     déplacer l'empreinte du portrait. Sans ce cas, on pourrait refondre les
+     deux en un seul objet sans qu'aucun test ne tombe. */
+  it("ignore tout ce qui appartient au message", () => {
+    const m = reglagesMessageDeDepart();
+    const melange = { ...m, ...depart } as ReglagesPortrait;
+    expect(empreinte(melange)).toBe(empreinte(depart));
+  });
+
+  it("bouge quand on change le modèle d'illustration", () => {
+    const apres = modifierPortrait((r) => { r.modeles.illustration = "openai:gpt-image-1"; });
+    expect(empreinte(apres)).not.toBe(empreinte(depart));
+  });
+});
+
 describe("le catalogue servi à l'application", () => {
   it("rend les douze orientations dans l'ordre de l'écran", () => {
     const c = catalogueServi(reglagesMessageDeDepart(), reglagesPortraitDeDepart(), "fr");
