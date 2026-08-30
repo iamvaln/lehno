@@ -147,9 +147,7 @@ export default function MonMur() {
             full
             variant="outline"
             icon="eye"
-            onPress={() => routeur.push({
-              pathname: "/(app)/apercu", params: { url: mur.publicUrl },
-            })}
+            onPress={() => routeur.push("/(app)/apercu")}
           >
             {t.murPrivApercu}
           </Button>

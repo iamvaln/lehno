@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { publicWallSchema, type PublicWall } from "@lehno/contracts";
+import { useRouter } from "expo-router";
+import {
+  publicWallSchema, wallSchema, type PublicWall,
+} from "@lehno/contracts";
 import {
   nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
@@ -33,21 +35,36 @@ import { accepteDesVoeux, anniversaireSansAnnee, pageVide } from "../../lib/aper
  * donc l'INVENTAIRE de ce qui est exposé, pas une imitation de la mise en page.
  *
  * Pour voir la page telle qu'elle est, il y a son adresse — c'est elle qui dit
- * la vérité, et non une copie qu'on tiendrait à jour à la main.
+ * la vérité, et non une copie qu'on tiendrait à jour à la main. Cette adresse
+ * se relit sur le serveur, jamais dans un paramètre de route : voir plus bas.
  */
 export default function Apercu() {
   const { t, langue } = useLangue();
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
-  const { url } = useLocalSearchParams<{ url?: string }>();
-
+  /* L'ADRESSE VIENT DU SERVEUR, JAMAIS DE LA NAVIGATION.
+     
+     Elle arrivait en paramètre de route, et c'était une faille : les routes
+     d'expo-router s'atteignent par LIEN PROFOND, donc n'importe qui pouvait
+     ouvrir `…/apercu?url=<ce qu'il veut>` et faire ouvrir cette adresse par
+     l'application — hameçonnage compris. Un paramètre de navigation est une
+     entrée non fiable, au même titre qu'un corps de requête.
+     
+     On la relit donc sur `/me/wall`, qui la compose. C'est la règle qu'on
+     applique déjà partout ailleurs, et je l'avais enfreinte ici. */
   const [mur, setMur] = useState<PublicWall | null>(null);
+  const [adresse, setAdresse] = useState<string | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
 
   const charge = useCallback(async () => {
     try {
-      setMur(publicWallSchema.parse(await appel<unknown>("/me/wall/preview")));
+      const [brutApercu, brutMur] = await Promise.all([
+        appel<unknown>("/me/wall/preview"),
+        appel<unknown>("/me/wall"),
+      ]);
+      setMur(publicWallSchema.parse(brutApercu));
+      setAdresse(wallSchema.parse(brutMur).publicUrl);
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
@@ -167,9 +184,9 @@ export default function Apercu() {
           la voir telle qu'elle est. L'adresse vient de l'écran d'où l'on
           arrive — le Mur la sert déjà, et la recomposer ici en ferait une
           seconde. */}
-      {url ? (
+      {adresse ? (
         <View style={styles.pied}>
-          <Button full variant="outline" icon="external-link" onPress={() => void Linking.openURL(url)}>
+          <Button full variant="outline" icon="external-link" onPress={() => void Linking.openURL(adresse)}>
             {t.murPrivVoir}
           </Button>
         </View>
