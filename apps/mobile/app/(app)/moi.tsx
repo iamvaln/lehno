@@ -185,14 +185,18 @@ export default function Moi() {
             <Card surface="panel" padding={13} radius="lg" style={styles.carte}>
               <View style={styles.ligne}>
                 <Icon name="globe" size={17} color={couleurs.textMention} />
-                <View style={styles.pleine}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => routeur.push("/(app)/monmur")}
+                  style={styles.pleine}
+                >
                   <Text style={[styles.surfaceTitre, { color: couleurs.textBody }]}>
                     {t.moiMonMur}
                   </Text>
                   <Text style={[styles.mention, { color: couleurs.textMention }]}>
                     {etatDuMur(mur) === "publie" ? t.moiMurVisible : t.moiMurDesactive}
                   </Text>
-                </View>
+                </Pressable>
                 {adresseDuMur ? (
                   <Button
                     variant="text"
@@ -252,7 +256,11 @@ export default function Moi() {
         <View style={styles.groupe}>
           <SectionLabel>{t.moiRetour}</SectionLabel>
           {mots !== null ? (
-            <View style={[styles.rang, { borderTopColor: couleurs.borderHairline }]}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => routeur.push("/(app)/monmur")}
+              style={[styles.rang, { borderTopColor: couleurs.borderHairline }]}
+            >
               <Icon name="mail" size={17} color={couleurs.textMention} />
               <Text style={[styles.libelle, { color: couleurs.textBody }]} numberOfLines={1}>
                 {t.moiMotsRecus}
@@ -260,7 +268,8 @@ export default function Moi() {
               <Text style={[styles.valeur, { color: couleurs.textMention }]}>
                 {mots === 0 ? t.moiMotsAucun : t.moiMotsN(mots)}
               </Text>
-            </View>
+              <Icon name="chevron-right" size={15} color={couleurs.textMention} />
+            </Pressable>
           ) : null}
           {estActive(actives, "reservation") ? (
             <Pressable

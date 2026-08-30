@@ -221,7 +221,6 @@ export const fr = {
   ongletReglages: "Réglages",
 
   /* ─── Mon Mur côté privé (3.10), profil, réglages, sécurité, aide ─── */
-  murPrivAdresse: "lehno.app/valentine",
   murPrivPublie: "Publié",
   murPrivPrive: "Hors ligne",
   murPrivBascule: "Rendre mon Mur public",

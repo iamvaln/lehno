@@ -209,7 +209,6 @@ export const en = {
   creditReste: (n: number) => n + (n === 1 ? " credit" : " credits") + " left",
   creditDepense: (n: number) => n + (n === 1 ? " credit" : " credits") + " spent",
   creditMot: (n: number): string => n === 1 ? "credit" : "credits",
-  murPrivAdresse: "lehno.app/valentine",
   murPrivPublie: "Published",
   murPrivPrive: "Offline",
   murPrivBascule: "Make my Wall public",
