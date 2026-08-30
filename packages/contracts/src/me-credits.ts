@@ -20,8 +20,20 @@ export type PaymentMethodKind = (typeof PAYMENT_METHOD_KINDS)[number];
 export const paymentMethodSchema = z.object({
   id: z.string().uuid(),
   kind: z.enum(PAYMENT_METHOD_KINDS),
-  // L'opérateur (« MTN MoMo », « Orange Money ») ou le réseau de la carte.
+  // Le réseau de la carte, tel que le prestataire le nomme. Nul sur un compte
+  // mobile money depuis que l'opérateur vient du canal : voir `operator`.
   brand: z.string().nullable(),
+  /* L'OPÉRATEUR, tel que le canal l'a nommé à l'enregistrement.
+   *
+   * Il ne s'agit pas d'un doublon de `brand` : celui-ci est saisi côté carte,
+   * celui-là est la clef par laquelle le serveur reconnaît « le numéro que
+   * cette personne a chez cet opérateur ». Elle n'en a qu'UN, et un nouvel
+   * enregistrement chez le même opérateur REMPLACE le précédent.
+   *
+   * Sans lui servi, le client ne peut pas prévenir : il montrerait « Ajouter »
+   * là où le geste efface un numéro et remet à zéro le délai de remboursement.
+   * Il l'apprendrait après coup, sur la seule liste qui a changé. */
+  operator: z.string().nullable(),
   last4: z.string().regex(/^\d{4}$/).nullable(),
   expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   // Détermine la méthode proposée par défaut à l'achat : la plus récente.

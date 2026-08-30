@@ -18,8 +18,8 @@ import { messageDErreur } from "../../lib/session.js";
 import { ecranEteint } from "../../lib/navigation.js";
 import { Choix } from "../../composants/Choix.js";
 import {
-  consequenceDuRetrait, corpsDEnregistrement, enregistrementComplet, estExpiree,
-  methodeParDefaut, operateursProposables,
+  canauxProposables, consequenceDuRetrait, corpsDEnregistrement,
+  enregistrementComplet, estExpiree, methodeParDefaut, methodeRemplacee,
 } from "../../lib/paiement.js";
 
 /* Méthodes de paiement — §3.25.
@@ -46,7 +46,7 @@ export default function Paiement() {
 
   const [ajoute, setAjoute] = useState(false);
   const [numero, setNumero] = useState("");
-  const [operateur, setOperateur] = useState<string | null>(null);
+  const [canalChoisi, setCanalChoisi] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [aRetirer, setARetirer] = useState<string | null>(null);
 
@@ -74,24 +74,36 @@ export default function Paiement() {
 
   useEffect(() => { if (!eteint) void charge(); }, [charge, eteint]);
 
-  const operateurs = operateursProposables(canaux);
+  const proposables = canauxProposables(canaux);
+  const canal = proposables.find((c) => c.id === canalChoisi) ?? null;
+  /* CE QUE LE GESTE VA FAIRE, avant qu'on l'appuie. « Un seul numéro par
+     opérateur » : chez un opérateur déjà enregistré, « Ajouter » efface. Le
+     bouton change donc de mot, et la phrase dit lequel part. */
+  const remplacee = canal === null ? null : methodeRemplacee(methodes, canal);
   const defaut = methodeParDefaut(methodes);
   const aujourdhui = new Date().toISOString().slice(0, 10);
   const partante = aRetirer === null ? null : methodes.find((m) => m.id === aRetirer) ?? null;
   const consequence = aRetirer === null ? "rien" : consequenceDuRetrait(methodes, aRetirer);
 
-  const enregistre = async (): Promise<void> => {
+  const enregistre = async (id: string, remplace: PaymentMethod | null): Promise<void> => {
     setEnvoi(true);
     setEchec(null);
     try {
       const nouvelle = await appel<unknown>("/me/payment-methods", {
-        method: "POST", body: JSON.stringify(corpsDEnregistrement(numero, operateur)),
+        method: "POST", body: JSON.stringify(corpsDEnregistrement(numero, id)),
       });
-      setMethodes((d) => [paymentMethodSchema.parse(nouvelle), ...d]);
+      /* L'ANCIENNE PART DE LA LISTE, parce qu'elle est partie de la base : le
+         serveur la supprime, il ne la désactive pas. La garder à l'écran
+         montrerait deux numéros chez le même opérateur, ce que le serveur vient
+         justement de rendre impossible. */
+      setMethodes((d) => [
+        paymentMethodSchema.parse(nouvelle),
+        ...(remplace === null ? d : d.filter((m) => m.id !== remplace.id)),
+      ]);
       setAjoute(false);
       setNumero("");
-      setOperateur(null);
-      setAccuse(t.paiementAjoutFait);
+      setCanalChoisi(null);
+      setAccuse(remplace ? t.paiementRemplaceFait : t.paiementAjoutFait);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
     } finally {
@@ -166,8 +178,14 @@ export default function Paiement() {
                     pas, et c'est délibéré : `paymentMethodSchema` est `strict`,
                     un serveur qui le laisserait fuir ferait échouer le parsage
                     plutôt que de l'envoyer jusqu'à un journal de bord. */}
+                {/* L'OPÉRATEUR VIENT DE `operator`, pas de `brand` : celui-ci
+                    est nul sur un mobile money depuis que le canal le porte, et
+                    l'écran ne montrerait plus que quatre chiffres sans dire de
+                    qui — ce qu'on relit précisément pour reconnaître son propre
+                    numéro. `brand` reste le repli des cartes. */}
                 <Text style={[styles.marque, { color: couleurs.textBody }]}>
-                  {m.brand ?? ""}{m.last4 === null ? "" : " •••• " + m.last4}
+                  {m.operator ?? m.brand ?? ""}
+                  {m.last4 === null ? "" : " •••• " + m.last4}
                 </Text>
                 <View style={styles.repères}>
                   {m.id === defaut ? (
@@ -212,16 +230,21 @@ export default function Paiement() {
             Les CARTES ne s'ajoutent pas ici : elles s'enregistrent par la
             référence opaque que le prestataire rend, dans SA page, et aucune
             n'est intégrée. Voir `SORTE_AJOUTABLE`. */}
-        {lu && operateurs.length > 0 ? (
+        {lu && proposables.length > 0 ? (
           ajoute ? (
             <View style={styles.bloc}>
               <SectionLabel>{t.paiementAjoutTitre}</SectionLabel>
               <View style={styles.champ}>
+                {/* LE CANAL, pas un nom tapé : « l'opérateur vient du canal,
+                    il ne se saisit pas ». Deux canaux d'un même opérateur
+                    restent deux — ils ne portent pas le même barème, et les
+                    fondre choisirait à la place de quelqu'un ce qu'il paiera
+                    en plus. */}
                 <Choix
-                  options={operateurs}
-                  libelle={(o) => o}
-                  valeur={operateur}
-                  pose={setOperateur}
+                  options={proposables.map((c) => c.id)}
+                  libelle={(id) => proposables.find((c) => c.id === id)?.label ?? id}
+                  valeur={canalChoisi}
+                  pose={setCanalChoisi}
                 />
               </View>
               <View style={styles.champ}>
@@ -232,13 +255,28 @@ export default function Paiement() {
                   onChangeText={setNumero}
                 />
               </View>
+              {/* LE REMPLACEMENT SE DIT AVANT, jamais après. Le serveur
+                  supprime l'ancienne ligne et le délai de remboursement repart
+                  de zéro — « hériter de l'ancienneté d'un numéro qu'on vient de
+                  changer viderait la garde anti-fraude de son sens ». Découvrir
+                  la perte sur la liste serait la découvrir trop tard. */}
+              {remplacee !== null ? (
+                <View style={styles.champ}>
+                  <Banner intent="warning">
+                    {t.paiementRemplaceTitre + " — " + t.paiementRemplace(remplacee.last4 ?? "")}
+                  </Banner>
+                </View>
+              ) : null}
+
               <View style={styles.champ}>
                 <Button
                   variant="primary"
-                  disabled={envoi || !enregistrementComplet(numero, operateur)}
-                  onPress={() => { void enregistre(); }}
+                  disabled={envoi || !enregistrementComplet(numero, canalChoisi)}
+                  onPress={() => {
+                    if (canalChoisi !== null) void enregistre(canalChoisi, remplacee);
+                  }}
                 >
-                  {t.paiementAjouter}
+                  {remplacee === null ? t.paiementAjouter : t.paiementRemplacer}
                 </Button>
               </View>
             </View>

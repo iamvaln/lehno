@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { paymentChannelSchema, paymentMethodSchema } from "@lehno/contracts";
 import {
-  consequenceDuRetrait, corpsDEnregistrement, enregistrementComplet, estExpiree,
-  methodeParDefaut, operateursProposables,
+  canauxProposables, consequenceDuRetrait, corpsDEnregistrement,
+  enregistrementComplet, estExpiree, methodeParDefaut, methodeRemplacee,
 } from "../lib/paiement.js";
 
 /* On repasse par les schémas plutôt que d'écrire des objets à la main : un
    agencement inventé ici tiendrait pendant que le vrai tomberait. */
 const methode = (p: Record<string, unknown>) => paymentMethodSchema.parse({
   id: "11111111-1111-4111-8111-111111111111",
-  kind: "mobile_money", brand: "MTN MoMo", last4: "4417",
+  kind: "mobile_money", brand: null, operator: "MTN", last4: "4417",
   expiresAt: null, lastUsedAt: null, refundEligible: false, ...p,
 });
 const canal = (p: Record<string, unknown>) => paymentChannelSchema.parse({
@@ -20,32 +20,49 @@ const canal = (p: Record<string, unknown>) => paymentChannelSchema.parse({
 
 const ID = (n: number) => `1111111${n}-1111-4111-8111-111111111111`;
 
-describe("les opérateurs qu'on propose", () => {
-  /* La liste vient des CANAUX, donc de ce que la plateforme sait débiter. Une
-     constante écrite ici vieillirait en silence : un opérateur ajouté en
-     back-office n'apparaîtrait jamais, un opérateur retiré resterait proposé. */
-  it("prend les opérateurs des canaux servis", () => {
-    expect(operateursProposables([
-      canal({ operator: "MTN" }),
-      canal({ operator: "Orange" }),
-    ])).toEqual(["MTN", "Orange"]);
-  });
+const ID_CANAL = (n: number) => `2222222${n}-2222-4222-8222-222222222222`;
 
-  /* Deux canaux du même opérateur — c'est le cas dès qu'un automatique et un
-     manuel coexistent — ne font qu'UNE entrée : le choix porte sur qui, pas sur
-     par où. Deux « MTN » identiques feraient hésiter sur une différence qui
-     n'existe pas à l'affichage. */
-  it("ne propose pas deux fois le même opérateur", () => {
-    expect(operateursProposables([
-      canal({ operator: "MTN", label: "MTN auto" }),
-      canal({ operator: " mtn ", label: "MTN manuel" }),
-    ])).toEqual(["MTN"]);
-  });
-
-  /* Un canal de carte n'ouvre PAS un opérateur mobile money : le proposer
-     ferait enregistrer un compte mobile money chez un réseau qui n'en a pas. */
+describe("les canaux qu'on propose", () => {
+  /* Un canal de carte n'ouvre PAS un compte mobile money : le proposer ferait
+     enregistrer un numéro chez un réseau qui n'en a pas — et le schéma le
+     refuse, « une carte ne passe pas par un canal d'opérateur ». */
   it("écarte les canaux d'une autre sorte", () => {
-    expect(operateursProposables([canal({ kind: "card", operator: "Visa" })])).toEqual([]);
+    expect(canauxProposables([canal({ kind: "card", operator: "Visa" })])).toEqual([]);
+  });
+
+  /* DEUX CANAUX DU MÊME OPÉRATEUR RESTENT DEUX. Ils ne portent pas le même
+     barème, `label` les distingue, et en fondre un dans l'autre choisirait à la
+     place de quelqu'un ce qu'il paiera en plus. C'est la correction du contrat
+     qui l'impose : on désigne un canal, plus un nom d'opérateur. */
+  it("garde les deux canaux d'un même opérateur", () => {
+    const deux = [
+      canal({ id: ID_CANAL(1), operator: "MTN", label: "MTN auto" }),
+      canal({ id: ID_CANAL(2), operator: "MTN", label: "MTN manuel" }),
+    ];
+    expect(canauxProposables(deux).map((c) => c.label)).toEqual(["MTN auto", "MTN manuel"]);
+  });
+});
+
+describe("ce que l'enregistrement va faire", () => {
+  /* « Un seul numéro par opérateur, et changer de numéro est le geste ordinaire
+     — pas ajouter. » Le serveur supprime l'ancienne ligne : le bouton ne peut
+     pas dire « Ajouter », il effacerait un numéro sans le dire. */
+  it("nomme le numéro que le geste va remplacer", () => {
+    const existante = methode({ id: ID(1), operator: "MTN", last4: "4417" });
+    expect(methodeRemplacee([existante], canal({ operator: " mtn " }))?.last4).toBe("4417");
+  });
+
+  it("ne remplace rien chez un opérateur où l'on n'a pas de numéro", () => {
+    const existante = methode({ id: ID(1), operator: "MTN" });
+    expect(methodeRemplacee([existante], canal({ operator: "Orange" }))).toBeNull();
+  });
+
+  /* On lit `operator`, JAMAIS `brand` : celui-ci est nul sur un mobile money
+     depuis que le canal porte l'opérateur, et s'en servir ferait annoncer
+     « rien à remplacer » à chaque fois — c'est-à-dire effacer en silence. */
+  it("ne se fie pas à la marque, qui est nulle ici", () => {
+    const sansMarque = methode({ id: ID(1), brand: null, operator: "MTN" });
+    expect(methodeRemplacee([sansMarque], canal({ operator: "MTN" }))).not.toBeNull();
   });
 });
 
@@ -123,32 +140,26 @@ describe("ce que le retrait coûte", () => {
 });
 
 describe("enregistrer un compte mobile money", () => {
-  it("compose un corps que le contrat accepte", () => {
-    expect(corpsDEnregistrement(" 655554417 ", " MTN MoMo ")).toEqual({
-      kind: "mobile_money", msisdn: "655554417", brand: "MTN MoMo",
+  it("désigne le canal, et ne compose rien d'autre", () => {
+    expect(corpsDEnregistrement(" 655554417 ", ID_CANAL(1))).toEqual({
+      kind: "mobile_money", msisdn: "655554417", channelId: ID_CANAL(1),
     });
   });
 
-  /* Une marque vide ferait une marque nommée « rien » plutôt qu'une marque
-     absente — et la liste montrerait quatre chiffres sans dire de qui. */
-  it("ne joint pas une marque vide", () => {
-    expect(corpsDEnregistrement("655554417", "  ")).toEqual({
-      kind: "mobile_money", msisdn: "655554417",
-    });
-  });
-
-  /* JAMAIS de `providerRef` sur un mobile money : le schéma le refuse
-     nommément, et le joindre ferait échouer l'enregistrement. */
-  it("n'invente pas de référence prestataire", () => {
-    expect(corpsDEnregistrement("655554417", "MTN")).not.toHaveProperty("providerRef");
+  /* NI marque NI référence prestataire : le schéma les refuse tous les deux
+     nommément — « l'opérateur vient du canal, il ne se saisit pas ». Les
+     joindre ferait échouer l'enregistrement, pas dériver l'affichage. */
+  it("ne joint ni marque ni référence prestataire", () => {
+    const corps = corpsDEnregistrement("655554417", ID_CANAL(1));
+    expect(corps).not.toHaveProperty("brand");
+    expect(corps).not.toHaveProperty("providerRef");
   });
 
   /* La borne vient du contrat — six caractères. Plus strict refuserait un
      numéro que le serveur aurait accepté, sans que personne puisse le savoir. */
-  it("exige le numéro et l'opérateur", () => {
-    expect(enregistrementComplet("65555", "MTN")).toBe(false);
+  it("exige le numéro et le canal", () => {
+    expect(enregistrementComplet("65555", ID_CANAL(1))).toBe(false);
     expect(enregistrementComplet("655554417", null)).toBe(false);
-    expect(enregistrementComplet("655554417", "   ")).toBe(false);
-    expect(enregistrementComplet("655554417", "MTN")).toBe(true);
+    expect(enregistrementComplet("655554417", ID_CANAL(1))).toBe(true);
   });
 });

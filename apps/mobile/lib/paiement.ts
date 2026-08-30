@@ -32,34 +32,51 @@ import {
  */
 export const SORTE_AJOUTABLE = "mobile_money" as const;
 
-/* LES OPÉRATEURS SE CHOISISSENT, ils ne se tapent pas.
+/* ON CHOISIT UN CANAL, PAS UN OPÉRATEUR ÉCRIT.
  *
- * `brand` est du texte libre au contrat, et rien côté serveur ne le normalise.
- * Laissé à la saisie, « MTN MoMo », « MTN Momo » et « mtn momo » deviennent
- * trois marques qui ne se regroupent nulle part — ni dans la liste de
- * quelqu'un, ni dans un rapprochement d'administration.
+ * Le contrat est catégorique — « l'opérateur vient du canal, il ne se saisit
+ * pas » —, et `brand` est refusé sur un mobile money. C'est mieux que ce que
+ * j'avais fait d'abord, qui prenait le NOM de l'opérateur du canal pour le
+ * renvoyer en texte : le nom se serait mis à diverger du canal à la première
+ * retouche de back-office, et personne n'aurait su lequel des deux disait vrai.
  *
- * La liste vient des CANAUX servis, pas d'une constante : ce sont les
- * opérateurs que la plateforme sait débiter. En écrire une ici la ferait
- * vieillir en silence — un opérateur ajouté en back-office n'apparaîtrait
- * jamais, et un opérateur retiré resterait proposé.
+ * La liste vient donc des canaux servis, et ce sont eux qu'on montre : ce que
+ * la plateforme sait débiter, à l'instant où on le demande. Une constante
+ * écrite ici vieillirait en silence — un opérateur ajouté n'apparaîtrait
+ * jamais, un opérateur retiré resterait proposé et l'enregistrement échouerait
+ * sur un canal inactif.
  *
- * On ne garde que les canaux de la sorte qu'on sait ajouter : proposer
- * l'opérateur d'une carte ferait enregistrer un compte mobile money chez un
- * réseau qui n'en a pas.
+ * On garde les DEUX canaux d'un même opérateur quand il y en a deux : ils ne
+ * portent pas le même barème, `label` les distingue, et en fondre un dans
+ * l'autre ferait choisir à la place de quelqu'un ce qu'il paiera en plus.
  */
-export function operateursProposables(canaux: readonly PaymentChannel[]): string[] {
-  const vus = new Set<string>();
-  const noms: string[] = [];
-  for (const c of canaux) {
-    if (c.kind !== SORTE_AJOUTABLE) continue;
-    const nom = c.operator.trim();
-    const clef = nom.toLowerCase();
-    if (nom === "" || vus.has(clef)) continue;
-    vus.add(clef);
-    noms.push(nom);
-  }
-  return noms;
+export function canauxProposables(canaux: readonly PaymentChannel[]): PaymentChannel[] {
+  return canaux.filter((c) => c.kind === SORTE_AJOUTABLE);
+}
+
+/* CE QUE L'ENREGISTREMENT VA FAIRE, dit avant le geste.
+ *
+ * « Un seul numéro par opérateur, et changer de numéro est le geste ordinaire —
+ * pas ajouter. » Le serveur SUPPRIME donc la ligne existante chez cet opérateur
+ * et en crée une neuve : le délai avant qu'elle puisse recevoir un
+ * remboursement repart de zéro, « et c'est voulu — hériter de l'ancienneté d'un
+ * numéro qu'on vient de changer viderait la garde anti-fraude de son sens ».
+ *
+ * Le bouton ne peut donc pas dire « Ajouter » dans les deux cas : il effacerait
+ * un numéro sans le dire, et la perte ne se découvrirait que sur la liste.
+ *
+ * L'opérateur se lit sur `operator`, servi exprès. `brand` ne convient PAS —
+ * il est nul sur un mobile money depuis que le canal porte l'opérateur, et
+ * s'en servir ferait annoncer « rien à remplacer » à chaque fois.
+ */
+export function methodeRemplacee(
+  methodes: readonly PaymentMethod[],
+  canal: PaymentChannel,
+): PaymentMethod | null {
+  const vise = canal.operator.trim().toLowerCase();
+  return methodes.find(
+    (m) => m.operator !== null && m.operator.trim().toLowerCase() === vise,
+  ) ?? null;
 }
 
 /* CE QUI EST « PAR DÉFAUT » NE SE DÉCIDE PAS ICI.
@@ -138,20 +155,19 @@ export function consequenceDuRetrait(
 
 /* Ce qu'on envoie pour enregistrer un compte mobile money.
  *
- * `brand` ne part que s'il est choisi : le contrat le donne facultatif, et une
- * chaîne vide en ferait une marque nommée « rien » plutôt qu'une marque
- * absente. `providerRef` n'est jamais joint — le schéma le refuse nommément sur
- * un mobile money, « un compte mobile money n'a pas de référence prestataire ».
+ * NI `brand` NI `providerRef` : le schéma les refuse tous les deux nommément
+ * sur un mobile money — « l'opérateur vient du canal, il ne se saisit pas » et
+ * « un compte mobile money n'a pas de référence prestataire ». Les joindre
+ * ferait échouer l'enregistrement, pas dériver l'affichage.
  */
 export function corpsDEnregistrement(
   numero: string,
-  operateur: string | null,
+  canalId: string,
 ): RegisterPaymentMethodInput {
-  const marque = operateur?.trim() ?? "";
   return registerPaymentMethodSchema.parse({
     kind: SORTE_AJOUTABLE,
     msisdn: numero.trim(),
-    ...(marque === "" ? {} : { brand: marque }),
+    channelId: canalId,
   });
 }
 
@@ -161,11 +177,7 @@ export function corpsDEnregistrement(
  * ressemble un numéro. Plus strict que le serveur refuserait un numéro qu'il
  * aurait accepté, et personne n'aurait moyen de le savoir. Même raison qu'au
  * versement manuel : « les opérateurs ne s'accordent sur rien ».
- *
- * L'opérateur est EXIGÉ ici alors que le contrat l'accepte absent : sans lui,
- * la liste montre quatre chiffres sans dire de qui, et c'est précisément ce
- * qu'on relit pour reconnaître son propre numéro.
  */
-export function enregistrementComplet(numero: string, operateur: string | null): boolean {
-  return numero.trim().length >= 6 && operateur !== null && operateur.trim() !== "";
+export function enregistrementComplet(numero: string, canalId: string | null): boolean {
+  return numero.trim().length >= 6 && canalId !== null;
 }
