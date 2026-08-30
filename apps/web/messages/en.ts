@@ -200,4 +200,20 @@ export const en: typeof fr = {
   murIdee: "An idea? Here's what I'd love.",
   murListe: "See my list",
   murMot: "Leave me a note",
+  acqTitre: "Be there on the day, too",
+  acqTexte: "Lehno remembers the dates that matter, keeps what you know about people, and writes the words when the day comes.",
+  acqAction: "Discover Lehno",
+
+  murIntro: "Here is what to know about me",
+  murAnniversaire: "My birthday",
+  murInterets: "What I like",
+  murDeposer: "Leave me a note",
+  murVoeuxFermes: "Notes are not open at the moment.",
+  murInvitation: "Get my own Wall",
+  murAlt: "Photo of {nom}",
+
+  etatIndisponibleTitre: "This page could not be shown",
+  etatIndisponibleTexte: "It is not you: we could not reach the service. Try again in a moment.",
+  etatRetour: "Go to the home page",
+
 };

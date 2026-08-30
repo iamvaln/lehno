@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Langue } from "../lib/langues.js";
 import type { Messages } from "../messages/index.js";
+import { BandeAcquisition, type Acquisition } from "./BandeAcquisition.js";
 import { SiteFooter } from "./landing/SiteFooter.js";
 import { SiteHeader } from "./landing/SiteHeader.js";
 
@@ -20,12 +21,35 @@ import { SiteHeader } from "./landing/SiteHeader.js";
  * consentement. Les poser quatre fois, c'est les oublier à la cinquième.
  */
 export function PublicShell(
-  { t, langue, children }: { t: Messages; langue: Langue; children: ReactNode },
+  { t, langue, children, acquisition }: {
+    t: Messages;
+    langue: Langue;
+    children: ReactNode;
+    /**
+     * L'invitation de pied. **Posée par défaut**, parce que c'est précisément
+     * ce qu'on oublie à la cinquième page — et que la coquille existe pour ça.
+     *
+     * `false` la retire, et seules deux surfaces le font : la landing, qui
+     * finit déjà sur son aplat de clôture, et le Mur, qui porte la sienne dans
+     * la page. Deux invitations à la suite, c'en est une de trop.
+     *
+     * Un objet la remplace par une phrase qui parle du contexte plutôt que du
+     * produit — « tenez la liste de vos proches » après une collecte dit
+     * l'exact retournement de ce qu'on vient de faire.
+     */
+    acquisition?: Acquisition | false;
+  },
 ): ReactNode {
   return (
     <div className="page">
       <SiteHeader t={t} langue={langue} />
       <main>{children}</main>
+      {acquisition === false ? null : (
+        <BandeAcquisition
+          t={t} langue={langue}
+          {...(acquisition ? { acquisition } : {})}
+        />
+      )}
       <SiteFooter t={t} langue={langue} />
     </div>
   );
