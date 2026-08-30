@@ -41,7 +41,7 @@ function liste(sur: Partial<Ouverte> = {}): Ouverte {
 describe("la liste partagée", () => {
   let appels: Array<{ url: string; corps: Record<string, unknown> | null }>;
 
-  const brancher = (reponses: Array<{ ok: boolean; status?: number; charge?: unknown }>): void => {
+  const brancher = (reponses: Array<{ ok: boolean; status?: number; charge?: unknown; code?: string }>): void => {
     let rang = 0;
     vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
       appels.push({
@@ -52,7 +52,7 @@ describe("la liste partagée", () => {
       return {
         ok: reponse.ok,
         status: reponse.status ?? (reponse.ok ? 200 : 500),
-        json: async () => reponse.charge,
+        json: async () => (reponse.code === undefined ? reponse.charge : { code: reponse.code, message: "" }),
       } as Response;
     }));
   };
@@ -180,7 +180,7 @@ describe("la liste partagée", () => {
   /* Pris entre-temps, ce n'est pas une panne : c'est une nouvelle, et elle ne
      se dit pas comme une erreur réseau. */
   it("distingue le souhait pris entre-temps d'une panne", async () => {
-    brancher([{ ok: false, status: 409 }]);
+    brancher([{ ok: false, status: 409, code: "conflict" }]);
     poser();
 
     await userEvent.click(screen.getByRole("button", { name: t.souhaitReserver }));

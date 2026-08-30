@@ -158,3 +158,28 @@ describe("la collecte", () => {
     expect(screen.getByRole("textbox", { name: t.collecteLabelSouhaits })).toHaveValue("");
   });
 });
+
+/* 410, seul statut de ce genre dans tout le contrat : le lien a existé. Le
+   visiteur l'a reçu de quelqu'un — un 404 lui ferait croire qu'il a mal recopié
+   l'adresse, et « nous n'avons pas pu répondre » l'enverrait réessayer une chose
+   qui ne marchera jamais. */
+describe("le chargeur des surfaces publiques", () => {
+  const forme = { safeParse: (v: unknown) => ({ success: true as const, data: v }) };
+
+  const repondre = async (status: number) => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: status < 400, status, json: async () => ({}),
+    } as Response)));
+    vi.stubEnv("API_URL", "http://api.test");
+    const { chargerSurface } = await import("../lib/surface-publique.js");
+    return chargerSurface("/public/collect/x", forme, 0);
+  };
+
+  afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+
+  it("distingue le lien retiré du lien inconnu et de la panne", async () => {
+    expect((await repondre(410)).etat).toBe("retire");
+    expect((await repondre(404)).etat).toBe("inconnu");
+    expect((await repondre(502)).etat).toBe("indisponible");
+  });
+});

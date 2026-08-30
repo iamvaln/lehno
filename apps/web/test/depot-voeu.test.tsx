@@ -40,10 +40,18 @@ function poser(sur: Partial<PublicWishForm> = {}) {
 describe("le dépôt d'un mot", () => {
   let appels: Array<{ corps: Record<string, unknown> }>;
 
-  const brancher = (reponse: { ok: boolean; status?: number }): void => {
+  /* Le refus se reconnaît à son CODE, pas à son statut : `wish_window_closed`
+     n'a pas d'entrée dans la table de `common/errors.ts` et tombe donc sur le
+     422 des règles métier. Un faux serveur qui rendrait 403 ferait passer un
+     test au-dessus d'un code qui ne marche pas contre le vrai. */
+  const brancher = (reponse: { ok: boolean; status?: number; code?: string }): void => {
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
       appels.push({ corps: JSON.parse(String(init.body)) as Record<string, unknown> });
-      return reponse as Response;
+      return {
+        ok: reponse.ok,
+        status: reponse.status ?? (reponse.ok ? 200 : 422),
+        json: async () => (reponse.code === undefined ? {} : { code: reponse.code, message: "" }),
+      } as Response;
     }));
   };
 
@@ -121,7 +129,7 @@ describe("le dépôt d'un mot", () => {
      pas une panne : le dire comme une erreur réseau ferait réessayer
      indéfiniment quelqu'un qui n'a plus rien à réessayer. */
   it("distingue le refus de fenêtre d'une panne", async () => {
-    brancher({ ok: false, status: 403 });
+    brancher({ ok: false, status: 422, code: "wish_window_closed" });
     poser();
     await userEvent.type(screen.getByRole("textbox", { name: t.voeuxLabelMessage }), "Trop tard.");
     await userEvent.click(screen.getByRole("button", { name: t.voeuxEnvoyer }));

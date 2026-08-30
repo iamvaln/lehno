@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { Messages } from "../../messages/index.js";
 import { Banner, Button } from "../ui/index.js";
+import { codeDuRefus } from "../../lib/refus.js";
 
 type Etat = "saisie" | "envoi" | "erreur" | "ferme";
 
@@ -50,11 +51,13 @@ export function FormulaireVoeu(
         }),
       });
       if (reponse.ok) { onEnvoye(); return; }
-      /* 403 est le refus de fenêtre — elle a pu se refermer entre le
-         chargement et l'envoi. Ce refus-là n'est pas une panne : le dire comme
-         une erreur réseau ferait réessayer indéfiniment quelqu'un qui n'a plus
-         rien à réessayer. */
-      setEtat(reponse.status === 403 ? "ferme" : "erreur");
+      /* La fenêtre a pu se refermer entre le chargement et l'envoi. Ce refus-là
+         n'est pas une panne : le dire comme une erreur réseau ferait réessayer
+         indéfiniment quelqu'un qui n'a plus rien à réessayer.
+         On le reconnaît à son CODE, pas à son statut : `wish_window_closed`
+         n'a pas d'entrée dans la table de `common/errors.ts` et tombe donc sur
+         le 422 des règles métier — pas sur le 403 qu'on lui prêterait. */
+      setEtat(await codeDuRefus(reponse) === "wish_window_closed" ? "ferme" : "erreur");
     } catch {
       setEtat("erreur");
     }
