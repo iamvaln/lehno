@@ -352,7 +352,104 @@ export class SharedWishlistService {
     }
   }
 
+
+  // ── Annuler ───────────────────────────────────────────────────────────────
+
+  /**
+   * Rendre un cadeau à la liste.
+   *
+   * **C'était le seul geste irréversible qu'un visiteur sans compte pouvait
+   * faire.** Trois clics suffisaient à bloquer un cadeau jusqu'à la date, et
+   * celui qui se trompait — ou qui ne pouvait plus offrir — n'avait aucun
+   * recours.
+   *
+   * L'autorisation tient à l'IDENTITÉ, comme la relecture : le jeton de visite
+   * ne fait que désigner une adresse, et c'est l'adresse qui possède la
+   * réservation. Un visiteur connecté est reconnu à son compte.
+   *
+   * **404 quand rien ne correspond**, jamais un refus explicite. La page dit
+   * déjà qu'un souhait est réservé ; répondre « vous n'avez pas le droit
+   * d'annuler celle-là » confirmerait à un curieux qu'une réservation est bien
+   * là, et par qui elle ne l'est pas.
+   */
+  async annuler(wishId: string, visiteur: Visiteur): Promise<void> {
+    const ou: Prisma.WishReservationWhereInput[] = [];
+    if (visiteur.userId) ou.push({ userId: visiteur.userId });
+    if (visiteur.jetonVisite) {
+      const porteur = await this.prisma.wishReservation.findUnique({
+        where: { sessionTokenHash: condense(visiteur.jetonVisite) },
+        select: { email: true },
+      });
+      if (porteur) ou.push({ email: porteur.email });
+    }
+    if (ou.length === 0) throw ABSENT();
+
+    const reservation = await this.prisma.wishReservation.findFirst({
+      where: { ownerWishId: wishId, status: "confirmed", OR: ou },
+      include: { ownerWish: { select: { id: true, status: true } } },
+    });
+    if (!reservation) throw ABSENT();
+
+    /* Un cadeau DÉJÀ OFFERT ne revient pas à la liste. Le propriétaire l'a
+       marqué reçu ; le rendre disponible ferait proposer à un autre visiteur
+       d'acheter ce qui est déjà sur la table. La réservation, elle, s'annule
+       quand même : elle a cessé d'être vraie. */
+    const rendreALaListe = reservation.ownerWish.status === "reserved";
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.wishReservation.update({
+        where: { id: reservation.id },
+        data: { status: "cancelled", cancelledAt: new Date() },
+      });
+      if (rendreALaListe) {
+        await tx.ownerWish.update({
+          where: { id: wishId },
+          data: { status: "available" },
+        });
+      }
+    });
+
+    await this.prevenirDeLAnnulation(wishId, reservation.id);
+  }
+
+  /* Le propriétaire avait été prévenu que ce cadeau était couvert ; il planifie
+     autour. Ne rien dire quand il se libère laisserait attendre un cadeau que
+     personne n'apporte.
+     Au mieux, comme sa jumelle : une notification perdue ne doit pas défaire
+     une annulation déjà acquise, ni faire échouer l'appel du visiteur. */
+  private async prevenirDeLAnnulation(wishId: string, reservationId: string): Promise<void> {
+    try {
+      const souhait = await this.prisma.ownerWish.findUniqueOrThrow({
+        where: { id: wishId },
+        include: { occurrence: true, reservations: { where: { id: reservationId } } },
+      });
+      const reservation = souhait.reservations[0];
+      await this.prisma.notification.create({
+        data: {
+          userId: souhait.occurrence.userId,
+          type: "wish_reservation_cancelled",
+          eventOccurrenceId: souhait.eventOccurrenceId,
+          channel: "in_app",
+          titleKey: "wish_reservation_cancelled",
+          // Le nom SEULEMENT s'il avait été autorisé — même arbitrage qu'à la
+          // réservation. Une annulation ne défait pas l'anonymat consenti.
+          bodyParams: reservation?.showIdentity && reservation.displayName
+            ? { wishLabel: souhait.label, by: reservation.displayName }
+            : { wishLabel: souhait.label },
+          targetRoute: `/wishlists/occurrence/${souhait.eventOccurrenceId}`,
+          dedupeKey: `wish_reservation_cancelled:${reservationId}`,
+          scheduledFor: new Date(),
+        },
+      });
+    } catch (erreur) {
+      this.journal.warn(
+        `annulation enregistrée sans notification au propriétaire : ${erreur instanceof Error ? erreur.message : "cause inconnue"}`,
+      );
+    }
+  }
+
   // ── Les pièces communes ───────────────────────────────────────────────────
+
 
   private async souhaitReservable(wishId: string): Promise<{ id: string }> {
     const souhait = await this.prisma.ownerWish.findFirst({

@@ -146,3 +146,23 @@ export const reservationConfirmedSchema = z.object({
 }).strict();
 
 export type ReservationConfirmed = z.infer<typeof reservationConfirmedSchema>;
+
+// ── Annuler ─────────────────────────────────────────────────────────────────
+
+/* Une réservation s'annule, et c'était le seul geste irréversible qu'un
+ * visiteur sans compte pouvait faire : sans cette route, celui qui se trompe —
+ * ou qui ne peut plus offrir — bloquait le cadeau jusqu'à la date, sans recours,
+ * après trois clics.
+ *
+ * Pas de corps : le souhait est dans le chemin, et l'identité vient du jeton de
+ * visite (ou de la session). Rien d'autre n'a à être dit.
+ *
+ * La réponse porte `cancelled: true` plutôt qu'un 204 muet, comme le dépôt
+ * porte `submitted: true` : le client sait qu'il a été entendu, et non
+ * seulement que rien n'a cassé.
+ */
+export const cancelReservationResponseSchema = z.object({
+  cancelled: z.literal(true),
+}).strict();
+
+export type CancelReservationResponse = z.infer<typeof cancelReservationResponseSchema>;
