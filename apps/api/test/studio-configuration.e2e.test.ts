@@ -217,9 +217,9 @@ describe("administration — la configuration du studio", () => {
     expect(apres.publishedByAdminId).toBe(compte.id);
     expect(apres.note).toBe(MOTIF);
     // Exactement une en service : l'ancienne a reculé.
-    expect(await db.prisma.studioConfig.count({ where: { state: "published" } })).toBe(1);
+    expect(await db.prisma.studioConfig.count({ where: { kind: "portrait", state: "published" } })).toBe(1);
     // Et plus de brouillon : le suivant naîtra de la prochaine prévisualisation.
-    expect(await db.prisma.studioConfig.count({ where: { state: "draft" } })).toBe(0);
+    expect(await db.prisma.studioConfig.count({ where: { kind: "portrait", state: "draft" } })).toBe(0);
   });
 
   /* C'est ce qui rend la §3 praticable : un changement de libellé crée une
@@ -263,7 +263,7 @@ describe("administration — la configuration du studio", () => {
      deviendrait illisible au bout de dix retours. */
   it("republie une version antérieure sans en créer une nouvelle", async () => {
     const { entete } = await session("admin");
-    const un = await db.prisma.studioConfig.findFirstOrThrow({ where: { state: "published" } });
+    const un = await db.prisma.studioConfig.findFirstOrThrow({ where: { kind: "portrait", state: "published" } });
     const deux = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "la seconde"; }));
     await essaiSur(deux.id, "success");
     await appeler("POST", "/config/publish", entete, { configId: deux.id, note: MOTIF });
@@ -287,7 +287,7 @@ describe("administration — la configuration du studio", () => {
      précisément le moment où quelqu'un d'autre est en train de régler. */
   it("ne touche pas au brouillon en cours", async () => {
     const { entete } = await session("admin");
-    const un = await db.prisma.studioConfig.findFirstOrThrow({ where: { state: "published" } });
+    const un = await db.prisma.studioConfig.findFirstOrThrow({ where: { kind: "portrait", state: "published" } });
     const deux = await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "la seconde"; }));
     await essaiSur(deux.id, "success");
     await appeler("POST", "/config/publish", entete, { configId: deux.id, note: MOTIF });
@@ -325,7 +325,7 @@ describe("administration — la configuration du studio", () => {
     });
     expect(res.status).toBe(422);
     expect(await codeDe(res)).toBe("trial_required");
-    expect(await db.prisma.studioConfig.count({ where: { state: "draft" } })).toBe(0);
+    expect(await db.prisma.studioConfig.count({ where: { kind: "portrait", state: "draft" } })).toBe(0);
   });
 
   /* L'exception de la §3, et elle est nette : régénérer pour enregistrer un
@@ -341,9 +341,9 @@ describe("administration — la configuration du studio", () => {
       }),
     });
     expect(res.status).toBe(200);
-    const brouillon = await db.prisma.studioConfig.findFirstOrThrow({ where: { state: "draft" } });
+    const brouillon = await db.prisma.studioConfig.findFirstOrThrow({ where: { kind: "portrait", state: "draft" } });
     // La couverture d'essai de l'état précédent est héritée : même empreinte.
-    const enService = await db.prisma.studioConfig.findFirstOrThrow({ where: { state: "published" } });
+    const enService = await db.prisma.studioConfig.findFirstOrThrow({ where: { kind: "portrait", state: "published" } });
     expect(brouillon.fingerprint).toBe(enService.fingerprint);
   });
 

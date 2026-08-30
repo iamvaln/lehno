@@ -185,8 +185,17 @@ export class StudioConfigurationService {
          `published` : dans l'ordre inverse, l'insertion tombe sur une
          violation de contrainte, et l'écran lirait « erreur interne » là où il
          n'y a qu'un ordre d'écriture. */
+      /* DÉPUBLIER SEULEMENT SA NATURE.
+       *
+       * Sans ce filtre, publier le portrait faisait passer la configuration du
+       * message en `superseded` : le studio se retrouvait à moitié servi, et
+       * `/me/studio/options` refusait tout — la moitié qu'on venait de publier
+       * emportait l'autre.
+       *
+       * L'index unique ne l'aurait pas rattrapé : il n'admet qu'une publiée PAR
+       * NATURE, et zéro en satisfait la lettre. */
       await tx.studioConfig.updateMany({
-        where: { state: "published" }, data: { state: "superseded" },
+        where: { kind: cible.kind, state: "published" }, data: { state: "superseded" },
       });
 
       const dernier = await tx.studioConfig.aggregate({ _max: { version: true } });
