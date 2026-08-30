@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { homeSchema, type Home, type Occurrence } from "@lehno/contracts";
 import {
-  nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin, nativeTracking,
+  nativeFont, nativeLetterSpacing, nativeRadius, nativeSpace, nativeTouchMin,
+  nativeTracking,
 } from "@lehno/tokens";
 import {
-  Banner, Button, EmptyState, EventCard, LoadingState, SectionLabel, Toast, useCouleurs,
+  Banner, Button, EmptyState, EventCard, Icon, LoadingState, SectionLabel, Toast,
+  useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -121,7 +125,24 @@ export default function Accueil() {
 
   return (
     <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
-      <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.salut(home.firstName)}</Text>
+      <View style={styles.salutation}>
+        <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.salut(home.firstName)}</Text>
+        {/* LE DÉCOMPTE VIENT DE `/me/home`, jamais d'un second appel : le
+            contrat le sert là exprès, et « les deux passent par le même
+            prédicat côté serveur, donc ils ne peuvent pas se contredire ».
+            Deux `where` recopiés, eux, auraient divergé au premier ajout. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t.notifsTitre}
+          onPress={() => routeur.push("/(app)/notifications")}
+          style={styles.cloche}
+        >
+          <Icon name="bell" size={20} color={couleurs.textBody} />
+          {home.unreadNotifications > 0 ? (
+            <View style={[styles.pastille, { backgroundColor: couleurs.action }]} />
+          ) : null}
+        </Pressable>
+      </View>
 
       {etat === "vide" ? (
         <>
@@ -241,7 +262,20 @@ export default function Accueil() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, paddingHorizontal: nativeSpace[16] },
+  salutation: { flexDirection: "row", alignItems: "center", gap: nativeSpace[8] },
+  cloche: {
+    width: nativeTouchMin, height: nativeTouchMin,
+    alignItems: "center", justifyContent: "center",
+  },
+  /* Une pastille, pas un nombre : « il y a quelque chose » suffit à faire
+     ouvrir, et un compte à deux chiffres sur une cloche se lit mal et se
+     compare mal. */
+  pastille: {
+    position: "absolute", top: nativeSpace[8], right: nativeSpace[8],
+    width: nativeSpace[8], height: nativeSpace[8], borderRadius: nativeRadius.pill,
+  },
   titre: {
+    flex: 1,
     fontFamily: nativeFont.displayMedium, fontSize: 27,
     letterSpacing: nativeLetterSpacing(27, nativeTracking.display),
     marginBottom: nativeSpace[16],
