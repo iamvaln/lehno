@@ -34,6 +34,17 @@ export const paymentMethodSchema = z.object({
 
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
 
+/* La liste, NOMMÉE. Le contrôleur rendait `{ paymentMethods: [...] }` sans que
+ * rien ne le décrive : chaque appelant refaisait alors la sienne, et le mobile
+ * n'embarque pas zod — il ne PEUT pas se la refaire. C'est le onzième tableau
+ * du même motif, et c'est la raison d'être d'un contrat commun : une réponse
+ * qui n'a pas de nom n'a pas de forme. */
+export const paymentMethodListSchema = z.object({
+  paymentMethods: z.array(paymentMethodSchema),
+}).strict();
+
+export type PaymentMethodList = z.infer<typeof paymentMethodListSchema>;
+
 /* Un compte mobile money s'identifie par son numéro ; une carte par la
    référence opaque que le prestataire rend. L'un n'a jamais l'autre. */
 /* L'OPÉRATEUR NE SE TAPE PAS, IL SE CHOISIT.
