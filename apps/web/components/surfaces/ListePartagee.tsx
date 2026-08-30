@@ -101,9 +101,12 @@ export function ListePartagee(
 
   return (
     <PublicShell t={t} langue={langue} acquisition={false}>
+      {/* La colonne suit la composition. En cartes larges, l'en-tête doit se
+          resserrer avec elles : laissé à la pleine largeur, il envoyait le
+          décompte à neuf cents pixels du prénom qu'il accompagne. */}
       <section
         style={{
-          maxWidth: "var(--page-max)", margin: "0 auto",
+          maxWidth: grille ? "var(--page-max)" : "44rem", margin: "0 auto",
           padding: "clamp(40px,7vw,72px) var(--page-gutter)",
         }}
       >
@@ -116,11 +119,18 @@ export function ListePartagee(
             />
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: "var(--font-body-semibold)" }}>{etat.ownerFirstName}</div>
-              <div style={{ fontSize: "var(--text-mention-m)", color: "var(--text-mention)" }}>
-                {interpoler(t.listeOccasion, {
-                  occasion: etat.occasionLabel ?? "",
-                  date: dateEnToutesLettres(etat.occasionDate, langue),
-                })}
+              <div style={{ fontSize: "var(--text-mention-s)", color: "var(--text-mention)" }}>
+                {/* Le libellé est NUL pour un anniversaire — « un `birthday`
+                    prend son libellé dans les traductions de l'application »
+                    (me-events.ts), et la forme publique ne porte pas le genre
+                    de l'occasion. La date seule vaut mieux qu'une virgule
+                    orpheline devant elle. */}
+                {etat.occasionLabel === null
+                  ? dateEnToutesLettres(etat.occasionDate, langue)
+                  : interpoler(t.listeOccasion, {
+                      occasion: etat.occasionLabel,
+                      date: dateEnToutesLettres(etat.occasionDate, langue),
+                    })}
               </div>
             </div>
             {joursRestants >= 0 ? (
@@ -162,7 +172,7 @@ export function ListePartagee(
               display: "grid", gap: "var(--space-16)",
               ...(grille
                 ? { gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))" }
-                : { maxWidth: "40rem" }),
+                : {}),
             }}
           >
             {etat.wishes.map((souhait) => (
@@ -179,7 +189,7 @@ export function ListePartagee(
 
         {/* L'anonymat se dit une fois, en pied de liste. */}
         {etat.wishes.length > 0 ? (
-          <p style={{ marginTop: "var(--space-24)", fontSize: "var(--text-mention-m)", color: "var(--text-mention)" }}>
+          <p style={{ marginTop: "var(--space-24)", fontSize: "var(--text-mention-s)", color: "var(--text-mention)" }}>
             {t.listeAnonymat}
           </p>
         ) : null}
@@ -188,7 +198,7 @@ export function ListePartagee(
           <div style={{ marginTop: "var(--space-32)" }}>
             <Banner intent="info">
               <strong>{t.listeFaireMaPart}</strong> {t.listeFaireMaPartTexte}{" "}
-              <a href={`/${langue}`}>{t.listeFaireMaPartAction}</a>
+              <a className="lien" href={`/${langue}`}>{t.listeFaireMaPartAction}</a>
             </Banner>
           </div>
         ) : null}

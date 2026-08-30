@@ -256,4 +256,14 @@ describe("la liste partagée", () => {
     await waitFor(() => expect(screen.getByText(t.souhaitAnnulerErreur)).toBeInTheDocument());
     expect(screen.getByText(t.souhaitMien)).toBeInTheDocument();
   });
+
+  /* Le libellé est NUL pour un anniversaire — le cas ORDINAIRE : « un
+     `birthday` prend son libellé dans les traductions de l'application », et la
+     forme publique ne porte pas le genre de l'occasion. Sans garde, l'en-tête
+     rendait « , le 2 septembre », virgule orpheline comprise. */
+  it("ne rend pas de virgule orpheline quand l'occasion n'a pas de nom", () => {
+    poser({ occasionLabel: null, occasionDate: "2026-12-24" });
+    expect(screen.getByText("24 décembre 2026")).toBeInTheDocument();
+    expect(screen.queryByText(/^,/)).toBeNull();
+  });
 });

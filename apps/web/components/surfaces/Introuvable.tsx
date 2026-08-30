@@ -26,7 +26,7 @@ export function Introuvable({ t, langue }: { t: Messages; langue: Langue }): Rea
         style={{
           maxWidth: "var(--page-max)", margin: "0 auto",
           padding: "clamp(56px,9vw,104px) var(--page-gutter)",
-          display: "grid", gap: "var(--space-22)", justifyItems: "start",
+          display: "grid", gap: "var(--space-24)", justifyItems: "start",
         }}
       >
         <div
@@ -57,10 +57,10 @@ export function Introuvable({ t, langue }: { t: Messages; langue: Langue }): Rea
           {t.introuvableTexte}
         </p>
         <div style={{ display: "flex", gap: "var(--space-16)", flexWrap: "wrap" }}>
-          <a href={`/${langue}`} style={{ fontWeight: "var(--font-body-semibold)" }}>
+          <a className="lien" href={`/${langue}`} style={{ fontWeight: "var(--font-body-semibold)" }}>
             {t.introuvableRetour}
           </a>
-          <a href={`/${langue}/faq`}>{t.introuvableFaq}</a>
+          <a className="lien" href={`/${langue}/faq`}>{t.introuvableFaq}</a>
         </div>
       </section>
     </PublicShell>

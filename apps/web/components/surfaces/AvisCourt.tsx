@@ -42,7 +42,7 @@ export function AvisCourt(
         <p style={{ margin: "var(--space-16) 0 var(--space-32)", maxWidth: "62ch", textWrap: "pretty" }}>
           {texte}
         </p>
-        <a href={`/${langue}`} style={{ fontWeight: "var(--font-body-semibold)" }}>
+        <a className="lien" href={`/${langue}`} style={{ fontWeight: "var(--font-body-semibold)" }}>
           {t.etatRetour}
         </a>
       </section>

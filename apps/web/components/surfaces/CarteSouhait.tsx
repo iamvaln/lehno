@@ -200,6 +200,7 @@ export function CarteSouhait(
 
           {souhait.link ? (
             <a
+              className="lien"
               href={souhait.link}
               target="_blank"
               rel="noopener noreferrer"
@@ -232,7 +233,7 @@ export function CarteSouhait(
         ) : souhait.isReserved ? (
           <>
             <Tag>{t.souhaitReserve}</Tag>
-            <span style={{ fontSize: "var(--text-mention-m)", color: "var(--text-mention)" }}>
+            <span style={{ fontSize: "var(--text-mention-s)", color: "var(--text-mention)" }}>
               {t.souhaitReserveAide}
             </span>
           </>
