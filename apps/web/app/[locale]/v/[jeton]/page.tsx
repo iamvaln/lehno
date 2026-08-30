@@ -5,6 +5,7 @@ import { AvisCourt } from "../../../../components/surfaces/AvisCourt.js";
 import { estLangue, type Langue } from "../../../../lib/langues.js";
 import { chargerFormulaireVoeux } from "../../../../lib/voeux.js";
 import { messages } from "../../../../messages/index.js";
+import { joursEntre } from "../../../../lib/dates.js";
 
 /* `/v/<jeton>`, une lettre, comme `/m/` et comme l'invitation `/i/`. Ces
  * adresses arrivent par un message, pas depuis le site : un mot français dans
@@ -38,5 +39,19 @@ export default async function Page({ params }: Proprietes): Promise<ReactNode> {
     );
   }
 
-  return <DepotVoeu t={t} langue={langue} jeton={jeton} formulaire={etat.donnees} />;
+  /* Le jour courant et le décompte se calculent ICI, au rendu serveur, et
+     descendent en données. Les laisser au composant client lui ferait lire une
+     autre horloge que celle du rendu, et l'hydratation s'en plaindrait — un
+     décompte qui saute d'un jour sous les yeux du visiteur. */
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const joursRestants = joursEntre(aujourdhui, etat.donnees.occurrenceDate);
+
+  return (
+    <DepotVoeu
+      t={t} langue={langue} jeton={jeton}
+      formulaire={etat.donnees}
+      joursRestants={joursRestants}
+      aujourdhui={aujourdhui}
+    />
+  );
 }

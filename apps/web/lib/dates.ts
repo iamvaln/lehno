@@ -27,3 +27,13 @@ export function jourEtMois(mmjj: string, langue: Langue): string {
     day: "numeric", month: "long", timeZone: "UTC",
   }).format(date);
 }
+
+/** Le nombre de jours civils entre deux dates « AAAA-MM-JJ ».
+ *
+ *  En UTC, sur des jours entiers : un décompte qui passerait par l'heure locale
+ *  afficherait « J−3 » d'un côté de l'Atlantique et « J−2 » de l'autre pour le
+ *  même anniversaire. Négatif si l'échéance est passée. */
+export function joursEntre(depuis: string, jusqu: string): number {
+  const jour = 24 * 60 * 60 * 1000;
+  return Math.round((Date.parse(`${jusqu}T00:00:00Z`) - Date.parse(`${depuis}T00:00:00Z`)) / jour);
+}

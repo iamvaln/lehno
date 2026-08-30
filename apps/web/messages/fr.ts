@@ -253,7 +253,6 @@ export const fr = {
   // une page qui ne se charge pas, laisse le visiteur sans recours.
   voeuxTitre: "Un mot pour {nom}",
   voeuxOccasion: "Pour le {date}",
-  voeuxOuvertJusqu: "Les mots se referment le {date}.",
   voeuxAvantOuverture: "Les mots s'ouvrent le {date}.",
   voeuxApresFermeture: "Les mots se sont refermés le {date}.",
   voeuxRevenir: "Revenez à ce moment-là : le lien reste le même.",
@@ -265,5 +264,18 @@ export const fr = {
   voeuxConfirme: "C'est envoyé. Votre mot l'attendra.",
   voeuxErreur: "Votre mot n'est pas parti. Réessayez dans un instant.",
   voeuxFermeErreur: "Les mots viennent de se refermer. Votre texte n'a pas été envoyé.",
+
+  voeuxContexte: "pour l'anniversaire de {nom}",
+  voeuxPlaceholderMessage: "Écrivez-lui ce que vous avez sur le cœur…",
+  voeuxPlaceholderSignature: "votre nom, ou comme il vous plaît",
+  voeuxMention: "Votre mot lui parviendra le jour venu, tel que vous l'écrivez.",
+  voeuxConfirmeTitre: "C'est envoyé.",
+  voeuxConfirmeTexte: "Votre mot l'attendra le jour venu. Vous pouvez fermer cette page.",
+  // Après le geste seulement : promettre « ayez votre Mur » à quelqu'un qui
+  // n'a pas encore écrit, c'est lui parler d'autre chose que de ce qu'il est
+  // venu faire.
+  acqVoeuxTitre: "Ayez votre Mur",
+  acqVoeuxTexte: "Vos proches y trouvent votre date, ce que vous aimez, et un endroit pour vous écrire.",
+  acqVoeuxAction: "Créer le mien",
 
 };
