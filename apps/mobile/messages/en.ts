@@ -270,6 +270,7 @@ export const en = {
   securiteAppareils: "Signed-in devices",
   securiteCetAppareil: "This device",
   securiteDeconnecterTout: "Sign out other devices",
+  securiteDeconnecterTousTexte: "Other devices will have to sign in again. This one stays open.",
   securiteSupprimer: "Delete my account",
   securiteSupprimerAide: "Your pages, your notes and your Wall go with it.",
   securiteInhabituelle: "An unusual sign-in was detected on 12 August.",
