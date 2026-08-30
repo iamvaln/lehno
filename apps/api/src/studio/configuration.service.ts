@@ -36,6 +36,12 @@ function blocagePour(etat: string, essaisReussis: number): BlocagePublication | 
   return essaisReussis === 0 ? "aucun_essai_reussi" : null;
 }
 
+/* Une configuration n'a QU'UNE forme ; seuls ses réglages changent selon la
+   nature. L'écrire ainsi plutôt qu'en union laisse le compilateur vérifier
+   l'assemblage — une union l'obligerait à corréler `kind` et `reglages`, ce
+   qu'il ne sait pas faire sur un littéral, et on en serait réduit à forcer. */
+type ConfigurationDe<R> = Omit<ConfigurationMessage, "reglages"> & { reglages: R };
+
 type LigneConfig = {
   id: string; kind: StudioConfigKind; version: number | null; state: string; settings: unknown;
   fingerprint: string; publishedAt: Date | null; publishedByAdminId: string | null;
@@ -266,7 +272,20 @@ export class StudioConfigurationService {
   }
 
   /** Une ligne, rendue au contrat. Le compte d'essais est résolu à la lecture. */
-  async rendre(ligne: LigneConfig): Promise<ConfigurationMessage | ConfigurationPortrait> {
+  /* Deux lectures typées, comme pour les réglages : l'appelant n'a pas à
+     affirmer ce qu'il reçoit. Le studio du portrait ne sert QUE du portrait,
+     l'atelier du message QUE du message — et une inversion ne se compile pas.
+     Une union rendue ici obligerait chaque appelant à la rétrécir lui-même,
+     c'est-à-dire à se porter garant de ce que le service sait déjà. */
+  async rendrePortrait(ligne: LigneConfig): Promise<ConfigurationPortrait> {
+    return (await this.rendre(ligne)) as ConfigurationPortrait;
+  }
+
+  async rendreMessage(ligne: LigneConfig): Promise<ConfigurationMessage> {
+    return (await this.rendre(ligne)) as ConfigurationMessage;
+  }
+
+  async rendre(ligne: LigneConfig): Promise<ConfigurationDe<ReglagesMessage | ReglagesPortrait>> {
     const [essais, auteur] = await Promise.all([
       this.essaisReussis(ligne.fingerprint),
       ligne.publishedByAdminId === null
@@ -280,7 +299,7 @@ export class StudioConfigurationService {
 
   private assembler(
     ligne: LigneConfig, essaisReussis: number, parQui: string | null,
-  ): ConfigurationMessage | ConfigurationPortrait {
+  ): ConfigurationDe<ReglagesMessage | ReglagesPortrait> {
     /* Le blocage se DÉDUIT du compte déjà lu, il ne se relit pas : une seconde
        interrogation rendrait la ligne vue en liste incohérente avec la même
        ligne vue en détail dès qu'un essai tombe entre les deux. */
@@ -316,7 +335,7 @@ export class StudioConfigurationService {
    * ligne et pour cent. Deux formes de rendu pour une seule chose finissent
    * toujours par diverger — c'est ce qui fait qu'un champ ajouté n'apparaît
    * que sur l'un des deux écrans. */
-  async rendreTous(lignes: LigneConfig[]): Promise<ConfigurationMessage[]> {
+  async rendreTous(lignes: LigneConfig[]): Promise<ConfigurationDe<ReglagesMessage | ReglagesPortrait>[]> {
     if (lignes.length === 0) return [];
 
     const empreintes = [...new Set(lignes.map((l) => l.fingerprint))];

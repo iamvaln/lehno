@@ -432,8 +432,12 @@ export class GenerationService {
      * en service. Ici, il n'y a rien à cacher : le repli produit un message
      * correct au lieu de reprendre un crédit à quelqu'un parce qu'une table
      * d'administration était vide. */
-    const publie = await this.configs.enService().catch(() => null);
-    const reglages = publie === null ? null : this.configs.reglagesDe(publie);
+    /* La configuration du MESSAGE, et elle seule. Avant le découpage, ce
+       service lisait « la » configuration — celle qui portait aussi les
+       ambiances du portrait. Nommer la nature n'est pas une précision : c'est
+       ce qui empêche une consigne de dessin d'entrer dans un texte. */
+    const publie = await this.configs.enService("message").catch(() => null);
+    const reglages = publie === null ? null : this.configs.reglagesMessageDe(publie);
     const orientationPubliee = reglages?.orientations.find((o) => o.id === orientation);
 
     return {

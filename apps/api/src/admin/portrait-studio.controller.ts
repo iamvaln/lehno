@@ -6,10 +6,11 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import {
   CHAMPS_DU_PROCHE, GROUPES_AMBIANCE, MOTIFS_IDENTITAIRES, ORIENTATIONS,
-  creationProfilSchema, enregistrementDirectSchema, lancementEssaiSchema,
+  creationProfilSchema, enregistrementPortraitSchema, lancementEssaiPortraitSchema,
   modificationProfilSchema, profilContenuSchema, publicationStudioSchema,
   retourArriereStudioSchema,
-  type CandidatsStudio, type EssaiStudio, type EtatStudio,
+  type CandidatsStudio, type ConfigurationPortrait, type EssaiStudio, type EtatPortrait,
+  type ReglagesPortrait,
   type ProfilStudio, type ProfilsStudio,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -54,25 +55,31 @@ export class PortraitStudioService {
   /* Les deux écrans du brief de design en un seul appel : ce qui tourne, et ce
      qu'on compose. Deux points d'entrée feraient payer un aller-retour à
      l'établi, qui les montre côte à côte — c'est tout son propos. */
-  async etat(): Promise<EtatStudio> {
+  /* CE CONTRÔLEUR NE SERT QUE LE PORTRAIT, et le nomme partout.
+   *
+   * Avant le découpage il servait « la » configuration — celle qui portait
+   * aussi les orientations du message. L'établi du portrait affichait donc, et
+   * faisait publier, des réglages de texte. */
+  async etat(): Promise<EtatPortrait> {
     const [enService, brouillon] = await Promise.all([
-      this.configs.enService(), this.configs.brouillon(),
+      this.configs.enService("portrait"), this.configs.brouillon("portrait"),
     ]);
     return {
-      enService: enService === null ? null : await this.configs.rendre(enService),
-      brouillon: brouillon === null ? null : await this.configs.rendre(brouillon),
+      enService: enService === null ? null : await this.configs.rendrePortrait(enService),
+      brouillon: brouillon === null ? null : await this.configs.rendrePortrait(brouillon),
     };
   }
 
   async historique() {
     const lignes = await this.prisma.studioConfig.findMany({
+      where: { kind: "portrait" },
       orderBy: { createdAt: "desc" }, take: 200,
     });
     return { items: await this.configs.rendreTous(lignes) };
   }
 
-  async enregistrerDirect(reglages: Parameters<StudioConfigurationService["enregistrerDirect"]>[0]) {
-    return this.configs.rendre(await this.configs.enregistrerDirect(reglages));
+  async enregistrerDirect(reglages: ReglagesPortrait): Promise<ConfigurationPortrait> {
+    return this.configs.rendrePortrait(await this.configs.enregistrerDirect("portrait", reglages));
   }
 
   async publier(adminId: string, entree: z.infer<typeof publicationStudioSchema>) {
@@ -145,7 +152,7 @@ export class PortraitStudioService {
 
   // ── Les essais ────────────────────────────────────────────────────────────
 
-  async essayer(adminId: string, entree: z.infer<typeof lancementEssaiSchema>) {
+  async essayer(adminId: string, entree: z.infer<typeof lancementEssaiPortraitSchema>) {
     return this.essais.essayer(adminId, entree.reglages, entree.profileId);
   }
 
@@ -202,7 +209,7 @@ export class PortraitStudioController {
   constructor(@Inject(PortraitStudioService) private readonly service: PortraitStudioService) {}
 
   @Get("config")
-  etat(): Promise<EtatStudio> {
+  etat(): Promise<EtatPortrait> {
     return this.service.etat();
   }
 
@@ -220,7 +227,7 @@ export class PortraitStudioController {
    * engage. */
   @Patch("config")
   enregistrer(
-    @Body(new ZodValidationPipe(enregistrementDirectSchema)) corps: z.infer<typeof enregistrementDirectSchema>,
+    @Body(new ZodValidationPipe(enregistrementPortraitSchema)) corps: z.infer<typeof enregistrementPortraitSchema>,
   ) {
     return this.service.enregistrerDirect(corps.reglages);
   }
@@ -287,7 +294,7 @@ export class PortraitStudioController {
   @Post("trials")
   @HttpCode(201)
   essayer(
-    @Body(new ZodValidationPipe(lancementEssaiSchema)) corps: z.infer<typeof lancementEssaiSchema>,
+    @Body(new ZodValidationPipe(lancementEssaiPortraitSchema)) corps: z.infer<typeof lancementEssaiPortraitSchema>,
     @Req() req: { admin?: { id: string } },
   ) {
     return this.service.essayer(req.admin?.id ?? "", corps);
