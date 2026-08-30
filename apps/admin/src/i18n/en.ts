@@ -57,6 +57,8 @@ export const en: typeof fr = {
     transactionsToutes: "All transactions",
     versementsManuels: "Manual deposits",
     canauxPaiement: "Channels and fees",
+    creditsSection: "Credits",
+    transactionManuelle: "Manual transaction",
     acces: "Administrator access",
     parametres: "Parameters",
     fonctionnalites: "Features",
@@ -764,6 +766,7 @@ export const en: typeof fr = {
     etats: {
       enCours: "Grace period",
       echue: "To erase",
+      attendRemboursement: "Refund to pay",
       efface: "Erased",
     },
     col: {
@@ -1045,6 +1048,40 @@ export const en: typeof fr = {
         "Work postponed",
       ],
     },
+  },
+
+  transactionManuelle: {
+    titre: "Manual transaction",
+    sous: "Write a credit movement on an account. The gesture is logged with its author and reason.",
+    compte: "The account",
+    chercher: "Search for an account",
+    chercherPlaceholder: "Username or address",
+    aucunCompte: "No account matches",
+    solde: "Balance",
+    changer: "Change",
+    nature: "What this is",
+    natures: {
+      gift: "Gift — credited",
+      reward: "Reward — credited",
+      correctionPlus: "Correction — credited",
+      correctionMoins: "Credits taken back — debited",
+    },
+    sensCredit: "The account will receive {n} credits.",
+    sensDebit: "The account will lose {n} credits.",
+    montant: "How many",
+    montantAide: "A whole number of credits, above zero.",
+    ecrire: "Write the movement",
+    annuler: "Cancel",
+    dialogue: {
+      titre: "Write this movement",
+      consequence: "The balance changes immediately, and the client sees it. The audit log keeps the gesture, its author and its reason.",
+      motifs: [
+        "Goodwill gesture",
+        "Fixing an error",
+        "Compensation for an incident",
+      ],
+    },
+    fait: "Movement written.",
   },
 
   metriques: {

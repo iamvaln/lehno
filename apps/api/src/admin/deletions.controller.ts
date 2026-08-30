@@ -22,7 +22,7 @@ export type DemandeSuppression = {
   demandeeLe: string;
   echeance: string;
   joursRestants: number;
-  etat: "en_cours" | "echue";
+  etat: "en_cours" | "echue" | "attend_remboursement";
 };
 
 @Injectable()
@@ -57,7 +57,17 @@ export class DeletionsService {
       orderBy: [{ deletionRequestedAt: "asc" }, { id: "asc" }],
       take: limite + 1,
       ...(requete.cursor ? { cursor: { id: requete.cursor }, skip: 1 } : {}),
-      select: { id: true, username: true, deletionRequestedAt: true },
+      select: {
+        id: true, username: true, deletionRequestedAt: true,
+        /* Un seul remboursement suffit à retenir l'effacement : on ne compte
+           pas, on regarde s'il en existe. `take: 1` évite de rapatrier la
+           file de paiements d'un compte pour répondre à une question binaire. */
+        payments: {
+          where: { direction: "refund", status: "pending" },
+          select: { id: true },
+          take: 1,
+        },
+      },
     });
 
     const page = lignes.slice(0, limite);
@@ -72,7 +82,14 @@ export class DeletionsService {
           demandeeLe: demandee.toISOString(),
           echeance: echeance.toISOString(),
           joursRestants: restants,
-          etat: restants <= 0 ? "echue" : "en_cours",
+          /* Le remboursement PRIME sur l'échéance, et c'est le sens de la
+             distinction : « échue » dit que la date est passée et que
+             l'effacement va suivre, ce qui serait faux ici — il est retenu.
+             Un compte qui attend notre virement ne doit pas se lire comme un
+             compte qui attend le calendrier. */
+          etat: u.payments.length > 0
+            ? "attend_remboursement"
+            : restants <= 0 ? "echue" : "en_cours",
         };
       }),
       nextCursor: lignes.length > limite ? (page.at(-1)?.id ?? null) : null,
