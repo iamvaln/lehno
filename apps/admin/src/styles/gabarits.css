@@ -315,3 +315,33 @@
   border-left: 3px solid var(--action);
   padding-left: var(--space-16);
 }
+
+/* La galerie des essais. On vient JUGER un résultat : les vignettes se posent
+   en grille, larges assez pour qu'on voie ce qui a été produit — une table de
+   modèles et de dates ne dit pas si le portrait était bon. */
+.admin-vignettes {
+  list-style: none;
+  margin: var(--space-16) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-16);
+}
+
+.admin-vignette {
+  border: var(--border-width) solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-12);
+  display: grid;
+  gap: var(--space-8);
+  align-content: start;
+}
+
+/* L'image occupe la largeur de sa vignette et garde ses proportions : un
+   portrait déformé se juge mal, et c'est le jugement qu'on est venu porter. */
+.admin-vignette-image {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+}
