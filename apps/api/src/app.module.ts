@@ -222,20 +222,34 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     {
       /* Les notifications poussées.
        *
-       * OneSignal quand les deux variables sont là, la console sinon — et la
-       * console ÉCRIT ce qui serait parti, elle ne se tait pas. Un port muet
-       * donnerait un développement où tout paraît marcher et où l'on découvre
-       * à la mise en service que rien n'était branché.
+       * Même raisonnement que MAIL_PORT juste au-dessus, et la même
+       * correction : L'ADHÉSION EXPLICITE PASSE AVANT. Sur un poste de
+       * développement, les deux variables OneSignal viennent du fichier
+       * d'environnement partagé — les tester en premier rendrait
+       * `LEHNO_PUSH_CONSOLE=1` inatteignable, et chaque essai local partirait
+       * sur un vrai téléphone. Une notification poussée par erreur ne se
+       * rattrape pas : elle a déjà sonné.
        *
-       * Les deux ensemble ou aucune, comme pour R2 : un identifiant
+       * Les deux variables ensemble ou aucune, comme pour R2 : un identifiant
        * d'application sans clé donnerait un client qui part en requête et se
        * fait refuser, et le refus ne paraîtrait qu'au premier rappel dû —
-       * c'est-à-dire chez quelqu'un, un matin, sans que personne regarde. */
+       * c'est-à-dire chez quelqu'un, un matin, sans que personne regarde.
+       *
+       * Le repli est la console et non un refus de démarrer, contrairement au
+       * courrier : sans courriel, personne ne peut se connecter ; sans push,
+       * l'application marche. Mais le repli s'ANNONCE, parce que c'est
+       * exactement ainsi qu'une mise en service se fait sans notifications
+       * sans que personne ne s'en aperçoive. */
       provide: "PUSH_PORT",
       useFactory: () => {
+        if (process.env.LEHNO_PUSH_CONSOLE === "1") return new PoussePourLaConsole();
         const app = process.env.ONESIGNAL_APP_ID;
         const cle = process.env.ONESIGNAL_API_KEY;
         if (app && cle) return new PousseOneSignal(app, cle);
+        new Logger("PUSH_PORT").warn(
+          "ONESIGNAL_APP_ID et ONESIGNAL_API_KEY absentes : aucune notification " +
+          "poussée ne partira, leur contenu s'écrira sur cette console.",
+        );
         return new PoussePourLaConsole();
       },
     },
