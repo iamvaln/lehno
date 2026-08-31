@@ -10,6 +10,8 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1121.0",
+    "@aws-sdk/s3-request-presigner": "^3.1121.0",
     "@lehno/contracts": "workspace:*",
     "@lehno/i18n": "workspace:*",
     "@nestjs/common": "^11.2.1",

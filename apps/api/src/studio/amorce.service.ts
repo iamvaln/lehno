@@ -1,6 +1,9 @@
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
-import { reglagesDeDepart, type ProfilContenu } from "@lehno/contracts";
+import type { Prisma, StudioConfigKind } from "@prisma/client";
+import {
+  reglagesMessageDeDepart, reglagesPortraitDeDepart,
+  type ProfilContenu, type ReglagesMessage, type ReglagesPortrait,
+} from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { StudioConfigurationService } from "./configuration.service.js";
 
@@ -47,16 +50,28 @@ export class AmorceStudioService implements OnModuleInit {
    * par-dessus ce que l'administration a publié. On chercherait longtemps
    * pourquoi « le réglage ne tient pas », comme on l'a cherché pour les tarifs
    * des modèles. */
+  /* DEUX configurations, une par nature — le message et le portrait se règlent,
+     s'éprouvent et se publient séparément. Le compte se fait PAR NATURE : semer
+     l'une n'excuse pas de ne pas semer l'autre, et un serveur qui aurait perdu
+     la seconde s'ouvrirait à moitié sans que rien ne le dise. */
   private async semerLaConfiguration(): Promise<void> {
-    if ((await this.prisma.studioConfig.count()) > 0) return;
+    await this.semerUne("message", reglagesMessageDeDepart());
+    await this.semerUne("portrait", reglagesPortraitDeDepart());
+  }
 
-    const reglages = reglagesDeDepart();
+  private async semerUne(
+    nature: StudioConfigKind,
+    reglages: ReglagesMessage | ReglagesPortrait,
+  ): Promise<void> {
+    if ((await this.prisma.studioConfig.count({ where: { kind: nature } })) > 0) return;
+
     await this.prisma.studioConfig.create({
       data: {
+        kind: nature,
         state: "published",
         version: 1,
         settings: reglages as unknown as Prisma.InputJsonValue,
-        fingerprint: this.configs.empreinte(reglages),
+        fingerprint: this.configs.empreinte(nature, reglages),
         publishedAt: new Date(),
         // Personne ne l'a publiée : voir le commentaire de tête.
         publishedByAdminId: null,

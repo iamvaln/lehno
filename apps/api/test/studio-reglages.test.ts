@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  catalogueServi, matierePourEmpreinte, reglagesDeDepart,
+  catalogueServi, matierePourEmpreinteMessage, matierePourEmpreintePortrait,
+  reglagesMessageDeDepart, reglagesPortraitDeDepart,
   ORIENTATIONS, groupesAtteignables, valideSelection,
-  type ProfilContenu, type StudioReglages,
+  type ProfilContenu, type ReglagesMessage, type ReglagesPortrait,
 } from "@lehno/contracts";
 import { axesManquants } from "../src/studio/couverture.js";
 
@@ -15,15 +16,25 @@ import { axesManquants } from "../src/studio/couverture.js";
  * zèle ; une empreinte trop ÉTROITE laisse publier une consigne que personne
  * n'a vue tourner. Ces cas gardent les deux bords. */
 
-const modifier = (f: (r: StudioReglages) => void): StudioReglages => {
-  const r = JSON.parse(JSON.stringify(reglagesDeDepart())) as StudioReglages;
+/* DEUX modificateurs, un par nature : les réglages du message et ceux du
+   portrait ne vivent plus dans le même objet, et c'est tout le sujet du
+   découpage — reformuler un garde-fou du message ne doit plus faire retomber
+   les essais du portrait. */
+const modifier = (f: (r: ReglagesMessage) => void): ReglagesMessage => {
+  const r = JSON.parse(JSON.stringify(reglagesMessageDeDepart())) as ReglagesMessage;
+  f(r);
+  return r;
+};
+
+const modifierPortrait = (f: (r: ReglagesPortrait) => void): ReglagesPortrait => {
+  const r = JSON.parse(JSON.stringify(reglagesPortraitDeDepart())) as ReglagesPortrait;
   f(r);
   return r;
 };
 
 describe("l'empreinte de la partie lue par le modèle", () => {
-  const depart = reglagesDeDepart();
-  const empreinte = (r: StudioReglages) => matierePourEmpreinte(r);
+  const depart = reglagesMessageDeDepart();
+  const empreinte = (r: ReglagesMessage): string => matierePourEmpreinteMessage(r);
 
   // LE BORD LARGE. Sans lui, réordonner l'écran redemanderait de régénérer —
   // et on ferait valider une image identique à la précédente. Une validation
@@ -61,7 +72,7 @@ describe("l'empreinte de la partie lue par le modèle", () => {
   });
 
   it("bouge quand on change le modèle appelé", () => {
-    const apres = modifier((r) => { r.modeles.message = "deepseek:deepseek-chat"; });
+    const apres = modifier((r) => { r.modele = "deepseek:deepseek-chat"; });
     expect(empreinte(apres)).not.toBe(empreinte(depart));
   });
 
@@ -91,22 +102,59 @@ describe("l'empreinte de la partie lue par le modèle", () => {
      formulaire, et la publication réclamerait un essai pour un changement qui
      n'existe pas. */
   it("ne dépend pas de l'ordre des clés d'un objet", () => {
-    const remonte = JSON.parse(JSON.stringify(depart)) as StudioReglages;
+    const remonte = JSON.parse(JSON.stringify(depart)) as ReglagesMessage;
+    /* Les motifs sont le seul objet à clés multiples du côté message. Leur
+       ordre ne doit rien changer : une empreinte sensible à l'ordre des clés
+       redemanderait un essai après un simple aller-retour par JSON. */
     const desordre = {
+      motifs: undefined,
       ...remonte,
-      modeles: {
-        photo_style: remonte.modeles.photo_style,
-        message: remonte.modeles.message,
-        illustration: remonte.modeles.illustration,
-      },
-    } as StudioReglages;
+      champsDuProche: [...remonte.champsDuProche],
+    } as ReglagesMessage;
     expect(empreinte(desordre)).toBe(empreinte(depart));
+  });
+});
+
+/* LES DEUX EMPREINTES SONT INDÉPENDANTES — c'est tout l'objet du découpage.
+ *
+ * Avant lui, une seule empreinte couvrait les deux natures : reformuler un
+ * garde-fou du message faisait retomber les essais du portrait, et modifier un
+ * style de dessin faisait retomber ceux du message. Chaque réglage rendait
+ * l'autre à éprouver alors qu'il n'avait pas bougé. */
+describe("l'empreinte du portrait", () => {
+  const depart = reglagesPortraitDeDepart();
+  const empreinte = (r: ReglagesPortrait): string => matierePourEmpreintePortrait(r);
+
+  it("bouge quand on change la consigne d'une ambiance", () => {
+    const apres = modifierPortrait((r) => { r.ambiances[0]!.consigne.fr = "Tout autre chose"; });
+    expect(empreinte(apres)).not.toBe(empreinte(depart));
+  });
+
+  // Le libellé est lu par l'ÉCRAN, pas par le modèle : le renommer ne doit pas
+  // redemander un essai.
+  it("ne bouge pas quand on renomme une ambiance", () => {
+    const apres = modifierPortrait((r) => { r.ambiances[0]!.libelle.fr = "Un autre nom"; });
+    expect(empreinte(apres)).toBe(empreinte(depart));
+  });
+
+  /* LA propriété du découpage : rien de ce qui touche au message ne doit
+     déplacer l'empreinte du portrait. Sans ce cas, on pourrait refondre les
+     deux en un seul objet sans qu'aucun test ne tombe. */
+  it("ignore tout ce qui appartient au message", () => {
+    const m = reglagesMessageDeDepart();
+    const melange = { ...m, ...depart } as ReglagesPortrait;
+    expect(empreinte(melange)).toBe(empreinte(depart));
+  });
+
+  it("bouge quand on change le modèle d'illustration", () => {
+    const apres = modifierPortrait((r) => { r.modeles.illustration = "openai:gpt-image-1"; });
+    expect(empreinte(apres)).not.toBe(empreinte(depart));
   });
 });
 
 describe("le catalogue servi à l'application", () => {
   it("rend les douze orientations dans l'ordre de l'écran", () => {
-    const c = catalogueServi(reglagesDeDepart(), "fr");
+    const c = catalogueServi(reglagesMessageDeDepart(), reglagesPortraitDeDepart(), "fr");
     const orientation = c.groups.find((g) => g.id === "orientation");
     expect(orientation?.choices.map((x) => x.id)).toEqual([...ORIENTATIONS]);
   });
@@ -116,9 +164,9 @@ describe("le catalogue servi à l'application", () => {
      l'application pour retirer une orientation — c'est-à-dire attendre que le
      parc se mette à jour, ce qu'il ne fait jamais d'un bloc. */
   it("ne rend pas une orientation désactivée", () => {
-    const c = catalogueServi(modifier((r) => { r.orientations[2]!.actif = false; }), "fr");
+    const c = catalogueServi(modifier((r) => { r.orientations[2]!.actif = false; }), reglagesPortraitDeDepart(), "fr");
     const ids = c.groups.find((g) => g.id === "orientation")?.choices.map((x) => x.id) ?? [];
-    expect(ids).not.toContain(reglagesDeDepart().orientations[2]!.id);
+    expect(ids).not.toContain(reglagesMessageDeDepart().orientations[2]!.id);
     expect(ids).toHaveLength(ORIENTATIONS.length - 1);
   });
 
@@ -126,14 +174,14 @@ describe("le catalogue servi à l'application", () => {
   // défaut nommé pointerait un jour sur ce qu'on vient de désactiver, et
   // l'écran s'ouvrirait sans sélection.
   it("prend le premier choix actif pour défaut", () => {
-    const c = catalogueServi(modifier((r) => { r.orientations[0]!.actif = false; }), "fr");
+    const c = catalogueServi(modifier((r) => { r.orientations[0]!.actif = false; }), reglagesPortraitDeDepart(), "fr");
     const orientation = c.groups.find((g) => g.id === "orientation");
     expect(orientation?.defaultChoiceId).toBe(ORIENTATIONS[1]);
   });
 
   it("résout les libellés dans la langue demandée", () => {
-    const fr = catalogueServi(reglagesDeDepart(), "fr");
-    const en = catalogueServi(reglagesDeDepart(), "en");
+    const fr = catalogueServi(reglagesMessageDeDepart(), reglagesPortraitDeDepart(), "fr");
+    const en = catalogueServi(reglagesMessageDeDepart(), reglagesPortraitDeDepart(), "en");
     const premier = (c: typeof fr) => c.groups[0]!.choices[0]!.label;
     expect(premier(fr)).toBe("Notre relation");
     expect(premier(en)).toBe("Our relationship");
@@ -142,7 +190,7 @@ describe("le catalogue servi à l'application", () => {
   /* L'avertissement s'affiche AU MOMENT du choix. Le perdre ferait découvrir
      après coup que l'hommage change tout — c'est-à-dire après avoir payé. */
   it("porte l'avertissement de l'hommage", () => {
-    const c = catalogueServi(reglagesDeDepart(), "fr");
+    const c = catalogueServi(reglagesMessageDeDepart(), reglagesPortraitDeDepart(), "fr");
     const hommage = c.groups[0]!.choices.find((x) => x.id === "un_hommage");
     expect(hommage?.warning).toContain("sobre");
   });
@@ -152,7 +200,7 @@ describe("le catalogue servi à l'application", () => {
      « une photo », et rien n'apparaît. C'est l'état du jour — les trois noms
      de style de photo ne sont pas tranchés. */
   it("retire une voie d'image dont le groupe d'ambiances est vide", () => {
-    const c = catalogueServi(modifier((r) => {
+    const c = catalogueServi(reglagesMessageDeDepart(), modifierPortrait((r) => {
       r.voiesImage.find((v) => v.id === "photo")!.actif = true;
     }), "fr");
     const image = c.groups.find((g) => g.id === "image");
@@ -161,7 +209,7 @@ describe("le catalogue servi à l'application", () => {
   });
 
   it("rend la voie photo dès qu'un style existe", () => {
-    const c = catalogueServi(modifier((r) => {
+    const c = catalogueServi(reglagesMessageDeDepart(), modifierPortrait((r) => {
       r.voiesImage.find((v) => v.id === "photo")!.actif = true;
       r.ambiances.push({
         id: "argentique", groupe: "photo_style", actif: true,
@@ -177,7 +225,7 @@ describe("le catalogue servi à l'application", () => {
      emploie. Un catalogue valide au schéma mais qui ouvre un groupe vide
      passerait le `parse` et casserait l'écran. */
   it("se laisse parcourir et valider par le client", () => {
-    const c = catalogueServi(reglagesDeDepart(), "fr");
+    const c = catalogueServi(reglagesMessageDeDepart(), reglagesPortraitDeDepart(), "fr");
     const atteignables = groupesAtteignables(c, {});
     const selection = Object.fromEntries(
       atteignables.map((g) => [g, c.groups.find((x) => x.id === g)!.defaultChoiceId]),

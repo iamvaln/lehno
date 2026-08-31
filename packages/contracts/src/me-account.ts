@@ -76,6 +76,17 @@ export const deletionRefundSchema = z.object({
      le calcul : le délai est réglable en back-office, et deux versions du parc
      appliqueraient deux règles. */
   eligibleMethods: z.array(paymentMethodSchema),
+  /* LE DÉLAI, en jours — celui des CGU §6, réglable en administration.
+   *
+   * Le serveur le lisait pour trancher l'éligibilité et ne le rendait pas :
+   * l'écran pouvait dire « cette méthode ne peut pas encore recevoir de
+   * remboursement », jamais « elle le pourra dans neuf jours ». Un refus sans
+   * échéance se lit comme un refus définitif, et la personne renonce ou écrit
+   * à l'assistance pour une attente qui allait finir seule.
+   *
+   * Le client ne le RECALCULE pas — il l'affiche. C'est le serveur qui rend
+   * `refundEligible`, et deux versions du parc appliqueraient deux règles. */
+  refundMethodMinAgeDays: z.number().int().positive(),
 }).strict();
 
 export type DeletionRefund = z.infer<typeof deletionRefundSchema>;

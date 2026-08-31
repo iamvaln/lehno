@@ -15,6 +15,9 @@ const apercu = (refundable: number, methodes: number): DeletionPreview => ({
     refundable,
     currency: refundable > 0 ? "XAF" : null,
     amount: refundable > 0 ? refundable * 100 : null,
+    // Le délai des CGU §6, rendu par le serveur : l'écran annonce l'échéance
+    // d'une méthode trop récente au lieu d'un refus sans date.
+    refundMethodMinAgeDays: 14,
     eligibleMethods: Array.from({ length: methodes }, (_, i) => ({
       id: `${String(i + 1).padStart(8, "0")}-0000-4000-8000-000000000000`,
       kind: "mobile_money" as const,

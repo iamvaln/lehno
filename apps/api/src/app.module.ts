@@ -130,6 +130,8 @@ import { SubmissionService } from "./mur/submission.service.js";
 import { VoeuxService } from "./mur/voeux.service.js";
 import { SurfacePubliqueService } from "./mur/jetons.js";
 import { EffacementService } from "./me/effacement.service.js";
+import { StockageR2 } from "./stockage/r2.adapter.js";
+import { StockageMemoire } from "./stockage/memoire.adapter.js";
 import { TrackingService } from "./tracking/tracking.service.js";
 import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
 import { PostHogAdapter } from "./tracking/posthog.adapter.js";
@@ -192,6 +194,29 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
       },
     },
     TrackingService,
+    {
+      /* Le stockage des fichiers.
+       *
+       * R2 quand les quatre variables sont là, la mémoire sinon. Pas de repli
+       * silencieux vers rien du tout, comme la mesure : un fichier qu'on croit
+       * rangé et qui n'est nulle part se découvre le jour où on va le
+       * chercher — et à ce moment-là il n'existe plus de moyen de le
+       * retrouver. Mieux vaut une mémoire honnête, qui perd au redémarrage et
+       * le dit par son nom, qu'un puits sans fond.
+       *
+       * Les QUATRE ensemble ou aucune : trois variables sur quatre donneraient
+       * un client qui signe des URL vers un compartiment qui n'existe pas, et
+       * l'erreur ne paraîtrait qu'au premier dépôt d'un utilisateur. */
+      provide: "STOCKAGE_PORT",
+      useFactory: () => {
+        const compte = process.env.R2_ACCOUNT_ID;
+        const cle = process.env.R2_ACCESS_KEY_ID;
+        const secret = process.env.R2_SECRET_ACCESS_KEY;
+        const seau = process.env.R2_BUCKET;
+        if (compte && cle && secret && seau) return new StockageR2(compte, cle, secret, seau);
+        return new StockageMemoire();
+      },
+    },
     // Le Mur et la collecte (§5.3, §5.5, §7).
     SurfacePubliqueService,
     MurService,

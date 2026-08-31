@@ -20091,10 +20091,26 @@
                       "minimum": 0
                     },
                     "version": {
-                      "type": "integer",
-                      "exclusiveMinimum": true,
-                      "minimum": 0,
-                      "nullable": true
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0,
+                          "nullable": true
+                        },
+                        "portrait": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0,
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "message",
+                        "portrait"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
@@ -23301,6 +23317,11 @@
                             ],
                             "additionalProperties": false
                           }
+                        },
+                        "refundMethodMinAgeDays": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0
                         }
                       },
                       "required": [
@@ -23308,7 +23329,8 @@
                         "refundable",
                         "currency",
                         "amount",
-                        "eligibleMethods"
+                        "eligibleMethods",
+                        "refundMethodMinAgeDays"
                       ],
                       "additionalProperties": false
                     },

@@ -609,6 +609,11 @@ describe("mes listes de souhaits, leur partage et leur réservation", () => {
 
     const n = await db.prisma.notification.findFirstOrThrow({ where: { userId: awa } });
     expect(n.type).toBe("wish_reserved");
+    /* La CLÉ, et pas seulement la nature : elles se ressemblent, et c'est ce
+       qui a laissé passer une clé sans son préfixe `notification.`. Un client
+       qui résout ses libellés par préfixe ne l'aurait jamais trouvée, et rien
+       ici ne le disait. */
+    expect(n.titleKey).toBe("notification.wish_reserved");
     expect(JSON.stringify(n.bodyParams)).not.toContain("Kiné");
     expect(JSON.stringify(n.bodyParams)).toContain("Un moulin à café");
   });

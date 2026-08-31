@@ -156,7 +156,18 @@ export function valideSelection(config: StudioConfig, selection: StudioSelection
 export const studioOptionsSchema = z.object({
   catalogue: studioConfigSchema,
   creditCost: z.number().int().min(0),
-  version: z.number().int().positive().nullable(),
+  /* DEUX numéros, un par nature.
+   *
+   * Le catalogue réunit deux configurations — les orientations viennent du
+   * message, les voies et les ambiances du portrait. Un seul numéro en
+   * désignerait donc la mauvaise une fois sur deux, et l'assistance chercherait
+   * le réglage d'un texte pour expliquer une image ratée.
+   *
+   * Nuls tant que rien n'a été publié de cette nature-là. */
+  version: z.object({
+    message: z.number().int().positive().nullable(),
+    portrait: z.number().int().positive().nullable(),
+  }).strict(),
 }).strict();
 
 export type StudioOptions = z.infer<typeof studioOptionsSchema>;

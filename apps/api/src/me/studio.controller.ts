@@ -27,8 +27,12 @@ export class StudioOptionsService {
   ) {}
 
   async options(userId: string): Promise<StudioOptions> {
-    const [config, action, compte] = await Promise.all([
-      this.configs.enService(),
+    /* LES DEUX configurations : le catalogue de l'application les réunit — les
+       orientations viennent du message, les voies et les ambiances du portrait.
+       C'est le seul endroit où elles se rejoignent, et il est en lecture. */
+    const [message, portrait, action, compte] = await Promise.all([
+      this.configs.enService("message"),
+      this.configs.enService("portrait"),
       this.prisma.premiumAction.findUnique({ where: { code: ACTION_PORTRAIT } }),
       this.prisma.user.findUnique({ where: { id: userId }, select: { uiLanguage: true } }),
     ]);
@@ -43,7 +47,12 @@ export class StudioOptionsService {
      * pourquoi une orientation désactivée est revenue. Une seule source, et
      * elle est en base ; la réconciliation au démarrage se charge qu'elle
      * existe. */
-    if (!config)
+    /* On REFUSE plutôt que de servir à moitié : un catalogue sans ses
+       ambiances ouvrirait l'écran sur une voie d'image qui ne mène nulle part,
+       et un catalogue sans orientations n'aurait rien à proposer du tout. Le
+       repli silencieux ferait croire à un studio appauvri là où il est à
+       moitié absent. */
+    if (!message || !portrait)
       throw new AppError("resource_inactive", "the studio has no published configuration");
 
     /* La langue est celle de l'INTERFACE de l'utilisateur, pas celle du
@@ -54,13 +63,17 @@ export class StudioOptionsService {
     const langue = compte?.uiLanguage === "en" ? "en" : "fr";
 
     return {
-      catalogue: catalogueServi(this.configs.reglagesDe(config), langue),
+      catalogue: catalogueServi(
+        this.configs.reglagesMessageDe(message),
+        this.configs.reglagesPortraitDe(portrait),
+        langue,
+      ),
       /* LE PRIX VIENT DE LA BASE. Il se règle en administration sans
          livraison ; une constante ici afficherait l'ancien tarif sur tout un
          parc jusqu'à la mise à jour suivante. Zéro si l'action n'existe pas
          encore — le semis la crée, et le lancement, lui, refusera. */
       creditCost: action?.creditCost ?? 0,
-      version: config.version,
+      version: { message: message.version, portrait: portrait.version },
     };
   }
 }
