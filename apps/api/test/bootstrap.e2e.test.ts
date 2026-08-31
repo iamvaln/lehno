@@ -86,6 +86,33 @@ describe("démarrage de l'application", () => {
     expect(app.get<MailPort>("MAIL_PORT")).toBeInstanceOf(ConsoleMailAdapter);
   });
 
+  /* LE QUATRIÈME CAS, celui d'un poste de développement — et le seul qui
+     n'était pas éprouvé.
+     
+     Sur une machine de développement les DEUX sont posés : Resend vient du
+     fichier d'environnement partagé, `LEHNO_MAIL_CONSOLE=1` est ajouté exprès
+     pour développer. L'ordre précédent donnait Resend, donc l'adhésion
+     explicite ne servait JAMAIS là où elle sert.
+     
+     La conséquence n'était pas théorique : Resend refuse d'écrire à un domaine
+     non vérifié, le code à usage unique ne partait nulle part, et le parcours
+     de connexion était impossible en local — avec un 403 pour seule
+     explication.
+     
+     La garde d'origine tient toujours : on ne TOMBE pas sur la console faute
+     de configuration, il faut écrire « 1 », ce qui ne s'écrit pas par
+     accident. Et le démarrage l'annonce. */
+  it("préfère la console à Resend quand l'adhésion explicite est posée", async () => {
+    await resetDatabase(db.prisma);
+    restoreEnv = withEnv({
+      DATABASE_URL: db.url, OTP_PEPPER: PEPPER, JWT_SECRET: SECRET,
+      RESEND_API_KEY: "re_cle-de-test", RESEND_FROM: "Lehno <no-reply@lehno.io>",
+      LEHNO_MAIL_CONSOLE: "1",
+    });
+    app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
+    expect(app.get<MailPort>("MAIL_PORT")).toBeInstanceOf(ConsoleMailAdapter);
+  });
+
   it("refuse de démarrer sans identifiants Resend NI adhésion explicite à la console", async () => {
     restoreEnv = withEnv({
       DATABASE_URL: db.url, OTP_PEPPER: PEPPER, JWT_SECRET: SECRET,
