@@ -50,8 +50,12 @@ export interface StudioAtelierProps {
   dernier: EssaiStudio | null;
   enCours?: boolean;
   onEssayer?: (reglages: ReglagesPortrait, profileId: string, ambianceId: string) => void;
-  onGarder?: (reglages: ReglagesPortrait) => void;
-  onEcarter?: () => void;
+  /* Garder et Écarter emportent l'ESSAI qu'ils suivent : le sort d'un résultat
+     se lit du geste qui vient après lui, et non d'un troisième bouton à
+     apprendre. Nul quand aucun essai n'a encore eu lieu — mais les deux gestes
+     sont alors fermés, donc le cas ne se présente pas. */
+  onGarder?: (reglages: ReglagesPortrait, essaiId: string | null) => void;
+  onEcarter?: (essaiId: string | null) => void;
   onPublier?: (configId: string, note: string) => void;
   onRetour?: (id: string) => void;
 }
@@ -276,14 +280,14 @@ export function StudioAtelier(
                 <button
                   type="button"
                   disabled={!rendu}
-                  onClick={() => { onGarder?.(reglages); setSale(false); }}
+                  onClick={() => { onGarder?.(reglages, dernier?.id ?? null); setSale(false); }}
                 >
                   {d.gestes.garder}
                 </button>
                 <button
                   type="button"
                   disabled={!rendu}
-                  onClick={() => { setReglages(depart.reglages); setSale(false); onEcarter?.(); }}
+                  onClick={() => { setReglages(depart.reglages); setSale(false); onEcarter?.(dernier?.id ?? null); }}
                 >
                   {d.gestes.ecarter}
                 </button>

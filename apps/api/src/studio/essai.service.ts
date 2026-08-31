@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import {
   consigneSysteme, invite, profilContenuSchema,
   type ContexteMessage, type EssaiStudio, type ProfilContenu,
-  type ReglagesMessage, type ReglagesPortrait,
+  type ReglagesMessage, type ReglagesPortrait, type VerdictEssai,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
@@ -27,6 +27,7 @@ type LigneEssai = {
   id: string; studioConfigId: string; studioProfileId: string | null; adminId: string | null;
   provider: string; modelKey: string; status: string; output: unknown;
   cost: unknown; errorCode: string | null; createdAt: Date;
+  verdict?: "kept" | "discarded" | null;
 };
 
 @Injectable()
@@ -335,7 +336,28 @@ export class StudioEssaiService {
       erreur: l.errorCode,
       parQui,
       quand: l.createdAt.toISOString(),
+      verdict: l.verdict ?? null,
     };
+  }
+
+  /* Le sort d'un essai : ce qu'on a PENSÉ du résultat.
+   *
+   * Il se pose depuis l'Atelier, par le geste qui SUIT l'essai — garder retient
+   * le brouillon et retient l'essai avec lui, écarter fait l'inverse. Aucun
+   * geste de plus à apprendre, et c'est pourquoi il n'y a pas de motif : un
+   * essai ne change rien pour personne, et une séance en compte trente.
+   *
+   * Il se REPOSE : on se ravise en regardant la vignette du lendemain, et
+   * refuser le second geste obligerait à refaire l'essai pour changer d'avis. */
+  async juger(id: string, verdict: VerdictEssai): Promise<EssaiStudio> {
+    const ligne = await this.prisma.studioTrial.findUnique({ where: { id }, select: { id: true } });
+    if (!ligne) throw new AppError("not_found", "resource not found");
+    const misAJour = await this.prisma.studioTrial.update({
+      where: { id },
+      data: { verdict },
+      include: { admin: { select: { email: true } } },
+    });
+    return this.rendre(misAJour, misAJour.admin?.email ?? null);
   }
   /* Une sortie d'image porte `{ cle }` ; une sortie de texte porte `{ message }`.
      On ne signe que la première, et on laisse la seconde telle quelle : deviner
