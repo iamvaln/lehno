@@ -51,9 +51,12 @@ après la build, c'est-à-dire après l'attente.
   `extra.eas.projectId` dans `app.json`.
 - **Un compte Apple Developer** (99 $/an) : incontournable dès qu'on installe
   sur un appareil réel, y compris le sien.
-- **La version** est à `0.0.0`. À monter avant la première build : les magasins
-  refusent une version qui n'augmente pas.
-- **`EXPO_PUBLIC_API_URL`** pointe sur `localhost:3001` en développement — donc
-  sur la machine du développeur. Un téléphone réel ne l'atteint pas : il faudra
-  l'adresse du réseau local, ou un tunnel. C'est le premier mur qu'on rencontre,
-  et il n'a rien à voir avec EAS.
+- **La version** est passée à `0.1.0` : les magasins refusent une version qui
+  n'augmente pas, et `0.0.0` n'aurait laissé nulle part où descendre.
+- **`EXPO_PUBLIC_API_URL`** diffère selon le profil, et c'est délibéré.
+  `development` vise `localhost:3001` : c'est la boucle de développement, l'api
+  tourne sur la machine. Mais un téléphone réel ne joint pas ce localhost-là —
+  il faudra l'adresse du réseau local, ou un tunnel.
+  `preview` et `production` visent `https://api.lehno.io/v1`, l'api déployée.
+  Un APK qu'on fait essayer à quelqu'un doit marcher depuis chez lui, pas
+  seulement sur le réseau du bureau.

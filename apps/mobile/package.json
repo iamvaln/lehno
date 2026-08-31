@@ -19,6 +19,7 @@
     "@lehno/ui-native": "workspace:^",
     "expo": "~57.0.16",
     "expo-constants": "~57.0.14",
+    "expo-dev-client": "~6.0.13",
     "expo-font": "~57.0.1",
     "expo-linking": "~57.0.7",
     "expo-localization": "~57.0.1",
@@ -35,13 +36,13 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
-    "react-native-worklets": "0.10.1",
-    "expo-dev-client": "~6.0.13"
+    "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
     "@lehno/tsconfig": "workspace:*",
     "@types/node": "^22.20.1",
     "@types/react": "^19.0.0",
+    "eas-cli": "^23.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
