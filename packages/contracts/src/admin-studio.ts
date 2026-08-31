@@ -202,6 +202,25 @@ export const modificationProfilSchema = z.object({
 export const ETATS_ESSAI = ["success", "error", "timeout", "refused"] as const;
 export type EtatEssai = (typeof ETATS_ESSAI)[number];
 
+/* Ce qu'on a PENSÉ du résultat, et non ce que l'appel a rendu : `etat` dit déjà
+ * si le modèle a répondu.
+ *
+ * Nul tant qu'on n'a pas tranché — un essai qu'on n'a pas jugé n'est pas un
+ * essai jugé mauvais, et l'écran des essais doit pouvoir les distinguer.
+ *
+ * « Publié » n'en fait pas partie : ce n'est pas l'essai qu'on publie, c'est sa
+ * configuration. L'écran le déduit de l'état de celle-ci, et un troisième
+ * membre ici mentirait sur ce qui se range où. */
+export const VERDICTS_ESSAI = ["kept", "discarded"] as const;
+export type VerdictEssai = (typeof VERDICTS_ESSAI)[number];
+
+/* Le sort se pose SANS MOTIF, comme la prévisualisation : un essai ne change
+   rien pour personne, et une séance de réglage en compte trente — la phrase
+   serait vide dès la troisième. */
+export const verdictEssaiSchema = z.object({
+  verdict: z.enum(VERDICTS_ESSAI),
+}).strict();
+
 export const essaiStudioSchema = z.object({
   id: z.string().uuid(),
   configId: z.string().uuid(),
@@ -217,6 +236,8 @@ export const essaiStudioSchema = z.object({
   erreur: z.string().nullable(),
   parQui: z.string().nullable(),
   quand: z.string(),
+  /** Nul tant que personne n'a tranché. Voir `VERDICTS_ESSAI`. */
+  verdict: z.enum(VERDICTS_ESSAI).nullable(),
 }).strict();
 
 export const essaisStudioSchema = z.object({

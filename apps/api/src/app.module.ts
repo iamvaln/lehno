@@ -1,5 +1,5 @@
 import type { MiddlewareConsumer, NestModule } from "@nestjs/common";
-import { Module } from "@nestjs/common";
+import { Logger, Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ScheduleModule } from "@nestjs/schedule";
 import { CorrelationMiddleware } from "./common/correlation.middleware.js";
@@ -282,8 +282,27 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
       useFactory: () => {
         const apiKey = process.env.RESEND_API_KEY;
         const from = process.env.RESEND_FROM;
+        /* L'ADHÉSION EXPLICITE PASSE AVANT, et l'ordre inverse rendait la
+           variable INATTEIGNABLE : sur un poste de développement, Resend et
+           `LEHNO_MAIL_CONSOLE=1` cohabitent toujours — l'un vient du fichier
+           d'environnement partagé, l'autre est posé exprès pour développer. Le
+           second ne servait donc jamais, et le parcours de connexion était
+           impossible en local : Resend refuse d'écrire à un domaine non
+           vérifié, le code ne partait nulle part, et rien ne disait pourquoi.
+
+           La garde que l'ordre précédent défendait tient toujours : on ne
+           TOMBE pas sur la console faute de configuration — il faut poser la
+           variable à « 1 », ce qui ne s'écrit pas par accident. Et le
+           démarrage l'annonce, pour qu'un environnement où elle traîne se
+           remarque au lieu de journaliser des codes en silence. */
+        if (process.env.LEHNO_MAIL_CONSOLE === "1") {
+          new Logger("MAIL_PORT").warn(
+            "LEHNO_MAIL_CONSOLE=1 : les courriels ne partent pas, leur contenu " +
+            "s'écrit sur cette console — codes à usage unique compris.",
+          );
+          return new ConsoleMailAdapter();
+        }
         if (apiKey && from) return new ResendAdapter(apiKey, from);
-        if (process.env.LEHNO_MAIL_CONSOLE === "1") return new ConsoleMailAdapter();
         throw new Error(
           "Aucun envoi de courrier configuré : posez RESEND_API_KEY et RESEND_FROM, " +
           "ou LEHNO_MAIL_CONSOLE=1 pour accepter explicitement la console de développement.",

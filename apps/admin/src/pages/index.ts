@@ -19,6 +19,12 @@ export { Assistance, type AssistanceProps } from "./Assistance.js";
 
 // La seule page qui n'appelle personne : un registre tenu dans le code.
 export { Liens, type LiensProps } from "./Liens.js";
+export { StudioEssais } from "./StudioEssais.js";
+export type { StudioEssaisProps } from "./StudioEssais.js";
+export { StudioAtelier } from "./StudioAtelier.js";
+export type { StudioAtelierProps } from "./StudioAtelier.js";
+export { StudioService } from "./StudioService.js";
+export type { StudioServiceProps } from "./StudioService.js";
 export { Studio, type StudioProps } from "./Studio.js";
 export { TransactionManuelle, type TransactionManuelleProps, type MouvementManuel } from "./TransactionManuelle.js";
 export { StatsTransactions, type StatsTransactionsProps } from "./StatsTransactions.js";
