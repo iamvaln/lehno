@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Metriques, StatsTransactions, Studio, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, StatsTransactions, Studio, StudioAtelier, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -57,6 +57,7 @@ import {
   profilAdminSchema, catalogueGabaritsSchema,
   type Intervention,
   etatPortraitSchema, historiquePortraitSchema,
+  profilsStudioSchema, candidatsStudioSchema, essaisStudioSchema,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
@@ -306,6 +307,7 @@ export function App(): ReactNode {
   const [tourAcces, setTourAcces] = useState(0);
   const [tourProfil, setTourProfil] = useState(0);
   const [tourStudio, setTourStudio] = useState(0);
+  const [essaiEnCours, setEssaiEnCours] = useState(false);
   const [tourAssistance, setTourAssistance] = useState(0);
   const [ongletAssistance, setOngletAssistance] = useState<"demandes" | "contact" | "attente" | "retours">("demandes");
   const [filtreAssistance, setFiltreAssistance] = useState("tous");
@@ -706,6 +708,24 @@ export function App(): ReactNode {
   /* Deux appels, un seul état d'écran : ce qui tourne et ce qui l'a précédé se
      lisent ensemble ou pas du tout. Les afficher séparément ferait paraître
      l'historique au-dessus d'une fiche encore vide. */
+  /* L'Atelier a besoin de quatre choses pour se composer : de quoi partir (le
+     brouillon s'il existe, la version en service sinon), les profils contre
+     lesquels essayer, les modèles dans lesquels choisir, et les essais du jour.
+     Un écran qui n'aurait que trois des quatre ne se lirait pas d'un regard. */
+  const etatAtelier = useRessource(
+    () => (section === "atelier"
+      ? Promise.all([
+          api.appeler("/admin/portrait-studio/config", { schema: etatPortraitSchema }),
+          api.appeler("/admin/portrait-studio/profiles", { schema: profilsStudioSchema }),
+          api.appeler("/admin/portrait-studio/candidates", { schema: candidatsStudioSchema }),
+          api.appeler("/admin/portrait-studio/trials", { schema: essaisStudioSchema }),
+        ]).then(([etat, profils, candidats, essais]) => ({
+          etat, profils: profils.items, candidats, essais: essais.items,
+        }))
+      : Promise.resolve(null)),
+    [section, tourStudio],
+  );
+
   const etatGabarits = useRessource(
     () => (section === "gabarits"
       ? api.appeler("/admin/portrait-studio/templates", { schema: catalogueGabaritsSchema })
@@ -1010,6 +1030,93 @@ export function App(): ReactNode {
           enfant={(page) => <Assistance {...communAssistance} demandes={page?.items ?? []} />} />
       );
     }
+  } else if (section === "atelier") {
+    vue = (
+      <Ressource
+        etat={etatAtelier}
+        t={t}
+        enfant={(a) => {
+          if (!a) return null;
+          /* On compose à partir du brouillon s'il existe, de ce qui tourne
+             sinon : un atelier qui repartirait de zéro ferait réécrire ce qui
+             est déjà en service. */
+          const depart = a.etat.brouillon ?? a.etat.enService;
+          /* Ni brouillon ni version en service : rien n'a jamais été composé.
+             L'Atelier ne peut pas partir de rien — le contrat exige des
+             réglages complets, et en inventer ferait essayer autre chose que ce
+             que la production exécutera. */
+          if (!depart) {
+            return (
+              <EmptyState
+                titre={t.studioAtelier.sansDepart.titre}
+                texte={t.studioAtelier.sansDepart.texte}
+              />
+            );
+          }
+          return (
+            <StudioAtelier
+              role={role}
+              langue={langue}
+              depart={depart}
+              profils={a.profils}
+              candidats={a.candidats}
+              essais={a.essais}
+              // Le plus récent : c'est celui qu'on vient de lancer.
+              dernier={a.essais[0] ?? null}
+              enCours={essaiEnCours}
+              onEssayer={(reglages, profileId, ambianceId) => {
+                setEssaiEnCours(true);
+                void (async () => {
+                  try {
+                    await api.appeler("/admin/portrait-studio/trials", {
+                      methode: "POST",
+                      corps: { reglages, profileId, ambianceId },
+                    });
+                  } catch (echec) {
+                    if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                  } finally {
+                    setEssaiEnCours(false);
+                    setTourStudio((n) => n + 1);
+                  }
+                })();
+              }}
+              onGarder={(reglages) => {
+                void (async () => {
+                  try {
+                    await api.appeler("/admin/portrait-studio/config", {
+                      methode: "PATCH",
+                      corps: { reglages },
+                    });
+                  } catch (echec) {
+                    if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                  } finally {
+                    setTourStudio((n) => n + 1);
+                  }
+                })();
+              }}
+              // Écarter ne parle pas au serveur : le brouillon gardé est déjà
+              // ce qu'il a. On relit, et l'écran repart de lui.
+              onEcarter={() => setTourStudio((n) => n + 1)}
+              onPublier={(configId, note) => {
+                void (async () => {
+                  try {
+                    await api.appeler("/admin/portrait-studio/config/publish", {
+                      methode: "POST",
+                      corps: { configId, note },
+                    });
+                  } catch (echec) {
+                    if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                  } finally {
+                    setTourStudio((n) => n + 1);
+                  }
+                })();
+              }}
+              onRetour={aller}
+            />
+          );
+        }}
+      />
+    );
   } else if (section === "gabarits") {
     vue = (
       <Ressource
