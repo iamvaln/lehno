@@ -1080,13 +1080,19 @@ export function App(): ReactNode {
                   }
                 })();
               }}
-              onGarder={(reglages) => {
+              onGarder={(reglages, essaiId) => {
                 void (async () => {
                   try {
                     await api.appeler("/admin/portrait-studio/config", {
                       methode: "PATCH",
                       corps: { reglages },
                     });
+                    // Le geste retient le brouillon ET l'essai qu'il suit.
+                    if (essaiId !== null) {
+                      await api.appeler(`/admin/portrait-studio/trials/${essaiId}`, {
+                        methode: "PATCH", corps: { verdict: "kept" },
+                      });
+                    }
                   } catch (echec) {
                     if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
                   } finally {
@@ -1094,9 +1100,25 @@ export function App(): ReactNode {
                   }
                 })();
               }}
-              // Écarter ne parle pas au serveur : le brouillon gardé est déjà
-              // ce qu'il a. On relit, et l'écran repart de lui.
-              onEcarter={() => setTourStudio((n) => n + 1)}
+              /* Écarter ne touche pas au brouillon — le serveur a déjà le
+                 dernier gardé —, mais il TRANCHE sur l'essai : « on l'a jugé
+                 mauvais, c'est une information, et le revoir évite de refaire
+                 le même ». */
+              onEcarter={(essaiId) => {
+                void (async () => {
+                  try {
+                    if (essaiId !== null) {
+                      await api.appeler(`/admin/portrait-studio/trials/${essaiId}`, {
+                        methode: "PATCH", corps: { verdict: "discarded" },
+                      });
+                    }
+                  } catch (echec) {
+                    if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                  } finally {
+                    setTourStudio((n) => n + 1);
+                  }
+                })();
+              }}
               onPublier={(configId, note) => {
                 void (async () => {
                   try {

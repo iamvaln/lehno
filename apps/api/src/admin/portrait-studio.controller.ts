@@ -8,9 +8,9 @@ import {
   CHAMPS_DU_PROCHE, GROUPES_AMBIANCE, MOTIFS_IDENTITAIRES, ORIENTATIONS,
   creationProfilSchema, enregistrementPortraitSchema, lancementEssaiPortraitSchema,
   modificationProfilSchema, profilContenuSchema, publicationStudioSchema,
-  retourArriereStudioSchema,
+  retourArriereStudioSchema, verdictEssaiSchema,
   type CandidatsStudio, type ConfigurationPortrait, type EssaiStudio, type EtatPortrait,
-  type ReglagesPortrait,
+  type ReglagesPortrait, type VerdictEssai,
   type ProfilStudio, type ProfilsStudio,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -160,6 +160,10 @@ export class PortraitStudioService {
     return { items: await this.essais.lister(configId) };
   }
 
+  async juger(id: string, verdict: VerdictEssai): Promise<EssaiStudio> {
+    return this.essais.juger(id, verdict);
+  }
+
   // ── Les valeurs candidates ────────────────────────────────────────────────
 
   /* Ce dans quoi l'établi choisit. Les modèles viennent du CATALOGUE en base,
@@ -298,6 +302,24 @@ export class PortraitStudioController {
     @Req() req: { admin?: { id: string } },
   ) {
     return this.service.essayer(req.admin?.id ?? "", corps);
+  }
+
+  /* LE SORT D'UN ESSAI se pose depuis l'Atelier, par le geste qui SUIT l'essai.
+   *
+   * PATCH et non POST : on ne crée rien, on tranche sur une ligne qui existe.
+   * Et il se REPOSE — on se ravise en regardant la vignette du lendemain, et
+   * refuser le second geste obligerait à refaire l'essai pour changer d'avis.
+   *
+   * Aucun motif, comme la prévisualisation : un essai ne change rien pour
+   * personne, et une séance de réglage en compte trente — la phrase serait vide
+   * dès la troisième. */
+  @Patch("trials/:id")
+  @Role("admin")
+  juger(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(verdictEssaiSchema)) corps: z.infer<typeof verdictEssaiSchema>,
+  ) {
+    return this.service.juger(id, corps.verdict);
   }
 
   @Get("candidates")

@@ -65,6 +65,8 @@ const essai = (sur: Record<string, unknown> = {}) => ({
   modele: { fournisseur: "anthropic", cle: "anthropic:claude-opus-5" },
   sortie: { cle: "k", url: "https://example.test/p.png" },
   cout: 12, erreur: null, parQui: "sam@lehno.app", quand: "2026-08-30T09:00:00.000Z",
+  // Nul tant que personne n'a tranché.
+  verdict: null,
   ...sur,
 });
 
@@ -254,5 +256,41 @@ describe("l'Atelier, sur les données du serveur", () => {
     render(<App />);
     await waitFor(() => expect(screen.getByRole("navigation")).toBeInTheDocument());
     expect(screen.queryByText(t.sections.atelier)).toBeNull();
+  });
+
+  /* Le sort d'un essai se lit du geste qui SUIT : garder retient le brouillon
+     et retient l'essai avec lui, écarter fait l'inverse. Aucun troisième bouton
+     à apprendre. */
+  it("retient l'essai avec le brouillon", async () => {
+    const appels = serveur({ "/admin/portrait-studio/trials": () => reponse(200, { items: [essai()] }) });
+    const utilisateur = await ouvrir();
+    await waitFor(() => expect(screen.getByRole("button", { name: d.gestes.garder })).toBeEnabled());
+    await utilisateur.click(screen.getByRole("button", { name: d.gestes.garder }));
+
+    await waitFor(() => {
+      const sort = appels.mock.calls.find(([u, i]) =>
+        String(u).includes(`/trials/${essai().id}`) && (i as RequestInit)?.method === "PATCH");
+      expect(sort).toBeDefined();
+      expect(JSON.parse(String((sort![1] as RequestInit).body))).toEqual({ verdict: "kept" });
+    });
+  });
+
+  /* Un essai écarté ne disparaît pas : on l'a jugé mauvais, c'est une
+     information, et le revoir évite de refaire le même. */
+  it("écarte l'essai sans l'effacer", async () => {
+    const appels = serveur({ "/admin/portrait-studio/trials": () => reponse(200, { items: [essai()] }) });
+    const utilisateur = await ouvrir();
+    await waitFor(() => expect(screen.getByRole("button", { name: d.gestes.ecarter })).toBeEnabled());
+    await utilisateur.click(screen.getByRole("button", { name: d.gestes.ecarter }));
+
+    await waitFor(() => {
+      const sort = appels.mock.calls.find(([u, i]) =>
+        String(u).includes(`/trials/${essai().id}`) && (i as RequestInit)?.method === "PATCH");
+      expect(sort).toBeDefined();
+      expect(JSON.parse(String((sort![1] as RequestInit).body))).toEqual({ verdict: "discarded" });
+    });
+    // Aucun essai ne s'efface : ce qui a coûté un appel se garde.
+    const effacements = appels.mock.calls.filter(([, i]) => (i as RequestInit)?.method === "DELETE");
+    expect(effacements).toHaveLength(0);
   });
 });
