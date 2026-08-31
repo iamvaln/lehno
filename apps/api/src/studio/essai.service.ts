@@ -2,13 +2,15 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import {
   consigneSysteme, invite, profilContenuSchema,
-  type ContexteMessage, type EssaiStudio, type ProfilContenu, type StudioReglages,
+  type ContexteMessage, type EssaiStudio, type ProfilContenu,
+  type ReglagesMessage, type ReglagesPortrait,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { RouteurIAService, type Adaptateur } from "../ia/routeur.service.js";
 import { FOURNISSEURS_IA } from "../ia/adaptateurs/index.js";
 import { StudioConfigurationService } from "./configuration.service.js";
+import type { StockagePort } from "../stockage/stockage.port.js";
 
 /* L'essai d'administration — le geste qui enregistre.
  *
@@ -35,6 +37,7 @@ export class StudioEssaiService {
     @Inject(StudioConfigurationService) private readonly configs: StudioConfigurationService,
     @Inject(RouteurIAService) private readonly routeur: RouteurIAService,
     @Inject(FOURNISSEURS_IA) private readonly adaptateurs: Record<string, Adaptateur>,
+    @Inject("STOCKAGE_PORT") private readonly stockage: StockagePort,
   ) {}
 
   /* LE BROUILLON NAÎT AVANT L'APPEL, et l'ordre décide de ce qu'on perd.
@@ -50,17 +53,17 @@ export class StudioEssaiService {
    * commence. */
   async essayer(
     adminId: string,
-    reglages: StudioReglages,
+    reglages: ReglagesMessage,
     profileId: string,
   ): Promise<{ configId: string; essai: EssaiStudio }> {
     const profil = await this.prisma.studioProfile.findUnique({ where: { id: profileId } });
     if (!profil) throw new AppError("not_found", "unknown simulation profile");
     const contenu = profilContenuSchema.parse(profil.payload);
 
-    const cle = reglages.modeles.message;
+    const cle = reglages.modele;
     const modele = await this.modeleDemande(cle);
 
-    const config = await this.configs.deposerBrouillon(reglages);
+    const config = await this.configs.deposerBrouillon("message", reglages);
 
     const adaptateur = this.adaptateurs[modele.provider];
     if (!adaptateur) {
@@ -72,7 +75,7 @@ export class StudioEssaiService {
          Aucune ligne `AIUsage` : rien n'a été appelé, donc rien n'a coûté. */
       return {
         configId: config.id,
-        essai: this.rendre(await this.consigner(config.id, profil.id, adminId, modele, {
+        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, modele, {
           status: "error", errorCode: `no_adapter_for_${modele.provider}`,
         })),
       };
@@ -97,7 +100,7 @@ export class StudioEssaiService {
         ? { status: "success", output: { message: resultat.contenu }, cost: resultat.cout }
         : { status: resultat.etat, errorCode: resultat.code });
 
-    return { configId: config.id, essai: this.rendre(ligne) };
+    return { configId: config.id, essai: await this.rendre(ligne) };
   }
 
   /* Le modèle DEMANDÉ, résolu dans le catalogue.
@@ -137,7 +140,93 @@ export class StudioEssaiService {
    * la consigne complémentaire et les garde-fous s'ajoutent aux règles
    * absolues, et la consigne d'orientation est injectée par la couture prévue
    * pour elle (`consigneOrientation`). */
-  private composer(reglages: StudioReglages, profil: ProfilContenu): { systeme: string; invite: string } {
+  /* L'ESSAI DU PORTRAIT — celui qui manquait.
+   *
+   * Jusqu'ici l'établi du portrait lançait un essai de MESSAGE : il appelait
+   * `modeles.message` et rendait un texte. Publier un changement de style de
+   * dessin se débloquait donc avec un essai que personne n'avait regardé comme
+   * une image. C'est exactement la faute que « rien ne se publie sans essai »
+   * existe pour empêcher, passée par le trou entre les deux générations.
+   *
+   * L'AMBIANCE décide du modèle : une famille d'illustration et un style de
+   * photo ne passent pas par le même. C'est aussi elle qui porte la consigne
+   * lue par le modèle — le reste des réglages ne dit rien à une image.
+   */
+  async essayerPortrait(
+    adminId: string,
+    reglages: ReglagesPortrait,
+    profileId: string,
+    ambianceId: string,
+  ): Promise<{ configId: string; essai: EssaiStudio }> {
+    const profil = await this.prisma.studioProfile.findUnique({ where: { id: profileId } });
+    if (!profil) throw new AppError("not_found", "unknown simulation profile");
+    const contenu = profilContenuSchema.parse(profil.payload);
+
+    const ambiance = reglages.ambiances.find((a): boolean => a.id === ambianceId);
+    /* 404 et non 422 : une ambiance qu'on ne trouve pas dans les réglages
+       qu'on vient d'envoyer est une erreur d'appel, pas un état du monde. */
+    if (!ambiance) throw new AppError("not_found", "unknown ambiance");
+
+    const cle = ambiance.groupe === "photo_style"
+      ? reglages.modeles.photo_style
+      : reglages.modeles.illustration;
+    const modele = await this.modeleDemande(cle);
+
+    const config = await this.configs.deposerBrouillon("portrait", reglages);
+    const adaptateur = this.adaptateurs[modele.provider];
+    if (!adaptateur) {
+      return {
+        configId: config.id,
+        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, modele, {
+          status: "error", errorCode: `no_adapter_for_${modele.provider}`,
+        })),
+      };
+    }
+
+    const tache = ambiance.groupe === "photo_style" ? "photo_style" as const : "illustration" as const;
+    const resultat = await this.routeur.appelerUnSeulModele(
+      tache,
+      { invite: this.composerPortrait(ambiance.consigne[contenu.langue], contenu) },
+      adaptateur,
+      modele,
+      { origine: "studio_trial", userId: null, actionRunId: null },
+    );
+
+    /* CE QU'ON GARDE EST UNE CLÉ, jamais l'image.
+     *
+     * Un modèle rend du base64 — un à deux mégaoctets. Le ranger dans
+     * `output` gonflerait la table des essais de la taille de tout ce qu'on a
+     * essayé, et chaque lecture de la liste les traînerait tous. La clé pèse
+     * soixante caractères, et l'image se lit par une URL signée à la demande.
+     */
+    let sortie: { cle: string } | null = null;
+    if (resultat.etat === "success") {
+      sortie = { cle: await this.stockage.ecrire("portraits", Buffer.from(resultat.contenu, "base64"), "image/png") };
+    }
+
+    const ligne = await this.consigner(config.id, profil.id, adminId, modele,
+      resultat.etat === "success"
+        ? { status: "success", output: sortie, cost: resultat.cout }
+        : { status: resultat.etat, errorCode: resultat.code });
+    return { configId: config.id, essai: await this.rendre(ligne) };
+  }
+
+  /* La consigne de l'ambiance, et le profil. RIEN D'AUTRE.
+   *
+   * Les garde-fous et la consigne commune appartiennent au message : les
+   * glisser ici enverrait au modèle d'image des instructions sur des tournures
+   * de phrase, et l'empreinte du portrait retomberait à chaque fois qu'on
+   * reformulerait un garde-fou du texte. */
+  private composerPortrait(consigne: string, profil: ProfilContenu): string {
+    const parties = [consigne];
+    /* Le CONTENU des notes, pas leur structure : le modèle d'image n'a que
+       faire d'une catégorie ou d'une date. */
+    if (profil.notes.length > 0) parties.push(profil.notes.map((n) => n.contenu).join(" "));
+    if (profil.texteLibre) parties.push(profil.texteLibre);
+    return parties.join("\n\n");
+  }
+
+  private composer(reglages: ReglagesMessage, profil: ProfilContenu): { systeme: string; invite: string } {
     const contexte = this.contexteDe(reglages, profil);
     const fr = profil.langue === "fr";
 
@@ -159,7 +248,7 @@ export class StudioEssaiService {
    * l'invite sait omettre proprement ; une chaîne vide y laisserait une ligne
    * d'étiquette sans valeur, que le modèle lirait comme une information
    * manquante plutôt que comme une information non fournie. */
-  private contexteDe(reglages: StudioReglages, p: ProfilContenu): ContexteMessage {
+  private contexteDe(reglages: ReglagesMessage, p: ProfilContenu): ContexteMessage {
     const retient = (champ: (typeof reglages.champsDuProche)[number]): boolean =>
       reglages.champsDuProche.includes(champ);
     const orientation = reglages.orientations.find((o) => o.id === p.orientation);
@@ -214,10 +303,24 @@ export class StudioEssaiService {
       take: 100,
       include: { admin: { select: { email: true } } },
     });
-    return lignes.map((l) => this.rendre(l, l.admin?.email ?? null));
+    return Promise.all(lignes.map((l) => this.rendre(l, l.admin?.email ?? null)));
   }
 
-  private rendre(l: LigneEssai, parQui: string | null = null): EssaiStudio {
+  /* La CLÉ devient une URL au moment de rendre, jamais avant.
+   *
+   * L'essai garde une clé — soixante caractères — et l'écran a besoin d'un lien
+   * qu'un navigateur sait suivre. La signature se fait donc ici, à la dernière
+   * seconde, et le lien ne vaut que quelques minutes.
+   *
+   * C'est ce qui interdit de la ranger : un lien mis en cache par l'écran, ou
+   * collé dans un message, serait mort avant d'être ouvert. L'écran redemande,
+   * et le serveur redécide à chaque fois si celui qui demande a le droit — ce
+   * qu'un compartiment public ne permettrait jamais.
+   *
+   * La signature est locale (un HMAC), pas un appel réseau : cent essais
+   * coûtent cent calculs, pas cent allers-retours. */
+  private async rendre(l: LigneEssai, parQui: string | null = null): Promise<EssaiStudio> {
+    const sortie = await this.sortieServie((l.output ?? null) as Prisma.JsonValue | null);
     return {
       id: l.id,
       configId: l.studioConfigId,
@@ -225,7 +328,7 @@ export class StudioEssaiService {
       etat: l.status as EssaiStudio["etat"],
       // Le modèle demandé, qui est aussi le seul appelé : l'essai ne replie pas.
       modele: { fournisseur: l.provider, cle: l.modelKey },
-      sortie: l.output ?? null,
+      sortie,
       // `Decimal` de Prisma : `Number` ici, jamais à l'écran — une chaîne
       // « 0.000123 » se trierait alphabétiquement dans un tableau.
       cout: l.cost === null || l.cost === undefined ? null : Number(l.cost),
@@ -234,4 +337,15 @@ export class StudioEssaiService {
       quand: l.createdAt.toISOString(),
     };
   }
+  /* Une sortie d'image porte `{ cle }` ; une sortie de texte porte `{ message }`.
+     On ne signe que la première, et on laisse la seconde telle quelle : deviner
+     la nature d'après la présence d'une clé vaut mieux qu'un champ « type » que
+     personne ne penserait à remplir. */
+  private async sortieServie(output: Prisma.JsonValue | null): Promise<Prisma.JsonValue | null> {
+    if (output === null || typeof output !== "object" || Array.isArray(output)) return output ?? null;
+    const cle = (output as Record<string, unknown>)["cle"];
+    if (typeof cle !== "string") return output;
+    return { cle, url: await this.stockage.lire(cle) };
+  }
+
 }

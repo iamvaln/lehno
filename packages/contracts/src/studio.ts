@@ -116,23 +116,33 @@ export const voieImageReglageSchema = z.object({
   description: bilingueFacultatifSchema,
 }).strict();
 
-export const studioReglagesSchema = z.object({
+/* DEUX CONFIGURATIONS, ET NON UNE.
+ *
+ * Elles n'ont vécu ensemble que par accident d'écriture, et ça coûtait deux
+ * choses qu'on ne voyait pas :
+ *
+ * 1. UNE SEULE EMPREINTE pour les deux. Reformuler un garde-fou du message
+ *    faisait retomber les essais du portrait, et modifier un style de dessin
+ *    faisait retomber ceux du message. Chaque réglage rendait l'autre à
+ *    éprouver, sans qu'aucun des deux n'ait changé.
+ *
+ * 2. PIRE : l'essai du studio appelle le modèle du MESSAGE. Publier un
+ *    changement de style de dessin se débloquait donc avec un essai qui avait
+ *    produit un texte — on mettait en service un portrait que personne n'avait
+ *    vu. C'est exactement la faute que la règle « rien ne se publie sans
+ *    essai » existe pour empêcher, et elle passait par le trou entre les deux
+ *    générations.
+ *
+ * Chacune a désormais sa ligne, son empreinte, ses essais et sa publication. */
+
+export const reglagesMessageSchema = z.object({
   /** Ce qui s'ajoute à la consigne système, en plus des règles absolues. */
   consigneCommune: z.string().trim().max(4000),
   /** Ce qui est écarté : symboles, formules, tournures. */
   gardeFous: z.array(z.string().trim().min(1).max(200)).max(40),
   champsDuProche: z.array(z.enum(CHAMPS_DU_PROCHE)),
-  motifs: z.object({
-    /** Le seul qui accepte du texte par-dessus (§3.4). */
-    bande: z.enum(MOTIFS_IDENTITAIRES),
-    fondSansImage: z.enum(MOTIFS_IDENTITAIRES),
-  }).strict(),
-  /** Le modèle appelé par production. Voir la note de `cleModeleSchema`. */
-  modeles: z.object({
-    message: cleModeleSchema,
-    illustration: cleModeleSchema,
-    photo_style: cleModeleSchema,
-  }).strict(),
+  /** Le modèle appelé par génération. Voir la note de `cleModeleSchema`. */
+  modele: cleModeleSchema,
   /* L'ORDRE DU TABLEAU EST L'ORDRE DE L'ÉCRAN, et le premier actif est le
      défaut. Deux champs — un ordre et un défaut désigné — laisseraient un
      défaut pointer sur une orientation qu'on vient de désactiver ; l'écran
@@ -140,24 +150,13 @@ export const studioReglagesSchema = z.object({
      construction, et l'administration règle le défaut en réordonnant, ce
      qu'elle fait déjà. */
   orientations: z.array(orientationReglageSchema).min(1),
-  voiesImage: z.array(voieImageReglageSchema).min(1),
-  ambiances: z.array(ambianceReglageSchema),
 }).strict().superRefine((r, ctx) => {
-  const doublon = (ids: string[]): string | null => {
-    const vus = new Set<string>();
-    for (const id of ids) { if (vus.has(id)) return id; vus.add(id); }
-    return null;
-  };
-
-  for (const [chemin, ids] of [
-    ["orientations", r.orientations.map((o) => o.id)],
-    ["voiesImage", r.voiesImage.map((v) => v.id)],
-    ["ambiances", r.ambiances.map((a) => a.id)],
-  ] as const) {
-    const d = doublon([...ids]);
-    if (d) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [chemin], message: `« ${d} » figure deux fois` });
+  const vus = new Set<string>();
+  for (const o of r.orientations) {
+    if (vus.has(o.id))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["orientations"], message: `« ${o.id} » figure deux fois` });
+    vus.add(o.id);
   }
-
   /* Aucune orientation active vaut un écran de studio VIDE : l'utilisateur
      n'aurait rien à choisir et ne pourrait pas produire. On le refuse ici
      plutôt qu'à la publication — sinon le brouillon s'enregistrerait, et le
@@ -166,10 +165,38 @@ export const studioReglagesSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["orientations"], message: "au moins une orientation doit rester active" });
 });
 
+export const reglagesPortraitSchema = z.object({
+  motifs: z.object({
+    /** Le seul qui accepte du texte par-dessus (§3.4). */
+    bande: z.enum(MOTIFS_IDENTITAIRES),
+    fondSansImage: z.enum(MOTIFS_IDENTITAIRES),
+  }).strict(),
+  modeles: z.object({
+    illustration: cleModeleSchema,
+    photo_style: cleModeleSchema,
+  }).strict(),
+  voiesImage: z.array(voieImageReglageSchema).min(1),
+  ambiances: z.array(ambianceReglageSchema),
+}).strict().superRefine((r, ctx) => {
+  const doublon = (ids: string[]): string | null => {
+    const vus = new Set<string>();
+    for (const id of ids) { if (vus.has(id)) return id; vus.add(id); }
+    return null;
+  };
+  for (const [chemin, ids] of [
+    ["voiesImage", r.voiesImage.map((v) => v.id)],
+    ["ambiances", r.ambiances.map((a) => a.id)],
+  ] as const) {
+    const d = doublon([...ids]);
+    if (d) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [chemin], message: `« ${d} » figure deux fois` });
+  }
+});
+
 export type OrientationReglage = z.infer<typeof orientationReglageSchema>;
 export type AmbianceReglage = z.infer<typeof ambianceReglageSchema>;
 export type VoieImageReglage = z.infer<typeof voieImageReglageSchema>;
-export type StudioReglages = z.infer<typeof studioReglagesSchema>;
+export type ReglagesMessage = z.infer<typeof reglagesMessageSchema>;
+export type ReglagesPortrait = z.infer<typeof reglagesPortraitSchema>;
 
 // ── L'empreinte : ce que le modèle lit, et rien d'autre ─────────────────────
 
@@ -192,7 +219,8 @@ export type StudioReglages = z.infer<typeof studioReglagesSchema>;
  *
  * D'où le tri, champ par champ, plutôt qu'un hachage de `settings` entier.
  */
-export function partieLueParLeModele(r: StudioReglages): unknown {
+/* La projection du MESSAGE sur ce que le modèle lit. */
+export function partieLueParLeModeleMessage(r: ReglagesMessage): unknown {
   return {
     consigneCommune: r.consigneCommune,
     /* NI `gardeFous` NI `champsDuProche` ne se trient : leur ordre est celui
@@ -201,8 +229,7 @@ export function partieLueParLeModele(r: StudioReglages): unknown {
        le sont pas. */
     gardeFous: r.gardeFous,
     champsDuProche: r.champsDuProche,
-    motifs: r.motifs,
-    modeles: r.modeles,
+    modele: r.modele,
     /* Les orientations, elles, SE TRIENT — par identifiant, jamais par
        position. Leur position est l'ordre de l'écran, c'est-à-dire justement
        ce que la §3 range du côté de l'application. Sans ce tri, remonter une
@@ -210,13 +237,19 @@ export function partieLueParLeModele(r: StudioReglages): unknown {
     orientations: [...r.orientations]
       .sort((a, b) => a.id.localeCompare(b.id))
       .map((o) => ({ id: o.id, consigne: o.consigne })),
+  };
+}
+
+/* Et celle du PORTRAIT. Séparées, donc indépendantes : reformuler un garde-fou
+   du message ne fait plus retomber les essais du portrait, et l'inverse non
+   plus. */
+export function partieLueParLeModelePortrait(r: ReglagesPortrait): unknown {
+  return {
+    motifs: r.motifs,
+    modeles: r.modeles,
     ambiances: [...r.ambiances]
       .sort((a, b) => a.id.localeCompare(b.id))
       .map((a) => ({ id: a.id, groupe: a.groupe, consigne: a.consigne })),
-    /* L'ACTIVATION N'Y EST PAS, et c'est le cas qui surprend.
-       Désactiver une orientation ne change rien à ce que le modèle lit quand
-       on en demande une autre : c'est un retrait de l'écran, pas une
-       consigne. La §3 le range explicitement du côté de l'application. */
   };
 }
 
@@ -236,8 +269,12 @@ function canonique(valeur: unknown): string {
 }
 
 /** La matière dont l'empreinte se calcule. Le hachage lui-même vit au serveur. */
-export function matierePourEmpreinte(r: StudioReglages): string {
-  return canonique(partieLueParLeModele(r));
+export function matierePourEmpreinteMessage(r: ReglagesMessage): string {
+  return canonique(partieLueParLeModeleMessage(r));
+}
+
+export function matierePourEmpreintePortrait(r: ReglagesPortrait): string {
+  return canonique(partieLueParLeModelePortrait(r));
 }
 
 // ── Ce que l'application reçoit ─────────────────────────────────────────────
@@ -262,7 +299,14 @@ const GROUPE_OUVERT: Record<VoieImage, GroupeAmbiance | null> = {
  * à savoir quoi faire d'une troisième langue le jour où elle arrivera — et
  * elles ne se mettent pas à jour d'un bloc (voir me-studio.ts).
  */
-export function catalogueServi(r: StudioReglages, langue: "fr" | "en"): StudioConfig {
+/* Le catalogue servi à l'application réunit les DEUX configurations : les
+   orientations viennent du message, les voies et les ambiances du portrait.
+   C'est le seul endroit où elles se rejoignent, et il est en lecture — chacune
+   se règle, s'éprouve et se publie de son côté. */
+export function catalogueServi(
+  m: ReglagesMessage, p: ReglagesPortrait, langue: "fr" | "en",
+): StudioConfig {
+  const r = { ...m, ...p };
   const dit = (b: Bilingue): string => b[langue];
   const ditOuNul = (b: Bilingue | null): string | null => (b === null ? null : b[langue]);
 
@@ -472,8 +516,8 @@ const AMBIANCES_DE_DEPART: AmbianceReglage[] = [
  * exemplaires du même texte divergeraient au premier ajustement, et on
  * chercherait longtemps pourquoi l'essai ne rend pas ce que la production
  * rend. */
-export function reglagesDeDepart(): StudioReglages {
-  return studioReglagesSchema.parse({
+export function reglagesMessageDeDepart(): ReglagesMessage {
+  return reglagesMessageSchema.parse({
     consigneCommune: "",
     gardeFous: [],
     /* L'âge est ABSENT du défaut : la §2.5 le veut « seulement si
@@ -481,12 +525,7 @@ export function reglagesDeDepart(): StudioReglages {
        sans qu'on le lui donne. L'activer par défaut ferait dire l'âge de
        quelqu'un à qui personne ne l'a demandé. */
     champsDuProche: ["relation", "notes", "texte_libre"],
-    motifs: { bande: "trame_de_hampes", fondSansImage: "registres" },
-    modeles: {
-      message: "anthropic:claude-opus-5",
-      illustration: "xai:grok-imagine-image",
-      photo_style: "xai:grok-imagine-image",
-    },
+    modele: "anthropic:claude-opus-5",
     // L'ordre est celui de ORIENTATIONS — celui de l'écran, pas celui de la
     // table de la §2.1. Voir le commentaire du registre.
     orientations: ORIENTATIONS.map((id) => ({
@@ -497,6 +536,16 @@ export function reglagesDeDepart(): StudioReglages {
       avertissement: id === "un_hommage" ? AVERTISSEMENT_HOMMAGE : null,
       consigne: ORIENTATION_CONSIGNE[id],
     })),
+  });
+}
+
+export function reglagesPortraitDeDepart(): ReglagesPortrait {
+  return reglagesPortraitSchema.parse({
+    motifs: { bande: "trame_de_hampes", fondSansImage: "registres" },
+    modeles: {
+      illustration: "xai:grok-imagine-image",
+      photo_style: "xai:grok-imagine-image",
+    },
     voiesImage: [
       {
         id: "illustration", actif: true,

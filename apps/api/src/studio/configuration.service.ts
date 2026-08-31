@@ -1,9 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, StudioConfigKind } from "@prisma/client";
 import {
-  matierePourEmpreinte, studioReglagesSchema,
-  type BlocagePublication, type ConfigurationStudio, type StudioReglages,
+  matierePourEmpreinteMessage, matierePourEmpreintePortrait,
+  reglagesMessageSchema, reglagesPortraitSchema,
+  type BlocagePublication, type ReglagesMessage, type ReglagesPortrait,
+  type ConfigurationMessage, type ConfigurationPortrait,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
@@ -34,8 +36,14 @@ function blocagePour(etat: string, essaisReussis: number): BlocagePublication | 
   return essaisReussis === 0 ? "aucun_essai_reussi" : null;
 }
 
+/* Une configuration n'a QU'UNE forme ; seuls ses réglages changent selon la
+   nature. L'écrire ainsi plutôt qu'en union laisse le compilateur vérifier
+   l'assemblage — une union l'obligerait à corréler `kind` et `reglages`, ce
+   qu'il ne sait pas faire sur un littéral, et on en serait réduit à forcer. */
+type ConfigurationDe<R> = Omit<ConfigurationMessage, "reglages"> & { reglages: R };
+
 type LigneConfig = {
-  id: string; version: number | null; state: string; settings: unknown;
+  id: string; kind: StudioConfigKind; version: number | null; state: string; settings: unknown;
   fingerprint: string; publishedAt: Date | null; publishedByAdminId: string | null;
   note: string | null; createdAt: Date;
 };
@@ -52,21 +60,42 @@ export class StudioConfigurationService {
      entier. Le tri des champs vit dans le contrat commun, pour que
      l'administration puisse prédire à l'écran si sa modification exigera une
      prévisualisation — sans quoi elle le découvrirait au moment de publier. */
-  empreinte(reglages: StudioReglages): string {
-    return createHash("sha256").update(matierePourEmpreinte(reglages)).digest("hex");
+  /* Deux empreintes, et c'est tout l'objet du découpage : reformuler un
+     garde-fou du message ne doit plus faire retomber les essais du portrait, ni
+     l'inverse. Une seule empreinte rendait chaque réglage à éprouver dès que
+     l'AUTRE bougeait. */
+  empreinte(nature: StudioConfigKind, reglages: ReglagesMessage | ReglagesPortrait): string {
+    const matiere = nature === "message"
+      ? matierePourEmpreinteMessage(reglages as ReglagesMessage)
+      : matierePourEmpreintePortrait(reglages as ReglagesPortrait);
+    return createHash("sha256").update(matiere).digest("hex");
   }
 
   /** Les réglages relus de la base, revalidés. */
-  reglagesDe(ligne: { settings: unknown }): StudioReglages {
-    return studioReglagesSchema.parse(ligne.settings);
+  reglagesDe(ligne: { kind: StudioConfigKind; settings: unknown }): ReglagesMessage | ReglagesPortrait {
+    return ligne.kind === "message"
+      ? reglagesMessageSchema.parse(ligne.settings)
+      : reglagesPortraitSchema.parse(ligne.settings);
   }
 
-  async enService(): Promise<LigneConfig | null> {
-    return this.prisma.studioConfig.findFirst({ where: { state: "published" } });
+  /* Deux lectures typées, pour que les appelants n'aient pas à faire
+     l'affirmation eux-mêmes : `generation.service` ne lit QUE le message, le
+     studio du portrait QUE le portrait. Une assertion posée chez l'appelant
+     laisserait passer l'inversion sans que rien ne le dise. */
+  reglagesMessageDe(ligne: { settings: unknown }): ReglagesMessage {
+    return reglagesMessageSchema.parse(ligne.settings);
   }
 
-  async brouillon(): Promise<LigneConfig | null> {
-    return this.prisma.studioConfig.findFirst({ where: { state: "draft" } });
+  reglagesPortraitDe(ligne: { settings: unknown }): ReglagesPortrait {
+    return reglagesPortraitSchema.parse(ligne.settings);
+  }
+
+  async enService(nature: StudioConfigKind): Promise<LigneConfig | null> {
+    return this.prisma.studioConfig.findFirst({ where: { kind: nature, state: "published" } });
+  }
+
+  async brouillon(nature: StudioConfigKind): Promise<LigneConfig | null> {
+    return this.prisma.studioConfig.findFirst({ where: { kind: nature, state: "draft" } });
   }
 
   /* Le CHAÎNAGE, en une transaction : la ligne courante recule, la neuve prend
@@ -76,16 +105,24 @@ export class StudioConfigurationService {
    * `draft`, et refuserait l'insertion dans l'ordre inverse. C'est le même
    * piège que la chaîne des gabarits, et il se paie de la même façon : par une
    * violation de contrainte que rien n'explique à l'écran. */
-  async deposerBrouillon(reglages: StudioReglages, tx?: Prisma.TransactionClient): Promise<LigneConfig> {
+  async deposerBrouillon(
+    nature: StudioConfigKind,
+    reglages: ReglagesMessage | ReglagesPortrait,
+    tx?: Prisma.TransactionClient,
+  ): Promise<LigneConfig> {
     const ecrire = async (client: Prisma.TransactionClient): Promise<LigneConfig> => {
+      /* Le dépassement ne vaut QUE pour sa nature : sans ce filtre, composer un
+         message ferait passer le brouillon du portrait en `superseded` — on
+         perdrait un travail en cours en travaillant sur autre chose. */
       await client.studioConfig.updateMany({
-        where: { state: "draft" }, data: { state: "superseded" },
+        where: { kind: nature, state: "draft" }, data: { state: "superseded" },
       });
       return client.studioConfig.create({
         data: {
+          kind: nature,
           state: "draft",
           settings: reglages as unknown as Prisma.InputJsonValue,
-          fingerprint: this.empreinte(reglages),
+          fingerprint: this.empreinte(nature, reglages),
         },
       });
     };
@@ -104,12 +141,14 @@ export class StudioConfigurationService {
    * une prévisualisation. Sans ce refus, ce chemin deviendrait la porte de
    * service par laquelle on publie une consigne que personne n'a vue tourner.
    */
-  async enregistrerDirect(reglages: StudioReglages): Promise<LigneConfig> {
-    const tete = (await this.brouillon()) ?? (await this.enService());
+  async enregistrerDirect(
+    nature: StudioConfigKind, reglages: ReglagesMessage | ReglagesPortrait,
+  ): Promise<LigneConfig> {
+    const tete = (await this.brouillon(nature)) ?? (await this.enService(nature));
     if (!tete)
       throw new AppError("resource_inactive", "the studio has no configuration to adjust yet");
 
-    const empreinte = this.empreinte(reglages);
+    const empreinte = this.empreinte(nature, reglages);
     if (empreinte !== tete.fingerprint)
       throw new AppError(
         "trial_required",
@@ -117,7 +156,7 @@ export class StudioConfigurationService {
         { empreinteAttendue: tete.fingerprint, empreinteRecue: empreinte },
       );
 
-    return this.deposerBrouillon(reglages);
+    return this.deposerBrouillon(nature, reglages);
   }
 
   /* La PUBLICATION, en une transaction.
@@ -146,8 +185,17 @@ export class StudioConfigurationService {
          `published` : dans l'ordre inverse, l'insertion tombe sur une
          violation de contrainte, et l'écran lirait « erreur interne » là où il
          n'y a qu'un ordre d'écriture. */
+      /* DÉPUBLIER SEULEMENT SA NATURE.
+       *
+       * Sans ce filtre, publier le portrait faisait passer la configuration du
+       * message en `superseded` : le studio se retrouvait à moitié servi, et
+       * `/me/studio/options` refusait tout — la moitié qu'on venait de publier
+       * emportait l'autre.
+       *
+       * L'index unique ne l'aurait pas rattrapé : il n'admet qu'une publiée PAR
+       * NATURE, et zéro en satisfait la lettre. */
       await tx.studioConfig.updateMany({
-        where: { state: "published" }, data: { state: "superseded" },
+        where: { kind: cible.kind, state: "published" }, data: { state: "superseded" },
       });
 
       const dernier = await tx.studioConfig.aggregate({ _max: { version: true } });
@@ -233,7 +281,20 @@ export class StudioConfigurationService {
   }
 
   /** Une ligne, rendue au contrat. Le compte d'essais est résolu à la lecture. */
-  async rendre(ligne: LigneConfig): Promise<ConfigurationStudio> {
+  /* Deux lectures typées, comme pour les réglages : l'appelant n'a pas à
+     affirmer ce qu'il reçoit. Le studio du portrait ne sert QUE du portrait,
+     l'atelier du message QUE du message — et une inversion ne se compile pas.
+     Une union rendue ici obligerait chaque appelant à la rétrécir lui-même,
+     c'est-à-dire à se porter garant de ce que le service sait déjà. */
+  async rendrePortrait(ligne: LigneConfig): Promise<ConfigurationPortrait> {
+    return (await this.rendre(ligne)) as ConfigurationPortrait;
+  }
+
+  async rendreMessage(ligne: LigneConfig): Promise<ConfigurationMessage> {
+    return (await this.rendre(ligne)) as ConfigurationMessage;
+  }
+
+  async rendre(ligne: LigneConfig): Promise<ConfigurationDe<ReglagesMessage | ReglagesPortrait>> {
     const [essais, auteur] = await Promise.all([
       this.essaisReussis(ligne.fingerprint),
       ligne.publishedByAdminId === null
@@ -245,7 +306,9 @@ export class StudioConfigurationService {
     return this.assembler(ligne, essais, auteur?.email ?? null);
   }
 
-  private assembler(ligne: LigneConfig, essaisReussis: number, parQui: string | null): ConfigurationStudio {
+  private assembler(
+    ligne: LigneConfig, essaisReussis: number, parQui: string | null,
+  ): ConfigurationDe<ReglagesMessage | ReglagesPortrait> {
     /* Le blocage se DÉDUIT du compte déjà lu, il ne se relit pas : une seconde
        interrogation rendrait la ligne vue en liste incohérente avec la même
        ligne vue en détail dès qu'un essai tombe entre les deux. */
@@ -253,7 +316,7 @@ export class StudioConfigurationService {
 
     return {
       id: ligne.id,
-      etat: ligne.state as ConfigurationStudio["etat"],
+      etat: ligne.state as ConfigurationMessage["etat"],
       version: ligne.version,
       empreinte: ligne.fingerprint,
       reglages: this.reglagesDe(ligne),
@@ -281,7 +344,7 @@ export class StudioConfigurationService {
    * ligne et pour cent. Deux formes de rendu pour une seule chose finissent
    * toujours par diverger — c'est ce qui fait qu'un champ ajouté n'apparaît
    * que sur l'un des deux écrans. */
-  async rendreTous(lignes: LigneConfig[]): Promise<ConfigurationStudio[]> {
+  async rendreTous(lignes: LigneConfig[]): Promise<ConfigurationDe<ReglagesMessage | ReglagesPortrait>[]> {
     if (lignes.length === 0) return [];
 
     const empreintes = [...new Set(lignes.map((l) => l.fingerprint))];

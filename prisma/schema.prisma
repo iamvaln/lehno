@@ -1740,6 +1740,15 @@ model PromptTemplate {
 
 // ─── Le Studio du portrait ───────────────────────────────────────────────────
 
+/// Ce qu'une configuration de studio gouverne : le texte du message, ou
+/// l'image du portrait. Voir `StudioConfig.kind`.
+enum StudioConfigKind {
+  message
+  portrait
+
+  @@map("studio_config_kind")
+}
+
 enum StudioConfigState {
   draft
   published
@@ -1763,6 +1772,22 @@ enum StudioConfigState {
  */
 model StudioConfig {
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  /**
+   * Ce que cette configuration gouverne.
+   *
+   * Les deux n'ont vécu ensemble que par accident d'écriture, et ça coûtait
+   * deux choses invisibles. D'abord une seule empreinte : reformuler un
+   * garde-fou du message faisait retomber les essais du portrait, et l'inverse.
+   * Ensuite, et c'est le grave : l'essai du studio appelle le modèle du
+   * MESSAGE. Publier un changement de style de dessin se débloquait donc avec
+   * un essai qui avait produit un texte — on mettait en service un portrait que
+   * personne n'avait vu.
+   *
+   * Chaque nature a sa ligne publiée, sa ligne brouillon, son empreinte et ses
+   * essais. Les index uniques partiels sont portés par nature en migration.
+   */
+  kind StudioConfigKind
 
   /**
    * Nul tant que la ligne n'a jamais été publiée.

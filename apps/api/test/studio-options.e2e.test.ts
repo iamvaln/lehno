@@ -8,7 +8,8 @@ import { AppExceptionFilter } from "../src/common/errors.js";
 import { AmorceStudioService } from "../src/studio/amorce.service.js";
 import { StudioConfigurationService } from "../src/studio/configuration.service.js";
 import {
-  ORIENTATIONS, studioOptionsSchema, reglagesDeDepart, type StudioReglages,
+  ORIENTATIONS, studioOptionsSchema, reglagesPortraitDeDepart,
+  type ReglagesPortrait,
 } from "@lehno/contracts";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
@@ -76,17 +77,17 @@ describe("le studio de l'utilisateur", () => {
   const options = (entete: Record<string, string> = { authorization: `Bearer ${jeton}` }) =>
     fetch(`${baseUrl}/v1/me/studio/options`, { headers: entete });
 
-  const reglages = (f: (r: StudioReglages) => void): StudioReglages => {
-    const r = JSON.parse(JSON.stringify(reglagesDeDepart())) as StudioReglages;
+  const reglages = (f: (r: ReglagesPortrait) => void): ReglagesPortrait => {
+    const r = JSON.parse(JSON.stringify(reglagesPortraitDeDepart())) as ReglagesPortrait;
     f(r);
     return r;
   };
 
-  const publier = async (r: StudioReglages) => {
+  const publier = async (r: ReglagesPortrait) => {
     const admin = await db.prisma.admin.create({
       data: { email: `a${Date.now()}@lehno.app`, role: "admin" },
     });
-    const brouillon = await configs.deposerBrouillon(r);
+    const brouillon = await configs.deposerBrouillon("portrait", r);
     await db.prisma.studioTrial.create({
       data: { studioConfigId: brouillon.id, provider: "anthropic", modelKey: "x", status: "success" },
     });
@@ -101,7 +102,7 @@ describe("le studio de l'utilisateur", () => {
     expect(res.status).toBe(200);
     const page = studioOptionsSchema.parse(await res.json());
 
-    expect(page.version).toBe(1);
+    expect(page.version.portrait).toBe(1);
     expect(page.creditCost).toBe(1);
     expect(page.catalogue.rootGroupIds).toContain("orientation");
     const orientation = page.catalogue.groups.find((g) => g.id === "orientation");
@@ -121,30 +122,40 @@ describe("le studio de l'utilisateur", () => {
   /* « Une orientation désactivée disparaît de l'application sans livraison. »
      C'est tout l'intérêt du catalogue en base ; si ça tombe, il faut publier
      une version de l'application pour en retirer une. */
-  it("fait disparaître une orientation désactivée, sans livraison", async () => {
+  /* LA propriété qui justifie le catalogue en base : « on désactive sans
+     livraison ». Si elle tombe, retirer une ambiance demande de publier une
+     version de l'application — c'est-à-dire d'attendre que le parc se mette à
+     jour, ce qu'il ne fait jamais d'un bloc.
+     
+     Ce fichier publie du PORTRAIT : l'éprouver sur une ambiance et non sur une
+     orientation, qui vient de l'autre configuration. */
+  it("fait disparaître une ambiance désactivée, sans livraison", async () => {
     await publier(reglages((r) => {
-      r.orientations.find((o) => o.id === "un_hommage")!.actif = false;
+      r.ambiances.find((a): boolean => a.id === "nature")!.actif = false;
     }));
 
     const page = studioOptionsSchema.parse(await (await options()).json());
-    const ids = page.catalogue.groups.find((g) => g.id === "orientation")!.choices.map((c) => c.id);
-    expect(ids).not.toContain("un_hommage");
-    expect(ids).toHaveLength(ORIENTATIONS.length - 1);
-    expect(page.version).toBe(2);
+    const ids = page.catalogue.groups.flatMap((g) => g.choices.map((c) => c.id));
+    expect(ids).not.toContain("nature");
+    // Les orientations, elles, viennent du message : elles n'ont pas bougé.
+    const orientations = page.catalogue.groups.find((g) => g.id === "orientation")!.choices;
+    expect(orientations).toHaveLength(ORIENTATIONS.length);
+    expect(page.version.portrait).toBe(2);
   });
 
   /* UN BROUILLON N'ATTEINT JAMAIS UN UTILISATEUR. Sans ce cas, une consigne en
      cours de composition — et le libellé provisoire qui va avec — partirait
      chez tout le monde à la première prévisualisation. */
   it("ne rend jamais un brouillon", async () => {
-    await configs.deposerBrouillon(reglages((r) => {
-      r.orientations[0]!.libelle.fr = "LIBELLÉ EN COURS DE COMPOSITION";
+    await configs.deposerBrouillon("portrait", reglages((r) => {
+      r.ambiances[0]!.libelle.fr = "LIBELLÉ EN COURS DE COMPOSITION";
     }));
 
     const page = studioOptionsSchema.parse(await (await options()).json());
-    const premier = page.catalogue.groups[0]!.choices[0]!.label;
-    expect(premier).toBe("Notre relation");
-    expect(page.version).toBe(1);
+    const libelles = page.catalogue.groups.flatMap((g) => g.choices.map((c) => c.label));
+    expect(libelles).not.toContain("LIBELLÉ EN COURS DE COMPOSITION");
+    // Deux numéros désormais : le catalogue réunit les deux configurations.
+    expect(page.version.portrait).toBe(1);
   });
 
   /* Aucun repli sur les réglages du code. Il rendrait cette route increvable,

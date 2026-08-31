@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ORIENTATIONS } from "./gabarits.js";
 import { PERSON_REGISTERS, PERSON_RELATIONS } from "./me.js";
-import { studioReglagesSchema } from "./studio.js";
+import { reglagesMessageSchema, reglagesPortraitSchema } from "./studio.js";
 
 /* Le Studio du portrait, côté administration — `ux-admin-lehno.md` §5.9 et le
  * brief fonctionnel du 27 août.
@@ -27,7 +27,11 @@ export const BLOCAGES_PUBLICATION = [
 ] as const;
 export type BlocagePublication = (typeof BLOCAGES_PUBLICATION)[number];
 
-export const configurationStudioSchema = z.object({
+/* Une configuration, quelle que soit sa nature. Le corps est identique — seuls
+   les `reglages` diffèrent —, d'où la fabrique plutôt que deux déclarations qui
+   divergeraient au premier champ ajouté. */
+const configurationAvec = <T extends z.ZodTypeAny>(reglages: T) =>
+  z.object({
   id: z.string().uuid(),
   etat: z.enum(ETATS_CONFIG_STUDIO),
   /* Nul tant qu'elle n'a jamais été publiée.
@@ -41,7 +45,7 @@ export const configurationStudioSchema = z.object({
   /** L'empreinte de la partie lue par le modèle. C'est elle que la règle de
    *  publication compare, jamais `reglages` entier. */
   empreinte: z.string(),
-  reglages: studioReglagesSchema,
+  reglages,
   note: z.string().nullable(),
   publieeLe: z.string().nullable(),
   parQui: z.string().nullable(),
@@ -52,19 +56,28 @@ export const configurationStudioSchema = z.object({
   blocage: z.enum(BLOCAGES_PUBLICATION).nullable(),
 }).strict();
 
-export type ConfigurationStudio = z.infer<typeof configurationStudioSchema>;
+export const configurationMessageSchema = configurationAvec(reglagesMessageSchema);
+export const configurationPortraitSchema = configurationAvec(reglagesPortraitSchema);
+
+export type ConfigurationMessage = z.infer<typeof configurationMessageSchema>;
+export type ConfigurationPortrait = z.infer<typeof configurationPortraitSchema>;
 
 /* Les deux écrans du brief de design en un seul appel : ce qui tourne, et ce
    qu'on est en train de composer. Deux points d'entrée obligeraient l'atelier à
    deux allers-retours pour afficher son comparatif, qui les montre côte à
    côte. */
-export const etatStudioSchema = z.object({
-  enService: configurationStudioSchema.nullable(),
-  brouillon: configurationStudioSchema.nullable(),
+const etatAvec = <T extends z.ZodTypeAny>(config: T) =>
+  z.object({ enService: config.nullable(), brouillon: config.nullable() }).strict();
+
+export const etatMessageSchema = etatAvec(configurationMessageSchema);
+export const etatPortraitSchema = etatAvec(configurationPortraitSchema);
+
+export const historiqueMessageSchema = z.object({
+  items: z.array(configurationMessageSchema),
 }).strict();
 
-export const historiqueStudioSchema = z.object({
-  items: z.array(configurationStudioSchema),
+export const historiquePortraitSchema = z.object({
+  items: z.array(configurationPortraitSchema),
 }).strict();
 
 /* L'enregistrement DIRECT : ce que seule l'application lit (brief §3).
@@ -72,8 +85,12 @@ export const historiqueStudioSchema = z.object({
  * Il n'emporte pas de motif, et c'est cohérent avec la prévisualisation : un
  * brouillon ne change rien pour personne tant qu'il n'est pas publié. Exiger
  * une phrase à chaque réordonnancement la rendrait vide. */
-export const enregistrementDirectSchema = z.object({
-  reglages: studioReglagesSchema,
+/* Nommé PORTRAIT, et pas « direct » : c'est la nature qui décide de ce que le
+   corps contient. Un atelier du message aura le sien le jour où il existera —
+   déclarer aujourd'hui un schéma que rien n'emploie donnerait l'illusion d'une
+   surface posée. */
+export const enregistrementPortraitSchema = z.object({
+  reglages: reglagesPortraitSchema,
 }).strict();
 
 /* La publication. `note` EST le motif : « ce que cette publication change, en
@@ -212,9 +229,21 @@ export const essaisStudioSchema = z.object({
  * (brief §11.2). L'ordre inverse ferait perdre dix minutes de composition à
  * chaque fournisseur en panne, et l'essai porte une référence vers la
  * configuration, qui doit donc exister quand il commence. */
-export const lancementEssaiSchema = z.object({
-  reglages: studioReglagesSchema,
+/* L'essai du PORTRAIT appelle un modèle d'IMAGE, et c'est tout le sujet du
+   découpage : avant lui, publier un changement de style de dessin se débloquait
+   avec un essai qui avait produit un texte. */
+export const lancementEssaiPortraitSchema = z.object({
+  reglages: reglagesPortraitSchema,
   profileId: z.string().uuid(),
+  /* L'AMBIANCE ÉPROUVÉE, et il en faut une.
+   *
+   * C'est elle qui décide du modèle appelé : une famille d'illustration et un
+   * style de photo ne passent pas par le même. Sans elle, l'essai choisirait
+   * pour nous — et prouverait une voie qu'on ne voulait pas éprouver.
+   *
+   * C'est aussi ce que dit l'établi du kit : on compose POUR une ambiance, et
+   * la règle des deux rangs se compte par ambiance. */
+  ambianceId: z.string().min(1).max(60),
 }).strict();
 
 // ── Les valeurs candidates ──────────────────────────────────────────────────
@@ -254,7 +283,8 @@ export const candidatsStudioSchema = z.object({
   }).strict()),
 }).strict();
 
-export type EtatStudio = z.infer<typeof etatStudioSchema>;
+export type EtatMessage = z.infer<typeof etatMessageSchema>;
+export type EtatPortrait = z.infer<typeof etatPortraitSchema>;
 export type ProfilStudio = z.infer<typeof profilStudioSchema>;
 export type ProfilsStudio = z.infer<typeof profilsStudioSchema>;
 export type EssaiStudio = z.infer<typeof essaiStudioSchema>;

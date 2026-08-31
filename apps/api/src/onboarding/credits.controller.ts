@@ -3,6 +3,8 @@ import { RAISON_DE_LA_SOURCE } from "@lehno/contracts";
 import type { CreditBalance, ReferralSummary, Invitation } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { FlagsService } from "../flags/flags.service.js";
+import { Feature } from "../flags/feature.decorator.js";
+import { FeatureGuard } from "../flags/feature.guard.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { AppError } from "../common/errors.js";
 
@@ -129,8 +131,20 @@ export class CreditsController {
   }
 }
 
+/* GOUVERNÉ PAR `referral`, comme la page d'invitation qu'il alimente.
+ *
+ * Le drapeau était déclaré au registre — il annonce « le parrainage et la page
+ * d'invitation », et nomme ce chemin — mais aucune garde ne le lisait. Éteindre
+ * le parrainage laissait donc cette route répondre, et l'écran continuait de
+ * proposer d'inviter quelqu'un pour un geste qu'on venait de fermer.
+ *
+ * L'ordre compte, et il se joue DANS `@UseGuards` : `FeatureGuard` d'abord.
+ * Une fonctionnalité éteinte doit se dire même à qui n'est pas connecté —
+ * sinon le refus rendu dépend de la session, et le client ne sait plus si le
+ * problème vient de lui ou de nous. */
 @Controller("me/referral")
-@UseGuards(AuthGuard)
+@UseGuards(FeatureGuard, AuthGuard)
+@Feature("referral")
 export class ReferralController {
   constructor(@Inject(CreditsService) private readonly credits: CreditsService) {}
 

@@ -556,7 +556,11 @@ export class SharedWishlistService {
           type: "wish_reserved",
           eventOccurrenceId: souhait.eventOccurrenceId,
           channel: "in_app",
-          titleKey: "wish_reserved",
+          /* Le préfixe `notification.` comme les sept autres clés : sans lui,
+             un client qui résout ses libellés par préfixe ne trouve jamais
+             celle-ci, et une correspondance qui semble exhaustive la manque en
+             silence. */
+          titleKey: "notification.wish_reserved",
           /* Le nom SEULEMENT s'il a été autorisé. C'est le même arbitrage que
              sur l'écran, et il doit se rejouer ici : une notification qui
              nommerait l'anonyme gâcherait la surprise plus sûrement qu'un
