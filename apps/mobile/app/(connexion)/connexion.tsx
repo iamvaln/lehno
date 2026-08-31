@@ -30,12 +30,16 @@ export default function Connexion() {
       const brut = await appelPublic<unknown>("/auth/otp", {
         method: "POST", body: JSON.stringify({ email: email.trim() }),
       });
-      const { retryAfterSeconds } = requestOtpResultSchema.parse(brut);
+      const { retryAfterSeconds, expiresAt } = requestOtpResultSchema.parse(brut);
       // Le délai voyage avec l'adresse : l'écran du code l'affiche sans avoir à
       // le redemander, et sans en inventer un.
       routeur.push({
         pathname: "/(connexion)/code",
-        params: { email: email.trim(), renvoi: String(retryAfterSeconds) },
+        /* L'ÉCHÉANCE VOYAGE AVEC L'ADRESSE. Sans elle, l'écran suivant
+           décompterait sa propre constante depuis son montage : quelqu'un qui
+           revient en arrière puis repart verrait le minuteur repartir de dix
+           minutes sur un code déjà mort. */
+        params: { email: email.trim(), renvoi: String(retryAfterSeconds), echeance: expiresAt },
       });
     } catch (e) {
       setErreur(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));

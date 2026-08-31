@@ -12,7 +12,7 @@ import { OtpService } from "./otp.service.js";
 import { TokenService } from "./token.service.js";
 import { SignupService } from "../onboarding/signup.service.js";
 import type { MailPort } from "../mail/mail.port.js";
-import type { VerifyOutcome, RegisterInput, Registered } from "@lehno/contracts";
+import type { VerifyOutcome, RegisterInput, Registered, RequestOtpResult } from "@lehno/contracts";
 import { otpEmail } from "../mail/templates.js";
 
 type VerifyInput = {
@@ -67,9 +67,7 @@ export class AuthService {
   // La réponse reste la même pour une adresse inconnue : on émet un code et
   // on envoie, que le compte existe ou non — sinon le point d'entrée énumère
   // les comptes.
-  async requestOtp(
-    input: { email: string; ip?: string },
-  ): Promise<{ sent: true; retryAfterSeconds: number }> {
+  async requestOtp(input: { email: string; ip?: string }): Promise<RequestOtpResult> {
     // Par destinataire ET par origine : l'un arrête celui qui vise une personne,
     // l'autre celui qui balaie un annuaire.
     //
@@ -106,7 +104,7 @@ export class AuthService {
     // panne, pas une protection.
     if (input.ip) await this.limiter.hit(`otp:ip:${input.ip}`, 20, 3_600_000);
 
-    const { code } = await this.otp.issue(input.email, "login");
+    const { code, expiresAt } = await this.otp.issue(input.email, "login");
     const user = await this.prisma.user.findUnique({
       where: { email: input.email }, select: { uiLanguage: true },
     });
@@ -118,7 +116,10 @@ export class AuthService {
     // code l'affiche en compte à rebours : sans lui, le client devrait coder
     // la formule de son côté, et deux versions du parc appliqueraient deux
     // règles différentes — celle du serveur restant la seule qui compte.
-    return { sent: true, retryAfterSeconds };
+    /* L'ÉCHÉANCE REMONTE JUSQU'AU CLIENT. Elle était calculée puis jetée ici,
+       et l'écran de saisie décomptait sa propre constante de dix minutes — la
+       même valeur écrite deux fois, sans rien pour les tenir ensemble. */
+    return { sent: true, retryAfterSeconds, expiresAt: expiresAt.toISOString() };
   }
 
   private async paramNumber(

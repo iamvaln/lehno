@@ -15,7 +15,23 @@ export const requestOtpSchema = z.object({ email: z.string().email().max(254) })
  * pouvait pas l'importer. Ici, les deux le lisent au même endroit. */
 export const requestOtpResultSchema = z.object({
   sent: z.literal(true),
+  /* Le délai avant de pouvoir en REDEMANDER un — croissant : cinq secondes,
+     puis vingt-cinq, puis cent vingt-cinq. Ce n'est PAS la validité du code ;
+     les confondre ferait annoncer « il vous reste 5 s pour le saisir ». */
   retryAfterSeconds: z.number().int().positive(),
+  /* QUAND LE CODE MEURT, en absolu.
+   *
+   * Servi parce que le client ne peut pas le savoir : il tenait une constante
+   * de dix minutes en face de celle du serveur — deux vérités qui s'accordent
+   * aujourd'hui et que rien n'oblige à s'accorder demain. Le serveur calculait
+   * déjà cette date ; elle était jetée avant de sortir.
+   *
+   * Et une DATE, pas une durée : une durée se décompte depuis l'instant où
+   * l'écran s'affiche, ce qui mesure l'âge de l'ÉCRAN et non celui du CODE.
+   * Quelqu'un qui revient en arrière puis repart voyait le minuteur repartir
+   * de dix minutes sur un code déjà mort — l'écran annonçait « expiré »
+   * au-dessus d'un décompte qui tournait encore. */
+  expiresAt: z.string(),
 }).strict();
 
 export type RequestOtpResult = z.infer<typeof requestOtpResultSchema>;

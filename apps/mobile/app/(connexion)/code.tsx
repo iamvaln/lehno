@@ -17,9 +17,9 @@ import { messageDErreur } from "../../lib/session.js";
 import { poseLesJetons } from "../../lib/jetons.js";
 import { requestOtpResultSchema, verifyOutcomeSchema } from "@lehno/contracts";
 import { identifiantDeLAppareil } from "../../lib/appareil.js";
+import { resteAvantExpiration } from "../../lib/bienvenue.js";
 
 const LONGUEUR = 6;
-const VALIDITE = 10 * 60;
 
 /* Le délai avant de redemander un code vient du serveur — c'est son limiteur
    qui le fixe. Cette valeur ne sert qu'au premier affichage, avant que la
@@ -49,18 +49,26 @@ export default function Code() {
   const insets = useSafeAreaInsets();
   const compact = useCompact();
   const routeur = useRouter();
-  const { email, renvoi } = useLocalSearchParams<{ email: string; renvoi: string }>();
+  const { email, renvoi, echeance } = useLocalSearchParams<{
+    email: string; renvoi: string; echeance: string;
+  }>();
 
   const champ = useRef<TextInput>(null);
   const [saisi, setSaisi] = useState("");
-  const [reste, setReste] = useState(VALIDITE);
+  /* L'ÉCHÉANCE, pas une durée. Le serveur la sert désormais — il la calculait
+     déjà et la jetait avant de sortir. Décompter une constante depuis le
+     montage mesurait l'âge de l'ÉCRAN et non celui du CODE. */
+  const [expire, setExpire] = useState(echeance ?? "");
+  const [reste, setReste] = useState<number | null>(
+    () => resteAvantExpiration(echeance ?? "", Date.now()),
+  );
   const [avantRenvoi, setAvantRenvoi] = useState(Number(renvoi) || RENVOI_PROVISOIRE);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
   useEffect(() => {
     const battement = setInterval(() => {
-      setReste((v) => (v > 0 ? v - 1 : 0));
+      setReste(resteAvantExpiration(expire, Date.now()));
       setAvantRenvoi((v) => (v > 0 ? v - 1 : 0));
     }, 1000);
     return () => clearInterval(battement);
@@ -113,8 +121,9 @@ export default function Code() {
       const brut = await appelPublic<unknown>("/auth/otp", {
         method: "POST", body: JSON.stringify({ email }),
       });
-      const { retryAfterSeconds } = requestOtpResultSchema.parse(brut);
-      setReste(VALIDITE);
+      const { retryAfterSeconds, expiresAt } = requestOtpResultSchema.parse(brut);
+      setExpire(expiresAt);
+      setReste(resteAvantExpiration(expiresAt, Date.now()));
       // Le délai du serveur, pas le nôtre : lui seul sait ce que son limiteur
       // accepte, et le contredire ferait promettre un renvoi qu'il refuserait.
       setAvantRenvoi(retryAfterSeconds);
@@ -189,7 +198,11 @@ export default function Code() {
         />
 
         <Text style={[styles.validite, { color: couleurs.textMention }]}>
-          {perime ? "" : t.codeValidite(horloge(reste))}
+          {/* RIEN PLUTÔT QU'UN CHIFFRE FAUX. `reste` est nul quand l'échéance
+              est illisible — un écran atteint par un lien profond, par exemple.
+              Afficher « il reste 0 s » sur un code encore valide ferait
+              renoncer quelqu'un qui pouvait saisir ; le serveur tranchera. */}
+          {perime || reste === null ? "" : t.codeValidite(horloge(reste))}
         </Text>
 
         <Button
