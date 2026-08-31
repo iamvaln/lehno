@@ -20,7 +20,7 @@ export type Famille = "exploitation" | "economie" | "supervision" | "outils";
  * dépense de l'argent réel à chaque essai.
  */
 export const SECTIONS_ECONOMIE = [
-  "parametres", "fonctionnalites", "modeles", "studio",
+  "parametres", "fonctionnalites", "modeles", "studioService", "gabarits",
 ] as const;
 
 /**
@@ -108,7 +108,19 @@ export const NAVIGATION: { famille: Famille | null; items: readonly Entree[] }[]
       "moderation",
     ],
   },
-  { famille: "economie", items: SECTIONS_ECONOMIE },
+  /* Le Studio se groupe. §5.9 lui donne trois entrées — l'Atelier, les essais,
+     les réglages en service — et le kit du 29 août les nomme ainsi. Deux
+     existent aujourd'hui : les réglages, et le registre des gabarits de
+     production, qui n'est PAS le portrait mais tous les gabarits (message,
+     illustration, style de photo, classement des notes, détection des cas
+     sensibles). Le second ne perd pas son entrée parce que le premier arrive. */
+  {
+    famille: "economie",
+    items: [
+      "parametres", "fonctionnalites", "modeles",
+      { id: "studio", enfants: ["studioService", "gabarits"] },
+    ],
+  },
   { famille: "supervision", items: ["metriques", "audit", "connexions"] },
   // « acces » passe des outils de SUIVI aux OUTILS : on n'y observe rien, on y
   // administre les comptes de l'équipe. Il voisinait le journal d'audit faute

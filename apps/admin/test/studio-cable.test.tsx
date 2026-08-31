@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { App } from "../src/App.js";
 import { magasinLocal } from "../src/api/session.js";
 import { messages } from "../src/i18n/index.js";
+import { allerA } from "./aide-navigation.js";
 
 const t = messages("fr");
 
@@ -57,7 +58,9 @@ async function ouvrirStudio(role: "admin" | "support" = "admin") {
   magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role, email: "sam@lehno.app" });
   render(<App />);
   const utilisateur = userEvent.setup({ delay: null });
-  await utilisateur.click(within(screen.getByRole("navigation")).getByText(t.sections.studio));
+  // Le Studio est devenu une section : les gabarits y sont une entrée, à côté
+  // des réglages en service.
+  await allerA(utilisateur, "gabarits");
   return utilisateur;
 }
 

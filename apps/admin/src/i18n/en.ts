@@ -65,6 +65,8 @@ export const en: typeof fr = {
     fonctionnalites: "Features",
     modeles: "AI models",
     studio: "Portrait studio",
+    studioService: "Live settings",
+    gabarits: "Production templates",
     offres: "Offers and growth",
     metriques: "Metrics",
     audit: "Audit log",
@@ -944,6 +946,59 @@ export const en: typeof fr = {
     account_suspended: "This account is suspended.",
     reseau_indisponible: "The service is unreachable. Check your connection.",
     reponse_invalide: "The service answered something unexpected. Try again in a moment.",
+  },
+
+  studioService: {
+    titre: "Live settings",
+    sous: "What runs today, and who put it there.",
+    lecture: "This screen cannot be edited. Settings are composed in the Workshop, and only go live once published.",
+    enService: "Live",
+    version: "Version {n}",
+    depuis: "Published on {date}",
+    par: "by {qui}",
+    sansNote: "Published without a note.",
+    tauxAbsent: "The regeneration rate is not measured yet: nothing counts it on the server.",
+    contenu: {
+      titre: "What this version sets",
+      ambiances: "{n} moods",
+      voies: "{n} image routes",
+      illustration: "Illustration: {modele}",
+      photo: "Photo style: {modele}",
+    },
+    historique: {
+      titre: "Publications",
+      sous: "Every go-live, with its author and its reason. This is this section's log.",
+    },
+    col: {
+      version: "Version",
+      quand: "Published on",
+      parQui: "By",
+      note: "What it changes",
+      etat: "State",
+    },
+    etats: {
+      published: "Live",
+      superseded: "Retired",
+      draft: "Draft",
+    },
+    revenir: "Put back live",
+    dialogue: {
+      titre: "Put version {n} back live",
+      consequence: "The live version steps back, this one takes over. Nothing is rebuilt, and the change joins the log with its reason.",
+      motifs: [
+        "Output has degraded since it went live",
+        "The live version does not hold its guardrails",
+        "Rolling back after an inconclusive trial",
+      ],
+    },
+    aucunePublication: {
+      titre: "No publication yet",
+      texte: "Every go-live is recorded here, with its author and its reason.",
+    },
+    premier: {
+      titre: "Nothing is live yet",
+      texte: "No version has been published. Settings are composed in the Workshop, tried out, then published.",
+    },
   },
 
   studio: {

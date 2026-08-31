@@ -77,6 +77,8 @@ export const fr = {
     fonctionnalites: "Fonctionnalités",
     modeles: "Modèles d'IA",
     studio: "Studio du portrait",
+    studioService: "Réglages en service",
+    gabarits: "Gabarits de production",
     offres: "Offres et croissance",
     metriques: "Métriques",
     audit: "Journal d'audit",
@@ -1021,6 +1023,66 @@ export const fr = {
     account_suspended: "Ce compte est suspendu.",
     reseau_indisponible: "Le service est injoignable. Vérifiez votre connexion.",
     reponse_invalide: "Le service a répondu quelque chose d'inattendu. Réessayez dans un instant.",
+  },
+
+  studioService: {
+    titre: "Réglages en service",
+    sous: "Ce qui tourne aujourd'hui, et qui l'a mis là.",
+    // On ne change rien ici, et l'écran le dit : un administrateur qui cherche
+    // où modifier ne doit pas avoir à le déduire de l'absence de champs.
+    lecture: "Cet écran ne se modifie pas. Les réglages se composent à l'Atelier, et n'entrent en service qu'une fois publiés.",
+    enService: "En service",
+    version: "Version {n}",
+    depuis: "Publiée le {date}",
+    par: "par {qui}",
+    sansNote: "Publiée sans note.",
+    // La mesure que l'écran devrait porter et qu'aucune route ne sert : on le
+    // dit plutôt que de rendre un zéro, qui se prendrait pour un chiffre.
+    tauxAbsent: "Le taux de régénération n'est pas encore mesuré : rien ne le compte côté serveur.",
+    contenu: {
+      titre: "Ce que cette version règle",
+      ambiances: "{n} ambiances",
+      voies: "{n} voies d'image",
+      illustration: "Illustration : {modele}",
+      photo: "Style de photo : {modele}",
+    },
+    historique: {
+      titre: "Les publications",
+      // L'historique EST l'audit : publier et republier sont les deux seuls
+      // gestes de cette section, et une table qui les liste avec leur auteur,
+      // leur date et leur motif est déjà la traçabilité exigée.
+      sous: "Chaque mise en service, avec son auteur et son motif. C'est le journal de cette section.",
+    },
+    col: {
+      version: "Version",
+      quand: "Publiée le",
+      parQui: "Par",
+      note: "Ce que ça change",
+      etat: "État",
+    },
+    etats: {
+      published: "En service",
+      superseded: "Rangée",
+      draft: "Brouillon",
+    },
+    revenir: "Remettre en service",
+    dialogue: {
+      titre: "Remettre la version {n} en service",
+      consequence: "La version en service se range, celle-ci reprend la main. Rien n'est reconstruit, et le changement rejoint le journal avec son motif.",
+      motifs: [
+        "Les productions se sont dégradées depuis la publication",
+        "La version en service ne tient pas ses garde-fous",
+        "Retour arrière après un essai non concluant",
+      ],
+    },
+    aucunePublication: {
+      titre: "Aucune publication",
+      texte: "Les mises en service s'inscrivent ici, avec leur auteur et leur motif.",
+    },
+    premier: {
+      titre: "Rien n'est encore en service",
+      texte: "Aucune version n'a été publiée. Les réglages se composent à l'Atelier, s'éprouvent par un essai, puis se publient.",
+    },
   },
 
   studio: {
