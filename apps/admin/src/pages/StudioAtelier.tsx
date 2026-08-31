@@ -346,7 +346,7 @@ function Ouvrage({ sortie, alt }: { sortie: unknown; alt: string }): ReactNode {
   if (sortie === null || typeof sortie !== "object") return null;
   const contenu = sortie as { url?: unknown; message?: unknown };
   if (typeof contenu.url === "string") {
-    return <img src={contenu.url} alt={alt} style={{ maxWidth: "100%", borderRadius: 8 }} />;
+    return <img src={contenu.url} alt={alt} style={{ maxWidth: "100%", borderRadius: "var(--radius-lg)" }} />;
   }
   if (typeof contenu.message === "string") return <p>{contenu.message}</p>;
   return null;
