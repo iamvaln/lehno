@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Metriques, StatsTransactions, Studio, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, StatsTransactions, Studio, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -55,7 +55,8 @@ import {
   paiementDetailSchema, paliersSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
   profilAdminSchema, catalogueGabaritsSchema,
-  type Intervention, type GabaritStudio,
+  type Intervention,
+  etatPortraitSchema, historiquePortraitSchema,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
@@ -702,9 +703,22 @@ export function App(): ReactNode {
     [section, tourAcces],
   );
 
-  const etatStudio = useRessource(
-    () => (section === "studio"
+  /* Deux appels, un seul état d'écran : ce qui tourne et ce qui l'a précédé se
+     lisent ensemble ou pas du tout. Les afficher séparément ferait paraître
+     l'historique au-dessus d'une fiche encore vide. */
+  const etatGabarits = useRessource(
+    () => (section === "gabarits"
       ? api.appeler("/admin/portrait-studio/templates", { schema: catalogueGabaritsSchema })
+      : Promise.resolve(null)),
+    [section, tourStudio],
+  );
+
+  const etatStudio = useRessource(
+    () => (section === "studioService"
+      ? Promise.all([
+          api.appeler("/admin/portrait-studio/config", { schema: etatPortraitSchema }),
+          api.appeler("/admin/portrait-studio/config/history", { schema: historiquePortraitSchema }),
+        ]).then(([etat, historique]) => ({ etat, historique: historique.items }))
       : Promise.resolve(null)),
     [section, tourStudio],
   );
@@ -996,22 +1010,52 @@ export function App(): ReactNode {
           enfant={(page) => <Assistance {...communAssistance} demandes={page?.items ?? []} />} />
       );
     }
-  } else if (section === "studio") {
+  } else if (section === "gabarits") {
     vue = (
       <Ressource
-        etat={etatStudio}
+        etat={etatGabarits}
         t={t}
         enfant={(catalogue) => (catalogue ? (
           <Studio
             role={role}
             langue={langue}
             gabarits={catalogue.items}
-            onRevenir={(gabarit: GabaritStudio, motif) => {
+            onRevenir={(gabarit, motif) => {
               void (async () => {
                 try {
                   await api.appeler(`/admin/portrait-studio/templates/${gabarit.id}`, {
                     methode: "PATCH",
                     corps: { isActive: true, reason: motif },
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourStudio((n) => n + 1);
+                }
+              })();
+            }}
+            onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "studioService") {
+    vue = (
+      <Ressource
+        etat={etatStudio}
+        t={t}
+        enfant={(studio) => (studio ? (
+          <StudioService
+            role={role}
+            langue={langue}
+            etat={studio.etat}
+            historique={studio.historique}
+            onRevenir={(config, motif) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/portrait-studio/config/rollback", {
+                    methode: "POST",
+                    corps: { configId: config.id, reason: motif },
                   });
                 } catch (echec) {
                   if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
