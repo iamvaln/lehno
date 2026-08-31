@@ -11,17 +11,26 @@ import {
 
 /* LES NOTIFICATIONS POUSSÉES — le seul endroit qui parle à OneSignal.
  *
- * L'IDENTIFIANT D'APPLICATION N'EST PAS UN SECRET : il voyage dans chaque
- * installation. Il vient donc d'une variable PUBLIQUE, comme l'adresse de
- * l'API — mais il ne s'écrit pas en dur pour autant : sans variable, la
- * recette et la production partageraient le même flux, et un essai ferait
- * sonner de vrais téléphones.
+ * L'IDENTIFIANT D'APPLICATION vient de `ONESIGNAL_APP_ID`, lue par
+ * `app.config.js` À LA CONSTRUCTION et déposée dans `extra`.
+ *
+ * Pas par une variable `EXPO_PUBLIC_` : Expo n'injecte dans le paquet client
+ * que celles-là, ce qui aurait obligé à DUPLIQUER la variable sous un second
+ * nom — deux entrées pour une seule valeur, qui divergent le jour où l'on n'en
+ * change qu'une. Le fichier de configuration, lui, s'exécute sur la machine qui
+ * construit et lit la variable telle qu'elle est.
+ *
+ * Ce n'est pas un secret — il voyage dans chaque installation — mais il ne
+ * s'écrit pas en dur pour autant : sans variable, la recette et la production
+ * partageraient le même flux, et un essai ferait sonner de vrais téléphones.
  *
  * ABSENT, ON NE FAIT RIEN — et sans bruit. Un poste de développement qui ne
  * l'a pas posée doit démarrer normalement : les notifications sont une
  * commodité, pas une condition de fonctionnement.
  */
-const APP_ID = process.env["EXPO_PUBLIC_ONESIGNAL_APP_ID"];
+const APP_ID = typeof Constants.expoConfig?.extra?.["oneSignalAppId"] === "string"
+  ? Constants.expoConfig.extra["oneSignalAppId"]
+  : null;
 
 /* LA DEMANDE DE PERMISSION, à déclencher depuis un écran.
  *
