@@ -8,11 +8,11 @@ import { Hero } from "./Hero.js";
 import { HowItWorks } from "./HowItWorks.js";
 import { Pricing } from "./Pricing.js";
 import { WallPreview } from "./WallPreview.js";
-import { SiteFooter } from "./SiteFooter.js";
-import { SiteHeader } from "./SiteHeader.js";
+import { PublicShell } from "../PublicShell.js";
 
-// La landing assemblée : SiteHeader, Hero, HowItWorks, Content, Pricing,
-// ClosingBand, SiteFooter. Un composant de rendu ordinaire, sans rien de
+// La landing assemblée : Hero, HowItWorks, Content, WallPreview, Pricing,
+// ClosingBand — dans la coquille publique, qui porte l'en-tête et le pied
+// communs à toutes les surfaces. Un composant de rendu ordinaire, sans rien de
 // propre à Next — c'est page.tsx qui résout la langue, la configuration et
 // l'environnement, et les lui passe déjà prêts. Un test peut donc le rendre
 // directement, avec sa propre configuration, sans simuler de serveur.
@@ -25,17 +25,15 @@ export function Landing(
   },
 ): ReactNode {
   return (
-    <div className="page">
-      <SiteHeader t={t} langue={langue} />
-      <main>
+    // L'aplat de clôture ci-dessous porte déjà l'invitation, et avec plus de
+    // force : c'est la fin d'un argumentaire, pas une porte de sortie.
+    <PublicShell t={t} langue={langue} acquisition={false}>
         <Hero t={t} langue={langue} avantLancement={avantLancement} />
         <HowItWorks t={t} />
         <Content t={t} langue={langue} />
         <WallPreview t={t} langue={langue} />
         <Pricing t={t} langue={langue} config={configuration} />
         <ClosingBand t={t} langue={langue} avantLancement={avantLancement} />
-      </main>
-      <SiteFooter t={t} langue={langue} />
-    </div>
+    </PublicShell>
   );
 }

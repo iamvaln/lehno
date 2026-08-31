@@ -121,7 +121,7 @@ describe("Liste — le gabarit des quinze sections", () => {
 
 describe("Detail — un compte, ses faces, sa traçabilité", () => {
   it("rend l'historique des interventions en pied de page", () => {
-    render(<Detail role="admin" />);
+    render(<Detail role="admin" interventions={interventions.items} />);
 
     // L'historique est la seule liste ordonnée de la page : ce qu'il porte se
     // lit là, avec son motif — un journal sans raison ne prouve rien.
@@ -136,7 +136,7 @@ describe("Detail — un compte, ses faces, sa traçabilité", () => {
   // Spec §6 : le journal d'audit est réservé à l'administrateur. Le prototype
   // l'ouvrait au support ; c'est la spec qui tranche.
   it("garde le journal d'audit hors de portée du support", () => {
-    render(<Detail role="support" />);
+    render(<Detail role="support" interventions={interventions.items} />);
 
     expect(screen.queryByText(interventions.items[0]!.action)).not.toBeInTheDocument();
     expect(screen.queryByText(fr.audit.titre)).not.toBeInTheDocument();
@@ -206,10 +206,13 @@ describe("Edition — les configurations", () => {
 
     // Le rappel se lit dans le rang du réglage qu'il concerne, pas ailleurs :
     // deux réglages peuvent quitter la même valeur sans dire la même chose.
-    const offerts = parametres.economie[1]!;
-    const rang = screen.getByLabelText(offerts.libelle).closest(".admin-rang");
+    // Le libellé et l'unité viennent du dictionnaire, indexés par la clé que le
+    // serveur envoie : il transporte des clés, jamais des phrases composées.
+    const prix = parametres.economie[0]!;
+    const dit = fr.parametres.cles[prix.cle as keyof typeof fr.parametres.cles];
+    const rang = screen.getByLabelText(dit.libelle).closest(".admin-rang");
     expect(within(rang as HTMLElement).getByText(
-      fr.parametres.precedente.replace("{valeur}", `${offerts.valeurPrecedente} ${offerts.unite}`),
+      fr.parametres.precedente.replace("{valeur}", `${prix.valeurPrecedente} ${dit.unite}`),
     )).toBeInTheDocument();
   });
 
@@ -217,22 +220,35 @@ describe("Edition — les configurations", () => {
     const onEnregistrer = vi.fn();
     render(<Edition role="admin" onEnregistrer={onEnregistrer} />);
 
-    const champ = screen.getByLabelText(parametres.economie[1]!.libelle);
+    const cle = parametres.economie[1]!.cle as keyof typeof fr.parametres.cles;
+    const champ = screen.getByLabelText(fr.parametres.cles[cle].libelle);
     await userEvent.clear(champ);
     await userEvent.type(champ, "7");
     expect(onEnregistrer).not.toHaveBeenCalled();
 
+    // Le geste explicite ne suffit plus : le serveur refuse une écriture sans
+    // motif, l'écran le demande donc avant d'appeler.
     await userEvent.click(screen.getByRole("button", { name: fr.parametres.enregistrer }));
+    expect(onEnregistrer).not.toHaveBeenCalled();
+
+    await userEvent.selectOptions(
+      screen.getByLabelText(fr.parametres.motif.question),
+      fr.parametres.motif.motifs[0]!,
+    );
+    await userEvent.click(screen.getByRole("button", { name: fr.confirmation.confirmer }));
+
     expect(onEnregistrer).toHaveBeenCalledTimes(1);
-    expect(onEnregistrer.mock.calls[0]![0].economie[1].valeur).toBe(7);
-    expect(onEnregistrer.mock.calls[0]![0].economie[1].valeurPrecedente).toBe(parametres.economie[1]!.valeur);
+    // Telle que saisie : la base stocke du texte et porte le type à côté.
+    expect(onEnregistrer.mock.calls[0]![0].economie[1].valeur).toBe("7");
+    expect(onEnregistrer.mock.calls[0]![1]).toBe(fr.parametres.motif.motifs[0]);
   });
 
   it("refuse d'enregistrer un réglage qui n'est pas un entier positif", async () => {
     const onEnregistrer = vi.fn();
     render(<Edition role="admin" onEnregistrer={onEnregistrer} />);
 
-    const champ = screen.getByLabelText(parametres.economie[0]!.libelle);
+    const cle = parametres.economie[0]!.cle as keyof typeof fr.parametres.cles;
+    const champ = screen.getByLabelText(fr.parametres.cles[cle].libelle);
     await userEvent.clear(champ);
     await userEvent.type(champ, "0");
 
@@ -245,7 +261,10 @@ describe("Edition — les configurations", () => {
     render(<Edition role="admin" />);
 
     await userEvent.click(screen.getByRole("tab", { name: new RegExp(fr.parametres.onglets.occasions) }));
-    expect(screen.getByText(parametres.typesEvenement[0]!.libelle)).toBeInTheDocument();
+    // Les types viennent d'un enum du schéma : leur identifiant est ce qu'on
+    // peut en dire, et l'écran annonce qu'ils ne se règlent pas d'ici.
+    expect(screen.getByText(parametres.typesEvenement[0]!.id)).toBeInTheDocument();
+    expect(screen.getByText(fr.parametres.nonReglable)).toBeInTheDocument();
     expect(screen.getByText(fr.parametres.occasions.noteSensible)).toBeInTheDocument();
   });
 

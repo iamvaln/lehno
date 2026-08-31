@@ -8,6 +8,10 @@ import { AppExceptionFilter } from "../src/common/errors.js";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
+// L'application entière refuse de démarrer sans clé d'administration : c'est
+// voulu, mieux vaut ne pas démarrer que signer sans clé. Ces suites montent
+// AppModule, elles la posent donc aussi.
+const SECRET_ADMIN = "Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh";
 
 // Revue tour 1 : config/legal/waitlist n'étaient éprouvés que par leurs
 // services, jamais par la route réelle. Deux propriétés ne se démontrent
@@ -35,6 +39,7 @@ describe("surfaces publiques — HTTP de bout en bout", () => {
     process.env.DATABASE_URL = db.url;
     process.env.OTP_PEPPER = PEPPER;
     process.env.JWT_SECRET = SECRET;
+    process.env.ADMIN_JWT_SECRET = SECRET_ADMIN;
     // Aucun identifiant Resend ici : adhésion explicite à la console de
     // développement requise depuis la revue tour 2 (voir app.module.ts) —
     // sans elle, le module refuserait de démarrer.
@@ -91,6 +96,43 @@ describe("surfaces publiques — HTTP de bout en bout", () => {
         ["creditUnitPrice", "currency", "referralBonusInvited", "signupFreeCredits"].sort(),
       );
       expect(publicConfigSchema.safeParse(body).success).toBe(true);
+    });
+
+    // La configuration ne porte PLUS aucun drapeau : la spécification §6.2
+    // veut que les clients reçoivent la liste RÉSOLUE de ce qui est actif, par
+    // /public/features, et jamais l'état brut. Ce cas garde la frontière en
+    // HTTP réel — un drapeau allumé en base ne doit rien changer ici.
+    it("ne porte aucun drapeau, même allumé en base", async () => {
+      await db.prisma.featureFlag.create({ data: { key: "launch.live", enabled: true } });
+      const res = await fetch(`${baseUrl}/v1/public/config`);
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(body).not.toHaveProperty("flags");
+    });
+  });
+
+  describe("GET /public/features", () => {
+    // Un drapeau d'application n'a rien à faire sur une surface sans compte :
+    // l'exposer annoncerait au monde ce qu'on prépare. La preuve se fait ici,
+    // en HTTP réel — le service seul ne démontre pas ce que la route rend.
+    /* La portée s'est élargie le 27/08 : les quatre clés qui décident d'une
+       section de la landing sont devenues publiques, pour que la page ne puisse
+       pas promettre ce qui est éteint. Ce cas garde son sujet — une clé
+       purement applicative ne fuite pas — mais le prouve sur deux clés qui le
+       sont restées : `events.other` gouverne une valeur dans une requête, et
+       `topup.manual` un chemin de paiement. Ni l'une ni l'autre n'a de section
+       sur la page. */
+    it("ne laisse pas fuiter un drapeau d'application", async () => {
+      await db.prisma.featureFlag.createMany({
+        data: [
+          { key: "events.other", enabled: true },
+          { key: "topup.manual", enabled: true },
+          { key: "launch.live", enabled: true },
+        ],
+      });
+      const res = await fetch(`${baseUrl}/v1/public/features`);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { features: string[] };
+      expect(body.features).toEqual(["launch.live"]);
     });
   });
 

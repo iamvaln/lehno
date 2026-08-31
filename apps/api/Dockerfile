@@ -24,7 +24,7 @@
 # contrainte que celle déjà documentée dans le code pour vitest
 # (voir apps/api/src/**/*.ts, commentaires « esbuild/vitest »).
 
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 # openssl : le moteur Prisma généré pour linux-musl en a besoin au chargement ;
 # son absence produit une erreur au démarrage, pas à la construction.
 RUN apk add --no-cache openssl

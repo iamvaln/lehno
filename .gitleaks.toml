@@ -7,18 +7,26 @@ useDefault = true
 
 [allowlist]
 description = """
-Le jeu de tests de l'API signe ses jetons avec un secret de démonstration \
-unique, partagé par huit fichiers et cité dans le plan de la phase 0. \
-Décodé, il s'écrit « secret-de-test-32-octets-exactement » : sa longueur est \
-ce qui compte, la valeur n'ouvre rien. Sans cette exception, gitleaks \
-remontait onze fuites à chaque exécution — une barrière rouge en permanence \
-cesse d'être lue, puis finit débranchée.
+Le jeu de tests de l'API signe ses jetons avec deux secrets de démonstration, \
+partagés par une dizaine de fichiers et cités dans le plan de la phase 0. \
+Décodés, ils s'écrivent « secret-de-test-32-octets-exactement » et \
+« cle-admin-de-test-32-octets-ici » : leur longueur est ce qui compte, la \
+valeur n'ouvre rien. Sans ces exceptions, gitleaks remontait onze fuites à \
+chaque exécution — une barrière rouge en permanence cesse d'être lue, puis \
+finit débranchée.
 
-L'exception porte sur cette chaîne exacte, pas sur les fichiers de test : \
+Le second a été ajouté le 27/08/2026, en livrant les métriques. Il n'avait \
+jamais été signalé parce que gitleaks ne relit que les commits d'une \
+proposition : la valeur dormait dans neuf fichiers déjà versés, et le premier \
+fichier neuf à s'en servir l'a réveillée. Ce n'est donc pas un secret \
+nouveau — c'est une exception qui manquait.
+
+Les exceptions portent sur ces chaînes exactes, pas sur les fichiers de test : \
 un vrai secret déposé dans apps/api/test/ reste détecté. Un nouveau montage \
 de test qui aurait besoin d'une valeur de ce genre devra donc l'ajouter ici \
 explicitement — c'est la friction qu'on veut.
 """
 regexes = [
   '''c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=''',
+  '''Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh''',
 ]

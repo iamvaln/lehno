@@ -72,6 +72,7 @@ const C = await window.lehnoBoot([
   "../../components/navigation/NotificationBell.jsx",
   "../../components/brand/Wordmark.jsx",
   "../../components/brand/BrandMark.jsx",
+  "../../components/brand/PortraitComposition.jsx",
   "./copy.js",
   "./PhoneFrame.jsx",
   "./SplashScreen.jsx",
@@ -85,9 +86,9 @@ const C = await window.lehnoBoot([
   "./NotificationsScreen.jsx",
   "./ReprisesScreen.jsx",
   "./CollecteScreen.jsx",
-  "./PortraitImage.jsx",
   "./PortraitScreen.jsx",
-  "./CompositionScreen.jsx",
+  "./StudioScreen.jsx",
+  "./SurfacePubliqueScreen.jsx",
   "./CadrageIdeesScreen.jsx",
   "./RechargeScreen.jsx",
   "./ParrainageScreen.jsx",
@@ -110,7 +111,7 @@ const C = await window.lehnoBoot([
 const {
   COPY, PROCHES, PhoneFrame, MODELES, AppHeader, TabBar,
   AccueilScreen, DatesScreen, ProchesScreen, ProcheScreen, PreparationScreen, MoiScreen,
-  GenerationScreen, NotificationsScreen, AValiderScreen, ReprisesScreen, CollecteScreen, IdentiteScreen, PortraitImage, PortraitScreen, CompositionScreen, CadrageIdeesScreen, RechargeScreen, ParrainageScreen, MonMurScreen,
+  GenerationScreen, NotificationsScreen, AValiderScreen, ReprisesScreen, CollecteScreen, IdentiteScreen, PortraitScreen, StudioScreen, SurfacePubliqueScreen, CadrageIdeesScreen, RechargeScreen, ParrainageScreen, MonMurScreen,
   ProfilScreen, ReglagesScreen, SecuriteScreen, PaiementScreen, AideScreen, ReservationsScreen,
   SplashScreen, ConnexionScreen, CodeScreen, PseudoScreen, BienvenueScreen,
   NoteScreen, EvenementScreen, RechercheScreen, SouhaitScreen, OccasionScreen
@@ -126,6 +127,7 @@ const SUITE = [
   { id: "pseudo",     num: "3.1",  nom: { fr: "Pseudo",              en: "Handle" } },
   { id: "bienvenue",  num: "3.1",  nom: { fr: "Bienvenue",           en: "Welcome" } },
   { id: "accueil",    num: "3.2",  nom: { fr: "Accueil",             en: "Home" }, onglet: "accueil" },
+  { id: "dates",      num: "3.14", nom: { fr: "Dates",               en: "Dates" },  onglet: "dates" },
   { id: "proches",    num: "3.3",  nom: { fr: "Proches",             en: "People" }, onglet: "proches" },
   { id: "proche",     num: "3.4",  nom: { fr: "Fiche d'un proche",   en: "A person" }, titre: "Valery Bah" },
   { id: "note",       num: "3.5",  nom: { fr: "Saisie d'une note",   en: "Write a note" }, titre: { fr: "Nouvelle note", en: "New note" } },
@@ -133,17 +135,18 @@ const SUITE = [
   { id: "recherche",  num: "3.15", nom: { fr: "Recherche",           en: "Search" } },
   { id: "souhait",    num: "3.19", nom: { fr: "Un souhait",          en: "A wish" },      titre: { fr: "Souhait", en: "Wish" } },
   { id: "occasion",   num: "3.21", nom: { fr: "Une occasion",        en: "An occasion" }, titre: { fr: "24 août", en: "24 Aug" } },
-  { id: "preparation", num: "3.7", nom: { fr: "Préparer",             en: "Prepare" },      titre: { fr: "Pour Valery", en: "For Valery" } },
-  { id: "generation",  num: "3.7", nom: { fr: "Le message écrit",     en: "The written message" }, titre: { fr: "Pour Valery", en: "For Valery" } },
+  { id: "preparation", num: "3.7", nom: { fr: "Préparer",             en: "Prepare" },      titre: { fr: "Préparer", en: "Prepare" } },
+  { id: "generation",  num: "3.7", nom: { fr: "Le message écrit",     en: "The written message" }, titre: { fr: "Préparer", en: "Prepare" } },
   { id: "notifications", num: "3.13", nom: { fr: "Notifications",     en: "Notifications" } },
   { id: "valider",     num: "3.8",  nom: { fr: "À valider",           en: "To review" },    titre: { fr: "À valider", en: "To review" } },
   { id: "reprises",    num: "3.16", nom: { fr: "Reprises en cours",   en: "In progress" },  titre: { fr: "En cours", en: "In progress" } },
   { id: "collecte",    num: "3.20", nom: { fr: "Lien de collecte",     en: "Collection link" }, titre: { fr: "Faire compléter", en: "Have it filled in" } },
   { id: "identite",    num: "3.18", nom: { fr: "Identité d'un proche", en: "Their details" },   titre: { fr: "Valery Bah", en: "Valery Bah" } },
-  { id: "cadrage",     num: "3.7",  nom: { fr: "Cadrer les idées",     en: "Frame the ideas" }, titre: { fr: "Idées pour Valery", en: "Ideas for Valery" } },
-  { id: "composition", num: "3.7",  nom: { fr: "Composer un portrait", en: "Compose a portrait" }, titre: { fr: "Un portrait de Valery", en: "A portrait of Valery" } },
+  { id: "cadrage",     num: "3.7",  nom: { fr: "Cadrer les idées",     en: "Frame the ideas" }, titre: { fr: "Cadrer les idées", en: "Frame the ideas" } },
+  { id: "studio", num: "3.7",  nom: { fr: "Studio du portrait", en: "Portrait studio" }, titre: { fr: "Le studio", en: "The studio" } },
   { id: "portrait",    num: "3.22", nom: { fr: "Un portrait",           en: "A portrait" },     titre: { fr: "Le portrait", en: "The portrait" } },
   { id: "moi",         num: "3.17", nom: { fr: "Moi",                   en: "Me" },             onglet: "moi" },
+  { id: "surface",     num: "3.12", nom: { fr: "Un lien public",        en: "A public link" },  titre: { fr: "Awa Diop", en: "Awa Diop" } },
   { id: "recharge",    num: "3.9",  nom: { fr: "Recharger",             en: "Top up" },         titre: { fr: "Recharger", en: "Top up" } },
   { id: "parrainage",  num: "3.9",  nom: { fr: "Parrainage",            en: "Referral" },       titre: { fr: "Parrainage", en: "Referral" } },
   { id: "monmur",      num: "3.10", nom: { fr: "Mon Mur",               en: "My Wall" },        titre: { fr: "Mon Mur", en: "My Wall" } },
@@ -163,6 +166,12 @@ const ETATS = [
   { id: "code",      etat: "expire",     num: "3.1",  legende: { fr: "Code expiré",         en: "Expired code" } },
   { id: "dates",     etat: "liste",     num: "3.14", legende: { fr: "Vue liste",            en: "List view" } },
   { id: "recherche", etat: "vide",       num: "3.15", legende: { fr: "Sans correspondance", en: "No match" } },
+  { id: "surface",   etat: "connecte",   num: "3.12", legende: { fr: "Reconnu",              en: "Recognised" } },
+  { id: "surface",   etat: "mur",        num: "3.12", legende: { fr: "Le Mur d'un proche",   en: "Someone's Wall" } },
+  { id: "surface",   etat: "collecte",   num: "3.12", legende: { fr: "Une collecte",         en: "A collection" } },
+  { id: "surface",   etat: "revoque",    num: "3.12", legende: { fr: "Lien révoqué",         en: "Revoked link" } },
+  { id: "surface",   etat: "voeuxclos",  num: "3.12", legende: { fr: "Vœux clos",            en: "Wishes closed" } },
+  { id: "souhait",   etat: "anonyme",    num: "3.19", legende: { fr: "Réservé, sans nom",    en: "Reserved, no name" } },
   { id: "souhait",   etat: "vide",       num: "3.19", legende: { fr: "Souhaits à lister",   en: "No wishes yet" } },
   { id: "note",      etat: "horsligne",  num: "3.5",  legende: { fr: "Hors connexion",      en: "Offline" } },
   { id: "note",      etat: "erreur",     num: "3.5",  legende: { fr: "Erreur de saisie",    en: "Input error" } },
@@ -173,7 +182,7 @@ const ETATS = [
   { id: "preparation",   etat: "solde",     num: "3.7",  legende: { fr: "Solde insuffisant",    en: "Not enough credits" } },
   { id: "preparation",   etat: "horsligne", num: "3.7",  legende: { fr: "Hors connexion",       en: "Offline" } },
   { id: "generation",    etat: "attente",   num: "3.7",  legende: { fr: "Lehno écrit",          en: "Lehno is writing" } },
-  { id: "generation",    etat: "idees",     num: "3.7",  legende: { fr: "Trois idées",          en: "Three ideas" } },
+  { id: "generation",    etat: "idees",     num: "3.7",  legende: { fr: "Cinq idées",           en: "Five ideas" } },
   { id: "generation",    etat: "erreur",    num: "3.7",  legende: { fr: "Écriture interrompue", en: "Writing failed" } },
   { id: "notifications", etat: "vide",      num: "3.13", legende: { fr: "Rien à signaler",      en: "Nothing to flag" } },
   { id: "valider",       etat: "vide",      num: "3.8",  legende: { fr: "Tout est traité",      en: "All caught up" } },
@@ -227,7 +236,8 @@ function Ecran({ def, etat, langue, nuit, modele, os, legende }) {
     case "collecte":      vue = <CollecteScreen {...props} />; break;
     case "identite":      vue = <IdentiteScreen {...props} />; break;
     case "portrait":      vue = <PortraitScreen {...props} />; break;
-    case "composition":   vue = <CompositionScreen {...props} />; break;
+    case "studio":   vue = <StudioScreen {...props} />; break;
+    case "surface":       vue = <SurfacePubliqueScreen {...props} />; break;
     case "cadrage":       vue = <CadrageIdeesScreen {...props} />; break;
     case "moi":           vue = <MoiScreen {...props} />; break;
     case "recharge":      vue = <RechargeScreen {...props} />; break;

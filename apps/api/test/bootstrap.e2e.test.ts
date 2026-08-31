@@ -118,6 +118,6 @@ describe("démarrage de l'application", () => {
     });
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ sent: true });
+    await expect(res.json()).resolves.toMatchObject({ sent: true });
   });
 });

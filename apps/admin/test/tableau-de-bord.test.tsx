@@ -118,7 +118,7 @@ describe("les cartes d'indicateurs", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /Crédits vendus/ }));
 
-    expect(onAller).toHaveBeenCalledWith("transactions");
+    expect(onAller).toHaveBeenCalledWith("credits");
   });
 
   // Un chiffre qui ne mène nulle part n'est pas une commande : il ne s'atteint
@@ -216,9 +216,15 @@ describe("l'adhérence de la page", () => {
     expect(feuille).not.toMatch(/\b(rgb|rgba|hsl|hsla)\(/);
   });
 
-  // « Cartes d'indicateurs — grille auto-fit, minimum 170 px » : le paquet de
-  // passation le dit, la feuille le tient.
-  it("pose la grille des indicateurs en auto-fit à 170 px", () => {
-    expect(feuille).toMatch(/repeat\(auto-fit,\s*minmax\(170px,\s*1fr\)\)/);
+  /* « Cartes d'indicateurs — grille auto-fit, minimum 170 px » : le paquet de
+     passation le dit, la feuille le tient.
+
+     La règle a quitté `tableau.css` pour `gabarits.css` le 28/08 : deux pages
+     s'en servent — le tableau de bord et les métriques —, et son nom disait
+     « accueil ». Le cas suit la règle plutôt que le fichier ; ce qu'il éprouve
+     n'a pas changé. */
+  it("pose la grille des cartes en auto-fit à 170 px", () => {
+    const gabarits = readFileSync("src/styles/gabarits.css", "utf-8");
+    expect(gabarits).toMatch(/repeat\(auto-fit,\s*minmax\(170px,\s*1fr\)\)/);
   });
 });

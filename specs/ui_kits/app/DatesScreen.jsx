@@ -45,7 +45,7 @@ function Liste({ t, onOpen }) {
             borderRadius: "var(--radius-lg)", overflow: "hidden"
           }}>
             {m.items.map((e, i) => (
-              <button key={e.nom} type="button" onClick={() => onOpen && onOpen("occasion")}
+              <button key={e.nom} type="button" onClick={() => onOpen && onOpen("occasion", e)}
                 className="lehno-focusable" style={{
                   all: "unset", boxSizing: "border-box", cursor: "pointer", width: "100%",
                   display: "flex", alignItems: "center", gap: 12, padding: "13px 14px",
@@ -134,7 +134,7 @@ function Calendrier({ t, onOpen }) {
           panneau dit qui. */}
       <div style={{ marginTop: 16, minHeight: 74 }}>
         {retenu ? (
-          <button type="button" onClick={() => onOpen && onOpen("occasion")}
+          <button type="button" onClick={() => onOpen && onOpen("occasion", retenu)}
             className="lehno-focusable" style={{
               all: "unset", boxSizing: "border-box", cursor: "pointer", width: "100%",
               display: "flex", alignItems: "center", gap: 12, padding: "13px 14px",

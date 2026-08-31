@@ -4,7 +4,20 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
-  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
-  "dependencies": { "zod": "^3.23.0" },
-  "devDependencies": { "@lehno/tsconfig": "workspace:*", "typescript": "^5.6.0", "vitest": "^2.1.0" }
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "openapi": "tsx scripts/build-openapi.ts",
+    "serve-contrat": "tsx scripts/serve-docs.ts"
+  },
+  "dependencies": {
+    "zod": "^3.23.0",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "devDependencies": {
+    "@lehno/tsconfig": "workspace:*",
+    "tsx": "^4.23.12",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
 }

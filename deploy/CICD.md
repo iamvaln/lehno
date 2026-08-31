@@ -41,13 +41,17 @@ Inlinées dans le bundle client au build de l'image web (voir
 
 | Variable | Valeur (exemple) |
 | --- | --- |
-| `NEXT_PUBLIC_API_URL` | `https://api.lehno.app` |
-| `NEXT_PUBLIC_LANCEMENT` | `0` (pré-lancement) ou `1` (badges de stores) |
+| `NEXT_PUBLIC_API_URL` | `https://api.lehno.io` |
 
 ```bash
-gh variable set NEXT_PUBLIC_API_URL --body "https://api.lehno.app"
-gh variable set NEXT_PUBLIC_LANCEMENT --body "0"
+gh variable set NEXT_PUBLIC_API_URL --body "https://api.lehno.io"
 ```
+
+La bascule de lancement (pré-lancement ↔ liens de magasins) n'est plus une
+variable de build : c'est le drapeau `launch.live`, lu à l'exécution via
+`/v1/public/config` (voir `packages/contracts/src/flags.ts`). Il s'allume en
+administration, pas par un redéploiement — jusqu'à cinq minutes pour
+paraître (`revalidate` de la page, `apps/web/app/[locale]/page.tsx`).
 
 ### 2. Secrets de déploiement (Settings ▸ Secrets ▸ Actions, ou via gh)
 
@@ -100,12 +104,15 @@ directement.
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | identifiants de la base (service `db`) |
 | `DATABASE_URL` | `postgresql://<user>:<mdp>@db:5432/<db>` — lue par `api` et `migrate` |
 | `OTP_PEPPER`, `JWT_SECRET` | secrets applicatifs — l'api refuse de démarrer si absents (générer avec `openssl rand -base64 32`) |
-| `RESEND_API_KEY`, `RESEND_FROM` | envoi de courriel — l'api refuse de démarrer sans les deux. `RESEND_FROM` doit porter un domaine vérifié chez Resend, par exemple `Lehno <no-reply@lehno.app>` |
+| `RESEND_API_KEY`, `RESEND_FROM` | envoi de courriel — l'api refuse de démarrer sans les deux. `RESEND_FROM` doit porter un domaine vérifié chez Resend, par exemple `Lehno <no-reply@lehno.io>` |
+| `PUBLIC_WEB_URL` | adresse du site public — elle fabrique les liens de Mur et de partage. Un repli codé en dur existe (`https://lehno.io`), mais un domaine changé sans que cette variable suive rendrait des liens morts que des gens ont déjà collés ailleurs |
+| `CONTACT_TO_EMAIL` | destinataire du formulaire de contact. Repli `hello@lehno.io` |
+| `ADMIN_JWT_SECRET` | clé propre à l'administration, **distincte de `JWT_SECRET`** — deux mondes séparés jusque dans leurs signatures, sans quoi la séparation des tables ne serait qu'apparente. L'api refuse de démarrer sans elle (`AdminTokenService`) |
 | `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID` | connexion fédérée, optionnels, vérifiés à l'usage |
 | `TRUST_PROXY_HOPS` | déjà posé à `1` par `docker-compose.yml`, rien à écrire ici. Ne le relevez que si un relais s'ajoute devant Traefik — voir l'encadré ci-dessous |
 | `SENTRY_DSN` | suivi des erreurs, optionnel |
 | `API_URL` | lue côté serveur par le rendu SSR du web — mettre `http://api:3000` (nom du service Docker, réseau interne), pas le domaine public |
-| `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_LANCEMENT` | mêmes valeurs que les variables GitHub Actions ci-dessus — utiles seulement à un `docker compose build` local (en production, l'image publiée les porte déjà) |
+| `NEXT_PUBLIC_API_URL` | même valeur que la variable GitHub Actions ci-dessus — utile seulement à un `docker compose build` local (en production, l'image publiée la porte déjà) |
 
 > **Sur `TRUST_PROXY_HOPS`.** Ce réglage dit combien de relais inverses on
 > exploite devant l'api. Il vaut `1` : le Traefik partagé du VPS. Sans lui,

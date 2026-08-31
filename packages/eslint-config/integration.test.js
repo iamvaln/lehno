@@ -56,7 +56,12 @@ describe("preuve d'intégration : ESLint réel sur apps/web/components/ui/", () 
     // Deux infractions distinctes de couleur en dur : le rgb() du style et le
     // fill hexadécimal du SVG. Au moins deux messages « couleur » attendus.
     expect(messages.filter((m) => /couleur écrite en dur/i.test(m.message)).length).toBeGreaterThanOrEqual(2);
-  });
+    // 30 s, pas les 5 s par défaut : ce cas lance le VRAI ESLint sur le dépôt,
+    // et sous la charge de la suite complète du monorepo il dépassait le délai.
+    // Un échec par délai dépassé sur une règle d'adhérence finit toujours de la
+    // même façon — quelqu'un marque le test instable et le neutralise, et la
+    // règle cesse de garder quoi que ce soit sans que rien ne rougisse.
+  }, 30_000);
 
   it("couvre bien apps/web/components/ui/ (les nouveaux composants dès le premier jour)", async () => {
     const eslint = new ESLint({ cwd: RACINE });
@@ -65,7 +70,8 @@ describe("preuve d'intégration : ESLint réel sur apps/web/components/ui/", () 
 
     expect(fichierPreuve).toBeDefined();
     expect(fichierPreuve.messages.some((m) => m.ruleId === "lehno/jetons-seulement")).toBe(true);
-  });
+    // Même raison qu'au-dessus : vrai ESLint, vrai dossier.
+  }, 30_000);
 });
 
 describe("périmètre de la règle d'adhérence", () => {

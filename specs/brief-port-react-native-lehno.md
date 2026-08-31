@@ -1,6 +1,6 @@
 # Lehno — Brief du port React Native
 
-Ce brief fait suite au pilote de port (`LEHNO REACT NATIVE.zip` : `tokens.js`,
+Ce brief fait suite au pilote de port (la dernière archive pour le react navitve : `tokens.js`,
 `Button.js`, `EventCard.js`, `AccueilScreen.js`). **La convention du pilote est
 retenue** — le reste peut suivre mécaniquement. Ce document ne demande donc pas
 un nouveau kit : il demande les trois choses que le port ne peut pas produire

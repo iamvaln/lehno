@@ -35,6 +35,7 @@ Titulaire et compte fusionnés. Racine du cloisonnement multi-tenant.
 | status | user_status (enum) | non | — | 'active' | `active` \| `suspended` \| `pending_deletion` (désactivé, dans le délai de grâce) \| `deleted` |
 | deletion_requested_at | timestamptz | oui | — | — | Début du délai de grâce ; l'effacement définitif intervient après `account_grace_period_days` |
 | deletion_reason | text | oui | — | — | Raison du départ, facultative (motif choisi ou texte libre) |
+| gender | person_gender (enum) | oui | — | 'unspecified' | **Sert l'accord grammatical** de ce que l'utilisateur signe : *je suis fier* ou *fière*. Demandé au studio, à la première génération |
 | ui_language | varchar(10) | non | — | 'fr' | Langue de l'interface (code BCP 47, ex. `fr`, `en`) ; distincte de `person.language`, la langue de communication propre à chaque proche |
 | theme | ui_theme (enum) | non | — | 'system' | Apparence choisie : `system` (suit l'appareil) \| `light` \| `dark` |
 | timezone | varchar(64) | non | — | 'Africa/Douala' | Fuseau IANA ; décide de « aujourd'hui » et de l'heure des envois |
@@ -120,7 +121,16 @@ Achat de crédits réglé par un `User`. Alimente l'historique des paiements et 
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
 | user_id | uuid | non | — | — | FK → user(id) on delete cascade |
 | payment_method_id | uuid | oui | — | — | FK → payment_method(id) on delete set null ; méthode utilisée |
-| provider_ref | text | non | oui | — | Référence de la transaction chez le prestataire (idempotence) |
+| mode | payment_mode (enum) | non | — | 'provider' | Par quelle voie ce paiement se règle |
+| credit_bundle_id | uuid | oui | — | — | FK → credit_bundle(id) on delete set null ; le palier acheté |
+| collection_account_id | uuid | oui | — | — | FK → collection_account(id) on delete restrict ; le compte qui a REÇU l'argent, sur les voies manuelles |
+| payer_msisdn | varchar(32) | oui | — | — | Le numéro depuis lequel le client déclare avoir versé — semi-manuel seulement |
+| proof_key | text | oui | — | — | Reçu déposé par le client ou saisi par l'administrateur : image ou PDF. Référence sur le stockage |
+| provider_ref | text | oui | oui | — | Référence de la transaction. Chez le prestataire pour `provider` ; **saisie par l'administrateur** sur les voies manuelles, à la confirmation. Nulle tant qu'elle n'est pas connue — d'où l'unicité partielle, sur les valeurs présentes |
+| payment_channel_id | uuid | oui | — | — | FK → payment_channel(id) on delete restrict ; le canal employé, et son barème |
+| fee_amount | numeric(12,2) | oui | — | — | Les frais **annoncés à l'aperçu**, figés ici. Pas ceux que le canal porte aujourd'hui : changer un taux ne doit pas fausser rétroactivement la comptabilité |
+| expected_amount | numeric(12,2) | oui | — | — | Ce qu'on **attend sur le compte**, calculé à l'aperçu depuis le montant, les frais et `fee_borne_by` |
+| received_amount | numeric(12,2) | oui | — | — | Ce que l'administrateur a **constaté sur le compte**. Comparé à `expected_amount` : un écart se traite, il ne se devine pas |
 | direction | payment_direction (enum) | non | — | 'charge' | `charge` (achat) \| `refund` (remboursement) |
 | amount | numeric(12,2) | non | — | — | Montant réglé |
 | currency | varchar(3) | non | — | — | Code ISO 4217 |
@@ -130,6 +140,15 @@ Achat de crédits réglé par un `User`. Alimente l'historique des paiements et 
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `payment_direction` : `charge`, `refund`.
+- Enum `payment_mode` : `provider` (l'intégration, quand elle existera), `semi_manual` (le client verse puis dépose son reçu), `manual` (un administrateur saisit tout depuis le back-office).
+- **Les deux voies manuelles sont des `Payment`, pas une entité à part.** Elles ont le même cycle de vie, la même histoire d'états, et produisent le même `CreditTransaction` portant `payment_id`. Une table parallèle obligerait à tenir deux registres, deux historiques et deux chemins d'octroi — et une recharge manuelle n'apparaîtrait pas dans l'historique des paiements du client.
+- **`provider_ref` est nulle tant que la référence n'est pas connue.** Sur la voie du prestataire elle arrive avec la notification ; sur les voies manuelles, c'est l'administrateur qui la consigne au moment de confirmer. L'unicité porte donc sur les valeurs présentes (index unique partiel) — sans quoi deux demandes en attente entreraient en collision sur une valeur nulle.
+- **Trois montants, et ils ne disent pas la même chose.** `amount` est le prix du palier ; `expected_amount` ce qu'on attend sur le compte une fois les frais appliqués selon `fee_borne_by` ; `received_amount` ce qui est réellement arrivé. Un seul champ ne suffirait pas : sans `expected_amount`, on ne saurait pas si un écart vient du client ou du barème ; sans `received_amount`, on ne saurait pas qu'il y a écart.
+- **`fee_amount` est figé au moment de l'aperçu.** Le barème d'un canal change ; un paiement passé garde les frais qui lui ont été annoncés. Lire le taux du jour pour expliquer un paiement d'il y a trois mois donnerait un chiffre faux, et personne ne s'en apercevrait.
+- **`received_amount` n'est pas `amount`.** Le premier est ce que l'administrateur a vu arriver sur le compte, le second ce que le paiement visait. Les confondre effacerait le cas qui compte : un client qui verse moins que le palier choisi. L'écart se traite — on crédite le palier correspondant, ou on rejette avec motif — mais il ne se devine pas après coup.
+- **Le reçu ne prouve rien.** Un montage est facile : l'administrateur **vérifie la réception sur le compte de l'opérateur** avant de confirmer, et ne se fie pas à l'image. Le fichier suit les règles des fichiers reçus (type vérifié par le contenu, poids borné, métadonnées retirées) et s'efface une fois la demande traitée.
+- **Seul un administrateur confirme ou rejette**, quelle que soit la voie. Chaque passage d'état ouvre une ligne de `PaymentStatusHistory` avec `origin = 'admin'`, `changed_by_admin_id` renseigné et un **motif obligatoire** — c'est ce qui rend le registre lisible le jour d'un litige.
+- **À la confirmation** : les crédits sont octroyés une seule fois (unicité partielle sur `credit_transaction.payment_id` **là où `type` vaut `purchase`** — un remboursement rattaché au même paiement violerait sinon la contrainte), et le client reçoit une notification par courriel **et** par poussée.
 - Enum `payment_status` : `pending`, `succeeded`, `failed`, `expired`, `refunded`.
 - Chaque changement d'état ouvre une ligne dans `PaymentStatusHistory` et ferme la précédente.
 - Un `pending` se résout par trois voies, dans cet ordre : la **notification du prestataire** ; à défaut, l'**interrogation de son point d'état**, engagée une fois le délai de notification dépassé ; en dernier ressort, la **confirmation manuelle d'un administrateur**, avec motif. Les crédits ne sont octroyés qu'au passage à `succeeded`, une seule fois quelle que soit la voie qui l'a constaté. Sans résolution au terme du délai configuré, l'opération passe à `expired`.
@@ -150,7 +169,7 @@ Trace des créations de compte par appareil, pour limiter l'abus du parrainage (
 
 - Index sur (`device_id`), pour compter les comptes d'un même appareil.
 - **Plafond de comptes par appareil** : le décompte porte sur le seul `device_id`, et compte **toutes** les lignes de cet appareil, que le compte associé existe encore ou non. Au-delà du seuil (`SystemParameter` `max_accounts_per_device`, trois par défaut), la création est refusée.
-- **La trace survit au compte.** Une suppression met `user_id` à nul sans effacer la ligne : effacer en cascade rendrait le plafond contournable en créant puis supprimant des comptes à la chaîne. C'est aussi ce que veut la règle générale des traces de sécurité (9.10 de la spécification technique), qui les fait survivre sous une forme anonymisée.
+- **La trace survit au compte.** Une suppression met `user_id` à nul sans effacer la ligne : effacer en cascade rendrait le plafond contournable en créant puis supprimant des comptes à la chaîne. C'est aussi ce que veut la règle générale des traces de sécurité (10.11 de la spécification technique), qui les fait survivre sous une forme anonymisée.
 - Un appareil peut légitimement servir à plusieurs personnes (téléphone familial, appareil revendu) : le seuil laisse cette marge, et un administrateur peut lever le blocage au cas par cas.
 
 ## PaymentStatusHistory
@@ -322,9 +341,11 @@ Fiche d'un proche, ou fiche de l'utilisateur lui-même (self-Person).
 | is_self | boolean | non | — | false | true pour la self-Person (support du Wall) |
 | relation | person_relation (enum) | oui | — | — | Lien avec ce proche ; oriente le ton et les idées de cadeaux |
 | relation_hint | text | oui | — | — | « on se connaît d'où », en toutes lettres — souvent plus riche que l'enum. Renseigné par le proche via une collecte publique, ou par le propriétaire |
-| gender | person_gender (enum) | oui | — | 'unspecified' | Facultatif ; sert **uniquement** à orienter des idées de cadeaux faute d'autre matière |
+| gender | person_gender (enum) | oui | — | 'unspecified' | **Sert l'accord grammatical** des contenus produits pour ce proche. Demandé au studio, à la première génération, jamais dans le carnet |
 | city | text | oui | — | — | Ville, pour suggérer des adresses et des sorties |
 | country | varchar(2) | oui | — | — | Code ISO 3166-1 alpha-2 |
+| birth_date | date | oui | — | — | **Sa date de naissance.** Elle appartient au PROCHE, pas à un événement : c'est un fait de son identité, et l'anniversaire n'en est qu'une conséquence |
+| birth_year_known | boolean | non | — | true | false quand on connaît le jour et le mois sans l'année — on suit alors l'anniversaire sans pouvoir dire l'âge |
 | register | person_register (enum) | oui | — | — | Registre de communication |
 | language | varchar(10) | oui | — | — | Langue préférée (code BCP 47, ex. `fr`, `en`) |
 | preferred_channel | contact_channel (enum) | oui | — | — | Par où on lui écrit d'ordinaire ; oriente la longueur du message produit |
@@ -335,8 +356,12 @@ Fiche d'un proche, ou fiche de l'utilisateur lui-même (self-Person).
 - Enum `person_relation` : `famille_proche`, `famille_etendue`, `ami`, `partenaire`, `collegue`, `relation_pro`, `connaissance`.
 - Enum `person_gender` : `female`, `male`, `other`, `unspecified`.
 - Enum `contact_channel` : `whatsapp`, `sms`, `email`, `autre`.
+- **La date de naissance vit ICI, et l'anniversaire s'en déduit.** Un anniversaire n'est pas une donnée de plus : c'est le prochain jour de l'année qui porte le même jour et le même mois que la naissance — celui de cette année s'il est devant nous, celui de l'année prochaine sinon. La porter sur un `Event` reviendrait à ranger un fait d'identité parmi les rendez-vous, et à devoir la corriger à deux endroits le jour où elle se révèle fausse.
+- **`birth_year_known` accompagne la date, pas l'événement.** C'est la naissance dont l'année est inconnue, pas l'anniversaire — celui-ci a toujours une année, celle qui vient. Le champ décide si une fiche peut annoncer un âge.
 - **`relation` et `relation_hint` coexistent** : l'enum sert la génération, le texte libre garde la nuance que l'enum écrase (« on a fait la fac ensemble »). Une réponse de collecte publique peut proposer une `relation`, que le propriétaire confirme.
-- **Le genre est un signal de dernier recours.** Il oriente des idées de cadeaux lorsque rien d'autre n'est disponible ; une seule note bien prise vaut mieux que lui. Il reste facultatif, et `unspecified` est une valeur légitime, jamais un champ à remplir.
+- **Le genre sert d'abord la grammaire.** En français, on n'écrit pas à quelqu'un sans savoir : *fier ou fière*, *le meilleur ou la meilleure*. Ce n'est pas un signal, c'est un accord. Sans lui, un message est soit fautif, soit contraint à des tournures neutres qui sonnent creux.
+- **Il se demande au studio, à la première génération**, là où il sert — « pour écrire correctement : fier ou fière ? » —, jamais dans le carnet. Un champ posé sans raison paraît intrusif ; posé à l'endroit où il sert, il ne l'est pas. `unspecified` reste une réponse légitime, et la génération emploie alors des tournures qui s'en passent.
+- **Il oriente aussi les idées de cadeaux**, mais faiblement : une seule note bien prise vaut mieux que lui.
 - Contrainte : au plus une `person` avec `is_self = true` par `user_id` (index unique partiel).
 
 ## Event
@@ -351,8 +376,7 @@ Occasion datée rattachée à une `Person`.
 | label | text | oui | — | — | Libellé libre (ex. « Rencontre », « Mariage ») |
 | kind | event_kind (enum) | non | — | 'other' | Routage UX : `birthday` \| `other` |
 | event_nature | event_nature (enum) | non | — | 'happy' | Tonalité : `happy` \| `sensitive` |
-| reference_date | date | non | — | — | Date d'ancrage |
-| year_known | boolean | non | — | true | false si l'année n'est pas connue (anniversaire sans année) |
+| reference_date | date | non | — | — | Date d'ancrage, **toujours à venir**. Un événement dit quand la chose SERA — un mariage, une soutenance. Pour un anniversaire, elle vaut la prochaine échéance, calculée depuis `person.birth_date` |
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
@@ -437,6 +461,26 @@ Catégorie de classement des notes. **Ensemble fixe défini par le système** (a
 - Enum `category_kind` : `ponctuelle`, `durable`.
 - Socle des `code` : `gift_ideas`, `message_ideas`, `facts`, `encouragements`, `challenges` (ponctuelles) ; `interests`, `dislikes_nogo` (durables ; `dislikes_nogo` a `is_constraint = true`).
 
+## PersonAttribute
+
+Trait caractéristique d'un proche, **extrait des notes** par la passe de classement — jamais saisi dans un formulaire. C'est ce qui donne, en un regard, le topo d'une personne.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| person_id | uuid | non | — | — | FK → person(id) on delete cascade |
+| kind | attribute_kind (enum) | non | — | — | Ce que l'attribut décrit |
+| value | text | non | — | — | La valeur, telle qu'elle a été dite |
+| note_id | uuid | oui | — | — | FK → note(id) on delete set null ; **la note d'où il vient** |
+| observed_at | date | non | — | — | Date de la note dont il est tiré |
+| created_at | timestamptz | non | — | now() | |
+
+- Enum `attribute_kind` : `color`, `animal`, `food`, `drink`, `clothing_size`, `shoe_size`, `fragrance`, `style`, `hobby`, `occupation`, `avoid`.
+- **Le plus récent l'emporte** : unicité sur (`person_id`, `kind`), la valeur nouvelle remplaçant l'ancienne. Une personne aime le bleu en mars et le vert en septembre : c'est le vert qu'on retient.
+- **Chaque attribut garde sa provenance** — `note_id` et `observed_at` permettent d'afficher la ligne de provenance et de remonter à ce qui a été écrit.
+- **Aucun formulaire ne les demande.** Ils naissent de la passe qui classe les notes : le même appel, avec quelques valeurs de sortie de plus. Le client affiche ce qui vient ; une valeur absente n'apparaît pas.
+- `avoid` recoupe la catégorie `dislikes_nogo` : l'attribut porte la valeur précise (« alcool »), la catégorie porte la note entière.
+
 ## NoteCategory (association)
 
 Rattachement N–N d'une `Note` à ses `Category` (une note peut relever de deux catégories).
@@ -449,10 +493,14 @@ Rattachement N–N d'une `Note` à ses `Category` (une note peut relever de deux
 
 - PK composite (`note_id`, `category_id`).
 - Enum `assignment_source` : `auto`, `user`.
+- **Zéro ligne est un état valide.** Une note que le système n'a pas su ranger reste sans catégorie : aucun repli sur une catégorie fourre-tout. Elle paraît alors dans le bloc « à ranger » de la fiche, et **nourrit la génération comme les autres** — celle-ci lit le contenu, non le classement.
+- **`dislikes_nogo` ne pèse pas comme les autres.** Six catégories organisent l'affichage ; celle-ci **contraint ce que le produit propose** (`category.is_constraint = true`). Se tromper de rangement ailleurs coûte un désordre ; se tromper ici fait proposer du vin à quelqu'un qui ne boit pas.
 
 ## WishlistItem
 
-Souhait structuré, rattaché à une `EventOccurrence` (l'anniversaire d'une année).
+Souhait **qu'un proche m'a fait connaître**, ou que j'ai noté pour lui, rattaché à une `EventOccurrence`. Il est **privé** : personne d'autre que moi ne le voit, et il ne se partage pas.
+
+**À distinguer de `OwnerWish`**, qui porte mes propres souhaits. Ce sont deux fonctionnalités : ce qu'un proche ose me demander à moi n'est pas ce qu'il publierait, et la liste qu'il créerait plus tard n'aurait aucun lien avec celle-ci.
 
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
@@ -467,13 +515,159 @@ Souhait structuré, rattaché à une `EventOccurrence` (l'anniversaire d'une ann
 | currency | varchar(3) | oui | — | — | Code ISO 4217 si `price` renseigné |
 | status | wishlist_status (enum) | non | — | 'available' | `available` \| `reserved` \| `fulfilled` ; **`reserved` est dérivé** d'une `WishReservation` confirmée |
 | origin | wishlist_origin (enum) | non | — | — | `collected` \| `accepted_idea` \| `owner` |
-| is_public | boolean | non | — | false | Exposé sur le `Wall` si true |
+| is_shortlisted | boolean | non | — | false | **Repère personnel** : je marque ce qui m'intéresse. La préparation le remonte en tête des suggestions. Invisible pour tout autre que moi, et sans effet sur la disponibilité |
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
 - Enum `wishlist_status` : `available`, `reserved`, `fulfilled`.
 - Enum `wishlist_origin` : `collected`, `accepted_idea`, `owner`.
+- **Aucune réservation ici.** Un souhait de proche ne se réserve pas : il se **marque**. Marquer n'engage à rien — on peut en marquer cinq et n'en offrir qu'un.
 - `fulfilled` reste une décision du propriétaire ; `reserved` découle d'une réservation confirmée (voir `WishReservation`).
+
+## FeatureFlag
+
+Drapeau de fonctionnalité. Sert à **livrer progressivement** : une fonctionnalité éteinte disparaît de l'application et se refuse côté serveur.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| key | varchar(64) | non | oui (PK) | — | Correspond à une clé du registre, tenu dans le code |
+| enabled | boolean | non | — | false | **Éteint par défaut** : une ligne absente vaut éteint |
+| updated_at | timestamptz | non | — | now() | |
+| updated_by_admin_id | uuid | oui | — | — | FK → admin(id) on delete set null |
+
+- **La table ne porte que l'état.** Ce qu'un drapeau gouverne, sa portée, ses dépendances et **la liste des écrans et points d'entrée qu'il couvre** vivent dans le **registre**, en code : ajouter un drapeau demande un déploiement, et une clé mal orthographiée ne compile pas.
+- **Réconciliation au démarrage** : les clés du registre absentes de la table y sont créées éteintes ; un état déjà réglé n'est jamais touché.
+- **Les drapeaux sont globaux** : tout le monde voit la même chose. L'activation par compte (essais restreints, A/B) reste une extension possible, sans changement pour les clients — le serveur rend déjà **la liste résolue pour le demandeur**, jamais l'état brut des drapeaux.
+- **Un drapeau inconnu d'un client vaut éteint.** Le parc ne se met pas à jour d'un bloc : une version installée ignore un drapeau créé après elle.
+- **La vérité est côté serveur.** Le client masque ; le serveur refuse. Sans quoi une version périmée ou modifiée passerait outre.
+
+## CreditBundle
+
+Palier d'achat de crédits. **Réglé par l'administration** : montant, crédits obtenus, remise affichée.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| amount | numeric(12,2) | non | — | — | Prix du palier |
+| currency | varchar(3) | non | — | 'XAF' | Code ISO 4217 |
+| credits | integer | non | — | — | Crédits obtenus, remise comprise |
+| bonus_percent | smallint | oui | — | — | Remise annoncée à l'écran ; nulle sur les petits paliers |
+| position | smallint | non | — | — | Ordre d'affichage |
+| is_active | boolean | non | — | true | |
+| updated_at | timestamptz | non | — | now() | |
+
+- **Aucune saisie libre d'un montant** : on achète un palier, et rien d'autre. Le plus petit palier fixe le minimum d'achat.
+- **La remise s'affiche** — c'est un argument de vente, pas un calcul caché.
+- Valeurs de départ, à ajuster depuis l'administration : 500 F → 5 crédits · 1 000 F → 10 · 2 000 F → 22 (+10 %) · 5 000 F → 57 (+15 %) · 10 000 F → 120 (+20 %).
+
+## PaymentChannel
+
+Un **canal de paiement** offert par le service, et ses frais : « MTN MoMo au
+Cameroun, 2 % ». Réglé depuis le back-office.
+
+**À ne pas confondre avec `PaymentMethod`**, et c'est la distinction qui évite
+d'embrouiller la comptabilité :
+
+- `PaymentChannel` est ce que **le service propose** — un opérateur, un pays, un
+  barème. Il en existe une poignée, réglés par l'administration.
+- `PaymentMethod` est ce qu'**un client a enregistré** — son numéro, sa carte.
+  Il y en a autant que de clients.
+
+Les fondre reviendrait à porter un taux de frais sur le numéro de téléphone de
+chaque client, et à devoir tous les corriger le jour où MTN change son barème.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| kind | payment_method_kind (enum) | non | — | — | `mobile_money` \| `card` |
+| operator | varchar(40) | non | — | — | `mtn_momo`, `orange_money`, … |
+| country | varchar(2) | non | — | — | Code ISO 3166-1 alpha-2 : **les frais diffèrent d'un pays à l'autre**, même chez le même opérateur |
+| label | varchar(80) | non | — | — | Nom affiché — « MTN Mobile Money » |
+| fee_percent | numeric(5,2) | non | — | 0 | Part proportionnelle, en pourcentage |
+| fee_fixed | numeric(12,2) | non | — | 0 | Part fixe, dans la devise du canal. Certains opérateurs prennent les deux |
+| fee_min | numeric(12,2) | oui | — | — | Plancher éventuel des frais |
+| fee_max | numeric(12,2) | oui | — | — | Plafond éventuel |
+| fee_borne_by | fee_bearer (enum) | non | — | 'payer' | Qui supporte les frais |
+| currency | varchar(3) | non | — | 'XAF' | Devise du barème |
+| is_active | boolean | non | — | true | |
+| position | smallint | oui | — | — | Ordre d'affichage |
+| updated_at | timestamptz | non | — | now() | |
+
+- Enum `fee_bearer` : `payer` (le client verse le montant **plus** les frais, et
+  le service reçoit le montant plein) ; `payee` (les frais sont **prélevés** sur
+  le versement, et le service reçoit moins que ce que le client a envoyé).
+- **Sur le mobile money, c'est le client qui paie les frais** — tranché le
+  25/08/2026. Un palier à 1 000 F fait verser **1 020 F**, et il en arrive
+  **1 000**. `fee_borne_by = 'payer'`, et l'écart attendu sur le compte est
+  nul : tout manque est donc un vrai écart, pas le fonctionnement de
+  l'opérateur.
+- **Le champ demeure malgré tout, parce que la carte se comporte à l'inverse.**
+  Un prestataire de carte prélève sa part sur ce qu'il reverse : le client est
+  débité de 1 000 et le service en reçoit 980 (`fee_borne_by = 'payee'`). Coder
+  la règle du mobile money en dur rendrait la carte inexprimable le jour où
+  elle arrivera, et le montant attendu serait alors faux sans que rien ne le
+  signale.
+- **Unicité logique sur (`operator`, `country`, `kind`)** : un même opérateur
+  n'a qu'un barème par pays. Deux lignes concurrentes rendraient l'aperçu
+  indéterminé.
+- **Jamais supprimé, seulement désactivé** : un `Payment` passé le référence, et
+  son barème explique le montant qui a été versé ce jour-là.
+- **Le barème du jour ne réécrit pas le passé.** Un `Payment` conserve les frais
+  qui lui ont été annoncés (`fee_amount`), et non ceux que le canal porte
+  aujourd'hui. Sans cela, changer un taux fausserait rétroactivement toute la
+  comptabilité.
+- Sa modification est une action sensible : elle passe au journal d'audit.
+
+## CollectionAccount
+
+Un compte d'opérateur sur lequel les clients versent. **Géré depuis le
+back-office** : on en ouvre un, on le nomme, on décide s'il paraît dans
+l'application.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| label | varchar(80) | non | — | — | Nom affiché — « Orange Money principal » |
+| operator | varchar(40) | non | — | — | L'opérateur : `orange_money`, `mtn_momo`, … |
+| number | varchar(32) | non | — | — | Le numéro sur lequel verser |
+| is_visible_in_app | boolean | non | — | false | **Paraît-il dans l'application ?** Un compte peut servir aux saisies d'administration sans être proposé aux clients |
+| is_active | boolean | non | — | true | Un compte fermé cesse d'être proposé, sans disparaître des paiements passés |
+| position | smallint | oui | — | — | Ordre d'affichage |
+| created_at | timestamptz | non | — | now() | |
+| updated_at | timestamptz | non | — | now() | |
+
+- **`is_visible_in_app` et `is_active` ne disent pas la même chose.** Le premier
+  décide de ce que le client voit ; le second, de ce qui reste employable. Un
+  compte peut être actif pour l'administration et invisible dans l'application
+  — le temps d'un essai, ou parce qu'il sert d'appoint.
+- **Jamais supprimé, seulement désactivé** : un `Payment` passé le référence, et
+  effacer le compte rendrait ce paiement inexplicable.
+- Sa modification est une action sensible : elle passe au journal d'audit.
+
+## ManualTopUp — **retirée**, absorbée par `Payment`
+
+Cette entité décrivait la demande de recharge manuelle comme une chose à part.
+Elle ne l'est pas : c'est un **paiement**, avec le même cycle de vie et la même
+histoire d'états. Voir `Payment.mode` — `semi_manual` et `manual`.
+
+Ce que la fusion évite : deux registres à tenir, deux historiques d'états, deux
+chemins d'octroi de crédits. Et surtout, une recharge manuelle qui n'aurait pas
+paru dans l'historique des paiements du client — alors que c'est un paiement,
+du point de vue de celui qui a versé l'argent.
+
+La correspondance, pour qui lisait l'ancienne table :
+
+| Ancien champ | Devient |
+|---|---|
+| `user_id` | `payment.user_id` |
+| `credit_bundle_id` | `payment.credit_bundle_id` |
+| `declared_amount` | `payment.amount` — ce que le paiement visait |
+| `operator` | `payment.collection_account_id` → le compte, qui porte son opérateur |
+| `proof_key` | `payment.proof_key` |
+| `status` `pending`/`approved`/`rejected` | `payment.status` `pending`/`succeeded`/`failed` |
+| `reason` | le motif de la ligne `payment_status_history` correspondante |
+| `handled_by_admin_id` | `payment_status_history.changed_by_admin_id` |
+| `handled_at` | `payment_status_history.started_at` de l'état final |
 
 ## GiftGiven
 
@@ -493,6 +687,64 @@ Ce qui a été offert à un proche, une année donnée. **Sans cette trace, rien
 - La génération d'idées **lit cet historique** et écarte ce qui a déjà été offert.
 - La fiche d'un proche affiche cet historique par année.
 
+## Wishlist
+
+**La liste elle-même**, une par occasion de l'utilisateur. Elle existe comme table à part alors qu'`OwnerWish` porte déjà `event_occurrence_id` : sans elle, « j'ai ouvert ma liste et je n'ai pas encore ajouté de souhait » ne s'écrit nulle part, et l'écran de §3.29 ne distinguerait pas une **liste vide** — où il invite à ajouter un premier souhait — d'une **occasion sans liste**, où il propose d'en ouvrir une.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| event_occurrence_id | uuid | non | **oui** | — | FK → event_occurrence(id) on delete cascade ; une occasion de l'utilisateur **lui-même** |
+| created_at | timestamptz | non | — | now() | |
+| updated_at | timestamptz | non | — | now() | |
+
+- **Une seule liste par occasion** : deux listes sur la même occasion rendraient le partage ambigu — lequel des deux liens l'ouvrirait ?
+- **L'occasion doit être celle de la self-Person.** Le serveur le vérifie par `person.is_self` avant d'écrire ; `event_occurrence.user_id` ne suffit pas, cette colonne valant aussi pour l'anniversaire d'un proche. Ouvrir une liste dessus publierait ce que ce proche a confié en privé.
+- **Aucun jeton ici** : le lien de partage vit à côté (voir `WishlistShareLink`).
+
+## WishlistShareLink
+
+Le lien public d'une liste, sur le modèle de `CollectionLink` : durable, révocable, sans expiration automatique.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| wishlist_id | uuid | non | — | — | FK → wishlist(id) on delete cascade |
+| token | varchar(32) | non | oui | — | Jeton d'accès dans l'URL |
+| is_active | boolean | non | — | true | Révocable (pas d'expiration automatique) |
+| created_at | timestamptz | non | — | now() | |
+
+- **Plusieurs lignes par liste, et c'est l'intérêt.** Faire tourner un jeton unique porté par la `Wishlist` effacerait l'ancien, et le lien déjà partagé — sur un statut, dans un groupe — rendrait `404` : « cette page n'existe pas » là où il faut dire « ce lien n'est plus actif » (surfaces publiques §3.9). La ligne révoquée **survit** pour pouvoir le dire.
+- **Un jeton inconnu, lui, rend bien `404`** : rien n'a jamais existé, et répondre « révoqué » apprendrait qu'un jeton a un jour été valide.
+- Le partage est **idempotent** : redemander l'adresse rend le même jeton tant qu'un lien actif existe. En frapper un neuf à chaque appel ferait cesser de valoir celui qu'on vient de coller dans un groupe.
+
+## OwnerWish
+
+**Mon** souhait, sur **ma** liste. Rattaché à une `EventOccurrence` qui m'appartient — mon anniversaire, mon mariage, ma crémaillère : un cadeau de Noël n'est pas un cadeau de mariage.
+
+Sa raison d'être est d'**être partagé** : c'est la surface la plus visible du produit vers l'extérieur.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| event_occurrence_id | uuid | non | — | — | FK → event_occurrence(id) on delete cascade ; une occasion **de l'utilisateur lui-même** |
+| label | text | non | — | — | Intitulé du souhait |
+| link | text | oui | — | — | URL éventuelle |
+| image_key | text | oui | — | — | Photo de l'objet, facultative |
+| details | text | oui | — | — | Taille, couleur, référence, où le trouver |
+| price | numeric(12,2) | oui | — | — | Prix indicatif |
+| currency | varchar(3) | oui | — | — | Code ISO 4217 si `price` renseigné |
+| status | wishlist_status (enum) | non | — | 'available' | `available` \| `reserved` \| `fulfilled` ; **`reserved` est dérivé** d'une réservation confirmée |
+| is_public | boolean | non | — | true | Exposé sur la liste partagée ; un souhait peut rester privé |
+| position | smallint | oui | — | — | Ordre voulu par le propriétaire |
+| created_at | timestamptz | non | — | now() | |
+| updated_at | timestamptz | non | — | now() | |
+
+- **Seul un `OwnerWish` se réserve** (voir `WishReservation`). Un souhait de proche se marque, il ne se réserve pas.
+- Le propriétaire est **prévenu de chaque réservation confirmée** — c'est ce qui rend la liste vivante après le partage.
+- **Aucun lien avec `WishlistItem`.** Si un proche crée un compte, il compose sa propre liste : ce qu'il m'avait confié n'est pas ce qu'il publierait, et sa liste publique sera plus longue.
+- Une liste dont l'occasion est passée **s'archive** et cesse d'accepter des réservations.
+
 ## WishReservation
 
 Réservation d'un souhait public par un visiteur, **sans compte**. Elle évite que deux proches offrent la même chose.
@@ -500,7 +752,7 @@ Réservation d'un souhait public par un visiteur, **sans compte**. Elle évite q
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
-| wishlist_item_id | uuid | non | — | — | FK → wishlist_item(id) on delete cascade |
+| owner_wish_id | uuid | non | — | — | FK → owner_wish(id) on delete cascade ; **seuls mes propres souhaits se réservent** |
 | user_id | uuid | oui | — | — | FK → user(id) on delete set null ; renseigné lorsque le réservant a un compte Lehno |
 | email | citext | non | — | — | Adresse du réservant ; celle du compte s'il en a un, sinon celle qu'il a donnée |
 | display_name | varchar(80) | oui | — | — | Nom donné par le visiteur, si `show_identity` |
@@ -515,7 +767,7 @@ Réservation d'un souhait public par un visiteur, **sans compte**. Elle évite q
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `reservation_status` : `pending`, `confirmed`, `cancelled`, `expired`.
-- **Une seule réservation confirmée par souhait** : index unique partiel sur `wishlist_item_id` là où `status` vaut **`confirmed`** — et là seulement. Inclure `pending` reviendrait à laisser la première demande occuper le souhait, donc à permettre qu'une adresse inventée le bloque : plusieurs réservations en attente coexistent, la première confirmée l'emporte, les autres passent à `expired`.
+- **Une seule réservation confirmée par souhait** : index unique partiel sur `owner_wish_id` là où `status` vaut **`confirmed`** — et là seulement. Inclure `pending` reviendrait à laisser la première demande occuper le souhait, donc à permettre qu'une adresse inventée le bloque : plusieurs réservations en attente coexistent, la première confirmée l'emporte, les autres passent à `expired`.
 - **Deux chemins selon qui réserve.** Un **utilisateur connecté** réserve en un geste : son adresse est déjà vérifiée par son compte, la réservation naît `confirmed` et se rattache à lui. Un **visiteur sans compte** donne son adresse, reçoit un **code à usage unique** qu'il saisit dans la page, et la réservation ne tient qu'une fois ce code vérifié. Tant qu'elle est `pending`, le souhait reste disponible pour un autre — sans quoi une adresse inventée bloquerait un cadeau.
 - **Retrouver ses réservations.** Un utilisateur connecté les voit dans son espace, sur tous ses appareils. Un visiteur sans compte est reconnu par son jeton de session dans le même navigateur ; ailleurs, il redonne son adresse et un nouveau code — c'est **l'adresse qui fait l'identité**, le jeton n'étant qu'un raccourci.
 - **Protections contre l'abus.** Le débit est limité **par adresse destinataire** autant que par origine — borner la seule origine laisserait le point d'entrée servir à arroser la boîte d'un tiers. Les **adresses jetables** sont refusées, et l'**énumération d'une même boîte** par suffixes (`a+1@`, `a+2@`) est détectée et bornée, la partie qui suit le `+` étant ignorée pour le décompte.
@@ -541,7 +793,8 @@ Vue publique curée sur la self-Person de l'utilisateur.
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
-- Le contenu exposé dérive de la self-Person : catégories `interests` marquées publiques et `wishlist_item.is_public = true`. La visibilité par élément vit sur ces entités, pas sur le `Wall`.
+- Le contenu exposé dérive de la self-Person : catégories `interests` marquées publiques et `owner_wish.is_public = true`. La visibilité par élément vit sur ces entités, pas sur le `Wall`.
+- **Pas de `wishlist_item` ici.** Cette ligne visait autrefois `wishlist_item.is_public` ; c'était une confusion entre les deux tables de souhaits. Un `WishlistItem` est ce qu'un proche m'a confié : il est privé, ne se partage pas, et son booléen — désormais `is_shortlisted` — n'est qu'un repère personnel. Ce qui se publie est `OwnerWish`, dont c'est la raison d'être.
 
 ## CollectionLink
 
@@ -646,7 +899,8 @@ Portrait généré et persistant. C'est une **image** que l'utilisateur envoie �
 | content | text | non | — | — | Le message produit, deux à quatre phrases à la première personne |
 | content_short | text | oui | — | — | Version courte du message, pour le format vertical |
 | status | generated_profile_status (enum) | non | — | 'generated' | `generated` \| `approved` |
-| image_url | text | oui | — | — | L'image composée, produite à l'approbation ; c'est elle que l'utilisateur enregistre et envoie |
+| image_key | text | oui | — | — | Référence de l'image composée sur le stockage de fichiers. **Jamais une URL signée** : celle-ci se demande au moment d'afficher, et expire |
+| source_photo_key | text | oui | — | — | Photo déposée, si `visual_kind = photo`. **Effacée dès le traitement terminé** ; seule l'image composée demeure |
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
@@ -656,7 +910,7 @@ Portrait généré et persistant. C'est une **image** que l'utilisateur envoie �
 - Enum `illustration_family` : `nature`, `animal`, `abstract`.
 - Enum `photo_style` : trois styles définis par la marque ; leurs noms restent à arrêter.
 - **`tribute` est à part.** Il neutralise l'accent chaud, écarte toute illustration joyeuse et emprunte un registre sobre : une occasion sensible ne partage pas le gabarit d'une déclaration de fierté.
-- **La photo ne transite qu'au moment du traitement.** Elle n'est pas conservée ; seule l'image produite l'est (`image_url`).
+- **La photo ne transite qu'au moment du traitement.** Elle n'est pas conservée : `source_photo_key` est vidée dès la production terminée, et le fichier retiré du stockage par le traitement horaire.
 - **Le portrait est une image, pas une page.** Il ne s'expose à aucune adresse publique : l'utilisateur l'enregistre et l'envoie lui-même, accompagné d'un mot. Le **pied de marque fait partie de l'image** — c'est ainsi qu'il fait connaître Lehno, sans lien à suivre.
 - Le portrait se génère **à tout moment** depuis la fiche du proche, et **plusieurs portraits coexistent** dans le temps pour une même personne : ils donnent à voir l'évolution de la relation. `source_from` / `source_to` mémorisent la plage de notes retenue (les deux nuls = tout l'historique).
 
@@ -748,12 +1002,17 @@ Registre des mouvements de crédits. Le solde d'un `User` en est la somme.
 | amount | integer | non | — | — | Signé (+ crédit, − débit) |
 | action_run_id | uuid | oui | — | — | FK → action_run(id) ; si `consumption` |
 | referral_id | uuid | oui | — | — | FK → referral(id) ; si `grant` de parrainage |
+| payment_id | uuid | oui | — | — | FK → payment(id) on delete restrict ; si `purchase`, et sur l'ajustement qui reprend un remboursement |
 | promo_code_id | uuid | oui | — | — | FK → promo_code(id) ; si `grant` de code promo |
 | reason | text | oui | — | — | Libellé libre (octroi direct, ajustement admin…) |
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `credit_txn_type` : `grant`, `purchase`, `consumption`, `adjustment`.
 - Solde = `sum(amount) where user_id = ?`. Aucune colonne de solde stockée.
+- **Un paiement et un octroi sont deux choses.** Le `Payment` porte l'argent et un cycle de vie qui lui est propre (`pending` → `succeeded` / `failed` / `expired` / `refunded`) ; la `CreditTransaction` porte le mouvement en crédits, et n'existe qu'une fois le paiement abouti. Les fondre en une seule ligne obligerait à écrire un mouvement dès l'initiation, puis à le défaire si l'opérateur refuse — un solde qui monte et redescend au gré d'un paiement en attente.
+- **Chaque ligne dit d'où elle vient.** `payment_id` pour un achat, `referral_id` pour un parrainage, `promo_code_id` pour un code, `action_run_id` pour une consommation. Sans ce pointeur, une ligne de +20 crédits ne se rattache à rien : on ne saurait ni quel paiement l'a produite, ni quoi reprendre lors d'un remboursement — la ligne d'ajustement n'aurait aucun moyen de désigner l'achat qu'elle annule, et un litige se règlerait à l'estime.
+- **Unicité partielle sur `payment_id` là où `type = 'purchase'`.** C'est ce qui rend l'octroi unique STRUCTUREL plutôt que dépendant du code qui le vérifie : un paiement se résout par trois voies — notification, interrogation, confirmation manuelle — et deux d'entre elles peuvent constater le succès à quelques secondes d'écart. Sans la contrainte, le compte est crédité deux fois. Même logique que l'unicité sur `referral.invited_user_id`.
+- **`on delete restrict` et non `cascade`** : effacer un paiement ne doit pas faire disparaître le crédit qu'il a produit. Un solde qui change parce qu'on a nettoyé une table est un solde qu'on ne peut plus expliquer.
 
 ## Referral
 
@@ -861,6 +1120,58 @@ Catalogue des modèles d'IA et configuration de routage.
 
 - Unicité logique (`provider`, `model_key`).
 
+## StudioConfig
+
+Configuration d'ensemble du studio. **Un brouillon se modifie librement ; une publication met en service.** Sans cette séparation, chaque frappe partirait en production.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| version | integer | non | oui | — | S'incrémente à chaque publication |
+| state | studio_config_state (enum) | non | — | 'draft' | `draft` \| `published` \| `superseded` |
+| settings | jsonb | non | — | — | Orientations actives et leur ordre, ambiances, motif, modèle par production, gabarits retenus |
+| published_at | timestamptz | oui | — | — | |
+| published_by_admin_id | uuid | oui | — | — | FK → admin(id) on delete set null |
+| note | text | oui | — | — | Ce que cette publication change, en une ligne |
+| created_at | timestamptz | non | — | now() | |
+
+- Enum `studio_config_state` : `draft`, `published`, `superseded`.
+- **Une seule version publiée à la fois** : index unique partiel là où `state` vaut `published`. Publier fait passer la précédente à `superseded`.
+- **Le retour arrière republie une version antérieure**, sans la reconstruire.
+- **Rien ne se publie sans essai** : au moins une `StudioTrial` doit exister sur le brouillon.
+
+## StudioProfile
+
+Profil de simulation employé pour essayer une configuration. Composé et conservé par l'administrateur ; **ne correspond à aucun compte réel**.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| label | varchar(80) | non | — | — | Ce que ce profil met à l'épreuve (« fiche pauvre, nom long, anglais ») |
+| payload | jsonb | non | — | — | Le proche simulé : nom, relation, registre, langue, notes, orientation visée |
+| is_sensitive | boolean | non | — | false | Marque le cas d'une occasion sensible |
+| created_at | timestamptz | non | — | now() | |
+
+- Les profils doivent couvrir **ce qui met un gabarit à l'épreuve** : fiche riche et fiche pauvre, nom court et nom long, les deux langues, relation familiale et professionnelle, et au moins un cas sensible.
+
+## StudioTrial
+
+Essai d'une configuration sur un profil de simulation. **Sert la décision, jamais un utilisateur.**
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| studio_config_id | uuid | non | — | — | FK → studio_config(id) on delete cascade ; la version essayée |
+| studio_profile_id | uuid | non | — | — | FK → studio_profile(id) on delete set null |
+| admin_id | uuid | oui | — | — | FK → admin(id) on delete set null |
+| output | jsonb | oui | — | — | Le message produit, la référence de l'image |
+| cost | numeric(12,6) | oui | — | — | Coût réel de l'essai |
+| status | ai_usage_status (enum) | non | — | — | `success` \| `error` \| `timeout` |
+| created_at | timestamptz | non | — | now() | |
+
+- **Un essai coûte en argent réel** sans consommer de crédit ni toucher un compte. L'écran affiche son coût et le cumul du jour ; un plafond quotidien (`SystemParameter` `studio_trial_daily_cap`) évite qu'une après-midi de réglages passe inaperçue.
+- Les productions d'essai s'enregistrent dans `AIUsage` avec un `action_run_id` nul, comme les autres appels sans production visible.
+
 ## PromptTemplate
 
 Gabarit de production du studio : ce qu'on demande au modèle pour un message, une illustration ou un traitement de photo. **Les gabarits vivent en base**, jamais dans le code : ils s'ajustent au vu des résultats.
@@ -892,6 +1203,8 @@ Trace d'un appel modèle. Elle couvre **tous** les appels, y compris ceux qui ne
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
 | action_run_id | uuid | oui | — | — | FK → action_run(id) on delete cascade ; **nul** pour un appel sans production visible |
 | purpose | ai_purpose (enum) | non | — | — | Ce à quoi l'appel a servi |
+| origin | ai_origin (enum) | non | — | 'user_action' | Ce qui l'a déclenché : un geste, un traitement programmé, une reprise |
+| correlation_id | varchar(64) | oui | — | — | Identifiant de corrélation, le même que celui des journaux techniques |
 | user_id | uuid | oui | — | — | FK → user(id) on delete set null ; rapporte le coût à un compte |
 | ai_model_id | uuid | oui | — | — | FK → ai_model(id) on delete set null ; modèle effectivement utilisé |
 | provider | varchar(40) | non | — | — | Copié (traçabilité même si `ai_model` évolue) |
@@ -905,6 +1218,8 @@ Trace d'un appel modèle. Elle couvre **tous** les appels, y compris ceux qui ne
 
 - Enum `ai_usage_status` : `success`, `error`, `timeout`.
 - Enum `ai_purpose` : `note_classification`, `sensitive_detection`, `portrait`, `gift_ideas`, `wish_message`.
+- Enum `ai_origin` : `user_action`, `scheduled_job`, `retry`, `studio_trial`.
+- **L'origine sépare ce que le coût ne distingue pas** : une passe d'arrière-plan d'un geste de l'utilisateur, une première classification d'une reprise, un essai du studio d'une production réelle. Sans elle, on voit la dépense monter sans savoir quelle passe l'a causée.
 - L'`internal_cost` de l'`action_run` = somme des `cost` de ses `ai_usage` rattachés.
 - **Les appels gratuits comptent aussi.** Le classement d'une note et la détection d'un événement sensible ne coûtent aucun crédit à l'utilisateur, mais se paient en argent réel : les omettre fausserait le suivi de marge du tableau de bord.
 
@@ -976,8 +1291,11 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | payment_method_kind | mobile_money, card |
 | payment_direction | charge, refund |
 | payment_status | pending, succeeded, failed, expired, refunded |
+| payment_mode | provider, semi_manual, manual |
+| fee_bearer | payer, payee |
 | status_change_origin | user, webhook, polling, admin, system |
 | person_register | familier, amical, formel |
+| attribute_kind | color, animal, food, drink, clothing_size, shoe_size, fragrance, style, hobby, occupation, avoid |
 | person_relation | famille_proche, famille_etendue, ami, partenaire, collegue, relation_pro, connaissance |
 | person_gender | female, male, other, unspecified |
 | contact_channel | whatsapp, sms, email, autre |
@@ -1009,7 +1327,9 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | admin_role | support, admin |
 | ai_usage_status | success, error, timeout |
 | ai_purpose | note_classification, sensitive_detection, portrait, gift_ideas, wish_message |
+| ai_origin | user_action, scheduled_job, retry, studio_trial |
 | prompt_kind | message, illustration, photo_style, note_classification, sensitive_detection |
+| studio_config_state | draft, published, superseded |
 | audit_actor | admin, user |
 | notification_type | event_reminder, event_day_of, digest, contribution_received, wish_received, enrichment_nudge_global, enrichment_nudge_person, generation_ready, payment_succeeded, payment_failed, credits_received, login_code, security, account |
 | notification_channel | email, push, in_app |

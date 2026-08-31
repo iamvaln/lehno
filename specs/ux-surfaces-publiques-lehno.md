@@ -6,12 +6,12 @@ Références : `doc-fonctionnelle-assistant-anniversaires.md` (le modèle et les
 
 ## 1. Périmètre & principes
 
-Les surfaces publiques regroupent tout ce qu'un **tiers** (répondant, visiteur) ou un **prospect** voit sans compte, plus le **portrait partagé**. Toutes vivent dans une seule app Next.js, en rendu serveur, pour le SEO et les aperçus de partage.
+Les surfaces publiques regroupent tout ce qu'un **tiers** (répondant, visiteur) ou un **prospect** voit sans compte. Toutes vivent dans une seule app Next.js, en rendu serveur, pour le SEO et les aperçus de partage.
 
 Principes directeurs :
 
 - **Sans compte.** Aucune de ces pages ne demande de créer un compte pour contribuer. Le compte, c'est pour le propriétaire, ailleurs (mobile).
-- **Rendu serveur.** SEO pour la landing et les Murs ; balises Open Graph pour le portrait partagé (aperçu riche quand on le poste).
+- **Rendu serveur.** SEO pour la landing et les Murs ; balises Open Graph pour un aperçu riche quand on partage l'adresse d'un Mur ou d'une invitation.
 - **Mobile-first.** Les répondants ouvrent ces liens depuis leur téléphone, souvent depuis une messagerie ou un réseau.
 - **Acquisition partout.** Chaque page publique porte le CTA discret « obtenir son propre espace » (voir composants transverses). C'est le moteur de croissance.
 - **Rien ne s'expose sans opt-in.** Le Mur ne montre que ce que le propriétaire a rendu public ; la collecte n'expose jamais de données existantes.
@@ -24,10 +24,12 @@ Principes directeurs :
 3. **Collecte — lien public** — n'importe qui contribue à une fiche.
 4. **Mur public** — la vitrine d'un utilisateur (« Mon Mur »).
 5. **Dépôt de vœux** — laisser un message d'anniversaire (via `WishCollectionLink`).
-6. **Portrait partagé** — la page publique d'un `GeneratedProfile` partagé.
+6. **Liste de souhaits partagée** — la page d'une liste qu'un utilisateur partage, où l'on réserve.
 7. **Invitation au parrainage** — la page d'un lien d'invitation, qui présente Lehno et mène à l'installation.
 8. **Pages légales** — conditions d'utilisation, politique de confidentialité.
 9. **Pages d'état** — lien révoqué, hors fenêtre, occurrence close, introuvable.
+
+**Le portrait ne figure pas dans cette liste.** Il ne s'expose sur aucune page : c'est une **image** que l'utilisateur enregistre et envoie lui-même, accompagnée d'un mot. Il porte le pied de marque, ce qui en fait un vecteur d'acquisition — mais il circule dans les conversations, pas sur le web.
 
 ## 3. Écran par écran
 
@@ -150,23 +152,23 @@ Le reste est identique (date, souhait(s), mot, mêmes champs séparés, même pa
 
 **Après envoi.** Crée un `ReceivedWish` en statut `pending`. Le propriétaire le modère, puis décide — ou non — de l'afficher sur son Mur (privé par défaut), et, s'il l'affiche, de montrer ou non le nom de l'auteur. Confirmation à l'auteur : « ton message est transmis à [nom] ». CTA transverse « obtenir son propre espace ».
 
-### 3.6 Portrait partagé
+### 3.6 Liste de souhaits partagée
 
-**Rôle.** Page publique d'un `GeneratedProfile` que le propriétaire a rendu partageable — vecteur d'acquisition.
+**Rôle.** La page qu'ouvre le lien d'une liste partagée par un utilisateur. C'est la surface la plus virale du produit : elle se partage en un statut et atteint d'un coup des dizaines de personnes.
 
-**Entrée.** URL avec `share_token`. Valable seulement si le portrait est en statut `shared`.
+**Contenu.** Le prénom de celui qui partage, l'occasion et sa date, puis les souhaits — intitulé, photo, précisions, lien et prix indicatifs. Chaque souhait porte son état : un cadeau **déjà réservé** apparaît comme tel, **sans jamais dire par qui**.
 
-**Contenu.** Le portrait mis en forme, agréable à regarder et à partager. **Balises Open Graph** soignées (titre, image, description) pour un bel aperçu quand on poste le lien. **Trace discrète de Lehno** (sans dénaturer le contenu).
+**Réserver.** Le parcours décrit en 3.4 : adresse e-mail, choix de se faire connaître ou non, code à saisir dans la page. Un utilisateur connecté réserve en un geste.
 
-**Actions.** CTA transverse « obtenir son propre espace », mis en avant ici (c'est le point d'entrée le plus viral).
+**Faire ma part.** Un appel présent en pied de page : celui qui vient de réserver — ou qui a simplement regardé — peut à son tour créer sa liste. C'est le geste qui referme la boucle et fait entrer de nouveaux utilisateurs.
 
-**Confidentialité.** N'expose que le contenu du portrait validé ; aucune autre donnée de la fiche ni de la personne.
+**États particuliers.** Liste dont l'occasion est passée (elle s'affiche, sans accepter de réservation) ; liste dépubliée par son propriétaire ; lien révoqué.
 
 ### 3.7 Invitation au parrainage
 
 **Rôle.** La page qu'ouvre le lien d'invitation partagé par un utilisateur. Elle présente Lehno à la personne invitée, annonce ce qu'elle y gagne, et la mène à l'installation.
 
-**Adresse.** Le lien porte le **code de parrainage** de celui qui invite (par exemple `lehno.app/i/<code>`).
+**Adresse.** Le lien porte le **code de parrainage** de celui qui invite (par exemple `lehno.io/i/<code>`).
 
 **Contenu.**
 - **Qui invite** — le prénom ou le pseudo du parrain, avec sa photo s'il en a une : l'invitation vient de quelqu'un, pas de la marque.
@@ -207,19 +209,19 @@ Aucune de ces pages ne révèle d'information sur le propriétaire au-delà du s
 - **Proche invité (nominatif).** Reçoit le lien → ouvre → remplit date/souhait/mot → confirmation → (option) revient plus tard ajouter un souhait. → alimente la review du propriétaire.
 - **Partage large (public).** Voit un statut → ouvre le lien public → renseigne nom + « on se connaît d'où » + infos → review (peut créer une fiche).
 - **Visiteur du Mur → vœux.** Arrive sur le Mur → « laisser un message » → dépôt de vœux (si fenêtre ouverte) → message en attente de modération.
-- **Découverte par le portrait.** Quelqu'un voit un portrait partagé sur un réseau → ouvre → séduit → « obtenir son propre espace » → store/waitlist.
+- **Découverte par le portrait.** Quelqu'un reçoit un portrait dans une conversation ou le voit passer sur un réseau. L'image porte le pied de marque : il retient le nom, cherche Lehno, arrive sur la landing. Le portrait ne renvoie vers aucune page — c'est la marque qu'il transporte, pas un lien.
 
 ## 5. Composants transverses
 
 **Mise en page adaptative.** Les pages se lisent d'abord sur un téléphone — c'est par là qu'arrivent les liens partagés — puis s'ajustent à l'écran plus large : le contenu garde une largeur de lecture confortable, les images se redimensionnent, et les actions restent atteignables au pouce. Les réglages du système (taille de texte, réduction des animations) sont respectés.
 
-**Deux thèmes.** Les pages suivent le thème du navigateur, clair ou sombre. Les rôles de couleur restent les mêmes dans les deux : fond, texte, action, mise en avant, accent. Un portrait partagé garde son rendu propre, quel que soit le thème de la page qui l'entoure.
+**Deux thèmes.** Les pages suivent le thème du navigateur, clair ou sombre. Les rôles de couleur restent les mêmes dans les deux : fond, texte, action, mise en avant, accent. Un portrait est une image fixe : son rendu ne dépend d'aucun thème.
 
 **Langue.** Chaque page existe en français et en anglais. Elle choisit sa langue ainsi : le paramètre porté par l'adresse s'il existe, puis la langue du navigateur, puis celle du propriétaire de la page — car elle s'adresse d'abord à ses proches. Un moyen de changer de langue reste accessible.
 
 - **CTA « obtenir son propre espace ».** Présent sur **toutes** les pages publiques. Discret mais constant. C'est le moteur d'acquisition.
 - **CTA « visiter le mur ».** Discret, **uniquement** sur les surfaces de collecte, et seulement si le propriétaire a un Mur publié.
-- **Bandeau / signature Lehno.** Léger, sur le portrait partagé et en pied des pages publiques. Le pied porte aussi les liens vers les **pages légales** (CGU, confidentialité, mentions légales).
+- **Bandeau / signature Lehno.** Léger, en pied des pages publiques. Le pied porte aussi les liens vers les **pages légales** (CGU, confidentialité, mentions légales).
 - **Confirmation de contribution.** Message clair après tout envoi : transmis + sera validé par le propriétaire.
 - **Bandeau de consentement.** Choix le plus respectueux par défaut (refus des non-essentiels).
 
@@ -230,13 +232,11 @@ Aucune de ces pages ne révèle d'information sur le propriétaire au-delà du s
 - Message très tardif (après la fermeture de la fenêtre de vœux) → non accepté ; message clair.
 - Double soumission (même répondant, même contenu) → tolérée côté public (la review dédoublonne) ; éviter les envois accidentels par un état de bouton.
 - Contenu indésirable / spam sur lien public → absorbé par la review + protections légères.
-- Portrait dont le partage a été **retiré** (repassé sous `approved`) → le `share_token` ne résout plus → page d'état.
 
 ## 7. Rattachement au phasage
 
 - **Phase 0** — Landing (présence, waitlist / stores). Base de l'app Next.js.
 - **Phase 2** — Collecte nominative et publique (formulaires + confirmation). Les Murs et vœux viennent après.
-- **Phase 3** — Portrait partagé (dépend de la génération).
 - **Phase 4** — Mur public et dépôt de vœux (ouverture publique, `WishCollectionLink`).
 
 L'app publique se construit donc par tranches, au rythme des phases, mais dans une seule base Next.js.

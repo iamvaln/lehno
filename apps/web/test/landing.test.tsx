@@ -4,7 +4,9 @@ import { Landing } from "../components/landing/Landing.js";
 import { messages } from "../messages/index.js";
 import type { ConfigPublique } from "../lib/config-publique.js";
 
-const config: ConfigPublique = { signupFreeCredits: 5, creditUnitPrice: 100, currency: "XAF", referralBonusInvited: 0 };
+const config: ConfigPublique = {
+  signupFreeCredits: 5, creditUnitPrice: 100, currency: "XAF", referralBonusInvited: 0,
+};
 
 // Landing ne connaît rien de Next : elle reçoit sa configuration toute faite,
 // donc les tests la lui posent directement plutôt que de simuler un serveur

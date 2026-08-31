@@ -4,7 +4,9 @@ export const typography = {
   // L'instance de marque de Fraunces. Sans elle, la police rend sa forme neutre.
   fontDisplaySettings: '"SOFT" 40, "WONK" 1',
   fontDisplayRegular: "400", fontDisplayMedium: "500",
-  fontBodyLight: "300", fontBodyRegular: "400", fontBodyMedium: "500",
+  // Karla 300 a été retirée : déclarée, employée nulle part. Un jeton inutilisé
+  // finit par être utilisé — et en natif, il aurait fallu embarquer un fichier.
+  fontBodyRegular: "400", fontBodyMedium: "500",
   fontBodySemibold: "600", fontBodyBold: "700",
   textDisplayXl: "76px", textDisplayL: "50px", textDisplayM: "38px",
   textDisplayS: "30px", textDisplayXs: "22px",

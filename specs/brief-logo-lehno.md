@@ -8,7 +8,7 @@ Le principe qui la résume : **on capture quand on y pense, on retrouve quand ç
 
 **Le nom.** *Lehno* traduit « jour J » dans une langue locale. Il se prononce **lèh·noh**.
 
-**Le domaine.** lehno.app
+**Le domaine.** lehno.io
 
 **À qui il s'adresse.** Des personnes de vingt-cinq à quarante ans, à l'aise avec leur téléphone, qui tiennent à leurs proches et suivent trente à cinquante personnes. Trois profils guident les arbitrages : celle qui note volontiers et veut l'esprit libre ; celui qui sait qu'il faut y penser mais n'en a pas le réflexe — et qui paie pour le résultat ; celle qui aime autant célébrer qu'être célébrée, et qui fait connaître l'application autour d'elle.
 
@@ -76,7 +76,7 @@ Le logotype ne suffit pas partout : il faut un signe qui tienne dans un carré, 
 
 **Les contextes.** Écran d'accueil d'un téléphone, parmi d'autres icônes · notification poussée · onglet de navigateur · photo de profil **ronde** sur les réseaux · pied des portraits partagés, qui circulent hors de l'application · écran de lancement.
 
-**Les fonds.** Blanc, lilas, encre sombre, et une photographie quelconque (le portrait partagé).
+**Les fonds.** Blanc, lilas, encre sombre, et l'image d'un portrait (où le pied de marque s'inscrit).
 
 **Les contraintes techniques.** Tracé vectoriel, sans dégradé ni ombre. Lisible en une seule couleur. Zone de protection définie. Les magasins d'applications recadrent l'icône : prévoir la marge, et le rendu en masque circulaire.
 

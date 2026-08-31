@@ -1,0 +1,104 @@
+import { describe, expect, it } from "vitest";
+import {
+  resumableSchema, searchResultSchema, updateWallSchema, wallSchema,
+  NATURES_EXPOSABLES,
+} from "./me-app.js";
+
+const ID = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
+
+describe("le Mur", () => {
+  const MUR = {
+    slug: "valentine",
+    isEnabled: false,
+    showBirthdayDate: true,
+    welcomeMessage: null,
+    publicUrl: "https://lehno.app/valentine",
+    wishLinkUrl: null,
+    interests: [],
+  };
+
+  it("se lit non publié, avec son adresse déjà connue", () => {
+    // L'adresse existe avant la publication : l'écran la montre pour qu'on
+    // sache ce qu'on s'apprête à ouvrir.
+    expect(wallSchema.parse(MUR).publicUrl).toBe("https://lehno.app/valentine");
+  });
+
+  // « Le Mur expose le lien de l'occurrence courante ; une nouvelle occurrence
+  // chaque année ⇒ un nouveau lien. » Hors fenêtre de vœux, il n'y en a pas.
+  it("n'a pas toujours un lien de dépôt de vœux", () => {
+    expect(wallSchema.parse(MUR).wishLinkUrl).toBeNull();
+  });
+
+  it("refuse un PATCH vide", () => {
+    expect(() => updateWallSchema.parse({})).toThrow();
+    expect(() => updateWallSchema.parse({ isEnabled: true })).not.toThrow();
+  });
+
+  // Garde le défaut privé : un Mur sans rien de coché est un état normal, pas
+  // un défaut à corriger. Une liste vide doit donc passer.
+  it("accepte de n'exposer aucun goût", () => {
+    expect(() => updateWallSchema.parse({ publicInterestIds: [] })).not.toThrow();
+  });
+
+  /* Garde le tri des natures exposables. Les tailles servent à choisir un
+     cadeau sur une liste partagée, pas à se présenter à un inconnu qui passe :
+     les laisser publiables reviendrait à s'en remettre au discernement de
+     chacun au moment où il coche — et l'écran les afficherait toutes. */
+  it("n'expose ni les tailles ni les « à éviter »", () => {
+    expect(NATURES_EXPOSABLES).not.toContain("clothing_size");
+    expect(NATURES_EXPOSABLES).not.toContain("shoe_size");
+    expect(NATURES_EXPOSABLES).not.toContain("avoid");
+    expect(NATURES_EXPOSABLES).toContain("hobby");
+  });
+});
+
+// Les notifications (centre + préférences) ont leur propre fichier de test :
+// voir me-notifications.test.ts.
+
+describe("la recherche", () => {
+  it("rend de quoi reconnaître la bonne personne sans ouvrir", () => {
+    const resultat = searchResultSchema.parse({
+      personId: ID,
+      displayName: "Awa Diop",
+      avatarUrl: null,
+      nextOccurrenceKind: "birthday",
+      nextOccurrenceDate: "2026-08-24",
+      daysUntil: -1,
+    });
+    expect(resultat.displayName).toBe("Awa Diop");
+  });
+
+  // Un proche sans date n'a pas de prochaine échéance, et la recherche doit
+  // quand même le rendre : c'est souvent lui qu'on cherche pour la lui ajouter.
+  it("rend un proche sans échéance à venir", () => {
+    expect(() => searchResultSchema.parse({
+      personId: ID, displayName: "Awa Diop", avatarUrl: null,
+      nextOccurrenceKind: null, nextOccurrenceDate: null, daysUntil: null,
+    })).not.toThrow();
+  });
+});
+
+describe("les reprises", () => {
+  // « Rien ne se perd : ce qu'on a lancé se retrouve ici. » Deux natures, et
+  // l'état où en est l'élément — brouillon, à approuver, à partager.
+  it("distingue un brouillon de message d'un portrait à finir", () => {
+    const brouillon = resumableSchema.parse({
+      id: ID, kind: "message_draft", state: "draft",
+      personId: "3f2504e0-4f89-11d3-9a0c-0305e82c3302", personDisplayName: "Awa Diop",
+      occurrenceId: "3f2504e0-4f89-11d3-9a0c-0305e82c3303", daysUntil: 3,
+      updatedAt: "2026-08-25T03:00:00.000Z",
+    });
+    expect(brouillon.kind).toBe("message_draft");
+  });
+
+  // Un portrait se génère hors de toute échéance : il n'a ni occasion ni
+  // décompte, et le classement par urgence le range après ceux qui en ont une.
+  it("accepte un portrait sans occasion ni décompte", () => {
+    expect(() => resumableSchema.parse({
+      id: ID, kind: "portrait", state: "to_approve",
+      personId: "3f2504e0-4f89-11d3-9a0c-0305e82c3302", personDisplayName: "Awa Diop",
+      occurrenceId: null, daysUntil: null,
+      updatedAt: "2026-08-25T03:00:00.000Z",
+    })).not.toThrow();
+  });
+});

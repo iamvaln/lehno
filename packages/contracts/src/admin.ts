@@ -82,6 +82,10 @@ export const compteLigneSchema = z.object({
   pseudo: z.string(),
   email: z.string(),
   etat: etatCompteSchema,
+  // Le solde est la somme signée des mouvements. Un compte sans mouvement a
+  // bien zéro, ce qui n'est pas la même chose qu'une mesure absente : cette
+  // colonne a été nullable le temps que credit_transaction existe, elle ne
+  // l'est plus.
   credits: z.number().int(),
   inscritLe: z.string(),
 }).strict();
@@ -98,18 +102,29 @@ export const compteDetailSchema = z.object({
   langue: z.enum(["fr", "en"]),
   inscritLe: z.string(),
   derniereConnexion: z.string().nullable(),
+  /** Renseigné pendant le délai de grâce, nul sinon. */
+  suppressionDemandeeLe: z.string().nullable(),
   volumetrie: z.object({
     proches: z.number().int().nonnegative(),
     occasions: z.number().int().nonnegative(),
     notes: z.number().int().nonnegative(),
-    murs: z.number().int().nonnegative(),
+    // Nul tant que la table des Murs n'existe pas — voir compteLigneSchema.
+    murs: z.number().int().nonnegative().nullable(),
   }).strict(),
+  /** Acheté et offert se distinguent : payer n'est pas être entretenu. */
   credits: z.object({
     solde: z.number().int(),
     achetes: z.number().int().nonnegative(),
     offerts: z.number().int().nonnegative(),
   }).strict(),
 }).strict();
+
+/** La page d'une liste : pas de total, un curseur (spec technique §3). */
+export const pageComptesSchema = z.object({
+  items: z.array(compteLigneSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+export type PageComptes = z.infer<typeof pageComptesSchema>;
 
 export type CompteLigne = z.infer<typeof compteLigneSchema>;
 export type CompteDetail = z.infer<typeof compteDetailSchema>;
@@ -138,48 +153,140 @@ export const demandeSuppressionSchema = z.object({
   echeance: z.string(),
   /** Le délai de grâce est de trente jours (dictionnaire de données, User). */
   joursRestants: z.number().int(),
-  etat: z.enum(["en_cours", "echue"]),
+  /**
+   * Trois états, et le troisième n'est pas un raffinement.
+   *
+   * - `en_cours` — le délai court. **Ça attend une date.**
+   * - `echue` — le délai est passé, l'effacement va suivre.
+   * - `attend_remboursement` — un versement est dû au titulaire. **Ça attend un
+   *   geste de notre part**, et l'effacement est retenu tant qu'il n'est pas
+   *   parti (décision du 29/08 : après l'effacement il n'existe plus de
+   *   coordonnée où verser).
+   *
+   * Les confondre ferait passer pour patient ce qui est en retard : un compte
+   * qui attend notre virement se lirait comme un compte qui attend le calendrier.
+   */
+  etat: z.enum(["en_cours", "echue", "attend_remboursement"]),
 }).strict();
 
 export type DemandeSuppression = z.infer<typeof demandeSuppressionSchema>;
+
+/** La file des demandes : une page à curseur, la plus urgente d'abord. */
+export const pageSuppressionsSchema = z.object({
+  items: z.array(demandeSuppressionSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+export type PageSuppressions = z.infer<typeof pageSuppressionsSchema>;
 
 // ——— Configurations ———————————————————————————————————————————
 
 // Un rang de formulaire rappelle la valeur précédente : c'est ce qui permet de
 // voir ce qu'on change avant d'enregistrer.
+// Le serveur transporte des clés, jamais des phrases composées (contrat commun
+// §2) : c'est ce qui rend l'outil bilingue sans que le serveur ait à connaître
+// la langue de qui l'appelle. Libellé, aide et unité vivent donc dans le
+// dictionnaire de l'outil, indexés par cette clé — et une clé qu'il ne connaît
+// pas s'affiche telle quelle, ce qui se voit, plutôt que vide.
 export const parametreSchema = z.object({
   cle: z.string(),
-  libelle: z.string(),
-  aide: z.string().nullable(),
   valeur: z.union([z.string(), z.number()]),
+  /** Le type dit comment saisir : un prix n'est pas un délai. */
+  type: z.enum(["number", "money", "duration", "boolean", "string"]),
+  /** « Modifier une valeur, avec rappel de la précédente » (ux-admin §5.6). */
   valeurPrecedente: z.union([z.string(), z.number()]).nullable(),
-  unite: z.string().nullable(),
+  misAJourLe: z.string(),
 }).strict();
 
 export const parametresSchema = z.object({
   economie: z.array(parametreSchema),
+  // Les types d'occasion sont un enum du code, pas une table : leur activation
+  // n'est stockée nulle part et ne peut donc pas se régler ici. Le serveur les
+  // rend pour qu'on voie lesquels existent ; l'écran les montre en lecture.
   typesEvenement: z.array(z.object({
     id: z.string(),
-    libelle: z.string(),
     actif: z.boolean(),
     sensible: z.boolean(),
+    /** Faux tant qu'aucune table ne porte l'activation. */
+    reglable: z.boolean(),
   }).strict()),
 }).strict();
 
 export type Parametres = z.infer<typeof parametresSchema>;
 export type Parametre = z.infer<typeof parametreSchema>;
 
+// ——— Studio du portrait ————————————————————————————————————————
+
+/**
+ * Les gabarits de production — ux-admin §5.9, entrée « réglages en service ».
+ *
+ * **Un gabarit ne se modifie pas, il se reversionne.** Ajuster crée une version
+ * de plus ; l'ancienne demeure. Sans cela, comprendre pourquoi les productions
+ * d'une semaine valaient mieux que celles de la suivante devient impossible, et
+ * c'est tout l'objet du versionnage.
+ *
+ * Une seule version est en service par couple (genre, clé) — la base le tient
+ * par un index unique partiel, et non le service : une seconde version active
+ * ne se verrait pas, la génération en prendrait une au hasard, et l'écart de
+ * qualité resterait inexplicable.
+ */
+export const GENRES_GABARIT = [
+  "message", "illustration", "photo_style", "note_classification", "sensitive_detection",
+] as const;
+
+export const gabaritStudioSchema = z.object({
+  id: z.string(),
+  genre: z.enum(GENRES_GABARIT),
+  /** Ce que le gabarit produit : une orientation, une famille, un style. */
+  cle: z.string(),
+  version: z.number().int().positive(),
+  corps: z.string(),
+  /** Les garde-fous, tels que le gabarit les porte. Forme libre, et souvent nuls. */
+  gardeFous: z.unknown().nullable(),
+  /**
+   * Le modèle appelé, résolu à la lecture. Un identifiant seul ne se reconnaît
+   * pas ; le fournisseur et la clé se lisent. Nul quand le gabarit s'en remet
+   * au routage par priorité plutôt que d'en nommer un.
+   */
+  modele: z.object({
+    id: z.string(),
+    fournisseur: z.string(),
+    cle: z.string(),
+  }).strict().nullable(),
+  actif: z.boolean(),
+  /**
+   * Qui a publié cette version. Nul pour un gabarit posé par une migration,
+   * avant qu'il y ait quelqu'un pour publier — et non « inconnu », qui
+   * laisserait croire qu'on a perdu le nom.
+   */
+  parQui: z.string().nullable(),
+  quand: z.string(),
+}).strict();
+
+export const catalogueGabaritsSchema = z.object({
+  items: z.array(gabaritStudioSchema),
+}).strict();
+
+export type GabaritStudio = z.infer<typeof gabaritStudioSchema>;
+export type CatalogueGabarits = z.infer<typeof catalogueGabaritsSchema>;
+
 // ——— Le compte connecté ————————————————————————————————————————
 
 export const profilAdminSchema = z.object({
   email: z.string(),
   role: adminRoleSchema,
+  /** Qui a ouvert cet accès, d'après le journal d'audit. Nul pour un compte
+   *  posé à la main, avant qu'il y ait quelqu'un pour inviter. */
   ajoutePar: z.string().nullable(),
   derniereConnexion: z.string().nullable(),
   sessions: z.array(z.object({
+    /** La lignée de jetons, non le jeton : une session survit à ses échanges. */
     id: z.string(),
-    appareil: z.string(),
-    ip: z.string(),
+    // Nuls tous les deux, comme les colonnes qui les portent et comme
+    // `entreeSchema` les rend déjà pour les connexions d'utilisateur. Une
+    // session ouverte avant qu'on trace l'adresse n'en a pas, et « — » écrit
+    // par le serveur serait une donnée inventée là où il n'y en a pas.
+    appareil: z.string().nullable(),
+    ip: z.string().nullable(),
     depuis: z.string(),
     courante: z.boolean(),
   }).strict()),
@@ -199,3 +306,887 @@ export const verificationCodeSchema = z.object({
   email: z.string().email().max(254),
   code: z.string().regex(/^\d{6}$/),
 }).strict();
+
+// La paire rendue par une entrée réussie comme par un échange. Le rôle repart
+// à chaque tour : il peut avoir changé depuis l'ouverture de la session, et
+// l'outil doit suivre sans attendre une reconnexion.
+export const sessionAdminSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  expiresIn: z.number().int().positive(),
+  role: adminRoleSchema,
+}).strict();
+export type SessionAdmin = z.infer<typeof sessionAdminSchema>;
+
+// L'échange du jeton long. Il ne porte pas de jeton d'accès : c'est justement
+// parce que celui-ci a expiré qu'on passe ici.
+export const rafraichissementSchema = z.object({ refreshToken: z.string().min(1) }).strict();
+
+
+// ——— Journal d'audit ——————————————————————————————————————————
+
+/**
+ * Une trace, telle qu'elle fait foi. Rien ici ne se modifie ni ne s'efface :
+ * il n'existe aucun chemin d'écriture vers le journal depuis l'extérieur.
+ *
+ * `acteurId` n'est pas une clé étrangère en base — une trace qui doit faire foi
+ * ne disparaît pas avec le compte qu'elle décrit. L'écran affiche donc un
+ * identifiant, pas toujours un nom.
+ */
+export const traceAuditSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  acteurType: z.enum(["admin", "user"]),
+  acteurId: z.string(),
+  action: z.string(),
+  /** Obligatoire pour un administrateur, absent pour un utilisateur chez lui. */
+  motif: z.string().nullable(),
+  cibleType: z.string().nullable(),
+  cibleId: z.string().nullable(),
+  details: z.unknown().nullable(),
+}).strict();
+
+export const pageAuditSchema = z.object({
+  items: z.array(traceAuditSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+export type TraceAudit = z.infer<typeof traceAuditSchema>;
+export type PageAudit = z.infer<typeof pageAuditSchema>;
+
+// ——— Connexions ———————————————————————————————————————————————
+
+/**
+ * Une tentative d'entrée, réussie ou non.
+ *
+ * **Pas d'adresse IP dans cette lecture** — mais elle est bien en base.
+ *
+ * Un commentaire a longtemps affirmé ici que « la spécification technique §9 »
+ * disait qu'elle n'y descendait pas. Cette section porte sur les droits d'accès
+ * et ne dit rien de l'adresse : la citation était inventée, et le fait qu'elle
+ * avançait est faux depuis qu'on enregistre l'adresse.
+ *
+ * Ce qui reste vrai est un choix, pas une contrainte : l'écran montre un lieu
+ * approximatif, assez pour voir qu'une série d'essais vient d'ailleurs, pas
+ * assez pour suivre quelqu'un. L'adresse sert aux investigations, et s'y lit.
+ *
+ * L'adresse tentée reste visible même quand aucun compte n'y correspond : c'est
+ * elle qui montre qu'on essaie mille adresses à la suite.
+ */
+export const connexionSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  compte: z.string().nullable(),
+  adresseTentee: z.string().nullable(),
+  resultat: z.enum(["success", "failure"]),
+  appareil: z.string().nullable(),
+  lieu: z.string().nullable(),
+}).strict();
+
+export const pageConnexionsSchema = z.object({
+  items: z.array(connexionSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+export type Connexion = z.infer<typeof connexionSchema>;
+export type PageConnexions = z.infer<typeof pageConnexionsSchema>;
+
+
+// ——— Modèles d'IA —————————————————————————————————————————————
+
+/**
+ * Un modèle du catalogue, avec ce qu'il sait faire et où il sert.
+ *
+ * Les coûts sont ceux du fournisseur, par million de jetons, tels qu'on les a
+ * relevés — ils peuvent manquer pour un modèle qu'on n'a pas encore tarifé.
+ * Manquer veut dire « on ne sait pas », jamais « gratuit ».
+ *
+ * Le RANG n'est plus ici. Il appartenait à un ordre global, remplacé par une
+ * chaîne par tâche : voir `chainesIaSchema`. Un modèle occupe désormais
+ * plusieurs rangs, un par tâche où il sert, et c'est `emplois` qui les porte.
+ *
+ * Ce que ce contrat **ne porte pas** : la dépense réelle et ce qu'elle a
+ * rapporté. Le §5.8 les demande face à face, mais `ActionRun` n'existe pas
+ * encore. Les inventer ici donnerait un écran qui affiche des zéros là où il
+ * devrait afficher une marge.
+ */
+export const modeleIaSchema = z.object({
+  id: z.string(),
+  fournisseur: z.string(),
+  modele: z.string(),
+  capacite: z.enum(["text", "image"]),
+  /** L'interrupteur de l'administration, et lui seul. */
+  actif: z.boolean(),
+  /**
+   * L'état de panne, tenu par le disjoncteur — SÉPARÉ de `actif`, jamais fondu
+   * avec lui. Un modèle coupé à la main et un modèle en panne se réparent par
+   * des gestes opposés : le premier attend qu'on le rallume, le second se
+   * rouvre seul. Les confondre à l'écran ferait attendre une reprise qui ne
+   * viendra pas.
+   */
+  enPanneJusquA: z.string().nullable(),
+  motifDePanne: z.string().nullable(),
+  echecsConsecutifs: z.number().int(),
+  coutEntree: z.number().nullable(),
+  coutSortie: z.number().nullable(),
+  /** Où ce modèle sert, pour qu'on voie ce qu'on casse en le coupant. */
+  emplois: z.array(z.object({ tache: z.string(), rang: z.number().int() }).strict()),
+  misAJourLe: z.string(),
+}).strict();
+
+export const catalogueIaSchema = z.object({
+  items: z.array(modeleIaSchema),
+}).strict();
+
+/**
+ * Une chaîne de repli : les modèles d'une tâche, du premier essai au dernier.
+ *
+ * Le FOURNISSEUR est rendu à chaque rang, et pas seulement dans le catalogue.
+ * C'est ce qui rend visible d'un coup d'œil qu'on vient d'aligner trois modèles
+ * du même hébergeur — une chaîne qu'une seule panne emporte en entier, et donc
+ * un repli qui n'aura jamais lieu.
+ *
+ * Les avertissements ne sont pas des refus. Une chaîne de moins de trois rangs
+ * est un jugement d'exploitation, pas une erreur : parmi les fournisseurs
+ * retenus, deux seulement produisent des images, et refuser rendrait ces
+ * tâches-là inconfigurables.
+ */
+export const chaineIaSchema = z.object({
+  tache: z.string(),
+  capaciteRequise: z.enum(["text", "image"]),
+  rangs: z.array(z.object({
+    rang: z.number().int(),
+    modeleId: z.string(),
+    fournisseur: z.string(),
+    modele: z.string(),
+    actif: z.boolean(),
+    enPanne: z.boolean(),
+  }).strict()),
+  avertissements: z.array(z.object({
+    code: z.string(),
+    rangs: z.number().int().optional(),
+    recommande: z.number().int().optional(),
+  }).strict()),
+}).strict();
+
+export const chainesIaSchema = z.object({
+  items: z.array(chaineIaSchema),
+}).strict();
+
+export type ModeleIa = z.infer<typeof modeleIaSchema>;
+export type CatalogueIa = z.infer<typeof catalogueIaSchema>;
+export type ChaineIa = z.infer<typeof chaineIaSchema>;
+export type ChainesIa = z.infer<typeof chainesIaSchema>;
+
+// ——— Drapeaux de fonctionnalité ————————————————————————————————
+
+/**
+ * Un drapeau, avec ce qu'il gouverne et ce qu'il emporte.
+ *
+ * Deux états, et la distinction n'est pas un détail. `actif` est ce que
+ * l'interrupteur dit ; `effectif` est ce qui se produit vraiment, dépendances
+ * résolues. Un drapeau allumé dont un prérequis est éteint reste inerte : ne
+ * montrer que le premier laisserait croire qu'une fonctionnalité tourne alors
+ * que personne ne la voit.
+ *
+ * `emporte` est l'inverse de `requiert`, calculé de proche en proche : ce que
+ * l'extinction de ce drapeau éteindra en cascade. C'est ce que le §5.7 demande
+ * d'annoncer **avant** la bascule, plutôt que de le laisser découvrir.
+ *
+ * Couverture, dépendances et portée viennent du registre — il est en code, et
+ * c'est le serveur qui le lit. Le back-office ne duplique rien.
+ */
+export const drapeauAdminSchema = z.object({
+  cle: z.string(),
+  gouverne: z.string(),
+  portee: z.array(z.enum(["app", "public"])),
+  requiert: z.array(z.string()),
+  /** Ce que l'éteindre éteindra aussi, transitivement. */
+  emporte: z.array(z.string()),
+  ecrans: z.array(z.string()),
+  chemins: z.array(z.string()),
+  actif: z.boolean(),
+  effectif: z.boolean(),
+  misAJourLe: z.string(),
+  /** Qui a basculé en dernier. Nul tant que personne n'y a touché. */
+  parQui: z.string().nullable(),
+}).strict();
+
+export const drapeauxAdminSchema = z.object({
+  items: z.array(drapeauAdminSchema),
+}).strict();
+
+/** La bascule. Le motif est obligatoire : chaque changement est journalisé. */
+export const basculeDrapeauSchema = z.object({
+  cle: z.string().min(1).max(64),
+  actif: z.boolean(),
+  reason: motifSchema,
+}).strict();
+
+export type DrapeauAdmin = z.infer<typeof drapeauAdminSchema>;
+export type DrapeauxAdmin = z.infer<typeof drapeauxAdminSchema>;
+
+// ——— Les réglages du paiement ————————————————————————————————
+
+/**
+ * Un palier d'achat. Aucune saisie libre d'un montant : on achète un palier,
+ * et le plus petit fixe le minimum. La remise s'affiche — c'est un argument de
+ * vente, pas un calcul caché.
+ */
+export const palierSchema = z.object({
+  id: z.string(),
+  montant: z.number(),
+  devise: z.string(),
+  credits: z.number().int().positive(),
+  remisePourcent: z.number().int().nullable(),
+  position: z.number().int(),
+  actif: z.boolean(),
+}).strict();
+
+/**
+ * Ce que le **service** propose : un opérateur, un pays, un barème.
+ *
+ * À ne pas confondre avec la méthode qu'un **client** a enregistrée. Les fondre
+ * reviendrait à porter un taux de frais sur le numéro de téléphone de chaque
+ * client, et à devoir tous les corriger le jour où un opérateur change son
+ * barème.
+ */
+export const canalSchema = z.object({
+  id: z.string(),
+  nature: z.enum(["mobile_money", "card"]),
+  operateur: z.string(),
+  /** Les frais diffèrent d'un pays à l'autre, même chez le même opérateur. */
+  pays: z.string(),
+  libelle: z.string(),
+  fraisPourcent: z.number(),
+  fraisFixe: z.number(),
+  fraisMin: z.number().nullable(),
+  fraisMax: z.number().nullable(),
+  /** `payer` : le client verse en plus. `payee` : c'est prélevé sur le versement. */
+  fraisPortesPar: z.enum(["payer", "payee"]),
+  devise: z.string(),
+  actif: z.boolean(),
+  position: z.number().int().nullable(),
+}).strict();
+
+/**
+ * Un compte d'opérateur sur lequel les clients versent.
+ *
+ * Le numéro est rendu **en entier** à l'administration : c'est celui qu'on
+ * dicte à un client au téléphone, et qu'on va lire sur l'application de
+ * l'opérateur pour vérifier une réception. Ce n'est pas une donnée de client,
+ * c'est un compte du service.
+ */
+export const compteCollecteSchema = z.object({
+  id: z.string(),
+  libelle: z.string(),
+  operateur: z.string(),
+  numero: z.string(),
+  /** Ce que le client voit. Distinct de `actif`, qui dit ce qui reste employable. */
+  visibleDansApp: z.boolean(),
+  actif: z.boolean(),
+  position: z.number().int().nullable(),
+}).strict();
+
+export const paliersSchema = z.object({ items: z.array(palierSchema) }).strict();
+export const canauxSchema = z.object({ items: z.array(canalSchema) }).strict();
+export const comptesCollecteSchema = z.object({ items: z.array(compteCollecteSchema) }).strict();
+
+export type Palier = z.infer<typeof palierSchema>;
+export type Canal = z.infer<typeof canalSchema>;
+export type CompteCollecte = z.infer<typeof compteCollecteSchema>;
+
+// ——— La saisie manuelle d'un paiement —————————————————————————
+
+/**
+ * Ce qu'un administrateur saisit pour enregistrer un versement reçu.
+ *
+ * Le paiement naît `pending`. La spécification dit qu'il « se confirme du même
+ * geste » : c'est l'écran qui enchaîne les deux appels, pas le serveur qui les
+ * fond. Séparer garde une seule porte de décision — celle qui exige le montant
+ * réellement constaté et journalise son motif.
+ */
+export const saisiePaiementSchema = z.object({
+  utilisateurId: z.string().uuid(),
+  palierId: z.string().uuid(),
+  compteCollecteId: z.string().uuid(),
+  canalId: z.string().uuid(),
+  /** Le numéro depuis lequel le client déclare avoir versé. */
+  numeroPayeur: z.string().max(32).optional(),
+  /** La référence de la transaction chez l'opérateur, si elle est déjà connue. */
+  reference: z.string().max(200).optional(),
+  /** Le reçu déposé. Il ne prouve rien — la réception sur le compte fait foi. */
+  recu: z.string().max(500).optional(),
+  reason: motifSchema,
+}).strict();
+
+export const paiementCreeSchema = z.object({
+  id: z.string(),
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  montant: z.number(),
+  frais: z.number(),
+  /** Ce qu'on doit voir arriver sur le compte, frais appliqués. */
+  attenduSurLeCompte: z.number(),
+  credits: z.number().int(),
+  devise: z.string(),
+}).strict();
+
+export type SaisiePaiement = z.infer<typeof saisiePaiementSchema>;
+export type PaiementCree = z.infer<typeof paiementCreeSchema>;
+
+// ——— La décision sur un paiement —————————————————————————————
+
+/**
+ * Confirmer ou rejeter un paiement en attente.
+ *
+ * **Le montant reçu se renseigne toujours**, même sans écart : c'est lui qui
+ * permet de constater qu'il n'y en a pas. Sans ce champ, on ne saurait jamais
+ * si le silence vaut « rien à signaler » ou « personne n'a regardé ».
+ *
+ * Le reçu ne prouve rien — un montage est facile. C'est la réception **sur le
+ * compte de l'opérateur** qui fait foi, et c'est ce que l'administrateur
+ * consigne ici.
+ */
+export const decisionPaiementSchema = z.discriminatedUnion("decision", [
+  z.object({
+    decision: z.literal("confirmer"),
+    montantRecu: z.number().nonnegative(),
+    /** La référence chez l'opérateur, consignée au moment de confirmer. */
+    reference: z.string().min(1).max(200),
+    reason: motifSchema,
+    /* Le code du motif retenu. Facultatif au schéma, exigé par le service
+       quand le geste propose des motifs — le schéma ne peut pas le savoir,
+       c'est la table qui le dit. */
+    reasonCode: z.string().max(48).optional(),
+  }).strict(),
+  z.object({
+    decision: z.literal("rejeter"),
+    /** Renseigné quand on a regardé et constaté un manque ; nul sinon. */
+    montantRecu: z.number().nonnegative().nullable().optional(),
+    reason: motifSchema,
+    reasonCode: z.string().max(48).optional(),
+  }).strict(),
+]);
+
+export const paiementDecideSchema = z.object({
+  id: z.string(),
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  creditsOctroyes: z.number().int(),
+  /** L'écart constaté : reçu moins attendu. Négatif quand il manque. */
+  ecart: z.number().nullable(),
+}).strict();
+
+export type DecisionPaiement = z.infer<typeof decisionPaiementSchema>;
+
+// ——— Les deux listes du §5.4 ——————————————————————————————————
+
+/**
+ * Une ligne de la liste des paiements.
+ *
+ * La méthode n'y paraît que par ses éléments d'identification — opérateur et
+ * derniers chiffres. Le numéro complet d'un compte mobile money demeure masqué,
+ * **y compris pour l'administrateur** : il est chiffré au repos, déchiffré pour
+ * la seule communication avec le prestataire, et n'entre dans aucun journal.
+ *
+ * À ne pas confondre avec le numéro d'un compte de **collecte**, qui est rendu
+ * en entier : celui-là est un compte du service, pas d'un client.
+ */
+export const paiementLigneSchema = z.object({
+  id: z.string(),
+  utilisateur: z.string(),
+  mode: z.enum(["provider", "semi_manual", "manual"]),
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  montant: z.number(),
+  devise: z.string(),
+  credits: z.number().int(),
+  /** « MTN MoMo •••4321 », ou nul quand aucune méthode n'est rattachée. */
+  methode: z.string().nullable(),
+  attenduSurLeCompte: z.number().nullable(),
+  recuSurLeCompte: z.number().nullable(),
+  /** Reçu moins attendu. Nul tant que personne n'a constaté. */
+  ecart: z.number().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+/** Un état traversé, et **combien de temps** il a duré. */
+export const etatTraverseSchema = z.object({
+  etat: z.enum(["pending", "succeeded", "failed", "expired", "refunded"]),
+  debut: z.string(),
+  fin: z.string().nullable(),
+  /** En secondes. Nul pour l'état courant, qui dure encore. */
+  dureeSecondes: z.number().int().nullable(),
+  origine: z.enum(["user", "webhook", "polling", "admin", "system"]),
+  parQui: z.string().nullable(),
+  motif: z.string().nullable(),
+}).strict();
+
+export const paiementDetailSchema = paiementLigneSchema.extend({
+  reference: z.string().nullable(),
+  motifEchec: z.string().nullable(),
+  frais: z.number().nullable(),
+  compteCollecte: z.string().nullable(),
+  histoire: z.array(etatTraverseSchema),
+}).strict();
+
+export const pagePaiementsSchema = z.object({
+  items: z.array(paiementLigneSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+/** Un mouvement de crédits, tel que l'administration le lit. */
+export const mouvementCreditSchema = z.object({
+  id: z.string(),
+  utilisateur: z.string(),
+  type: z.enum(["grant", "purchase", "consumption", "adjustment"]),
+  /** D'où il vient. Le type dit ce qu'il est, la source ce qui l'a produit. */
+  source: z.string(),
+  montant: z.number().int(),
+  paiementId: z.string().nullable(),
+  note: z.string().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+export const pageMouvementsSchema = z.object({
+  items: z.array(mouvementCreditSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+export type PaiementLigne = z.infer<typeof paiementLigneSchema>;
+export type PaiementDetail = z.infer<typeof paiementDetailSchema>;
+export type MouvementCredit = z.infer<typeof mouvementCreditSchema>;
+
+// ——— L'ajustement manuel d'un solde ——————————————————————————
+
+/**
+ * « Ajuster manuellement le solde d'un utilisateur, avec motif obligatoire »
+ * (ux-admin §5.4).
+ *
+ * Le montant est **signé** : positif pour créditer, négatif pour reprendre. Un
+ * champ « sens » séparé se désynchroniserait du signe au premier oubli, et le
+ * mouvement écrit ne dirait plus ce qu'on a voulu faire.
+ */
+export const ajustementCreditsSchema = z.object({
+  montant: z.number().int().refine((n) => n !== 0, "un ajustement de zéro ne dit rien"),
+  /**
+   * Ce que le mouvement **est**, et que le client lira.
+   *
+   * Choisi, jamais deviné. « admin_adjustment » disait « on a corrigé une
+   * erreur » pour annoncer « on vous offre quelque chose » : deux nouvelles
+   * opposées sous un même nom. Quelqu'un dont on reprend cinq crédits par
+   * erreur ne doit pas lire « Cadeau », et l'inverse non plus.
+   */
+  nature: z.enum(["gift", "reward", "correction"]),
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
+}).strict();
+
+export const soldeApresAjustementSchema = z.object({
+  utilisateurId: z.string(),
+  montant: z.number().int(),
+  solde: z.number().int().nonnegative(),
+}).strict();
+
+export type AjustementCredits = z.infer<typeof ajustementCreditsSchema>;
+
+// ——— Les comptes d'exploitation ———————————————————————————————
+
+/**
+ * Un compte d'administration, tel que la liste le montre.
+ *
+ * Ni condensé de code, ni jeton : cette liste dit **qui a accès**, pas comment
+ * entrer. C'est aussi pourquoi le serveur y fait une sélection explicite plutôt
+ * que de rendre la ligne entière — un champ ajouté demain à la table ne doit
+ * pas sortir sans qu'on l'ait voulu.
+ */
+export const compteAdminSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  displayName: z.string().nullable(),
+  role: adminRoleSchema,
+  /** Un compte révoqué est désactivé, jamais effacé : le journal doit encore
+   *  pouvoir nommer qui a fait quoi. */
+  isActive: z.boolean(),
+  createdAt: z.string(),
+}).strict();
+
+export const comptesAdminSchema = z.object({ items: z.array(compteAdminSchema) }).strict();
+
+export type CompteAdmin = z.infer<typeof compteAdminSchema>;
+
+// ——— Les files d'assistance ———————————————————————————————————
+
+/**
+ * Une demande d'assistance, envoyée depuis l'application par quelqu'un qui a
+ * un compte.
+ *
+ * C'est la seule des quatre files qui porte un **état** : les trois autres sont
+ * des registres qu'on lit, celle-ci est un travail qu'on solde.
+ */
+export const demandeAssistanceSchema = z.object({
+  id: z.string(),
+  utilisateur: z.string(),
+  sujet: z.string().nullable(),
+  corps: z.string(),
+  version: z.string().nullable(),
+  plateforme: z.string().nullable(),
+  etat: z.enum(["open", "answered", "closed"]),
+  creeLe: z.string(),
+}).strict();
+
+/**
+ * Un message du formulaire public. Rien d'autre ne le porte : il est écrit
+ * avant toute tentative d'envoi, pour qu'une panne de courriel ne le perde pas.
+ *
+ * Le sujet est l'une des six clés du contrat, jamais un texte libre venu du
+ * client — c'est ce qui permet de le traduire plutôt que de l'afficher tel quel.
+ */
+export const messageContactSchema = z.object({
+  id: z.string(),
+  nom: z.string(),
+  email: z.string(),
+  sujet: z.string(),
+  message: z.string(),
+  langue: z.string().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+/** Une inscription à la liste d'attente. */
+export const inscriptionAttenteSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  langue: z.string().nullable(),
+  source: z.string().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+/** Un retour laissé depuis l'application. */
+export const retourSchema = z.object({
+  id: z.string(),
+  utilisateur: z.string().nullable(),
+  note: z.number().int().nullable(),
+  corps: z.string().nullable(),
+  version: z.string().nullable(),
+  creeLe: z.string(),
+}).strict();
+
+const page = <T extends z.ZodTypeAny>(item: T) =>
+  z.object({ items: z.array(item), nextCursor: z.string().nullable() }).strict();
+
+export const pageAssistanceSchema = page(demandeAssistanceSchema);
+export const pageContactSchema = page(messageContactSchema);
+export const pageAttenteSchema = page(inscriptionAttenteSchema);
+export const pageRetoursSchema = page(retourSchema);
+
+/** Solder une demande d'assistance. Le motif accompagne, comme partout. */
+export const etatAssistanceSchema = z.object({
+  etat: z.enum(["open", "answered", "closed"]),
+  reason: motifSchema,
+}).strict();
+
+export type DemandeAssistance = z.infer<typeof demandeAssistanceSchema>;
+export type MessageContact = z.infer<typeof messageContactSchema>;
+export type InscriptionAttente = z.infer<typeof inscriptionAttenteSchema>;
+export type Retour = z.infer<typeof retourSchema>;
+
+// ——— Métriques (ux-admin §5.11) ———————————————————————————————————
+
+/** Les périodes que l'écran propose. Une liste fermée plutôt qu'un couple de
+ *  dates : « choisir la période » (§5.11) est un geste de lecture, pas la
+ *  construction d'une requête. Un intervalle libre ouvrirait des fenêtres que
+ *  personne ne relit et que rien n'indexe. */
+export const periodeMetriquesSchema = z.enum(["7j", "30j", "90j", "12m"]);
+
+/** Une cohorte de rétention : le mois d'entrée, et ce qu'il en reste.
+ *
+ *  `actifsA7j` et non `revenusA7j` : en économie, « revenus » se lit d'abord
+ *  comme de l'argent, et cette section en montre juste à côté. */
+export const cohorteSchema = z.object({
+  /** Le mois d'inscription, `AAAA-MM`. */
+  mois: z.string().regex(/^\d{4}-\d{2}$/),
+  inscrits: z.number().int().nonnegative(),
+  actifsA7j: z.number().int().nonnegative(),
+  actifsA30j: z.number().int().nonnegative(),
+}).strict()
+  // Plus de revenants que d'entrants n'est pas un chiffre surprenant, c'est une
+  // requête fausse. Refusé à la frontière : sinon l'erreur ressort trois écrans
+  // plus loin, sous la forme d'une barre qui dépasse son cadre, et se lit comme
+  // un problème d'affichage.
+  .refine((c) => c.actifsA7j <= c.inscrits && c.actifsA30j <= c.inscrits, {
+    message: "une cohorte ne peut pas rendre plus de comptes qu'elle n'en a reçus",
+  });
+
+export const retentionSchema = z.object({
+  cohortes: z.array(cohorteSchema),
+}).strict();
+
+export const conversionSchema = z.object({
+  comptes: z.number().int().nonnegative(),
+  acheteurs: z.number().int().nonnegative(),
+  /** Jours entre l'inscription et le premier paiement réussi. **Médiane**, pas
+   *  moyenne : un compte qui paie au bout d'un an tirerait la moyenne pour tous
+   *  et ferait croire à un cycle long qui n'existe pas.
+   *
+   *  Nul quand personne n'a encore acheté — `0` dirait « le jour même ». */
+  delaiMedianJours: z.number().nonnegative().nullable(),
+  /** Le palier se désigne par son **nombre de crédits**, jamais par une phrase.
+   *  `CreditBundle` n'a pas de libellé : le serveur devrait en fabriquer un, et
+   *  il le ferait dans une seule langue. La mise en forme — séparateur de
+   *  milliers, mot « crédits » — appartient à l'écran, qui sait laquelle. */
+  parPalier: z.array(z.object({
+    credits: z.number().int().positive(),
+    achats: z.number().int().nonnegative(),
+  }).strict()),
+}).strict()
+  .refine((c) => c.acheteurs <= c.comptes, {
+    message: "il ne peut pas y avoir plus d'acheteurs que de comptes",
+  });
+
+export const consommationSchema = z.object({
+  /** Crédits débités sur la période, en valeur absolue : le registre les porte
+   *  en négatif, mais un volume ne se lit pas avec un signe moins. */
+  credits: z.number().int().nonnegative(),
+  mouvements: z.number().int().nonnegative(),
+}).strict();
+
+/** Ce que §5.11 demande et que le dépôt ne sait pas encore mesurer.
+ *
+ *  Une liste **fermée**, et rendue par le serveur : c'est lui qui sait ce qui
+ *  lui manque. Le jour où la source arrive, il cesse de le déclarer et l'écran
+ *  suit — personne n'a à se souvenir d'aller retirer un avertissement écrit en
+ *  dur dans une page.
+ *
+ *  Seul l'identifiant circule ; la phrase vit dans les deux tables de langue.
+ *  Un libellé venu du serveur ne se traduirait pas. */
+export const manqueMetriqueSchema = z.enum([
+  "usage_par_fonctionnalite",
+  // « issue_des_actions » y figurait. Retiré le 28/08 : `ActionRun` existe,
+  // avec son statut et son code d'échec — la section le MESURE désormais, elle
+  // ne le déclare plus. C'est le mouvement que ce mécanisme prévoyait.
+  "contributions",
+]);
+
+/* Les exécutions d'une action payante, sur la période, et leur issue.
+ *
+ * §5.11 : « exécutions des actions payantes et leur issue ». L'issue est ce qui
+ * compte — un volume seul ne dit pas si les gens obtiennent ce qu'ils paient. */
+export const actionPayanteSchema = z.object({
+  /** Le code de l'action, jamais son libellé : celui-ci vit dans le
+   *  dictionnaire de l'outil, qui sait dans quelle langue il se lit. */
+  code: z.string(),
+  lancements: z.number().int().nonnegative(),
+  reussies: z.number().int().nonnegative(),
+  echouees: z.number().int().nonnegative(),
+  enAttente: z.number().int().nonnegative(),
+}).strict()
+  // Les trois issues redonnent le total : l'enum n'en connaît que trois, donc
+  // un écart signale une requête qui compte deux fois ou en oublie une. À
+  // l'écran, il se lirait comme un taux d'échec — faux, et crédible.
+  .refine((a) => a.reussies + a.echouees + a.enAttente === a.lancements, {
+    message: "les issues ne redonnent pas le total des lancements",
+  });
+
+export const metriquesSchema = z.object({
+  periode: periodeMetriquesSchema,
+  retention: retentionSchema,
+  conversion: conversionSchema,
+  consommation: consommationSchema,
+  actions: z.array(actionPayanteSchema),
+  manques: z.array(manqueMetriqueSchema),
+}).strict();
+
+export type PeriodeMetriques = z.infer<typeof periodeMetriquesSchema>;
+export type Cohorte = z.infer<typeof cohorteSchema>;
+export type Conversion = z.infer<typeof conversionSchema>;
+export type Metriques = z.infer<typeof metriquesSchema>;
+export type ManqueMetrique = z.infer<typeof manqueMetriqueSchema>;
+export type ActionPayante = z.infer<typeof actionPayanteSchema>;
+
+// ——— Les motifs d'administration ——————————————————————————————
+
+/**
+ * Un motif proposé pour un geste.
+ *
+ * **Les deux langues voyagent ensemble**, et ce n'est pas un oubli de
+ * négociation : le back-office change de langue depuis le menu de compte, sans
+ * recharger. Rendre un seul libellé obligerait à refaire l'appel à chaque
+ * bascule — et à ré-ouvrir la fenêtre de confirmation en cours.
+ *
+ * Le `code` est ce qui part au journal ; les libellés ne servent qu'à l'écran.
+ * C'est la distinction qui rend les comptages possibles : corriger une faute
+ * d'orthographe ne doit pas couper en deux l'historique d'un motif.
+ */
+export const motifPropositionSchema = z.object({
+  code: z.string(),
+  fr: z.string(),
+  en: z.string(),
+}).strict();
+
+/**
+ * Les motifs d'un geste. La liste peut être **vide**, et c'est un état normal :
+ * huit gestes n'ont aucun préréglage et n'attendent qu'une phrase. Un écran qui
+ * traiterait le vide comme une panne afficherait une erreur là où il faut une
+ * zone de saisie.
+ */
+export const motifsDuGesteSchema = z.object({
+  geste: z.string(),
+  motifs: z.array(motifPropositionSchema),
+}).strict();
+
+export type MotifProposition = z.infer<typeof motifPropositionSchema>;
+export type MotifsDuGeste = z.infer<typeof motifsDuGesteSchema>;
+
+/**
+ * Un motif tel que l'administration le voit : avec son identifiant, son état, et
+ * les gestes auxquels il se propose.
+ */
+export const motifAdminSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  fr: z.string(),
+  en: z.string(),
+  actif: z.boolean(),
+  gestes: z.array(z.string()),
+}).strict();
+
+export const motifsAdminSchema = z.object({
+  motifs: z.array(motifAdminSchema),
+}).strict();
+
+/**
+ * Le code est **contraint de forme** : minuscules, chiffres et tirets bas.
+ *
+ * Ce n'est pas de la coquetterie. Sans cette règle, quelqu'un collerait un
+ * libellé — « Fraude suspectée » — dans le champ du code, et on serait revenu au
+ * point de départ : un texte d'affichage en guise de clé de comptage, qu'une
+ * correction d'orthographe coupe en deux.
+ */
+export const codeMotifSchema = z.string().regex(/^[a-z][a-z0-9_]{2,47}$/);
+
+export const creationMotifSchema = z.object({
+  code: codeMotifSchema,
+  fr: z.string().trim().min(1).max(120),
+  en: z.string().trim().min(1).max(120),
+  gestes: z.array(z.string().min(1).max(48)),
+  reason: motifSchema,
+}).strict();
+
+/**
+ * Le code **n'y figure pas**, et c'est l'invariant du module.
+ *
+ * Le renommer couperait en deux l'historique de tout ce qu'il a justifié : les
+ * gestes d'hier garderaient l'ancien code, ceux de demain le nouveau, et aucun
+ * comptage ne les rapprocherait. Un code se retire ; il ne se renomme pas.
+ */
+export const modificationMotifSchema = z.object({
+  fr: z.string().trim().min(1).max(120).optional(),
+  en: z.string().trim().min(1).max(120).optional(),
+  actif: z.boolean().optional(),
+  gestes: z.array(z.string().min(1).max(48)).optional(),
+  reason: motifSchema,
+}).strict();
+
+export type MotifAdmin = z.infer<typeof motifAdminSchema>;
+export type MotifsAdmin = z.infer<typeof motifsAdminSchema>;
+
+// ——— Statistiques des transactions (lot du 29/08) ————————————————
+
+/** Les périodes du graphe. Fermée, comme celle des métriques : « choisir la
+ *  période » est un geste de lecture, pas la construction d'un intervalle. */
+export const periodeTransactionsSchema = z.enum(["7j", "30j", "90j"]);
+
+/** Le sens : ce qui entre, ce qui sort. `Payment.direction` les distingue. */
+export const sensTransactionSchema = z.enum(["tous", "depot", "retrait"]);
+
+/** Le mode : ce que le fournisseur encaisse, ce qu'un humain constate. Les deux
+ *  voies manuelles comptent pour une — « manuel » est une famille, pas un mode. */
+export const modeTransactionSchema = z.enum(["tous", "auto", "manuel"]);
+
+/** Un jour du graphe. Deux montants, jamais un solde : encaissé et échoué ne
+ *  s'additionnent pas, et les fondre cacherait ce qu'on vient regarder. */
+export const jourTransactionsSchema = z.object({
+  jour: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  encaisse: z.number().nonnegative(),
+  echoue: z.number().nonnegative(),
+}).strict();
+
+/** L'aboutissement d'un groupe — un moyen de paiement, un pays.
+ *
+ *  Le taux se calcule ici plutôt qu'à l'écran : deux calculs de la même chose
+ *  divergent, et celui-ci sert aussi à trier. */
+export const aboutissementSchema = z.object({
+  cle: z.string(),
+  tentatives: z.number().int().nonnegative(),
+  aboutis: z.number().int().nonnegative(),
+}).strict()
+  .refine((a) => a.aboutis <= a.tentatives, {
+    message: "il ne peut pas y avoir plus de paiements aboutis que de tentatives",
+  });
+
+export const statsTransactionsSchema = z.object({
+  periode: periodeTransactionsSchema,
+  sens: sensTransactionSchema,
+  mode: modeTransactionSchema,
+  /* Les quatre chiffres de tête. Ils suivent la période, comme le graphe :
+     une carte figée à côté d'un graphe qui bouge ment dès le premier
+     changement de période. */
+  tentatives: z.number().int().nonnegative(),
+  aboutis: z.number().int().nonnegative(),
+  encaisse: z.number().nonnegative(),
+  frais: z.number().nonnegative(),
+  /** Le paiement MÉDIAN, pas le moyen : un versement exceptionnel tirerait la
+   *  moyenne et ferait croire à un panier qui n'existe pour personne.
+   *  Nul quand rien n'a abouti — zéro dirait « on encaisse zéro franc ». */
+  median: z.number().nonnegative().nullable(),
+  jours: z.array(jourTransactionsSchema),
+  parMoyen: z.array(aboutissementSchema),
+  parPays: z.array(aboutissementSchema),
+}).strict()
+  .refine((s) => s.aboutis <= s.tentatives, {
+    message: "il ne peut pas y avoir plus de paiements aboutis que de tentatives",
+  });
+
+export type PeriodeTransactions = z.infer<typeof periodeTransactionsSchema>;
+export type SensTransaction = z.infer<typeof sensTransactionSchema>;
+export type ModeTransaction = z.infer<typeof modeTransactionSchema>;
+export type Aboutissement = z.infer<typeof aboutissementSchema>;
+export type StatsTransactions = z.infer<typeof statsTransactionsSchema>;
+// ——— Le versement d'un remboursement ——————————————————————————
+
+/**
+ * Constater qu'un remboursement a été versé.
+ *
+ * Le miroir de `saisiePaiementSchema`, en sens inverse : là on déclare l'argent
+ * qui entre, ici celui qui sort. La `reference` est celle de l'opérateur, comme
+ * pour un versement entrant — c'est elle qui permet de retrouver l'opération
+ * chez lui le jour d'une contestation.
+ *
+ * Aucun montant : il a été FIXÉ à la demande, et c'est ce montant-là qui a été
+ * annoncé au titulaire. Le laisser saisir ici inviterait à verser autre chose
+ * que ce qu'on a promis, sans que rien ne le signale.
+ */
+export const versementRemboursementSchema = z.object({
+  reference: z.string().trim().min(1).max(200),
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
+}).strict();
+
+/**
+ * Renoncer à un remboursement.
+ *
+ * Il faut ce geste : un numéro fermé, un titulaire injoignable, un montant
+ * contesté laissent une demande qui ne peut pas aboutir — et sans porte de
+ * sortie, elle retiendrait l'effacement du compte pour toujours.
+ */
+export const abandonRemboursementSchema = z.object({
+  reason: motifSchema,
+  reasonCode: z.string().max(48).optional(),
+}).strict();
+
+export const remboursementRegleSchema = z.object({
+  id: z.string(),
+  etat: z.enum(["succeeded", "failed"]),
+  /** Les crédits repris. Nuls sur un abandon : rien n'est sorti. */
+  creditsRepris: z.number().int().min(0),
+}).strict();
+
+export type RemboursementRegle = z.infer<typeof remboursementRegleSchema>;

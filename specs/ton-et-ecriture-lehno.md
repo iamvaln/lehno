@@ -25,7 +25,7 @@ La voix change selon qui parle et à qui. C'est le premier réflexe : **identifi
 |---|---|---|
 | **L'application** | Lehno → son utilisateur | Vouvoiement |
 | **Les surfaces publiques** | Lehno → un visiteur qu'on ne connaît pas | Vouvoiement |
-| **Le Mur** | L'utilisateur → ses proches | Première personne, tutoiement |
+| **Le Mur, mes listes** | L'utilisateur → ses proches | Première personne, tutoiement |
 | **Les messages d'accompagnement** | L'utilisateur → un proche | Selon son registre |
 | **Le back-office** | Lehno → l'équipe | Vouvoiement, plus direct |
 
@@ -44,11 +44,13 @@ Même vouvoiement, mais le visiteur **ne connaît pas Lehno**. Il faut donc nomm
 
 > *« Valentine vous a envoyé ceci. Quelques questions sur elle, et c'est tout. »*
 
-### 2.3 Sur le Mur
+### 2.3 Sur le Mur et sur mes listes
 
 Ce n'est plus Lehno qui parle : **c'est le propriétaire, chez lui**. Toute la page est à la première personne, et tutoie le visiteur.
 
-> *« Salut, bienvenue chez Valentine » · « Ce que j'aime » · « Laisse-moi un mot »*
+> *« Salut, bienvenue chez Valentine » · « Ce que j'aime » · « Laisse-moi un mot » · « Voilà ce qui me ferait plaisir »*
+
+Une liste partagée suit la même règle : **« Voilà ce qui me ferait plaisir »**, jamais « Liste de souhaits de Valentine Nguemne ».
 
 Jamais de « vous » collectif : le visiteur est **une** personne, et les mots reçus viennent d'autres que lui.
 
@@ -140,7 +142,20 @@ C'est la table à consulter devant un écran. Chaque situation a son ton et ses 
 > **On dit** : « Votre carnet est prêt. » · « Rien dans les semaines qui viennent. Le bon moment pour noter une idée pendant qu'elle est fraîche. »
 > **On évite** : « Aucun proche enregistré. » · « Vous n'avez rien à faire. » · « Cette liste est vide. »
 
-### 4.8 Un moment grave
+### 4.8 Un arrêt pour intervention
+
+**Ton** — dire ce qui se passe et **combien de temps**. Un délai annoncé transforme une panne en attente.
+
+> **On dit** : « On améliore quelque chose. L'application revient dans une vingtaine de minutes. »
+> **On évite** : « Service temporairement indisponible. » · « Maintenance en cours. » · « Nous nous excusons pour la gêne occasionnée. »
+
+Ce n'est ni une erreur ni une panne : **quelque chose se répare**, et c'est volontaire. Le dire ainsi évite l'inquiétude.
+
+**Le délai vient du serveur** ; le texte l'annonce sans le promettre à la minute près.
+
+*Écrans concernés* — l'écran d'attente, qui peut paraître avant même l'entrée dans l'application.
+
+### 4.9 Un moment grave
 
 C'est là que le ton se révèle. Lehno gère des occasions sensibles — un anniversaire de décès, une date qui fait mal.
 
@@ -181,5 +196,5 @@ L'anglais **s'écrit, il ne se traduit pas**. La version française sert de réf
 ## 7. Trois questions avant d'écrire
 
 1. **Quelle surface ?** L'app, une page publique, le Mur, un message d'accompagnement, le back-office. La voix en dépend.
-2. **Quelle situation ?** Tout va bien, rassurer, informer, alerter, s'excuser, inciter, un état vide, un moment grave.
+2. **Quelle situation ?** Tout va bien, rassurer, informer, alerter, s'excuser, inciter, un état vide, un arrêt pour intervention, un moment grave.
 3. **Peut-on faire plus court ?** Presque toujours. Une phrase qu'on peut couper en deux se coupe.

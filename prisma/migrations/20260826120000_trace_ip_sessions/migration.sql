@@ -1,0 +1,12 @@
+-- L'adresse sur les jetons de session d'administration.
+--
+-- `refresh_token.ip` existait déjà en base depuis la migration d'identité —
+-- posée puis oubliée, faute d'être modélisée : Prisma ne peut pas écrire une
+-- colonne qu'il ne connaît pas, et elle est restée vide. Le modèle la porte
+-- désormais, sans qu'il faille toucher au schéma physique.
+--
+-- `admin_refresh_token`, créée plus tard, n'en avait aucune. C'est une
+-- asymétrie qu'on ne veut pas : une session d'exploitation ouvre sur les
+-- comptes des autres, et sa durée est plus courte pour cette raison. Elle
+-- devrait au moins tracer autant qu'une session ordinaire, pas moins.
+ALTER TABLE "admin_refresh_token" ADD COLUMN "ip" inet;

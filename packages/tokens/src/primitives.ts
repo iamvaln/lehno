@@ -9,6 +9,10 @@ export const primitives = {
     violetPress: "#4A3D7C",
     lilac: "#EDEAF7",
     apricot: "#F0CFB4",
+    /* L'abricot des APLATS. Le clair est une pastille — un point qui signale un
+       jour ; posé en fond de bouton ou de bandeau, il ne tient pas le contraste
+       sous un texte. Deux emplois, deux valeurs : la pastille garde le premier. */
+    apricotDeep: "#E3A971",
     // Le gris de mention vaut le gris de texte : 4,708 sur lilas, 5,581 sur
     // papier. La hiérarchie entre mention et texte secondaire tient par la
     // taille (11,5 contre 14 px), signal plus sûr que trois pas de gris.
@@ -21,6 +25,10 @@ export const primitives = {
     success: "#166B43",
     warning: "#8A5A00",
     error: "#B3261E",
+    // Le fond du bouton destructeur pendant l'appui. Sur un téléphone il n'y a
+    // pas de survol : la pression est le seul retour que reçoit le doigt, et le
+    // web l'obtenait par filter: brightness(), qui n'existe pas en natif.
+    errorPress: "#8E1E17",
     infoBg: "#EDEAF7",
     successBg: "#E6F4EC",
     warningBg: "#FBF0DC",
@@ -38,6 +46,7 @@ export const primitives = {
     violetHi: "#B0A2E2",
     lilac: "#2E2945",
     apricot: "#F0CFB4",
+    apricotDeep: "#E3A971",
     greyText: "#B9B4C6",
     greyMention: "#9A94A8",
     rule: "#2A2836",
@@ -51,6 +60,7 @@ export const primitives = {
     success: "#7ED9A6",
     warning: "#E3B25C",
     error: "#F2837A",
+    errorPress: "#C9635B",
     infoBg: "#2E2945",
     successBg: "#163024",
     warningBg: "#322814",

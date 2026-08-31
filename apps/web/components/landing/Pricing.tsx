@@ -18,7 +18,7 @@ export function Pricing(
       <div style={{ maxWidth: "var(--page-max)", margin: "0 auto", padding: "clamp(44px,6vw,76px) var(--page-gutter) clamp(48px,7vw,84px)" }}>
         <SectionLabel>{t.prixKicker}</SectionLabel>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: "clamp(24px,4vw,48px)", marginTop: "var(--space-28)" }}>
-          <div style={{ borderTop: "var(--border-width-firm) solid var(--action)", paddingTop: "var(--space-18)" }}>
+          <div style={{ borderTop: "var(--border-width-firm) solid var(--action)", paddingTop: "var(--space-20)" }}>
             <div className="titre" style={{ fontSize: "clamp(38px,5vw,52px)", fontWeight: "var(--font-display-regular)", lineHeight: "var(--leading-display)", letterSpacing: "var(--tracking-display)", color: "var(--text-accent)" }}>
               {t.prixGratuitChiffre}
             </div>
@@ -28,7 +28,7 @@ export function Pricing(
             <p style={{ margin: 0, color: "var(--text-secondary)", maxWidth: "40ch" }}>{t.prixGratuit}</p>
           </div>
 
-          <div style={{ borderTop: "var(--border-width-firm) solid var(--border-object)", paddingTop: "var(--space-18)" }}>
+          <div style={{ borderTop: "var(--border-width-firm) solid var(--border-object)", paddingTop: "var(--space-20)" }}>
             <div className="titre" style={{ fontSize: "clamp(38px,5vw,52px)", fontWeight: "var(--font-display-regular)", lineHeight: "var(--leading-display)", letterSpacing: "var(--tracking-display)" }}>
               <span>{prixCredit}</span>
               <span style={{ fontSize: ".42em", letterSpacing: 0, color: "var(--text-secondary)", marginLeft: ".5em" }}>{t.prixCreditsUnite}</span>

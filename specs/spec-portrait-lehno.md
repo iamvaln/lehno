@@ -102,7 +102,7 @@ Deux motifs, deux emplois, **jamais les deux sur un même portrait** :
 
 ### 3.5 Ce que porte la bande
 
-Dans cet ordre : **le nom du proche** · **le message** · **la note de l'expéditeur** · **le pied de marque** (lehno.app et les identifiants sociaux, discrets).
+Dans cet ordre : **le nom du proche** · **le message** · **la note de l'expéditeur** · **le pied de marque** (lehno.io et les identifiants sociaux, discrets).
 
 ### 3.6 Les formats
 
@@ -121,7 +121,7 @@ Quatre productions distinctes, quatre briefs. Chacun précise **ce qu'on donne a
 
 ### 4.1 Le message
 
-**Ce qu'on fournit** — l'orientation choisie ; le nom d'usage du proche ; la relation et le registre ; les notes de la plage retenue, avec leur date et leur catégorie ; la langue ; le texte libre s'il existe ; la nature de l'occasion (ordinaire ou sensible).
+**Ce qu'on fournit** — l'orientation choisie ; le nom d'usage du proche ; **son genre et celui de l'utilisateur**, pour l'accord ; la relation et le registre ; les notes de la plage retenue, avec leur date et leur catégorie ; la langue ; le texte libre s'il existe ; la nature de l'occasion (ordinaire ou sensible).
 
 **Ce qu'on attend** — un texte court, **de deux à quatre phrases**, écrit **à la première personne**, adressé au proche. Il tient dans la bande sans être tronqué.
 
@@ -129,6 +129,7 @@ Quatre productions distinctes, quatre briefs. Chacun précise **ce qu'on donne a
 
 - Il **s'appuie sur des faits présents dans les notes**. Aucune invention de souvenir, aucun détail que l'utilisateur n'a pas fourni.
 - Il **suit le registre de la fiche** — familier, amical, formel.
+- Il **s'accorde correctement**, pour celui qui reçoit comme pour celui qui signe : *je suis fier* ou *fière*, *tu es le meilleur* ou *la meilleure*. Lorsqu'un genre est inconnu, il emploie des tournures qui s'en passent — jamais un accord au hasard, jamais une double forme entre parenthèses.
 - Il **suit l'orientation choisie**, sans dériver vers une autre.
 - Il **ne mentionne jamais Lehno**, ni le fait d'avoir pris des notes.
 - Il **ne date pas** l'occasion et ne dit pas « joyeux anniversaire » : le portrait peut s'offrir n'importe quand.
@@ -141,7 +142,7 @@ Quatre productions distinctes, quatre briefs. Chacun précise **ce qu'on donne a
 
 ### 4.2 L'illustration
 
-**Ce qu'on fournit** — la famille choisie (nature, animal, abstrait) ; les notes qui décrivent goûts, traits de caractère et centres d'intérêt ; le texte libre ; l'orientation du message ; la palette de la marque.
+**Ce qu'on fournit** — la famille choisie (nature, animal, abstrait) ; les **attributs extraits** des notes, dont l'animal s'il en existe un ; les notes qui décrivent goûts, traits de caractère et centres d'intérêt ; le texte libre ; l'orientation du message ; la palette de la marque.
 
 **Ce qu'on attend** — une composition en **aplats pleins**, sans contour, dans la palette, occupant la zone haute du portrait, avec une **zone calme** en bas où la bande viendra se poser.
 
@@ -155,7 +156,7 @@ Quatre productions distinctes, quatre briefs. Chacun précise **ce qu'on donne a
 - **Aucune ombre portée, aucun dégradé.**
 - **L'abricot reste un accent**, jamais une masse.
 
-**Le choix de l'animal** — s'il figure dans les notes, on le prend. Sinon on le déduit du caractère, et **on l'indique à l'utilisateur** : il doit pouvoir corriger. Un animal mal choisi est plus blessant qu'aucun animal.
+**Le choix de l'animal** — si un attribut `animal` existe, on le prend : c'est une valeur sûre, extraite d'une note, plutôt qu'une déduction. Sinon on le déduit du caractère, et **on l'indique à l'utilisateur** : il doit pouvoir corriger. Un animal mal choisi est plus blessant qu'aucun animal.
 
 **Pour une occasion sensible** — palette froide, composition dépouillée, aucun élément vif.
 
@@ -180,6 +181,8 @@ Quatre productions distinctes, quatre briefs. Chacun précise **ce qu'on donne a
 
 **Avant l'envoi** — une photo trop sombre, trop floue ou trop petite est refusée avec une raison claire, plutôt que traitée mal.
 
+**Après le traitement** — la photo source est **effacée**. Seule l'image produite demeure. L'écran l'annonce au moment du dépôt.
+
 ### 4.4 Le classement des notes pour la sélection
 
 **Ce qu'on fournit** — les notes de la plage, avec leurs catégories.
@@ -190,17 +193,21 @@ Quatre productions distinctes, quatre briefs. Chacun précise **ce qu'on donne a
 
 ---
 
+**Le prix est unique.** Un portrait coûte le même nombre de crédits quelle que soit sa voie d'image. Le traitement d'une photo coûte davantage à produire, sans coûter davantage à l'utilisateur : le prix est un réglage d'administration, et c'est la moyenne des productions qui doit couvrir l'exploitation.
+
 ## 5. Ce qui se règle depuis le back-office
 
 Le studio porte douze orientations, des familles, des styles, et derrière chacun un gabarit de production. **Rien de tout cela ne vit dans le code** : ce sont des réglages qu'on ajuste au vu des résultats.
 
-La section **Studio du portrait** du back-office (5.8 de `ux-admin-lehno.md`) permet de :
+La section **Studio du portrait** du back-office (5.8 de `ux-admin-lehno.md`) se tient en trois entrées — **réglages en service**, **composition**, **banc d'essai** — et permet de :
 
 - **régler les orientations** — libellés dans les deux langues, ordre, activation ; si trois orientations sur douze servent, on désactive les autres sans livraison ;
 - **tenir les familles et les styles** — nom, description, activation, modèle qui les produit ;
 - **modifier les gabarits de production** — un par orientation, par famille, par style ;
 - **compléter les garde-fous** à mesure qu'on voit passer des résultats ;
-- **essayer une production** sur une fiche de démonstration, sans consommer de crédit ni toucher à un compte réel.
+- **essayer une production** sur un profil de simulation, sans consommer de crédit ni toucher à un compte réel, et **comparer deux essais côte à côte** sur le même profil.
+
+**Le brouillon et la publication sont deux choses.** On ajuste librement sans que rien ne change pour les utilisateurs ; seule la publication met en service. Elle est **refusée tant qu'aucun essai n'a tourné** sur la combinaison en cours, et se révoque en un geste si elle déçoit.
 
 **Chaque gabarit est versionné**, et chaque portrait retient la version qui l'a produit (`ActionRun.prompt_template_id`). Sans cela, comprendre pourquoi les productions d'une semaine valaient mieux que celles de la suivante devient impossible.
 
@@ -220,7 +227,6 @@ La section **Studio du portrait** du back-office (5.8 de `ux-admin-lehno.md`) pe
 
 ## 7. Ce qui reste à décider
 
-- **Le prix.** Un portrait avec photo coûte plus cher à produire qu'un portrait sans image. Faut-il qu'il coûte plus de crédits ?
 - **La couleur du motif** suit-elle l'orientation, ou reste-t-elle constante, l'illustration portant seule la couleur du propos ?
 - **La hauteur de la bande** est-elle fixe, ou s'adapte-t-elle à la longueur du message ?
 - **Les noms des trois styles** de photo.

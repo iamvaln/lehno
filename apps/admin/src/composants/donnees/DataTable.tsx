@@ -305,11 +305,19 @@ export function DataTable<L extends LigneTableau>({
 
                   {actions ? (
                     <td className="admin-cellule-actions">
-                      <MenuLigne
-                        items={actions(ligne)}
-                        libelle={libelles.actions}
-                        onChoix={(id) => onAction?.(id, ligne)}
-                      />
+                      {/* Aucun geste possible sur cette ligne : pas de bouton.
+                          Un menu qui s'ouvre vide promet quelque chose et ne le
+                          tient pas — « une action hors des droits n'apparaît
+                          pas » (ux-admin §6) vaut aussi quand il n'en reste
+                          aucune. La cellule demeure, pour que la colonne garde
+                          sa largeur. */}
+                      {actions(ligne).length > 0 ? (
+                        <MenuLigne
+                          items={actions(ligne)}
+                          libelle={libelles.actions}
+                          onChoix={(id) => onAction?.(id, ligne)}
+                        />
+                      ) : null}
                     </td>
                   ) : null}
 

@@ -49,24 +49,35 @@ export const fr = {
 
   // Rangées par ce que l'administrateur vient faire, pas par objet manipulé.
   familles: {
-    attention: "À traiter",
-    finances: "Finances",
-    gestion: "Gestion",
-    surveiller: "Suivi",
+    exploitation: "Exploitation",
+    economie: "Économie",
+    supervision: "Supervision",
     outils: "Outils",
   },
 
   sections: {
     tableau: "Tableau de bord",
-    alertes: "Alertes",
     moderation: "Modération",
     suppressions: "Demandes de suppression",
-    contact: "Messages de contact",
-    attente: "Liste d'attente",
-    transactions: "Transactions",
-    comptes: "Utilisateurs",
-    acces: "Administrateurs",
-    parametres: "Configurations",
+    assistance: "Assistance",
+    comptes: "Comptes",
+    // La section groupe les quatre cadrages ; l'entrée qui hérite du
+    // comportement actuel devient « À vérifier », puisqu'elle s'ouvre sur ce
+    // qui attend une décision.
+    paiements: "Paiements",
+    credits: "À vérifier",
+    transactionsToutes: "Toutes les transactions",
+    versementsManuels: "Versements manuels",
+    canauxPaiement: "Canaux et barèmes",
+    transactionsStats: "Statistiques",
+    creditsSection: "Crédits",
+    transactionManuelle: "Transaction manuelle",
+    acces: "Accès administrateurs",
+    parametres: "Paramètres",
+    fonctionnalites: "Fonctionnalités",
+    modeles: "Modèles d'IA",
+    studio: "Studio du portrait",
+    offres: "Offres et croissance",
     metriques: "Métriques",
     audit: "Journal d'audit",
     connexions: "Connexions",
@@ -134,11 +145,476 @@ export const fr = {
     formatJson: "JSON — données brutes",
     journal: "L'export apparaît au journal d'audit.",
     encours: "Préparation du fichier…",
-    lance: "Export lancé sur {n} lignes. Le fichier arrive par courriel.",
+    // Le fichier arrive tout de suite. La formule précédente annonçait un
+    // courriel : il n'existe ni file d'attente ni envoi de pièce jointe, et
+    // promettre un courriel qui n'arrive jamais est pire qu'un téléchargement.
+    telecharge: "Le fichier est prêt : il vient d'être téléchargé.",
   },
 
   // Trois temps, dans cet ordre : ce qui s'est passé, ce qu'on a fait, ce qu'on
   // peut faire maintenant. Aucune de ces phrases n'est sans sujet.
+  // Un écran qui charge et un écran vide ne disent pas la même chose : sans
+  // état d'attente, une base lente ressemble à un système sans activité.
+  actions: {
+    chargement: "Chargement…",
+    reessayer: "Réessayer",
+    echecTitre: "Le chargement n'a pas abouti",
+  },
+
+  // Une valeur qu'on ne sait pas encore compter n'est pas zéro. Le dire au lieu
+  // de l'écrire « 0 » évite de faire passer une lacune de la base pour un
+  // constat sur le compte qu'on regarde.
+  nonMesure: {
+    court: "—",
+    explication: "Pas encore mesuré",
+    bloc: "Cette mesure n'existe pas encore. Elle apparaîtra ici quand la fonctionnalité sera en service.",
+  },
+
+  // La section « Journal d'audit ». À ne pas confondre avec `audit` ci-dessus,
+  // qui nomme l'historique des interventions **sur un compte**, dans sa fiche.
+  // Les deux existent, et ne montrent pas la même chose.
+  journal: {
+    titre: "Journal d'audit",
+    sous: "Ce que l'équipe a fait, avec son motif. Rien ne s'y modifie ni ne s'y efface.",
+    col: { date: "Quand", acteur: "Qui", action: "Quoi", motif: "Pourquoi", cible: "Sur quoi" },
+    // Un utilisateur agissant chez lui n'a rien à justifier ; l'absence se dit,
+    // plutôt que de laisser une case vide qu'on prendrait pour un oubli.
+    sansMotif: "Geste de l'utilisateur",
+    acteurs: { admin: "Administration", user: "Utilisateur" },
+    vide: {
+      titre: "Aucune trace sur cette période",
+      texte: "Chaque geste d'administration s'inscrit ici, avec son auteur, sa cible et son motif.",
+    },
+    filtres: {
+      action: "Nature du geste",
+      periode: "Période",
+      toutes: "Toutes",
+      touteLaPeriode: "Depuis toujours",
+      // Les natures que le journal porte aujourd'hui. La liste vient du code
+      // parce qu'elle vient des gestes qu'on a écrits — la déduire des traces
+      // existantes ferait disparaître un filtre le jour où personne n'a encore
+      // posé ce geste.
+      actions: {
+        user_status_update: "Changement d'état d'un compte",
+        admin_invite: "Invitation d'un administrateur",
+        admin_role_update: "Changement de rôle d'un administrateur",
+        admin_revoke: "Révocation d'un accès d'administrateur",
+        ai_model_update: "Réglage d'un modèle d'IA",
+        prompt_template_create: "Création d'un gabarit de production",
+        prompt_template_activate: "Activation d'un gabarit de production",
+        support_request_update: "Changement d'état d'une demande d'assistance",
+        parameter_update: "Modification d'un paramètre",
+        feature_flag_update: "Bascule d'une fonctionnalité",
+        credit_bundle_update: "Modification d'un palier",
+        payment_channel_create: "Ouverture d'un canal",
+        payment_channel_update: "Modification d'un barème",
+        collection_account_create: "Ouverture d'un compte de collecte",
+        collection_account_update: "Modification d'un compte de collecte",
+        payment_manual_create: "Saisie d'un paiement",
+        payment_decision: "Décision sur un paiement",
+        credit_adjustment: "Ajustement d'un solde",
+        audit_log_export: "Export du journal",
+        login_activity_export: "Export des connexions",
+        user_export: "Export des comptes",
+        payment_export: "Export des paiements",
+        credit_transaction_export: "Export des mouvements de crédits",
+      },
+    },
+  },
+
+  entrees: {
+    titre: "Connexions",
+    sous: "Les entrées réussies et les tentatives refusées. L'adresse IP est enregistrée mais ne se lit pas ici : elle sert aux investigations, pas à la lecture courante.",
+    col: { date: "Quand", compte: "Compte", adresse: "Adresse tentée", resultat: "Résultat", appareil: "Appareil", lieu: "Lieu approximatif" },
+    resultats: { success: "Entrée", failure: "Refusée" },
+    inconnu: "—",
+    filtres: {
+      resultat: "Résultat",
+      periode: "Période",
+      tous: "Tous",
+      touteLaPeriode: "Depuis toujours",
+    },
+    vide: {
+      titre: "Aucune tentative sur cette période",
+      texte: "Chaque entrée, réussie ou non, s'inscrit ici avec son appareil et son lieu approximatif.",
+    },
+  },
+
+  modeles: {
+    titre: "Modèles d'IA",
+    sous: "Ce qu'on appelle pour chaque tâche, dans quel ordre, et ce que ça coûte au fournisseur.",
+    col: { fournisseur: "Fournisseur", modele: "Modèle", capacite: "Sait faire", etat: "État", emplois: "Où il sert", entree: "Coût entrée", sortie: "Coût sortie" },
+    capacites: { texte: "Texte", image: "Image" },
+    /* Trois états, et surtout pas deux. « Éteint » est la décision d'un humain,
+       « momentanément injoignable » le constat du disjoncteur. Ils se réparent
+       par des gestes opposés : le premier attend qu'on le rallume, le second se
+       rouvre seul. Les confondre ferait attendre une reprise qui ne viendra pas. */
+    etats: { actif: "En service", eteint: "Éteint", enPanne: "Momentanément injoignable" },
+    // Un coût absent n'est pas un coût nul : c'est un modèle qu'on n'a pas
+    // encore tarifé. « 0 » le ferait passer pour gratuit dans un calcul de marge.
+    sansCout: "Non tarifé",
+    sansEmploi: "Dans aucune chaîne",
+    unite: "$ / M jetons",
+    taches: {
+      note_classification: "Classement des notes",
+      sensitive_detection: "Détection du sensible",
+      message: "Message",
+      gift_ideas: "Idées de cadeaux",
+      illustration: "Illustration",
+      photo_style: "Style photo",
+    } as Record<string, string>,
+    eteindre: "Éteindre ce modèle",
+    rallumer: "Remettre en service",
+    dialogueEteindre: {
+      titre: "Éteindre {modele}",
+      consequence: "Les productions passeront au modèle suivant, dans chaque chaîne où celui-ci figure. Si c'est le dernier en service d'une tâche, le serveur refusera.",
+      motifs: [
+        "Le modèle échoue trop souvent",
+        "Coût devenu trop élevé",
+        "Remplacé par un autre fournisseur",
+      ],
+    },
+    dialogueRallumer: {
+      titre: "Remettre {modele} en service",
+      consequence: "Il reprendra sa place, à son rang, dans chaque chaîne où il figure.",
+      motifs: [
+        "L'incident du fournisseur est clos",
+        "Retour arrière après un essai",
+      ],
+    },
+    chaines: {
+      titre: "L'ordre d'essai, tâche par tâche",
+      sous: "Le rang 1 est appelé en premier. S'il ne répond pas, on passe au suivant. Le fournisseur est rappelé à chaque rang : trois modèles du même hébergeur, c'est une chaîne qu'une seule panne emporte en entier.",
+      vide: "Aucun modèle rangé sur cette tâche : rien ne sera produit.",
+      promouvoir: "Monter d'un rang",
+      declasser: "Descendre d'un rang",
+      dialogue: {
+        titre: "Changer l'ordre d'essai",
+        consequence: "L'ordre s'applique à la prochaine production. Les crédits déjà engagés ne sont pas concernés.",
+        motifs: [
+          "Le primaire coûte trop cher",
+          "Le repli donne de meilleurs résultats",
+          "Le fournisseur du primaire est instable",
+        ],
+      },
+      avertissements: {
+        courte: "Cette chaîne ne compte que {rangs} rang(s) au lieu de {recommande}. Ce n'est pas une erreur : deux fournisseurs seulement produisent des images.",
+        fournisseurRepete: "Plusieurs rangs partagent le même fournisseur : une seule panne emporterait toute la chaîne, et le repli n'aurait pas lieu.",
+      },
+    },
+    // Ce que cet écran ne montre pas encore, et pourquoi.
+    manque: "La dépense réelle et ce qu'elle a rapporté n'apparaissent pas encore : les productions payantes ne sont pas encore rattachées à leur consommation. Ce catalogue dit ce qu'on essaie, dans quel ordre, et ce que ça coûte au fournisseur.",
+  },
+
+  drapeaux: {
+    titre: "Fonctionnalités",
+    sous: "Ce qu'on livre, et ce qui attend. Le socle n'y figure pas : il n'est pas extinguible.",
+    col: { cle: "Clé", gouverne: "Ce que ça gouverne", portee: "Où", couverture: "Ce que ça couvre", etat: "État", parQui: "Dernière bascule" },
+    etats: {
+      actif: "En service",
+      eteint: "Éteint",
+      // Allumé, mais un prérequis est éteint : la fonctionnalité ne tourne pas.
+      // Le dire évite de croire qu'elle marche alors que personne ne la voit.
+      inerte: "Allumé, sans effet",
+    },
+    portees: { app: "Application", public: "Public" },
+    requiert: "Demande : {cles}",
+    emporte: "Éteindre emporte aussi",
+    jamais: "Jamais basculé",
+    allumer: "Allumer",
+    eteindre: "Éteindre",
+    dialogueEteindre: {
+      titre: "Éteindre {cle}",
+      consequence: "Les écrans et points d'entrée listés cessent de répondre. Ceux qui en dépendent s'éteignent avec.",
+      motifs: [
+        "Incident en cours sur cette fonctionnalité",
+        "Pas encore prête pour le public",
+        "Coût trop élevé pour l'instant",
+      ],
+    },
+    dialogueAllumer: {
+      titre: "Allumer {cle}",
+      consequence: "Les écrans et points d'entrée listés se mettent à répondre. Si un prérequis est éteint, rien ne changera tant qu'il le reste.",
+      motifs: [
+        "Ouverture au public",
+        "L'incident est clos",
+        "Essai sur une durée courte",
+      ],
+    },
+  },
+
+  // La section §5.4. Trois faces d'une même chose : ce qui est entré, ce que
+  // ça a produit en crédits, et les réglages qui décident de l'un et de
+  // l'autre.
+  credits: {
+    titre: "Crédits et paiements",
+    sous: "Ce qui est entré, ce que ça a produit, et les réglages qui en décident.",
+    onglets: { paiements: "Paiements", mouvements: "Mouvements", reglages: "Réglages" },
+
+    paiements: {
+      col: {
+        utilisateur: "Compte", mode: "Voie", etat: "État", montant: "Montant",
+        methode: "Méthode", attendu: "Attendu", recu: "Reçu", ecart: "Écart", quand: "Saisi le",
+      },
+      modes: { provider: "Prestataire", semi_manual: "Semi-manuel", manual: "Manuel" },
+      etats: {
+        pending: "En attente", succeeded: "Confirmé", failed: "Refusé",
+        expired: "Expiré", refunded: "Remboursé",
+      },
+      filtreEtat: "État", filtreMode: "Voie", tous: "Tous",
+      // Ce qu'on ne connaît pas ne s'écrit pas zéro : un écart nul et un écart
+      // non constaté ne disent pas la même chose.
+      nonConstate: "—",
+      vide: {
+        titre: "Aucun paiement sur cette période",
+        texte: "Les versements saisis et ceux reçus par l'application apparaissent ici, avec leur issue.",
+      },
+    },
+
+    mouvements: {
+      col: { utilisateur: "Compte", type: "Type", source: "Origine", montant: "Crédits", quand: "Le" },
+      types: { grant: "Octroi", purchase: "Achat", consumption: "Consommation", adjustment: "Ajustement" },
+      sources: {
+        signup_grant: "Inscription", referral_bonus: "Parrainage", purchase: "Achat",
+        manual_topup: "Versement manuel", promo_code: "Code promo", gift: "Cadeau",
+        reward: "Récompense", consumption: "Consommation", refund: "Remboursement",
+        correction: "Correction",
+      },
+      vide: {
+        titre: "Aucun mouvement sur cette période",
+        texte: "Chaque octroi, achat, consommation et ajustement s'inscrit ici.",
+      },
+    },
+
+    detail: {
+      titre: "Paiement",
+      groupes: { operation: "L'opération", montants: "Les montants", histoire: "Son histoire" },
+      champs: {
+        reference: "Référence", compte: "Compte de collecte", frais: "Frais",
+        montant: "Prix du palier", attendu: "Attendu sur le compte", recu: "Constaté",
+        ecart: "Écart", motifEchec: "Motif du refus", credits: "Crédits",
+      },
+      histoire: { etat: "État", debut: "Depuis", duree: "Durée", origine: "Provoqué par", parQui: "Par", motif: "Motif" },
+      origines: {
+        user: "L'utilisateur", webhook: "Le prestataire", polling: "Une interrogation",
+        admin: "L'administration", system: "Un traitement programmé",
+      },
+      // L'état courant dure encore : lui donner une durée figerait une mesure
+      // qui bouge.
+      enCours: "En cours",
+      retour: "Retour aux paiements",
+    },
+
+    decision: {
+      confirmer: "Confirmer la réception",
+      rejeter: "Rejeter",
+      // Le rappel qui évite l'approbation machinale. Il ne s'efface pas.
+      avertissement: "Le reçu ne prouve rien : un montage est facile. Vérifiez la réception sur le compte de l'opérateur avant de confirmer.",
+      montantRecu: "Montant constaté sur le compte",
+      montantAide: "À renseigner même sans écart : c'est lui qui permet de constater qu'il n'y en a pas.",
+      reference: "Référence de la transaction",
+      dialogueConfirmer: {
+        titre: "Confirmer ce versement",
+        consequence: "Les crédits sont octroyés au compte, une seule fois. Le client en est prévenu.",
+        motifs: ["Réception constatée sur le compte", "Versement retrouvé après recherche"],
+      },
+      dialogueRejeter: {
+        titre: "Rejeter ce versement",
+        consequence: "Aucun crédit n'est octroyé. Le motif sera visible sur le paiement.",
+        motifs: ["Aucune réception sur le compte", "Montant insuffisant", "Reçu non conforme"],
+      },
+    },
+
+    // Enregistrer un versement constaté. Le montant et les crédits viennent du
+    // palier : « on achète un palier, jamais un montant libre », et l'écran
+    // n'offre donc aucun champ de montant.
+    saisie: {
+      ouvrir: "Saisir un versement",
+      titre: "Saisir un versement reçu",
+      sous: "Le versement a déjà été fait. On l'enregistre ici, puis on le confirme après avoir vérifié la réception.",
+      champs: {
+        compteClient: "Compte crédité",
+        palier: "Palier acheté",
+        canal: "Canal employé",
+        compte: "Compte qui a reçu",
+        numeroPayeur: "Numéro du payeur",
+        reference: "Référence de la transaction",
+      },
+      apercu: {
+        titre: "Ce que le client verse, et ce qu'on doit voir arriver",
+        aVerser: "Le client verse",
+        attendu: "On doit voir arriver",
+        credits: "Crédits octroyés à la confirmation",
+      },
+      choisir: "Choisir…",
+      enregistrer: "Enregistrer le versement",
+      annuler: "Annuler",
+      // Le paiement naît en attente : il reste à confirmer une fois la
+      // réception vérifiée sur le compte de l'opérateur.
+      enregistre: "Versement enregistré, en attente de confirmation.",
+      motifs: [
+        "Versement constaté sur le compte",
+        "Recharge demandée par téléphone",
+        "Régularisation d'un versement ancien",
+      ],
+      dialogue: {
+        titre: "Enregistrer ce versement",
+        consequence: "Le paiement naît en attente. Aucun crédit n'est octroyé tant que la réception n'est pas confirmée.",
+      },
+    },
+
+    reglages: {
+      paliers: {
+        titre: "Paliers d'achat",
+        sous: "Ce qu'on propose à l'achat. Aucune saisie libre : le plus petit palier fixe le minimum.",
+        col: { montant: "Prix", credits: "Crédits", remise: "Remise", position: "Ordre", etat: "État" },
+      },
+      canaux: {
+        titre: "Canaux et barèmes",
+        sous: "Ce que le service propose, et ce que l'opérateur prend. Un canal ne se supprime pas, il se désactive.",
+        col: { libelle: "Canal", pays: "Pays", frais: "Frais", portes: "À la charge de", etat: "État" },
+        portes: { payer: "Du client", payee: "Du service" },
+      },
+      comptes: {
+        titre: "Comptes de collecte",
+        sous: "Les comptes sur lesquels les clients versent.",
+        col: { libelle: "Compte", operateur: "Opérateur", numero: "Numéro", visible: "Dans l'application", etat: "État" },
+        visible: "Proposé", masque: "Masqué",
+      },
+      actif: "En service",
+      inactif: "Retiré",
+      aucuneRemise: "—",
+    },
+  },
+
+  // Les comptes d'exploitation. « Gérer les accès des administrateurs » est
+  // réservé au rôle admin (ux-admin §6) — c'est le contrepoids du journal
+  // d'audit : qui peut lire le travail de l'équipe décide aussi qui en fait
+  // partie.
+  acces: {
+    titre: "Accès administrateurs",
+    sous: "Qui entre dans cet outil, et avec quels droits. Un accès se retire, il ne s'efface pas.",
+    col: { email: "Adresse", nom: "Nom", role: "Rôle", etat: "État", depuis: "Depuis" },
+    roles: { admin: "Administrateur", support: "Support" },
+    etats: { actif: "En service", revoque: "Accès retiré" },
+    sansNom: "—",
+    // Le compte de celui qui regarde : ni rôle ni accès ne s'y touchent.
+    soiMeme: "Vous",
+    vide: {
+      titre: "Aucun autre compte",
+      texte: "Les comptes d'exploitation apparaissent ici, avec leur rôle et la date de leur arrivée.",
+    },
+    gestes: {
+      promouvoir: "Passer administrateur",
+      retrograder: "Passer support",
+      revoquer: "Retirer l'accès",
+    },
+    inviter: {
+      ouvrir: "Inviter quelqu'un",
+      titre: "Inviter un compte d'exploitation",
+      sous: "Le compte est créé à l'avance : une adresse inconnue ne reçoit jamais de code.",
+      email: "Adresse e-mail",
+      role: "Rôle",
+      confirmer: "Inviter",
+      annuler: "Annuler",
+      motifs: [
+        "Arrivée dans l'équipe",
+        "Renfort temporaire sur l'assistance",
+        "Remplacement d'un départ",
+      ],
+      dialogue: {
+        titre: "Inviter ce compte",
+        consequence: "Le compte pourra entrer dès sa première demande de code. Le journal garde qui l'a invité.",
+      },
+    },
+    dialogueRole: {
+      titre: "Changer le rôle de {compte}",
+      consequence: "Le rôle administrateur ouvre la famille Économie et le journal d'audit. Le changement prend effet au prochain geste.",
+      motifs: [
+        "Changement de responsabilité",
+        "Besoin d'accès aux leviers d'économie",
+        "Retour à un périmètre d'assistance",
+      ],
+    },
+    dialogueRevocation: {
+      titre: "Retirer l'accès de {compte}",
+      // Ce qui distingue « retirer l'accès » de « le retirer plus tard ».
+      consequence: "Les sessions ouvertes se ferment tout de suite. Le compte est désactivé, jamais effacé : le journal doit encore pouvoir nommer qui a fait quoi.",
+      motifs: [
+        "Départ de l'équipe",
+        "Compte compromis",
+        "Fin d'une mission temporaire",
+      ],
+    },
+  },
+
+  // Les quatre files. Trois se lisent, la quatrième se solde — et c'est la
+  // seule dont le modèle porte un état.
+  assistance: {
+    titre: "Assistance",
+    sous: "Ce que les gens nous écrivent, et ce qui attend une réponse.",
+    onglets: { demandes: "Demandes", contact: "Messages", attente: "Liste d'attente", retours: "Retours" },
+
+    demandes: {
+      col: { utilisateur: "Compte", sujet: "Sujet", corps: "Demande", version: "Version", etat: "État", quand: "Reçue le" },
+      etats: { open: "Ouverte", answered: "Répondue", closed: "Close" },
+      filtreEtat: "État",
+      tous: "Toutes",
+      sansSujet: "—",
+      gestes: { repondre: "Marquer répondue", clore: "Clore", rouvrir: "Rouvrir" },
+      dialogue: {
+        titre: "Changer l'état de cette demande",
+        consequence: "Le changement rejoint le journal d'audit, avec son motif.",
+        motifs: [
+          "Réponse envoyée par courriel",
+          "Question déjà traitée ailleurs",
+          "Sans suite après relance",
+        ],
+      },
+      vide: {
+        titre: "Aucune demande en attente",
+        texte: "Les demandes envoyées depuis l'application apparaissent ici, la plus ancienne d'abord.",
+      },
+    },
+
+    contact: {
+      col: { nom: "Nom", email: "Adresse", sujet: "Sujet", message: "Message", quand: "Reçu le" },
+      // Les six clés du formulaire public. Le serveur transporte la clé, jamais
+      // la phrase : c'est ce qui permet de la dire dans les deux langues.
+      sujets: {
+        question: "Une question",
+        probleme: "Un problème",
+        suggestion: "Une suggestion",
+        partenariat: "Un partenariat",
+        presse: "La presse",
+        autre: "Autre chose",
+      },
+      vide: {
+        titre: "Aucun message",
+        texte: "Les messages du formulaire public apparaissent ici, le plus récent d'abord.",
+      },
+    },
+
+    attente: {
+      col: { email: "Adresse", source: "Venue de", langue: "Langue", quand: "Inscrite le" },
+      sansSource: "—",
+      vide: {
+        titre: "Personne sur la liste",
+        texte: "Les adresses laissées avant l'ouverture apparaissent ici.",
+      },
+    },
+
+    retours: {
+      col: { utilisateur: "Compte", note: "Note", corps: "Retour", version: "Version", quand: "Laissé le" },
+      anonyme: "Compte retiré",
+      sansNote: "—",
+      vide: {
+        titre: "Aucun retour",
+        texte: "Les retours laissés depuis l'application apparaissent ici.",
+      },
+    },
+  },
+
   echecs: {
     chargement: "On n'a pas réussi à charger cette liste. Rien n'a bougé côté données. Réessayez, ou revenez dans un instant.",
     action: "On n'a pas pu appliquer ce geste. L'état du compte est celui d'avant. Réessayez, ou passez la main à un administrateur.",
@@ -356,6 +832,10 @@ export const fr = {
     etats: {
       enCours: "Délai de grâce",
       echue: "À effacer",
+      // Ce n'est pas un raffinement de « à effacer » : celui-là attend une
+      // date, celui-ci attend un geste de notre part. Les confondre ferait
+      // passer pour patient ce qui est en retard.
+      attendRemboursement: "Remboursement à verser",
       efface: "Effacé",
     },
     col: {
@@ -411,6 +891,30 @@ export const fr = {
     rienAEnregistrer: "Rien n'a changé depuis le dernier enregistrement.",
     journal: "Le journal d'audit garde chaque changement et son auteur.",
     erreurEntier: "Un nombre entier supérieur à zéro.",
+    // Les libellés des paramètres vivent ici, indexés par la clé que le serveur
+    // envoie : il transporte des clés, jamais des phrases composées. Une clé
+    // qu'on ne connaît pas s'affiche telle quelle — ça se voit, et c'est mieux
+    // qu'une ligne vide.
+    cles: {
+      reminder_lead_days_default: { libelle: "Anticipation des rappels", aide: "Combien de jours avant la date le rappel part, par défaut.", unite: "jours" },
+      wish_window_lead_days: { libelle: "Ouverture de la fenêtre de vœux", aide: "Combien de jours avant la date le lien accepte des vœux.", unite: "jours" },
+      wish_window_trail_days: { libelle: "Fermeture de la fenêtre de vœux", aide: "Combien de jours après la date le lien reste ouvert.", unite: "jours" },
+      max_accounts_per_device: { libelle: "Comptes par appareil", aide: "Au-delà, la création est refusée depuis cet appareil.", unite: null },
+      account_grace_period_days: { libelle: "Délai de grâce", aide: "Le temps laissé avant l'effacement définitif d'un compte.", unite: "jours" },
+      signup_free_credits: { libelle: "Crédits offerts à l'inscription", aide: "Ce qu'un compte neuf reçoit pour essayer.", unite: "crédits" },
+      credit_unit_price: { libelle: "Prix du crédit", aide: "Le prix unitaire, en francs CFA.", unite: "FCFA" },
+    },
+    motif: {
+      titre: "Enregistrer ces réglages",
+      question: "Pourquoi ce changement ?",
+      consequence: "Ces valeurs pilotent le produit et prennent effet tout de suite. Le journal garde le motif, votre nom et l'heure.",
+      motifs: [
+        "Ajustement tarifaire",
+        "Correction d'une valeur erronée",
+        "Décision de lancement",
+      ],
+    },
+    nonReglable: "Ces types viennent du code : leur état ne se règle pas ici. Ils sont montrés pour qu'on sache lesquels existent.",
     occasions: {
       sous: "Ce que le produit propose de célébrer. L'ordre est celui du choix à la création.",
       col: {
@@ -435,6 +939,8 @@ export const fr = {
 
   profil: {
     titre: "Mon profil",
+    /** Ce qu'on écrit à la place d'une valeur absente — jamais une valeur inventée. */
+    inconnu: "—",
     groupes: {
       compte: "Compte",
       acces: "Accès",
@@ -474,7 +980,7 @@ export const fr = {
     titre: "Connexion",
     sous: "Réservée aux comptes d'administration.",
     adresse: "Adresse e-mail",
-    adressePlaceholder: "vous@lehno.app",
+    adressePlaceholder: "vous@lehno.io",
     envoyer: "Recevoir un code",
     titreCode: "Le code",
     envoye: "Un code vient de partir vers {adresse}.",
@@ -489,10 +995,285 @@ export const fr = {
     echec: "On n'a pas pu envoyer le code. Rien n'est parti vers cette adresse. Réessayez dans un instant.",
   },
 
+  // Le serveur rend un code stable, jamais une phrase : son message est destiné
+  // au journal, écrit dans une seule langue, et cite des identifiants internes.
+  // C'est ici que le code devient lisible — et c'est ce qui rend l'outil
+  // bilingue sans que le serveur ait à connaître la langue de qui l'appelle.
+  codes: {
+    otp_invalid: "Code refusé.",
+    otp_expired: "Ce code a expiré. Demandez-en un nouveau.",
+    otp_too_many_attempts: "Trop de codes refusés. Demandez-en un nouveau pour reprendre.",
+    otp_rate_limited: "Trop de demandes. Patientez un instant avant de réessayer.",
+    unauthorized: "Votre session a expiré. Reconnectez-vous.",
+    session_expired: "Votre session a expiré. Reconnectez-vous.",
+    refresh_reused: "Votre session a été fermée par sécurité. Reconnectez-vous.",
+    forbidden: "Votre rôle ne permet pas cette action.",
+    not_found: "Introuvable.",
+    conflict: "L'état a changé entre-temps. Rechargez avant de réessayer.",
+    validation_failed: "La demande est mal formée.",
+    reason_required: "Un motif est nécessaire, d'au moins six caractères.",
+    // Un palier retiré, un canal fermé, un compte de collecte désactivé : la
+    // demande est bien formée, c'est ce qu'elle vise qui ne se propose plus.
+    resource_inactive: "Ce choix n'est plus proposé. Rechargez pour voir ce qui reste disponible.",
+    insufficient_credits: "Il n'y a pas assez de crédits pour ce geste.",
+    rate_limited: "Trop de demandes. Patientez un instant.",
+    internal_error: "Le service a rencontré une erreur. Réessayez dans un instant.",
+    account_suspended: "Ce compte est suspendu.",
+    reseau_indisponible: "Le service est injoignable. Vérifiez votre connexion.",
+    reponse_invalide: "Le service a répondu quelque chose d'inattendu. Réessayez dans un instant.",
+  },
+
+  studio: {
+    titre: "Studio du portrait",
+    sous: "Les gabarits de production en service, et ce qui les a précédés.",
+    portee: "Cette entrée montre les réglages en service. La composition d'un brouillon et le banc d'essai ne sont pas encore possibles : le modèle de données ne porte pas de brouillon, et aucun fournisseur d'IA n'est branché.",
+    col: {
+      genre: "Production",
+      cle: "Gabarit",
+      version: "En service",
+      modele: "Modèle appelé",
+      parQui: "Publié par",
+      corps: "Consigne",
+    },
+    genres: {
+      message: "Message",
+      illustration: "Illustration",
+      photo_style: "Style de photo",
+      note_classification: "Classement des notes",
+      sensitive_detection: "Détection des cas sensibles",
+    },
+    version: "Version {n}",
+    aucune: "Aucune",
+    parPriorite: "Au routage par priorité",
+    parMigration: "Posé à l'installation",
+    historique: "Historique de « {cle} »",
+    revenir: "Remettre en service",
+    dialogue: {
+      titre: "Remettre la version {n} en service",
+      consequence: "La version en service se range, celle-ci reprend la main. Rien n'est reconstruit, et le changement rejoint le journal d'audit avec son motif.",
+      motifs: [
+        "Les productions se sont dégradées depuis la publication",
+        "La version en service ne tient pas ses garde-fous",
+        "Retour arrière après un essai non concluant",
+      ],
+    },
+    vide: {
+      titre: "Aucun gabarit",
+      texte: "Les gabarits de production s'inscrivent ici dès qu'une première version est publiée.",
+    },
+  },
+
+  liens: {
+    titre: "Liens externes",
+    sous: "Les consoles des plateformes sur lesquelles Lehno s'appuie, rassemblées ici plutôt que cherchées ailleurs.",
+    groupes: {
+      mesure: "Mesure et supervision",
+      messages: "Envoi de messages",
+      identite: "Identité et connexion",
+      code: "Code et livraison",
+    },
+    usages: {
+      posthog: "La mesure d'usage : ce que les gens font dans l'application, et ce qu'ils n'y font pas.",
+      resend: "L'envoi des e-mails transactionnels — codes de connexion, confirmations, avis.",
+      google: "Les identifiants de la connexion Google, et leur validité.",
+      apple: "Les identifiants de la connexion Apple, et les certificats de l'application.",
+      github: "Le dépôt, les revues et les livraisons.",
+    },
+    ouvrir: "Ouvre {nom} dans un nouvel onglet",
+    horsOutil: "Chaque plateforme garde sa propre authentification : ces liens ne donnent aucun accès par eux-mêmes.",
+  },
+
   gabarits: {
     tableau: "Tableau de bord",
     liste: "Liste filtrable, puis détail",
     formulaire: "Formulaire de configuration",
+  },
+
+  arret: {
+    titre: "Arrêt pour intervention",
+    // Deux gestes différents, et les confondre coûterait cher : éteindre une
+    // fonctionnalité retire une surface, arrêter le service les suspend toutes.
+    sous: "Suspend tout le service et annonce un délai. À ne pas confondre avec l'extinction d'une fonctionnalité, qui ne retire qu'une surface.",
+    etats: {
+      ouvert: "Service ouvert",
+      arrete: "Service arrêté",
+    },
+    jusqua: "Retour annoncé pour {heure}",
+    sansHeure: "Aucune heure de retour annoncée",
+    arreter: "Arrêter le service",
+    prolonger: "Prolonger",
+    rouvrir: "Rouvrir le service",
+    duree: "Durée",
+    durees: {
+      m15: "15 minutes",
+      m30: "30 minutes",
+      h1: "1 heure",
+      h2: "2 heures",
+      inconnue: "Je ne sais pas encore",
+    },
+    dialogueArreter: {
+      titre: "Arrêter le service",
+      consequence: "Tous les appels rendront une réponse d'attente, y compris la connexion. Le back-office reste joignable — c'est par là qu'on rouvre.",
+      motifs: [
+        "Migration de la base de données",
+        "Mise en production d'une version",
+        "Incident en cours de traitement",
+      ],
+    },
+    dialogueRouvrir: {
+      titre: "Rouvrir le service",
+      consequence: "Les appels repartent immédiatement. L'heure de retour annoncée est effacée.",
+      motifs: [
+        "Intervention terminée",
+        "Intervention reportée",
+      ],
+    },
+  },
+
+  transactionManuelle: {
+    titre: "Transaction manuelle",
+    sous: "Écrire un mouvement de crédits sur un compte. Le geste est journalisé avec son auteur et son motif.",
+    compte: "Le compte",
+    // Un compte ne se tape pas : « valentine@ » et « valentin@ » se ressemblent,
+    // et rien ne dirait ensuite lequel a été servi.
+    chercher: "Chercher un compte",
+    chercherPlaceholder: "Pseudo ou adresse",
+    aucunCompte: "Aucun compte ne correspond",
+    solde: "Solde",
+    changer: "Changer",
+    nature: "Ce que c'est",
+    // Chaque option dit son sens : une liste fermée cacherait ce qu'on doit
+    // voir avant d'écrire de l'argent.
+    natures: {
+      gift: "Cadeau — au crédit",
+      reward: "Récompense — au crédit",
+      correctionPlus: "Correction — au crédit",
+      correctionMoins: "Reprise de crédits — au débit",
+    },
+    // Redit une fois la nature retenue : l'option a défilé, la ligne reste.
+    sensCredit: "Le compte recevra {n} crédits.",
+    sensDebit: "Le compte perdra {n} crédits.",
+    montant: "Combien",
+    montantAide: "Un nombre entier de crédits, supérieur à zéro.",
+    ecrire: "Écrire le mouvement",
+    annuler: "Annuler",
+    dialogue: {
+      titre: "Écrire ce mouvement",
+      consequence: "Le solde change immédiatement, et le client le voit. Le journal d'audit garde le geste, son auteur et son motif.",
+      motifs: [
+        "Geste commercial",
+        "Correction d'une erreur",
+        "Compensation d'un incident",
+      ],
+    },
+    fait: "Mouvement écrit.",
+  },
+
+  transactionsStats: {
+    titre: "Statistiques des transactions",
+    sous: "Ce qui est encaissé, ce que ça coûte, ce qui n'aboutit pas.",
+    devise: "F",
+    cartes: {
+      aboutis: "Paiements aboutis",
+      // Un ratio parle là où un pourcentage se lit sans se sentir : « un sur
+      // douze échoue » se retient, « 8 % » se survole.
+      aboutisRatio: "un sur {n} échoue",
+      aucunEchec: "aucun échec",
+      encaisse: "Encaissé",
+      frais: "Frais prélevés",
+      panier: "Paiement médian",
+      // Nul n'est pas zéro : « aucun paiement n'a abouti » et « le paiement
+      // médian vaut zéro franc » sont deux nouvelles opposées.
+      sansPanier: "Aucun paiement abouti",
+    },
+    graphe: {
+      titre: "Encaissé et échoué",
+      encaisse: "Encaissé",
+      echoue: "Échoué",
+      jour: "Jour",
+      vide: "Aucun paiement sur la période.",
+      periodeLabel: "La période",
+      periodes: { "7j": "7 jours", "30j": "30 jours", "90j": "3 mois" },
+      typeLabel: "Le sens",
+      types: { tous: "Dépôts et retraits", depot: "Dépôts", retrait: "Retraits" },
+      modeLabel: "Le mode",
+      modes: { tous: "Automatique et manuel", auto: "Automatique", manuel: "Manuel" },
+      // La mention nomme la coupe active : sans elle, le graphe ne dit plus ce
+      // qu'il montre dès qu'on a changé d'axe.
+      coupe: "{periode} · {sens} · {mode}",
+    },
+    parMoyen: "Par moyen de paiement",
+    noteMoyen: "Un moyen qui échoue plus que les autres est une décision de routage, pas de frais.",
+    parPays: "Aboutissement par pays",
+    notePays: "Un pays qui échoue plus révèle des frais mal réglés ou un opérateur mal choisi.",
+    col: { groupe: "Groupe", tentatives: "Tentatives", aboutis: "Aboutis", taux: "Taux" },
+    vide: "Aucun paiement rattaché à un canal sur la période.",
+    moyens: { mobile_money: "Mobile money", card: "Carte" },
+  },
+
+  metriques: {
+    titre: "Métriques",
+    sous: "L'usage au-delà des chiffres du tableau de bord.",
+    periode: "Période",
+    periodes: { j7: "7 jours", j30: "30 jours", j90: "90 jours", m12: "12 mois" },
+    retention: {
+      titre: "Rétention",
+      sous: "Ce que devient chaque mois d'arrivées. Toujours douze mois, quelle que soit la période retenue : sur une fenêtre plus courte, la colonne des trente jours ne pourrait afficher que des zéros, et ces zéros se liraient comme une fuite.",
+      // « De retour » et non « revenus » : la page porte des montants juste à
+      // côté, et le mot s'y lirait comme de l'argent.
+      col: { mois: "Mois d'entrée", inscrits: "Entrées", a7: "De retour à 7 jours", a30: "De retour à 30 jours" },
+      vide: "Aucune arrivée sur les douze derniers mois.",
+    },
+    conversion: {
+      titre: "Conversion",
+      sous: "La part d'une arrivée qui finit par acheter. Le chiffre d'affaires, lui, se lit au tableau de bord.",
+      comptes: "Comptes entrés",
+      acheteurs: "Ont acheté",
+      delai: "Délai médian jusqu'au premier achat",
+      // Zéro dirait « le jour même ». Personne n'ayant acheté, il n'y a pas de
+      // délai à annoncer — et non un délai nul.
+      sansDelai: "Personne n'a encore acheté",
+      jours: "{n} j",
+      paliers: "Achats par palier",
+      colPalier: "Palier",
+      colAchats: "Achats",
+      credits: "{n} crédits",
+      sansPalier: "Aucun achat rattaché à un palier sur la période.",
+    },
+    actionsPayantes: {
+      titre: "Actions payantes",
+      sous: "Ce qui se lance, et ce que ça donne. Une action que personne n'emploie figure à zéro : ne pas la voir et ne pas l'avoir se ressembleraient trop.",
+      col: {
+        action: "Action", lancements: "Lancements", reussies: "Réussies",
+        echouees: "Échouées", enAttente: "En attente", echec: "Taux d'échec",
+      },
+      // Aucun lancement ne donne pas zéro pour cent : c'est un taux qui n'a
+      // rien à mesurer. « 0 % » se lirait comme « rien n'échoue ».
+      sansTaux: "—",
+      vide: "Aucune action payante déclarée.",
+      codes: {
+        gift_ideas: "Des idées de cadeaux",
+        portrait: "Un portrait",
+        wish_message: "Un message",
+      },
+    },
+    consommation: {
+      titre: "Consommation",
+      credits: "Crédits consommés",
+      mouvements: "Mouvements",
+    },
+    manques: {
+      titre: "Ce qui n'est pas encore mesurable",
+      sous: "Trois des cinq contenus de la section n'ont pas de source dans ce dépôt. Ils sont nommés ici plutôt que rendus en rangs vides : un zéro sans explication se prend pour une mesure.",
+      usage_par_fonctionnalite: {
+        quoi: "Usage par fonctionnalité",
+        bloque: "Le marquage part vers l'outil d'analyse sans que rien n'en soit conservé ici.",
+      },
+      contributions: {
+        quoi: "Contributions reçues et validées",
+        bloque: "Les surfaces publiques qui les produisent ne sont pas construites.",
+      },
+    },
   },
 
   attente: {

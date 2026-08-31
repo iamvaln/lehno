@@ -214,4 +214,200 @@ export const fr = {
   murIdee: "Une idée ? Voici ce qui me ferait plaisir.",
   murListe: "Voir ma liste",
   murMot: "Laisse-moi un mot",
+  // ——— L'acquisition, sur les surfaces publiques ———————————————
+  //
+  // Une phrase générique, servie partout où la surface n'en propose pas de
+  // meilleure. « Vous aussi, soyez là le jour J » est vrai partout, donc
+  // convaincant nulle part — mais c'est mieux que rien, et c'est ce qui évite
+  // qu'une page publique se termine sans porte de sortie.
+  acqTitre: "Vous aussi, soyez là le jour J",
+  acqTexte: "Lehno retient les dates qui comptent, garde ce que vous savez des gens, et écrit le mot le jour venu.",
+  acqAction: "Découvrir Lehno",
+
+  // ——— Le Mur ————————————————————————————————————————————————
+  //
+  // C'est la seule surface où la marque ne parle pas en son nom : le
+  // propriétaire s'adresse à ses proches. « Je », tutoiement.
+  murIntro: "Voilà ce qu'il faut savoir sur moi",
+  murAnniversaire: "Mon anniversaire",
+  murInterets: "Ce que j'aime",
+  murDeposer: "Me laisser un mot",
+  // Les vœux fermés retirent le bouton et gardent le fait. Un bouton qui
+  // n'ouvre rien serait pire que pas de bouton.
+  murVoeuxFermes: "Les mots ne sont pas ouverts en ce moment.",
+  murInvitation: "Avoir mon Mur",
+  murAlt: "Photo de {nom}",
+
+  // ——— Les avis courts ————————————————————————————————————————
+  //
+  // Ce qui s'est passé, et la suite. Pas d'illustration, pas d'« Oups ».
+  etatIndisponibleTitre: "Cette page n'a pas pu s'afficher",
+  etatIndisponibleTexte: "Ce n'est pas vous : nous n'avons pas réussi à joindre le service. Réessayez dans un instant.",
+  etatRetour: "Aller à l'accueil",
+
+
+  // ——— Le dépôt de vœux ————————————————————————————————————————
+  //
+  // La page s'ouvre MÊME hors fenêtre, et dit alors quand revenir : c'est le
+  // dépôt qui refuse, pas la lecture. Un formulaire qui échoue en silence, ou
+  // une page qui ne se charge pas, laisse le visiteur sans recours.
+  voeuxTitre: "Un mot pour {nom}",
+  voeuxOccasion: "Pour le {date}",
+  voeuxAvantOuverture: "Les mots s'ouvrent le {date}.",
+  voeuxApresFermeture: "Les mots se sont refermés le {date}.",
+  voeuxRevenir: "Revenez à ce moment-là : le lien reste le même.",
+  voeuxLabelMessage: "Votre mot",
+  voeuxAideMessage: "Il sera lu le jour venu, tel que vous l'écrivez.",
+  voeuxLabelSignature: "Signature",
+  voeuxAideSignature: "Facultative. Sans elle, votre mot arrive anonyme.",
+  voeuxEnvoyer: "Envoyer mon mot",
+  voeuxConfirme: "C'est envoyé. Votre mot l'attendra.",
+  voeuxErreur: "Votre mot n'est pas parti. Réessayez dans un instant.",
+  voeuxFermeErreur: "Les mots viennent de se refermer. Votre texte n'a pas été envoyé.",
+
+  voeuxContexte: "pour l'anniversaire de {nom}",
+  voeuxPlaceholderMessage: "Écrivez-lui ce que vous avez sur le cœur…",
+  voeuxPlaceholderSignature: "votre nom, ou comme il vous plaît",
+  voeuxMention: "Votre mot lui parviendra le jour venu, tel que vous l'écrivez.",
+  voeuxConfirmeTitre: "C'est envoyé.",
+  voeuxConfirmeTexte: "Votre mot l'attendra le jour venu. Vous pouvez fermer cette page.",
+  // Après le geste seulement : promettre « ayez votre Mur » à quelqu'un qui
+  // n'a pas encore écrit, c'est lui parler d'autre chose que de ce qu'il est
+  // venu faire.
+  acqVoeuxTitre: "Ayez votre Mur",
+  acqVoeuxTexte: "Vos proches y trouvent votre date, ce que vous aimez, et un endroit pour vous écrire.",
+  acqVoeuxAction: "Créer le mien",
+
+
+  // ——— La collecte ————————————————————————————————————————————
+  //
+  // On salue d'abord la personne — un lien nominatif désigne quelqu'un —, et
+  // c'est seulement après qu'on dit de qui vient l'invitation. L'inverse,
+  // c'est une machine qui se présente avant de dire bonjour.
+  collecteSalut: "Bonjour {nom}",
+  collecteSalutPublic: "Bonjour",
+  collecteDemandeNominatif: "vous a écrit",
+  collecteDemandePublic: "a ouvert un lien",
+  collecteChapeauNominatif: "{nom} garde les dates et les envies de ses proches au même endroit. Ce que vous écrivez ici n'est vu que par {nom}.",
+  collecteChapeauPublic: "{nom} garde les dates et les envies de ses proches au même endroit. Dites-lui qui vous êtes, et ce qui vous ferait plaisir.",
+  collecteChapeauRetour: "Vous avez déjà répondu. Vous pouvez compléter : ce que vous ajoutez s'ajoute, rien ne s'efface.",
+  collecteLabelNom: "Votre nom",
+  collecteLabelRelation: "On se connaît d'où ?",
+  collecteAideRelation: "Un mot suffit : collègue, cousine, voisin de palier.",
+  collecteLabelDate: "Votre date de naissance",
+  collecteAideDateNominatif: "Déjà connue de {nom} — corrigez-la si elle est fausse.",
+  collecteAideDatePublic: "Le jour et le mois suffisent à {nom} pour y penser.",
+  collecteLabelSouhaits: "Ce qui vous ferait plaisir",
+  collectePlaceholderSouhait: "Un livre, une soirée, un ustensile qui manque…",
+  collecteAjouterSouhait: "Ajouter un souhait",
+  collecteRetirerSouhait: "Retirer ce souhait",
+  collecteLabelPrix: "Prix indicatif ({devise})",
+  collecteLabelLien: "Un lien",
+  collecteLabelMot: "Un mot pour {nom}",
+  collecteAideMot: "Facultatif, et lu tel quel.",
+  collecteFacultatif: "Facultatif",
+  collecteLabelEmail: "Votre adresse",
+  collecteAideEmail: "Elle sert à {nom} pour vous demander une précision. Rien d'autre : pas d'inscription, pas de lettre.",
+  collecteAideEmailPublic: "Requise sur un lien ouvert : c'est ce qui permet à {nom} de savoir à qui il parle.",
+  collecteEnvoyer: "Envoyer à {nom}",
+  collecteConfirmeTitre: "C'est transmis.",
+  collecteConfirmeTexte: "{nom} le verra et décidera de ce qu'il garde. Rien n'entre dans une fiche sans sa décision.",
+  collecteAjouterEncore: "Ajouter autre chose",
+  collecteErreur: "Votre réponse n'est pas partie. Réessayez dans un instant.",
+  // Le sort de chaque souhait se montre SANS le commenter : « écarté » ne
+  // s'excuse pas et ne se justifie pas.
+  collecteDejaTitre: "Ce que vous avez déjà envoyé",
+  collecteRetenu: "Retenu",
+  collecteEcarte: "Écarté",
+  collecteEnAttente: "En attente",
+  collecteVoirMur: "Voir le mur de {nom}",
+  // Après le geste, l'exact retournement de ce qu'on vient de faire.
+  acqCollecteTitre: "Tenez la liste de vos proches",
+  acqCollecteTexte: "Leurs dates, ce qu'ils aiment, ce qu'ils vous ont dit un jour. Lehno vous le rappelle le moment venu.",
+  acqCollecteAction: "Essayer Lehno",
+
+
+  // ——— La liste partagée ——————————————————————————————————————
+  //
+  // La page la plus exigeante du produit : vue par des gens qui ne connaissent
+  // pas Lehno, souvent une seule fois. La personne avant les objets — une page
+  // qui ouvre sur une grille ressemble à un catalogue, et le lien n'était pas
+  // un catalogue.
+  listeTitre: "Voilà ce qui me ferait plaisir",
+  listeOccasion: "{occasion}, le {date}",
+  listeFermee: "L'occasion est passée. La liste reste visible, mais on ne peut plus s'en occuper.",
+  listeVide: "Rien n'est encore posé ici.",
+  // L'anonymat se dit UNE FOIS, en pied de liste. Répété sur chaque carte, un
+  // rappel devient du bruit.
+  listeAnonymat: "Ce que vous réservez reste anonyme : personne d'autre ne voit qui a pris quoi.",
+  listeRevoqueTitre: "Ce lien n'est plus actif",
+  listeRevoqueTexte: "La liste a été dépubliée ou le lien retiré. Rien à faire de votre côté.",
+  // Après le geste seulement : quelqu'un qui vient de réserver a compris à
+  // quoi ça sert.
+  listeFaireMaPart: "Faites la vôtre",
+  listeFaireMaPartTexte: "Vos proches savent quoi vous offrir, et vous n'avez rien eu à demander.",
+  listeFaireMaPartAction: "Créer ma liste",
+
+  // ——— Un souhait ——————————————————————————————————————————————
+  //
+  // Ce qui n'apparaît JAMAIS : qui a réservé. Un souhait réservé se dit
+  // réservé, et rien de plus.
+  souhaitReserver: "Je m'en occupe",
+  souhaitReserve: "Déjà pris",
+  souhaitReserveAide: "Quelqu'un s'en occupe.",
+  souhaitMien: "Vous vous en occupez",
+  souhaitOffert: "Offert",
+  souhaitPourquoiAdresse: "Votre adresse sert à confirmer que c'est bien vous, et à vous retrouver si vous revenez. Pas de compte à créer.",
+  souhaitLabelEmail: "Votre adresse",
+  souhaitSeFaireConnaitre: "Dire à qui de droit que c'est moi",
+  souhaitLabelNom: "Votre nom",
+  souhaitContinuer: "Continuer",
+  souhaitAnnulerGeste: "Laisser tomber",
+  souhaitCodeEnvoye: "Un code à six chiffres part à cette adresse. Il vaut dix minutes.",
+  souhaitLabelCode: "Le code",
+  souhaitConfirmer: "Confirmer",
+  souhaitErreur: "Ça n'a pas marché. Réessayez dans un instant.",
+  souhaitCodeFaux: "Ce code ne correspond pas, ou il a expiré.",
+  souhaitDejaPris: "Quelqu'un a été plus rapide : ce souhait vient d'être pris.",
+
+
+  // ——— L'invitation au parrainage ————————————————————————————
+  //
+  // Une invitation est INTIME : quelqu'un vous dit que ça vous servira. Une
+  // colonne, sur du blanc, sans aplat ni maquette. La page ne porte pas la
+  // clôture d'acquisition de la coquille — elle EST la page d'acquisition.
+  inviteMention: "vous invite sur Lehno",
+  inviteTitre: "Les dates qui comptent, et quoi offrir le jour venu",
+  inviteTitreSansCode: "Lehno, en deux mots",
+  invitePromesse: "Lehno retient les anniversaires de vos proches, garde ce que vous savez d'eux, et vous aide à trouver le bon cadeau — sans avoir à demander.",
+  inviteGainTexte: "crédits offerts à l'ouverture de votre compte, parce que quelqu'un vous a invité.",
+  inviteCodeLabel: "Votre code :",
+  // Sans code valable il n'y a pas de gain à annoncer : la ligne disparaît,
+  // les badges restent. Le contrat ne distingue pas « expiré » de « déjà
+  // employé » — la page ne l'invente pas.
+  inviteSansCode: "Ce lien d'invitation n'est plus valable. Vous pouvez tout de même installer Lehno.",
+
+
+  // ——— La page introuvable ——————————————————————————————————
+  //
+  // Elle dit ce qui s'est passé et propose la suite. Pas d'excuse, pas
+  // d'illustration, pas d'« Oups » : quelqu'un arrivé là par le lien d'une
+  // amie n'a pas besoin d'être consolé.
+  introuvableTitre: "Cette page n'existe pas",
+  introuvableTexte: "Le lien est peut-être incomplet, ou la page a été retirée. Il n'y a rien à réparer de votre côté.",
+  introuvableRetour: "Aller à l'accueil",
+  introuvableFaq: "Voir les questions fréquentes",
+
+
+  // ——— Un lien retiré ———————————————————————————————————————
+  //
+  // 410, seul statut de ce genre dans tout le contrat : le lien a existé. Le
+  // visiteur l'a reçu de quelqu'un — un 404 lui ferait croire qu'il a mal
+  // recopié l'adresse, et une panne l'enverrait réessayer pour rien.
+  lienRetireTitre: "Ce lien n'est plus actif",
+  lienRetireTexte: "Il a été retiré par la personne qui vous l'a envoyé. Il n'y a rien à faire de votre côté.",
+
+  souhaitAnnuler: "Annuler",
+  souhaitAnnulerErreur: "L'annulation n'a pas abouti. Réessayez dans un instant.",
+
 };

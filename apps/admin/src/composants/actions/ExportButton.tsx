@@ -87,21 +87,28 @@ export function ExportButton({
       </Button>
 
       {ouvert ? (
-        <div className="admin-export-menu" role="menu">
-          {formats.map((format) => (
-            <button
-              key={format}
-              type="button"
-              role="menuitem"
-              className="admin-export-item admin-focus"
-              onClick={() => {
-                setOuvert(false);
-                onExport(format);
-              }}
-            >
-              {libelles.formats?.[format] ?? format.toUpperCase()}
-            </button>
-          ))}
+        // Le rappel de journalisation vit **hors** du role="menu". Un menu
+        // n'admet que des menuitem : un lecteur d'écran saute ce qu'il ne
+        // reconnaît pas, et le compte qu'il annonce — « 1 sur 3 » — devient
+        // faux dès qu'on glisse autre chose entre les entrées. Le rappel reste
+        // affiché et lu, il n'est simplement plus compté comme un choix.
+        <div className="admin-export-panneau">
+          <div className="admin-export-menu" role="menu">
+            {formats.map((format) => (
+              <button
+                key={format}
+                type="button"
+                role="menuitem"
+                className="admin-export-item admin-focus"
+                onClick={() => {
+                  setOuvert(false);
+                  onExport(format);
+                }}
+              >
+                {libelles.formats?.[format] ?? format.toUpperCase()}
+              </button>
+            ))}
+          </div>
           {libelles.journal ? <p className="admin-export-journal">{libelles.journal}</p> : null}
         </div>
       ) : null}

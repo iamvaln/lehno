@@ -6,7 +6,7 @@ import { ConfirmWithReason, RoleGate } from "../composants/actions/index.js";
 import { AlertPill, AuditTrail, StatCard, Toast } from "../composants/signaux/index.js";
 import { Button } from "../composants/base/index.js";
 import { messages, type Langue, type Messages } from "../i18n/index.js";
-import { compteDetail, interventions as interventionsDemo } from "../fixtures/index.js";
+import { compteDetail } from "../fixtures/index.js";
 
 /* Le gabarit de détail — un objet, ses faces, ses actions, sa traçabilité.
  *
@@ -45,12 +45,25 @@ export interface DetailProps {
   role: AdminRole;
   langue?: Langue;
   compte?: CompteDetail;
-  /** L'historique des interventions sur *ce* compte. */
+  /**
+   * L'historique des interventions sur *ce* compte (ux-admin §7).
+   *
+   * Vide par défaut, et non rempli d'une démonstration : ce pied de page a
+   * rendu pendant tout le premier lot le même historique fabriqué pour chaque
+   * compte, parce qu'un défaut de props le fournissait et que l'appelant
+   * l'avait oublié. Un tableau vide se voit ; une fausse trace passe pour vraie.
+   */
   interventions?: Intervention[];
   onRetour?: (id?: string) => void;
   onSuspendre?: (motif: string) => void;
   onRetablir?: (motif: string) => void;
   onAjuster?: (motif: string) => void;
+}
+
+/** Un nombre, ou le tiret qui dit qu'on ne le connaît pas encore. */
+function compte_(valeur: number | null, format: Intl.NumberFormat, t: { court: string; explication: string }): ReactNode {
+  if (valeur === null) return <span title={t.explication}>{t.court}</span>;
+  return format.format(valeur);
 }
 
 function Champ({ cle, valeur }: { cle: string; valeur: ReactNode }): ReactNode {
@@ -66,7 +79,7 @@ export function Detail({
   role,
   langue = "fr",
   compte = compteDetail,
-  interventions = interventionsDemo.items,
+  interventions = [],
   onRetour,
   onSuspendre,
   onRetablir,
@@ -138,7 +151,9 @@ export function Detail({
         onSelect={(id) => setOnglet(id as Onglet)}
         onglets={[
           { id: "vue", label: t.compte.onglets.vue },
-          { id: "murs", label: t.compte.onglets.murs, compte: compte.volumetrie.murs },
+          // Sans mesure, pas de pastille de compte : « 0 » dirait que ce
+          // compte n'a aucun Mur, alors qu'on n'en sait rien.
+          { id: "murs", label: t.compte.onglets.murs, ...(compte.volumetrie.murs === null ? {} : { compte: compte.volumetrie.murs }) },
           { id: "credits", label: t.compte.onglets.credits },
           { id: "securite", label: t.compte.onglets.securite },
         ]}
@@ -166,7 +181,7 @@ export function Detail({
               <Champ cle={t.compte.champs.proches} valeur={nombre.format(compte.volumetrie.proches)} />
               <Champ cle={t.compte.champs.occasions} valeur={nombre.format(compte.volumetrie.occasions)} />
               <Champ cle={t.compte.champs.notes} valeur={nombre.format(compte.volumetrie.notes)} />
-              <Champ cle={t.compte.champs.murs} valeur={nombre.format(compte.volumetrie.murs)} />
+              <Champ cle={t.compte.champs.murs} valeur={compte_(compte.volumetrie.murs, nombre, t.nonMesure)} />
             </section>
           </div>
           <p className="gabarit-note">{t.compte.cloisonnement}</p>
@@ -176,7 +191,9 @@ export function Detail({
       {onglet === "murs" ? (
         <>
           <h2 className="gabarit-groupe-titre">{t.compte.murs.titre}</h2>
-          {compte.volumetrie.murs > 0 ? (
+          {compte.volumetrie.murs === null ? (
+            <EmptyState titre={t.nonMesure.explication} texte={t.nonMesure.bloc} />
+          ) : compte.volumetrie.murs > 0 ? (
             <div className="gabarit-chiffres">
               <StatCard libelle={t.compte.champs.murs} valeur={nombre.format(compte.volumetrie.murs)} />
             </div>
@@ -190,12 +207,16 @@ export function Detail({
       {onglet === "credits" ? (
         <>
           <h2 className="gabarit-groupe-titre">{t.compte.groupes.credits}</h2>
-          <div className="gabarit-chiffres">
-            <StatCard libelle={t.compte.champs.solde} valeur={nombre.format(compte.credits.solde)} />
-            <StatCard libelle={t.compte.champs.achetes} valeur={nombre.format(compte.credits.achetes)} />
-            <StatCard libelle={t.compte.champs.offerts} valeur={nombre.format(compte.credits.offerts)} />
-          </div>
-          <p className="gabarit-note">{t.compte.credits.note}</p>
+          {(
+            <>
+              <div className="gabarit-chiffres">
+                <StatCard libelle={t.compte.champs.solde} valeur={nombre.format(compte.credits.solde)} />
+                <StatCard libelle={t.compte.champs.achetes} valeur={nombre.format(compte.credits.achetes)} />
+                <StatCard libelle={t.compte.champs.offerts} valeur={nombre.format(compte.credits.offerts)} />
+              </div>
+              <p className="gabarit-note">{t.compte.credits.note}</p>
+            </>
+          )}
         </>
       ) : null}
 

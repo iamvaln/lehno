@@ -5,10 +5,12 @@ import {
   requestOtpSchema,
   verifyOtpSchema,
   type Session,
+  registerSchema, type RegisterInput, type Registered, type VerifyOutcome,
 } from "@lehno/contracts";
 import type { IdentityProvider } from "@prisma/client";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthService } from "./auth.service.js";
+import { TrackingService } from "../tracking/tracking.service.js";
 import { TokenService } from "./token.service.js";
 import { FederatedService } from "./federated.service.js";
 import { AuthGuard } from "./auth.guard.js";
@@ -25,6 +27,7 @@ export class AuthController {
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(TokenService) private readonly tokens: TokenService,
     @Inject(FederatedService) private readonly federatedAuth: FederatedService,
+    @Inject(TrackingService) private readonly mesure: TrackingService,
   ) {}
 
   // Rend toujours { sent: true }, adresse connue ou non : voir AuthService.requestOtp.
@@ -46,7 +49,7 @@ export class AuthController {
   requestOtp(
     @Body(new ZodValidationPipe(requestOtpSchema)) body: RequestOtpBody,
     @Ip() ip: string,
-  ): Promise<{ sent: true }> {
+  ): Promise<{ sent: true; retryAfterSeconds: number }> {
     return this.auth.requestOtp({ ...body, ip });
   }
 
@@ -59,15 +62,40 @@ export class AuthController {
     @Body(new ZodValidationPipe(verifyOtpSchema)) body: VerifyOtpBody,
     @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
-  ): Promise<Session> {
-    // referralCode : accepté par le contrat, câblé au crédit d'invitation dans une tâche à venir.
-    return this.auth.verifyOtp({
-      email: body.email,
-      code: body.code,
-      ip,
-      ...(body.deviceId !== undefined ? { deviceId: body.deviceId } : {}),
-      ...(userAgent !== undefined ? { userAgent } : {}),
-    });
+  ): Promise<VerifyOutcome> {
+    return this.auth
+      .verifyOtp({
+        email: body.email,
+        code: body.code,
+        ip,
+        ...(body.deviceId !== undefined ? { deviceId: body.deviceId } : {}),
+        ...(body.referralCode !== undefined ? { referralCode: body.referralCode } : {}),
+        ...(userAgent !== undefined ? { userAgent } : {}),
+      })
+      .then((issue) => {
+        /* Seul signup.started part d'ici. Une inscription qui COMMENCE n'a pas
+           encore de compte : `null` y est la vérité, pas un manque.
+           signin.completed, lui, s'émet dans le service, où l'identifiant
+           existe — VerifyOutcome ne le porte pas, et n'a pas à le porter. */
+        if (issue.outcome !== "session") {
+          this.mesure.emettre(null, "signup.started", { method: "code" });
+        }
+        return issue;
+      });
+  }
+
+  // La création du compte. Le jeton d'inscription vient de /otp/verify ou de
+  // /federated ; le pseudo et le code de parrainage viennent de l'écran du
+  // pseudo. Tout se joue ici, en une transaction.
+  @Post("register")
+  @HttpCode(201)
+  register(
+    @Body(new ZodValidationPipe(registerSchema)) body: RegisterInput,
+    @Headers("user-agent") userAgent?: string,
+  ): Promise<Registered> {
+    // signup.completed s'émet dans AuthService.register, où l'identifiant de
+    // compte existe : voir la note là-bas.
+    return this.auth.register({ ...body, ...(userAgent !== undefined ? { userAgent } : {}) });
   }
 
   @Post("federated")
@@ -75,22 +103,34 @@ export class AuthController {
   federated(
     @Body(new ZodValidationPipe(federatedSchema)) body: FederatedBody,
     @Headers("user-agent") userAgent?: string,
-  ): Promise<Session> {
-    return this.federatedAuth.signIn({
-      ...body,
-      ...(userAgent !== undefined ? { userAgent } : {}),
-    });
+  ): Promise<VerifyOutcome> {
+    return this.federatedAuth
+      .signIn({ ...body, ...(userAgent !== undefined ? { userAgent } : {}) })
+      .then((issue) => {
+        // Voir /auth/otp/verify : seul le début d'inscription part du contrôleur.
+        if (issue.outcome !== "session") {
+          this.mesure.emettre(null, "signup.started", { method: body.provider });
+        }
+        return issue;
+      });
   }
 
   @Post("refresh")
   @HttpCode(200)
   async refresh(
     @Body(new ZodValidationPipe(refreshSchema)) body: RefreshBody,
+    @Ip() ip: string,
     @Headers("user-agent") userAgent?: string,
   ): Promise<Session> {
-    const pair = await this.tokens.rotate(body.refreshToken, userAgent);
-    // Un renouvellement ne crée jamais de compte : la forme reste celle d'une session.
-    return { ...pair, isNewAccount: false };
+    // L'adresse de CE tour, pas celle de l'ouverture : c'est la suite des
+    // adresses d'une lignée qui montre qu'une copie circule ailleurs.
+    const pair = await this.tokens.rotate(body.refreshToken, userAgent, ip);
+    /* Un renouvellement ne crée jamais de compte : la forme reste celle d'une
+       session. `deletionPendingUntil` reste nulle ici — c'est la CONNEXION qui
+       annonce l'état, et un jeton renouvelé l'a déjà fait à son ouverture. La
+       garde, elle, referme les portes à chaque appel : la session d'un compte
+       qui part reste vide même renouvelée. */
+    return { ...pair, isNewAccount: false, deletionPendingUntil: null };
   }
 
   @Delete("session")

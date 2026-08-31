@@ -69,6 +69,39 @@ export interface ListeProps {
   onRetablir?: (compte: CompteLigne, motif: string) => void;
   onAjuster?: (compte: CompteLigne, motif: string) => void;
   onExporter?: (format: string) => void;
+  /**
+   * Les formats réellement servis. Sans serveur — l'aperçu, un test de
+   * composant — les deux du dictionnaire se montrent ; branché, l'appelant ne
+   * passe que ce que le point d'entrée rend. Proposer « json » et livrer un
+   * CSV serait un mensonge d'un clic.
+   */
+  formatsExport?: string[];
+
+  /**
+   * Piloté par le serveur. Passer `onRequete` fait basculer l'écran : il cesse
+   * de filtrer, d'ordonner et de découper lui-même, et remonte chaque geste.
+   *
+   * Le motif contrôlé / non contrôlé, plutôt qu'un drapeau `serveur`. Sans
+   * serveur — l'aperçu, un test de composant — la liste se suffit à elle-même
+   * sur les données qu'on lui donne. Avec, elle ne doit surtout pas refiltrer :
+   * filtrer une page déjà découpée ne filtre que cette page, et un compte
+   * suspendu qui vit à la page trois resterait introuvable pendant que l'écran
+   * annonce « aucun résultat » avec aplomb.
+   */
+  onRequete?: (requete: RequeteComptes) => void;
+  /** Le curseur de la page suivante, rendu par le serveur. Nul : on a tout lu. */
+  curseurSuivant?: string | null;
+  /** Vrai dès qu'une page a été quittée — c'est l'appelant qui tient l'historique. */
+  aPrecedent?: boolean;
+  onPagePrecedente?: () => void;
+  onPageSuivante?: () => void;
+}
+
+/** Ce qu'un geste de l'écran demande au serveur. */
+export interface RequeteComptes {
+  q?: string | undefined;
+  etat?: EtatCompte | "tous" | undefined;
+  limit?: number | undefined;
 }
 
 function valeurTriee(compte: CompteLigne, cle: string): string | number {
@@ -88,6 +121,8 @@ export function Liste({
   onRetablir,
   onAjuster,
   onExporter,
+  formatsExport = ["csv", "json"],
+  onRequete, curseurSuivant = null, aPrecedent = false, onPagePrecedente, onPageSuivante,
 }: ListeProps): ReactNode {
   const t = messages(langue);
   const [recherche, setRecherche] = useState("");
@@ -104,17 +139,30 @@ export function Liste({
     [langue],
   );
 
+  const pilote = onRequete !== undefined;
   const filtre = recherche !== "" || filtreEtat !== "tous" || filtreSolde !== "tous";
+
+  // Piloté, l'écran ne refiltre pas : la page reçue est déjà la réponse à la
+  // question posée. La refiltrer reviendrait à filtrer un filtre.
+  const demander = (suite: { q?: string; etat?: FiltreEtat }): void => {
+    onRequete?.({
+      q: (suite.q ?? recherche).trim() || undefined,
+      etat: suite.etat ?? filtreEtat,
+      limit: parPage,
+    });
+  };
 
   const remiseAZero = () => {
     setRecherche("");
     setFiltreEtat("tous");
     setFiltreSolde("tous");
     setPage(0);
+    onRequete?.({ limit: parPage });
   };
 
   // Filtrer, puis ordonner : les deux gestes que le tableau ne fait pas.
   const trouves = useMemo(() => {
+    if (pilote) return comptes;
     const q = recherche.trim().toLowerCase();
     const retenus = comptes.filter((compte) => {
       if (filtreEtat !== "tous" && compte.etat !== filtreEtat) return false;
@@ -131,13 +179,13 @@ export function Liste({
       if (typeof va === "number" && typeof vb === "number") return (va - vb) * sens;
       return String(va).localeCompare(String(vb), langue) * sens;
     });
-  }, [comptes, recherche, filtreEtat, filtreSolde, tri, langue]);
+  }, [pilote, comptes, recherche, filtreEtat, filtreSolde, tri, langue]);
 
   // Découper : la page courante est bornée, parce qu'un filtre resserré peut
   // laisser un curseur au-delà de la dernière page.
   const dernierePage = Math.max(0, Math.ceil(trouves.length / parPage) - 1);
   const courante = Math.min(page, dernierePage);
-  const tranche = trouves.slice(courante * parPage, courante * parPage + parPage);
+  const tranche = pilote ? trouves : trouves.slice(courante * parPage, courante * parPage + parPage);
 
   const lignes: LigneCompte[] = tranche.map((compte) => ({
     ...compte,
@@ -210,7 +258,7 @@ export function Liste({
         actions={
           <RoleGate role={role} autorise="admin">
             <ExportButton
-              formats={["csv", "json"]}
+              formats={formatsExport}
               portee={portee}
               libelles={{
                 exporter: t.exporter.bouton,
@@ -221,7 +269,7 @@ export function Liste({
               }}
               onExport={(format) => {
                 onExporter?.(format);
-                setAccuse(t.exporter.lance.replace("{n}", String(trouves.length)));
+                setAccuse(t.exporter.telecharge);
               }}
             />
           </RoleGate>
@@ -233,6 +281,7 @@ export function Liste({
         onRecherche={(e) => {
           setRecherche(e.target.value);
           setPage(0);
+          demander({ q: e.target.value });
         }}
         placeholder={t.comptes.recherche}
         filtres={[
@@ -241,8 +290,10 @@ export function Liste({
             label: t.comptes.filtreEtat,
             valeur: filtreEtat,
             onChange: (e) => {
-              setFiltreEtat(e.target.value as FiltreEtat);
+              const etat = e.target.value as FiltreEtat;
+              setFiltreEtat(etat);
               setPage(0);
+              demander({ etat });
             },
             options: [
               { value: "tous", label: t.comptes.tousEtats },
@@ -294,14 +345,21 @@ export function Liste({
           rang de la page suivante — demain, celui que rend l'API. */}
       {trouves.length > 0 ? (
         <Pagination
-          curseurSuivant={courante < dernierePage ? String(courante + 1) : null}
-          aPrecedent={courante > 0}
-          onPrecedent={() => setPage(courante - 1)}
-          onSuivant={() => setPage(courante + 1)}
+          // Piloté, le curseur vient du serveur : c'est lui qui sait s'il reste
+          // quelque chose, et il ne rend aucun total (spec technique §3).
+          curseurSuivant={pilote ? curseurSuivant : (courante < dernierePage ? String(courante + 1) : null)}
+          aPrecedent={pilote ? aPrecedent : courante > 0}
+          onPrecedent={() => (pilote ? onPagePrecedente?.() : setPage(courante - 1))}
+          onSuivant={() => (pilote ? onPageSuivante?.() : setPage(courante + 1))}
           parPage={parPage}
           onParPage={(taille) => {
             setParPage(taille);
             setPage(0);
+            onRequete?.({
+              q: recherche.trim() || undefined,
+              etat: filtreEtat,
+              limit: taille,
+            });
           }}
           tailles={TAILLES}
           libelles={{

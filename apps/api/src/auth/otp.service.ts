@@ -25,7 +25,10 @@ export class OtpService {
     return `${KEY_VERSION}$${digest}`;
   }
 
-  private matches(stored: string, candidate: string): boolean {
+  // Public : le service d'administration compare de la même façon, sur ses
+  // propres tables. Deux comparaisons en temps constant écrites deux fois
+  // finiraient par diverger, et c'est le genre d'écart qu'on ne voit pas.
+  matches(stored: string, candidate: string): boolean {
     const a = Buffer.from(stored);
     const b = Buffer.from(this.hash(candidate));
     return a.length === b.length && timingSafeEqual(a, b);

@@ -1,6 +1,6 @@
 # Terms of Service
 
-_Version 2026-08-23 · Last updated: 23 August 2026_
+_Version 2026-08-30 · Last updated: 30 August 2026_
 
 ## 1. Purpose
 
@@ -66,10 +66,27 @@ sign-ups.
 The core of the Service is free, with no time limit: your notes, your pages, your
 dates, your reminders and your Wall.
 
-Content created for you is paid for in credits. The price of a credit and the
-number of credits given at sign-up are shown in the Service and on its website;
-they may change, with no effect on credits already bought. **The cost of an
-action is shown to you before it starts.**
+Content created for you is paid for in credits. Prices are shown in the Service
+and on its website.
+
+**We set our prices, and we may revise them at any time.** This covers the price
+of a credit pack, the number of credits it holds, any discount that comes with
+it, the number of credits given at sign-up, and the credit cost of each action. A
+pack may also stop being offered.
+
+**You are told beforehand.** A price change is announced to you by email
+**before** it takes effect, not discovered afterwards. You therefore have time to
+buy on the terms you knew.
+
+Three things also protect you:
+
+- **Credits you already hold keep their value.** A price change never reduces
+  them, never takes them back, and never makes them expire.
+- **The cost of an action is shown to you before it starts.** You decide when you
+  spend, never afterwards.
+- **A purchase already made keeps its terms.** The amount, the number of credits
+  and the fees quoted to you remain those of your purchase, whatever tomorrow's
+  prices are.
 
 Credits are bought by mobile money or by card. **They do not expire**: they stay
 yours for as long as the account exists, and you spend them in the app at your own
@@ -189,7 +206,7 @@ Each acceptance is timestamped and kept.
 ## 15. Governing law and disputes
 
 These Terms are governed by **Cameroonian law**. In the event of a disagreement,
-an amicable solution is sought by writing to hello@lehno.app before any legal
+an amicable solution is sought by writing to hello@lehno.io before any legal
 action. Failing agreement, the dispute falls to the **competent courts of
 Cameroon**.
 

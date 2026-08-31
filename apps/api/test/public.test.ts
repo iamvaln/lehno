@@ -31,6 +31,17 @@ describe("surfaces publiques", () => {
     expect((await new ConfigService(db.prisma as never).get()).creditUnitPrice).toBe(150);
   });
 
+  // La configuration publique ne porte PLUS aucun drapeau : la spécification
+  // §6.2 veut que les clients reçoivent la liste RÉSOLUE de ce qui est actif,
+  // par /public/features, et jamais l'état brut. Ce cas garde la frontière —
+  // remettre des drapeaux ici les exposerait sous une forme que le contrat
+  // commun interdit.
+  it("ne porte aucun drapeau : ils passent par /public/features", async () => {
+    await db.prisma.featureFlag.create({ data: { key: "launch.live", enabled: true } });
+    const cfg = await new ConfigService(db.prisma as never).get();
+    expect(cfg).not.toHaveProperty("flags");
+  });
+
   // Les cas de la liste d'attente vivent dans waitlist.test.ts : depuis que
   // le point d'entrée limite le débit et confirme par courriel, ils demandent
   // un limiteur et un adaptateur de courriel, et ils couvrent sept
