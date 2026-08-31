@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import type { Locale } from "@lehno/i18n";
+import { phraseDeNotification, type Locale } from "@lehno/i18n";
 import { PrismaService } from "../prisma/prisma.service.js";
 import type { MailPort } from "../mail/mail.port.js";
 
@@ -63,6 +63,32 @@ export class EnvoiService {
     let echouees = 0;
 
     for (const n of dues as Ligne[]) {
+      const langue = (n.user.uiLanguage === "en" ? "en" : "fr") as Locale;
+
+      /* La phrase se compose AVANT de prendre la ligne, et son absence marque
+         un échec plutôt qu'un envoi.
+
+         Le courrier part chez un fournisseur qui ne connaît ni nos clés ni nos
+         traductions : lui passer `titleKey` brut donnerait un objet
+         « notification.event_reminder » et un corps en JSON. Ça part, et ça ne
+         se lit pas.
+
+         Une clé sans phrase est un trou de développement, pas une panne
+         passagère — la marquer `failed` la fait paraître dans la file du
+         back-office, là où quelqu'un la verra. La taire la laisserait
+         `pending` pour toujours, et un silence ne se remarque pas. */
+      const phrase = phraseDeNotification(n.titleKey, n.bodyParams, langue);
+      if (phrase === null) {
+        const prise = await this.prisma.notification.updateMany({
+          where: { id: n.id, status: "pending" },
+          data: { status: "failed" },
+        });
+        if (prise.count === 0) continue;
+        echouees += 1;
+        this.logger.warn(`aucune phrase pour ${n.titleKey} (${n.id}) en ${langue}`);
+        continue;
+      }
+
       /* On prend la ligne pour soi AVANT d'envoyer, et on ne la prend que si
          elle est encore en attente. Le `updateMany` avec la condition sur le
          statut est ce qui rend deux processus concurrents inoffensifs : le
@@ -76,12 +102,13 @@ export class EnvoiService {
       try {
         await this.mail.send({
           to: n.user.email,
-          // La clé, pas une phrase : le gabarit vit dans les traductions, et
-          // la langue de l'interface peut avoir changé depuis la
-          // programmation. C'est pourquoi on la relit ICI.
-          subject: n.titleKey,
-          text: JSON.stringify(n.bodyParams ?? {}),
-          locale: (n.user.uiLanguage === "en" ? "en" : "fr") as Locale,
+          subject: phrase.titre,
+          text: phrase.corps,
+          // La langue se relit ICI, pas à la programmation : elle peut avoir
+          // changé entre le moment où la notification a été posée et celui où
+          // elle part. C'est la raison pour laquelle le serveur transporte une
+          // clé jusqu'au dernier moment au lieu d'une phrase figée.
+          locale: langue,
         });
         envoyees += 1;
       } catch (err: unknown) {

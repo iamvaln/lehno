@@ -81,7 +81,7 @@ describe("ce qu'une entrée dit", () => {
       "notification.activation_unused_credits",
       "notification.enrichment_nudge_global",
       "notification.enrichment_nudge_person",
-      "wish_reserved",
+      "notification.wish_reserved",
     ]);
   });
 });

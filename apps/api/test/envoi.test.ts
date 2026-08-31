@@ -22,7 +22,11 @@ describe("l'envoi des notifications", () => {
     const n = await db.prisma.notification.create({
       data: {
         userId: awa, type: "event_reminder", channel: canal as never,
-        titleKey: "notification.event_reminder", bodyParams: { days: 3 },
+        titleKey: "notification.event_reminder",
+        /* Les paramètres complets, comme la programmation les pose vraiment.
+           Un rappel sans le nom ni la date ne se compose pas — c'est voulu,
+           et c'est ce que vérifie « une clé sans phrase » plus bas. */
+        bodyParams: { days: 3, date: "2026-03-14", person: "Célarine", nature: "happy" },
         dedupeKey: randomBytes(8).toString("hex"),
         ...(quand ? { scheduledFor: quand } : {}),
       },
@@ -98,6 +102,63 @@ describe("l'envoi des notifications", () => {
     await enFile(new Date(Date.now() - 60_000), "in_app");
     await envoi.envoyer();
     expect(partis).toHaveLength(0);
+  });
+
+  /* Le courrier porte une PHRASE, pas la clé.
+   *
+   * Avant, l'envoi passait `titleKey` en objet et les paramètres en JSON : ça
+   * partait, et ça ne se lisait pas. Le test le fige, parce qu'un courrier
+   * illisible ne fait échouer aucune assertion — il arrive juste chez
+   * quelqu'un. */
+  it("compose une vraie phrase dans la langue de qui reçoit", async () => {
+    await enFile(new Date(Date.now() - 60_000));
+    await envoi.envoyer();
+    expect(partis[0]?.subject).toBe("Une date pour Célarine approche");
+    expect(partis[0]?.text).toContain("14 mars");
+    expect(partis[0]?.subject).not.toContain("notification.");
+    expect(partis[0]?.text).not.toContain("{");
+  });
+
+  it("suit la langue d'interface, relue au moment de l'envoi", async () => {
+    await db.prisma.user.update({ where: { id: awa }, data: { uiLanguage: "en" } });
+    await enFile(new Date(Date.now() - 60_000));
+    await envoi.envoyer();
+    expect(partis[0]?.subject).toBe("A date for Célarine is coming up");
+    expect(partis[0]?.locale).toBe("en");
+  });
+
+  /* Une clé sans phrase est un trou de développement, pas une panne passagère.
+     La marquer `failed` la fait paraître dans la file du back-office ; la
+     laisser `pending` l'y cacherait pour toujours. */
+  it("marque en échec une clé qu'aucune traduction ne sait rendre", async () => {
+    const n = await db.prisma.notification.create({
+      data: {
+        userId: awa, type: "event_reminder", channel: "email" as never,
+        titleKey: "notification.jamais_ecrite", bodyParams: {},
+        dedupeKey: randomBytes(8).toString("hex"),
+      },
+      select: { id: true },
+    });
+    const bilan = await envoi.envoyer();
+    expect(partis).toHaveLength(0);
+    expect(bilan.echouees).toBe(1);
+    expect(await statutDe(n.id)).toBe("failed");
+  });
+
+  // Même chose quand la clé est connue mais qu'un paramètre indispensable
+  // manque : mieux vaut un rappel manqué qu'un courrier nommant « undefined ».
+  it("marque en échec un rappel dont le nom du proche manque", async () => {
+    const n = await db.prisma.notification.create({
+      data: {
+        userId: awa, type: "event_reminder", channel: "email" as never,
+        titleKey: "notification.event_reminder", bodyParams: { days: 3 },
+        dedupeKey: randomBytes(8).toString("hex"),
+      },
+      select: { id: true },
+    });
+    await envoi.envoyer();
+    expect(partis).toHaveLength(0);
+    expect(await statutDe(n.id)).toBe("failed");
   });
 
   describe("quand le relais tombe", () => {
