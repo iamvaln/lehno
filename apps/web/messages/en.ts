@@ -340,4 +340,10 @@ export const en: typeof fr = {
   souhaitAnnuler: "Cancel",
   souhaitAnnulerErreur: "The cancellation did not go through. Try again in a moment.",
 
+
+  // ——— L'arrêt pour intervention ————————————————————————————————
+  interventionTitre: "Lehno is being updated",
+  interventionAvecHeure: "The service is back around {heure}. Nothing you sent is lost.",
+  interventionSansHeure: "An update is under way. Nothing you sent is lost.",
+
 };
