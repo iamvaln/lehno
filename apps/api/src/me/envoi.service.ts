@@ -49,7 +49,11 @@ export class EnvoiService {
     @Inject("PUSH_PORT") private readonly push: PushPort,
   ) {}
 
-  async envoyer(): Promise<{ envoyees: number; echouees: number }> {
+  /* Le bilan compte SÉPARÉMENT ce qui a échoué et ce qui était impossible.
+     Un seul nombre ferait passer pour une panne du relais ce qui n'est qu'une
+     application désinstallée, et l'inverse : c'est précisément la confusion
+     que le statut `invalid` existe pour lever. */
+  async envoyer(): Promise<{ envoyees: number; echouees: number; impossibles: number }> {
     const dues = await this.prisma.notification.findMany({
       where: {
         status: "pending",
@@ -82,6 +86,7 @@ export class EnvoiService {
 
     let envoyees = 0;
     let echouees = 0;
+    let impossibles = 0;
 
     for (const n of dues as Ligne[]) {
       const langue = (n.user.uiLanguage === "en" ? "en" : "fr") as Locale;
@@ -95,17 +100,20 @@ export class EnvoiService {
          se lit pas.
 
          Une clé sans phrase est un trou de développement, pas une panne
-         passagère — la marquer `failed` la fait paraître dans la file du
-         back-office, là où quelqu'un la verra. La taire la laisserait
-         `pending` pour toujours, et un silence ne se remarque pas. */
+         passagère. D'où `invalid` et non `failed` : réessayer n'y changerait
+         rien tant que personne n'aura écrit la phrase. La distinction compte
+         parce que `failed` appelle une intervention — mêler les deux ferait
+         noyer les vraies pannes dans ce qui est structurellement impossible.
+         La taire la laisserait `pending` pour toujours, et un silence ne se
+         remarque pas. */
       const phrase = phraseDeNotification(n.titleKey, n.bodyParams, langue);
       if (phrase === null) {
         const prise = await this.prisma.notification.updateMany({
           where: { id: n.id, status: "pending" },
-          data: { status: "failed" },
+          data: { status: "invalid" },
         });
         if (prise.count === 0) continue;
-        echouees += 1;
+        impossibles += 1;
         this.logger.warn(`aucune phrase pour ${n.titleKey} (${n.id}) en ${langue}`);
         continue;
       }
@@ -114,15 +122,16 @@ export class EnvoiService {
          La programmation ne pose une ligne `push` que si un appareil existe,
          mais l'application a pu être désinstallée depuis. Marquer `sent`
          prétendrait qu'elle est partie ; laisser `pending` ferait grossir une
-         file qui ment sur ce qu'elle contient. `failed` est le seul statut qui
-         dise la vérité, et il se voit dans le back-office. */
+         file qui ment sur ce qu'elle contient.
+         `invalid` plutôt que `failed` : il n'y a rien à réparer et rien à
+         réessayer — quelqu'un a simplement désinstallé l'application. */
       if (n.channel === "push" && n.user.devices.length === 0) {
         const prise = await this.prisma.notification.updateMany({
           where: { id: n.id, status: "pending" },
-          data: { status: "failed" },
+          data: { status: "invalid" },
         });
         if (prise.count === 0) continue;
-        echouees += 1;
+        impossibles += 1;
         this.logger.warn(`aucun appareil actif pour ${n.type} (${n.id})`);
         continue;
       }
@@ -177,9 +186,9 @@ export class EnvoiService {
       }
     }
 
-    if (envoyees > 0 || echouees > 0) {
-      this.logger.log(`${envoyees} envoyées, ${echouees} en échec`);
+    if (envoyees > 0 || echouees > 0 || impossibles > 0) {
+      this.logger.log(`${envoyees} envoyées, ${echouees} en échec, ${impossibles} impossibles`);
     }
-    return { envoyees, echouees };
+    return { envoyees, echouees, impossibles };
   }
 }

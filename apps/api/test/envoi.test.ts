@@ -134,10 +134,10 @@ describe("l'envoi des notifications", () => {
     expect(partis[0]?.locale).toBe("en");
   });
 
-  /* Une clé sans phrase est un trou de développement, pas une panne passagère.
-     La marquer `failed` la fait paraître dans la file du back-office ; la
-     laisser `pending` l'y cacherait pour toujours. */
-  it("marque en échec une clé qu'aucune traduction ne sait rendre", async () => {
+  /* `invalid`, pas `failed`. Réessayer n'y changerait rien tant que personne
+     n'aura écrit la phrase — et si les deux partageaient le même statut, une
+     vraie panne du relais se noierait au milieu de clés jamais traduites. */
+  it("marque impossible une clé qu'aucune traduction ne sait rendre", async () => {
     const n = await db.prisma.notification.create({
       data: {
         userId: awa, type: "event_reminder", channel: "email" as never,
@@ -148,13 +148,16 @@ describe("l'envoi des notifications", () => {
     });
     const bilan = await envoi.envoyer();
     expect(partis).toHaveLength(0);
-    expect(bilan.echouees).toBe(1);
-    expect(await statutDe(n.id)).toBe("failed");
+    // Le bilan les sépare : ce n'est pas une panne, et le compter comme telle
+    // ferait chercher un relais tombé qui n'a jamais été sollicité.
+    expect(bilan.impossibles).toBe(1);
+    expect(bilan.echouees).toBe(0);
+    expect(await statutDe(n.id)).toBe("invalid");
   });
 
   // Même chose quand la clé est connue mais qu'un paramètre indispensable
   // manque : mieux vaut un rappel manqué qu'un courrier nommant « undefined ».
-  it("marque en échec un rappel dont le nom du proche manque", async () => {
+  it("marque impossible un rappel dont le nom du proche manque", async () => {
     const n = await db.prisma.notification.create({
       data: {
         userId: awa, type: "event_reminder", channel: "email" as never,
@@ -165,7 +168,7 @@ describe("l'envoi des notifications", () => {
     });
     await envoi.envoyer();
     expect(partis).toHaveLength(0);
-    expect(await statutDe(n.id)).toBe("failed");
+    expect(await statutDe(n.id)).toBe("invalid");
   });
 
   /* Le téléphone.
@@ -238,21 +241,27 @@ describe("l'envoi des notifications", () => {
 
     /* Une ligne `push` sans appareil ne peut pas aboutir. La marquer `sent`
        prétendrait qu'elle est partie ; la laisser `pending` ferait grossir une
-       file qui ment sur ce qu'elle contient. */
-    it("marque en échec un push sans aucun appareil actif", async () => {
+       file qui ment sur ce qu'elle contient. Et `invalid` plutôt que
+       `failed` : quelqu'un a désinstallé l'application, il n'y a rien à
+       réparer. */
+    it("marque impossible un push sans aucun appareil actif", async () => {
       const id = await enFile(new Date(Date.now() - 60_000), "push");
       const bilan = await envoi.envoyer();
       expect(pousses).toHaveLength(0);
-      expect(bilan.echouees).toBe(1);
-      expect(await statutDe(id)).toBe("failed");
+      expect(bilan.impossibles).toBe(1);
+      expect(bilan.echouees).toBe(0);
+      expect(await statutDe(id)).toBe("invalid");
     });
 
-    it("marque en échec quand le service de notification refuse", async () => {
+    /* LA distinction, éprouvée de face : un service qui refuse est une panne,
+       et elle ne doit pas se ranger avec ce qui est impossible. */
+    it("marque en ÉCHEC, pas impossible, quand le service refuse", async () => {
       envoi = new EnvoiService(db.prisma as never, poste, telephoneEnPanne);
       await avecAppareil();
       const id = await enFile(new Date(Date.now() - 60_000), "push");
       const bilan = await envoi.envoyer();
       expect(bilan.echouees).toBe(1);
+      expect(bilan.impossibles).toBe(0);
       expect(await statutDe(id)).toBe("failed");
     });
 
