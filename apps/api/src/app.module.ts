@@ -132,6 +132,8 @@ import { SurfacePubliqueService } from "./mur/jetons.js";
 import { EffacementService } from "./me/effacement.service.js";
 import { StockageR2 } from "./stockage/r2.adapter.js";
 import { StockageMemoire } from "./stockage/memoire.adapter.js";
+import { PousseOneSignal } from "./notifications/onesignal.adapter.js";
+import { PoussePourLaConsole } from "./notifications/console.adapter.js";
 import { TrackingService } from "./tracking/tracking.service.js";
 import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
 import { PostHogAdapter } from "./tracking/posthog.adapter.js";
@@ -215,6 +217,26 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
         const seau = process.env.R2_BUCKET;
         if (compte && cle && secret && seau) return new StockageR2(compte, cle, secret, seau);
         return new StockageMemoire();
+      },
+    },
+    {
+      /* Les notifications poussées.
+       *
+       * OneSignal quand les deux variables sont là, la console sinon — et la
+       * console ÉCRIT ce qui serait parti, elle ne se tait pas. Un port muet
+       * donnerait un développement où tout paraît marcher et où l'on découvre
+       * à la mise en service que rien n'était branché.
+       *
+       * Les deux ensemble ou aucune, comme pour R2 : un identifiant
+       * d'application sans clé donnerait un client qui part en requête et se
+       * fait refuser, et le refus ne paraîtrait qu'au premier rappel dû —
+       * c'est-à-dire chez quelqu'un, un matin, sans que personne regarde. */
+      provide: "PUSH_PORT",
+      useFactory: () => {
+        const app = process.env.ONESIGNAL_APP_ID;
+        const cle = process.env.ONESIGNAL_API_KEY;
+        if (app && cle) return new PousseOneSignal(app, cle);
+        return new PoussePourLaConsole();
       },
     },
     // Le Mur et la collecte (§5.3, §5.5, §7).
