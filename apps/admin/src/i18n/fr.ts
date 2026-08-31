@@ -78,6 +78,7 @@ export const fr = {
     modeles: "Modèles d'IA",
     studio: "Studio du portrait",
     atelier: "L'Atelier",
+    essais: "Les essais",
     studioService: "Réglages en service",
     gabarits: "Gabarits de production",
     offres: "Offres et croissance",
@@ -1126,6 +1127,51 @@ export const fr = {
       titre: "Aucun profil d'essai",
       texte: "Un essai se lance contre un proche simulé. Il n'y en a aucun ; créez-en un avant d'essayer.",
     },
+  },
+
+  studioEssais: {
+    titre: "Les essais",
+    sous: "Ce qui a été produit, et ce qu'on en a pensé.",
+    // Il existe parce que le journal de l'Atelier ne porte que la journée : un
+    // essai gardé la semaine dernière était introuvable, il fallait refaire la
+    // configuration de mémoire et repayer l'appel pour revoir ce qu'on avait
+    // déjà vu.
+    pourquoi: "L'Atelier ne montre que la journée. Ici, les cent derniers essais — de quoi revoir sans repayer l'appel.",
+    filtre: {
+      libelle: "Sort",
+      tout: "Tous",
+      kept: "Gardés",
+      discarded: "Écartés",
+      publie: "Publiés",
+      nonJuge: "Non jugés",
+    },
+    // Trois sorts, et le troisième est le but. Un essai publié quitte cette
+    // page pour l'historique des versions, où il a un numéro.
+    sorts: {
+      kept: "Gardé",
+      discarded: "Écarté",
+      publie: "Publié",
+      nonJuge: "Non jugé",
+    },
+    carte: {
+      alt: "Résultat de l'essai",
+      echoue: "Rien n'a été produit : {code}",
+      coutInconnu: "Coût inconnu",
+      cout: "{cout} F",
+      par: "par {qui}",
+    },
+    vide: {
+      titre: "Aucun essai",
+      texte: "Les essais lancés depuis l'Atelier s'inscrivent ici, avec ce qu'ils ont produit.",
+    },
+    videFiltre: {
+      titre: "Aucun essai de ce sort",
+      texte: "Changez de filtre pour revoir les autres.",
+    },
+    // Aucun essai ne s'efface à la main : ce qui a coûté un appel se garde, ce
+    // qui encombre se filtre. Un bouton de suppression n'aurait servi qu'à
+    // perdre la trace d'une dépense.
+    rappel: "Aucun essai ne s'efface : ce qui a coûté un appel se garde.",
   },
 
   studioService: {

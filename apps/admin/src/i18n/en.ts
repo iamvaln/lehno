@@ -66,6 +66,7 @@ export const en: typeof fr = {
     modeles: "AI models",
     studio: "Portrait studio",
     atelier: "The workshop",
+    essais: "The trials",
     studioService: "Live settings",
     gabarits: "Production templates",
     offres: "Offers and growth",
@@ -1032,6 +1033,42 @@ export const en: typeof fr = {
       titre: "No test profile",
       texte: "A trial runs against a simulated person. There is none; create one before trying.",
     },
+  },
+
+  studioEssais: {
+    titre: "The trials",
+    sous: "What was produced, and what we thought of it.",
+    pourquoi: "The Workshop only shows today. Here are the last hundred trials — enough to look again without paying for the call.",
+    filtre: {
+      libelle: "Fate",
+      tout: "All",
+      kept: "Kept",
+      discarded: "Set aside",
+      publie: "Published",
+      nonJuge: "Unjudged",
+    },
+    sorts: {
+      kept: "Kept",
+      discarded: "Set aside",
+      publie: "Published",
+      nonJuge: "Unjudged",
+    },
+    carte: {
+      alt: "Trial result",
+      echoue: "Nothing was produced: {code}",
+      coutInconnu: "Cost unknown",
+      cout: "{cout} F",
+      par: "by {qui}",
+    },
+    vide: {
+      titre: "No trial",
+      texte: "Trials launched from the Workshop appear here, with what they produced.",
+    },
+    videFiltre: {
+      titre: "No trial with that fate",
+      texte: "Change the filter to see the others.",
+    },
+    rappel: "No trial is deleted: what cost a call is kept.",
   },
 
   studioService: {
