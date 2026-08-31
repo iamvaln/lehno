@@ -110,6 +110,7 @@ directement.
 | `ADMIN_JWT_SECRET` | clé propre à l'administration, **distincte de `JWT_SECRET`** — deux mondes séparés jusque dans leurs signatures, sans quoi la séparation des tables ne serait qu'apparente. L'api refuse de démarrer sans elle (`AdminTokenService`) |
 | `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID` | connexion fédérée, optionnels, vérifiés à l'usage |
 | `TRUST_PROXY_HOPS` | déjà posé à `1` par `docker-compose.yml`, rien à écrire ici. Ne le relevez que si un relais s'ajoute devant Traefik — voir l'encadré ci-dessous |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | stockage des images (portraits, avatars, reçus, exports). **Les quatre ensemble ou aucune.** Absentes, l'api démarre quand même et bascule sur `StockageMemoire` : les fichiers vivent en RAM, disparaissent au premier redémarrage, et rien ne le signale. Voir le fournisseur `STOCKAGE_PORT` dans `apps/api/src/app.module.ts` |
 | `SENTRY_DSN` | suivi des erreurs, optionnel |
 | `API_URL` | lue côté serveur par le rendu SSR du web — mettre `http://api:3000` (nom du service Docker, réseau interne), pas le domaine public |
 | `NEXT_PUBLIC_API_URL` | même valeur que la variable GitHub Actions ci-dessus — utile seulement à un `docker compose build` local (en production, l'image publiée la porte déjà) |
