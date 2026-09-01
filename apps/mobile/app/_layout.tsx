@@ -1,7 +1,8 @@
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { View } from "react-native";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { OfflineBanner, ThemeProvider, useCouleurs } from "@lehno/ui-native";
 import { LangueProvider } from "../lib/langue.js";
 import { DrapeauxProvider } from "../lib/DrapeauxProvider.js";
@@ -41,11 +42,24 @@ function SousArret() {
 function BandeauReseau() {
   const { horsLigne, enAttente } = useReseau();
   const { t } = useLangue();
+  const insets = useSafeAreaInsets();
+  const couleurs = useCouleurs();
   if (!horsLigne) return null;
+  /* LA MARGE HAUTE EST INDISPENSABLE, et c'est l'écran qui l'a montré : posé
+     nu, le bandeau se dessinait PAR-DESSUS la barre d'état — l'opérateur,
+     l'heure et la batterie passaient sous le texte. Il est au-dessus de la
+     pile, donc aucun écran ne lui donne d'encart ; `SafeAreaProvider` fournit
+     les mesures, il ne les applique pas.
+
+     Le fond est peint sur toute la hauteur, encart compris : sans lui, la barre
+     d'état resterait sur la couleur de la page et le bandeau paraîtrait
+     flotter au milieu de rien. */
   return (
-    <OfflineBanner
-      message={messageDuBandeau(enAttente, t.horsConnexion, t.horsConnexionFile)}
-    />
+    <View style={{ paddingTop: insets.top, backgroundColor: couleurs.surfacePanel }}>
+      <OfflineBanner
+        message={messageDuBandeau(enAttente, t.horsConnexion, t.horsConnexionFile)}
+      />
+    </View>
   );
 }
 
