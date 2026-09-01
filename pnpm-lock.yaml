@@ -267,6 +267,9 @@ importers:
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.18
+      babel-preset-expo:
+        specifier: ~57.0.8
+        version: 57.0.8(@babel/core@7.29.7)(@babel/runtime@7.29.7)(expo@57.0.16)(react-refresh@0.14.2)
       eas-cli:
         specifier: ^23.0.0
         version: 23.0.0(@types/node@22.20.1)(typescript@5.9.3)
