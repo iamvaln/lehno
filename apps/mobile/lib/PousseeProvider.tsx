@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { Platform } from "react-native";
-import Constants from "expo-constants";
-import { OneSignal } from "react-native-onesignal";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import { appel } from "./api.js";
 import { litLesJetons, surChangementDeSession } from "./jetons.js";
 import {
@@ -28,6 +27,56 @@ import {
  * l'a pas posée doit démarrer normalement : les notifications sont une
  * commodité, pas une condition de fonctionnement.
  */
+/* LE MODULE SE CHARGE À LA DEMANDE, JAMAIS PAR UN IMPORT STATIQUE.
+ *
+ * `react-native-onesignal` est un module NATIF. Un import statique s'évalue au
+ * chargement de CE fichier, donc au démarrage de l'application — et là où le
+ * binaire natif ne le contient pas, il lève
+ * `TurboModuleRegistry.getEnforcing(...): 'OneSignal' could not be found`
+ * avant qu'aucune garde n'ait pu s'exécuter. L'application entière tombe sur
+ * un écran rouge.
+ *
+ * C'est exactement ce qui s'est produit dans Expo Go, qui embarque une liste
+ * fixe de modules natifs : la fusion des notifications a rendu l'application
+ * inouvrable pour tout le monde, et l'a fait immédiatement.
+ *
+ * ET LE `try` NE SUFFIT PAS EN DÉVELOPPEMENT. Metro charge par
+ * `guardedLoadModule`, qui SIGNALE l'erreur au gestionnaire global AVANT de la
+ * relancer : le `catch` la reçoit bien, mais l'écran rouge est déjà affiché.
+ * L'application marche, et paraît cassée — ce qui revient au même pour qui
+ * regarde.
+ *
+ * On interroge donc l'ENVIRONNEMENT D'EXÉCUTION avant d'appeler `require`.
+ * `storeClient` est Expo Go, qui embarque une liste fixe de modules natifs et
+ * ne contiendra jamais celui-ci. Le `try` reste par-dessous, pour les
+ * compilations qui ne l'embarquent pas sans être Expo Go.
+ */
+interface ModuleOneSignal {
+  initialize: (appId: string) => void;
+  Notifications: { requestPermission: (versLesReglages: boolean) => Promise<boolean> };
+  User: {
+    pushSubscription: {
+      getPushSubscriptionId: () => string | null;
+      addEventListener: (e: "change", f: () => void) => void;
+      removeEventListener: (e: "change", f: () => void) => void;
+    };
+  };
+}
+
+function chargeOneSignal(): ModuleOneSignal | null {
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return (require("react-native-onesignal") as { OneSignal: ModuleOneSignal }).OneSignal;
+  } catch {
+    /* Pas de module natif — Expo Go, ou une compilation qui ne l'embarque pas.
+       On ne signale RIEN : celui qui développe dans Expo Go n'a pas demandé de
+       notifications, et une erreur au démarrage lui apprendrait seulement que
+       son environnement n'est pas celui de la production. */
+    return null;
+  }
+}
+
 const APP_ID = typeof Constants.expoConfig?.extra?.["oneSignalAppId"] === "string"
   ? Constants.expoConfig.extra["oneSignalAppId"]
   : null;
@@ -42,8 +91,9 @@ const APP_ID = typeof Constants.expoConfig?.extra?.["oneSignalAppId"] === "strin
  * ce qui va se passer, ou ce qui ne se passera pas.
  */
 export async function demandeLaPermission(): Promise<boolean> {
-  if (!APP_ID) return false;
-  return OneSignal.Notifications.requestPermission(false);
+  const sdk = chargeOneSignal();
+  if (!APP_ID || sdk === null) return false;
+  return sdk.Notifications.requestPermission(false);
 }
 
 export function PousseeProvider({ children }: { children: ReactNode }) {
@@ -58,8 +108,9 @@ export function PousseeProvider({ children }: { children: ReactNode }) {
      qu'une seule règle décide — trois conditions écrites à trois endroits
      finiraient par se contredire. */
   const enregistre = useCallback(async () => {
-    if (!pret.current) return;
-    const jeton = OneSignal.User.pushSubscription.getPushSubscriptionId();
+    const sdk = chargeOneSignal();
+    if (!pret.current || sdk === null) return;
+    const jeton = sdk.User.pushSubscription.getPushSubscriptionId();
     const connecte = (await litLesJetons()) !== null;
     if (!doitEnregistrer(etat.current, jeton, connecte)) return;
 
@@ -87,9 +138,10 @@ export function PousseeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!APP_ID) return;
+    const sdk = chargeOneSignal();
+    if (!APP_ID || sdk === null) return;
 
-    OneSignal.initialize(APP_ID);
+    sdk.initialize(APP_ID);
     pret.current = true;
 
     /* LA PERMISSION NE SE DEMANDE PAS ICI, et c'est délibéré.
@@ -111,7 +163,7 @@ export function PousseeProvider({ children }: { children: ReactNode }) {
        n'enregistrerait que les démarrages où il se trouve déjà là — soit
        jamais au premier lancement. */
     const surAbonnement = () => { void enregistre(); };
-    OneSignal.User.pushSubscription.addEventListener("change", surAbonnement);
+    sdk.User.pushSubscription.addEventListener("change", surAbonnement);
 
     /* ET À CHAQUE OUVERTURE DE SESSION. Un jeton reçu avant la connexion n'a
        aucun compte auquel se rattacher ; il faut donc repasser quand la
@@ -121,7 +173,7 @@ export function PousseeProvider({ children }: { children: ReactNode }) {
     void enregistre();
 
     return () => {
-      OneSignal.User.pushSubscription.removeEventListener("change", surAbonnement);
+      sdk.User.pushSubscription.removeEventListener("change", surAbonnement);
       detache();
     };
   }, [enregistre]);
