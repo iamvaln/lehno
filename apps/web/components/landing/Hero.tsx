@@ -10,7 +10,9 @@ import { Telephone } from "../Telephone.js";
 // renvoie vers les magasins. Rien d'autre ne change dans le héros. Le seul
 // titre de premier rang de la page — h1 — vit ici.
 export function Hero(
-  { t, langue, avantLancement }: { t: Messages; langue: Langue; avantLancement: boolean },
+  { t, langue, avantLancement, ouvert }: { t: Messages; langue: Langue; avantLancement: boolean;
+    ouvert: (cle: string) => boolean;
+  },
 ): ReactNode {
   return (
     <section style={{ background: "var(--surface-page)" }}>
@@ -54,7 +56,7 @@ export function Hero(
           }}
         >
           <Telephone>
-            <ApercuApplication t={t} langue={langue} />
+            <ApercuApplication t={t} langue={langue} ouvert={ouvert} />
           </Telephone>
         </div>
       </div>

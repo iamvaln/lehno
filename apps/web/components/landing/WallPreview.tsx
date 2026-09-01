@@ -20,7 +20,11 @@ const SURTITRE: CSSProperties = {
   fontWeight: "var(--font-body-semibold)",
 };
 
-export function WallPreview({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
+export function WallPreview({ t, langue, ouvert }: { t: Messages; langue: Langue;
+    /** Une fonctionnalité est-elle ouverte ? Le serveur a déjà résolu les
+     *  dépendances ; la page ne connaît aucune règle. */
+    ouvert: (cle: string) => boolean;
+  }): ReactNode {
   const points: { titre: string; texte: string }[] = [
     { titre: t.murPoint1Titre, texte: t.murPoint1 },
     { titre: t.murPoint2Titre, texte: t.murPoint2 },
@@ -182,28 +186,34 @@ export function WallPreview({ t, langue }: { t: Messages; langue: Langue }): Rea
                     }}
                   >
                     <div style={{ fontSize: "var(--text-body-s)", color: "var(--text-secondary)" }}>{t.murIdee}</div>
-                    <div
-                      style={{
-                        marginTop: "var(--space-8)", color: "var(--text-accent)",
-                        border: "var(--border-width) solid var(--action)",
-                        borderRadius: "var(--radius-md)", padding: "var(--space-6)",
-                        fontSize: "var(--text-body-s)", fontWeight: "var(--font-body-semibold)",
-                      }}
-                    >
-                      {t.murListe}
-                    </div>
+                    {/* La liste ne s'annonce que si elle existe. */}
+                    {ouvert("wishlist.own") ? (
+                      <div
+                        style={{
+                          marginTop: "var(--space-8)", color: "var(--text-accent)",
+                          border: "var(--border-width) solid var(--action)",
+                          borderRadius: "var(--radius-md)", padding: "var(--space-6)",
+                          fontSize: "var(--text-body-s)", fontWeight: "var(--font-body-semibold)",
+                        }}
+                      >
+                        {t.murListe}
+                      </div>
+                    ) : null}
                   </div>
 
-                  <div
-                    style={{
-                      marginTop: "var(--space-8)", background: "var(--action)",
-                      color: "var(--text-on-accent)", textAlign: "center",
-                      borderRadius: "var(--radius-md)", padding: "var(--space-10)",
-                      fontWeight: "var(--font-body-semibold)", fontSize: "var(--text-body-m)",
-                    }}
-                  >
-                    {t.murMot}
-                  </div>
+                  {/* Et le mot ne se propose que si on peut en déposer un. */}
+                  {ouvert("wishes") ? (
+                    <div
+                      style={{
+                        marginTop: "var(--space-8)", background: "var(--action)",
+                        color: "var(--text-on-accent)", textAlign: "center",
+                        borderRadius: "var(--radius-md)", padding: "var(--space-10)",
+                        fontWeight: "var(--font-body-semibold)", fontSize: "var(--text-body-m)",
+                      }}
+                    >
+                      {t.murMot}
+                    </div>
+                  ) : null}
 
                   {/* Le pied du Mur déborde des marges du téléphone : c'est la
                       seule chose de cet aperçu qui parle au visiteur plutôt

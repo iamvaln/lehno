@@ -9,9 +9,25 @@ import { SectionLabel } from "../ui/index.js";
 // Les montants ne sont pas écrits ici : ils viennent de /v1/public/config. Un
 // prix en dur dans une page est un prix qui ment le jour où il change.
 export function Pricing(
-  { t, langue, config }: { t: Messages; langue: Langue; config: ConfigPublique },
+  { t, langue, config, ouvert }: { t: Messages; langue: Langue; config: ConfigPublique;
+    /** Une fonctionnalité est-elle ouverte ? Le serveur a déjà résolu les
+     *  dépendances ; la page ne connaît aucune règle. */
+    ouvert: (cle: string) => boolean;
+  },
 ): ReactNode {
   const prixCredit = formaterMontant(config.creditUnitPrice, config.currency, langue);
+
+  /* L'énumération de ce qu'un crédit achète, réduite à ce qui est OUVERT.
+     L'ordre est celui du dictionnaire, pas celui du registre : le serveur rend
+     les clés dans l'ordre où il les résout, et une phrase dont les termes
+     changent de place d'un déploiement à l'autre se relit mal.
+     Au moins le message est toujours ouvert — la liste n'est donc jamais vide. */
+  const noms = (Object.keys(t.prixGenerations) as (keyof typeof t.prixGenerations)[])
+    .filter((cle) => ouvert(cle))
+    .map((cle) => t.prixGenerations[cle]);
+  const liste = noms.length <= 1
+    ? (noms[0] ?? "")
+    : `${noms.slice(0, -1).join(", ")} ${t.prixEt} ${noms[noms.length - 1]}`;
 
   return (
     <section id="prix" style={{ background: "var(--surface-page)" }}>
@@ -37,7 +53,11 @@ export function Pricing(
               {t.prixCreditsTitre}
             </h3>
             <p style={{ margin: 0, color: "var(--text-secondary)", maxWidth: "40ch" }}>
-              {interpoler(t.prixCredits, { credits: config.signupFreeCredits })}
+              {interpoler(t.prixCredits, { liste, credits: config.signupFreeCredits })}
+              {/* La phrase de parrainage ne paraît que si le parrainage existe :
+                  promettre deux crédits par invitation quand rien ne les
+                  distribue, c'est une promesse qu'on ne tiendra pas. */}
+              {ouvert("referral") ? ` ${t.prixParrainage}` : ""}
             </p>
           </div>
         </div>

@@ -6,7 +6,7 @@ porte que sur le `README.md` de passation, et surtout sur sa section des
 drapeaux — celle qui dit d'elle-même : « c'est la logique centrale de cette
 page ».
 
-Trois choses y sont fausses, et quatre demandent un arbitrage.
+Trois choses y sont fausses, et deux demandent un arbitrage.
 
 ---
 
@@ -69,29 +69,6 @@ pré-lancement — on montre la capture d'adresse plutôt que de promettre une
 application. C'est la lecture qui respecte la phrase que vous avez écrite.
 Confirmez-vous le repli vide ?
 
-### 5. Le tarif quand aucune génération n'est ouverte
-
-La formule s'assemble ainsi :
-
-```
-« Un crédit par contenu créé pour vous : {liste}. {offerts}{parrainage} »
-```
-
-Rien ne dit ce qu'elle donne quand `{liste}` est **vide** — c'est-à-dire quand
-aucune des trois générations n'est ouverte. Aujourd'hui, la phrase produirait :
-
-> « Un crédit par contenu créé pour vous : . 5 crédits offerts à l'inscription. »
-
-Ce n'est pas un cas de bord : c'est l'état actuel du registre. Faut-il masquer
-le bloc entier, remplacer la phrase, ou n'annoncer que les crédits offerts ?
-
-### 6. L'étape 03 quand le message est fermé lui aussi
-
-Le tableau dit : `generation.ideas` éteinte → « l'étape 03 est réécrite pour ne
-parler que du message ». Et si `generation.message` est également éteinte,
-l'étape 03 ne parle plus de rien. Que devient-elle — réécrite encore, ou
-retirée ?
-
 ### 7. Une ligne du tableau ne mène nulle part
 
 La dernière ligne dit : « `credits`, `topup.manual`, `collect`, `reservation` —
@@ -105,11 +82,10 @@ Que commandent `topup.manual` et `collect` sur cette page ?
 
 ## Deux détails de la maquette
 
-**L'onglet « Réglages ».** La barre du téléphone en porte cinq
-(`tabAccueil`, `tabDates`, `tabProches`, `tabMoi`, `tabReglages`). La règle des
-colonnes dit « cinq si l'onglet Moi est là, quatre sinon » — donc `Réglages`
-reste dans les deux cas. C'est bien ça ? La formulation laisse croire que le
-cinquième est « Moi ».
+**L'onglet « Réglages ».** La formulation « cinq si l'onglet Moi est là, quatre
+sinon » laisse croire que le cinquième onglet est « Moi ». Le prototype tranche
+— `Réglages` reste dans les deux cas —, mais la phrase du document mériterait de
+le dire.
 
 **Le « F » du prix.** Voir le point 2 : préciser que c'est un libellé
 d'affichage, et lequel employer en anglais.

@@ -9,7 +9,7 @@ import { messages } from "../messages/index.js";
 // pour l'aperçu de téléphone du héros.
 describe("aperçu d'application — logotype", () => {
   it("porte le logotype en image, pas en texte dessiné", () => {
-    const { container } = render(<ApercuApplication t={messages("fr")} langue="fr" />);
+    const { container } = render(<ApercuApplication t={messages("fr")} langue="fr" ouvert={() => true} />);
     const images = [...container.querySelectorAll("img")].map((img) => img.getAttribute("src"));
     expect(images.some((src) => src?.includes("logotype"))).toBe(true);
   });
