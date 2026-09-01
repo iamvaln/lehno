@@ -410,4 +410,15 @@ export const fr = {
   souhaitAnnuler: "Annuler",
   souhaitAnnulerErreur: "L'annulation n'a pas abouti. Réessayez dans un instant.",
 
+
+  // ——— L'arrêt pour intervention ————————————————————————————————
+  //
+  // 503, et non 404 : un arrêt de deux heures ne se lit pas comme une
+  // suppression. Deux états, parce que l'heure de retour est facultative —
+  // avec elle on dit quand revenir, sans elle on dit seulement qu'une mise à
+  // jour est en cours. Pas de « bientôt », pas d'estimation inventée.
+  interventionTitre: "Lehno est en cours de mise à jour",
+  interventionAvecHeure: "Le service revient vers {heure}. Rien de ce que vous avez envoyé n'est perdu.",
+  interventionSansHeure: "Une mise à jour est en cours. Rien de ce que vous avez envoyé n'est perdu.",
+
 };
