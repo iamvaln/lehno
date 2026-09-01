@@ -22,17 +22,32 @@ const onglet = (actif: boolean): CSSProperties => ({
   color: actif ? "var(--text-accent)" : "var(--text-mention)",
 });
 
-const ONGLETS: { icone: string; nom: (t: Messages) => string }[] = [
+/* La barre d'onglets, telle que la maquette la compose.
+ *
+ * « Moi » n'existe QUE si l'une de ses sections existe — c'est une conséquence
+ * que le serveur n'envoie jamais, elle se déduit ici. Et le nombre de colonnes
+ * en découle : une barre à cinq colonnes dont une est vide est un bug visible.
+ *
+ * `Réglages` reste dans les deux cas : il ne dépend d'aucun drapeau. */
+const ONGLETS: { icone: string; nom: (t: Messages) => string; cles?: string[] }[] = [
   { icone: "house", nom: (t) => t.tabAccueil },
   { icone: "calendar", nom: (t) => t.tabDates },
   { icone: "heart", nom: (t) => t.tabProches },
-  { icone: "circle-user", nom: (t) => t.tabMoi },
+  { icone: "circle-user", nom: (t) => t.tabMoi, cles: ["wall", "wishlist.own", "wishes", "reservation"] },
+  { icone: "settings", nom: (t) => t.tabReglages },
 ];
 
 // L'accueil de l'application, tel qu'il paraît dans le héros. Ce n'est pas l'écran
 // réel : c'est ce qu'il promet — une échéance qui porte ses actions, les suivantes
 // en lignes calmes.
-export function ApercuApplication({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
+export function ApercuApplication(
+  { t, langue, ouvert }: {
+    t: Messages; langue: Langue;
+    /** Une fonctionnalité est-elle ouverte ? Voir ONGLETS ci-dessus. */
+    ouvert: (cle: string) => boolean;
+  },
+): ReactNode {
+  const onglets = ONGLETS.filter((o) => o.cles === undefined || o.cles.some(ouvert));
   return (
     <div
       style={{
@@ -115,10 +130,10 @@ export function ApercuApplication({ t, langue }: { t: Messages; langue: Langue }
         style={{
           borderTop: "var(--border-width) solid var(--border-object)", background: "var(--surface-page)",
           padding: "var(--space-8) var(--space-14) var(--space-14)", display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)", gap: "var(--space-4)", flex: "none",
+          gridTemplateColumns: `repeat(${onglets.length},1fr)`, gap: "var(--space-4)", flex: "none",
         }}
       >
-        {ONGLETS.map(({ icone, nom }, index) => (
+        {onglets.map(({ icone, nom }, index) => (
           <div key={icone} style={onglet(index === 0)}>
             <Icon name={icone} size={21} />
             <span style={{ fontSize: 10.5, fontWeight: "var(--font-body-semibold)" }}>{nom(t)}</span>
