@@ -7,6 +7,7 @@ import { LangueProvider } from "../lib/langue.js";
 import { DrapeauxProvider } from "../lib/DrapeauxProvider.js";
 import { MetadonneesProvider } from "../lib/MetadonneesProvider.js";
 import { ArretProvider, useArret } from "../lib/ArretProvider.js";
+import { PousseeProvider } from "../lib/PousseeProvider.js";
 import { ReseauProvider, useReseau } from "../lib/ReseauProvider.js";
 import { messageDuBandeau } from "../lib/file.js";
 import { useLangue } from "../lib/langue.js";
@@ -108,9 +109,16 @@ export default function Racine() {
             <DrapeauxProvider>
               {/* Les listes de valeurs et leur SENS : ce qu'aucune énumération
                   ne porte. Elles se lisent une fois, après la connexion. */}
-              <MetadonneesProvider>
+              {/* LES NOTIFICATIONS POUSSÉES sont DEDANS, tout au fond : elles
+                  n'affichent rien et ne gouvernent rien — elles ont seulement
+                  besoin d'une session, et cet endroit est le plus profond où
+                  elle est établie. Les poser plus haut les ferait s'initialiser
+                  pendant un arrêt pour intervention, où rien ne peut aboutir. */}
+              <PousseeProvider>
+                <MetadonneesProvider>
                 <SousArret />
-              </MetadonneesProvider>
+                </MetadonneesProvider>
+              </PousseeProvider>
             </DrapeauxProvider>
             </ArretProvider>
           </ReseauProvider>

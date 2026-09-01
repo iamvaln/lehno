@@ -29,10 +29,21 @@ export default [
   // pas par l'application : ils sont en CommonJS, avec les globales de Node.
   // Les convertir en ESM n'est pas une option — Metro les charge par require.
   {
-    files: ["apps/mobile/babel.config.js", "apps/mobile/metro.config.js"],
+    files: [
+      "apps/mobile/babel.config.js",
+      "apps/mobile/metro.config.js",
+      /* `app.config.js` s'exécute sur la MACHINE QUI CONSTRUIT, pas sur le
+         téléphone : c'est ce qui lui permet de lire `process.env` et donc
+         `ONESIGNAL_APP_ID` sans qu'on ait à la dupliquer sous un nom
+         `EXPO_PUBLIC_`. Expo le charge par `require`, comme les deux autres. */
+      "apps/mobile/app.config.js",
+    ],
     languageOptions: {
       sourceType: "commonjs",
-      globals: { module: "writable", require: "readonly", __dirname: "readonly" },
+      globals: {
+        module: "writable", require: "readonly", __dirname: "readonly",
+        process: "readonly",
+      },
     },
     rules: { "@typescript-eslint/no-require-imports": "off" },
   },
