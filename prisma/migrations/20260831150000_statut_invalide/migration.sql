@@ -1,0 +1,12 @@
+-- Un statut pour ce qui NE PEUT PAS aboutir, distinct de ce qui a échoué.
+--
+-- « failed » disait deux choses à la fois : le relais est tombé (réessayer un
+-- jour aurait du sens) et il n'y a aucun appareil pour recevoir ce push
+-- (réessayer n'a aucun sens). Mêlées dans la même file, la première se noie
+-- dans la seconde — et c'est la première qui demande une intervention.
+--
+-- ADD VALUE seulement, aucune écriture qui l'emploie : Postgres refuse
+-- d'utiliser une valeur d'énumération dans la transaction qui vient de
+-- l'ajouter, et Prisma enveloppe chaque migration dans une transaction. Un
+-- UPDATE ici échouerait avec « unsafe use of new value of enum type ».
+ALTER TYPE "NotificationStatus" ADD VALUE IF NOT EXISTS 'invalid';

@@ -996,7 +996,15 @@ enum NotificationStatus {
   pending
   sent
   read
+  // Le transport a refusé : le relais est tombé, le service a rendu une
+  // erreur. Réessayer un jour aurait du sens, et une ligne ici demande une
+  // intervention.
   failed
+  // L'envoi ne PEUT PAS aboutir : aucune traduction ne sait rendre cette clé,
+  // aucun appareil actif ne peut recevoir ce push. Réessayer n'y changerait
+  // rien. Séparé de `failed` pour que les vraies pannes ne se noient pas dans
+  // ce qui est structurellement impossible.
+  invalid
 }
 
 enum DevicePlatform {

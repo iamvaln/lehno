@@ -12,6 +12,7 @@ import { StudioConfigurationService } from "../src/studio/configuration.service.
 import { RouteurIAService } from "../src/ia/routeur.service.js";
 import { OrdonnanceurService } from "../src/me/ordonnanceur.service.js";
 import type { Mail, MailPort } from "../src/mail/mail.port.js";
+import type { PushPort } from "../src/notifications/push.port.js";
 
 /* Le passage complet, de bout en bout : une échéance périmée doit finir en
    courrier parti, sans qu'aucune étape ne soit appelée à la main. */
@@ -20,6 +21,9 @@ describe("le passage quotidien", () => {
   let ordonnanceur: OrdonnanceurService;
   let partis: Mail[];
   const poste: MailPort = { send: async (m) => { partis.push(m); } };
+  // L'ordonnanceur n'éprouve pas le téléphone : ce qu'il vérifie est l'ordre
+  // des passages, pas le transport. Un port qui ne fait rien suffit.
+  const telephone: PushPort = { envoyer: async () => {} };
 
   beforeAll(async () => { db = await withDatabase(); }, 120_000);
   afterAll(async () => { await db.close(); });
@@ -29,7 +33,7 @@ describe("le passage quotidien", () => {
     const p = db.prisma as never;
     ordonnanceur = new OrdonnanceurService(
       new DeroulementService(p), new ProgrammationService(p),
-      new RelancesService(p), new EnvoiService(p, poste),
+      new RelancesService(p), new EnvoiService(p, poste, telephone),
       // Le rattrapage des générations abandonnées : sans fournisseur d'IA, il
       // ne produit rien mais rembourse ce qui traîne — c'est bien son rôle.
       new GenerationService(p, new TenantRepository(p), new RouteurIAService(p), {}, new StudioConfigurationService(p, new AuditService(p))),
@@ -74,7 +78,7 @@ describe("le passage quotidien", () => {
     } as never;
     const p = db.prisma as never;
     const avecPanne = new OrdonnanceurService(
-      casse, new ProgrammationService(p), new RelancesService(p), new EnvoiService(p, poste),
+      casse, new ProgrammationService(p), new RelancesService(p), new EnvoiService(p, poste, telephone),
       new GenerationService(p, new TenantRepository(p), new RouteurIAService(p), {}, new StudioConfigurationService(p, new AuditService(p))),
     );
     await expect(avecPanne.executer()).resolves.toBeUndefined();

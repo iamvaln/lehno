@@ -87,7 +87,11 @@ export const CLES_SERVIES: readonly string[] = [
   "notification.activation_unused_credits",
   "notification.enrichment_nudge_global",
   "notification.enrichment_nudge_person",
-  "wish_reserved",
+  // Avec son préfixe, comme le serveur l'émet réellement
+  // (shared-wishlist.service.ts). Sans lui, cette liste auditait une clé qui
+  // n'existe pas et manquait celle qui part — un audit faux est pire qu'un
+  // audit absent, parce qu'on le croit.
+  "notification.wish_reserved",
 ];
 
 export function clesSansLibelle(t: Traductions): string[] {
