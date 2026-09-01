@@ -60,3 +60,44 @@ après la build, c'est-à-dire après l'attente.
   `preview` et `production` visent `https://api.lehno.io/v1`, l'api déployée.
   Un APK qu'on fait essayer à quelqu'un doit marcher depuis chez lui, pas
   seulement sur le réseau du bureau.
+
+---
+
+## `ONESIGNAL_APP_ID` vit en secret EAS, pas dans le dépôt
+
+`app.config.js` lit `process.env.ONESIGNAL_APP_ID` **sur la machine qui
+construit** et la dépose dans `extra.oneSignalAppId`. Or une build EAS tourne
+sur les serveurs d'Expo : le `.env.local` de la machine du développeur n'y monte
+pas.
+
+Sans elle, la build réussit et l'application se lance — mais
+`PousseeProvider` trouve `null`, ne s'abonne à rien, et **aucune notification
+n'arrive**. C'est silencieux des deux côtés : rien n'échoue, rien ne le dit.
+On le découvre en attendant un rappel qui ne vient pas.
+
+D'où un secret de projet, posé une fois :
+
+```
+eas secret:create --scope project --name ONESIGNAL_APP_ID \
+  --value "<identifiant>" --type string
+```
+
+`--type string` n'est pas optionnel en mode non interactif : sans lui la
+commande échoue sur « Secret type may not be empty ».
+
+**Un secret, et non une entrée `env` dans `eas.json`.** L'identifiant n'est pas
+secret — il voyage dans chaque installation — mais l'écrire dans `eas.json` le
+figerait pour tous les profils, et recette et production partageraient alors le
+même flux : un essai ferait sonner de vrais téléphones. C'est le raisonnement
+que porte déjà `app.config.js`.
+
+**La clé d'API OneSignal ne suit JAMAIS ce chemin.** Elle autorise à envoyer une
+notification à n'importe qui ; un APK se décompresse et ses chaînes se lisent.
+Elle reste au serveur, dans `.env.production`.
+
+## Une observation qui trompe
+
+`expo config --json` rend `"oneSignalAppId": {}` quand la variable est absente —
+c'est sa façon de sérialiser un `null`, pas un défaut. Avec la variable posée,
+la valeur est bien la chaîne. Le garde de `PousseeProvider`
+(`typeof === "string"`) traite correctement les deux cas.
