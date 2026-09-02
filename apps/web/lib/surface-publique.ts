@@ -21,11 +21,20 @@ type Analyseur<T> = { safeParse(valeur: unknown): { success: true; data: T } | {
  * contrat (`common/errors.ts`). Le visiteur l'a reçu de quelqu'un ; un 404 lui
  * ferait croire qu'il a mal recopié l'adresse, et « nous n'avons pas pu
  * répondre » l'enverrait réessayer une chose qui ne marchera jamais.
+ *
+ * « En intervention » non plus, et c'est la cinquième : pendant un arrêt le
+ * serveur rend **503** sur tout, et le contrat le dit sans détour — « un arrêt
+ * de deux heures se lirait comme une suppression définitive ». Le ranger en
+ * panne enverrait le visiteur réessayer toutes les deux minutes une chose dont
+ * on connaît l'heure de retour.
  */
 export type Etat<T> =
   | { etat: "trouve"; donnees: T }
   | { etat: "inconnu" }
   | { etat: "retire" }
+  /** `retour` est l'heure annoncée, ISO 8601 — nulle quand on ne la connaît
+   *  pas. Pas de « bientôt », pas d'estimation inventée. */
+  | { etat: "intervention"; retour: string | null }
   | { etat: "indisponible" };
 
 /**
@@ -40,6 +49,25 @@ export type Etat<T> =
  * `chemin` est déjà échappé par l'appelant : lui seul sait quel segment est une
  * donnée d'utilisateur.
  */
+/* L'heure de retour annoncée, ou rien.
+ *
+ * `until` est FACULTATIVE : on ne la connaît pas toujours. Elle ne se déduit pas
+ * de `retryAfterSeconds`, qui est le rythme de réessai — « un rythme de quinze
+ * minutes ne dit pas que le service revient dans quinze minutes ».
+ *
+ * Un échec ici ne fait pas échouer la page : elle dira qu'une intervention est
+ * en cours, sans l'heure. C'est le second des deux états que le contrat prévoit. */
+async function heureDeRetour(base: string): Promise<string | null> {
+  try {
+    const reponse = await fetch(`${base}/v1/public/maintenance`, { cache: "no-store" });
+    if (!reponse.ok) return null;
+    const corps = await reponse.json() as { until?: unknown };
+    return typeof corps?.until === "string" ? corps.until : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function chargerSurface<T>(
   chemin: string,
   forme: Analyseur<T>,
@@ -60,6 +88,11 @@ export async function chargerSurface<T>(
     if (reponse.status === 404) return { etat: "inconnu" };
     // 410 : le lien a existé et ne mène plus. Voir `Etat` ci-dessus.
     if (reponse.status === 410) return { etat: "retire" };
+    /* 503 : le service est momentanément fermé, et `/public/maintenance` reste
+       ouvert PENDANT l'arrêt — c'est même sa raison d'être. On y va tout de
+       suite : sans l'heure de retour, la page ne saurait dire que « revenez »,
+       ce qui est exactement le « bientôt » que le contrat interdit. */
+    if (reponse.status === 503) return { etat: "intervention", retour: await heureDeRetour(base) };
     if (!reponse.ok) return { etat: "indisponible" };
 
     const analyse = forme.safeParse(await reponse.json());

@@ -1,0 +1,12 @@
+-- L'ambiance éprouvée par un essai, recopiée.
+--
+-- C'est elle qui décide du modèle appelé, et l'essai la reçoit déjà à son
+-- lancement — elle n'était simplement pas gardée. Sans elle, la galerie des
+-- essais ne peut pas dire ce qu'on regarde : deux portraits du même modèle,
+-- sous deux ambiances, s'y ressemblent sans qu'on sache lequel éprouvait quoi.
+--
+-- Recopiée et non liée : une ambiance retirée des réglages n'efface pas la
+-- trace de ce qu'on a essayé, comme `model_key` survit au retrait du modèle.
+--
+-- Nulle sur les essais déjà en base : on ne la reconstitue pas.
+ALTER TABLE "studio_trial" ADD COLUMN "ambiance_id" VARCHAR(60);

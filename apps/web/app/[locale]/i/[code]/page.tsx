@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Invitation } from "../../../../components/surfaces/Invitation.js";
+import { Intervention } from "../../../../components/surfaces/Intervention.js";
 import { AvisCourt } from "../../../../components/surfaces/AvisCourt.js";
 import { estLangue, type Langue } from "../../../../lib/langues.js";
 import { chargerInvitation } from "../../../../lib/invitation.js";
@@ -35,6 +36,13 @@ export default async function Page({ params }: Proprietes): Promise<ReactNode> {
         texte={t.lienRetireTexte}
       />
     );
+  }
+
+  /* 503 : le service est momentanément fermé. Le dire comme une panne enverrait
+     le visiteur réessayer toutes les deux minutes une chose dont on connaît
+     souvent l'heure de retour. */
+  if (etat.etat === "intervention") {
+    return <Intervention t={t} langue={langue} retour={etat.retour} />;
   }
 
   if (etat.etat === "indisponible") {

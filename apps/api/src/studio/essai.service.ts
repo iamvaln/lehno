@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import {
   consigneSysteme, invite, profilContenuSchema,
   type ContexteMessage, type EssaiStudio, type ProfilContenu,
-  type ReglagesMessage, type ReglagesPortrait,
+  type ReglagesMessage, type ReglagesPortrait, type VerdictEssai,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
@@ -27,6 +27,8 @@ type LigneEssai = {
   id: string; studioConfigId: string; studioProfileId: string | null; adminId: string | null;
   provider: string; modelKey: string; status: string; output: unknown;
   cost: unknown; errorCode: string | null; createdAt: Date;
+  verdict?: "kept" | "discarded" | null;
+  ambianceId?: string | null;
 };
 
 @Injectable()
@@ -75,7 +77,7 @@ export class StudioEssaiService {
          Aucune ligne `AIUsage` : rien n'a été appelé, donc rien n'a coûté. */
       return {
         configId: config.id,
-        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, modele, {
+        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, null, modele, {
           status: "error", errorCode: `no_adapter_for_${modele.provider}`,
         })),
       };
@@ -95,7 +97,7 @@ export class StudioEssaiService {
       { origine: "studio_trial", userId: null, actionRunId: null },
     );
 
-    const ligne = await this.consigner(config.id, profil.id, adminId, modele,
+    const ligne = await this.consigner(config.id, profil.id, adminId, null, modele,
       resultat.etat === "success"
         ? { status: "success", output: { message: resultat.contenu }, cost: resultat.cout }
         : { status: resultat.etat, errorCode: resultat.code });
@@ -177,7 +179,7 @@ export class StudioEssaiService {
     if (!adaptateur) {
       return {
         configId: config.id,
-        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, modele, {
+        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, ambianceId, modele, {
           status: "error", errorCode: `no_adapter_for_${modele.provider}`,
         })),
       };
@@ -204,7 +206,7 @@ export class StudioEssaiService {
       sortie = { cle: await this.stockage.ecrire("portraits", Buffer.from(resultat.contenu, "base64"), "image/png") };
     }
 
-    const ligne = await this.consigner(config.id, profil.id, adminId, modele,
+    const ligne = await this.consigner(config.id, profil.id, adminId, ambianceId, modele,
       resultat.etat === "success"
         ? { status: "success", output: sortie, cost: resultat.cout }
         : { status: resultat.etat, errorCode: resultat.code });
@@ -278,6 +280,10 @@ export class StudioEssaiService {
 
   private async consigner(
     configId: string, profilId: string, adminId: string,
+    /* Nulle pour un essai de MESSAGE : il n'éprouve pas d'ambiance. Ce n'est
+       pas une donnée manquante, c'est une donnée qui n'existe pas pour cette
+       nature — d'où le nul plutôt qu'une chaîne vide. */
+    ambianceId: string | null,
     modele: { provider: string; modelKey: string },
     issue: { status: string; output?: unknown; cost?: number | null; errorCode?: string },
   ): Promise<LigneEssai> {
@@ -286,6 +292,9 @@ export class StudioEssaiService {
         studioConfigId: configId,
         studioProfileId: profilId,
         adminId,
+        // Recopiée : une ambiance retirée des réglages n'efface pas la trace
+        // de ce qu'on a essayé.
+        ambianceId,
         provider: modele.provider,
         modelKey: modele.modelKey,
         status: issue.status as "success" | "error" | "timeout" | "refused",
@@ -335,7 +344,29 @@ export class StudioEssaiService {
       erreur: l.errorCode,
       parQui,
       quand: l.createdAt.toISOString(),
+      verdict: l.verdict ?? null,
+      ambianceId: l.ambianceId ?? null,
     };
+  }
+
+  /* Le sort d'un essai : ce qu'on a PENSÉ du résultat.
+   *
+   * Il se pose depuis l'Atelier, par le geste qui SUIT l'essai — garder retient
+   * le brouillon et retient l'essai avec lui, écarter fait l'inverse. Aucun
+   * geste de plus à apprendre, et c'est pourquoi il n'y a pas de motif : un
+   * essai ne change rien pour personne, et une séance en compte trente.
+   *
+   * Il se REPOSE : on se ravise en regardant la vignette du lendemain, et
+   * refuser le second geste obligerait à refaire l'essai pour changer d'avis. */
+  async juger(id: string, verdict: VerdictEssai): Promise<EssaiStudio> {
+    const ligne = await this.prisma.studioTrial.findUnique({ where: { id }, select: { id: true } });
+    if (!ligne) throw new AppError("not_found", "resource not found");
+    const misAJour = await this.prisma.studioTrial.update({
+      where: { id },
+      data: { verdict },
+      include: { admin: { select: { email: true } } },
+    });
+    return this.rendre(misAJour, misAJour.admin?.email ?? null);
   }
   /* Une sortie d'image porte `{ cle }` ; une sortie de texte porte `{ message }`.
      On ne signe que la première, et on laisse la seconde telle quelle : deviner

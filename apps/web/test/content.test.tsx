@@ -13,23 +13,23 @@ describe("Content — fiche d'un proche", () => {
   const t = messages("fr");
 
   it("l'idée cadeau se lit comme une parole rapportée, en italique", () => {
-    render(<Content t={t} langue="fr" />);
+    render(<Content t={t} langue="fr" ouvert={() => true} />);
     expect(screen.getByText(t.ideeParole, { exact: false })).toBeInTheDocument();
   });
 
   it("l'idée cadeau porte sa provenance", () => {
-    render(<Content t={t} langue="fr" />);
+    render(<Content t={t} langue="fr" ouvert={() => true} />);
     expect(screen.getByText(t.provIdee, { exact: false })).toBeInTheDocument();
   });
 
   it("le no-go se lit lui aussi comme une parole rapportée, avec sa provenance", () => {
-    render(<Content t={t} langue="fr" />);
+    render(<Content t={t} langue="fr" ouvert={() => true} />);
     expect(screen.getByText(t.nogoParole, { exact: false })).toBeInTheDocument();
     expect(screen.getByText(t.provNogo, { exact: false })).toBeInTheDocument();
   });
 
   it("les anciennes clés ne sont plus employées", () => {
-    render(<Content t={t} langue="fr" />);
+    render(<Content t={t} langue="fr" ouvert={() => true} />);
     expect(screen.queryByText("ideeTexte", { exact: false })).not.toBeInTheDocument();
     expect(("ideeTexte" in t)).toBe(false);
     expect(("ideeDate" in t)).toBe(false);
@@ -44,7 +44,7 @@ describe("Content — station « Ce que l'application contient »", () => {
   // cette station, comme HowItWorks et Pricing en portent déjà un chacun —
   // seule cette station en était dépourvue.
   it("porte son propre surtitre, au-dessus de la fiche", () => {
-    render(<Content t={t} langue="fr" />);
+    render(<Content t={t} langue="fr" ouvert={() => true} />);
     expect(screen.getByText(t.contenuKicker)).toBeInTheDocument();
   });
 });
@@ -53,13 +53,13 @@ describe("Content — calendrier", () => {
   const t = messages("fr");
 
   it("porte une ligne « aujourd'hui » pour Celarine", () => {
-    render(<Content t={t} langue="fr" />);
+    render(<Content t={t} langue="fr" ouvert={() => true} />);
     expect(screen.getByText("Celarine")).toBeInTheDocument();
     expect(screen.getAllByText(t.aujourdhui).length).toBeGreaterThan(0);
   });
 
   it("ne porte plus la ligne Nour & moi retirée de la maquette", () => {
-    render(<Content t={t} langue="fr" />);
+    render(<Content t={t} langue="fr" ouvert={() => true} />);
     expect(screen.queryByText(/nour/i)).not.toBeInTheDocument();
     expect(("nourEtMoi" in t)).toBe(false);
     expect(("sixMois" in t)).toBe(false);
@@ -70,7 +70,7 @@ describe("Content — brouillon", () => {
   const t = messages("fr");
 
   it("le message brouillé porte sa provenance", () => {
-    render(<Content t={t} langue="fr" />);
+    render(<Content t={t} langue="fr" ouvert={() => true} />);
     expect(screen.getByText(t.provBrouillon, { exact: false })).toBeInTheDocument();
   });
 });

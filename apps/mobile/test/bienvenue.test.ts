@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  expliqueLeBonusManque, lignesDeBienvenue, phraseDeBienvenue,
+  expliqueLeBonusManque, lignesDeBienvenue, phraseDeBienvenue, resteAvantExpiration,
 } from "../lib/bienvenue.js";
 import { MESSAGES } from "../messages/index.js";
 
@@ -124,5 +124,31 @@ describe("les deux issues qui n'empêchent rien", () => {
       { cadeau: 5, attente: 3, parrainage: { outcome: "credited", bonusCredits: 2 } }, [], t,
     );
     expect(lignes.map((l) => l.cle)).toEqual(["cadeau", "attente"]);
+  });
+});
+
+describe("le temps qui reste pour saisir le code", () => {
+  const T = Date.parse("2026-08-31T04:00:00.000Z");
+
+  /* ON COMPTE DEPUIS L'ÉCHÉANCE SERVIE, pas depuis une durée démarrée au
+     montage : revenir en arrière puis repartir faisait repartir le minuteur de
+     dix minutes sur un code déjà mort — « expiré » au-dessus d'un décompte qui
+     tournait encore. */
+  it("mesure l'âge du CODE, pas celui de l'écran", () => {
+    expect(resteAvantExpiration("2026-08-31T04:09:00.000Z", T)).toBe(540);
+    // Le même code, lu trois minutes plus tard : il reste moins, pas autant.
+    expect(resteAvantExpiration("2026-08-31T04:09:00.000Z", T + 180_000)).toBe(360);
+  });
+
+  it("ne descend jamais sous zéro", () => {
+    expect(resteAvantExpiration("2026-08-31T03:59:00.000Z", T)).toBe(0);
+  });
+
+  /* Illisible : on rend `null` plutôt que zéro. « Il reste 0 s » sur un code
+     parfaitement valide ferait renoncer quelqu'un qui pouvait encore saisir —
+     l'écran se tait, et le serveur tranchera. */
+  it("se tait plutôt que d'annoncer zéro sur une échéance illisible", () => {
+    expect(resteAvantExpiration("pas une date", T)).toBeNull();
+    expect(resteAvantExpiration("", T)).toBeNull();
   });
 });

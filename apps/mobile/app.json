@@ -43,6 +43,12 @@
     "experiments": {
       "typedRoutes": true
     },
-    "owner": "PROXIA"
+    "owner": "proxia",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fdd049d8-8fd6-48a7-b366-56f580e8d39e"
+      }
+    }
   }
 }

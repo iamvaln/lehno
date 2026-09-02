@@ -83,13 +83,11 @@ model User {
   deletionReason           String?         @map("deletion_reason")
   /**
    * Quand la ligne a été VIDÉE, pas quand la suppression a été demandée.
-   *
    * C'est le seul marqueur d'idempotence de la tâche d'effacement, et il ne
    * peut pas être `status` : la ligne reste `deleted` avant comme après, parce
    * qu'elle n'est jamais supprimée — les paiements et les mouvements de crédits
    * la référencent en `Cascade`, et les effacer avec elle emporterait des
    * pièces comptables que la loi impose de garder.
-   *
    * Il s'écrit EN DERNIER, une fois toutes les étapes passées. Un passage
    * interrompu le laisse donc nul, et le suivant reprend le compte du début :
    * c'est ce qui rend l'effacement reprenable sans qu'aucune étape n'ait à
@@ -998,7 +996,15 @@ enum NotificationStatus {
   pending
   sent
   read
+  // Le transport a refusé : le relais est tombé, le service a rendu une
+  // erreur. Réessayer un jour aurait du sens, et une ligne ici demande une
+  // intervention.
   failed
+  // L'envoi ne PEUT PAS aboutir : aucune traduction ne sait rendre cette clé,
+  // aucun appareil actif ne peut recevoir ce push. Réessayer n'y changerait
+  // rien. Séparé de `failed` pour que les vraies pannes ne se noient pas dans
+  // ce qui est structurellement impossible.
+  invalid
 }
 
 enum DevicePlatform {
@@ -1178,10 +1184,10 @@ model Admin {
   isActive    Boolean   @default(true) @map("is_active")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  otpCodes         AdminOtpCode[]
-  refreshTokens    AdminRefreshToken[]
-  featureFlags     FeatureFlag[]
-  paymentDecisions PaymentStatusHistory[]
+  otpCodes           AdminOtpCode[]
+  refreshTokens      AdminRefreshToken[]
+  featureFlags       FeatureFlag[]
+  paymentDecisions   PaymentStatusHistory[]
   studioPublications StudioConfig[]
   studioTrials       StudioTrial[]
 
@@ -1759,10 +1765,8 @@ enum StudioConfigState {
 
 /**
  * Ce que le studio propose, et ce qu'on demande au modèle pour le produire.
- *
  * UNE LIGNE NE SE MODIFIE JAMAIS ; elle se dépasse. Chaque prévisualisation en
  * crée une neuve en `draft` et fait passer la précédente à `superseded`.
- *
  * Ce n'est pas une préférence de style. Si le brouillon était mutable, un essai
  * lancé avant une modification resterait rattaché à la même ligne après elle :
  * la règle « rien ne se publie sans essai » serait satisfaite par un essai qui
@@ -1775,7 +1779,6 @@ model StudioConfig {
 
   /**
    * Ce que cette configuration gouverne.
-   *
    * Les deux n'ont vécu ensemble que par accident d'écriture, et ça coûtait
    * deux choses invisibles. D'abord une seule empreinte : reformuler un
    * garde-fou du message faisait retomber les essais du portrait, et l'inverse.
@@ -1783,7 +1786,6 @@ model StudioConfig {
    * MESSAGE. Publier un changement de style de dessin se débloquait donc avec
    * un essai qui avait produit un texte — on mettait en service un portrait que
    * personne n'avait vu.
-   *
    * Chaque nature a sa ligne publiée, sa ligne brouillon, son empreinte et ses
    * essais. Les index uniques partiels sont portés par nature en migration.
    */
@@ -1804,7 +1806,6 @@ model StudioConfig {
 
   /**
    * L'empreinte de la partie LUE PAR LE MODÈLE, calculée à l'écriture.
-   *
    * Elle est stockée plutôt que recalculée à la lecture : la règle de
    * publication cherche « un essai réussi sur une configuration de même
    * empreinte », et sans colonne cette recherche lirait toutes les lignes du
@@ -1852,11 +1853,22 @@ model StudioProfile {
 
 /**
  * Un essai : une configuration, un profil, un modèle nommé, un résultat.
- *
  * Il porte `studioConfigId` et jamais « le studio en général » — c'est ce qui
  * rend la règle de publication vérifiable. Un essai rattaché au studio
  * couvrirait n'importe quel réglage, y compris celui qu'on vient d'écrire.
  */
+/**
+ * Le sort d'un essai. « Publié » n'en fait pas partie : ce n'est pas l'essai
+ * qu'on publie, c'est sa configuration — l'écran le déduit de l'état de
+ * celle-ci, et un troisième membre ici mentirait sur ce qui se range où.
+ */
+enum StudioTrialVerdict {
+  kept
+  discarded
+
+  @@map("studio_trial_verdict")
+}
+
 model StudioTrial {
   id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   studioConfigId  String  @map("studio_config_id") @db.Uuid
@@ -1875,10 +1887,36 @@ model StudioTrial {
 
   status    AIUsageStatus
   output    Json?
-  cost      Decimal? @db.Decimal(12, 6)
+  cost      Decimal?      @db.Decimal(12, 6)
   /// Le code de l'échec, nommé. Jamais le message du fournisseur : ceux-là
   /// recopient parfois l'invite, donc les notes du profil.
-  errorCode String?  @map("error_code") @db.VarChar(80)
+  errorCode String?       @map("error_code") @db.VarChar(80)
+
+  /**
+   * L'AMBIANCE ÉPROUVÉE, recopiée.
+   * C'est elle qui décide du modèle appelé — une famille d'illustration et un
+   * style de photo ne passent pas par le même —, et l'essai la reçoit déjà à
+   * son lancement. Ne pas la garder rendait la galerie des essais incapable de
+   * dire ce qu'on regardait : deux portraits produits par le même modèle, sous
+   * deux ambiances, s'y ressemblaient sans qu'on sache lequel éprouvait quoi.
+   * Recopiée et non liée : une ambiance retirée des réglages ne doit pas
+   * effacer la trace de ce qu'on a essayé, comme `modelKey` survit au retrait
+   * du modèle du catalogue.
+   * Nulle sur les essais antérieurs à cette colonne : on ne la reconstitue pas.
+   */
+  ambianceId String? @map("ambiance_id") @db.VarChar(60)
+
+  /**
+   * CE QU'ON A PENSÉ DU RÉSULTAT, et non ce que l'appel a rendu — `status` dit
+   * déjà si le modèle a répondu. Nul tant qu'on n'a pas tranché : un essai
+   * qu'on n'a pas jugé n'est pas un essai jugé mauvais.
+   * Il se pose depuis l'Atelier, par le geste qui SUIT l'essai : garder retient
+   * le brouillon et retient l'essai avec lui, écarter fait l'inverse. Aucun
+   * geste de plus à apprendre.
+   * Un essai écarté NE DISPARAÎT PAS : on l'a jugé mauvais, c'est une
+   * information, et le revoir évite de refaire le même.
+   */
+  verdict StudioTrialVerdict?
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
@@ -2088,12 +2126,10 @@ model PaymentMethod {
   kind                     PaymentMethodKind
   /**
    * L'opérateur, RÉSOLU DEPUIS LE CANAL, jamais saisi.
-   *
    * C'est la clé de « un seul numéro par opérateur ». Elle ne pouvait pas être
    * `brand` : celui-ci est du texte libre, et « MTN » comme « MTN MoMo »
    * auraient fait deux méthodes pour un même opérateur sans que la règle ne
    * voie rien.
-   *
    * Nul sur une CARTE, et seulement là : une carte ne passe pas par un canal
    * d'opérateur, son réseau vient du prestataire. C'est la seule raison pour
    * laquelle l'index unique est partiel — et c'est une règle du modèle, pas une

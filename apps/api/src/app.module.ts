@@ -1,5 +1,5 @@
 import type { MiddlewareConsumer, NestModule } from "@nestjs/common";
-import { Module } from "@nestjs/common";
+import { Logger, Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ScheduleModule } from "@nestjs/schedule";
 import { CorrelationMiddleware } from "./common/correlation.middleware.js";
@@ -132,6 +132,8 @@ import { SurfacePubliqueService } from "./mur/jetons.js";
 import { EffacementService } from "./me/effacement.service.js";
 import { StockageR2 } from "./stockage/r2.adapter.js";
 import { StockageMemoire } from "./stockage/memoire.adapter.js";
+import { PousseOneSignal } from "./notifications/onesignal.adapter.js";
+import { PoussePourLaConsole } from "./notifications/console.adapter.js";
 import { TrackingService } from "./tracking/tracking.service.js";
 import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
 import { PostHogAdapter } from "./tracking/posthog.adapter.js";
@@ -217,6 +219,40 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
         return new StockageMemoire();
       },
     },
+    {
+      /* Les notifications poussées.
+       *
+       * Même raisonnement que MAIL_PORT juste au-dessus, et la même
+       * correction : L'ADHÉSION EXPLICITE PASSE AVANT. Sur un poste de
+       * développement, les deux variables OneSignal viennent du fichier
+       * d'environnement partagé — les tester en premier rendrait
+       * `LEHNO_PUSH_CONSOLE=1` inatteignable, et chaque essai local partirait
+       * sur un vrai téléphone. Une notification poussée par erreur ne se
+       * rattrape pas : elle a déjà sonné.
+       *
+       * Les deux variables ensemble ou aucune, comme pour R2 : un identifiant
+       * d'application sans clé donnerait un client qui part en requête et se
+       * fait refuser, et le refus ne paraîtrait qu'au premier rappel dû —
+       * c'est-à-dire chez quelqu'un, un matin, sans que personne regarde.
+       *
+       * Le repli est la console et non un refus de démarrer, contrairement au
+       * courrier : sans courriel, personne ne peut se connecter ; sans push,
+       * l'application marche. Mais le repli s'ANNONCE, parce que c'est
+       * exactement ainsi qu'une mise en service se fait sans notifications
+       * sans que personne ne s'en aperçoive. */
+      provide: "PUSH_PORT",
+      useFactory: () => {
+        if (process.env.LEHNO_PUSH_CONSOLE === "1") return new PoussePourLaConsole();
+        const app = process.env.ONESIGNAL_APP_ID;
+        const cle = process.env.ONESIGNAL_API_KEY;
+        if (app && cle) return new PousseOneSignal(app, cle);
+        new Logger("PUSH_PORT").warn(
+          "ONESIGNAL_APP_ID et ONESIGNAL_API_KEY absentes : aucune notification " +
+          "poussée ne partira, leur contenu s'écrira sur cette console.",
+        );
+        return new PoussePourLaConsole();
+      },
+    },
     // Le Mur et la collecte (§5.3, §5.5, §7).
     SurfacePubliqueService,
     MurService,
@@ -260,8 +296,27 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
       useFactory: () => {
         const apiKey = process.env.RESEND_API_KEY;
         const from = process.env.RESEND_FROM;
+        /* L'ADHÉSION EXPLICITE PASSE AVANT, et l'ordre inverse rendait la
+           variable INATTEIGNABLE : sur un poste de développement, Resend et
+           `LEHNO_MAIL_CONSOLE=1` cohabitent toujours — l'un vient du fichier
+           d'environnement partagé, l'autre est posé exprès pour développer. Le
+           second ne servait donc jamais, et le parcours de connexion était
+           impossible en local : Resend refuse d'écrire à un domaine non
+           vérifié, le code ne partait nulle part, et rien ne disait pourquoi.
+
+           La garde que l'ordre précédent défendait tient toujours : on ne
+           TOMBE pas sur la console faute de configuration — il faut poser la
+           variable à « 1 », ce qui ne s'écrit pas par accident. Et le
+           démarrage l'annonce, pour qu'un environnement où elle traîne se
+           remarque au lieu de journaliser des codes en silence. */
+        if (process.env.LEHNO_MAIL_CONSOLE === "1") {
+          new Logger("MAIL_PORT").warn(
+            "LEHNO_MAIL_CONSOLE=1 : les courriels ne partent pas, leur contenu " +
+            "s'écrit sur cette console — codes à usage unique compris.",
+          );
+          return new ConsoleMailAdapter();
+        }
         if (apiKey && from) return new ResendAdapter(apiKey, from);
-        if (process.env.LEHNO_MAIL_CONSOLE === "1") return new ConsoleMailAdapter();
         throw new Error(
           "Aucun envoi de courrier configuré : posez RESEND_API_KEY et RESEND_FROM, " +
           "ou LEHNO_MAIL_CONSOLE=1 pour accepter explicitement la console de développement.",

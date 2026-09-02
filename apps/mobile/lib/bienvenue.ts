@@ -109,3 +109,21 @@ export function lignesDeBienvenue(
 export function expliqueLeBonusManque(lignes: readonly LigneDeBienvenue[]): boolean {
   return lignes.some((l) => l.cle === "parrain" && l.sourd === true);
 }
+
+/* COMBIEN DE TEMPS IL RESTE POUR SAISIR LE CODE.
+ *
+ * On compte depuis l'ÉCHÉANCE servie par le serveur, jamais depuis une durée
+ * fixe démarrée au montage de l'écran. La différence n'est pas théorique :
+ * quelqu'un qui revient en arrière puis repart voyait le minuteur repartir de
+ * dix minutes sur un code déjà mort — l'écran annonçait « expiré » au-dessus
+ * d'un décompte qui tournait encore.
+ *
+ * Une échéance illisible rend `null` plutôt que zéro : « il reste 0 s » sur un
+ * code parfaitement valide ferait renoncer quelqu'un qui pouvait encore saisir.
+ * L'écran se tait alors sur la durée, et le serveur tranchera.
+ */
+export function resteAvantExpiration(echeance: string, maintenant: number): number | null {
+  const fin = Date.parse(echeance);
+  if (Number.isNaN(fin)) return null;
+  return Math.max(0, Math.floor((fin - maintenant) / 1000));
+}

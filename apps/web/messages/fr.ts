@@ -42,6 +42,7 @@ export const fr = {
   preparer: "Préparer",
   marquer: "Marquer envoyé",
   tabAccueil: "Accueil", tabDates: "Dates", tabProches: "Proches", tabMoi: "Moi",
+  tabReglages: "Réglages",
   notifications: "3 notifications non lues",
 
   etape1Titre: "Notez quand ça vous vient.",
@@ -88,8 +89,20 @@ export const fr = {
   prixGratuit: "Vos notes, les fiches de vos proches, vos dates, les rappels et votre Mur.",
   prixCreditsUnite: "le crédit",
   prixCreditsTitre: "À l'usage, en crédits",
-  // Le nombre de crédits offerts vient de /v1/public/config, jamais de la maquette.
-  prixCredits: "Un crédit par contenu créé pour vous : le portrait, les idées de cadeau, le message. {credits} crédits offerts à l'inscription.",
+  /* La phrase du tarif SE COMPOSE : elle n'énumère que les générations
+     ouvertes. Énumérer une génération fermée, c'est vendre ce qu'on ne livre
+     pas. Le nombre de crédits offerts vient de /v1/public/config, jamais de la
+     maquette. */
+  prixCredits: "Un crédit par contenu créé pour vous : {liste}. {credits} crédits offerts à l'inscription.",
+  prixGenerations: {
+    "generation.message": "le message",
+    "generation.ideas": "les idées de cadeau",
+    "generation.portrait": "le portrait",
+  },
+  // La conjonction de l'énumération : « le message, les idées et le portrait ».
+  prixEt: "et",
+  // Seulement quand le parrainage est ouvert.
+  prixParrainage: "Et deux de plus par personne que vous invitez.",
 
   finTitre: "Faites de chaque jour J un moment qui leur ressemble.",
   signature: "Chaque date qui compte, bien célébrée.",
@@ -409,5 +422,16 @@ export const fr = {
 
   souhaitAnnuler: "Annuler",
   souhaitAnnulerErreur: "L'annulation n'a pas abouti. Réessayez dans un instant.",
+
+
+  // ——— L'arrêt pour intervention ————————————————————————————————
+  //
+  // 503, et non 404 : un arrêt de deux heures ne se lit pas comme une
+  // suppression. Deux états, parce que l'heure de retour est facultative —
+  // avec elle on dit quand revenir, sans elle on dit seulement qu'une mise à
+  // jour est en cours. Pas de « bientôt », pas d'estimation inventée.
+  interventionTitre: "Lehno est en cours de mise à jour",
+  interventionAvecHeure: "Le service revient vers {heure}. Rien de ce que vous avez envoyé n'est perdu.",
+  interventionSansHeure: "Une mise à jour est en cours. Rien de ce que vous avez envoyé n'est perdu.",
 
 };

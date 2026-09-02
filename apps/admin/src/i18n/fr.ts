@@ -77,6 +77,10 @@ export const fr = {
     fonctionnalites: "Fonctionnalités",
     modeles: "Modèles d'IA",
     studio: "Studio du portrait",
+    atelier: "L'Atelier",
+    essais: "Les essais",
+    studioService: "Réglages en service",
+    gabarits: "Gabarits de production",
     offres: "Offres et croissance",
     metriques: "Métriques",
     audit: "Journal d'audit",
@@ -1021,6 +1025,216 @@ export const fr = {
     account_suspended: "Ce compte est suspendu.",
     reseau_indisponible: "Le service est injoignable. Vérifiez votre connexion.",
     reponse_invalide: "Le service a répondu quelque chose d'inattendu. Réessayez dans un instant.",
+  },
+
+  studioAtelier: {
+    titre: "L'Atelier",
+    sous: "Régler, essayer, garder — un seul geste répété.",
+    // Tout est visible en même temps : découper l'écran en temps successifs
+    // obligeait à revenir en arrière à chaque tour.
+    chaine: {
+      titre: "La chaîne",
+      ambiance: "Ambiance éprouvée",
+      profil: "Profil d'essai",
+      modele: "Modèle appelé",
+      sansTarif: "Tarif inconnu",
+      enPanne: "Écarté du routage jusqu'au {date}",
+      // L'atelier appelle quand même un modèle en panne : c'est là qu'on va voir.
+      enPanneAide: "L'Atelier l'appelle quand même — c'est ici qu'on va voir.",
+    },
+    // Ce que le modèle LIT porte un liséré : chaque changement demande un
+    // nouvel essai. Ce que seule l'application lit n'en porte pas.
+    lu: {
+      titre: "Ce que le modèle lit",
+      consigne: "Consigne de l'ambiance",
+      consigneAide: "Ce texte part au modèle tel quel, dans la langue de l'ambiance.",
+      nonEnregistre: "non enregistré",
+    },
+    interne: {
+      titre: "Ce que seule l'application lit",
+      motifBande: "Motif de la bande",
+      motifFond: "Motif du fond sans image",
+      motifs: {
+        trame_de_hampes: "Trame de hampes",
+        registres: "Registres",
+      },
+    },
+    ouvrage: {
+      titre: "L'ouvrage",
+      vide: "Rien n'a encore été produit. Lancez un essai pour voir ce que ces réglages donnent.",
+      alt: "Portrait produit par l'essai",
+      // Ce que l'issue appelle comme geste, dit une fois — pas un « échec »
+      // générique qu'on réessaie en boucle.
+      echecPanne: "Le modèle n'a pas répondu. Réessayez : la panne peut être passagère.",
+      echecDelai: "Le modèle a mis trop de temps. Réessayez, ou choisissez-en un plus rapide.",
+      echecRefus: "Le modèle a refusé cette demande. Ce n'est pas une panne : reprenez la consigne.",
+      code: "Code du serveur : {code}",
+      // Pas de repli : on essaie le modèle demandé, ou l'échec se dit en le
+      // nommant. Sans quoi on publierait sur la foi d'un résultat produit ailleurs.
+      sansRepli: "Aucun repli n'a été tenté : c'est bien ce modèle qui a échoué.",
+      cout: "{cout} F",
+      coutInconnu: "Coût inconnu",
+    },
+    gestes: {
+      essayer: "Prévisualiser",
+      enCours: "Essai en cours…",
+      garder: "Garder",
+      ecarter: "Écarter",
+      publier: "Publier",
+      // Garder et Écarter n'existent qu'après un essai, et le disent — cacher
+      // le second ferait croire qu'un essai raté est irréversible.
+      avantEssai: "Garder et Écarter s'ouvrent après un essai.",
+      // Publier reste inerte sans essai réussi et dit ce qui lui manque.
+      publierSansEssai: "On ne met pas en service ce qu'on n'a pas vu : lancez un essai d'abord.",
+      publierDejaEnService: "Ces réglages sont déjà ceux qui tournent.",
+      publierDepasse: "Cette version est dépassée : on y revient depuis les réglages en service.",
+      gardeFait: "Brouillon gardé.",
+      ecarteFait: "Retour au dernier gardé.",
+      echec: "Le serveur a refusé : {code}",
+    },
+    publier: {
+      titre: "Mettre ces réglages en service",
+      consequence: "Les portraits produits à partir de maintenant emploieront cette version. La précédente se range, et reste disponible au retour arrière.",
+      motifs: [
+        "Nouvelle consigne d'ambiance, essayée et concluante",
+        "Correction d'un garde-fou qui ne tenait pas",
+        "Changement de modèle après comparaison",
+      ],
+    },
+    journal: {
+      titre: "Les essais du jour",
+      sous: "Aucun essai ne s'efface : ce qui a coûté un appel se garde.",
+      vide: "Aucun essai aujourd'hui.",
+      col: { quand: "À", modele: "Modèle", etat: "Issue", cout: "Coût", parQui: "Par" },
+      // Un REFUS n'est pas une panne : trois issues, trois gestes — réessayer,
+      // reprendre la consigne, recharger le compte du fournisseur. Un seul
+      // « échoué » les confondrait, et on réessaierait trente fois une demande
+      // que le modèle refusera toujours.
+      etats: {
+        success: "Réussi",
+        error: "Panne",
+        timeout: "Délai dépassé",
+        refused: "Refusé par le modèle",
+      },
+    },
+    // Aucun compteur de dépense ici : le prix reste fiche technique du modèle.
+    rappel: "Le prix des modèles est indicatif. La dépense se lit dans « Usage des modèles », après coup.",
+    sansDepart: {
+      titre: "Rien à composer pour l'instant",
+      texte: "Aucun brouillon ni version en service. Les réglages de départ se posent en base, à l'installation du Studio.",
+    },
+    sansProfil: {
+      titre: "Aucun profil d'essai",
+      texte: "Un essai se lance contre un proche simulé. Il n'y en a aucun ; créez-en un avant d'essayer.",
+    },
+  },
+
+  studioEssais: {
+    titre: "Les essais",
+    sous: "Ce qui a été produit, et ce qu'on en a pensé.",
+    // Il existe parce que le journal de l'Atelier ne porte que la journée : un
+    // essai gardé la semaine dernière était introuvable, il fallait refaire la
+    // configuration de mémoire et repayer l'appel pour revoir ce qu'on avait
+    // déjà vu.
+    pourquoi: "L'Atelier ne montre que la journée. Ici, les cent derniers essais — de quoi revoir sans repayer l'appel.",
+    filtre: {
+      ambiance: "Ambiance",
+      toutesAmbiances: "Toutes",
+      sansAmbiance: "Sans ambiance",
+      libelle: "Sort",
+      tout: "Tous",
+      kept: "Gardés",
+      discarded: "Écartés",
+      publie: "Publiés",
+      nonJuge: "Non jugés",
+    },
+    // Trois sorts, et le troisième est le but. Un essai publié quitte cette
+    // page pour l'historique des versions, où il a un numéro.
+    sorts: {
+      kept: "Gardé",
+      discarded: "Écarté",
+      publie: "Publié",
+      nonJuge: "Non jugé",
+    },
+    carte: {
+      alt: "Résultat de l'essai",
+      echoue: "Rien n'a été produit : {code}",
+      coutInconnu: "Coût inconnu",
+      cout: "{cout} F",
+      par: "par {qui}",
+    },
+    vide: {
+      titre: "Aucun essai",
+      texte: "Les essais lancés depuis l'Atelier s'inscrivent ici, avec ce qu'ils ont produit.",
+    },
+    videFiltre: {
+      titre: "Aucun essai de ce sort",
+      texte: "Changez de filtre pour revoir les autres.",
+    },
+    // Aucun essai ne s'efface à la main : ce qui a coûté un appel se garde, ce
+    // qui encombre se filtre. Un bouton de suppression n'aurait servi qu'à
+    // perdre la trace d'une dépense.
+    rappel: "Aucun essai ne s'efface : ce qui a coûté un appel se garde.",
+  },
+
+  studioService: {
+    titre: "Réglages en service",
+    sous: "Ce qui tourne aujourd'hui, et qui l'a mis là.",
+    // On ne change rien ici, et l'écran le dit : un administrateur qui cherche
+    // où modifier ne doit pas avoir à le déduire de l'absence de champs.
+    lecture: "Cet écran ne se modifie pas. Les réglages se composent à l'Atelier, et n'entrent en service qu'une fois publiés.",
+    enService: "En service",
+    version: "Version {n}",
+    depuis: "Publiée le {date}",
+    par: "par {qui}",
+    sansNote: "Publiée sans note.",
+    // La mesure que l'écran devrait porter et qu'aucune route ne sert : on le
+    // dit plutôt que de rendre un zéro, qui se prendrait pour un chiffre.
+    tauxAbsent: "Le taux de régénération n'est pas encore mesuré : rien ne le compte côté serveur.",
+    contenu: {
+      titre: "Ce que cette version règle",
+      ambiances: "{n} ambiances",
+      voies: "{n} voies d'image",
+      illustration: "Illustration : {modele}",
+      photo: "Style de photo : {modele}",
+    },
+    historique: {
+      titre: "Les publications",
+      // L'historique EST l'audit : publier et republier sont les deux seuls
+      // gestes de cette section, et une table qui les liste avec leur auteur,
+      // leur date et leur motif est déjà la traçabilité exigée.
+      sous: "Chaque mise en service, avec son auteur et son motif. C'est le journal de cette section.",
+    },
+    col: {
+      version: "Version",
+      quand: "Publiée le",
+      parQui: "Par",
+      note: "Ce que ça change",
+      etat: "État",
+    },
+    etats: {
+      published: "En service",
+      superseded: "Rangée",
+      draft: "Brouillon",
+    },
+    revenir: "Remettre en service",
+    dialogue: {
+      titre: "Remettre la version {n} en service",
+      consequence: "La version en service se range, celle-ci reprend la main. Rien n'est reconstruit, et le changement rejoint le journal avec son motif.",
+      motifs: [
+        "Les productions se sont dégradées depuis la publication",
+        "La version en service ne tient pas ses garde-fous",
+        "Retour arrière après un essai non concluant",
+      ],
+    },
+    aucunePublication: {
+      titre: "Aucune publication",
+      texte: "Les mises en service s'inscrivent ici, avec leur auteur et leur motif.",
+    },
+    premier: {
+      titre: "Rien n'est encore en service",
+      texte: "Aucune version n'a été publiée. Les réglages se composent à l'Atelier, s'éprouvent par un essai, puis se publient.",
+    },
   },
 
   studio: {
