@@ -26,6 +26,13 @@ const ancresDeLaMaquette = (): string[] =>
 
 const configuration = { creditUnitPrice: 150, currency: "XAF", launched: false } as never;
 
+/* Tout est ouvert : un test qui ne parle pas des drapeaux ne doit pas changer
+   de sujet à cause d'eux. Ceux qui les éprouvent passent leur propre liste. */
+const TOUTES = [
+  "wall", "wishes", "wishlist.own", "reservation", "referral",
+  "generation.message", "generation.ideas", "generation.portrait",
+];
+
 describe("sections de la landing", () => {
   it("la maquette déclare bien des sections à comparer", () => {
     expect(ancresDeLaMaquette()).toEqual(["comment", "contenu", "mur", "prix"]);
@@ -33,7 +40,7 @@ describe("sections de la landing", () => {
 
   it.each(["fr", "en"] as const)("rend toutes les sections de la maquette, en %s", (langue) => {
     const { container } = render(
-      <Landing t={messages(langue)} langue={langue} configuration={configuration} avantLancement />,
+      <Landing t={messages(langue)} langue={langue} configuration={configuration} avantLancement features={TOUTES} />,
     );
     const rendues = new Set(
       [...container.querySelectorAll("section[id]")].map((s) => s.getAttribute("id")),
@@ -46,7 +53,7 @@ describe("sections de la landing", () => {
   // L'aperçu du Mur en particulier : c'est celui qui avait disparu.
   it("montre l'aperçu du Mur avec ce qu'il promet", () => {
     render(
-      <Landing t={messages("fr")} langue="fr" configuration={configuration} avantLancement />,
+      <Landing t={messages("fr")} langue="fr" configuration={configuration} avantLancement features={TOUTES} />,
     );
 
     expect(screen.getByText(messages("fr").murTitre)).toBeInTheDocument();

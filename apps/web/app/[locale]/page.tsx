@@ -39,5 +39,12 @@ export default async function Page({ params }: Proprietes): Promise<ReactNode> {
   // refléter un changement : le cache de la page, pas une bascule instantanée.
   const avantLancement = !features.includes("launch.live");
 
-  return <Landing t={t} langue={langue} configuration={configuration} avantLancement={avantLancement} />;
+  return (
+    <Landing
+      t={t} langue={langue}
+      configuration={configuration}
+      avantLancement={avantLancement}
+      features={features}
+    />
+  );
 }

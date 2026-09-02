@@ -110,7 +110,11 @@ function Brouillon({ t }: { t: Messages }): ReactNode {
 
 // Trois stations, en aplats alternés — blanc, lilas, blanc — plutôt qu'en filets :
 // c'est l'alternance qui donne le rythme, pas les séparations.
-export function Content({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
+export function Content({ t, langue, ouvert }: { t: Messages; langue: Langue;
+    /** Une fonctionnalité est-elle ouverte ? Le serveur a déjà résolu les
+     *  dépendances ; la page ne connaît aucune règle. */
+    ouvert: (cle: string) => boolean;
+  }): ReactNode {
   return (
     <>
       <FeatureRow id="contenu" kicker={t.contenuKicker} titre={t.blocFicheTitre} texte={t.blocFiche}>
@@ -124,7 +128,9 @@ export function Content({ t, langue }: { t: Messages; langue: Langue }): ReactNo
       <FeatureRow
         titre={t.blocMotTitre}
         texte={t.blocMot}
-        extra={
+        /* La liste des idées ne paraît que si on les produit : l'annoncer
+           quand la génération est fermée, c'est vendre ce qu'on ne livre pas. */
+        extra={ouvert("generation.ideas") ? (
           <>
             <SectionLabel style={{ marginTop: "var(--space-20)" }}>{t.ideesKicker}</SectionLabel>
             <ul style={{ display: "grid", gap: "var(--space-8)", marginTop: "var(--space-12)", padding: 0, listStyle: "none" }}>
@@ -136,7 +142,7 @@ export function Content({ t, langue }: { t: Messages; langue: Langue }): ReactNo
               ))}
             </ul>
           </>
-        }
+        ) : null}
       >
         <Brouillon t={t} />
       </FeatureRow>

@@ -310,9 +310,20 @@ describe("authentification", () => {
   it("demander un code pour une adresse inconnue ne le dit pas", async () => {
     const connue = await auth.requestOtp({ email: "awa@example.com" });
     const inconnue = await auth.requestOtp({ email: "personne@example.com" });
-    // Même forme, aucun indice — le délai annoncé compris, qui ne dépend que
-    // du compteur de la boîte visée et non de l'existence d'un compte.
-    expect(connue).toEqual(inconnue);
+    /* Même forme, aucun indice — le délai annoncé compris, qui ne dépend que
+       du compteur de la boîte visée et non de l'existence d'un compte.
+
+       L'ÉCHÉANCE EST ÉCARTÉE DE L'ÉGALITÉ, et seulement elle : c'est un
+       INSTANT, donc deux appels successifs en rendent deux différents à la
+       milliseconde près. Les comparer rendrait ce test instable sans rien
+       éprouver de plus — elle ne dépend que de l'heure, jamais de l'existence
+       d'un compte. Sa PRÉSENCE, elle, se vérifie des deux côtés : c'est son
+       absence d'un seul qui dirait quelque chose. */
+    const { expiresAt: e1, ...resteConnue } = connue;
+    const { expiresAt: e2, ...resteInconnue } = inconnue;
+    expect(resteConnue).toEqual(resteInconnue);
+    expect(typeof e1).toBe("string");
+    expect(typeof e2).toBe("string");
   });
 
   // Le limiteur et l'envoi sont désormais dans le chemin de requestOtp :
@@ -327,9 +338,15 @@ describe("authentification", () => {
     // Le délai annoncé en fait partie : il ne dépend que du compteur de la
     // boîte visée, jamais de l'existence d'un compte. Un délai qui différerait
     // entre les deux dirait lesquelles sont connues.
-    expect(connue).toEqual({ sent: true, retryAfterSeconds: 5 });
-    expect(inconnue).toEqual({ sent: true, retryAfterSeconds: 5 });
-    expect(connue).toEqual(inconnue);
+    expect(connue).toMatchObject({ sent: true, retryAfterSeconds: 5 });
+    expect(inconnue).toMatchObject({ sent: true, retryAfterSeconds: 5 });
+    // Voir le test précédent : l'échéance est un instant, elle sort de
+    // l'égalité — mais sa présence se vérifie des deux côtés.
+    const { expiresAt: a, ...sansA } = connue;
+    const { expiresAt: b, ...sansB } = inconnue;
+    expect(sansA).toEqual(sansB);
+    expect(Number.isNaN(Date.parse(a))).toBe(false);
+    expect(Number.isNaN(Date.parse(b))).toBe(false);
   });
 
   it("demander un code envoie effectivement un courrier, dans la langue du compte", async () => {

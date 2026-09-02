@@ -2499,11 +2499,15 @@
                       "type": "integer",
                       "exclusiveMinimum": true,
                       "minimum": 0
+                    },
+                    "expiresAt": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "sent",
-                    "retryAfterSeconds"
+                    "retryAfterSeconds",
+                    "expiresAt"
                   ],
                   "additionalProperties": false
                 }

@@ -41,6 +41,7 @@ export const en: typeof fr = {
   preparer: "Prepare",
   marquer: "Mark as sent",
   tabAccueil: "Home", tabDates: "Dates", tabProches: "People", tabMoi: "Me",
+  tabReglages: "Settings",
   notifications: "3 unread notifications",
 
   etape1Titre: "Write it down when it comes to you.",
@@ -87,7 +88,14 @@ export const en: typeof fr = {
   prixGratuit: "Your notes, the pages for the people you love, your dates, the reminders and your Wall.",
   prixCreditsUnite: "per credit",
   prixCreditsTitre: "Pay as you go, in credits",
-  prixCredits: "One credit per piece created for you: the portrait, the gift ideas, the message. {credits} credits when you sign up.",
+  prixCredits: "One credit per piece created for you: {liste}. {credits} credits when you sign up.",
+  prixGenerations: {
+    "generation.message": "the message",
+    "generation.ideas": "the gift ideas",
+    "generation.portrait": "the portrait",
+  },
+  prixEt: "and",
+  prixParrainage: "And two more for every person you invite.",
 
   finTitre: "Make every big day feel like the person it's for.",
   signature: "Every date that matters, properly celebrated.",
@@ -339,5 +347,11 @@ export const en: typeof fr = {
 
   souhaitAnnuler: "Cancel",
   souhaitAnnulerErreur: "The cancellation did not go through. Try again in a moment.",
+
+
+  // ——— L'arrêt pour intervention ————————————————————————————————
+  interventionTitre: "Lehno is being updated",
+  interventionAvecHeure: "The service is back around {heure}. Nothing you sent is lost.",
+  interventionSansHeure: "An update is under way. Nothing you sent is lost.",
 
 };

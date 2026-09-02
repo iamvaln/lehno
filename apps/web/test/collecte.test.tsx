@@ -183,3 +183,46 @@ describe("le chargeur des surfaces publiques", () => {
     expect((await repondre(502)).etat).toBe("indisponible");
   });
 });
+
+/* 503 : le service est momentanément fermé, et le contrat le souligne — « un
+   arrêt de deux heures se lirait comme une suppression définitive ». Le ranger
+   en panne enverrait le visiteur réessayer toutes les deux minutes une chose
+   dont on connaît l'heure de retour. */
+describe("l'arrêt pour intervention", () => {
+  const forme = { safeParse: (v: unknown) => ({ success: true as const, data: v }) };
+
+  const brancher = (statut: number, maintenance?: unknown) => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => (String(url).includes("/public/maintenance")
+      ? { ok: maintenance !== undefined, status: 200, json: async () => maintenance } as Response
+      : { ok: statut < 400, status: statut, json: async () => ({}) } as Response)));
+    vi.stubEnv("API_URL", "http://api.test");
+  };
+
+  afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+
+  it("distingue l'intervention d'une panne, et rapporte l'heure de retour", async () => {
+    brancher(503, { maintenance: true, retryAfterSeconds: 900, until: "2026-08-31T14:30:00.000Z" });
+    const { chargerSurface } = await import("../lib/surface-publique.js");
+    const etat = await chargerSurface("/public/collect/x", forme, 0);
+    expect(etat).toEqual({ etat: "intervention", retour: "2026-08-31T14:30:00.000Z" });
+  });
+
+  /* L'heure est FACULTATIVE : on ne la connaît pas toujours, et elle ne se
+     déduit pas du rythme de réessai — « un rythme de quinze minutes ne dit pas
+     que le service revient dans quinze minutes ». */
+  it("reste une intervention même sans heure annoncée", async () => {
+    brancher(503, { maintenance: true, retryAfterSeconds: 900, until: null });
+    const { chargerSurface } = await import("../lib/surface-publique.js");
+    expect(await chargerSurface("/public/collect/x", forme, 0))
+      .toEqual({ etat: "intervention", retour: null });
+  });
+
+  // L'état lui-même injoignable : la page dit quand même qu'une mise à jour est
+  // en cours. C'est plus vrai que « nous n'avons pas pu répondre ».
+  it("tient sans l'état de maintenance", async () => {
+    brancher(503);
+    const { chargerSurface } = await import("../lib/surface-publique.js");
+    expect(await chargerSurface("/public/collect/x", forme, 0))
+      .toEqual({ etat: "intervention", retour: null });
+  });
+});
