@@ -28,6 +28,7 @@ type LigneEssai = {
   provider: string; modelKey: string; status: string; output: unknown;
   cost: unknown; errorCode: string | null; createdAt: Date;
   verdict?: "kept" | "discarded" | null;
+  ambianceId?: string | null;
 };
 
 @Injectable()
@@ -76,7 +77,7 @@ export class StudioEssaiService {
          Aucune ligne `AIUsage` : rien n'a été appelé, donc rien n'a coûté. */
       return {
         configId: config.id,
-        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, modele, {
+        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, null, modele, {
           status: "error", errorCode: `no_adapter_for_${modele.provider}`,
         })),
       };
@@ -96,7 +97,7 @@ export class StudioEssaiService {
       { origine: "studio_trial", userId: null, actionRunId: null },
     );
 
-    const ligne = await this.consigner(config.id, profil.id, adminId, modele,
+    const ligne = await this.consigner(config.id, profil.id, adminId, null, modele,
       resultat.etat === "success"
         ? { status: "success", output: { message: resultat.contenu }, cost: resultat.cout }
         : { status: resultat.etat, errorCode: resultat.code });
@@ -178,7 +179,7 @@ export class StudioEssaiService {
     if (!adaptateur) {
       return {
         configId: config.id,
-        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, modele, {
+        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, ambianceId, modele, {
           status: "error", errorCode: `no_adapter_for_${modele.provider}`,
         })),
       };
@@ -205,7 +206,7 @@ export class StudioEssaiService {
       sortie = { cle: await this.stockage.ecrire("portraits", Buffer.from(resultat.contenu, "base64"), "image/png") };
     }
 
-    const ligne = await this.consigner(config.id, profil.id, adminId, modele,
+    const ligne = await this.consigner(config.id, profil.id, adminId, ambianceId, modele,
       resultat.etat === "success"
         ? { status: "success", output: sortie, cost: resultat.cout }
         : { status: resultat.etat, errorCode: resultat.code });
@@ -279,6 +280,10 @@ export class StudioEssaiService {
 
   private async consigner(
     configId: string, profilId: string, adminId: string,
+    /* Nulle pour un essai de MESSAGE : il n'éprouve pas d'ambiance. Ce n'est
+       pas une donnée manquante, c'est une donnée qui n'existe pas pour cette
+       nature — d'où le nul plutôt qu'une chaîne vide. */
+    ambianceId: string | null,
     modele: { provider: string; modelKey: string },
     issue: { status: string; output?: unknown; cost?: number | null; errorCode?: string },
   ): Promise<LigneEssai> {
@@ -287,6 +292,9 @@ export class StudioEssaiService {
         studioConfigId: configId,
         studioProfileId: profilId,
         adminId,
+        // Recopiée : une ambiance retirée des réglages n'efface pas la trace
+        // de ce qu'on a essayé.
+        ambianceId,
         provider: modele.provider,
         modelKey: modele.modelKey,
         status: issue.status as "success" | "error" | "timeout" | "refused",
@@ -337,6 +345,7 @@ export class StudioEssaiService {
       parQui,
       quand: l.createdAt.toISOString(),
       verdict: l.verdict ?? null,
+      ambianceId: l.ambianceId ?? null,
     };
   }
 

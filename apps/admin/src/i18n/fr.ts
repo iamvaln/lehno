@@ -1138,6 +1138,9 @@ export const fr = {
     // déjà vu.
     pourquoi: "L'Atelier ne montre que la journée. Ici, les cent derniers essais — de quoi revoir sans repayer l'appel.",
     filtre: {
+      ambiance: "Ambiance",
+      toutesAmbiances: "Toutes",
+      sansAmbiance: "Sans ambiance",
       libelle: "Sort",
       tout: "Tous",
       kept: "Gardés",

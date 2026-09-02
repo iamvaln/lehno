@@ -238,6 +238,11 @@ export const essaiStudioSchema = z.object({
   quand: z.string(),
   /** Nul tant que personne n'a tranché. Voir `VERDICTS_ESSAI`. */
   verdict: z.enum(VERDICTS_ESSAI).nullable(),
+  /* L'ambiance éprouvée. C'est elle qui décide du modèle appelé, et sans elle
+     la galerie ne peut pas dire ce qu'on regarde : deux portraits du même
+     modèle, sous deux ambiances, s'y ressemblent.
+     Nulle sur les essais antérieurs à la colonne — on ne la reconstitue pas. */
+  ambianceId: z.string().max(60).nullable(),
 }).strict();
 
 export const essaisStudioSchema = z.object({
