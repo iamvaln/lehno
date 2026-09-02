@@ -108,7 +108,27 @@ jobs:
             cd "${APP_DIR:-$HOME/lehno}"
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             export IMAGE_TAG
-            git fetch --tags origin
+            # LE FETCH S'AUTHENTIFIE, et ce n'est pas une question de dépôt privé
+            # — celui-ci est public.
+            #
+            # GitHub plafonne les accès git ANONYMES par adresse IP. Le VPS est
+            # partagé, et le plafond a fini par être atteint : l'annonce des refs
+            # (GET /info/refs) passe encore en 200, mais la récupération du pack
+            # (POST /git-upload-pack) répond 401 avec « www-authenticate: Basic
+            # realm="GitHub" ». git réclame alors un nom d'utilisateur, n'en
+            # trouve pas, et meurt sur « could not read Username » — un message
+            # qui envoie chercher du côté des identifiants d'un dépôt privé
+            # qu'on n'a pas.
+            #
+            # L'en-tête plutôt que le jeton dans l'URL : une URL passe par la
+            # ligne de commande, donc par `ps`, sur une machine partagée avec un
+            # autre projet. C'est la forme qu'emploie actions/checkout, pour
+            # cette raison.
+            #
+            # GHCR_TOKEN est le GITHUB_TOKEN de l'exécution : il expire avec
+            # elle, et rien de durable ne reste sur le serveur.
+            git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GHCR_TOKEN" | base64 -w0)" \
+              fetch --tags origin
             git checkout "$IMAGE_TAG"   # synchronise docker-compose.yml sur le tag publié
             # Reprise sur l'extraction : le snapshotter overlayfs de containerd
             # échoue par intermittence sur une extraction de couche à froid

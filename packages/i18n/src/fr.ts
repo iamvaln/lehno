@@ -1,7 +1,14 @@
 export const fr = {
   errors: {
     validation_failed: "Cette demande n'est pas valide.",
-    not_found: "Introuvable.",
+    /* « Introuvable. » disait une CATÉGORIE HTTP, pas ce qui s'est passé.
+       Ce code est levé partout — un modèle d'IA, un palier, une méthode de
+       paiement, un paramètre — et sa phrase s'affichait telle quelle. Sur
+       l'écran de connexion elle se lisait « on ne trouve pas ton compte »,
+       ce qui était faux ET aurait été le signal d'énumération qu'on
+       s'emploie à éviter. La forme reprend celle de collect_rejected plus
+       bas : dire ce qui n'a pas abouti, puis quoi faire. */
+    not_found: "Cette demande n'a pas abouti. Réessayez dans un instant.",
     conflict: "Cette opération entre en conflit avec l'état actuel.",
     rate_limited: "Trop de tentatives. Réessayez dans un moment.",
     internal_error: "Quelque chose s'est mal passé de notre côté.",
