@@ -20,11 +20,23 @@ export default function Porte() {
      le parcours d'entrée. Une lecture au montage seul lui laissait sa réponse
      d'alors — « pas de session » — et le `replace("/")` de l'écran de bienvenue
      retombait aussitôt sur la connexion, compte créé et jetons en poche. */
+  /* ON OUBLIE EN PARTANT, PAS EN REVENANT — et c'est toute la correction.
+   *
+   * Remettre `session` à `null` DANS l'effet de focus arrive trop tard :
+   * l'effet s'exécute APRÈS le rendu, et ce rendu-là emploie encore la réponse
+   * de la fois d'avant. Au retour de l'inscription, cette réponse est « pas de
+   * session » — celle du démarrage, avant que le compte existe. La porte
+   * émettait donc son `<Redirect>` vers la connexion et partait AVANT que la
+   * lecture du trousseau n'aboutisse : compte créé, jetons en poche, et l'on
+   * se retrouvait devant le formulaire de connexion.
+   *
+   * En oubliant au moment de PERDRE le focus, la porte ne peut plus rendre
+   * qu'avec une réponse fraîche ou avec `null` — l'écran d'attente, qui ne
+   * redirige nulle part. */
   useFocusEffect(useCallback(() => {
     let vivant = true;
-    setSession(null);
     litLesJetons().then((j) => { if (vivant) setSession(j !== null); });
-    return () => { vivant = false; };
+    return () => { vivant = false; setSession(null); };
   }, []));
 
   if (session === null) return <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }} />;

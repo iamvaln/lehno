@@ -338,6 +338,18 @@ export default function Evenement() {
           </View>
         ) : null}
 
+        {/* LA SECTION PART AVEC SON TITRE quand elle n'a rien à montrer.
+            
+            Sur un anniversaire, la date se LIT — le contrat la calcule depuis
+            la naissance du proche — et tant qu'aucun proche n'est désigné, il
+            n'y a rien à lire. Le titre restait pourtant, au-dessus d'un trou :
+            c'est le PREMIER écran qu'ouvre un compte neuf, et il s'y présentait
+            comme cassé.
+            
+            Même règle qu'aux réglages : « une section dont il ne reste aucun
+            rang disparaît, titre compris — un titre seul annonce un contenu qui
+            ne vient pas ». */}
+        {(type && demandeLaDate(type)) || dateLue ? (
         <View style={styles.bloc}>
           <SectionLabel>{t.evtDate}</SectionLabel>
 
@@ -406,6 +418,7 @@ export default function Evenement() {
             </View>
           ) : null}
         </View>
+        ) : null}
 
         {/* Le rappel est le seul réglage de cet écran : la nature d'une date se
             reconnaît à son type et se corrige après coup — ce n'est pas une
