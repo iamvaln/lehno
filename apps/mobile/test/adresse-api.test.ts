@@ -71,12 +71,13 @@ describe("les profils de build EAS", () => {
     expect(fautifs).toEqual([]);
   });
 
-  it("posent une adresse à chaque profil", () => {
+  it("posent une adresse à chaque profil", async () => {
     // Une base absente ferait retomber sur la déduction depuis le serveur de
     // développement, qui n'existe pas dans une application empaquetée : l'appel
     // partirait vers null.
+    const { readFile } = await import("node:fs/promises");
     const eas = JSON.parse(
-      require("node:fs").readFileSync(new URL("../eas.json", import.meta.url), "utf8"),
+      await readFile(new URL("../eas.json", import.meta.url), "utf8"),
     ) as { build: Record<string, { env?: Record<string, string> }> };
     const sansAdresse = Object.entries(eas.build)
       .filter(([, p]) => !p.env?.["EXPO_PUBLIC_API_URL"])
