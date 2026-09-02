@@ -101,7 +101,22 @@ describe("authentification — HTTP de bout en bout", () => {
 
     expect(known.status).toBe(unknown.status);
     expect(known.status).toBe(200);
-    await expect(known.json()).resolves.toEqual(await unknown.json());
+    /* L'ÉCHÉANCE SORT DE L'ÉGALITÉ, et seulement elle : c'est un INSTANT, donc
+       deux appels successifs en rendent deux différents — quatorze
+       millisecondes ont suffi à faire tomber ce test. La comparer n'éprouverait
+       rien : elle ne dépend que de l'heure, jamais de l'existence d'un compte.
+
+       Sa PRÉSENCE, elle, se vérifie des deux côtés : c'est son absence d'un
+       seul qui dirait quelque chose. Et `content-length` reste comparé plus
+       bas — une date ISO fait toujours la même longueur, donc la garde tient
+       encore, y compris sur ce que la forme de la réponse pourrait trahir. */
+    const lu = async (r: Response) =>
+      (await r.json()) as { expiresAt: string } & Record<string, unknown>;
+    const { expiresAt: a, ...corpsConnu } = await lu(known);
+    const { expiresAt: b, ...corpsInconnu } = await lu(unknown);
+    expect(corpsConnu).toEqual(corpsInconnu);
+    expect(Number.isNaN(Date.parse(a))).toBe(false);
+    expect(Number.isNaN(Date.parse(b))).toBe(false);
     // Content-Type et Content-Length : rien qui distingue les deux réponses
     // par leur forme. Le temps de réponse n'est pas mesuré ici — il n'y a
     // rien à comparer statistiquement dans un test unique — mais il n'y a

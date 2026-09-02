@@ -6,6 +6,7 @@ import {
   verifyOtpSchema,
   type Session,
   registerSchema, type RegisterInput, type Registered, type VerifyOutcome,
+  type RequestOtpResult,
 } from "@lehno/contracts";
 import type { IdentityProvider } from "@prisma/client";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -49,7 +50,7 @@ export class AuthController {
   requestOtp(
     @Body(new ZodValidationPipe(requestOtpSchema)) body: RequestOtpBody,
     @Ip() ip: string,
-  ): Promise<{ sent: true; retryAfterSeconds: number }> {
+  ): Promise<RequestOtpResult> {
     return this.auth.requestOtp({ ...body, ip });
   }
 
