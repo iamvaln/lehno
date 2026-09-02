@@ -1,7 +1,7 @@
 export const en = {
   errors: {
     validation_failed: "That request isn't valid.",
-    not_found: "We can't find that.",
+    not_found: "That request didn't go through. Try again in a moment.",
     conflict: "That conflicts with what's already there.",
     rate_limited: "Too many attempts. Try again in a moment.",
     internal_error: "Something went wrong on our end.",
