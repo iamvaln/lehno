@@ -1040,6 +1040,9 @@ export const en: typeof fr = {
     sous: "What was produced, and what we thought of it.",
     pourquoi: "The Workshop only shows today. Here are the last hundred trials — enough to look again without paying for the call.",
     filtre: {
+      ambiance: "Mood",
+      toutesAmbiances: "All",
+      sansAmbiance: "No mood",
       libelle: "Fate",
       tout: "All",
       kept: "Kept",

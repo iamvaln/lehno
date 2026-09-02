@@ -49,6 +49,7 @@ export function StudioEssais(
   const t = messages(langue);
   const d = t.studioEssais;
   const [filtre, setFiltre] = useState<Sort | "tout">("tout");
+  const [ambiance, setAmbiance] = useState<string>("tout");
 
   const idsPubliees = new Set(publiees.map((c) => c.id));
 
@@ -58,7 +59,19 @@ export function StudioEssais(
   const sortDe = (e: EssaiStudio): Sort =>
     idsPubliees.has(e.configId) ? "publie" : e.verdict ?? "nonJuge";
 
-  const visibles = filtre === "tout" ? essais : essais.filter((e) => sortDe(e) === filtre);
+  /* Les ambiances proposées sont celles qui ont PRODUIT quelque chose : offrir
+     un filtre qui ne rend jamais rien fait douter du filtre, pas des données.
+     « Sans ambiance » couvre les essais antérieurs à la colonne et ceux du
+     message, qui n'en éprouvent aucune. */
+  const ambiances = [...new Set(
+    essais.map((e) => e.ambianceId).filter((a): a is string => a !== null),
+  )];
+  const parAmbiance = ambiance === "tout"
+    ? essais
+    : essais.filter((e) => (ambiance === "sans" ? e.ambianceId === null : e.ambianceId === ambiance));
+  const visibles = filtre === "tout"
+    ? parAmbiance
+    : parAmbiance.filter((e) => sortDe(e) === filtre);
 
   const quand = (iso: string): string =>
     new Intl.DateTimeFormat(langue === "en" ? "en-GB" : "fr-FR", {
@@ -93,7 +106,21 @@ export function StudioEssais(
                 ["nonJuge", d.filtre.nonJuge],
               ] as const).map(([value, label]) => ({ value, label })),
               onChange: (e) => setFiltre(e.target.value as Sort | "tout"),
-            }]}
+            },
+            ...(ambiances.length === 0 ? [] : [{
+              cle: "ambiance",
+              label: d.filtre.ambiance,
+              valeur: ambiance,
+              options: [
+                { value: "tout", label: d.filtre.toutesAmbiances },
+                ...ambiances.map((a) => ({ value: a, label: a })),
+                ...(essais.some((e) => e.ambianceId === null)
+                  ? [{ value: "sans", label: d.filtre.sansAmbiance }]
+                  : []),
+              ],
+              onChange: (e: { target: { value: string } }) => setAmbiance(e.target.value),
+            }]),
+            ]}
           />
 
           {visibles.length === 0 ? (

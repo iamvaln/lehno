@@ -40,6 +40,8 @@ const essai = (sur: Record<string, unknown> = {}) => ({
   sortie: { cle: "k", url: "https://example.test/p.png" },
   cout: 12, erreur: null, parQui: "sam@lehno.app", quand: "2026-08-30T09:00:00.000Z",
   verdict: null,
+  // L'ambiance éprouvée : nulle pour un essai de message.
+  ambianceId: "papier",
   ...sur,
 });
 
@@ -146,5 +148,29 @@ describe("les essais, sur les données du serveur", () => {
     serveur([]);
     await ouvrir();
     await waitFor(() => expect(screen.getByText(d.vide.titre)).toBeInTheDocument());
+  });
+
+  /* L'ambiance décide du modèle appelé : sans elle, deux portraits du même
+     modèle sous deux ambiances se ressemblent sans qu'on sache lequel
+     éprouvait quoi. La galerie doit donc pouvoir s'y réduire. */
+  it("filtre sur l'ambiance éprouvée", async () => {
+    serveur([
+      essai({ id: "11111111-1111-4111-8111-111111111111", ambianceId: "papier" }),
+      essai({ id: "22222222-2222-4222-8222-222222222222", ambianceId: "lilas" }),
+    ]);
+    const utilisateur = await ouvrir();
+    await waitFor(() => expect(screen.getAllByRole("img", { name: d.carte.alt })).toHaveLength(2));
+
+    await utilisateur.selectOptions(screen.getByLabelText(d.filtre.ambiance), "lilas");
+    await waitFor(() => expect(screen.getAllByRole("img", { name: d.carte.alt })).toHaveLength(1));
+  });
+
+  /* Un filtre qui ne rend jamais rien fait douter du filtre, pas des données :
+     on ne propose que les ambiances qui ont produit quelque chose. */
+  it("ne propose pas d'ambiance quand aucune n'a produit", async () => {
+    serveur([essai({ ambianceId: null })]);
+    await ouvrir();
+    await waitFor(() => expect(screen.getAllByRole("img", { name: d.carte.alt })).toHaveLength(1));
+    expect(screen.queryByLabelText(d.filtre.ambiance)).toBeNull();
   });
 });

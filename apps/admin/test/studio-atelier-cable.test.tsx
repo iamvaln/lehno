@@ -67,6 +67,8 @@ const essai = (sur: Record<string, unknown> = {}) => ({
   cout: 12, erreur: null, parQui: "sam@lehno.app", quand: "2026-08-30T09:00:00.000Z",
   // Nul tant que personne n'a tranché.
   verdict: null,
+  // L'ambiance éprouvée : c'est elle qui décide du modèle appelé.
+  ambianceId: "papier",
   ...sur,
 });
 

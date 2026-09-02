@@ -1893,6 +1893,20 @@ model StudioTrial {
   errorCode String?       @map("error_code") @db.VarChar(80)
 
   /**
+   * L'AMBIANCE ÉPROUVÉE, recopiée.
+   * C'est elle qui décide du modèle appelé — une famille d'illustration et un
+   * style de photo ne passent pas par le même —, et l'essai la reçoit déjà à
+   * son lancement. Ne pas la garder rendait la galerie des essais incapable de
+   * dire ce qu'on regardait : deux portraits produits par le même modèle, sous
+   * deux ambiances, s'y ressemblaient sans qu'on sache lequel éprouvait quoi.
+   * Recopiée et non liée : une ambiance retirée des réglages ne doit pas
+   * effacer la trace de ce qu'on a essayé, comme `modelKey` survit au retrait
+   * du modèle du catalogue.
+   * Nulle sur les essais antérieurs à cette colonne : on ne la reconstitue pas.
+   */
+  ambianceId String? @map("ambiance_id") @db.VarChar(60)
+
+  /**
    * CE QU'ON A PENSÉ DU RÉSULTAT, et non ce que l'appel a rendu — `status` dit
    * déjà si le modèle a répondu. Nul tant qu'on n'a pas tranché : un essai
    * qu'on n'a pas jugé n'est pas un essai jugé mauvais.
