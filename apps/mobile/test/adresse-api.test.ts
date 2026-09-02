@@ -45,3 +45,42 @@ describe("l'adresse du serveur", () => {
     expect(adresseDeLApi("", "192.168.1.103:8081")).toBe("http://192.168.1.103:3001");
   });
 });
+
+/* CE QUE LES PROFILS DE BUILD ONT LE DROIT DE PORTER.
+ *
+ * `api.ts` compose ses appels en `${base}/v1${chemin}`. Une base qui porte
+ * déjà « /v1 » donne donc `https://api.lehno.io/v1/v1/auth/otp`, un 404 que
+ * l'application traduit par « Introuvable » — un message qui envoie chercher
+ * du côté du compte alors que c'est l'adresse qui est fausse.
+ *
+ * C'est arrivé : les trois profils portaient « /v1 », et l'APK ne pouvait
+ * demander aucun code de connexion. Rien ne pouvait l'attraper — les tests
+ * n'ouvrent pas eas.json, et le typecheck ne lit pas du JSON.
+ */
+describe("les profils de build EAS", () => {
+  it("ne portent jamais le préfixe de version, que le client ajoute lui-même", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const brut = await readFile(new URL("../eas.json", import.meta.url), "utf8");
+    const eas = JSON.parse(brut) as {
+      build: Record<string, { env?: Record<string, string> }>;
+    };
+    const fautifs = Object.entries(eas.build)
+      .map(([nom, p]) => [nom, p.env?.["EXPO_PUBLIC_API_URL"]] as const)
+      .filter(([, url]) => url !== undefined && /\/v\d+\/?$/.test(url))
+      .map(([nom, url]) => `${nom} → ${url}`);
+    expect(fautifs).toEqual([]);
+  });
+
+  it("posent une adresse à chaque profil", () => {
+    // Une base absente ferait retomber sur la déduction depuis le serveur de
+    // développement, qui n'existe pas dans une application empaquetée : l'appel
+    // partirait vers null.
+    const eas = JSON.parse(
+      require("node:fs").readFileSync(new URL("../eas.json", import.meta.url), "utf8"),
+    ) as { build: Record<string, { env?: Record<string, string> }> };
+    const sansAdresse = Object.entries(eas.build)
+      .filter(([, p]) => !p.env?.["EXPO_PUBLIC_API_URL"])
+      .map(([nom]) => nom);
+    expect(sansAdresse).toEqual([]);
+  });
+});
