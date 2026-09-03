@@ -33,7 +33,17 @@ export function EmptyState({ title, text, illustration, icon, actionLabel, onAct
       <Text style={s.titre} accessibilityRole="header">{title}</Text>
       {text ? <Text style={s.texte}>{text}</Text> : null}
       {actionLabel ? (
-        <Button variant="primary" onPress={onAction} style={{ marginTop: 20 }}>{actionLabel}</Button>
+        /* `alignSelf: "center"` EN PLUS du centrage du conteneur, et il le faut.
+           Le bouton pose lui-même `alignSelf: "flex-start"` quand il n'est pas
+           en pleine largeur — pour ne pas s'étirer dans une colonne — et
+           `alignSelf` l'emporte toujours sur le `alignItems` du parent. Le
+           bouton se retrouvait donc collé à gauche sous un titre et un texte
+           centrés, sur TOUS les états vides de l'application. */
+        <Button
+          variant="primary"
+          onPress={onAction}
+          style={{ marginTop: 20, alignSelf: "center" }}
+        >{actionLabel}</Button>
       ) : null}
     </View>
   );
