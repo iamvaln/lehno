@@ -178,7 +178,10 @@ export default function Evenement() {
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + nativeSpace[12],
-          paddingBottom: nativeSpace[20],
+          /* De quoi dégager la dernière rangée du pied fixe : vingt points
+             suffisaient sur un écran court, pas sur un téléphone haut où l'on
+             s'arrête souvent au milieu d'une liste de pastilles. */
+          paddingBottom: nativeSpace[32],
           paddingHorizontal: nativeSpace[16],
         }}
         keyboardShouldPersistTaps="handled"
@@ -349,6 +352,36 @@ export default function Evenement() {
             Même règle qu'aux réglages : « une section dont il ne reste aucun
             rang disparaît, titre compris — un titre seul annonce un contenu qui
             ne vient pas ». */}
+        {/* UN ANNIVERSAIRE SANS NAISSANCE CONNUE : on le DIT, et on montre la
+            sortie. La date se calcule depuis `person.birthDate` — elle ne se
+            saisit pas ici, et c'est juste. Mais quand cette naissance manque,
+            l'écran n'offrait plus rien du tout : ni sélecteur, ni explication,
+            ni chemin. On restait devant un formulaire qui ne pouvait pas
+            aboutir, sans savoir pourquoi.
+
+            Ce n'est pas une erreur, donc pas un bandeau rouge : c'est un
+            renseignement qui manque, et le geste qui le comble tient à un
+            appui. */}
+        {type && !demandeLaDate(type) && proche && !proche.birthDate ? (
+          <View style={styles.bloc}>
+            <SectionLabel>{t.evtDate}</SectionLabel>
+            <Text style={[styles.manque, { color: couleurs.textBody }]}>
+              {t.evtSansNaissance(proche.displayName)}
+            </Text>
+            <Text style={[styles.manqueAide, { color: couleurs.textMention }]}>
+              {t.evtSansNaissanceAide}
+            </Text>
+            <View style={{ marginTop: nativeSpace[12] }}>
+              <Button
+                variant="outline"
+                onPress={() => routeur.push({
+                  pathname: "/(app)/proches/[id]", params: { id: proche.id },
+                })}
+              >{t.evtOuvrirLaFiche}</Button>
+            </View>
+          </View>
+        ) : null}
+
         {(type && demandeLaDate(type)) || dateLue ? (
         <View style={styles.bloc}>
           <SectionLabel>{t.evtDate}</SectionLabel>
@@ -444,10 +477,21 @@ export default function Evenement() {
 
       {/* Hors du défilement : le bouton se pose au-dessus du clavier plutôt que
           de disparaître dessous. Cet écran ne vit pas dans les onglets, il
-          porte donc l'inset du bas. */}
+          porte donc l'inset du bas.
+
+          UN FILET ET UN FOND, et ils ne sont pas décoratifs. Le pied est frère
+          du défilement, donc il ne recouvre rien — mais sans démarcation, la
+          liste qui se coupe à sa hauteur SE LIT comme recouverte. C'est ce
+          qu'on voit sur un téléphone haut en thème sombre : le champ « Année »
+          semble passer sous le bouton. Le filet dit où le défilement s'arrête,
+          le fond empêche la dernière rangée de sembler continuer dessous. */}
       <View style={{
         paddingHorizontal: nativeSpace[16],
+        paddingTop: nativeSpace[12],
         paddingBottom: insets.bottom + nativeSpace[16],
+        backgroundColor: couleurs.surfacePage,
+        borderTopWidth: nativeBorder.width,
+        borderTopColor: couleurs.borderHairline,
       }}>
         <Button variant="primary" full disabled={envoi || !pret} onPress={() => void enregistre()}>
           {t.enregistrer}
@@ -488,6 +532,8 @@ function Pastille({ actif, libelle, icone, appuie }: {
 }
 
 const styles = StyleSheet.create({
+  manque: { fontFamily: nativeFont.bodyRegular, fontSize: 14.5, lineHeight: 21, marginTop: nativeSpace[8] },
+  manqueAide: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, lineHeight: 18, marginTop: nativeSpace[4] },
   retour: {
     width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
     alignItems: "center", justifyContent: "center",
