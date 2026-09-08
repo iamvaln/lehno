@@ -40,7 +40,7 @@ import {
  * tournures qui s'en passent plutôt qu'un accord au hasard.
  */
 export default function Profil() {
-  const { t, langue } = useLangue();
+  const { t, langue, choisis } = useLangue();
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
@@ -55,6 +55,10 @@ export default function Profil() {
     try {
       const lu = profileSchema.parse(await appel<unknown>("/me/profile"));
       setProfil(lu);
+      /* Ouvrir cet écran RÉCONCILIE les deux : l'appareil peut avoir changé de
+         langue, ou le compte avoir été réglé depuis un autre téléphone. Ce que
+         le serveur a retenu fait foi — c'est lui qui envoie les courriels. */
+      choisis(lu.uiLanguage);
       setSaisie({
         pseudo: lu.username,
         nom: lu.displayName ?? "",
@@ -107,6 +111,12 @@ export default function Profil() {
         method: "PATCH",
         body: JSON.stringify(corpsDeMiseAJour(saisie, profil)),
       });
+      /* L'INTERFACE SUIT LE RÉGLAGE, sinon il ne règle rien de ce qu'on voit.
+         Sans cet appel, changer « Langue » ne changeait QUE la langue des
+         courriels — en silence, sur un écran qui restait dans l'autre langue.
+         On l'applique après l'enregistrement : ce qui est affiché correspond
+         alors à ce que le serveur a retenu. */
+      choisis(saisie.langue);
       routeur.back();
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));

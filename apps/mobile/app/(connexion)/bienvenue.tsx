@@ -52,6 +52,19 @@ export default function Bienvenue() {
 
   return (
     <View style={[styles.contenu, { paddingTop: insets.top + nativeSpace[32], paddingBottom: insets.bottom + nativeSpace[20] }]}>
+      {/* LE CORPS SE CENTRE, il ne s'entasse pas en haut.
+          
+          Sans ce bloc, l'illustration, le titre, la phrase et deux ou trois
+          lignes de cadeaux occupaient le tiers supérieur, les boutons étaient
+          collés en bas par leur `marginTop: auto`, et tout le milieu restait
+          vide. Sur un écran 16:9 le contenu remplissait presque la hauteur et
+          rien ne se voyait ; sur un téléphone 20:9, c'est un trou béant au
+          milieu d'un écran qui doit accueillir quelqu'un.
+          
+          `flex: 1` avec un centrage : le contenu se pose au milieu de ce qui
+          reste, quelle que soit la hauteur. Sur un écran court, il remplit — le
+          centrage ne coûte alors rien. */}
+      <View style={styles.corps}>
       <Illustration name="bienvenue-credits" width={140} />
 
       <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.bienvenueTitre(pseudo ?? "")}</Text>
@@ -88,6 +101,8 @@ export default function Bienvenue() {
         </Text>
       ) : null}
 
+      </View>
+
       <View style={styles.sorties}>
         <Button variant="primary" full onPress={() => routeur.replace("/")}>{t.commencer}</Button>
         {parrainageOuvert ? (
@@ -123,5 +138,9 @@ const styles = StyleSheet.create({
     alignSelf: "stretch", fontFamily: nativeFont.bodyRegular, fontSize: 12.5,
     lineHeight: 18, marginTop: nativeSpace[8],
   },
-  sorties: { alignSelf: "stretch", gap: nativeSpace[6], marginTop: "auto" },
+  /* Le corps prend la hauteur disponible et s'y centre ; les sorties restent
+     en bas sans avoir besoin d'un `marginTop: auto` — c'est le corps qui pousse
+     désormais, et il pousse en se centrant plutôt qu'en s'entassant. */
+  corps: { flex: 1, alignSelf: "stretch", alignItems: "center", justifyContent: "center" },
+  sorties: { alignSelf: "stretch", gap: nativeSpace[6] },
 });
