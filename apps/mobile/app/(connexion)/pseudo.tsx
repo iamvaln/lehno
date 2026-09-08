@@ -6,7 +6,7 @@ import { nativeFont, nativeLetterSpacing, nativeSpace, nativeTracking } from "@l
 import { Banner, Button, TextField, useTheme } from "@lehno/ui-native";
 import { registeredSchema, usernameSchema } from "@lehno/contracts";
 import { useLangue } from "../../lib/langue.js";
-import { appelPublic, ErreurDApi } from "../../lib/api.js";
+import { appel, appelPublic, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { poseLesJetons } from "../../lib/jetons.js";
 import { identifiantDeLAppareil } from "../../lib/appareil.js";
@@ -60,6 +60,32 @@ export default function Pseudo() {
       });
       const session = registeredSchema.parse(brut);
       await poseLesJetons(session);
+
+      /* LA LANGUE DE L'APPAREIL SUIT LE COMPTE, dès sa naissance.
+       *
+       * `user.ui_language` a `@default("fr")` en base : un compte créé depuis
+       * un téléphone anglais naissait donc en français. L'interface, elle,
+       * suit l'appareil — on lisait « Français » dans un écran de réglages
+       * entièrement en anglais, deux vérités côte à côte.
+       *
+       * Et ce n'est pas qu'un affichage : c'est `ui_language` qui décide de la
+       * langue des COURRIELS. Le code de connexion serait parti en français à
+       * quelqu'un qui n'en lit pas un mot.
+       *
+       * On l'envoie donc APRÈS la pose des jetons — la route est authentifiée —
+       * et son échec ne compromet rien : le compte existe, la session est
+       * ouverte, seule la préférence attendra le prochain passage aux réglages.
+       */
+      try {
+        await appel<unknown>("/me/profile", {
+          method: "PATCH",
+          body: JSON.stringify({ uiLanguage: langue }),
+        });
+      } catch {
+        /* Silencieux à dessein : interrompre une inscription réussie pour une
+           préférence d'affichage ferait payer cher une chose qui se répare en
+           deux appuis. */
+      }
 
       // Les crédits offerts viennent du serveur : les écrire en dur les ferait
       // mentir dès que le montant change en administration.

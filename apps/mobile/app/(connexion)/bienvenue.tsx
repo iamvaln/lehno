@@ -52,6 +52,19 @@ export default function Bienvenue() {
 
   return (
     <View style={[styles.contenu, { paddingTop: insets.top + nativeSpace[32], paddingBottom: insets.bottom + nativeSpace[20] }]}>
+      {/* LE CORPS COULE DEPUIS LE HAUT, et les boutons s'ancrent en bas.
+          C'est la composition de la planche (`BienvenueScreen.jsx`) : le
+          contenu part du haut, `marginTop: auto` pousse les sorties au bas.
+
+          J'ai essayé de CENTRER ce corps pour combler le vide qu'on voit sur un
+          écran haut. C'était une erreur, et elle est instructive : le vide ne
+          disparaissait pas, il se coupait en deux — au-dessus de l'illustration
+          et au-dessus des boutons —, et l'illustration se décrochait du haut.
+          La planche tranche, et ce qu'on voulait corriger n'est pas un défaut
+          d'intégration : c'est la composition elle-même qui laisse cet espace
+          quand l'écran est plus haut que celui sur lequel elle a été dessinée.
+          Cela se règle au design, pas ici. */}
+      <View style={styles.corps}>
       <Illustration name="bienvenue-credits" width={140} />
 
       <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.bienvenueTitre(pseudo ?? "")}</Text>
@@ -88,6 +101,8 @@ export default function Bienvenue() {
         </Text>
       ) : null}
 
+      </View>
+
       <View style={styles.sorties}>
         <Button variant="primary" full onPress={() => routeur.replace("/")}>{t.commencer}</Button>
         {parrainageOuvert ? (
@@ -123,5 +138,10 @@ const styles = StyleSheet.create({
     alignSelf: "stretch", fontFamily: nativeFont.bodyRegular, fontSize: 12.5,
     lineHeight: 18, marginTop: nativeSpace[8],
   },
+  /* Le corps ne prend PAS la hauteur : il coule depuis le haut, et ce sont les
+     sorties qui descendent par `marginTop: auto`. L'ordre compte — si le corps
+     prenait `flex: 1`, il absorberait l'espace et le `marginTop: auto` des
+     sorties n'aurait plus rien à pousser. */
+  corps: { alignSelf: "stretch", alignItems: "center" },
   sorties: { alignSelf: "stretch", gap: nativeSpace[6], marginTop: "auto" },
 });

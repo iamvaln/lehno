@@ -19,6 +19,7 @@ export interface SaisieDeProfil {
   nom: string;
   genre: Profile["gender"];
   langue: Profile["uiLanguage"];
+  theme: Profile["theme"];
 }
 
 /* CE QUI A CHANGÉ, et cela seul. Le schéma est partiel — c'est une invitation à
@@ -40,6 +41,7 @@ export function corpsDeMiseAJour(
   if (nom !== (original.displayName ?? "")) corps.displayName = nom === "" ? null : nom;
   if (saisie.genre !== original.gender) corps.gender = saisie.genre;
   if (saisie.langue !== original.uiLanguage) corps.uiLanguage = saisie.langue;
+  if (saisie.theme !== original.theme) corps.theme = saisie.theme;
 
   return corps;
 }

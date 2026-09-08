@@ -1,6 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 import { videLeCoffre } from "./coffre.js";
 import { videLaFile } from "./fileStockee.js";
+import { videLApparence } from "./apparence.js";
 import type { Session } from "@lehno/contracts";
 
 /* Les deux jetons de la session, au trousseau de l'appareil.
@@ -107,6 +108,10 @@ export async function effaceLesJetons(): Promise<void> {
        sous le compte SUIVANT écrirait les notes de quelqu'un dans le carnet
        d'un autre. */
     videLaFile(),
+    /* ET L'APPARENCE. Elle ne trahit rien d'intime, mais elle est PERSONNELLE :
+       le compte suivant ouvert sur ce téléphone doit repartir de la préférence
+       de l'appareil, pas hériter du thème sombre de quelqu'un d'autre. */
+    videLApparence(),
   ]);
   annonce();
 }

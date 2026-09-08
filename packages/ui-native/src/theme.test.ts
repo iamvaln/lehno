@@ -27,6 +27,17 @@ describe("le thème du système", () => {
     expect(themeDuSysteme("dark", "light")).toBe("light");
   });
 
+  /* « system » EST une valeur du contrat, et elle ne veut pas dire « clair » :
+     elle veut dire « demande à l'appareil ». La confondre avec un choix figé
+     casserait ce que le réglage promet — un téléphone qui bascule en sombre le
+     soir doit entraîner l'application, et c'est le cas PAR DÉFAUT, puisque
+     c'est la valeur que la base pose à la création du compte. */
+  it("laisse l'appareil décider quand on a réglé « system »", () => {
+    expect(themeDuSysteme("dark", "system")).toBe("dark");
+    expect(themeDuSysteme("light", "system")).toBe("light");
+    expect(themeDuSysteme(null, "system")).toBe("light");
+  });
+
   it("rend les couleurs de la charte, pas les siennes", () => {
     expect(couleursDuSysteme("dark")).toEqual(resolve("dark"));
     expect(couleursDuSysteme(null)).toEqual(resolve("light"));

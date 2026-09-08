@@ -1,6 +1,6 @@
 import type {
   AttributNature, CategoryCode, ContactChannel, EventKind, PersonGender,
-  PersonRegister, PersonRelation,
+  PersonRegister, PersonRelation, Profile,
 } from "@lehno/contracts";
 import type { Messages } from "../messages/index.js";
 
@@ -89,6 +89,22 @@ const NATURES: Record<AttributNature, CleDeTexte> = {
   avoid: "topoEviter",
 };
 
+/* L'apparence, à TROIS valeurs. « system » n'est pas une palette : c'est la
+   consigne de suivre l'appareil, et elle a besoin d'un libellé propre pour que
+   le sélecteur puisse la montrer comme un choix à part entière. */
+const THEMES: Record<Profile["theme"], CleDeTexte> = {
+  system: "themeSysteme",
+  light: "themeClair",
+  dark: "themeSombre",
+};
+
+export const CLES_DE_THEME = THEMES;
+
+/* Les options du sélecteur, DÉDUITES de la table plutôt que réécrites à côté.
+   Le contrat n'exporte pas de liste pour ce champ, et une seconde liste écrite
+   à la main se serait tue le jour où une valeur s'ajoute : la table, elle, est
+   un `Record` exhaustif — elle ne compile pas si elle en oublie une. */
+export const THEMES_ORDONNES = Object.keys(THEMES) as Profile["theme"][];
 export const CLES_DE_NATURE = NATURES;
 export const CLES_DE_GENRE = GENRES;
 export const CLES_DE_CATEGORIE = CATEGORIES;
