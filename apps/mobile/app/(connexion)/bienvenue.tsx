@@ -52,18 +52,18 @@ export default function Bienvenue() {
 
   return (
     <View style={[styles.contenu, { paddingTop: insets.top + nativeSpace[32], paddingBottom: insets.bottom + nativeSpace[20] }]}>
-      {/* LE CORPS SE CENTRE, il ne s'entasse pas en haut.
-          
-          Sans ce bloc, l'illustration, le titre, la phrase et deux ou trois
-          lignes de cadeaux occupaient le tiers supérieur, les boutons étaient
-          collés en bas par leur `marginTop: auto`, et tout le milieu restait
-          vide. Sur un écran 16:9 le contenu remplissait presque la hauteur et
-          rien ne se voyait ; sur un téléphone 20:9, c'est un trou béant au
-          milieu d'un écran qui doit accueillir quelqu'un.
-          
-          `flex: 1` avec un centrage : le contenu se pose au milieu de ce qui
-          reste, quelle que soit la hauteur. Sur un écran court, il remplit — le
-          centrage ne coûte alors rien. */}
+      {/* LE CORPS COULE DEPUIS LE HAUT, et les boutons s'ancrent en bas.
+          C'est la composition de la planche (`BienvenueScreen.jsx`) : le
+          contenu part du haut, `marginTop: auto` pousse les sorties au bas.
+
+          J'ai essayé de CENTRER ce corps pour combler le vide qu'on voit sur un
+          écran haut. C'était une erreur, et elle est instructive : le vide ne
+          disparaissait pas, il se coupait en deux — au-dessus de l'illustration
+          et au-dessus des boutons —, et l'illustration se décrochait du haut.
+          La planche tranche, et ce qu'on voulait corriger n'est pas un défaut
+          d'intégration : c'est la composition elle-même qui laisse cet espace
+          quand l'écran est plus haut que celui sur lequel elle a été dessinée.
+          Cela se règle au design, pas ici. */}
       <View style={styles.corps}>
       <Illustration name="bienvenue-credits" width={140} />
 
@@ -138,9 +138,10 @@ const styles = StyleSheet.create({
     alignSelf: "stretch", fontFamily: nativeFont.bodyRegular, fontSize: 12.5,
     lineHeight: 18, marginTop: nativeSpace[8],
   },
-  /* Le corps prend la hauteur disponible et s'y centre ; les sorties restent
-     en bas sans avoir besoin d'un `marginTop: auto` — c'est le corps qui pousse
-     désormais, et il pousse en se centrant plutôt qu'en s'entassant. */
-  corps: { flex: 1, alignSelf: "stretch", alignItems: "center", justifyContent: "center" },
-  sorties: { alignSelf: "stretch", gap: nativeSpace[6] },
+  /* Le corps ne prend PAS la hauteur : il coule depuis le haut, et ce sont les
+     sorties qui descendent par `marginTop: auto`. L'ordre compte — si le corps
+     prenait `flex: 1`, il absorberait l'espace et le `marginTop: auto` des
+     sorties n'aurait plus rien à pousser. */
+  corps: { alignSelf: "stretch", alignItems: "center" },
+  sorties: { alignSelf: "stretch", gap: nativeSpace[6], marginTop: "auto" },
 });
