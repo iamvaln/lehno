@@ -1,0 +1,25 @@
+# Recette 1 — l'entrée dans l'application.
+#
+# On désigne par le TEXTE et par les libellés d'accessibilité, jamais par des
+# coordonnées : une position se périme à la première retouche de maquette, un
+# libellé non. C'est aussi ce qui donne sa seconde utilité à la garde des
+# boutons muets — un bouton qui ne se dit pas ne se pilote pas non plus.
+appId: com.lehno.app
+---
+- launchApp:
+    clearState: true
+
+# 1.10 — les documents légaux s'ouvrent depuis la connexion.
+- assertVisible: "Be there on the day"
+- assertVisible: "terms of use"
+- assertVisible: "privacy policy"
+
+# 1.8 — une adresse mal formée n'ouvre rien. Le bouton reste inactif : on
+# vérifie qu'aucun écran ne s'est substitué à celui-ci.
+- tapOn:
+    id: "champEmail"
+    optional: true
+- tapOn: "you@example.com"
+- inputText: "pas-une-adresse"
+- tapOn: "Send me a code"
+- assertVisible: "Be there on the day"

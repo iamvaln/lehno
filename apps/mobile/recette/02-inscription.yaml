@@ -1,0 +1,29 @@
+# Recette 1.1 — l'inscription de bout en bout.
+#
+# LE CODE NE PEUT PAS S'AUTOMATISER ICI : il part par courriel, et le serveur
+# de recette n'écrit pas sur une console qu'on puisse lire. Le parcours s'arrête
+# donc à l'écran du code, et la suite se reprend à la main — ou avec un code
+# passé en paramètre quand on en a un.
+#
+# Ce qui est éprouvé sans lui vaut déjà : l'adresse est acceptée, l'écran du
+# code s'ouvre, le décompte tourne, et le renvoi s'annonce.
+appId: com.lehno.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Be there on the day"
+
+- tapOn: "you@example.com"
+- inputText: "${MAESTRO_EMAIL}"
+- assertVisible: "Send me a code"
+- tapOn: "Send me a code"
+
+# L'écran du code s'ouvre, et il dit ce qu'il attend.
+- assertVisible: "Your code is on its way"
+- assertVisible: "Check your inbox."
+# Le décompte de validité, servi par le serveur depuis #101.
+- assertVisible:
+    text: ".*left to enter it.*"
+# Le renvoi ne s'offre qu'après le délai du limiteur.
+- assertVisible:
+    text: ".*New code in.*"

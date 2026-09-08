@@ -24,9 +24,9 @@ en test.
 | 1.5 | Quatrième demande de code en une heure | « Trop de tentatives », le délai est dit |
 | 1.6 | Pseudo déjà pris | Le champ se marque, la raison s'affiche |
 | 1.7 | Code de parrainage valide / inconnu / le sien | Trois issues distinctes à l'écran de bienvenue |
-| 1.8 | Adresse mal formée | Le bouton reste inactif, aucun appel |
+| 1.8 | Adresse mal formée | Le bouton reste inactif, aucun appel — **vu** |
 | 1.9 | Retour arrière depuis l'écran du code | On revient à l'adresse, rien n'est perdu |
-| 1.10 | Liens légaux depuis la connexion | Les deux documents s'ouvrent |
+| 1.10 | Liens légaux depuis la connexion | Les deux documents s'ouvrent — **présents, vus** |
 
 ## 2. Le carnet
 
@@ -119,7 +119,7 @@ en test.
 | 10.3 | Rappels | Canaux, heure |
 | 10.4 | Mes données | Demande d'export, dernière demande |
 | 10.5 | Fermer le compte | Aperçu, remboursement, code, délai de grâce |
-| 10.6 | Se déconnecter | Sortie immédiate, cache et file vidés |
+| 10.6 | Se déconnecter | Sortie immédiate, cache et file vidés — **vu** |
 | 10.7 | Aide | Questions, contact, noter l'application |
 
 ## 11. États transversaux
@@ -142,16 +142,31 @@ dans ce cas on s'arrête, on le remonte, on corrige, on reprend.
 
 | # | Où | Ce qui se passe | Bloquant |
 |---|---|---|---|
-| D1 | Création d'événement | Sur un anniversaire, la section « La date » affiche son titre et rien dessous tant qu'aucun proche n'est choisi. La règle du dépôt veut qu'une section vide parte avec son titre. | non |
-| D2 | Inscription | Après « Get started », on retombe sur la connexion : le compte est créé mais la session ne suit pas. Cause non établie. | **oui** |
+| D1 | Création d'événement | Sur un anniversaire, la section « La date » affichait son titre et rien dessous. **Corrigé** (`fix/porte-session`) : la section part avec son titre. | non |
+| D2 | Inscription | Après « Get started », on retombait sur la connexion. **Cause trouvée** : la porte remettait son verdict à `null` DANS l'effet de focus, donc après le premier rendu — ce rendu-là redirigeait sur la réponse du démarrage. **Corrigé** (`fix/porte-session`). | **oui**, levé |
+| D3 | Toute l'APK | Le préfixe `/v1` est posé DEUX FOIS : `eas.json` le met dans `EXPO_PUBLIC_API_URL`, et `api.ts` l'ajoute. L'application appelle `/v1/v1/…` → 404 sur chaque route. Vérifié : `POST /v1/auth/otp` rend 200, `/v1/v1/auth/otp` rend 404. | **oui** |
+| D4 | Bandeau hors connexion | S'est affiché alors que le réseau fonctionnait, sur l'écran de connexion — où il promet des notes et des dates qui n'existent pas encore. À reproduire. | non |
 
-## Une note sur le pilotage
+## Le pilotage : Maestro
 
-Chaque scénario demande entre cinq et quinze gestes, et la saisie d'un champ
-échoue environ une fois sur trois — caractères perdus, champ mal vidé, focus
-volé. Ce n'est pas un défaut du produit, c'est le coût du pilotage à la main :
-il faut le compter dans le temps de la recette.
+Le pilotage à la main coûtait plus d'une heure pour deux frappes, avec une
+saisie perdue une fois sur trois — coordonnées calculées à partir d'une capture,
+facteur d'échelle de 86 %, focus volé par une autre fenêtre.
 
-Le dépôt n'a AUCUN outillage d'écran — ni Detox, ni Maestro, ni
-testing-library. Le jour où ces parcours devront se rejouer, c'est ce qui
-manquera.
+**Maestro** désigne les éléments par leur TEXTE ou leur libellé
+d'accessibilité. Les parcours vivent dans `apps/mobile/recette/`, en YAML, et
+se rejouent à l'identique :
+
+```yaml
+- tapOn: "Send me a code"
+- assertVisible: "Your code is on its way"
+```
+
+Cela donne au passage une seconde utilité aux libellés d'accessibilité : **un
+bouton qui ne se dit pas ne se pilote pas non plus**. La garde des boutons muets
+sert donc deux fois.
+
+**Ce que Maestro ne fera pas ici** : lire le code à usage unique. Il part par
+courriel, et le serveur de recette n'écrit sur aucune console qu'on puisse lire.
+Le parcours d'inscription s'arrête à l'écran du code ; la suite se reprend à la
+main, ou avec un code passé en paramètre.
