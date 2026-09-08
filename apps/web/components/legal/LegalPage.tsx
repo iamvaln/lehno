@@ -68,7 +68,7 @@ export function LegalPage(
     <PublicShell t={t} langue={langue}>
         <div
           style={{
-            maxWidth: "var(--page-max)", margin: "0 auto",
+            maxWidth: "var(--page-max-texte)", margin: "0 auto",
             padding: "clamp(40px,5vw,68px) var(--page-gutter) clamp(52px,7vw,92px)",
           }}
         >
