@@ -7,13 +7,14 @@ import {
 } from "@lehno/contracts";
 import { nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
-  Avatar, Banner, Button, Icon, LoadingState, SectionLabel, TextField, useCouleurs,
+  Avatar, Banner, Button, Icon, LoadingState, SectionLabel, TextField, useTheme,
 } from "@lehno/ui-native";
 import { Choix } from "../../composants/Choix.js";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
-import { CLES_DE_GENRE } from "../../lib/libelles.js";
+import { CLES_DE_GENRE, CLES_DE_THEME, THEMES_ORDONNES } from "../../lib/libelles.js";
+import { poseLApparence } from "../../lib/apparence.js";
 import {
   corpsDeMiseAJour, doitVerifierLaDisponibilite, peutEnregistrer, pseudoRecevable,
   type SaisieDeProfil,
@@ -41,7 +42,7 @@ import {
  */
 export default function Profil() {
   const { t, langue, choisis } = useLangue();
-  const couleurs = useCouleurs();
+  const { couleurs, choisis: choisisLeTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
 
@@ -59,11 +60,17 @@ export default function Profil() {
          langue, ou le compte avoir été réglé depuis un autre téléphone. Ce que
          le serveur a retenu fait foi — c'est lui qui envoie les courriels. */
       choisis(lu.uiLanguage);
+      /* Le serveur fait foi, ICI AUSSI : le compte a pu être réglé depuis un
+         autre téléphone. On applique, et on garde localement pour que le
+         PROCHAIN lancement parte du bon thème sans attendre cet appel. */
+      choisisLeTheme(lu.theme);
+      void poseLApparence(lu.theme);
       setSaisie({
         pseudo: lu.username,
         nom: lu.displayName ?? "",
         genre: lu.gender,
         langue: lu.uiLanguage,
+        theme: lu.theme,
       });
       setEchec(null);
     } catch (e) {
@@ -117,6 +124,8 @@ export default function Profil() {
          On l'applique après l'enregistrement : ce qui est affiché correspond
          alors à ce que le serveur a retenu. */
       choisis(saisie.langue);
+      choisisLeTheme(saisie.theme);
+      void poseLApparence(saisie.theme);
       routeur.back();
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
@@ -227,6 +236,22 @@ export default function Profil() {
             pose={(v) => setSaisie({ ...saisie, langue: v ?? saisie.langue })}
           />
           <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilLangueAide}</Text>
+        </View>
+
+        <View>
+          <SectionLabel>{t.champTheme}</SectionLabel>
+          {/* TROIS choix, pas deux. « Système » est la valeur par défaut au
+              contrat, et la seule qui laisse l'appareil décider : un sélecteur
+              qui n'offrirait que Clair et Sombre forcerait un réglage explicite
+              à la première visite, et le passage automatique au sombre le soir
+              serait perdu sans que personne ne l'ait demandé. */}
+          <Choix
+            options={THEMES_ORDONNES}
+            libelle={(v) => t[CLES_DE_THEME[v]]}
+            valeur={saisie.theme}
+            pose={(v) => setSaisie({ ...saisie, theme: v ?? saisie.theme })}
+          />
+          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilThemeAide}</Text>
         </View>
       </View>
 

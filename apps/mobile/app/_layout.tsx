@@ -1,9 +1,12 @@
+import { useEffect, useState } from "react";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import { OfflineBanner, ThemeProvider, useCouleurs } from "@lehno/ui-native";
+import {
+  OfflineBanner, ThemeProvider, useCouleurs, type PreferenceDeTheme,
+} from "@lehno/ui-native";
 import { LangueProvider } from "../lib/langue.js";
 import { DrapeauxProvider } from "../lib/DrapeauxProvider.js";
 import { MetadonneesProvider } from "../lib/MetadonneesProvider.js";
@@ -13,6 +16,7 @@ import { ReseauProvider, useReseau } from "../lib/ReseauProvider.js";
 import { messageDuBandeau } from "../lib/file.js";
 import { useLangue } from "../lib/langue.js";
 import Maintenance from "./maintenance.js";
+import { litLApparence } from "../lib/apparence.js";
 import { POLICES } from "../polices/index.js";
 
 /* La coquille. Trois choses s'y posent, et l'ordre compte : la zone sûre doit
@@ -99,10 +103,26 @@ function Coquille() {
 
 export default function Racine() {
   const [pretes] = useFonts(POLICES);
-  if (!pretes) return null;
+
+  /* `undefined` = PAS ENCORE LU, à distinguer de `null` = rien de gardé. On
+     attend la lecture avant de peindre quoi que ce soit : le thème s'applique
+     au premier pixel, et rendre d'abord sur la préférence de l'appareil ferait
+     clignoter en clair chaque lancement d'un compte réglé en sombre. Le délai
+     ne se voit pas — l'écran d'accueil natif couvre déjà le chargement des
+     polices, qu'on attendait de toute façon. */
+  const [apparence, setApparence] = useState<PreferenceDeTheme | null | undefined>(undefined);
+  useEffect(() => {
+    let vivant = true;
+    void litLApparence().then((lue) => { if (vivant) setApparence(lue); });
+    return () => { vivant = false; };
+  }, []);
+
+  if (!pretes || apparence === undefined) return null;
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
+      {/* Sans réglage gardé, « system » : on suit l'appareil, ce que le contrat
+          pose déjà par défaut à la création du compte. */}
+      <ThemeProvider choix={apparence ?? "system"}>
         {/* La langue enveloppe la navigation : un écran qui se monte avant elle
             afficherait « undefined » à chaque libellé. */}
         <LangueProvider>
