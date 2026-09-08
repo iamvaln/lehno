@@ -24,6 +24,24 @@ const tel_quel = (): SaisieDeProfil => ({
   nom: PROFIL.displayName ?? "",
   genre: PROFIL.gender,
   langue: PROFIL.uiLanguage,
+  theme: PROFIL.theme,
+});
+
+describe("l'apparence", () => {
+  /* « system » N'EST PAS un thème de plus : c'est la consigne de suivre
+     l'appareil. Le contrat la porte, l'écran doit pouvoir la renvoyer — sans
+     quoi personne ne peut REVENIR au suivi automatique après avoir figé un
+     thème une fois, et le réglage devient un aller sans retour. */
+  it("sait revenir au suivi de l'appareil", () => {
+    const fige: Profile = { ...PROFIL, theme: "dark" };
+    const corps = corpsDeMiseAJour({ ...tel_quel(), theme: "system" }, fige);
+    expect(corps.theme).toBe("system");
+    expect(updateProfileSchema.safeParse(corps).success).toBe(true);
+  });
+
+  it("n'envoie pas le thème quand il n'a pas bougé", () => {
+    expect(corpsDeMiseAJour(tel_quel(), PROFIL)).not.toHaveProperty("theme");
+  });
 });
 
 describe("ce qu'on envoie", () => {
@@ -54,7 +72,7 @@ describe("ce qu'on envoie", () => {
   // l'idée qu'on s'en fait.
   it("compose un corps que le contrat accepte", () => {
     const corps = corpsDeMiseAJour(
-      { pseudo: "valou", nom: "Val", genre: "female", langue: "en" }, PROFIL,
+      { pseudo: "valou", nom: "Val", genre: "female", langue: "en", theme: "dark" }, PROFIL,
     );
     expect(updateProfileSchema.safeParse(corps).success).toBe(true);
   });

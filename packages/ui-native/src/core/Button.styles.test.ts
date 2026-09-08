@@ -70,8 +70,15 @@ describe("le style du bouton", () => {
   // « full » étire le bouton ; sinon il se cale à sa largeur de contenu. Sans
   // alignSelf, un bouton dans une colonne s'étire toujours.
   it("ne s'étire que si on le lui demande", () => {
-    expect(styleDuBouton({ couleurs: CLAIR }).conteneur.alignSelf).toBe("flex-start");
     expect(styleDuBouton({ couleurs: CLAIR, pleineLargeur: true }).conteneur.alignSelf).toBe("stretch");
+  });
+
+  /* IL SE CENTRE, il ne se colle pas au début. `alignSelf` l'emporte sur
+     l'`alignItems` du parent : avec « flex-start », un écran centré ne POUVAIT
+     PAS centrer son bouton, et chaque écran rattrapait à la main — ou oubliait.
+     C'est le défaut qu'on a vu sur les états vides et sur le renvoi du code. */
+  it("se centre quand il ne prend pas toute la largeur", () => {
+    expect(styleDuBouton({ couleurs: CLAIR }).conteneur.alignSelf).toBe("center");
   });
 
   // Le web l'obtenait par currentColor, notion absente de RN. Sans injection,

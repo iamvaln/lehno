@@ -105,8 +105,24 @@ export function styleDuBouton({
       borderColor: r.bord,
       backgroundColor: enfonce ? r.fondPresse : r.fond,
       opacity: desactive ? 0.45 : 1,
-      // Sans alignSelf, un bouton dans une colonne s'étire toujours.
-      alignSelf: pleineLargeur ? "stretch" : "flex-start",
+      /* CENTRÉ, PAS COLLÉ AU DÉBUT — et `alignSelf` est ici obligatoire.
+         Sans lui, un bouton dans une colonne s'étire, parce que `alignItems`
+         vaut `stretch` par défaut en React Native.
+
+         Mais « flex-start » était pire que le problème qu'il réglait :
+         `alignSelf` L'EMPORTE TOUJOURS sur l'`alignItems` du parent, donc un
+         écran qui centrait tout son contenu ne pouvait pas centrer son bouton.
+         Il se collait à gauche, et chaque écran devait le rattraper à la main —
+         ce que faisait `EmptyState`, ce qu'oubliaient les autres. Le renvoi de
+         code se lisait ainsi dans le coin d'un écran par ailleurs centré.
+
+         Dans une colonne, « center » centre horizontalement, ce que la planche
+         demande partout où un bouton n'est pas pleine largeur. Dans une RANGÉE,
+         `alignSelf` joue sur l'axe vertical : « center » y aligne le bouton sur
+         ses voisins au lieu de le coller en haut — meilleur là aussi. Un écran
+         qui voudrait autre chose passe `alignSelf` par `style`, qui est
+         fusionné après. */
+      alignSelf: pleineLargeur ? "stretch" : "center",
     },
     libelle: {
       fontFamily: nativeFont.bodySemibold,

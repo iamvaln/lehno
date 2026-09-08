@@ -166,30 +166,6 @@ const GABARITS: Record<string, string> = {
 // vient donc pas du dictionnaire, à la différence de tout le reste.
 const MARQUE = "Lehno";
 
-// Hors de l'outil, et hors de la construction de production : la bascule de rôle
-// n'est pas un contrôle du produit — c'est le serveur qui décide d'un rôle, et un
-// bandeau qui laisse choisir le sien n'a rien à faire dans un outil livré. Elle ne
-// sert qu'à regarder les deux interfaces pendant qu'on les écrit, d'où le garde
-// « import.meta.env.DEV » : Vite l'évalue à la compilation et la bande disparaît
-// du paquet, code compris.
-function BandeApercu(
-  { t, role, setRole, connecte, setConnecte }:
-  {
-    t: ReturnType<typeof messages>; role: AdminRole; setRole: (r: AdminRole) => void;
-    connecte: boolean; setConnecte: (c: boolean) => void;
-  },
-): ReactNode {
-  return (
-    <div className="apercu-bande">
-      <span className="apercu-mention">Aperçu — back-office</span>
-      <button type="button" onClick={() => setConnecte(false)} aria-pressed={!connecte}>{t.connexion.titre}</button>
-      <button type="button" onClick={() => setConnecte(true)} aria-pressed={connecte}>{t.outil.marque}</button>
-      <span className="apercu-separateur" aria-hidden="true" />
-      <button type="button" onClick={() => setRole("support")} aria-pressed={role === "support"}>{t.barre.roleSupport}</button>
-      <button type="button" onClick={() => setRole("admin")} aria-pressed={role === "admin"}>{t.barre.roleAdmin}</button>
-    </div>
-  );
-}
 
 // Le client se crée une fois, hors du composant : il porte la session, et une
 // instance par rendu perdrait le jeton rafraîchi entre deux appels.
@@ -1657,7 +1633,6 @@ export function App(): ReactNode {
   if (!connecte) {
     return (
       <>
-        {import.meta.env.DEV ? <BandeApercu t={t} role={role} setRole={setRole} connecte={connecte} setConnecte={setConnecte} /> : null}
         <EcranConnexion
           langue={langue}
           onDemanderCode={async ({ email }) => {
@@ -1700,7 +1675,6 @@ export function App(): ReactNode {
       {/* Bande d'aperçu, hors de l'outil : la bascule de rôle n'est pas un
           contrôle du produit — c'est le serveur qui décide d'un rôle. Elle
           disparaît le jour où l'authentification arrive (tâche 10). */}
-      {import.meta.env.DEV ? <BandeApercu t={t} role={role} setRole={setRole} connecte={connecte} setConnecte={setConnecte} /> : null}
 
       {avis ? (
         <Toast libelleFermer={t.commun.fermer} onDismiss={() => setAvis(null)}>

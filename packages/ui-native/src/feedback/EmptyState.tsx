@@ -33,16 +33,16 @@ export function EmptyState({ title, text, illustration, icon, actionLabel, onAct
       <Text style={s.titre} accessibilityRole="header">{title}</Text>
       {text ? <Text style={s.texte}>{text}</Text> : null}
       {actionLabel ? (
-        /* `alignSelf: "center"` EN PLUS du centrage du conteneur, et il le faut.
-           Le bouton pose lui-même `alignSelf: "flex-start"` quand il n'est pas
-           en pleine largeur — pour ne pas s'étirer dans une colonne — et
-           `alignSelf` l'emporte toujours sur le `alignItems` du parent. Le
-           bouton se retrouvait donc collé à gauche sous un titre et un texte
-           centrés, sur TOUS les états vides de l'application. */
+        /* Plus de rattrapage ici : le bouton se centre DE LUI-MÊME quand il
+           n'est pas en pleine largeur. Il posait autrefois « flex-start », ce
+           qui l'emportait sur le centrage du parent et le collait à gauche sous
+           un titre et un texte centrés — sur tous les états vides. Corrigé à la
+           source, dans `Button.styles.ts`, parce que cet écran n'était pas le
+           seul à le subir : le renvoi du code aussi. */
         <Button
           variant="primary"
           onPress={onAction}
-          style={{ marginTop: 20, alignSelf: "center" }}
+          style={{ marginTop: 20 }}
         >{actionLabel}</Button>
       ) : null}
     </View>
