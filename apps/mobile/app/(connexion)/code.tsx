@@ -247,6 +247,15 @@ const styles = StyleSheet.create({
   // touchable et vole le focus aux cases.
   invisible: { position: "absolute", opacity: 0, left: -9999 },
   validite: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, textAlign: "center", marginTop: nativeSpace[12], minHeight: 18 },
-  renvoi: { alignItems: "center", marginTop: "auto", paddingTop: nativeSpace[12] },
+  /* LE RENVOI APPARTIENT AU BOUTON, pas au bas de l'écran. La planche le pose
+     juste sous « Confirmer » (`marginTop: 4`) : les deux gestes se répondent —
+     valider ce code, ou en demander un autre.
+
+     Il portait `marginTop: "auto"`, qui le poussait tout en bas. Sur le cadre
+     court de la planche cela ne se voyait pas ; sur un téléphone d'aujourd'hui,
+     il se retrouvait à trois cents pixels du bouton, isolé comme un pied de
+     page — et il fallait le chercher au moment précis où l'on attend un code
+     qui n'arrive pas. */
+  renvoi: { alignItems: "center", marginTop: nativeSpace[4] },
   attente: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5 },
 });
