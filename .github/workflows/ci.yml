@@ -1,16 +1,32 @@
 name: CI
 
-# Barrières de qualité sur chaque PR et sur les push vers develop et main. Ne
-# déploie jamais — voir release.yml, déclenché uniquement par un tag git `v*`.
+# Barrière de qualité sur `main`, APRÈS fusion. Ne déploie jamais — voir
+# release.yml, déclenché uniquement par un tag git `v*`.
 #
-# `develop` y figure parce que c'est la branche où le travail atterrit : les
-# agents y poussent directement, sans passer par une PR. Tant qu'elle n'était
-# pas surveillée, rien ne vérifiait ce qui s'y accumulait — et la CI a pu
-# rester rouge sur main du 24 août sans que personne ne s'en aperçoive.
+# CE QU'ON A RETIRÉ, ET CE QU'ON ÉCHANGE.
+#
+# La vérification tournait aussi sur chaque PR et sur chaque poussée vers
+# `develop`. Elle dure vingt minutes, et le coût ne s'arrêtait pas là : chaque
+# fusion mettait les PR restantes en retard, ce qui en déclenchait une nouvelle
+# à chaque fois. Trois correctifs pouvaient faire tourner la chaîne cinq fois.
+#
+# Ce qu'on perd est la DÉTECTION PRÉCOCE : un commit cassé peut désormais dormir
+# sur `develop` jusqu'à ce que quelqu'un taille une release. C'est exactement le
+# scénario qui avait motivé la surveillance de `develop` — la CI était restée
+# rouge du 24 août sans que personne ne le voie.
+#
+# Ce qu'on garde, et qui est la vraie garde : `release.yml` appelle la MÊME
+# définition (verification.yml) avant de construire les images et de déployer.
+# Rien ne part en production sans être vérifié. La panne se découvre au moment
+# de publier plutôt qu'au moment d'écrire — plus tard, mais jamais chez
+# l'utilisateur.
+#
+# Les contrôles requis ont été retirés de la protection de `develop` et de
+# `main` en même temps : sans exécution sur les PR, un contrôle exigé ne paraît
+# jamais, et plus rien ne peut être fusionné.
 on:
-  pull_request:
   push:
-    branches: [develop, main]
+    branches: [main]
 
 # Annule les exécutions périmées sur la même réf pour économiser des minutes.
 concurrency:

@@ -42,9 +42,11 @@ Inlinées dans le bundle client au build de l'image web (voir
 | Variable | Valeur (exemple) |
 | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `https://api.lehno.io` |
+| `VITE_API_URL` | `https://api.lehno.io/v1` — le back-office. **Le `/v1` en fait partie ici**, contrairement au mobile où le client l'ajoute : c'est la forme que porte le repli de `session.ts`. Gravée dans le paquet au build, donc une image de recette ne peut pas servir la production |
 
 ```bash
 gh variable set NEXT_PUBLIC_API_URL --body "https://api.lehno.io"
+gh variable set VITE_API_URL --body "https://api.lehno.io/v1"
 ```
 
 La bascule de lancement (pré-lancement ↔ liens de magasins) n'est plus une
@@ -94,6 +96,10 @@ directement.
   propre guide de provisionnement VPS — à écrire si Lehno prend son propre
   VPS plutôt que de rejoindre celui de gabee.)*
 - Le dépôt cloné dans `~/lehno` (ou `VPS_APP_DIR`).
+- **Un enregistrement DNS `admin.<domaine>`** vers l'IP du VPS, en **DNS only**
+  comme les autres : Traefik obtient son certificat par le défi HTTP-01, que le
+  proxy de Cloudflare intercepterait. Sans cet enregistrement, le back-office se
+  construit et se déploie sans que personne ne puisse l'atteindre.
 - Un `.env.production` rempli — **non versionné**, il reste sur le VPS et
   survit aux `git checkout`. Variables attendues par `docker-compose.yml` :
 

@@ -53,17 +53,25 @@ copie principale, où l'on se met alors à écrire sans s'en apercevoir.
 
 ## Rien n'arrive sur `develop` sans passer par une PR
 
-`develop` et `main` sont protégées : le contrôle `verifier / verifier` doit
-être vert, **administrateurs inclus**. Une poussée directe est refusée.
+`develop` et `main` sont protégées : une poussée directe est refusée,
+**administrateurs inclus**.
 
 ```
 git push -u origin feature/<sujet>
 gh pr create --base develop --head feature/<sujet> --title "…" --body-file <fichier>
 ```
 
-Cette protection existe parce que `develop` est resté rouge pendant trois
-fusions successives sans que personne ne le voie. Tant qu'une vérification ne
-bloque pas, elle ne protège que ceux qui la lisent.
+**La vérification ne tourne plus avant la fusion.** Elle s'exécute sur `main`
+après fusion, et surtout dans `release.yml` avant chaque déploiement — rien ne
+part en production sans être vérifié.
+
+Ce qu'on y perd est la détection précoce : un commit cassé peut dormir sur
+`develop` jusqu'à la prochaine release. C'est un échange assumé contre le coût
+de vingt minutes par PR, aggravé par les remises à jour en chaîne que chaque
+fusion imposait aux autres.
+
+**Conséquence pour vous : la suite tourne en local avant de pousser.** Plus
+personne ne la lancera à votre place avant que le code n'atteigne `main`.
 
 ---
 

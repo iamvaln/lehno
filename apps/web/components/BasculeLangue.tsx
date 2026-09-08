@@ -1,5 +1,9 @@
+"use client";
+
 import type { CSSProperties, ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import type { Langue } from "../lib/langues.js";
+import { cheminDansLautreLangue } from "../lib/chemins.js";
 import type { Messages } from "../messages/index.js";
 
 // Un lien, pas un état : changer de langue change d'adresse, donc la page se
@@ -31,9 +35,21 @@ const LIEN: CSSProperties = {
 export function BasculeLangue({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
   const autre: Langue = langue === "fr" ? "en" : "fr";
 
+  /* LE CHEMIN COURANT, PAS LA RACINE.
+   *
+   * Le lien pointait sur `/${autre}` : depuis la FAQ, changer de langue
+   * ramenait à l'accueil, et il fallait retrouver sa page. Quelqu'un qui bascule
+   * veut lire CE QU'IL LISAIT.
+   *
+   * `usePathname` plutôt qu'un chemin passé en propriété : ce composant vit
+   * dans l'en-tête, monté une fois pour toutes les pages. Le lui faire
+   * transmettre par chaque page obligerait à y penser à chaque nouvelle route —
+   * et celle qu'on oublierait retomberait en silence sur l'ancien défaut. */
+  const chemin = usePathname();
+
   return (
     <a
-      href={`/${autre}`}
+      href={cheminDansLautreLangue(chemin ?? `/${langue}`, langue)}
       hrefLang={autre}
       aria-label={t.langueLabel}
       title={t.langueLabel}
