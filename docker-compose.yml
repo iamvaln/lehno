@@ -114,6 +114,41 @@ services:
       - traefik.http.routers.${STACK:-lehno}-web.tls.certresolver=le
       - traefik.http.services.${STACK:-lehno}-web.loadbalancer.server.port=3000
 
+  # ── Back-office (Vite, fichiers statiques servis par nginx) ─────────────────
+  #
+  # Il n'existait sur aucun serveur : le back-office ne tournait que sur les
+  # machines de développement, et administrer le service demandait de cloner le
+  # dépôt. Les drapeaux ont dû être basculés en SQL faute d'écran.
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    image: ${REGISTRY:-ghcr.io/iamvaln}/lehno-admin:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    # PAS de env_file : rien n'est lu à l'exécution. VITE_API_URL est gravée
+    # dans le paquet au build, comme les NEXT_PUBLIC_* du site. Donner à ce
+    # conteneur le fichier qui porte les secrets du serveur les exposerait dans
+    # un processus qui n'a aucun usage d'aucun d'eux.
+    #
+    # PAS de dépendance à l'api non plus : ces fichiers se servent même api
+    # éteinte, et l'écran dira lui-même ce qui ne répond pas. Attendre l'api
+    # rendrait le back-office indisponible au moment précis où l'on vient
+    # regarder pourquoi elle ne va pas.
+    #
+    # « web » seulement : ce conteneur ne parle à rien d'autre. Le navigateur
+    # appelle api.lehno.io directement, autorisé par la liste d'origines de
+    # l'api — pas par un relais ici, qui doublerait la décision.
+    networks: [web]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.${STACK:-lehno}-admin.rule=Host(`admin.${WEB_DOMAIN}`)
+      - traefik.http.routers.${STACK:-lehno}-admin.entrypoints=websecure
+      - traefik.http.routers.${STACK:-lehno}-admin.tls.certresolver=le
+      - traefik.http.services.${STACK:-lehno}-admin.loadbalancer.server.port=80
+
 volumes:
   lehno-db:
 
