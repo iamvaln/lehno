@@ -21,7 +21,14 @@ export function originsAutorisees(
   const origines: string[] = [];
 
   if (domaine) {
-    origines.push(`https://${domaine}`, `https://www.${domaine}`);
+    /* Le back-office vit sur son propre sous-domaine et appelle la même api.
+       Sans cette origine, il se charge et chaque appel est refusé par le
+       navigateur avant de partir — l'écran s'affiche, rien ne répond, et le
+       message d'erreur parle du serveur alors que la requête n'est jamais
+       partie. C'est exactement ce qui est arrivé en le servant depuis
+       localhost, et le défaut ne se voit pas en curl : celui-ci n'envoie
+       aucune requête préalable. */
+    origines.push(`https://${domaine}`, `https://www.${domaine}`, `https://admin.${domaine}`);
   }
 
   // En développement, deux outils appellent l'API depuis un navigateur, et ils

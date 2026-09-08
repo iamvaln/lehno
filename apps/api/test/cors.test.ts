@@ -38,6 +38,19 @@ describe("origines autorisées", () => {
     expect(o).toContain("http://127.0.0.1:5173");
   });
 
+  /* Le back-office déployé, sur son propre sous-domaine.
+   *
+   * Quatrième fois que la requête préalable prend ce fichier. Le défaut serait
+   * le même que les trois précédents : l'outil se charge, et chaque appel est
+   * refusé AVANT de partir. On l'a vécu en le servant depuis localhost contre
+   * la production — l'écran de connexion affichait « on n'a pas pu envoyer le
+   * code » alors que rien n'avait même été tenté, et les journaux du serveur
+   * étaient vides. */
+  it("accepte le back-office déployé sur son sous-domaine", () => {
+    const o = originsAutorisees("lehno.io", "production");
+    expect(o).toContain("https://admin.lehno.io");
+  });
+
   it("n'ouvre pas les origines locales en production", () => {
     const o = originsAutorisees("lehno.app", "production");
     expect(o.some((v) => v.includes("localhost"))).toBe(false);
