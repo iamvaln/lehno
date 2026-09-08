@@ -4,7 +4,6 @@
 @import "./signaux.css";
 @import "./tableau.css";
 @import "./gabarits.css";
-@import "./apercu.css";
 @import "./connexion.css";
 
 /* Structure seulement. Les couleurs et la densité viennent de @lehno/tokens,
