@@ -24,6 +24,16 @@ describe("émission CSS", () => {
     expect(cssVariables("dark")).toContain("--text-on-accent: #15131D;");
   });
 
+  /* Une largeur employée par une page mais absente du CSS ne casse pas
+     bruyamment : `var(--page-max-texte)` invalide vaut « pas de contrainte »,
+     et la page passe en PLEINE LARGEUR — pire que le défaut qu'on corrigeait,
+     et sans erreur nulle part. D'où cette garde sur les deux. */
+  it("émet les deux largeurs de page, la large et celle des pages de texte", () => {
+    const css = cssTokens();
+    expect(css).toContain("--page-max: 1160px;");
+    expect(css).toContain("--page-max-texte: 820px;");
+  });
+
   it("les jetons hors thème sortent une seule fois", () => {
     const css = cssTokens();
     expect(css).toContain("--radius-sm: 10px;");

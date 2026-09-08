@@ -29,7 +29,7 @@ export function ContactPage({ t, langue }: { t: Messages; langue: Langue }): Rea
     <PublicShell t={t} langue={langue}>
         <div
           style={{
-            maxWidth: "var(--page-max)", margin: "0 auto",
+            maxWidth: "var(--page-max-texte)", margin: "0 auto",
             padding: "var(--section-pad-y) var(--page-gutter)",
           }}
         >
