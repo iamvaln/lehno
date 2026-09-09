@@ -593,7 +593,7 @@ Palier d'achat de crédits. **Réglé par l'administration** : montant, crédits
 | currency | varchar(3) | non | — | 'XAF' | Code ISO 4217 |
 | credits | integer | non | — | — | Crédits obtenus, remise comprise |
 
-> **Aucune colonne de remise.** Elle se **déduit** de `amount`, `credits` et du paramètre `credit_unit_price` (voir `apps/api/src/payments/remise.ts`). Le `bonus_percent` d'autrefois était saisi à la main et rien ne le rattachait aux montants qu'il résume : un palier pouvait annoncer 20 % quand son rapport en valait cinq, et aucun test ne tombait — il n'y avait rien à comparer. Aucune valeur rangée ne peut donc plus mentir sur ce qu'un palier vaut, et la question du recalcul en cascade quand le prix unitaire change ne se pose plus.
+> **Aucune colonne de remise.** Elle se **déduit** de `amount`, `credits` et du paramètre `credit_unit_price` (voir `apps/api/src/payments/remise.ts`, et `apps/api/src/payments/prix-unitaire.ts` pour la lecture du paramètre). Le `bonus_percent` d'autrefois était saisi à la main et rien ne le rattachait aux montants qu'il résume : un palier pouvait annoncer 20 % quand son rapport en valait cinq, et aucun test ne tombait — il n'y avait rien à comparer. Aucune valeur rangée ne peut donc plus mentir sur ce qu'un palier vaut, et la question du recalcul en cascade quand le prix unitaire change ne se pose plus.
 
 | position | smallint | non | — | — | Ordre d'affichage |
 | is_active | boolean | non | — | true | |
@@ -601,7 +601,8 @@ Palier d'achat de crédits. **Réglé par l'administration** : montant, crédits
 
 - **Aucune saisie libre d'un montant** : on achète un palier, et rien d'autre. Le plus petit palier fixe le minimum d'achat.
 - **La remise s'affiche** — c'est un argument de vente, pas un calcul caché.
-- Valeurs de départ, à ajuster depuis l'administration : 500 F → 5 crédits · 1 000 F → 10 · 2 000 F → 22 (+10 %) · 5 000 F → 57 (+15 %) · 10 000 F → 120 (+20 %).
+- **C'est une réduction de volume, pas un bonus de crédits.** On achète en lot, donc le crédit coûte moins cher : le prix baisse, rien n'est offert en plus. D'où « −N % » partout, et le champ `discountPercent` au contrat — il s'appelait `bonusPercent` et disait donc l'inverse de ce qu'il portait.
+- Valeurs de départ, à ajuster depuis l'administration : 500 F → 5 crédits · 1 000 F → 10 · 2 000 F → 22 (−10 %) · 5 000 F → 57 (−15 %) · 10 000 F → 120 (−20 %).
 
 ## PaymentChannel
 
