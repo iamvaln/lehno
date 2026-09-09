@@ -74,7 +74,7 @@ export class RecuService {
   // @Inject explicites : esbuild/vitest n'émet pas design:paramtypes.
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject("STOCKAGE") private readonly stockage: StockagePort,
+    @Inject("STOCKAGE_PORT") private readonly stockage: StockagePort,
   ) {}
 
   /* Le paiement doit être À LUI et EN ATTENTE, et on le vérifie AU DÉPÔT plutôt

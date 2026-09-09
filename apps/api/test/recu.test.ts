@@ -1,9 +1,20 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import type { INestApplication } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import jwt from "jsonwebtoken";
 import sharp from "sharp";
 import { randomBytes } from "node:crypto";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { RecuService } from "../src/payments/recu.service.js";
 import { StockageMemoire } from "../src/stockage/memoire.adapter.js";
+import { AppModule } from "../src/app.module.js";
+import { AppExceptionFilter } from "../src/common/errors.js";
+import { FlagsService } from "../src/flags/flags.service.js";
+
+const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
+const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
+const SECRET_ADMIN = "Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh";
+const SITE = "https://lehno.test";
 
 /**
  * Le reçu d'un versement.
@@ -209,5 +220,102 @@ describe("le reçu d'un versement", () => {
     expect(second).not.toBe(premier);
     expect(stockage.contenuDe(premier)).toBeUndefined();
     expect(stockage.contenuDe(second)).toBeDefined();
+  });
+
+  /* LE SERVICE DOIT DÉMARRER DANS LA VRAIE APPLICATION, et les cas ci-dessus ne
+   * le prouvaient pas : ils construisent `new RecuService(...)` à la main, donc
+   * ils passaient au vert pendant que l'injection échouait — le jeton du
+   * stockage s'appelle `STOCKAGE_PORT`, pas `STOCKAGE`, et rien ici ne le
+   * lisait. Toute l'API refusait de démarrer.
+   *
+   * Un service ne se teste donc pas seulement dans son coin : il faut au moins
+   * un cas qui monte le module et frappe la route, sinon la couverture rassure
+   * sur un serveur qui ne s'allume pas. */
+  describe("par HTTP, sur l'application montée", () => {
+    let app: INestApplication;
+    let baseUrl: string;
+    let precedent: Record<string, string | undefined>;
+
+    beforeAll(async () => {
+      precedent = {
+        DATABASE_URL: process.env.DATABASE_URL,
+        OTP_PEPPER: process.env.OTP_PEPPER,
+        JWT_SECRET: process.env.JWT_SECRET,
+        ADMIN_JWT_SECRET: process.env.ADMIN_JWT_SECRET,
+        LEHNO_MAIL_CONSOLE: process.env.LEHNO_MAIL_CONSOLE,
+        PUBLIC_WEB_URL: process.env.PUBLIC_WEB_URL,
+      };
+      process.env.DATABASE_URL = db.url;
+      process.env.OTP_PEPPER = PEPPER;
+      process.env.JWT_SECRET = SECRET;
+      process.env.ADMIN_JWT_SECRET = SECRET_ADMIN;
+      process.env.LEHNO_MAIL_CONSOLE = "1";
+      process.env.PUBLIC_WEB_URL = SITE;
+
+      app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
+      app.setGlobalPrefix("v1");
+      app.useGlobalFilters(new AppExceptionFilter());
+      await app.listen(0);
+      baseUrl = await app.getUrl();
+    }, 120_000);
+
+    afterAll(async () => {
+      await app.close();
+      for (const [cle, valeur] of Object.entries(precedent)) {
+        if (valeur === undefined) delete process.env[cle];
+        else process.env[cle] = valeur;
+      }
+    });
+
+    const jeton = (userId: string): string =>
+      jwt.sign({ sub: userId }, SECRET, { algorithm: "HS256", expiresIn: 900 });
+
+    /* APRÈS la remise à zéro de l'englobant, et à chaque cas. Un drapeau naît
+       ÉTEINT — c'est voulu, c'est l'état d'un déploiement neuf — et `topup.manual`
+       gouverne toute cette surface. Allumé une seule fois dans le premier cas,
+       il retombait pour les suivants, qui recevaient alors `404` : FeatureGuard
+       passe AVANT AuthGuard, et une surface éteinte l'est pour tout le monde,
+       jeton ou pas. Les statuts qu'on éprouve ici ne veulent donc rien dire
+       tant que le drapeau n'est pas rallumé. */
+    beforeEach(async () => {
+      const drapeaux = new FlagsService(db.prisma as never);
+      await drapeaux.reconcilier();
+      await db.prisma.featureFlag.update({ where: { key: "topup.manual" }, data: { enabled: true } });
+    });
+
+    it("délivre une autorisation de dépôt", async () => {
+      const r = await fetch(`${baseUrl}/v1/me/payments/${paiement}/proof/depot`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${jeton(awa)}` },
+        body: JSON.stringify({ contentType: "application/pdf" }),
+      });
+      expect(r.status).toBe(200);
+      const corps = (await r.json()) as { url: string; typeMime: string; tailleMax: number };
+      expect(corps.typeMime).toBe("application/pdf");
+      // La clé ne sort JAMAIS : le client reçoit une URL, et rien d'autre.
+      expect(Object.keys(corps)).not.toContain("cle");
+    });
+
+    /* 400 et non 422 : `validation_failed` vaut 400 dans tout le contrat (voir
+       common/errors.ts). Le type refusé ici l'est par le SCHÉMA, avant même
+       qu'on touche au stockage — signer un dépôt pour un exécutable serait déjà
+       trop tard. */
+    it("refuse un type de fichier qu'on n'accepte pas", async () => {
+      const r = await fetch(`${baseUrl}/v1/me/payments/${paiement}/proof/depot`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${jeton(awa)}` },
+        body: JSON.stringify({ contentType: "application/x-msdownload" }),
+      });
+      expect(r.status).toBe(400);
+    });
+
+    it("refuse un appel sans jeton", async () => {
+      const r = await fetch(`${baseUrl}/v1/me/payments/${paiement}/proof/depot`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ contentType: "image/jpeg" }),
+      });
+      expect(r.status).toBe(401);
+    });
   });
 });
