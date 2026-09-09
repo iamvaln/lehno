@@ -170,39 +170,82 @@ export function signatureARemettre(
 
 // ── Enregistrer et partager ─────────────────────────────────────────────────
 
-/* Ce qu'on passe à la feuille de partage du téléphone.
+/* Ce qu'on dépose dans la feuille de partage du téléphone.
  *
- * On le redit ici plutôt que d'importer `ShareContent` : ce module ne charge
- * pas `react-native`, c'est toute sa raison d'être. */
-export interface Feuille {
-  url: string;
-  message?: string;
-}
+ * DEUX SORTES, ET C'EST LE SYSTÈME QUI L'IMPOSE. `Share.share` de React Native
+ * ne prend `url` que sur iOS ; sur Android il ne lit que `message` et `title`,
+ * et l'adresse passée en `url` y est ignorée SANS ERREUR — le bouton s'anime,
+ * la feuille s'ouvre, et elle est vide. C'est le pire des défauts : silencieux.
+ *
+ * On nomme donc ce qu'on dépose. « fichier » est l'image elle-même, telle que
+ * §3.22 la veut ; « adresse » est le repli, où c'est le lien vers l'image qui
+ * circule. Le repli n'est pas ce que le produit promet — « on partage un
+ * fichier, pas une adresse » — mais il vaut mieux qu'un geste muet.
+ *
+ * On redit ces formes ici plutôt que d'importer `ShareContent` : ce module ne
+ * charge pas `react-native`, c'est toute sa raison d'être. */
+export type Feuille =
+  | { sorte: "fichier"; url: string; message?: string }
+  | { sorte: "adresse"; message: string };
 
 export type SorteDePartage = "enregistrer" | "partager";
 
+/* Là où `Share.share` sait déposer un fichier — c'est-à-dire iOS, et lui seul.
+ *
+ * C'est ce qui décide si « Enregistrer l'image » a un sens : la feuille y met
+ * « Enregistrer l'image » à côté des messageries, et c'est ainsi que §3.22
+ * range les deux gestes au même endroit. Ailleurs, il n'y a rien à enregistrer
+ * — envoyer un lien dans la pellicule n'enregistre aucune image —, et le bouton
+ * ne s'affiche pas plutôt que de ne rien faire.
+ *
+ * Écrire l'image sur le téléphone hors de la feuille demanderait un module
+ * natif que l'application n'embarque pas ; c'est signalé plutôt que bricolé. */
+export function laFeuilleDeposeUnFichier(plateforme: Plateforme): boolean {
+  return plateforme === "ios";
+}
+
+/* La plateforme, dite par son nom plutôt que par un booléen : « estIOS » se
+   lirait comme une exception à corriger, alors que c'est une différence de
+   capacité entre deux systèmes. */
+export type Plateforme = "ios" | "android" | "autre";
+
 /* UNE SEULE FEUILLE, DEUX CHARGES. §3.22 range les deux gestes au même endroit
- * — « partager / enregistrer → feuille de partage du téléphone » — et c'est
- * exact : le téléphone y met « Enregistrer l'image » à côté des messageries.
+ * — « partager / enregistrer → feuille de partage du téléphone ».
  *
  * Ce qui les distingue, c'est ce qu'on y dépose. « Partager » joint le mot :
  * « l'application ouvre la feuille avec l'image, accompagnée d'un mot ».
  * « Enregistrer » ne joint rien — un texte collé dans la pellicule n'irait
- * nulle part, et sur Android il ferait basculer la feuille en partage de texte,
- * l'image en pièce jointe muette.
+ * nulle part, et il ferait basculer la feuille en partage de texte, l'image en
+ * pièce jointe muette.
  *
  * SANS IMAGE, RIEN. Tant que la composition n'a pas rendu, il n'y a pas de
  * fichier : ouvrir la feuille sur une adresse nulle proposerait de partager le
- * vide. L'écran n'affiche pas les boutons plutôt que de les griser. */
+ * vide. L'écran n'affiche pas les boutons plutôt que de les griser.
+ *
+ * SANS FICHIER POSSIBLE, PAS D'ENREGISTREMENT — voir `laFeuilleDeposeUnFichier`.
+ * Le partage, lui, se replie sur l'adresse : le mot et le lien valent mieux que
+ * rien du tout. */
 export function feuilleDePartage(
   portrait: Portrait,
   sorte: SorteDePartage,
   mot: string,
+  plateforme: Plateforme,
 ): Feuille | null {
   if (!portrait.imageUrl) return null;
-  if (sorte === "enregistrer") return { url: portrait.imageUrl };
   const propre = mot.trim();
-  return propre === "" ? { url: portrait.imageUrl } : { url: portrait.imageUrl, message: propre };
+
+  if (!laFeuilleDeposeUnFichier(plateforme)) {
+    if (sorte === "enregistrer") return null;
+    /* Le lien EN DERNIER, sur sa propre ligne : les messageries n'en font un
+       aperçu que s'il termine le message, et collé au texte elles avalent la
+       ponctuation dans l'adresse. */
+    return { sorte: "adresse", message: propre === "" ? portrait.imageUrl : `${propre}\n${portrait.imageUrl}` };
+  }
+
+  if (sorte === "enregistrer") return { sorte: "fichier", url: portrait.imageUrl };
+  return propre === ""
+    ? { sorte: "fichier", url: portrait.imageUrl }
+    : { sorte: "fichier", url: portrait.imageUrl, message: propre };
 }
 
 /* Le mot qui accompagne l'image : la version courte quand elle existe, le

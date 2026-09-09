@@ -5,6 +5,7 @@ import {
 } from "@lehno/contracts";
 import {
   apresLeChoix, approbation, changementDeSignature, etatDuPortrait, feuilleDePartage,
+  laFeuilleDeposeUnFichier,
   motDAccompagnement, offreDeRefaire, ouverture, relanceDuPortrait,
   selectionParDefaut, signatureARemettre,
 } from "../lib/portrait.js";
@@ -153,19 +154,43 @@ describe("enregistrer et partager", () => {
   const pret = portrait({ status: "approved", imageUrl: IMAGE });
 
   it("n'ouvre rien tant qu'il n'y a pas d'image", () => {
-    expect(feuilleDePartage(portrait(), "partager", "un mot")).toBeNull();
-    expect(feuilleDePartage(portrait({ status: "approved" }), "enregistrer", "")).toBeNull();
+    expect(feuilleDePartage(portrait(), "partager", "un mot", "ios")).toBeNull();
+    expect(feuilleDePartage(portrait({ status: "approved" }), "enregistrer", "", "ios")).toBeNull();
   });
 
-  /* Un texte déposé dans la pellicule n'irait nulle part, et sur Android il
-     ferait basculer la feuille en partage de texte, l'image en pièce jointe. */
+  /* Un texte déposé dans la pellicule n'irait nulle part, et il ferait basculer
+     la feuille en partage de texte, l'image en pièce jointe muette. */
   it("enregistrer ne joint aucun mot", () => {
-    expect(feuilleDePartage(pret, "enregistrer", "un mot")).toEqual({ url: IMAGE });
+    expect(feuilleDePartage(pret, "enregistrer", "un mot", "ios"))
+      .toEqual({ sorte: "fichier", url: IMAGE });
   });
 
   it("partager joint le mot, et se passe d'un mot vide", () => {
-    expect(feuilleDePartage(pret, "partager", " un mot ")).toEqual({ url: IMAGE, message: "un mot" });
-    expect(feuilleDePartage(pret, "partager", "   ")).toEqual({ url: IMAGE });
+    expect(feuilleDePartage(pret, "partager", " un mot ", "ios"))
+      .toEqual({ sorte: "fichier", url: IMAGE, message: "un mot" });
+    expect(feuilleDePartage(pret, "partager", "   ", "ios"))
+      .toEqual({ sorte: "fichier", url: IMAGE });
+  });
+
+  /* LE DÉFAUT SILENCIEUX. `Share.share` ne lit `url` que sur iOS : ailleurs
+     l'adresse est ignorée SANS ERREUR, la feuille s'ouvre vide, et rien ne le
+     dit. On ne dépose donc un fichier que là où la feuille sait en prendre un ;
+     ailleurs, c'est l'adresse qui circule, et l'enregistrement n'existe pas. */
+  it("ne dépose un fichier que là où la feuille sait en prendre un", () => {
+    expect(laFeuilleDeposeUnFichier("ios")).toBe(true);
+    expect(laFeuilleDeposeUnFichier("android")).toBe(false);
+    expect(laFeuilleDeposeUnFichier("autre")).toBe(false);
+  });
+
+  it("se replie sur l'adresse là où le fichier ne passe pas", () => {
+    expect(feuilleDePartage(pret, "partager", "Pour toi", "android"))
+      .toEqual({ sorte: "adresse", message: `Pour toi\n${IMAGE}` });
+    expect(feuilleDePartage(pret, "partager", "  ", "android"))
+      .toEqual({ sorte: "adresse", message: IMAGE });
+  });
+
+  it("n'offre pas d'enregistrer là où rien ne peut l'être", () => {
+    expect(feuilleDePartage(pret, "enregistrer", "", "android")).toBeNull();
   });
 
   it("accompagne de la version courte, et se replie sur le texte long", () => {
