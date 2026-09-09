@@ -61,7 +61,8 @@ describe("l'accueil en un appel", () => {
     expect(homeSchema.parse({ ...ACCUEIL, hasWishlist: true }).hasWishlist).toBe(true);
     // Le drapeau est OBLIGATOIRE : un client qui l'oublie doit s'en apercevoir
     // ici, pas en affichant l'invitation à qui a déjà sa liste.
-    const { hasWishlist: _, ...sans } = ACCUEIL;
+    const sans: Record<string, unknown> = { ...ACCUEIL };
+    delete sans["hasWishlist"];
     expect(() => homeSchema.parse(sans)).toThrow();
   });
 
