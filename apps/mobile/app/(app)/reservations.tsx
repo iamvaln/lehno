@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { myReservationListSchema, type MyReservation } from "@lehno/contracts";
 import { nativeBorder, nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
-  Banner, Button, EmptyState, Icon, LoadingState, useCouleurs,
+  Banner, Button, EmptyState, Icon, LoadingState, Toast, useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -25,12 +25,22 @@ import { EcranFerme } from "../../composants/EcranFerme.js";
  * s'est fait connaître de la personne. Le deviner d'un autre champ ferait dire
  * à l'écran l'inverse de ce qu'on a choisi au moment de réserver.
  *
- * IL SE LIT, IL NE SE TOUCHE PAS — et ce n'est pas un choix de dessin. La copie
- * porte trois gestes que le contrat ne sert pas : « Libérer », « Marquer comme
- * offert », et l'état « Retiré par son propriétaire ». On RÉSERVE depuis la
- * liste publique (`POST public/wishlists/:id/reserve`), et rien ne défait ni ne
- * conclut ensuite. Les poser ici ferait trois boutons qui échouent — sur des
- * cadeaux que d'autres attendent.
+ * UN SEUL GESTE, ET C'EST « LIBÉRER ». J'avais écrit ici que le contrat n'en
+ * servait aucun des trois. C'était faux pour celui-là :
+ * `DELETE /public/owner-wishes/{id}/reserve` dit en toutes lettres que
+ * « l'identité vient du jeton de visite OU DE LA SESSION ». Le chemin est
+ * public parce qu'un visiteur sans compte doit pouvoir se dédire ; il accepte
+ * la session tout autant, et `wishId` est servi ici.
+ *
+ * Le laisser de côté avait un coût réel : un cadeau réservé par erreur, ou
+ * qu'on ne peut plus offrir, restait bloqué jusqu'à la date — et la personne
+ * ne recevait rien. C'est précisément ce que la route existe pour éviter.
+ *
+ * LES DEUX AUTRES RESTENT ABSENTS, eux pour de bon. « Marquer comme offert »
+ * n'a aucune route — c'est le PROPRIÉTAIRE qui marque reçu, pas celui qui
+ * offre. Et l'état « Retiré par son propriétaire » n'a aucun champ :
+ * `myReservationSchema` ne le porte pas. Les poser ferait deux commandes qui
+ * échouent, sur des cadeaux que d'autres attendent.
  */
 export default function Reservations() {
   const { t, langue } = useLangue();
@@ -44,6 +54,7 @@ export default function Reservations() {
   const eteint = ecranEteint("reservations", actives);
 
   const [reservations, setReservations] = useState<MyReservation[] | null>(null);
+  const [accuse, setAccuse] = useState<string | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
 
   const charge = useCallback(async () => {
@@ -104,6 +115,28 @@ export default function Reservations() {
     );
   }
 
+  /* 404 VAUT SUCCÈS. La route rend 404 « quand rien ne correspond, jamais un
+     refus explicite » — pour ne pas confirmer à un curieux qu'une réservation
+     existe. Ici, cela veut dire qu'elle n'est plus à nous : la retirer de la
+     liste est la bonne réponse, pas afficher une panne.
+
+     On retire de la liste AVANT la réponse : le geste est rare et la latence
+     se voit. Si l'appel échoue autrement, on remet — et on le dit. */
+  const libere = async (r: MyReservation): Promise<void> => {
+    setReservations((v) => (v ?? []).filter((x) => x.id !== r.id));
+    try {
+      await appel<unknown>(`/public/owner-wishes/${r.wishId}/reserve`, {
+        method: "DELETE", gouvernee: true,
+      });
+      setAccuse(t.reservLibereFait);
+    } catch (e) {
+      const code = e instanceof ErreurDApi ? e.enveloppe?.code : null;
+      if (code === "not_found") { setAccuse(t.reservLibereFait); return; }
+      setReservations((v) => [...(v ?? []), r]);
+      setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
+    }
+  };
+
   if (eteint) return <EcranFerme />;
 
   return (
@@ -146,8 +179,15 @@ export default function Reservations() {
           {r.showIdentity ? null : (
             <Icon name="eye" size={15} color={couleurs.textMention} />
           )}
+          {/* En bouton texte, discret : rendre un cadeau est un geste rare, et
+              une commande trop visible sur chaque rang inviterait à le défaire
+              par mégarde. */}
+          <Button variant="text" onPress={() => void libere(r)}>{t.reservLiberer}</Button>
         </View>
       ))}
+      {accuse ? (
+        <Toast intent="success" onDismiss={() => setAccuse(null)}>{accuse}</Toast>
+      ) : null}
     </ScrollView>
   );
 }
