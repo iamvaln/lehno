@@ -23,6 +23,11 @@ export const profileSchema = z.object({
   id: z.string().uuid(),
   username: usernameSchema,
   displayName: z.string().max(80).nullable(),
+  /* Une URL SIGNÉE, valable quelques minutes, et non ce qui est rangé en base
+     — la colonne porte une clé. Le serveur la signe à chaque lecture et décide
+     à ce moment-là si celui qui demande a le droit : un compartiment public
+     laisserait un lien partagé une fois ouvert pour toujours.
+     À ranger nulle part côté client : elle sera morte au prochain écran. */
   avatarUrl: z.string().url().nullable(),
   email: z.string().email(),
   emailVerified: z.boolean(),
@@ -69,3 +74,31 @@ export type UsernameAvailability = z.infer<typeof usernameAvailabilitySchema>;
 
 export type Profile = z.infer<typeof profileSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+// ── La photo de profil ──────────────────────────────────────────────────────
+
+/* Le dépôt se fait EN DIRECT sur le stockage, sans traverser l'API : une photo
+ * de deux mégaoctets qui passe par le serveur occupe une connexion pour rien, et
+ * un téléphone en zone lente la tiendrait longtemps.
+ *
+ * Le client reçoit une URL de dépôt — et RIEN D'AUTRE. Pas la clé : c'est le
+ * serveur qui l'engendre et la retient. La lui donner permettrait de la
+ * remplacer par celle d'un autre — un reçu de paiement, un export de données —
+ * et de nous faire signer une lecture dessus.
+ */
+export const depotAvatarSchema = z.object({
+  url: z.string().url(),
+  /** Secondes avant que l'URL de dépôt ne meure. */
+  expireDans: z.number().int().positive(),
+  /** Ce que le stockage acceptera : le dépôt est signé POUR ce type. */
+  typeMime: z.string(),
+  /** La taille au-delà de laquelle le serveur refusera à la confirmation.
+   *  Servie pour que le client n'ait pas à recopier la règle. */
+  tailleMax: z.number().int().positive(),
+}).strict();
+
+export type DepotAvatar = z.infer<typeof depotAvatarSchema>;
+
+/* La confirmation ne porte AUCUN corps : le serveur sait déjà quelle clé il a
+   délivrée, à qui, et pour quel type. Le client dit seulement « c'est
+   déposé ». */

@@ -105,7 +105,7 @@ export class DataExportService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
-        id: true, email: true, username: true, displayName: true, avatarUrl: true,
+        id: true, email: true, username: true, displayName: true, avatarKey: true,
         referralCode: true, uiLanguage: true, theme: true, timezone: true,
         sendHour: true, digestFrequency: true, reminderLeadDays: true, gender: true,
         acceptedTermsAt: true, acceptedTermsVersion: true, createdAt: true,

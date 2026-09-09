@@ -41,6 +41,16 @@ export interface StockagePort {
    */
   lire(cle: string, secondes?: number): Promise<string>;
 
+  /**
+   * Lire les OCTETS depuis le serveur.
+   *
+   * Distinct de `lire`, qui rend une URL pour le navigateur. Le serveur qui
+   * doit inspecter ce qu'on vient de déposer — vérifier le type d'après le
+   * contenu, recomposer une image — n'a pas à passer par une URL signée de son
+   * propre compartiment : ce serait un aller-retour réseau pour lire chez soi.
+   */
+  contenu(cle: string): Promise<Buffer>;
+
   /** Écrire depuis le serveur — le portrait rendu par le modèle passe par là. */
   ecrire(prefixe: Prefixe, contenu: Buffer, typeMime: string): Promise<string>;
 

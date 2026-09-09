@@ -75,7 +75,23 @@ model User {
   emailVerified            Boolean         @default(false) @map("email_verified")
   username                 String          @unique @db.Citext
   displayName              String?         @map("display_name")
-  avatarUrl                String?         @map("avatar_url")
+  /**
+   * LA CLÉ de la photo, jamais son URL.
+   * Une URL présignée expire : la ranger donnerait des liens morts, et lierait
+   * la donnée au fournisseur (voir `stockage.port.ts`). Le serveur signe une
+   * URL de lecture à chaque affichage, et décide à ce moment-là si celui qui
+   * demande a le droit.
+   */
+  avatarKey                String?         @map("avatar_key")
+  /**
+   * La clé délivrée pour un dépôt en cours, pas encore confirmée.
+   * Elle existe parce que le client ne choisit RIEN : c'est le serveur qui
+   * engendre la clé en signant l'URL de dépôt, et qui la retient. Accepter une
+   * clé venue du client laisserait pointer son avatar vers celle d'un autre —
+   * un reçu de paiement, un export de données — et nous ferions ensuite signer
+   * une URL de lecture dessus.
+   */
+  avatarPendingKey         String?         @map("avatar_pending_key")
   referralCode             String          @unique @map("referral_code") @db.VarChar(16)
   referredBy               String?         @map("referred_by") @db.Uuid
   status                   UserStatus      @default(active)
