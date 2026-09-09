@@ -146,38 +146,54 @@ maquette portait en dur.
 
 ### Ce qui est décidé, et qui revient au serveur
 
-**Le serveur calcule et sert le pourcentage.** Deux raisons, et la seconde
-compte autant que la première : on ne fait confiance qu'au serveur, et le
-téléphone n'a pas à porter des traitements qu'on peut lui épargner.
+**C'est une RÉDUCTION DE VOLUME, pas un bonus de crédits.** On achète en lot,
+donc le crédit coûte moins cher — 10 crédits à 1700 quand l'unité en vaut 189,
+c'est −10 %. Rien n'est « offert en plus » : c'est le prix qui baisse.
 
-Bénéfice supplémentaire : l'application n'aura **plus besoin d'appeler
-`/public/config`** pour cet écran. C'est un aller-retour réseau de moins sur
-l'appareil — et sur un téléphone, c'est le réseau qui pèse, pas le calcul.
+Tout le vocabulaire actuel dit le contraire, et il doit changer :
 
-**Au moment de servir, pas à l'enregistrement.** La réduction dépend de DEUX
-tables : `credit_bundle` (par palier) et `system_parameter` (le prix unitaire,
-global). La figer à l'écriture ferait qu'un changement de prix unitaire
-invaliderait en silence tous les paliers. Le recalcul en cascade est faisable —
-peu de lignes, même transaction — mais il ne gagne rien : l'arithmétique est
-gratuite, et il ajoute une règle que **tout chemin d'écriture doit se rappeler**
-(migration, peuplement, correction à la main, second endpoint). Calculé au
-service, il n'y a rien à oublier.
+| Aujourd'hui | Devrait dire |
+|---|---|
+| `credit_bundle.bonus_percent` | une réduction, pas un bonus |
+| `bonusPercent` au contrat | idem |
+| `apps/admin` : colonne rendue `` `+${p.remisePourcent} %` `` | `−N %` |
+| `apps/admin/src/i18n/en.ts` : `remise: "Bonus"` | `Discount` |
 
-C'est déjà la doctrine du dépôt, écrite sur `Payment.feeAmount` : *« les frais
-annoncés à l'aperçu, figés ici. Pas ceux que le canal porte aujourd'hui. »* On
-fige ce qu'on a promis sur une **transaction** ; on calcule la **vitrine** en
-direct.
+Le mobile affiche déjà **« −N % »** (PR #136). C'est le seul des quatre à le
+dire juste, et il est donc en désaccord avec le panneau tant que celui-ci n'est
+pas repris — un signe qui se contredit d'un écran à l'autre.
 
-### Le panneau doit prévisualiser
+**Le pourcentage est calculé À LA SAUVEGARDE**, quand l'administrateur
+configure un palier, et stocké. Le panneau montre alors immédiatement la
+réduction que ces prix donnent : on ne règle pas des montants sans voir ce
+qu'ils annoncent au client.
 
-En configurant un prix — unitaire ou de palier —, l'administrateur doit voir
-**tout de suite la réduction que ces prix donnent**. Sans quoi on règle des
-montants sans savoir ce qu'ils annoncent au client.
+Le mobile, lui, ne calcule rien : il lit le champ servi. On ne fait confiance
+qu'au serveur, et un téléphone n'a pas à porter un traitement qu'on peut lui
+épargner — l'application n'appelle même plus `/public/config` pour cet écran,
+soit un aller-retour réseau de moins.
 
 **Une seule implantation de la formule**, partagée entre l'aperçu du panneau et
-la réponse de l'API. Deux implantations dériveraient, et le panneau montrerait
-un chiffre pendant que l'application en affiche un autre — la panne exacte qu'on
-vient de retirer, déplacée d'un cran.
+l'écriture. Deux implantations dériveraient, et l'aperçu montrerait un chiffre
+pendant qu'un autre serait enregistré.
+
+### La cascade, qui n'est pas optionnelle
+
+La réduction dépend de DEUX sources : `credit_bundle` (montant et crédits, par
+palier) et `system_parameter.credit_unit_price` (**global**). Stockée, elle doit
+donc être recalculée **à chaque changement du prix unitaire**, pas seulement à
+l'édition d'un palier — sinon changer le prix unitaire laisse tous les paliers
+annoncer une réduction périmée, sans que rien ne le signale.
+
+Le recalcul est peu coûteux — quelques lignes, même transaction que
+l'enregistrement du paramètre. Ce qui coûte, c'est de l'oublier : la règle vit
+dans le code, pas dans le schéma, et tout chemin d'écriture doit s'en souvenir
+(migration, peuplement, correction à la main, second endpoint).
+
+**D'où l'exigence, non négociable : un test qui change `credit_unit_price` et
+vérifie que les pourcentages des paliers ont bougé.** Sans lui, la cascade
+pourrit en silence, et on retombe exactement sur la panne qu'on cherche à
+retirer.
 
 ### Le paiement doit figer ce qu'on lui a annoncé
 
@@ -198,8 +214,11 @@ Sans valeurs figées sur la ligne, l'information a purement disparu.
 Même doctrine que `feeAmount`, même raison : changer un prix ne doit pas
 fausser rétroactivement la comptabilité.
 
-### Ce que devient `bonus_percent`
+### Le renommage
 
-Redondant, et contredisable. Soit il disparaît du schéma et du contrat, soit il
-devient un **forçage manuel explicite** — et il doit alors se nommer ainsi, le
-panneau montrant la valeur calculée à côté de celle qu'on force.
+`bonusPercent` porte une réduction sous un nom de bonus, dans le contrat, en
+base, et sur le panneau. Le renommer traverse `packages/contracts`,
+`apps/api`, `apps/admin` et `apps/mobile` — et régénère `docs/api/openapi.json`.
+
+**Cela sort du périmètre mobile** : je le signale, je ne le fais pas. Le mobile
+suivra le champ en une ligne, quel que soit son nom.
