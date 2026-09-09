@@ -251,6 +251,14 @@ export const fr = {
   murPrivAucunMotTitre: "Personne n'a encore écrit",
   murPrivAucunMotTexte: "Les mots que vos proches déposeront s'afficheront ici.",
   profilPhoto: "Changer la photo",
+  photoChanger: "Changer la photo",
+  photoRetirer: "Retirer la photo",
+  photoEnvoi: "Envoi…",
+  // La permission se demande AU MOMENT du geste ; refusée, elle est durable, et
+  // l'écran doit dire où la reprendre plutôt que de laisser un bouton inerte.
+  photoRefusee: "L'accès aux photos est refusé. Vous pouvez l'autoriser dans les réglages du téléphone.",
+  photoTropLourde: "Cette photo dépasse la taille acceptée. Choisissez-en une plus légère.",
+  photoEchec: "La photo n'est pas partie. Réessayez dans un instant.",
   champPrenom: "Prénom",
   profilNaissance: "Ma date d'anniversaire",
   profilNaissanceAide: "Elle apparaît sur mon Mur si je l'y expose.",
