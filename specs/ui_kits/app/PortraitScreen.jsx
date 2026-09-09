@@ -20,7 +20,7 @@ import { EmptyState } from "../../components/feedback/EmptyState.jsx";
    La date et la plage de notes accompagnent l'image : sans elles, deux
    portraits de la même personne sont indistinguables dans sa collection. */
 
-export function PortraitScreen({ t, etat = "nominal", qui = "Valery Bah", base = "../../", onOpen }) {
+export function PortraitScreen({ t, etat = "nominal", qui = "Valery Bah", base = "../../", onOpen, onFait }) {
   const [avecNote, setAvecNote] = React.useState(true);
   const [voie, setVoie] = React.useState("illustration");
   const [ambiance, setAmbiance] = React.useState(t.nuit ? "encre" : "papier");
@@ -116,15 +116,19 @@ export function PortraitScreen({ t, etat = "nominal", qui = "Valery Bah", base =
       <div style={{ display: "grid", gap: 8, marginTop: 18 }}>
         {aValider ? (
           <>
-            <Button platform="mobile" full icon="check">{t.portraitApprouver}</Button>
+            <Button platform="mobile" full icon="check"
+          onClick={() => onFait && onFait(t.portraitApprouveFait)}>{t.portraitApprouver}</Button>
             <Button platform="mobile" full variant="outline" icon="refresh-cw"
               onClick={() => onOpen && onOpen("studio")}>{t.resRegenerer}</Button>
-            <Button platform="mobile" full variant="text">{t.resJeter}</Button>
+            <Button platform="mobile" full variant="text"
+          onClick={() => onFait && onFait(t.portraitJeteFait)}>{t.resJeter}</Button>
           </>
         ) : (
           <>
-            <Button platform="mobile" full icon="download">{t.portraitEnregistrer}</Button>
-            <Button platform="mobile" full variant="outline" icon="share-2">{t.portraitPartagerDehors}</Button>
+            <Button platform="mobile" full icon="download"
+          onClick={() => onFait && onFait(t.portraitEnregistreFait)}>{t.portraitEnregistrer}</Button>
+            <Button platform="mobile" full variant="outline" icon="share-2"
+          onClick={() => onFait && onFait(t.resEnvoyerVia)}>{t.portraitPartagerDehors}</Button>
             <Button platform="mobile" full variant="text" icon={surLeMur ? "eye-off" : "globe"}
               onClick={() => onOpen && onOpen("monmur")}>
               {surLeMur ? t.portraitRetirerDuMur : t.portraitSurMonMur}

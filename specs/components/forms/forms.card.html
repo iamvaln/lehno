@@ -1,0 +1,47 @@
+<!-- @dsCard group="Components" viewport="700x235" name="Formulaires — champ de saisie" subtitle="Ajout intentionnel — la charte ne traite pas encore les formulaires" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@0.417.0/dist/umd/lucide.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../components/_card-boot.js"></script>
+<style>
+  html, body { margin: 0; }
+  body { font-family: var(--font-body); background: var(--surface-page);
+         color: var(--text-body); padding: 18px 20px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .col { display: grid; gap: 10px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; }
+  .pane { padding: 16px 18px; }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+         font-weight: 600; color: var(--text-mention); margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/lehno">
+const C = await window.lehnoBoot(["../core/Icon.jsx","../core/Button.jsx","./TextField.jsx"]);
+const { TextField, Button } = C;
+function Demo() {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22, alignItems: "start" }}>
+      <div className="col" style={{ gap: 12 }}>
+        <TextField label="Votre adresse e-mail" type="email" defaultValue="valentine@exemple.fr" />
+        <TextField label="Code de parrainage" invalid defaultValue="XJ-0042" hint="Ce code n'est plus valable." />
+      </div>
+      <div className="col" style={{ gap: 12 }}>
+        <TextField multiline rows={3} label="Une note sur Valery"
+          defaultValue="Il a parlé d'un moulin à café manuel, le sien rend l'âme." />
+        <div className="row"><Button>Enregistrer</Button><Button variant="text">Annuler</Button></div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>
+</body>
+</html>

@@ -30,9 +30,9 @@ kit web ne peut pas les exprimer :
 
 ## Ce qui m'appartient
 
-**Unifier le portrait.** `PortraitImage.jsx` et
-`components/brand/PortraitComposition.jsx` dessinent le même objet de deux
-façons. Le second est le canonique ; le premier doit disparaître au profit de lui.
+**Livrer `PortraitComposition` dans les archives.** Le composant est le portrait
+canonique et deux écrans l'importent ; il manquait aux trois archives du design
+system. Il est désormais dans l'export, avec sa planche d'épreuve.
 
 **Répliquer le port React Native.** Le pilote — `tokens.js`, `Button.js`,
 `EventCard.js`, `AccueilScreen.js` — établit la convention. Le reste est
@@ -40,6 +40,25 @@ mécanique : 274 `<div>`, 132 éléments de texte, 36 boutons, 51 grilles à rep
 en flex, 62 raccourcis `border` à séparer, 65 attributs `aria-*` à convertir,
 et environ 190 propriétés sans effet à retirer. À lancer si la convention du
 pilote vous convient.
+
+## Le lot suivant, d'après la mise à jour du 25 août
+
+La navigation à cinq onglets, l'accueil allégé et les primitives sont faits. Restent,
+dans l'ordre où ils ont été retenus :
+
+- **Mes listes de souhaits** (3.29) et **la liste partagée publique** (§3.6 des
+  surfaces publiques), avec la distinction qui compte : on **réserve** sur ma liste,
+  je **marque** ce qu'un proche m'a confié. Deux traitements visuels, pas deux vues.
+- **Les douze drapeaux** : le trou que laisse une fonctionnalité éteinte doit rester
+  habitable, et la planche doit pouvoir l'éteindre pour qu'on le voie.
+- **Le studio en six temps** : le récapitulatif dont chaque ligne ramène à son
+  réglage, et le résultat en deux temps — le texte d'abord, l'image ensuite.
+- **Le paiement par paliers**, et le chemin manuel avec dépôt d'un justificatif.
+- **`CategoryTag`** sur les sept catégories du modèle, en deux natures — durables
+  sur la fiche, ponctuelles sur l'occasion — et `dislikes_nogo` traité comme la
+  contrainte qu'il est.
+- **Le bloc « à ranger »** sur la fiche, pour la note que le classement n'a pas su
+  ranger. Ton neutre : elle sert déjà.
 
 ## Ce qui n'est pas dessiné, et pourquoi
 

@@ -32,15 +32,23 @@ import { EmptyState } from "../../components/feedback/EmptyState.jsx";
 
 const GOUTS = { fr: ["jazz", "céramique", "randonnée"], en: ["jazz", "ceramics", "hiking"] };
 
-export function SurfacePubliqueScreen({ t, etat = "voeu", onOpen }) {
+export function SurfacePubliqueScreen({
+  t, etat = "voeu", qui = "Célarine", souhaits = [], listeQuand, mien = false, onOpen, onFait
+}) {
+  /* Qui tient la page : un proche dont on visite le Mur, ou soi-même quand on
+     regarde son propre aperçu avant de le partager. Sur une collecte, c'est
+     toujours celui qui demande. */
+  const proprietaire = qui;
   const langue = t.langue === "fr" ? "fr" : "en";
   const [envoye, setEnvoye] = React.useState(false);
+  const [reserves, setReserves] = React.useState({});
   const [ecarte, setEcarte] = React.useState(false);
 
   /* Les trois situations de la spec, plus les états d'indisponibilité. */
   const connecte = etat === "connecte";
   const mur = etat === "mur" || etat === "murprive";
   const collecte = etat === "collecte";
+  const liste = etat === "liste";
 
   if (etat === "revoque") {
     return (
@@ -105,23 +113,76 @@ export function SurfacePubliqueScreen({ t, etat = "voeu", onOpen }) {
       }}>
         <Icon name={connecte ? "circle-check" : "unlock"} size={14}
           color={connecte ? "var(--feedback-success)" : "var(--text-mention)"} />
-        <span>{connecte ? t.pubReconnu("Valentine") : t.pubSansCompte}</span>
+        <span>{connecte ? t.pubReconnu("Valentine")
+          : liste ? t.pubListeSansCompte
+          : mur ? t.pubMurSansCompte : t.pubSansCompte}</span>
       </div>
 
       <div style={{ padding: "4px 16px 18px", flex: 1 }}>
         {/* Qui invite, pas qui lit : sur une collecte c'est Valentine qui
-            demande, sur un Mur ou un vœu c'est Awa dont on visite la page. */}
+            demande, sur un Mur ou un vœu c'est Célarine dont on visite la page. */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Avatar name={collecte ? "Valentine" : "Awa Diop"} size={48} />
-          <h1 className="lehno-display" style={{
-            fontSize: 20, letterSpacing: "-.02em", margin: 0, fontWeight: 500, flex: 1
-          }}>{mur ? t.pubMurTitre : collecte ? t.pubCollecteTitre : t.pubVoeuTitre}</h1>
+          <Avatar name={collecte ? "Valentine" : proprietaire} size={48} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 className="lehno-display" style={{
+              fontSize: 20, letterSpacing: "-.02em", margin: 0, fontWeight: 500
+            }}>{liste ? t.pubListeTitre(proprietaire)
+              : mur ? t.pubMurTitre(proprietaire)
+              : collecte ? t.pubCollecteTitre : t.pubVoeuTitre(proprietaire)}</h1>
+            {liste && listeQuand ? (
+              <div style={{ fontSize: 12.5, color: "var(--text-secondary)", marginTop: 2 }}>
+                {t.pubListeQuand(listeQuand)}
+              </div>
+            ) : null}
+          </div>
         </div>
 
-        {mur ? (
+        {liste ? (
+          <>
+            <div style={{
+              border: "1px solid var(--border-object)", borderRadius: "var(--radius-lg)",
+              overflow: "hidden", marginTop: 20
+            }}>
+              {souhaits.map((sh, i) => {
+                const pris = sh.etat === "reserve" || sh.etat === "offert" || reserves[i];
+                const dit = sh.etat === "offert" ? t.souhaitOffertEtat : t.pubListeReserve;
+                return (
+                <div key={sh.id || sh.quoi} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "13px 14px",
+                  minHeight: "var(--touch-min)", boxSizing: "border-box",
+                  borderTop: i ? "1px solid var(--border-hairline)" : "none"
+                }}>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span className="lehno-display" style={{
+                      fontSize: 16, display: "block", whiteSpace: "nowrap",
+                      overflow: "hidden", textOverflow: "ellipsis"
+                    }}>{sh.quoi}</span>
+                    <span style={{ fontSize: 12.5, color: "var(--text-secondary)" }}>{sh.prix}</span>
+                  </span>
+                  {pris ? (
+                    <Tag tone="quiet" style={{ fontSize: 11, padding: "2px 9px", flex: "none" }}>
+                      {dit}
+                    </Tag>
+                  ) : (
+                    <Button platform="mobile" variant="outline" style={{
+                      flex: "none", minHeight: 38, padding: "8px 14px"
+                    }} onClick={() => {
+                      setReserves((v) => ({ ...v, [i]: true }));
+                      if (onFait) onFait(t.pubReserveFait);
+                    }}>{t.pubListeReserver}</Button>
+                  )}
+                </div>
+                );
+              })}
+            </div>
+            <p style={{
+              margin: "10px 0 0", fontSize: 12.5, color: "var(--text-mention)"
+            }}>{t.pubListeDiscret(proprietaire)}</p>
+          </>
+        ) : mur ? (
           <>
             <div style={{ marginTop: 22 }}>
-              <SectionLabel>{t.murGoutsLabel}</SectionLabel>
+              <SectionLabel>{t.murGoutsLabel(proprietaire)}</SectionLabel>
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 9 }}>
                 {GOUTS[langue].map((g) => <Tag key={g}>{g}</Tag>)}
               </div>
@@ -129,13 +190,14 @@ export function SurfacePubliqueScreen({ t, etat = "voeu", onOpen }) {
             <Card padding={15} radius="lg" style={{ marginTop: 18 }}>
               <SectionLabel>{t.murSouhaitsLabel}</SectionLabel>
               <div style={{ fontSize: 14.5, marginTop: 6 }}>{t.souhaitExemple}</div>
-              <Button platform="mobile" full variant="outline" style={{ marginTop: 12 }}>
+              <Button platform="mobile" full variant="outline" style={{ marginTop: 12 }}
+                onClick={() => onOpen && onOpen("surface", { etat: "liste", nom: proprietaire })}>
                 {t.murListeCta}
               </Button>
             </Card>
             <Card padding={15} radius="lg" style={{ marginTop: 10 }}>
               <SectionLabel>{t.murMotLabel}</SectionLabel>
-              <Quote size={15} style={{ marginTop: 6 }}>{t.murMotExemple}</Quote>
+              <Quote size={15} style={{ marginTop: 6 }}>{t.murMotExemple(proprietaire)}</Quote>
             </Card>
           </>
         ) : (
@@ -184,7 +246,17 @@ export function SurfacePubliqueScreen({ t, etat = "voeu", onOpen }) {
         )}
       </div>
 
-      {mur ? (
+      {liste ? (
+        <div style={{ padding: "0 16px 16px", flex: "none" }}>
+          {mien ? (
+            <Button platform="mobile" full icon="share-2"
+              onClick={() => onFait && onFait(t.resEnvoyerVia)}>{t.moiPartager}</Button>
+          ) : (
+            <Button platform="mobile" full variant="outline"
+              onClick={() => onOpen && onOpen("connexion")}>{t.pubListeInvite}</Button>
+          )}
+        </div>
+      ) : mur ? (
         <div style={{ padding: "0 16px 16px", flex: "none" }}>
           <Button platform="mobile" full onClick={() => setEnvoye(true)}>{t.murMotCta}</Button>
         </div>

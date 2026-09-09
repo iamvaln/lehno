@@ -82,7 +82,9 @@ export function CodeScreen({ t, etat = "nominal", onRetour, onSuite }) {
         textAlign: "center", maxWidth: "32ch", marginInline: "auto"
       }} className="lehno-code-texte">{t.codeTexte}</p>
 
-      {etat === "erreur" ? (
+      {etat === "connu" ? (
+        <Banner intent="info" style={{ margin: "0 -20px 18px" }}>{t.codeConnu}</Banner>
+      ) : etat === "erreur" ? (
         <Banner intent="error" style={{ margin: "0 -20px 18px" }}>{t.codeErreur}</Banner>
       ) : perime ? (
         <Banner intent="warning" style={{ margin: "0 -20px 18px" }}>{t.codeExpire}</Banner>

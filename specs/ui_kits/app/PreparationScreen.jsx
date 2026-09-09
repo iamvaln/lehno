@@ -16,7 +16,7 @@ import { OfflineBanner } from "../../components/feedback/OfflineBanner.jsx";
    qui a déjà été préparé ne se relance pas par défaut — on le consulte, et
    refaire est un geste explicite qui redit son prix. */
 
-function Piste({ titre, texte, cout, solde, fait, onLancer, onVoir, onRecharger, t, desactive }) {
+function Piste({ titre, texte, cout, solde, fait, onLancer, onVoir, onRecharger, t, desactive, gratuit }) {
   return (
     <Card padding={15} radius="lg" style={{ marginBottom: 10, opacity: desactive ? 0.45 : 1 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
@@ -37,7 +37,7 @@ function Piste({ titre, texte, cout, solde, fait, onLancer, onVoir, onRecharger,
         display: "flex", alignItems: "center", gap: 8, marginTop: 12,
         paddingTop: 12, borderTop: "1px solid var(--border-hairline)"
       }}>
-        <CreditIndicator t={t} cout={cout} style={{ flex: 1 }} />
+        {gratuit ? <span style={{ flex: 1 }} /> : <CreditIndicator t={t} cout={cout} style={{ flex: 1 }} />}
         {fait ? (
           <>
             <Button platform="mobile" variant="text" onClick={onLancer} disabled={desactive}
@@ -55,13 +55,24 @@ function Piste({ titre, texte, cout, solde, fait, onLancer, onVoir, onRecharger,
 }
 
 export function PreparationScreen({
-  t, etat = "nominal", qui = "Valery Bah", quoi, solde = 4,
-  onLancer, onVoir, onOpen
+  t, etat = "nominal", qui = "Valery Bah", quoi, solde = 4, flags = {},
+  faits = { message: true }, onLancer, onVoir, onOpen
 }) {
+  /* Ce qui a déjà été produit se retrouve ici : la carte porte « Déjà », et
+     « Voir » rouvre le résultat sans repayer. Relancer reste un geste explicite,
+     qui redit son prix. */
   const sensible = etat === "sensible";
   const horsligne = etat === "horsligne";
+  /* LE CAS QUI PIÈGE. L'achat éteint ne ferme pas les générations : elles
+     restent disponibles et deviennent gratuites. Un coût annoncé ou un renvoi
+     vers la recharge mentirait — les deux sortent de l'écran, et rien ne prend
+     leur place : il n'y a plus rien à décider avant de lancer. */
+  const gratuit = flags.credits === false;
   const insuffisant = etat === "solde";
   const dispo = insuffisant ? 0 : solde;
+  /* L'état « déjà produit » se joue aussi seul : c'est la page qu'on revoit en
+     revenant sur une occasion préparée, sans avoir à rejouer la génération. */
+  const dejaFaits = etat === "produit" ? { idees: true, message: true } : faits;
 
   return (
     <div style={{ padding: "0 16px 18px" }}>
@@ -92,21 +103,25 @@ export function PreparationScreen({
         {/* Une date sensible ne propose pas de cadeau : la spec l'impose, et
             c'est la seule ligne qui disparaît selon la nature de l'événement. */}
         {sensible ? null : (
-          <Piste t={t} titre={t.prepIdeesTitre} texte={t.prepIdeesTexte}
-            cout={1} solde={dispo} desactive={horsligne} onRecharger={() => onOpen && onOpen("moi")}
+          <Piste t={t} titre={t.prepIdeesTitre} texte={t.prepIdeesTexte} fait={!!dejaFaits.idees}
+            cout={1} solde={gratuit ? undefined : dispo} gratuit={gratuit} desactive={horsligne}
+            onRecharger={() => onOpen && onOpen("recharge")}
             onLancer={() => onLancer && onLancer("idees")} onVoir={() => onVoir && onVoir("idees")} />
         )}
 
         <Piste t={t} titre={t.prepMessageTitre} texte={t.prepMessageTexte}
-          cout={1} solde={dispo} fait onRecharger={() => onOpen && onOpen("moi")} onLancer={() => onLancer && onLancer("message")}
+          cout={1} solde={gratuit ? undefined : dispo} gratuit={gratuit} fait={!!dejaFaits.message}
+          onRecharger={() => onOpen && onOpen("recharge")} onLancer={() => onLancer && onLancer("message")}
           onVoir={() => onVoir && onVoir("message")} desactive={horsligne} />
       </div>
 
       {/* Le solde une seule fois, en pied : trois lignes qui répètent le même
           chiffre le transforment en bruit. Le coût, lui, reste sur chaque
           ligne — c'est là qu'on décide. */}
-      <CreditIndicator t={t} solde={dispo} onRecharger={() => onOpen && onOpen("recharge")}
-        style={{ marginTop: 16 }} />
+      {gratuit ? null : (
+        <CreditIndicator t={t} solde={dispo} onRecharger={() => onOpen && onOpen("recharge")}
+          style={{ marginTop: 16 }} />
+      )}
     </div>
   );
 }

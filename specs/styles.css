@@ -1,0 +1,10 @@
+/* Lehno — point d'entrée CSS global.
+   Uniquement des @import : toute règle réelle vit dans les fichiers importés. */
+@import url("tokens/fonts.css");
+@import url("tokens/colors.css");
+@import url("tokens/typography.css");
+@import url("tokens/spacing.css");
+@import url("tokens/shape.css");
+@import url("tokens/motion.css");
+@import url("tokens/base.css");
+@import url("tokens/admin.css");

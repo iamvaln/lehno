@@ -1,0 +1,155 @@
+:root {
+  /* ——— Base, thème clair ——————————————————————————————— */
+  --lehno-paper:        #FFFFFF;
+  --lehno-ink:          #221F2B;
+  --lehno-violet:       #7B6BB7;
+  --lehno-violet-deep:  #5A4B93;
+  --lehno-violet-press: #4A3D7C;
+  --lehno-lilac:        #EDEAF7;
+  --lehno-apricot:      #F0CFB4;
+  --lehno-grey-text:    #6B6579;
+  --lehno-rule:         #EDEBF2;
+  --lehno-rule-strong:  #E2DDF0;
+
+  /* ——— Base, thème sombre ——————————————————————————————— */
+  --lehno-night:            #17161F;
+  --lehno-night-card:       #1B1928;
+  --lehno-night-surface:    #1E1C29;
+  --lehno-lilac-night:      #2E2945;
+  --lehno-violet-light:     #9C8BD8;
+  --lehno-violet-light-hi:  #B0A2E2;
+  --lehno-violet-light-lo:  #8877CC;
+  --lehno-violet-tint:      #C3B4EE;
+  --lehno-band-night:       #41357E;
+  --lehno-night-text:       #F2F0F7;
+  --lehno-night-muted:      #B9B4C6;
+  --lehno-night-mention:    #9A94A8;
+  --lehno-night-rule:       #2A2836;
+  --lehno-night-rule-2:     #3D3757;
+  --lehno-night-edge:       #726C96;
+
+  /* ——— Intentions ————————————————————————————————————— */
+  --lehno-info:          #5A4B93;
+  --lehno-success:       #166B43;
+  --lehno-warning:       #8A5A00;
+  --lehno-error:         #B3261E;
+  --lehno-info-night:    #C3B4EE;
+  --lehno-success-night: #7ED9A6;
+  --lehno-warning-night: #E3B25C;
+  --lehno-error-night:   #F2837A;
+
+  /* ——— Alias sémantiques — thème clair par défaut ————————— */
+  --surface-page:      var(--lehno-paper);
+  --surface-panel:     var(--lehno-lilac);
+  --surface-card:      var(--lehno-paper);
+  --surface-band:      var(--lehno-ink);
+  --on-band:           var(--lehno-paper);
+
+  --text-body:         var(--lehno-ink);
+  --text-secondary:    var(--lehno-grey-text);
+  /* Le même gris que le texte secondaire : voir la note ci-dessous. La
+     distinction se fait par la taille et la graisse, pas par la couleur. */
+  --text-mention:      var(--lehno-grey-text);
+  --text-accent:       var(--lehno-violet-deep);
+  --text-on-accent:    var(--lehno-paper);
+
+  --action:            var(--lehno-violet);
+  --action-hover:      var(--lehno-violet-deep);
+  --action-press:      var(--lehno-violet-press);
+  --action-edge:       var(--lehno-violet);
+  --action-quiet-bg:   var(--lehno-lilac);
+
+  --border-hairline:   var(--lehno-rule);
+  --border-object:     var(--lehno-rule-strong);
+  --focus-ring:        var(--lehno-violet);
+
+  --celebrate:         var(--lehno-apricot);
+  --on-celebrate:      #7A4A22;
+
+  /* Surface inversée — ce qui se pose PAR-DESSUS la page : l'accusé d'action.
+     Comme l'aplat de clôture, elle change de rôle en sombre : l'encre ne
+     tranche pas sur l'encre. */
+  /* Illustrations — trois couleurs au plus par image, prises ici.
+     Les masses se rejouent en sombre, elles ne s'inversent pas. */
+  --illus-mass:        var(--lehno-violet);
+  --illus-form:        var(--lehno-lilac);
+  --illus-warm:        var(--lehno-apricot);
+  --illus-detail:      var(--lehno-ink);
+
+  --surface-inverse:   var(--lehno-ink);
+  --text-on-inverse:   var(--lehno-paper);
+  --border-inverse:    rgba(255, 255, 255, 0.14);
+
+  --feedback-info:        var(--lehno-info);
+  --feedback-info-bg:     #EDEAF7;
+  --feedback-success:     var(--lehno-success);
+  --feedback-success-bg:  #E6F4EC;
+  --feedback-warning:     var(--lehno-warning);
+  --feedback-warning-bg:  #FBF0DC;
+  --feedback-error:       var(--lehno-error);
+  --feedback-error-bg:    #FBEAE8;
+}
+
+/* Thème sombre — un second jeu, pas un inverse.
+   Deux couleurs changent de valeur, une troisième change de rôle :
+   l'aplat de clôture quitte l'encre pour un violet profond, l'encre ne
+   tranchant pas sur l'encre. */
+.lehno-nuit {
+  --surface-page:      var(--lehno-night);
+  --surface-panel:     var(--lehno-lilac-night);
+  --surface-card:      var(--lehno-night-card);
+  --surface-band:      var(--lehno-band-night);
+  --on-band:           var(--lehno-night-text);
+
+  --text-body:         var(--lehno-night-text);
+  --text-secondary:    var(--lehno-night-muted);
+  --text-mention:      var(--lehno-night-mention);
+  --text-accent:       var(--lehno-violet-tint);
+  --text-on-accent:    #15131D;
+
+  --action:            var(--lehno-violet-light);
+  --action-hover:      var(--lehno-violet-light-hi);
+  --action-press:      var(--lehno-violet-light-lo);
+  --action-edge:       var(--lehno-night-edge);
+  --action-quiet-bg:   var(--lehno-lilac-night);
+
+  --border-hairline:   var(--lehno-night-rule);
+  --border-object:     var(--lehno-night-rule-2);
+  --focus-ring:        var(--lehno-violet-light);
+
+  --celebrate:         var(--lehno-apricot);
+  --on-celebrate:      #3A2413;
+
+  --illus-mass:        var(--lehno-violet-light);
+  --illus-form:        var(--lehno-lilac-night);
+  --illus-warm:        var(--lehno-apricot);
+  --illus-detail:      var(--lehno-night-text);
+
+  --surface-inverse:   var(--lehno-band-night);
+  --text-on-inverse:   var(--lehno-night-text);
+  --border-inverse:    rgba(255, 255, 255, 0.20);
+
+  --feedback-info:        var(--lehno-info-night);
+  --feedback-info-bg:     #2E2945;
+  --feedback-success:     var(--lehno-success-night);
+  --feedback-success-bg:  #163024;
+  --feedback-warning:     var(--lehno-warning-night);
+  --feedback-warning-bg:  #322814;
+  --feedback-error:       var(--lehno-error-night);
+  --feedback-error-bg:    #35191A;
+}
+
+/* ——— Pourquoi il n'y a que deux gris de texte en thème clair ———————————
+   Le lilas #EDEAF7 est un fond très clair : pour tenir 4,5:1 dessus, un texte
+   doit descendre sous une clarté de Y=0,147. Le gris de texte #6B6579 est à
+   0,138 — il passe de justesse, à 4,72:1. Il n'existe donc pas de place pour un
+   TROISIÈME gris plus clair qui passerait encore.
+
+   La hiérarchie à trois niveaux se fait donc par la typographie : le texte
+   courant à 15-16 px, le secondaire à 13,5 px, la mention à 11,5 px. Trois
+   tailles, deux couleurs.
+
+   Le thème sombre n'a pas ce problème : #9A94A8 mesure 6,24:1 sur le fond et
+   4,73:1 sur le lilas sombre. Il garde donc ses trois niveaux de couleur —
+   c'est une des façons dont le thème sombre rejoue la palette au lieu de
+   l'inverser. */

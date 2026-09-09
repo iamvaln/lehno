@@ -4,7 +4,7 @@ import { TextField } from "../../components/forms/TextField.jsx";
 import { Wordmark } from "../../components/brand/Wordmark.jsx";
 import { Banner } from "../../components/feedback/Banner.jsx";
 
-export function ConnexionScreen({ t, etat = "nominal", base = "../../", onSuite }) {
+export function ConnexionScreen({ t, etat = "nominal", base = "../../", onSuite , onFait }) {
   return (
     <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", minHeight: "100%" }}>
       {/* Le logotype seul. La pastille au-dessus du mot répète le h que le mot
@@ -48,9 +48,9 @@ export function ConnexionScreen({ t, etat = "nominal", base = "../../", onSuite 
         textAlign: "center", lineHeight: 1.5
       }}>
         {t.connexionPiedAvant}
-        <a href="#" style={{ color: "var(--text-accent)" }}>{t.connexionPiedCgu}</a>
+        <a href="#" onClick={(ev) => { ev.preventDefault(); if (onFait) onFait(t.lienOuvreDehors); }} style={{ color: "var(--text-accent)" }}>{t.connexionPiedCgu}</a>
         {t.connexionPiedEntre}
-        <a href="#" style={{ color: "var(--text-accent)" }}>{t.connexionPiedConf}</a>
+        <a href="#" onClick={(ev) => { ev.preventDefault(); if (onFait) onFait(t.lienOuvreDehors); }} style={{ color: "var(--text-accent)" }}>{t.connexionPiedConf}</a>
         {t.connexionPiedApres}
       </p>
     </div>

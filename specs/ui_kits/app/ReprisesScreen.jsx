@@ -18,8 +18,8 @@ import { EmptyState } from "../../components/feedback/EmptyState.jsx";
 
 const REPRISES = {
   fr: [
-    { id: "r1", genre: "repriseBrouillon", qui: "Awa Diop", jours: 0,
-      extrait: "Awa, cette année encore tu as tenu tout le monde debout…" },
+    { id: "r1", genre: "repriseBrouillon", qui: "Célarine", jours: 0,
+      extrait: "Célarine, cette année encore tu as tenu tout le monde debout…" },
     { id: "r2", genre: "repriseIdees", qui: "Valery Bah", jours: 3,
       extrait: "Trois pistes, dont le moulin à café" },
     { id: "r3", genre: "reprisePortrait", qui: "Maman", jours: 12,
@@ -28,8 +28,8 @@ const REPRISES = {
       extrait: "Un mot pour ses trente ans" }
   ],
   en: [
-    { id: "r1", genre: "repriseBrouillon", qui: "Awa Diop", jours: 0,
-      extrait: "Awa, another year of keeping everyone standing…" },
+    { id: "r1", genre: "repriseBrouillon", qui: "Célarine", jours: 0,
+      extrait: "Célarine, another year of keeping everyone standing…" },
     { id: "r2", genre: "repriseIdees", qui: "Valery Bah", jours: 3,
       extrait: "Three directions, including the coffee grinder" },
     { id: "r3", genre: "reprisePortrait", qui: "Maman", jours: 12,
@@ -45,10 +45,21 @@ const ICONES = {
   reprisePortrait: "sparkles"
 };
 
-export function ReprisesScreen({ t, etat = "nominal", onOpen }) {
+export function ReprisesScreen({ t, etat = "nominal", flags = {}, onOpen }) {
   const langue = t.langue === "fr" ? "fr" : "en";
+  /* CET ÉCRAN N'EXISTE QUE POUR REPRENDRE UNE GÉNÉRATION. Chaque nature suit
+     son propre drapeau : le message seul allumé laisse les brouillons et retire
+     les idées et les portraits. Toutes éteintes, l'écran n'a plus de raison
+     d'être — le prototype le retire de la navigation, et ce qui y menait avec.
+     Ici, le repli est l'état vide : mieux que des lignes qui ne reprennent
+     rien. */
+  const ouvert = {
+    repriseBrouillon: flags.generationMessage !== false && flags.generation !== false,
+    repriseIdees: flags.generationIdeas !== false && flags.generation !== false,
+    reprisePortrait: flags.generationPortrait !== false && flags.generation !== false
+  };
 
-  if (etat === "vide") {
+  if (etat === "vide" || !REPRISES[langue].some((x) => ouvert[x.genre])) {
     return (
       <div style={{ padding: "8px 16px 18px" }}>
         <EmptyState illustration="rien-approche"
@@ -58,7 +69,7 @@ export function ReprisesScreen({ t, etat = "nominal", onOpen }) {
   }
 
   /* Du plus urgent au moins urgent ; les dates dépassées ferment la liste. */
-  const liste = [...REPRISES[langue]].sort((a, b) => {
+  const liste = REPRISES[langue].filter((x) => ouvert[x.genre]).sort((a, b) => {
     const passe = (x) => (x.jours < 0 ? 1 : 0);
     if (passe(a) !== passe(b)) return passe(a) - passe(b);
     return a.jours - b.jours;
@@ -93,7 +104,7 @@ export function ReprisesScreen({ t, etat = "nominal", onOpen }) {
                   fontSize: 11.5, color: "var(--text-mention)", whiteSpace: "nowrap", marginTop: 3
                 }}>{t.repriseDepassee}</span>
               ) : (
-                <Countdown days={r.jours} size="s" locale={t.langue} />
+                <Countdown label={r.jours === 0 ? t.aujourdhui : t.decompte(r.jours)} today={r.jours === 0} size="s" />
               )}
             </div>
 

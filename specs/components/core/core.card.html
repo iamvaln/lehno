@@ -1,0 +1,75 @@
+<!-- @dsCard group="Components" viewport="700x255" name="Core — boutons, étiquettes, cartes" subtitle="Les trois rangs, les pilules, la surface de carte" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@0.417.0/dist/umd/lucide.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../components/_card-boot.js"></script>
+<style>
+  html, body { margin: 0; }
+  body { font-family: var(--font-body); background: var(--surface-page);
+         color: var(--text-body); padding: 18px 20px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .col { display: grid; gap: 10px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; }
+  .pane { padding: 16px 18px; }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+         font-weight: 600; color: var(--text-mention); margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/lehno">
+const C = await window.lehnoBoot(["./Icon.jsx","./Button.jsx","./Tag.jsx","./Card.jsx","./SectionLabel.jsx","./Avatar.jsx"]);
+const { Button, Tag, Card, Avatar } = C;
+function Demo() {
+  return (
+    <div className="col" style={{ gap: 16 }}>
+      <div>
+        <div className="lbl">Web — hauteur 40, rayon 10</div>
+        <div className="row">
+          <Button>Commencer</Button>
+          <Button variant="outline">Voir la liste</Button>
+          <Button variant="text">Plus tard</Button>
+          <Button variant="destructive">Supprimer</Button>
+          <Button disabled>Inactif</Button>
+        </div>
+      </div>
+      <div>
+        <div className="lbl">Mobile — 48 px mini, rayon 12</div>
+        <div className="row">
+          <Button platform="mobile">Préparer</Button>
+          <Button platform="mobile" variant="outline" icon="check">Marquer envoyé</Button>
+          <Button platform="mobile" variant="neutral">Reporter</Button>
+          <Button platform="mobile" variant="destructive-outline">Supprimer</Button>
+        </div>
+      </div>
+      <div className="row" style={{ gap: 26, alignItems: "flex-start" }}>
+        <div>
+          <div className="lbl">Étiquettes</div>
+          <div className="row" style={{ gap: 7 }}>
+            <Tag>vinyles</Tag><Tag>rando</Tag>
+            <Tag tone="quiet">J−3</Tag>
+            <Tag tone="celebrate">aujourd'hui</Tag>
+          </div>
+        </div>
+        <div>
+          <div className="lbl">Carte · aplat · portrait</div>
+          <div className="row" style={{ gap: 10 }}>
+            <Card padding={13} radius="lg" style={{ fontSize: 13 }}>Carte + bordure</Card>
+            <Card surface="panel" padding={13} radius="lg" style={{ fontSize: 13 }}>Aplat lilas</Card>
+            <Avatar name="Valery Bah" size={40} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>
+</body>
+</html>

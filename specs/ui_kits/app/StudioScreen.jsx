@@ -99,7 +99,14 @@ function Cartes({ options, valeur, onSet, t }) {
   );
 }
 
-export function StudioScreen({ t, etat = "nominal", solde = 4, onLancer, onOpen }) {
+export function StudioScreen({
+  t, etat = "nominal", solde = 4, flags = {}, onLancer, onOpen
+}) {
+  /* LE PIÈGE DU BRIEF : l'achat éteint ne ferme pas les générations, il les rend
+     gratuites. Un coût annoncé ou un solde rappelé mentirait à quelqu'un qui
+     vient de recevoir quelque chose sans payer — les deux sortent de l'écran. */
+  const gratuit = flags.credits === false;
+
   const [orientation, setOrientation] = React.useState("orRelation");
   const [voie, setVoie] = React.useState("illustration");
   const [famille, setFamille] = React.useState("nature");
@@ -173,8 +180,10 @@ export function StudioScreen({ t, etat = "nominal", solde = 4, onLancer, onOpen 
       </div>
 
       <div style={{ marginTop: "auto", paddingTop: 24 }}>
-        <CreditIndicator t={t} cout={1} solde={dispo}
-          onRecharger={() => onOpen && onOpen("recharge")} style={{ marginBottom: 10 }} />
+        {gratuit ? null : (
+          <CreditIndicator t={t} cout={1} solde={dispo}
+            onRecharger={() => onOpen && onOpen("recharge")} style={{ marginBottom: 10 }} />
+        )}
         <Button platform="mobile" full onClick={() => onLancer && onLancer("portrait")}>
           {t.studioLancer}
         </Button>

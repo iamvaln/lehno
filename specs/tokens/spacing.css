@@ -1,0 +1,29 @@
+:root {
+  --space-2:  2px;
+  --space-4:  4px;
+  --space-6:  6px;
+  --space-8:  8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-28: 28px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-44: 44px;
+  --space-56: 56px;
+  --space-72: 72px;
+  --space-92: 92px;
+
+  /* Rythme de page */
+  --page-max:        1160px;
+  --page-gutter:     20px;
+  --section-pad-y:   clamp(52px, 7vw, 92px);
+  --measure:         62ch;   /* longueur de ligne confortable */
+  --measure-tight:   42ch;   /* chapeau, colonne étroite */
+
+  /* Cible tactile — jamais moins, même quand le fond visible est plus court */
+  --touch-min: 44px;
+}

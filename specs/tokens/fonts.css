@@ -1,0 +1,6 @@
+/* Fraunces et Karla sont servies par Google Fonts.
+   Aucun binaire n'a été fourni par la marque : cet import est la source de
+   vérité, et il embarque les @font-face (variable, latin + latin-ext).
+   Fraunces est une police variable — les axes opsz, SOFT et WONK sont pilotés
+   par --font-display-settings dans typography.css. */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Karla:ital,wght@0,300..700;1,400..500&display=swap");
