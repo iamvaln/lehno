@@ -13,6 +13,7 @@ type Ligne = {
   label: string;
   link: string | null;
   imageUrl: string | null;
+  imageKey: string | null;
   details: string | null;
   price: { toNumber(): number } | null;
   currency: string | null;
@@ -120,6 +121,7 @@ function rendre(l: Ligne): Wish {
     label: l.label,
     link: l.link,
     imageUrl: l.imageUrl,
+    imageKey: l.imageKey,
     details: l.details,
     // Decimal → nombre : le contrat rend un nombre, et un Decimal sérialisé
     // sortirait en chaîne. Un client qui compare des prix comparerait alors

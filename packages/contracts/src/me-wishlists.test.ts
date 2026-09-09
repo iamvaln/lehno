@@ -17,6 +17,7 @@ const SOUHAIT = {
   label: "Un moulin à café manuel",
   link: null,
   imageUrl: null,
+  imageKey: null,
   details: null,
   price: null,
   currency: null,

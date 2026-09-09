@@ -90,12 +90,41 @@ export class AvatarService {
      sort jamais : la lui donner permettrait de la remplacer par celle d'un
      autre — un reçu, un export — et de nous faire signer une lecture dessus. */
   async depot(userId: string): Promise<DepotAvatar> {
-    const { cle, url, expireDans } = await this.stockage.deposer("avatars", TYPE_DEPOT);
+    return this.ouvrirUnDepot(userId, "avatar", "avatars");
+  }
+
+  /* La photo d'un SOUHAIT, même chemin, même vérification.
+   *
+   * La cible est retenue par le serveur au moment de signer : sans elle, la
+   * confirmation devrait la recevoir du client, qui pourrait alors rattacher sa
+   * photo au souhait de quelqu'un d'autre. On vérifie donc ICI, une fois, que le
+   * souhait lui appartient — et plus jamais après. */
+  async depotSouhait(userId: string, souhaitId: string): Promise<DepotAvatar> {
+    await this.souhaitDe(userId, souhaitId);
+    return this.ouvrirUnDepot(userId, `souhait:${souhaitId}`, "souhaits");
+  }
+
+  private async ouvrirUnDepot(
+    userId: string, cible: string, prefixe: "avatars" | "souhaits",
+  ): Promise<DepotAvatar> {
+    const { cle, url, expireDans } = await this.stockage.deposer(prefixe, TYPE_DEPOT);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { avatarPendingKey: cle },
+      data: { depotEnCoursKey: cle, depotEnCoursCible: cible },
     });
     return { url, expireDans, typeMime: TYPE_DEPOT, tailleMax: TAILLE_MAX };
+  }
+
+  /* Le souhait doit être À LUI, et on le vérifie au dépôt plutôt qu'à la
+     confirmation : refuser après une montée ferait payer le forfait pour rien.
+     404 et non 403 — dire « ce souhait existe mais n'est pas à vous »
+     apprendrait qu'il existe. */
+  private async souhaitDe(userId: string, souhaitId: string): Promise<void> {
+    const sien = await this.prisma.ownerWish.findFirst({
+      where: { id: souhaitId, occurrence: { userId } },
+      select: { id: true },
+    });
+    if (!sien) throw new AppError("not_found", "resource not found");
   }
 
   /**
@@ -105,21 +134,68 @@ export class AvatarService {
    * le client dit seulement « c'est déposé ».
    */
   async confirmer(userId: string): Promise<Profile> {
+    const { propre, enAttente, cible } = await this.verifierLeDepot(userId);
+    if (cible !== "avatar") {
+      /* La confirmation ne dit pas ce qu'elle vise : c'est le dépôt qui l'a
+         fixé. Appeler la mauvaise route rattacherait une photo de souhait à un
+         avatar — d'où le refus plutôt qu'un rattachement de confort. */
+      throw new AppError("conflict", "pending upload targets something else");
+    }
+    return this.poserLAvatar(userId, propre, enAttente);
+  }
+
+  /** La photo d'un souhait, une fois vérifiée comme les autres. */
+  async confirmerSouhait(userId: string): Promise<void> {
+    const { propre, enAttente, cible } = await this.verifierLeDepot(userId);
+    const souhaitId = cible.startsWith("souhait:") ? cible.slice("souhait:".length) : null;
+    if (souhaitId === null) throw new AppError("conflict", "pending upload targets something else");
+
+    const cle = await this.stockage.ecrire("souhaits", propre, "image/jpeg");
+    const avant = await this.prisma.ownerWish.findUnique({
+      where: { id: souhaitId }, select: { imageKey: true },
+    });
+    await this.prisma.ownerWish.update({ where: { id: souhaitId }, data: { imageKey: cle } });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { depotEnCoursKey: null, depotEnCoursCible: null },
+    });
+    await this.balayer([enAttente, avant?.imageKey ?? null]);
+  }
+
+  /* Relire, borner, recomposer — la partie commune à toutes les images. Elle ne
+     sait pas ce qu'elle vérifie, et c'est voulu : une photo de profil et une
+     photo de souhait viennent du même inconnu, le téléphone, et méritent le
+     même examen. */
+  private async verifierLeDepot(
+    userId: string,
+  ): Promise<{ propre: Buffer; enAttente: string; cible: string }> {
     const compte = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { avatarPendingKey: true, avatarKey: true },
+      select: { depotEnCoursKey: true, depotEnCoursCible: true },
     });
     // Rien en attente : la confirmation ne suit aucun dépôt. On ne va pas
     // chercher au hasard dans le compartiment.
-    if (compte.avatarPendingKey === null) throw new AppError("not_found", "no pending upload");
+    if (compte.depotEnCoursKey === null || compte.depotEnCoursCible === null) {
+      throw new AppError("not_found", "no pending upload");
+    }
 
-    const octets = await this.lireLeDepot(compte.avatarPendingKey);
+    const octets = await this.lireLeDepot(compte.depotEnCoursKey);
     if (octets.byteLength > TAILLE_MAX) {
-      await this.oublier(userId, compte.avatarPendingKey);
+      await this.oublier(userId, compte.depotEnCoursKey);
       throw new AppError("validation_failed", "image too large");
     }
 
-    const propre = await this.recomposer(octets, userId, compte.avatarPendingKey);
+    return {
+      propre: await this.recomposer(octets, userId, compte.depotEnCoursKey),
+      enAttente: compte.depotEnCoursKey,
+      cible: compte.depotEnCoursCible,
+    };
+  }
+
+  private async poserLAvatar(userId: string, propre: Buffer, enAttente: string): Promise<Profile> {
+    const compte = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { avatarKey: true },
+    });
 
     /* L'image recomposée s'écrit sous une clé NEUVE : celle du dépôt a été
        signée pour le client, qui peut y réécrire tant que l'URL vit. Garder la
@@ -129,12 +205,12 @@ export class AvatarService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { avatarKey: cle, avatarPendingKey: null },
+      data: { avatarKey: cle, depotEnCoursKey: null, depotEnCoursCible: null },
     });
 
     // Au mieux : un objet resté derrière ne doit pas faire échouer un
     // changement de photo déjà acquis.
-    await this.balayer([compte.avatarPendingKey, ...(ancienne === null ? [] : [ancienne])]);
+    await this.balayer([enAttente, ...(ancienne === null ? [] : [ancienne])]);
 
     return this.profils.get(userId);
   }
@@ -154,23 +230,43 @@ export class AvatarService {
       where: { id: userId },
       select: { avatarKey: true },
     });
-    /* La clé EN ATTENTE n'en fait pas partie : elle désigne un dépôt que
-       personne n'a encore vérifié, et signer une lecture dessus servirait un
-       fichier qu'on n'a pas regardé. */
-    if (compte.avatarKey !== cle) throw new AppError("not_found", "resource not found");
+    /* La clé EN ATTENTE n'en fait jamais partie : elle désigne un dépôt que
+       personne n'a vérifié, et signer une lecture dessus servirait un fichier
+       qu'on n'a pas regardé. */
+    if (compte.avatarKey === cle) return this.signer(cle);
+
+    /* Les photos de souhaits, ensuite. On interroge par la CLÉ et par le
+       propriétaire dans la même requête : chercher le souhait puis comparer
+       laisserait une fenêtre où l'on saurait que la clé existe. */
+    const sien = await this.prisma.ownerWish.findFirst({
+      where: { imageKey: cle, occurrence: { userId } },
+      select: { id: true },
+    });
+    if (sien) return this.signer(cle);
+
+    const carnet = await this.prisma.wishlistItem.findFirst({
+      where: { imageKey: cle, occurrence: { userId } },
+      select: { id: true },
+    });
+    if (carnet) return this.signer(cle);
+
+    throw new AppError("not_found", "resource not found");
+  }
+
+  private async signer(cle: string): Promise<UrlMedia> {
     return { url: await this.stockage.lire(cle, DUREE_LECTURE), expireDans: DUREE_LECTURE };
   }
 
   async retirer(userId: string): Promise<Profile> {
     const compte = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { avatarKey: true, avatarPendingKey: true },
+      select: { avatarKey: true, depotEnCoursKey: true },
     });
     await this.prisma.user.update({
       where: { id: userId },
-      data: { avatarKey: null, avatarPendingKey: null },
+      data: { avatarKey: null, depotEnCoursKey: null, depotEnCoursCible: null },
     });
-    await this.balayer([compte.avatarKey, compte.avatarPendingKey]);
+    await this.balayer([compte.avatarKey, compte.depotEnCoursKey]);
     return this.profils.get(userId);
   }
 
@@ -222,7 +318,9 @@ export class AvatarService {
   }
 
   private async oublier(userId: string, cle: string): Promise<void> {
-    await this.prisma.user.update({ where: { id: userId }, data: { avatarPendingKey: null } });
+    await this.prisma.user.update({
+      where: { id: userId }, data: { depotEnCoursKey: null, depotEnCoursCible: null },
+    });
     await this.balayer([cle]);
   }
 

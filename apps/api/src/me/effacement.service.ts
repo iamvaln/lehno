@@ -313,7 +313,8 @@ export class EffacementService {
           username: `supprime-${id}`,
           displayName: null,
           avatarKey: null,
-          avatarPendingKey: null,
+          depotEnCoursKey: null,
+          depotEnCoursCible: null,
           /* Un code neuf, pas le sien. Le code d'origine a circulé dans des
              messages : le laisser vivant rattacherait un nouvel inscrit à un
              compte effacé. Les parrainages déjà noués ne bougent pas — `Referral`

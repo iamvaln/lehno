@@ -84,14 +84,21 @@ model User {
    */
   avatarKey                String?         @map("avatar_key")
   /**
-   * La clé délivrée pour un dépôt en cours, pas encore confirmée.
-   * Elle existe parce que le client ne choisit RIEN : c'est le serveur qui
-   * engendre la clé en signant l'URL de dépôt, et qui la retient. Accepter une
-   * clé venue du client laisserait pointer son avatar vers celle d'un autre —
-   * un reçu de paiement, un export de données — et nous ferions ensuite signer
-   * une URL de lecture dessus.
+   * Le dépôt EN COURS : sa clé, et ce qu'il vise.
+   * Une seule place par personne, et c'est assez : on choisit une photo, on la
+   * dépose, on confirme — les trois se suivent. Une place par image obligerait
+   * chaque table à porter sa colonne d'attente, pour un état qui ne dure que
+   * quelques secondes.
+   * La clé vit ici parce que le client ne choisit RIEN : c'est le serveur qui
+   * l'engendre en signant l'URL, et qui la retient. Accepter une clé venue du
+   * client laisserait pointer son image vers celle d'un autre — un reçu, un
+   * export — et nous ferions ensuite signer une lecture dessus.
+   * `depotEnCoursCible` dit à QUOI la rattacher : `avatar`, ou `souhait:<id>`.
+   * Sans elle, la confirmation devrait recevoir la cible du client — qui
+   * pourrait alors rattacher sa photo au souhait de quelqu'un d'autre.
    */
-  avatarPendingKey         String?         @map("avatar_pending_key")
+  depotEnCoursKey          String?         @map("depot_en_cours_key")
+  depotEnCoursCible        String?         @map("depot_en_cours_cible")
   referralCode             String          @unique @map("referral_code") @db.VarChar(16)
   referredBy               String?         @map("referred_by") @db.Uuid
   status                   UserStatus      @default(active)
@@ -775,6 +782,17 @@ model WishlistItem {
   authorUserId      String?        @map("author_user_id") @db.Uuid
   label             String
   imageUrl          String?        @map("image_url")
+  /**
+   * LA CLÉ de la photo déposée, distincte de `imageUrl`.
+   * Les deux coexistent, et ce n'est pas une redondance : `imageUrl` est le
+   * lien d'une boutique — une image qu'on ne possède pas et qu'on ne peut que
+   * pointer —, `imageKey` désigne une photo prise par l'utilisateur et rangée
+   * dans notre stockage. « Le bleu indigo, pas le turquoise » se règle mieux en
+   * une image qu'en une phrase, et cette image-là est à nous.
+   * Une clé, jamais une URL : une URL présignée expire, et la ranger donnerait
+   * des liens morts.
+   */
+  imageKey          String?        @map("image_key")
   details           String?
   link              String?
   price             Decimal?       @db.Decimal(12, 2)
@@ -870,6 +888,17 @@ model OwnerWish {
   label             String
   link              String?
   imageUrl          String?        @map("image_url")
+  /**
+   * LA CLÉ de la photo déposée, distincte de `imageUrl`.
+   * Les deux coexistent, et ce n'est pas une redondance : `imageUrl` est le
+   * lien d'une boutique — une image qu'on ne possède pas et qu'on ne peut que
+   * pointer —, `imageKey` désigne une photo prise par l'utilisateur et rangée
+   * dans notre stockage. « Le bleu indigo, pas le turquoise » se règle mieux en
+   * une image qu'en une phrase, et cette image-là est à nous.
+   * Une clé, jamais une URL : une URL présignée expire, et la ranger donnerait
+   * des liens morts.
+   */
+  imageKey          String?        @map("image_key")
   details           String?
   price             Decimal?       @db.Decimal(12, 2)
   currency          String?        @db.VarChar(3)

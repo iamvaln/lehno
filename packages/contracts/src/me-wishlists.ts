@@ -35,6 +35,13 @@ export const ownerWishSchema = z.object({
   label: z.string(),
   link: z.string().url().nullable(),
   imageUrl: z.string().url().nullable(),
+  /* LA CLÉ d'une photo déposée, à côté du lien d'une boutique. Les deux
+     coexistent : l'URL pointe une image qu'on ne possède pas, la clé désigne
+     celle qu'on a prise. C'est sur la clé qu'un client range son fichier —
+     l'URL de lecture, elle, se demande à `/me/media/url` — et seulement pour ce
+     qu'on n'a pas déjà. Une liste de vingt souhaits ne doit pas coûter vingt
+     signatures dont la plupart ne serviront pas. */
+  imageKey: z.string().nullable(),
   details: z.string().nullable(),
   price: z.number().nonnegative().nullable(),
   currency: currencySchema.nullable(),
