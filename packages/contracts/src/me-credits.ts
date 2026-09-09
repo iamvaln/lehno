@@ -289,19 +289,29 @@ export type PaymentPreview = z.infer<typeof paymentPreviewSchema>;
  * Le paiement naît donc `pending`, et c'est l'administration qui constate la
  * réception sur le compte.
  *
- * **Aucun fichier n'est déposé.** La référence de transaction le remplace — le
- * code que l'opérateur envoie par SMS juste après le versement.
+ * **Aucun fichier ne se dépose ICI**, et la déclaration n'en attend aucun. Le
+ * reçu se joint après coup, sur le paiement créé — voir
+ * `POST /me/payments/{id}/proof/depot`.
  *
- * Ce n'est pas un pis-aller. Une capture d'écran ne prouve rien : la spec le
- * dit — « un montage est facile ; c'est la réception sur le compte de
- * l'opérateur qui fait foi » —, et l'administration l'efface une fois la
- * demande traitée. La référence, elle, **retrouve la transaction sur le
- * relevé**, ce qu'aucune image ne fait.
+ * L'ordre n'est pas un détail : quand quelqu'un déclare, **il a déjà versé son
+ * argent**. Exiger le fichier à cet instant le laisserait coincé, argent parti,
+ * si son dépôt échoue — réseau, taille, format refusé. On déclare d'abord, on
+ * joint ensuite.
  *
- * Et elle apporte ce que le fichier n'apportait pas : **elle est unique**. Deux
+ * **La référence reste obligatoire, et le reçu ne la remplace pas.** Une
+ * capture d'écran ne prouve rien par elle-même : la spec le dit — « un montage
+ * est facile ; c'est la réception sur le compte de l'opérateur qui fait foi ».
+ * La référence, elle, **retrouve la transaction sur le relevé**, ce qu'aucune
+ * image ne fait.
+ *
+ * Et elle apporte ce que le fichier n'apporte pas : **elle est unique**. Deux
  * déclarations ne peuvent pas citer le même versement, donc personne ne peut
  * réclamer deux fois les crédits d'un seul transfert. Une image ne se compare à
  * rien.
+ *
+ * Le reçu sert l'autre moitié du travail : quand la référence a été mal
+ * recopiée, ou que le montant ne tombe pas juste, c'est lui qui permet de
+ * trancher au lieu de refuser.
  */
 export const declarePaymentSchema = z.object({
   bundleId: z.string().uuid(),
@@ -325,6 +335,53 @@ export const declarePaymentSchema = z.object({
 }).strict();
 
 export type DeclarePaymentInput = z.infer<typeof declarePaymentSchema>;
+
+// ── Le reçu du versement ────────────────────────────────────────────────────
+
+/**
+ * Ce qu'on accepte comme reçu.
+ *
+ * Le PDF autant que l'image : c'est la forme sous laquelle les banques envoient
+ * leur relevé, et c'est la meilleure pièce qu'on puisse recevoir. Le refuser
+ * obligerait à en faire une capture d'écran — donc à dégrader la seule pièce
+ * qui n'ait pas été photographiée.
+ *
+ * Le type voyage jusqu'au stockage : l'URL de dépôt est signée **pour** un
+ * type, et déposer autre chose dessus échoue au fournisseur. C'est une première
+ * barrière, jamais la vérification — celle-là se fait sur les octets, à la
+ * confirmation, parce qu'un fichier se déclare comme il veut.
+ */
+export const TYPES_DE_RECU = ["image/jpeg", "image/png", "application/pdf"] as const;
+
+export const demandeDeDepotRecuSchema = z.object({
+  contentType: z.enum(TYPES_DE_RECU),
+}).strict();
+
+export type DemandeDeDepotRecu = z.infer<typeof demandeDeDepotRecuSchema>;
+
+/**
+ * L'autorisation de déposer un reçu.
+ *
+ * Le client reçoit une URL de dépôt — et **rien d'autre**. Pas la clé : c'est le
+ * serveur qui l'engendre et la retient. La lui donner permettrait de la
+ * remplacer par celle d'un autre — l'export de données de quelqu'un, un avatar —
+ * et de nous faire signer une lecture dessus.
+ *
+ * La confirmation ne porte ensuite **aucun corps** : le serveur sait quelle clé
+ * il a délivrée, à qui, et pour quel paiement.
+ */
+export const depotRecuSchema = z.object({
+  url: z.string().url(),
+  /** Secondes avant que l'URL de dépôt ne meure. */
+  expireDans: z.number().int().positive(),
+  /** Le type POUR lequel le dépôt est signé — celui qui a été demandé. */
+  typeMime: z.enum(TYPES_DE_RECU),
+  /** La taille au-delà de laquelle le serveur refusera à la confirmation.
+   *  Servie pour que le client n'ait pas à recopier la règle. */
+  tailleMax: z.number().int().positive(),
+}).strict();
+
+export type DepotRecu = z.infer<typeof depotRecuSchema>;
 
 /**
  * Un paiement tel que le client le suit.
