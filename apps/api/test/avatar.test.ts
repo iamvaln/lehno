@@ -320,5 +320,68 @@ describe("la photo de profil", () => {
       await expect(avatars.urlDe(autre.id, souhait.imageKey!))
         .rejects.toMatchObject({ code: "not_found" });
     });
+
+    /* LE SOUHAIT NOTÉ POUR UN PROCHE — `wishlist_item`, l'autre table.
+       `image_key` y existait et la lecture la servait déjà ; rien ne pouvait
+       l'écrire, si bien que la colonne restait vide pour toujours. */
+    describe("celle d'un souhait du carnet", () => {
+      const unVoeuDuCarnet = async (proprietaire: string): Promise<string> => {
+        const occurrenceId = await unSouhait(proprietaire).then(async (id) => {
+          const s = await db.prisma.ownerWish.findUniqueOrThrow({ where: { id } });
+          return s.eventOccurrenceId;
+        });
+        const ligne = await db.prisma.wishlistItem.create({
+          data: { eventOccurrenceId: occurrenceId, label: "Un foulard", origin: "owner" },
+        });
+        return ligne.id;
+      };
+
+      it("rattache la photo au souhait du carnet, métadonnées retirées", async () => {
+        const id = await unVoeuDuCarnet(userId);
+        await avatars.depotPhotoDuCarnet(userId, id);
+        const { depotEnCoursKey } = await db.prisma.user.findUniqueOrThrow({
+          where: { id: userId }, select: { depotEnCoursKey: true },
+        });
+        stockage.poser(depotEnCoursKey!, await photoAvecPosition());
+
+        await avatars.confirmerPhotoDuCarnet(userId);
+
+        const ligne = await db.prisma.wishlistItem.findUniqueOrThrow({ where: { id } });
+        expect(ligne.imageKey).not.toBeNull();
+        expect(ligne.imageKey).not.toBe(depotEnCoursKey);
+        expect((await sharp(stockage.contenuDe(ligne.imageKey!)).metadata()).exif).toBeUndefined();
+        // La lecture la servait DÉJÀ : c'est ce qui rend le manque invisible.
+        await expect(avatars.urlDe(userId, ligne.imageKey!)).resolves.toMatchObject({
+          expireDans: expect.any(Number) as number,
+        });
+      });
+
+      it("refuse d'ouvrir un dépôt sur le souhait d'un autre", async () => {
+        const autre = await db.prisma.user.create({
+          data: { email: "nina@example.com", username: "nina", referralCode: "N1" },
+        });
+        const sien = await unVoeuDuCarnet(autre.id);
+        await expect(avatars.depotPhotoDuCarnet(userId, sien))
+          .rejects.toMatchObject({ code: "not_found" });
+      });
+
+      /* LA GARDE QUI JUSTIFIE LE PRÉFIXE. Les deux tables ont des identifiants
+         du même genre : sans cible distincte, une photo déposée pour un souhait
+         de ma liste se rattacherait à un souhait du carnet, et inversement. */
+      it("ne confond pas les deux tables de souhaits", async () => {
+        const duCarnet = await unVoeuDuCarnet(userId);
+        await avatars.depotPhotoDuCarnet(userId, duCarnet);
+        const { depotEnCoursKey } = await db.prisma.user.findUniqueOrThrow({
+          where: { id: userId }, select: { depotEnCoursKey: true },
+        });
+        stockage.poser(depotEnCoursKey!, await photoAvecPosition());
+
+        await expect(avatars.confirmerSouhait(userId)).rejects.toMatchObject({ code: "conflict" });
+        await expect(avatars.confirmer(userId)).rejects.toMatchObject({ code: "conflict" });
+
+        const ligne = await db.prisma.wishlistItem.findUniqueOrThrow({ where: { id: duCarnet } });
+        expect(ligne.imageKey).toBeNull();
+      });
+    });
   });
 });

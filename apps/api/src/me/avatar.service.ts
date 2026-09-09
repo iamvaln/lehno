@@ -104,6 +104,18 @@ export class AvatarService {
     return this.ouvrirUnDepot(userId, `souhait:${souhaitId}`, "souhaits");
   }
 
+  /* La photo d'un souhait NOTÉ POUR UN PROCHE — `wishlist_item`, pas
+     `owner_wish`. La colonne `image_key` y existait déjà et la lecture la
+     servait déjà (voir `urlDe`) ; seule l'écriture manquait, si bien que le
+     champ ne pouvait jamais se remplir.
+     Une cible distincte, `carnet:`, et non `souhait:` : les deux tables ont des
+     identifiants du même genre, et un préfixe commun aurait laissé une photo
+     déposée pour l'une se rattacher à l'autre. */
+  async depotPhotoDuCarnet(userId: string, souhaitId: string): Promise<DepotAvatar> {
+    await this.voeuDuCarnetDe(userId, souhaitId);
+    return this.ouvrirUnDepot(userId, `carnet:${souhaitId}`, "souhaits");
+  }
+
   private async ouvrirUnDepot(
     userId: string, cible: string, prefixe: "avatars" | "souhaits",
   ): Promise<DepotAvatar> {
@@ -127,6 +139,16 @@ export class AvatarService {
     if (!sien) throw new AppError("not_found", "resource not found");
   }
 
+  /* Le même contrôle sur le carnet. Le cloisonnement remonte par l'occurrence,
+     qui seule porte le compte — `wishlist_item` n'a pas de `user_id`. */
+  private async voeuDuCarnetDe(userId: string, souhaitId: string): Promise<void> {
+    const sien = await this.prisma.wishlistItem.findFirst({
+      where: { id: souhaitId, occurrence: { userId } },
+      select: { id: true },
+    });
+    if (!sien) throw new AppError("not_found", "resource not found");
+  }
+
   /**
    * Confirmer : relire, vérifier, recomposer, poser.
    *
@@ -144,22 +166,57 @@ export class AvatarService {
     return this.poserLAvatar(userId, propre, enAttente);
   }
 
-  /** La photo d'un souhait, une fois vérifiée comme les autres. */
+  /** La photo d'un souhait à MOI, une fois vérifiée comme les autres. */
   async confirmerSouhait(userId: string): Promise<void> {
+    await this.poserLaPhoto(
+      userId, "souhait",
+      async (id) => (await this.prisma.ownerWish.findUnique({
+        where: { id }, select: { imageKey: true },
+      }))?.imageKey ?? null,
+      async (id, cle) => { await this.prisma.ownerWish.update({ where: { id }, data: { imageKey: cle } }); },
+    );
+  }
+
+  /** La photo d'un souhait NOTÉ POUR UN PROCHE. */
+  async confirmerPhotoDuCarnet(userId: string): Promise<void> {
+    await this.poserLaPhoto(
+      userId, "carnet",
+      async (id) => (await this.prisma.wishlistItem.findUnique({
+        where: { id }, select: { imageKey: true },
+      }))?.imageKey ?? null,
+      async (id, cle) => { await this.prisma.wishlistItem.update({ where: { id }, data: { imageKey: cle } }); },
+    );
+  }
+
+  /* La pose, commune aux deux tables de souhaits.
+   *
+   * Elle est paramétrée par des fonctions plutôt que par un délégué Prisma :
+   * `ownerWish` et `wishlistItem` sont deux types distincts que rien ne réunit
+   * côté TypeScript, et les faire passer pour un seul demanderait un `as never`
+   * qui éteindrait la vérification là où elle sert — sur le nom des colonnes.
+   *
+   * Le PRÉFIXE est ce qui empêche de confondre les deux : une photo déposée
+   * pour un souhait de ma liste ne peut pas se rattacher à un souhait du
+   * carnet, même si les identifiants se ressemblent. La cible a été fixée au
+   * dépôt, où l'appartenance a été vérifiée une fois pour toutes. */
+  private async poserLaPhoto(
+    userId: string,
+    prefixe: "souhait" | "carnet",
+    imagePrecedente: (id: string) => Promise<string | null>,
+    rattacher: (id: string, cle: string) => Promise<void>,
+  ): Promise<void> {
     const { propre, enAttente, cible } = await this.verifierLeDepot(userId);
-    const souhaitId = cible.startsWith("souhait:") ? cible.slice("souhait:".length) : null;
-    if (souhaitId === null) throw new AppError("conflict", "pending upload targets something else");
+    const id = cible.startsWith(`${prefixe}:`) ? cible.slice(prefixe.length + 1) : null;
+    if (id === null) throw new AppError("conflict", "pending upload targets something else");
 
     const cle = await this.stockage.ecrire("souhaits", propre, "image/jpeg");
-    const avant = await this.prisma.ownerWish.findUnique({
-      where: { id: souhaitId }, select: { imageKey: true },
-    });
-    await this.prisma.ownerWish.update({ where: { id: souhaitId }, data: { imageKey: cle } });
+    const avant = await imagePrecedente(id);
+    await rattacher(id, cle);
     await this.prisma.user.update({
       where: { id: userId },
       data: { depotEnCoursKey: null, depotEnCoursCible: null },
     });
-    await this.balayer([enAttente, avant?.imageKey ?? null]);
+    await this.balayer([enAttente, avant]);
   }
 
   /* Relire, borner, recomposer — la partie commune à toutes les images. Elle ne
