@@ -12,6 +12,13 @@ import { PERSON_GENDERS } from "./me.js";
 // copie de la règle, plus permissive : deux formulaires du même champ
 // acceptaient des pseudos différents, et un compte créé à l'inscription
 // pouvait devenir irrecevable à la première correction de profil.
+/* Les langues de l'interface ET DES COURRIELS. Une seule liste : l'inscription
+   accepte la langue de l'appareil, le profil la corrige, et les deux doivent
+   accepter exactement les mêmes valeurs — recopiées, elles finiraient par
+   diverger, et une langue acceptée à l'inscription serait refusée à la
+   première correction de profil. */
+export const UI_LANGUAGES = ["fr", "en"] as const;
+
 export const usernameSchema = z
   .string()
   .trim()
@@ -41,7 +48,7 @@ export const profileSchema = z.object({
   avatarKey: z.string().nullable(),
   email: z.string().email(),
   emailVerified: z.boolean(),
-  uiLanguage: z.enum(["fr", "en"]),
+  uiLanguage: z.enum(UI_LANGUAGES),
   theme: z.enum(["system", "light", "dark"]),
   timezone: z.string().max(64),
   sendHour: z.number().int().min(0).max(23),

@@ -2471,6 +2471,13 @@
                     "type": "string",
                     "format": "email",
                     "maxLength": 254
+                  },
+                  "uiLanguage": {
+                    "type": "string",
+                    "enum": [
+                      "fr",
+                      "en"
+                    ]
                   }
                 },
                 "required": [
@@ -3067,6 +3074,13 @@
                   "referralCode": {
                     "type": "string",
                     "maxLength": 16
+                  },
+                  "uiLanguage": {
+                    "type": "string",
+                    "enum": [
+                      "fr",
+                      "en"
+                    ]
                   }
                 },
                 "required": [
@@ -17755,6 +17769,9 @@
                     "hasPersons": {
                       "type": "boolean"
                     },
+                    "hasWishlist": {
+                      "type": "boolean"
+                    },
                     "remainingOccurrences": {
                       "type": "integer",
                       "minimum": 0
@@ -17766,6 +17783,7 @@
                     "counts",
                     "unreadNotifications",
                     "hasPersons",
+                    "hasWishlist",
                     "remainingOccurrences"
                   ],
                   "additionalProperties": false
@@ -26041,6 +26059,10 @@
                       "token": {
                         "type": "string"
                       },
+                      "url": {
+                        "type": "string",
+                        "format": "uri"
+                      },
                       "personId": {
                         "type": "string",
                         "format": "uuid",
@@ -26057,6 +26079,7 @@
                       "id",
                       "type",
                       "token",
+                      "url",
                       "personId",
                       "isActive",
                       "createdAt"
@@ -26321,6 +26344,10 @@
                     "token": {
                       "type": "string"
                     },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
                     "personId": {
                       "type": "string",
                       "format": "uuid",
@@ -26337,6 +26364,7 @@
                     "id",
                     "type",
                     "token",
+                    "url",
                     "personId",
                     "isActive",
                     "createdAt"

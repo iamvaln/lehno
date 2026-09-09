@@ -1,7 +1,20 @@
 import { z } from "zod";
-import { usernameSchema } from "./profile.js";
+import { usernameSchema, UI_LANGUAGES } from "./profile.js";
 
-export const requestOtpSchema = z.object({ email: z.string().email().max(254) }).strict();
+export const requestOtpSchema = z.object({
+  email: z.string().email().max(254),
+  /* LA LANGUE DE L'APPAREIL, pour le courriel qui part maintenant.
+   *
+   * Le code de connexion est le PREMIER courriel qu'une personne reçoit, et à
+   * ce moment-là le compte n'existe pas encore : rien côté serveur ne dit dans
+   * quelle langue l'écrire, et il partait en français à qui n'en lit pas un
+   * mot. Le compte, lui, gardera sa propre langue et elle l'emportera — ce
+   * champ ne sert qu'à combler le vide, jamais à contredire un choix fait.
+   *
+   * Facultatif : un client qui ne le donne pas retrouve exactement l'ancien
+   * comportement. */
+  uiLanguage: z.enum(UI_LANGUAGES).optional(),
+}).strict();
 
 /* Ce que la demande rend. Toujours `sent: true`, adresse connue ou non — dire
  * le contraire apprendrait qui a un compte.
@@ -124,6 +137,17 @@ export const registerSchema = z.object({
   username: usernameSchema,
   deviceId: z.string().min(1).max(128),
   referralCode: z.string().max(16).optional(),
+  /* LA LANGUE DE L'APPAREIL, donnée à la naissance du compte.
+   *
+   * Elle décide de la langue des courriels. Le compte naissait en français
+   * quel que soit le téléphone, et le client rattrapait par un
+   * `PATCH /me/profile` juste après — un second appel, qui peut ne pas
+   * passer, et dont l'échec est silencieux : la personne recevait alors ses
+   * courriels dans une langue qu'elle ne lit pas, sans que rien ne le dise.
+   *
+   * Facultative : un client qui ne la connaît pas ne doit pas être forcé
+   * d'inventer une valeur. Le défaut de la base tranche alors, comme avant. */
+  uiLanguage: z.enum(UI_LANGUAGES).optional(),
 }).strict();
 
 export type RegisterInput = z.infer<typeof registerSchema>;

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -31,15 +31,16 @@ import { EcranFerme } from "../../composants/EcranFerme.js";
  * d'entrer dans la fiche. » C'est ce qui rend le sas de §3.8 utile : sans lien,
  * rien n'arrive.
  *
- * ─── DEUX GESTES DE LA MAQUETTE MANQUENT, ET C'EST LE CONTRAT QUI LES RETIENT
+ * ─── PARTAGER TIENT ; COPIER, NON
  *
- * PARTAGER ET COPIER n'ont rien à emporter. `collectionLinkSchema` porte un
- * `token` et AUCUNE URL, là où `wishlistShareSchema` sert l'adresse complète
- * avec cette raison : « le client ne la reconstitue pas ; le domaine public
- * change — préproduction, essai — et deux versions du parc en fabriqueraient
- * deux différentes ». Le site sait pourtant ouvrir `/c/<jeton>` : il ne manque
- * qu'un `url` composé par le serveur, comme le Mur et la wishlist en ont un.
- * Le composer ici le figerait dans le parc installé.
+ * `collectionLinkSchema` sert désormais `url`, composé par le SERVEUR — comme
+ * le Mur et la liste de souhaits. Le client ne la reconstitue pas : le domaine
+ * public change (préproduction, essai), et deux versions du parc en
+ * fabriqueraient deux différentes.
+ *
+ * COPIER reste absent, faute de presse-papiers embarqué : `expo-clipboard` est
+ * un module natif, et l'ajouter demande une reconstruction. `Share` couvre le
+ * besoin — la feuille du système propose « Copier » elle-même.
  *
  * LE MOT D'ACCOMPAGNEMENT n'a nulle part où aller. La copie promet « il
  * s'affiche en haut de la page qu'on ouvrira » ; `createCollectionLinkSchema`
@@ -272,10 +273,11 @@ export default function Collecte() {
         <Card surface="panel" padding={15} radius="lg" style={styles.carte}>
           <View style={styles.ligne}>
             <Icon name="link" size={17} color={couleurs.textMention} />
-            {/* LE JETON, PAS UNE ADRESSE, tant que le serveur n'en sert pas
-                une. La maquette montre « lehno.app/c/8Kd2p » — une adresse de
-                banc d'essai. La composer ici la figerait dans le parc
-                installé, et une recette la renverrait vers la production. */}
+            {/* L'ADRESSE, telle que le serveur la sert. C'est elle qu'on
+                envoie, donc c'est elle qu'on doit lire avant d'envoyer : le
+                jeton seul ne se vérifie pas d'un coup d'œil. Elle n'est PAS
+                composée ici — le domaine changerait sans que le parc installé
+                le sache. */}
             <Text
               selectable={!revoquee}
               numberOfLines={1}
@@ -284,7 +286,7 @@ export default function Collecte() {
                 ...(revoquee ? { textDecorationLine: "line-through" as const } : {}),
               }]}
             >
-              {vivant ? vivant.token : t.collecteEtatRevoque}
+              {vivant ? vivant.url : t.collecteEtatRevoque}
             </Text>
             <Tag tone={revoquee ? "outline" : "quiet"}>
               {revoquee ? t.collecteEtatRevoque : t.collecteEtatActif}
@@ -294,15 +296,25 @@ export default function Collecte() {
 
         <View style={styles.gestes}>
           {vivant ? (
-            <Button
-              full
-              variant="outline"
-              icon="eye"
-              disabled={envoi}
-              onPress={() => void ouvreLApercu(vivant)}
-            >
-              {t.collecteApercu}
-            </Button>
+            <>
+              <Button
+                full
+                icon="send"
+                disabled={envoi}
+                onPress={() => void Share.share({ message: vivant.url })}
+              >
+                {t.collectePartager}
+              </Button>
+              <Button
+                full
+                variant="outline"
+                icon="eye"
+                disabled={envoi}
+                onPress={() => void ouvreLApercu(vivant)}
+              >
+                {t.collecteApercu}
+              </Button>
+            </>
           ) : (
             <Button full icon="link" disabled={envoi} onPress={() => void cree(true)}>
               {t.collecteReactiver}

@@ -50,10 +50,17 @@ export class SignupService {
     return row ? Number(row.value) : defaut;
   }
 
-  private champsDeCompte(email: string, emailVerified: boolean, username: string) {
+  private champsDeCompte(
+    email: string, emailVerified: boolean, username: string,
+    uiLanguage: string | undefined,
+  ) {
     return {
       email,
       emailVerified,
+      /* La langue de l'appareil quand le client la donne. Omise, le défaut de
+         la base s'applique — on n'écrit pas "fr" ici, ce serait deux défauts à
+         tenir d'accord. */
+      ...(uiLanguage !== undefined ? { uiLanguage } : {}),
       // Choisi par l'utilisateur à l'écran du pseudo — il forme l'adresse de
       // son Mur, donc il lui appartient.
       username,
@@ -77,6 +84,8 @@ export class SignupService {
     deviceId: string;
     username: string;
     referralCode?: string | undefined;
+    /** La langue de l'appareil. Elle décide de celle des courriels. */
+    uiLanguage?: string | undefined;
     /** L'adresse au moment de la création, pour la trace de l'appareil. */
     ip?: string | undefined;
   }): Promise<Creation> {
@@ -99,7 +108,7 @@ export class SignupService {
 
           const user = await tx.user.create({
             data: {
-              ...this.champsDeCompte(input.email, input.emailVerified, input.username),
+              ...this.champsDeCompte(input.email, input.emailVerified, input.username, input.uiLanguage),
               acceptedTermsAt: new Date(),
               acceptedTermsVersion: versionCgu,
             },

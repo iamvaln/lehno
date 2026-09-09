@@ -130,7 +130,7 @@ describe("le retour au maximum n'appartient qu'au redimensionnement", () => {
 describe("les deux états vides ne se ressemblent pas", () => {
   const home = (occurrences: Occurrence[], hasPersons: boolean): Home => ({
     firstName: "Valentine", occurrences, counts: { today: 0, thisWeek: 0 },
-    unreadNotifications: 0, hasPersons, remainingOccurrences: 0,
+    unreadNotifications: 0, hasPersons, hasWishlist: false, remainingOccurrences: 0,
   });
 
   /* Carnet neuf : l'écran ne poursuit qu'un but, conduire au premier ajout.

@@ -364,6 +364,53 @@ describe("authentification", () => {
     expect(envoyés[0]).toMatchObject({ to: "personne@example.com", locale: "fr", subject: "Votre code Lehno" });
   });
 
+  /* Le PREMIER courriel qu'une personne reçoit est son code, et à ce moment-là
+     le compte n'existe pas : rien côté serveur ne dit dans quelle langue
+     l'écrire, et il partait en français à qui n'en lit pas un mot. La langue de
+     l'appareil comble ce vide. */
+  it("écrit le code dans la langue de l'appareil quand le compte n'existe pas", async () => {
+    await auth.requestOtp({ email: "nouvelle@example.com", uiLanguage: "en" });
+    expect(envoyés[0]).toMatchObject({ locale: "en", subject: "Your Lehno code" });
+  });
+
+  /* Et elle ne l'emporte JAMAIS sur un choix fait : quelqu'un qui a mis son
+     profil en anglais depuis un téléphone français a choisi, l'appareil non. */
+  it("laisse le choix du compte l'emporter sur la langue de l'appareil", async () => {
+    await db.prisma.user.create({
+      data: { email: "choisi@example.com", username: "choisi", referralCode: "CHOI1234", uiLanguage: "en" },
+    });
+    await auth.requestOtp({ email: "choisi@example.com", uiLanguage: "fr" });
+    expect(envoyés[0]).toMatchObject({ locale: "en", subject: "Your Lehno code" });
+  });
+
+  /* Le compte NAÎT dans la langue donnée. Le client rattrapait par un
+     `PATCH /me/profile` juste après l'inscription : un second appel, dont
+     l'échec est silencieux, et la personne recevait alors tous ses courriels
+     dans une langue qu'elle ne lit pas sans que rien ne le dise. */
+  it("crée le compte dans la langue donnée à l'inscription", async () => {
+    const { code } = await otp.issue("naissante@example.com", "login");
+    const r = await auth.verifyOtp({ email: "naissante@example.com", code, deviceId: "dev-lang" });
+    if (r.outcome !== "registration") throw new Error("inscription attendue");
+    await auth.register({
+      registrationToken: r.registrationToken, username: "naissante",
+      deviceId: "dev-lang", uiLanguage: "en",
+    });
+    const u = await db.prisma.user.findUniqueOrThrow({ where: { email: "naissante@example.com" } });
+    expect(u.uiLanguage).toBe("en");
+  });
+
+  // Sans elle, le défaut de la base tranche : l'ancien comportement, intact.
+  it("laisse le défaut de la base trancher quand la langue n'est pas donnée", async () => {
+    const { code } = await otp.issue("muette@example.com", "login");
+    const r = await auth.verifyOtp({ email: "muette@example.com", code, deviceId: "dev-muet" });
+    if (r.outcome !== "registration") throw new Error("inscription attendue");
+    await auth.register({
+      registrationToken: r.registrationToken, username: "muette", deviceId: "dev-muet",
+    });
+    const u = await db.prisma.user.findUniqueOrThrow({ where: { email: "muette@example.com" } });
+    expect(u.uiLanguage).toBe("fr");
+  });
+
   it("borne les demandes par adresse destinataire", async () => {
     for (let i = 0; i < 3; i++) {
       await auth.requestOtp({ email: "bombardée@example.com" });
