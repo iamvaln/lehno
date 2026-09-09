@@ -129,3 +129,77 @@ l'allumer.**
 - **`Share.share` n'accepte `url` que sur iOS** : ailleurs la feuille s'ouvre
   vide **sans erreur**. « Enregistrer » n'est donc pas offert là où il ne peut
   aboutir. *(#141)*
+
+---
+
+## 9. La réduction des paliers — décidé le 9 septembre
+
+Le pourcentage de remise était **saisi à la main** : `credit_bundle.bonus_percent`,
+un `smallint` tapé au panneau, que rien ne rattachait aux chiffres qu'il
+résume. Un palier pouvait annoncer 20 % quand son rapport prix/crédits en valait
+cinq — sans qu'aucun test ne tombe.
+
+Il est désormais **déduit côté mobile** (PR #136) des deux montants déjà
+servis : `creditUnitPrice` par `/public/config` et `amount`/`credits` par
+`/me/credit-bundles`. Le calcul retrouve exactement les 17 % et 27 % que la
+maquette portait en dur.
+
+### Ce qui est décidé, et qui revient au serveur
+
+**Le serveur calcule et sert le pourcentage.** Deux raisons, et la seconde
+compte autant que la première : on ne fait confiance qu'au serveur, et le
+téléphone n'a pas à porter des traitements qu'on peut lui épargner.
+
+Bénéfice supplémentaire : l'application n'aura **plus besoin d'appeler
+`/public/config`** pour cet écran. C'est un aller-retour réseau de moins sur
+l'appareil — et sur un téléphone, c'est le réseau qui pèse, pas le calcul.
+
+**Au moment de servir, pas à l'enregistrement.** La réduction dépend de DEUX
+tables : `credit_bundle` (par palier) et `system_parameter` (le prix unitaire,
+global). La figer à l'écriture ferait qu'un changement de prix unitaire
+invaliderait en silence tous les paliers. Le recalcul en cascade est faisable —
+peu de lignes, même transaction — mais il ne gagne rien : l'arithmétique est
+gratuite, et il ajoute une règle que **tout chemin d'écriture doit se rappeler**
+(migration, peuplement, correction à la main, second endpoint). Calculé au
+service, il n'y a rien à oublier.
+
+C'est déjà la doctrine du dépôt, écrite sur `Payment.feeAmount` : *« les frais
+annoncés à l'aperçu, figés ici. Pas ceux que le canal porte aujourd'hui. »* On
+fige ce qu'on a promis sur une **transaction** ; on calcule la **vitrine** en
+direct.
+
+### Le panneau doit prévisualiser
+
+En configurant un prix — unitaire ou de palier —, l'administrateur doit voir
+**tout de suite la réduction que ces prix donnent**. Sans quoi on règle des
+montants sans savoir ce qu'ils annoncent au client.
+
+**Une seule implantation de la formule**, partagée entre l'aperçu du panneau et
+la réponse de l'API. Deux implantations dériveraient, et le panneau montrerait
+un chiffre pendant que l'application en affiche un autre — la panne exacte qu'on
+vient de retirer, déplacée d'un cran.
+
+### Le paiement doit figer ce qu'on lui a annoncé
+
+`payment` porte déjà `amount`, `credits`, `currency`, `feeAmount` et
+`expectedAmount`. Il **manque** :
+
+- **le prix unitaire du jour** — sans lui, « quelle réduction cette personne
+  a-t-elle obtenue ? » n'est pas reconstructible après un changement de prix :
+  on lit 1000 F pour 12 crédits sans savoir si le plein tarif valait 100 ou 120 ;
+- **le prix du palier acheté**, quand il y en a un. `amount` le porte de fait,
+  mais rien ne le garantit : les garder tous deux rend l'écart détectable au
+  lieu d'être invisible.
+
+Ce n'est pas un confort. `creditBundleId` est en **`onDelete: SetNull`** :
+supprimer un palier fait perdre aux paiements historiques jusqu'à sa référence.
+Sans valeurs figées sur la ligne, l'information a purement disparu.
+
+Même doctrine que `feeAmount`, même raison : changer un prix ne doit pas
+fausser rétroactivement la comptabilité.
+
+### Ce que devient `bonus_percent`
+
+Redondant, et contredisable. Soit il disparaît du schéma et du contrat, soit il
+devient un **forçage manuel explicite** — et il doit alors se nommer ainsi, le
+panneau montrant la valeur calculée à côté de celle qu'on force.
