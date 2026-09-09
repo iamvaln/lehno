@@ -16,6 +16,7 @@ import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
+import { demandeLaPermission, permissionAccordee } from "../../lib/PousseeProvider.js";
 import {
   basculeDuGroupe, etatDuGroupe, groupesOfferts, plusRienNeParvient, RYTHMES,
   type Canal, type CleDeGroupe,
@@ -44,6 +45,9 @@ export default function Rappels() {
   const [rythme, setRythme] = useState<DigestFrequency>("weekly");
   const [heure, setHeure] = useState<number | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
+  /* `null` = on ne sait pas — pas « refusé ». La distinction gouverne tout ce
+     qui suit : on ne se tait que sur `false`, jamais sur l'ignorance. */
+  const [poussee, setPoussee] = useState<boolean | null>(null);
 
   const charge = useCallback(async () => {
     try {
@@ -62,6 +66,19 @@ export default function Rappels() {
   }, [langue]);
 
   useEffect(() => { void charge(); }, [charge]);
+
+  /* LA PERMISSION SE LIT À L'OUVERTURE, sans la demander. Cet écran laisse
+     allumer la poussée ; si le téléphone la refuse, la bascule s'allume et
+     RIEN N'ARRIVE — un réglage qui ment sans que personne ne puisse le voir.
+
+     On ne demande pas la permission ici : poser la question système à chaque
+     ouverture la ferait refuser par lassitude, et sur iOS une permission
+     refusée deux fois ne se redemande plus. */
+  useEffect(() => {
+    let vivant = true;
+    void permissionAccordee().then((p) => { if (vivant) setPoussee(p); });
+    return () => { vivant = false; };
+  }, []);
 
   /* ON POSE L'ÉTAT AVANT LA RÉPONSE, et on le remet si elle refuse.
      Un interrupteur qui attend un aller-retour avant de bouger donne
@@ -185,6 +202,31 @@ export default function Rappels() {
       {echec ? (
         <View style={{ marginBottom: nativeSpace[12] }}>
           <Banner intent="error">{echec}</Banner>
+        </View>
+      ) : null}
+
+      {/* LE TÉLÉPHONE REFUSE : on le dit, et on offre la sortie. Sans ce
+          bandeau, la bascule « Notification » s'allume et rien n'arrive — le
+          réglage ment, et rien sur cet écran ne permet de s'en apercevoir.
+
+          `=== false` et non `!poussee` : `null` veut dire qu'on ne SAIT pas
+          (pas de module natif sous Expo Go, pas d'identifiant d'application),
+          et alarmer quelqu'un dont les notifications marchent très bien coûte
+          plus cher qu'un silence. */}
+      {poussee === false ? (
+        <View style={{ marginBottom: nativeSpace[12] }}>
+          <Banner intent="warning">{t.reglagesRefus}</Banner>
+          {/* `true` renvoie AUX RÉGLAGES DU TÉLÉPHONE plutôt que de reposer la
+              question : elle a déjà été refusée, et sur iOS elle ne se
+              redemande plus. C'est le seul chemin qui aboutit. */}
+          <View style={{ marginTop: nativeSpace[8] }}>
+            <Button
+              variant="outline"
+              full
+              icon="settings"
+              onPress={() => { void demandeLaPermission(true); }}
+            >{t.reglagesActiver}</Button>
+          </View>
         </View>
       ) : null}
 
