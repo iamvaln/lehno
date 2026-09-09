@@ -5,7 +5,7 @@ import {
 } from "@lehno/contracts";
 import {
   apresLeChoix, approbation, changementDeSignature, etatDuPortrait, feuilleDePartage,
-  laFeuilleDeposeUnFichier,
+  laFeuilleDeposeUnFichier, laProductionEstRefusee,
   motDAccompagnement, offreDeRefaire, ouverture, relanceDuPortrait,
   selectionParDefaut, signatureARemettre,
 } from "../lib/portrait.js";
@@ -225,6 +225,26 @@ describe("refaire", () => {
   it("ne part pas sur une sélection que le catalogue refuse", () => {
     expect(relanceDuPortrait(PROCHE, CATALOGUE, {})).toBeNull();
     expect(relanceDuPortrait(PROCHE, CATALOGUE, { voie: "inconnue", ambiance: "papier" })).toBeNull();
+  });
+});
+
+/* LE SERVEUR N'ACCEPTE ENCORE QUE LE MESSAGE : toute autre nature est écartée
+   par `resource_inactive`, avant tout débit. L'écran doit cesser de proposer le
+   geste — sans quoi chaque appui rouvre une feuille qui annonce un prix pour un
+   lancement déjà refusé — mais garder tout le reste : le refus porte sur la
+   PRODUCTION, pas sur le portrait qu'on a sous les yeux. */
+describe("le refus de produire", () => {
+  it("retire l'offre quand la nature n'est pas ouverte", () => {
+    expect(laProductionEstRefusee("resource_inactive")).toBe(true);
+  });
+
+  /* Un accident se réessaie. Retirer le bouton pour une coupure de réseau
+     priverait quelqu'un d'un geste qui marchait la seconde d'avant. */
+  it("ne la retire pour aucun accident", () => {
+    for (const code of ["internal_error", "not_found", "validation_failed", "insufficient_credits"] as const) {
+      expect(laProductionEstRefusee(code), code).toBe(false);
+    }
+    expect(laProductionEstRefusee(null)).toBe(false);
   });
 });
 

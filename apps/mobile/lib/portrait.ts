@@ -1,6 +1,7 @@
 import {
   estActive, groupesAtteignables, portraitSchema, valideSelection,
-  type Portrait, type StartGenerationInput, type StudioConfig, type StudioSelection,
+  type ErrorCode, type Portrait, type StartGenerationInput, type StudioConfig,
+  type StudioSelection,
 } from "@lehno/contracts";
 
 /* « Aperçu et partage d'un portrait » — §3.22, séparé de son affichage.
@@ -305,6 +306,31 @@ export function relanceDuPortrait(
     chemin: "/me/generations",
     corps: { kind: "portrait", personId, studioSelection: { ...selection } },
   };
+}
+
+/* CE QUE LE SERVEUR RÉPOND QUAND LA NATURE N'EST PAS OUVERTE.
+ *
+ * `POST /me/generations` n'accepte aujourd'hui que `wish_message` : toute autre
+ * nature est refusée par `resource_inactive`, AVANT tout débit. Le portrait ne
+ * se produit donc pas encore, drapeau allumé ou non — c'est un manque du
+ * serveur, pas de l'écran, et l'écran doit le porter sans mentir.
+ *
+ * DEUX CHOSES À NE PAS FAIRE, et c'est pour elles que cette fonction existe.
+ *
+ * Ne pas insister : laisser « Refaire » en place après un tel refus invite à
+ * réappuyer sur un bouton qui ne peut pas aboutir, et chaque appui rouvre une
+ * feuille qui annonce un prix — donc promet un débit — pour un geste que le
+ * serveur a déjà écarté.
+ *
+ * Ne pas fermer l'écran non plus : le refus porte sur la PRODUCTION. Le
+ * portrait qu'on a sous les yeux se lit, s'approuve, s'enregistre et se partage
+ * comme avant. C'est la même frontière que le drapeau.
+ *
+ * `resource_inactive` et lui seul : une panne de réseau ou un 500 sont des
+ * accidents dont on se relève en réessayant, et retirer le bouton pour ça
+ * priverait quelqu'un d'un geste qui marchait la seconde d'avant. */
+export function laProductionEstRefusee(code: ErrorCode | null): boolean {
+  return code === "resource_inactive";
 }
 
 // ── Le studio, tel que le serveur le sert ───────────────────────────────────

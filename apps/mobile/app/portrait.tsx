@@ -24,8 +24,8 @@ import { coutDe } from "../lib/preparation.js";
 import { delaiAvantLaProchaine, doitInterroger } from "../lib/generation.js";
 import {
   apresLeChoix, approbation, changementDeSignature, etatDuPortrait, feuilleDePartage,
-  laFeuilleDeposeUnFichier, motDAccompagnement, offreDeRefaire, ouverture,
-  relanceDuPortrait, selectionParDefaut, signatureARemettre, type Plateforme,
+  laFeuilleDeposeUnFichier, laProductionEstRefusee, motDAccompagnement, offreDeRefaire,
+  ouverture, relanceDuPortrait, selectionParDefaut, signatureARemettre, type Plateforme,
 } from "../lib/portrait.js";
 import { Bascule } from "../composants/Bascule.js";
 import { Choix } from "../composants/Choix.js";
@@ -115,6 +115,10 @@ export default function PortraitEcran() {
      n'observe que le MESSAGE — « le portrait est une image qui vit en §3.22 » —
      et l'y envoyer ferait tourner sa roue pour toujours. */
   const [enProduction, setEnProduction] = useState<string | null>(null);
+  /* Le serveur a dit que la nature n'était pas ouverte. On ne repropose plus le
+     geste : chaque nouvelle tentative rouvrirait une feuille qui annonce un
+     prix, donc promet un débit, pour un lancement déjà écarté. */
+  const [productionRefusee, setProductionRefusee] = useState(false);
 
   const sors = useCallback((): void => {
     if (routeur.canGoBack()) routeur.back();
@@ -152,12 +156,14 @@ export default function PortraitEcran() {
 
   const etat = portrait ? etatDuPortrait(portrait) : null;
   const cout = coutDe(prix, "portrait");
-  /* QUATRE RAISONS DE NE PAS OFFRIR « REFAIRE », et l'écran se tait plutôt que
-     de griser : le drapeau éteint, le catalogue non servi (aucune configuration
-     en service — le chemin rend alors 422), le prix absent, et le proche
-     inconnu. Un bouton qui échouerait vaut moins que pas de bouton. */
   const catalogue = options?.catalogue ?? null;
-  const peutRefaire = offreDeRefaire(actives) && catalogue !== null && cout !== null;
+  /* CINQ RAISONS DE NE PAS OFFRIR « REFAIRE », et l'écran se tait plutôt que de
+     griser : le drapeau éteint, le catalogue non servi (aucune configuration en
+     service — le chemin rend alors 422), le prix absent, et le serveur qui
+     vient de refuser la nature. Un bouton qui échouerait vaut moins que pas de
+     bouton, et un bouton gris ne dirait pas davantage pourquoi. */
+  const peutRefaire = offreDeRefaire(actives) && catalogue !== null && cout !== null
+    && !productionRefusee;
 
   /* Le catalogue n'est lu QUE si le drapeau l'autorise. Sans cette garde, un
      lien profond ouvrirait cet écran drapeau éteint, appellerait un chemin que
@@ -325,7 +331,14 @@ export default function PortraitEcran() {
       }));
       setEnProduction(lu.generation.id);
     } catch (e) {
-      setEchecDuGeste(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
+      const erreur = e instanceof ErreurDApi ? e : null;
+      /* « LA NATURE N'EST PAS OUVERTE » N'EST PAS UN ACCIDENT. Le serveur
+         n'accepte aujourd'hui que le message : il écarte le portrait par
+         `resource_inactive`, AVANT tout débit — rien n'a été prélevé, et il n'y
+         a rien à réessayer. On retire l'offre pour de bon plutôt que de laisser
+         quelqu'un repasser par une feuille qui annonce un prix. */
+      if (laProductionEstRefusee(erreur?.code ?? null)) setProductionRefusee(true);
+      setEchecDuGeste(messageDErreur(erreur?.enveloppe ?? null, langue));
     } finally {
       setEnCours(false);
     }
