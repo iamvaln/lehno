@@ -32,6 +32,11 @@ const GOUVERNÉS: Readonly<Record<string, string>> = {
   reservations: "reservations",
   paiement: "paiement",
   reprises: "reprises",
+  /* Le cadrage précède la recherche d'idées : c'est `generation.ideas` qui le
+     gouverne, pas `generation.message`. La préparation, elle, n'est pas ici —
+     elle tient dès qu'UNE des deux natures tient, et se garde par
+     `preparationOuverte`. */
+  cadrage: "cadrage",
 };
 
 const source = (nom: string): string =>
