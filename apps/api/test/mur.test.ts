@@ -84,7 +84,7 @@ describe("le Mur et la collecte", () => {
     const depot = new TenantRepository(db.prisma as never);
     const surface = new SurfacePubliqueService(new RateLimitService(db.prisma as never));
     mur = new MurService(db.prisma as never, new FlagsService(db.prisma as never), SITE);
-    collecte = new CollecteService(db.prisma as never, depot, surface);
+    collecte = new CollecteService(db.prisma as never, depot, surface, SITE);
     soumissions = new SubmissionService(db.prisma as never);
     voeux = new VoeuxService(db.prisma as never, surface);
 
@@ -268,6 +268,19 @@ describe("le Mur et la collecte", () => {
     const sien = await collecte.create(bila, { type: "nominatif", personId: chezBila.id });
     await expect(collecte.revoke(awa, sien.id)).rejects.toMatchObject({ code: "not_found" });
     expect((await db.prisma.collectionLink.findUniqueOrThrow({ where: { id: sien.id } })).isActive).toBe(true);
+  });
+
+  /* Garde L'ADRESSE COMPLÈTE du lien de collecte. Elle appartient au serveur :
+     un client qui recompose `${site}/c/${jeton}` porte le domaine en dur, donc
+     se trompe le jour où il change, et rien ne le signale. La liste doit la
+     servir comme la création — c'est la liste que l'écran de partage lit. */
+  it("sert l'adresse complète du lien, à la création comme à la liste", async () => {
+    const p = await db.prisma.person.create({ data: { userId: awa, displayName: "Bila" } });
+    const lien = await collecte.create(awa, { type: "nominatif", personId: p.id });
+    expect(lien.url).toBe(`${SITE}/c/${lien.token}`);
+
+    const [dansLaListe] = await collecte.list(awa);
+    expect(dansLaListe?.url).toBe(`${SITE}/c/${lien.token}`);
   });
 
   /* Garde la RÉOUVERTURE du lien de collecte. §3.20 dit « lien révoqué

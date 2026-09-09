@@ -54,7 +54,7 @@ export class HomeService {
     // plafonnée à trois cartes. Trois échéances rendues ne disent pas combien
     // il y en a cette semaine — ils se comptent SÉPARÉMENT, en base, sur la
     // table entière plutôt que sur l'extrait rendu au client.
-    const [utilisateur, cartes, aujourdhui, semaine, premierProche, nonLues, dansLHorizon] = await Promise.all([
+    const [utilisateur, cartes, aujourdhui, semaine, premierProche, premiereListe, nonLues, dansLHorizon] = await Promise.all([
       this.prisma.user.findUniqueOrThrow({
         where: { id: userId },
         select: { displayName: true, username: true },
@@ -71,6 +71,10 @@ export class HomeService {
       // ce que count() ne ferait pas sur une fiche bien remplie. count()
       // n'accepte d'ailleurs pas `take`.
       this.prisma.person.findFirst({ where: { userId }, select: { id: true } }),
+      /* Même forme que ci-dessus, et pour la même raison : on veut savoir S'IL
+         Y EN A, pas combien. La liste appartient à une occasion, qui appartient
+         au compte — d'où le passage par `occurrence`. */
+      this.prisma.wishlist.findFirst({ where: { occurrence: { userId } }, select: { id: true } }),
       /* La cloche. Le prédicat vient du CENTRE, il n'est pas récrit ici : la
          pastille et la liste de /me/notifications doivent compter la même
          chose. Un `where: { userId, readAt: null }` écrit à la main comptait
@@ -109,6 +113,7 @@ export class HomeService {
          dates lointaines afficherait « -2 restants ». */
       remainingOccurrences: Math.max(0, dansLHorizon - cartes.length),
       hasPersons: premierProche !== null,
+      hasWishlist: premiereListe !== null,
     };
   }
 }

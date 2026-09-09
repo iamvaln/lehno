@@ -12,6 +12,12 @@ export const collectionLinkSchema = z.object({
   id: z.string().uuid(),
   type: z.enum(COLLECTION_LINK_TYPES),
   token: z.string(),
+  /* L'ADRESSE COMPLÈTE, parce qu'elle appartient au serveur. Le client qui
+     recompose `${site}/c/${token}` doit connaître le site — donc le porter en
+     dur, donc se tromper de domaine le jour où il change, sans que rien ne le
+     signale. Le jeton reste servi : c'est lui qu'on révoque, qu'on compare et
+     qu'on retrouve dans un journal. */
+  url: z.string().url(),
   personId: z.string().uuid().nullable(),
   // Le lien est durable : pas d'expiration, seulement une révocation.
   isActive: z.boolean(),

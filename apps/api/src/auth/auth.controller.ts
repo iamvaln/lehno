@@ -16,7 +16,12 @@ import { TokenService } from "./token.service.js";
 import { FederatedService } from "./federated.service.js";
 import { AuthGuard } from "./auth.guard.js";
 
-type RequestOtpBody = { email: string };
+/* Ces types RECOPIENT le corps que le schéma valide, et rien ne les tient
+   d'accord : un champ ajouté au contrat et oublié ici traverse quand même —
+   la validation le laisse passer, le spread l'emporte — mais devient invisible
+   au compilateur, donc impossible à lire dans le service. À tenir à jour avec
+   `packages/contracts/src/auth.ts`. */
+type RequestOtpBody = { email: string; uiLanguage?: "fr" | "en" };
 type VerifyOtpBody = { email: string; code: string; deviceId?: string; referralCode?: string };
 type RefreshBody = { refreshToken: string };
 type FederatedBody = { provider: IdentityProvider; idToken: string; deviceId?: string };

@@ -67,7 +67,7 @@ export class AuthService {
   // La réponse reste la même pour une adresse inconnue : on émet un code et
   // on envoie, que le compte existe ou non — sinon le point d'entrée énumère
   // les comptes.
-  async requestOtp(input: { email: string; ip?: string }): Promise<RequestOtpResult> {
+  async requestOtp(input: { email: string; uiLanguage?: string; ip?: string }): Promise<RequestOtpResult> {
     // Par destinataire ET par origine : l'un arrête celui qui vise une personne,
     // l'autre celui qui balaie un annuaire.
     //
@@ -108,7 +108,11 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email }, select: { uiLanguage: true },
     });
-    const locale = (user?.uiLanguage === "en" ? "en" : "fr") as Locale;
+    /* Le CHOIX DU COMPTE d'abord, la langue de l'appareil ensuite, le français
+       en dernier. L'ordre compte : quelqu'un qui a mis son profil en anglais
+       depuis un téléphone français doit recevoir son code en anglais — c'est
+       un choix, pas un réglage d'appareil. */
+    const locale = (user?.uiLanguage ?? input.uiLanguage ?? "fr") as Locale;
     const { subject, text } = otpEmail({ code, locale });
     await this.mail.send({ to: input.email, subject, text, locale });
 
@@ -164,6 +168,7 @@ export class AuthService {
       deviceId: input.deviceId,
       username: input.username,
       ...(input.referralCode !== undefined ? { referralCode: input.referralCode } : {}),
+      ...(input.uiLanguage !== undefined ? { uiLanguage: input.uiLanguage } : {}),
       ...(input.ip !== undefined ? { ip: input.ip } : {}),
     });
 

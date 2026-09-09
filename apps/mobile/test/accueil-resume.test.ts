@@ -20,6 +20,7 @@ const home = (today: number, thisWeek: number, dates: string[] = []): Home =>
     counts: { today, thisWeek },
     unreadNotifications: 0,
     hasPersons: true,
+    hasWishlist: false,
     remainingOccurrences: 0,
   });
 

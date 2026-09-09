@@ -14,11 +14,14 @@ type LigneLien = {
   isActive: boolean; createdAt: Date;
 };
 
-function rendre(l: LigneLien): CollectionLink {
+function rendre(l: LigneLien, siteWeb: string): CollectionLink {
   return {
     id: l.id,
     type: l.type as CollectionLink["type"],
     token: l.token,
+    // La barre finale du site est retirée : sans elle, `//c/…` sort une adresse
+    // que les messageries coupent au mauvais endroit.
+    url: `${siteWeb.replace(/\/+$/, "")}/c/${l.token}`,
     personId: l.personId,
     isActive: l.isActive,
     createdAt: l.createdAt.toISOString(),
@@ -34,6 +37,7 @@ export class CollecteService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(TenantRepository) private readonly depot: TenantRepository,
     @Inject(SurfacePubliqueService) private readonly surface: SurfacePubliqueService,
+    @Inject("PUBLIC_WEB_URL") private readonly siteWeb: string,
   ) {}
 
   // ── L'espace privé ────────────────────────────────────────────────────────
@@ -43,7 +47,7 @@ export class CollecteService {
       where: { userId },
       orderBy: { createdAt: "desc" },
     });
-    return lignes.map(rendre);
+    return lignes.map((l) => rendre(l, this.siteWeb));
   }
 
   /* Créer, ou ROUVRIR le lien qui existait déjà.
@@ -76,7 +80,7 @@ export class CollecteService {
         where: { id: existant.id },
         data: { isActive: true },
       });
-      return rendre(rouvert);
+      return rendre(rouvert, this.siteWeb);
     }
 
     const ligne = await this.prisma.collectionLink.create({
@@ -87,7 +91,7 @@ export class CollecteService {
         personId: input.type === "nominatif" ? input.personId! : null,
       },
     });
-    return rendre(ligne);
+    return rendre(ligne, this.siteWeb);
   }
 
   /* Révoquer, jamais supprimer. La ligne porte les contributions déjà reçues :

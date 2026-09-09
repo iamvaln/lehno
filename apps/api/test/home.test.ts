@@ -179,6 +179,36 @@ describe("l'accueil en un appel", () => {
     expect(rempli.occurrences).toHaveLength(0);
   });
 
+  /* MÊME RAISON que `hasPersons`, et le CLOISONNEMENT en plus : l'accueil
+     invite à faire une liste tant qu'il n'y en a pas, et l'invitation doit
+     disparaître une fois la première créée — sans quoi le client appelle
+     `/me/wishlists` sur l'écran le plus ouvert de l'application rien que pour
+     le savoir. La liste appartient à une occasion, qui appartient au compte :
+     celle d'un autre ne doit rien allumer ici. */
+  it("dit si le compte a déjà une liste, la sienne et pas celle d'un autre", async () => {
+    expect((await home.get(awa)).hasWishlist).toBe(false);
+
+    const chezBila = await persons.create(bila, { gender: "female", displayName: "Awa" });
+    const occasionDeBila = await events.create(bila, {
+      personId: chezBila.id, kind: "other", label: "Fête", referenceDate: aujourdhui(),
+    });
+    const echeanceDeBila = await db.prisma.eventOccurrence.findFirstOrThrow({
+      where: { eventId: occasionDeBila.id },
+    });
+    await db.prisma.wishlist.create({ data: { eventOccurrenceId: echeanceDeBila.id } });
+    expect((await home.get(awa)).hasWishlist).toBe(false);
+
+    const proche = await persons.create(awa, { gender: "female", displayName: "Bila" });
+    const occasion = await events.create(awa, {
+      personId: proche.id, kind: "other", label: "Fête", referenceDate: aujourdhui(),
+    });
+    const echeance = await db.prisma.eventOccurrence.findFirstOrThrow({
+      where: { eventId: occasion.id },
+    });
+    await db.prisma.wishlist.create({ data: { eventOccurrenceId: echeance.id } });
+    expect((await home.get(awa)).hasWishlist).toBe(true);
+  });
+
   it("compte les notifications non lues, propres au compte", async () => {
     await db.prisma.notification.create({
       data: { userId: awa, type: "digest", channel: "in_app", titleKey: "digest.ready", readAt: null },
