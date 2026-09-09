@@ -164,11 +164,23 @@ export const creditBundleSchema = z.object({
   currency: currencySchema,
   credits: z.number().int().positive(),
   /**
-   * La remise, en clair, sur les plus grands paliers — « +20 % offerts ».
+   * La remise, en clair, sur les plus grands paliers — « −20 % ».
+   *
+   * **C'est une réduction de volume, pas un bonus de crédits.** On achète en
+   * lot, donc le crédit coûte moins cher : 10 crédits à 1 700 quand l'unité en
+   * vaut 189, c'est −10 %. Rien n'est offert en plus — c'est le prix qui
+   * baisse. Le champ s'appelait `bonusPercent` et disait donc le contraire de
+   * ce qu'il porte.
+   *
+   * **Déduite, jamais saisie.** Le serveur la calcule au moment de servir,
+   * depuis `credits × credit_unit_price` et `amount`. Elle était un `smallint`
+   * tapé au panneau que rien ne rattachait à ces montants : un palier pouvait
+   * annoncer 20 % quand son rapport en valait cinq.
+   *
    * C'est un argument de vente, pas une décoration : nul quand il n'y en a pas,
-   * et **la ligne ne doit alors pas exister** plutôt qu'afficher « +0 % ».
+   * et **la ligne ne doit alors pas exister** plutôt qu'afficher « −0 % ».
    */
-  bonusPercent: z.number().int().nullable(),
+  discountPercent: z.number().int().nullable(),
   position: z.number().int(),
 }).strict();
 
@@ -261,7 +273,10 @@ export const paymentPreviewSchema = z.object({
   expectedOnAccount: z.number().nonnegative(),
   currency: currencySchema,
   credits: z.number().int().positive(),
-  bonusPercent: z.number().int().nullable(),
+  /* La MÊME valeur que celle de la carte du palier, déduite par la même
+     formule : l'aperçu doit annoncer ce que l'écran de choix annonçait, sinon
+     le chiffre change entre celui qui fait choisir et celui qui fait payer. */
+  discountPercent: z.number().int().nullable(),
 }).strict();
 
 export type PaymentPreview = z.infer<typeof paymentPreviewSchema>;

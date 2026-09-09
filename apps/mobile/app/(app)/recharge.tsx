@@ -570,9 +570,9 @@ export default function Recharge() {
                     {/* La remise vient du serveur, avec son signe : ce sont des
                         crédits EN PLUS, pas une réduction sur le prix. Nulle,
                         la ligne n'existe pas plutôt que d'afficher « +0 % ». */}
-                    {p.bonusPercent !== null && p.bonusPercent > 0 ? (
+                    {p.discountPercent !== null && p.discountPercent > 0 ? (
                       <Text style={[styles.bonus, { color: couleurs.feedbackSuccess }]}>
-                        {t.rechargeEconomie(p.bonusPercent)}
+                        {t.rechargeEconomie(p.discountPercent)}
                       </Text>
                     ) : null}
                     <Text style={[styles.prix, { color: couleurs.textBody }]}>

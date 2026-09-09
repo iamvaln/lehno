@@ -9,6 +9,7 @@ import { AdminGuard } from "./admin.guard.js";
 import { Role, RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
 import { poserLAuteurEtLeMotif } from "./historisation.js";
+import { remiseDe } from "../payments/remise.js";
 
 /**
  * Les trois tables que l'administration règle : paliers, canaux, comptes de
@@ -23,10 +24,16 @@ import { poserLAuteurEtLeMotif } from "./historisation.js";
  * leviers qui décident de ce qu'un client paie.
  */
 
+/* PAS DE `remisePourcent` EN ENTRÉE, et c'est tout l'objet de la reprise.
+   Il était saisi à la main et rien ne le rattachait aux montants qu'il
+   résume : un palier pouvait annoncer 20 % quand son rapport prix/crédits en
+   valait cinq. Il se déduit maintenant du montant et des crédits, donc régler
+   le montant SUFFIT à régler la remise. Le laisser en entrée rouvrirait la
+   possibilité de les faire diverger — `.strict()` refuse désormais le champ,
+   plutôt que de l'accepter en l'ignorant en silence. */
 const palierSchema = z.object({
   montant: z.number().positive().optional(),
   credits: z.number().int().positive().optional(),
-  remisePourcent: z.number().int().nullable().optional(),
   position: z.number().int().optional(),
   actif: z.boolean().optional(),
   reason: motifSchema,
@@ -126,18 +133,36 @@ export class PaymentSettingsService {
   // ─── Les paliers ─────────────────────────────────────────────────────────
 
   async paliers() {
-    const lignes = await this.prisma.creditBundle.findMany({ orderBy: { position: "asc" } });
+    /* LA MÊME FORMULE QUE CELLE SERVIE AU MOBILE, et le même prix unitaire.
+       C'est la raison d'être de `remise.ts` : deux implantations dériveraient,
+       et le panneau montrerait un chiffre pendant que l'application en
+       afficherait un autre sur le même palier, au même instant. Poser
+       « 10 crédits à 1700 » doit se lire « −10 % » ici comme là-bas. */
+    const [lignes, unitaire] = await Promise.all([
+      this.prisma.creditBundle.findMany({ orderBy: { position: "asc" } }),
+      this.prixUnitaire(),
+    ]);
     return {
       items: lignes.map((p) => ({
         id: p.id,
         montant: Number(p.amount),
         devise: p.currency,
         credits: p.credits,
-        remisePourcent: p.bonusPercent,
+        remisePourcent: remiseDe(unitaire, Number(p.amount), p.credits),
         position: p.position,
         actif: p.isActive,
       })),
     };
+  }
+
+  /* Le défaut est celui de `/public/config` et de `RechargeService`, et il doit
+     le rester : trois défauts divergents feraient annoncer trois remises
+     différentes sur la même offre selon la porte par laquelle on la regarde. */
+  private async prixUnitaire(): Promise<number> {
+    const ligne = await this.prisma.systemParameter.findUnique({
+      where: { key: "credit_unit_price" },
+    });
+    return ligne ? Number(ligne.value) : 100;
   }
 
   async modifierPalier(auteurId: string, id: string, entree: z.infer<typeof palierSchema>) {
@@ -153,7 +178,6 @@ export class PaymentSettingsService {
           data: {
             ...(entree.montant !== undefined ? { amount: entree.montant } : {}),
             ...(entree.credits !== undefined ? { credits: entree.credits } : {}),
-            ...(entree.remisePourcent !== undefined ? { bonusPercent: entree.remisePourcent } : {}),
             ...(entree.position !== undefined ? { position: entree.position } : {}),
             ...(entree.actif !== undefined ? { isActive: entree.actif } : {}),
           },

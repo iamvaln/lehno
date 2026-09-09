@@ -16,7 +16,7 @@ const uuid = (n: number): string =>
 const palier = (
   n: number, credits: number, montant: number, position: number, bonus: number | null,
 ): CreditBundle => ({
-  id: uuid(n), amount: montant, currency: "XAF", credits, bonusPercent: bonus, position,
+  id: uuid(n), amount: montant, currency: "XAF", credits, discountPercent: bonus, position,
 });
 
 const paiement = (n: number, forme: Partial<PaymentDetail> = {}): PaymentDetail => ({
@@ -36,7 +36,7 @@ const paiement = (n: number, forme: Partial<PaymentDetail> = {}): PaymentDetail 
 
 const apercu = (forme: Partial<PaymentPreview> = {}): PaymentPreview => ({
   amount: 1000, fee: 20, amountToSend: 1020, expectedOnAccount: 1000,
-  currency: "XAF", credits: 12, bonusPercent: 20, ...forme,
+  currency: "XAF", credits: 12, discountPercent: 20, ...forme,
 });
 
 const canal = (kind: PaymentChannel["kind"]): PaymentChannel => ({
@@ -97,7 +97,7 @@ describe("les paliers", () => {
   });
 
   /* Une remise nulle n'en est pas une : « −0 % » n'apprend rien et fait douter.
-     Même règle que le contrat pose sur `bonusPercent`. */
+     Même règle que le contrat pose sur `discountPercent`. */
   it("une remise nulle n'en est pas une", () => {
     const grille = [palier(1, 5, 500, 1, 0), palier(2, 12, 1000, 2, 20)];
     expect(palierParDefaut(grille)).toBe(uuid(2));
@@ -132,12 +132,12 @@ describe("le récapitulatif", () => {
      saisi à la main est une dette du SERVEUR, écrite dans
      `specs/manques-contrat-mobile-2026-09-09.md` §9. */
   it("porte la remise servie, sans la recalculer", () => {
-    expect(recapDuPaiement(apercu({ bonusPercent: 17 })).bonus).toBe(17);
+    expect(recapDuPaiement(apercu({ discountPercent: 17 })).bonus).toBe(17);
   });
 
   it("tait une remise nulle ou absente plutôt que d'écrire zéro", () => {
-    expect(recapDuPaiement(apercu({ bonusPercent: 0 })).bonus).toBeNull();
-    expect(recapDuPaiement(apercu({ bonusPercent: null })).bonus).toBeNull();
+    expect(recapDuPaiement(apercu({ discountPercent: 0 })).bonus).toBeNull();
+    expect(recapDuPaiement(apercu({ discountPercent: null })).bonus).toBeNull();
   });
 
   it("rend les crédits et la devise servis", () => {

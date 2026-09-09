@@ -17992,7 +17992,7 @@
     "/me/credit-bundles": {
       "get": {
         "summary": "Les paliers d'achat proposés, avec leur remise",
-        "description": "**Un achat porte un palier, jamais un montant libre.** Le plus petit\nfixe le minimum. C'est ce qui permet d'annoncer une remise en clair, et\nce qui évite d'avoir à valider un montant arbitraire contre un barème.\n\n`bonusPercent` est **nul** quand il n'y en a pas — la ligne ne doit alors\npas exister, jamais « +0 % ».\n\nGouverné par `credits`, **pas** par `topup.manual` : les paliers disent\nque les crédits s'achètent ; la façon de payer est une autre question.",
+        "description": "**Un achat porte un palier, jamais un montant libre.** Le plus petit\nfixe le minimum. C'est ce qui permet d'annoncer une remise en clair, et\nce qui évite d'avoir à valider un montant arbitraire contre un barème.\n\n`discountPercent` est une **réduction de volume, pas un bonus de**\n**crédits** : on achète en lot, donc le crédit coûte moins cher. Rien\nn'est offert en plus, c'est le prix qui baisse — d'où « −N % ».\n\nIl est **déduit** de `credits × credit_unit_price` et de `amount` au\nmoment de servir, jamais stocké : aucune valeur en base ne peut donc\nmentir sur ce qu'un palier vaut réellement, et changer le prix unitaire\nn'oblige à recalculer ni à invalider quoi que ce soit.\n\nIl est **nul** quand il n'y en a pas — la ligne ne doit alors pas\nexister, jamais « −0 % ».\n\nGouverné par `credits`, **pas** par `topup.manual` : les paliers disent\nque les crédits s'achètent ; la façon de payer est une autre question.",
         "security": [
           {
             "bearerAuth": []
@@ -18028,7 +18028,7 @@
                             "exclusiveMinimum": true,
                             "minimum": 0
                           },
-                          "bonusPercent": {
+                          "discountPercent": {
                             "type": "integer",
                             "nullable": true
                           },
@@ -18041,7 +18041,7 @@
                           "amount",
                           "currency",
                           "credits",
-                          "bonusPercent",
+                          "discountPercent",
                           "position"
                         ],
                         "additionalProperties": false
@@ -18846,7 +18846,7 @@
                       "exclusiveMinimum": true,
                       "minimum": 0
                     },
-                    "bonusPercent": {
+                    "discountPercent": {
                       "type": "integer",
                       "nullable": true
                     }
@@ -18858,7 +18858,7 @@
                     "expectedOnAccount",
                     "currency",
                     "credits",
-                    "bonusPercent"
+                    "discountPercent"
                   ],
                   "additionalProperties": false
                 }
