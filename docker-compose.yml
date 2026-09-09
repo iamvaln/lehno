@@ -12,6 +12,22 @@
 # développement local (base sur le port 5433, pas d'images publiées).
 name: lehno
 
+# CERT_RESOLVER — quel résolveur ACME demande les certificats.
+#
+# Défaut `le` : le défi TLS-ALPN du Traefik partagé, celui qui sert depuis le
+# début. Rien ne change tant que le VPS ne pose pas cette variable.
+#
+# `le-dns` la bascule sur le défi DNS-01, INDISPENSABLE dès qu'un nom passe
+# derrière le proxy de Cloudflare : celui-ci termine le TLS lui-même, donc le
+# défi TLS-ALPN ne parvient jamais à Traefik. La panne est silencieuse et
+# tardive — le renouvellement échoue soixante jours après la bascule, sur un
+# domaine qui servait très bien. C'est exactement ce que subit gabee, dont les
+# domaines sont déjà derrière le proxy.
+#
+# Une variable plutôt qu'une valeur en dur : la bascule et le retour en arrière
+# se font en éditant .env.production, sans redéployer. Et le jour où le nuage
+# repasse au gris, on revient à `le` de la même façon.
+
 services:
   # ── PostgreSQL ──────────────────────────────────────────────────────────────
   db:
@@ -85,7 +101,7 @@ services:
       - traefik.docker.network=web
       - traefik.http.routers.${STACK:-lehno}-api.rule=Host(`${API_DOMAIN}`)
       - traefik.http.routers.${STACK:-lehno}-api.entrypoints=websecure
-      - traefik.http.routers.${STACK:-lehno}-api.tls.certresolver=le
+      - traefik.http.routers.${STACK:-lehno}-api.tls.certresolver=${CERT_RESOLVER:-le}
       - traefik.http.services.${STACK:-lehno}-api.loadbalancer.server.port=3000
 
   # ── Site public (Next.js App Router) ─────────────────────────────────────────
@@ -111,7 +127,7 @@ services:
       - traefik.docker.network=web
       - traefik.http.routers.${STACK:-lehno}-web.rule=Host(`${WEB_DOMAIN}`) || Host(`www.${WEB_DOMAIN}`)
       - traefik.http.routers.${STACK:-lehno}-web.entrypoints=websecure
-      - traefik.http.routers.${STACK:-lehno}-web.tls.certresolver=le
+      - traefik.http.routers.${STACK:-lehno}-web.tls.certresolver=${CERT_RESOLVER:-le}
       - traefik.http.services.${STACK:-lehno}-web.loadbalancer.server.port=3000
 
   # ── Sauvegarde de la base (vidage nocturne vers R2) ────────────────────────
@@ -188,7 +204,7 @@ services:
       - traefik.docker.network=web
       - traefik.http.routers.${STACK:-lehno}-admin.rule=Host(`admin.${WEB_DOMAIN}`)
       - traefik.http.routers.${STACK:-lehno}-admin.entrypoints=websecure
-      - traefik.http.routers.${STACK:-lehno}-admin.tls.certresolver=le
+      - traefik.http.routers.${STACK:-lehno}-admin.tls.certresolver=${CERT_RESOLVER:-le}
       - traefik.http.services.${STACK:-lehno}-admin.loadbalancer.server.port=80
 
 volumes:
