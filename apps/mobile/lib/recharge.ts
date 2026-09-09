@@ -120,13 +120,16 @@ export function reductionDuPalier(
 ): number | null {
   if (prixUnitaire <= 0 || palier.credits <= 0) return null;
   const pleinTarif = palier.credits * prixUnitaire;
-  const economie = pleinTarif - palier.amount;
-  if (economie <= 0) return null;
   /* Arrondi à l'entier : le contrat n'a jamais servi de décimale sur ce
-     nombre, et « −16,67 % » sur un argument de vente se lit moins bien
-     qu'il ne rassure. */
-  const pourcentage = Math.round((economie / pleinTarif) * 100);
-  // Un arrondi peut ramener à zéro une économie réelle mais minuscule.
+     nombre, et « −16,67 % » sur un argument de vente se lit moins bien qu'il
+     ne rassure. */
+  const pourcentage = Math.round(((pleinTarif - palier.amount) / pleinTarif) * 100);
+  /* UNE SEULE GARDE POUR LES TROIS SILENCES, et c'est délibéré. J'avais écrit
+     un `if (economie <= 0) return null` au-dessus ; la preuve par la panne l'a
+     dit inutile — le relâcher ne faisait tomber aucun test, parce qu'un plein
+     tarif donne 0 et qu'un palier plus cher donne un négatif, que celui-ci
+     refuse déjà tous les deux. Deux gardes pour une règle, c'est une de trop :
+     celle qu'on croit tenir n'est pas celle qui tient. */
   return pourcentage > 0 ? pourcentage : null;
 }
 
