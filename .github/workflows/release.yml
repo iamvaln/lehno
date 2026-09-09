@@ -124,9 +124,44 @@ jobs:
           cache-from: type=gha,scope=admin
           cache-to: type=gha,scope=admin,mode=max
 
+  # ── Construit et pousse l'image de sauvegarde (pg_dump → R2) ────────────────
+  #
+  # docker-compose.yml référence lehno-backup:${IMAGE_TAG}, et le déploiement
+  # commence par un `docker compose pull`. Sans ce job, l'image n'existerait
+  # nulle part et le pull échouerait — emportant le déploiement entier, api et
+  # web compris, pour un service qui ne sert qu'à sauvegarder.
+  build-backup:
+    needs: [verifier]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Connexion à GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construit et pousse la sauvegarde
+        uses: docker/build-push-action@v6
+        with:
+          # Contexte réduit à ops/backup : cette image n'a besoin d'aucun
+          # fichier du monorepo, et lui donner la racine ferait transiter tout
+          # le dépôt pour cinq scripts shell.
+          context: ./ops/backup
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/lehno-backup:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/lehno-backup:latest
+          cache-from: type=gha,scope=backup
+          cache-to: type=gha,scope=backup,mode=max
+
   # ── Déploiement : SSH vers le VPS, tire le tag fraîchement poussé, redémarre ─
   deploy:
-    needs: [build-api, build-web, build-admin]
+    needs: [build-api, build-web, build-admin, build-backup]
     runs-on: ubuntu-latest
     environment: production # garde-fou optionnel : approbation manuelle (à activer dans les réglages du dépôt)
     steps:
@@ -186,7 +221,7 @@ jobs:
             # sur un :latest local périmé d'une version antérieure. Ignore
             # silencieusement une image pas encore publiée (premier
             # déploiement d'un nouveau service).
-            for image in lehno-api lehno-web lehno-admin; do
+            for image in lehno-api lehno-web lehno-admin lehno-backup; do
               docker pull "ghcr.io/iamvaln/${image}:latest" || true
             done
             docker logout ghcr.io
@@ -197,7 +232,7 @@ jobs:
             # Garde les 2 versions les plus récentes de chaque image
             # (courante + précédente, pour le retour arrière) ; :latest et
             # toute image en cours d'exécution ne sont pas touchées.
-            for image in lehno-api lehno-web lehno-admin; do
+            for image in lehno-api lehno-web lehno-admin lehno-backup; do
               docker images "ghcr.io/iamvaln/${image}" --format '{{.Tag}}' \
                 | grep -E '^v[0-9]' | sort -V | head -n -2 \
                 | while read -r tag; do docker rmi "ghcr.io/iamvaln/${image}:${tag}" 2>/dev/null || true; done
