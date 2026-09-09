@@ -177,6 +177,21 @@ export default function Souhaits() {
                   </Text>
                   {etat === "offert" ? <Tag tone="quiet">{t.souhaitOffertEtat}</Tag> : null}
                   {etat === "reserve" ? <Tag tone="quiet">{t.souhaitReserve}</Tag> : null}
+                  {/* LE DÉTAIL EXISTE, ET IL FAUT UNE PORTE. La carte ne dit ni
+                      le prix, ni le lien, ni la provenance : sans ce chevron,
+                      §3.19 ne serait atteignable que par un lien profond. Le
+                      libellé annoncé est l'intitulé du souhait — « bouton »
+                      répété huit fois ne dirait pas lequel on ouvre. */}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={s.label}
+                    onPress={() => routeur.push({
+                      pathname: "/(app)/souhait", params: { liste: id, id: s.id },
+                    })}
+                    hitSlop={8}
+                  >
+                    <Icon name="chevron-right" size={18} color={couleurs.textMention} />
+                  </Pressable>
                 </View>
 
                 {s.price !== null && s.currency ? (

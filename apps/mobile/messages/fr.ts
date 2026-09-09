@@ -852,6 +852,10 @@ export const fr = {
   souhaitRetraitTitre: "Retirer ce souhait ?",
   souhaitRetraitTexte: "Il quitte votre wishlist et les pages où vous l'avez partagée.",
   souhaitRetraitReserve: "Quelqu'un l'a réservé : la réservation part avec le souhait.",
+  /* Une idée notée pour un proche ne quitte aucune page publique : elle n'y a
+     jamais paru. Lui servir le texte d'un souhait à soi annoncerait un partage
+     qui n'a pas eu lieu. */
+  souhaitRetraitIdee: "Elle quitte cette occasion, et rien ne la garde ailleurs.",
   souhaitRetraitConfirmer: "Retirer",
   souhaitRetraitGarder: "Garder",
   souhaitRetireFait: "Le souhait est retiré.",
@@ -882,6 +886,12 @@ export const fr = {
   modifier: "Modifier",
   videSouhaitsTitre: "Rien de listé pour l'instant",
   videSouhaitsTexte: "Ajoutez une idée, ou partagez un lien de collecte pour la faire remplir.",
+  /* D'où vient une idée notée pour quelqu'un. « noté » — `souhaitOrigine` —
+     couvrait déjà la main du propriétaire ; les deux autres provenances du
+     contrat n'avaient pas de mot, et une idée confiée par le proche lui-même
+     ne vaut pas une idée qu'on a supposée. */
+  souhaitOrigineConfie: "confié",
+  souhaitOrigineIdee: "retenu des idées",
 
   /* ─── Occasion (3.21) ─── */
   occPassee: "Passée",
