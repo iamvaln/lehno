@@ -9,7 +9,7 @@ set -euo pipefail
 : "${PGUSER:?PGUSER is required}"
 : "${PGPASSWORD:?PGPASSWORD is required}"
 : "${PGDATABASE:?PGDATABASE is required}"
-: "${BACKUP_R2_ENDPOINT:?BACKUP_R2_ENDPOINT is required}"
+: "${BACKUP_R2_ACCOUNT_ID:?BACKUP_R2_ACCOUNT_ID is required}"
 : "${BACKUP_R2_BUCKET:?BACKUP_R2_BUCKET is required}"
 : "${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID is required (set R2_ACCESS_KEY_ID via compose)}"
 : "${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY is required (set R2_SECRET_ACCESS_KEY via compose)}"
@@ -40,7 +40,7 @@ size=$(stat -c %s "${TMP}" 2>/dev/null || stat -f %z "${TMP}")
 echo "[backup] dump complete (${size} bytes) → uploading to s3://${BACKUP_R2_BUCKET}/${KEY}"
 
 aws s3 cp "${TMP}" "s3://${BACKUP_R2_BUCKET}/${KEY}" \
-  --endpoint-url "${BACKUP_R2_ENDPOINT}" \
+  --endpoint-url "https://${BACKUP_R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
   --no-progress
 
 rm -f "${TMP}"
@@ -71,9 +71,9 @@ while IFS= read -r line; do
     # réussi. Le vrai coût n'est pas la purge manquée mais le signal perdu :
     # le jour où le vidage échoue vraiment, le journal dit la même chose.
     aws s3 rm "s3://${BACKUP_R2_BUCKET}/${PREFIX}/${fname}" \
-      --endpoint-url "${BACKUP_R2_ENDPOINT}"
+      --endpoint-url "https://${BACKUP_R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
     pruned=$((pruned + 1))
   fi
-done < <(aws s3 ls "s3://${BACKUP_R2_BUCKET}/${PREFIX}/" --endpoint-url "${BACKUP_R2_ENDPOINT}")
+done < <(aws s3 ls "s3://${BACKUP_R2_BUCKET}/${PREFIX}/" --endpoint-url "https://${BACKUP_R2_ACCOUNT_ID}.r2.cloudflarestorage.com")
 echo "[backup] pruned ${pruned} old backup(s)"
 echo "[backup] done"
