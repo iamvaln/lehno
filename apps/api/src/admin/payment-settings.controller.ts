@@ -10,6 +10,7 @@ import { Role, RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
 import { poserLAuteurEtLeMotif } from "./historisation.js";
 import { remiseDe } from "../payments/remise.js";
+import { prixUnitaireDuJour } from "../payments/prix-unitaire.js";
 
 /**
  * Les trois tables que l'administration règle : paliers, canaux, comptes de
@@ -140,7 +141,7 @@ export class PaymentSettingsService {
        « 10 crédits à 1700 » doit se lire « −10 % » ici comme là-bas. */
     const [lignes, unitaire] = await Promise.all([
       this.prisma.creditBundle.findMany({ orderBy: { position: "asc" } }),
-      this.prixUnitaire(),
+      prixUnitaireDuJour(this.prisma),
     ]);
     return {
       items: lignes.map((p) => ({
@@ -153,16 +154,6 @@ export class PaymentSettingsService {
         actif: p.isActive,
       })),
     };
-  }
-
-  /* Le défaut est celui de `/public/config` et de `RechargeService`, et il doit
-     le rester : trois défauts divergents feraient annoncer trois remises
-     différentes sur la même offre selon la porte par laquelle on la regarde. */
-  private async prixUnitaire(): Promise<number> {
-    const ligne = await this.prisma.systemParameter.findUnique({
-      where: { key: "credit_unit_price" },
-    });
-    return ligne ? Number(ligne.value) : 100;
   }
 
   async modifierPalier(auteurId: string, id: string, entree: z.infer<typeof palierSchema>) {

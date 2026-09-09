@@ -11,6 +11,7 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AdminGuard } from "./admin.guard.js";
 import { Role, RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
+import { prixUnitaireDuJour } from "../payments/prix-unitaire.js";
 import { poserLAuteurEtLeMotif } from "./historisation.js";
 import { fraisDe } from "../payments/frais.js";
 
@@ -32,11 +33,12 @@ export class AdminPaymentsService {
   ) {}
 
   async saisir(auteurId: string, entree: z.infer<typeof saisiePaiementSchema>) {
-    const [client, palier, compte, canal] = await Promise.all([
+    const [client, palier, compte, canal, unitaire] = await Promise.all([
       this.prisma.user.findUnique({ where: { id: entree.utilisateurId }, select: { id: true } }),
       this.prisma.creditBundle.findUnique({ where: { id: entree.palierId } }),
       this.prisma.collectionAccount.findUnique({ where: { id: entree.compteCollecteId } }),
       this.prisma.paymentChannel.findUnique({ where: { id: entree.canalId } }),
+      prixUnitaireDuJour(this.prisma),
     ]);
 
     if (!client) throw new AppError("not_found", "unknown user");
@@ -81,6 +83,18 @@ export class AdminPaymentsService {
           credits: palier.credits,
           feeAmount: calcul.frais,
           expectedAmount: calcul.attenduSurLeCompte,
+          /* FIGÉS ICI AUSSI, et surtout ici. Même doctrine que `feeAmount`
+             quinze lignes plus haut — « changer un taux ne doit pas fausser
+             rétroactivement la comptabilité » — mais la raison est plus forte
+             sur ce chemin : un paiement saisi à la main EST le paiement
+             contesté. C'est celui qu'on rouvre six mois plus tard parce que
+             quelqu'un dit avoir versé autre chose que ce qui a été crédité.
+             Sans ces deux montants, « quelle réduction cette personne
+             a-t-elle obtenue ? » n'est plus reconstructible dès que le prix
+             unitaire a changé — et `credit_bundle_id` est en `SetNull`, donc
+             supprimer le palier emporte jusqu'à sa référence. */
+          creditUnitPrice: unitaire,
+          bundleAmount: palier.amount,
           status: "pending",
           ...(entree.numeroPayeur !== undefined ? { payerMsisdn: entree.numeroPayeur } : {}),
           ...(entree.reference !== undefined ? { providerRef: entree.reference } : {}),
