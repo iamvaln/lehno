@@ -957,4 +957,9 @@ export const fr = {
   listeArchivee: "Archivée",
   listeArchiveeTexte: "L'occasion est passée. Les réservations sont closes ; la liste reste là pour l'an prochain.",
   listeMesDatesAucune: "Aucune date à vous pour l'instant.",
+  /* L'aperçu de la liste partagée. « On ne diffuse pas une page qu'on n'a pas
+     vue » : ces trois lignes servent l'écran qui la montre avant l'envoi. */
+  listeRevoquer: "Révoquer le lien",
+  listeRevoqueFait: "Lien révoqué.",
+  listeApercuRien: "Aucun de vos souhaits n'est visible : ils sont tous privés.",
 };

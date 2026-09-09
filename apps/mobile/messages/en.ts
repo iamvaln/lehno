@@ -890,4 +890,9 @@ export const en = {
   listeArchivee: "Archived",
   listeArchiveeTexte: "The occasion has passed. Reservations are closed; the list stays for next year.",
   listeMesDatesAucune: "No dates of your own yet.",
+  /* The shared list preview. "You don't send out a page you haven't seen" :
+     these three lines serve the screen that shows it before sending. */
+  listeRevoquer: "Revoke the link",
+  listeRevoqueFait: "Link revoked.",
+  listeApercuRien: "None of your wishes are visible: they are all private.",
 };
