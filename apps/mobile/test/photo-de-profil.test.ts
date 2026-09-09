@@ -17,6 +17,8 @@ const { choisirUnePhoto, envoyerLaPhoto } = await import("../lib/photo-de-profil
 const PROFIL = {
   id: "11111111-1111-4111-8111-111111111111",
   username: "awa", displayName: "Awa", avatarUrl: "https://exemple.test/a.jpg",
+  // La clé accompagne l'URL : c'est elle que le client range.
+  avatarKey: "avatars/ab12",
   email: "awa@example.com", emailVerified: true, uiLanguage: "fr", theme: "system",
   timezone: "Africa/Douala", sendHour: 9, gender: null,
 };

@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import type { DepotAvatar, Profile } from "@lehno/contracts";
+import type { DepotAvatar, Profile, UrlMedia } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { ProfileService } from "./profile.service.js";
 import { AppError } from "../common/errors.js";
@@ -45,6 +45,11 @@ async function image(): Promise<Sharp> {
 const TAILLE_MAX = 5 * 1024 * 1024;
 const COTE = 512;
 const TYPE_DEPOT = "image/jpeg";
+
+/* Dix minutes pour une lecture : le temps de télécharger sur un réseau lent,
+   sans qu'un lien recopié survive à la séance. Le client ne le devine pas — il
+   le reçoit, et redemande quand il a expiré. */
+const DUREE_LECTURE = 600;
 
 /* CE QU'ON ACCEPTE, lu dans le CONTENU et non dans l'extension ni dans le
    `Content-Type` — les deux se déclarent, et un fichier se déclare comme il
@@ -132,6 +137,28 @@ export class AvatarService {
     await this.balayer([compte.avatarPendingKey, ...(ancienne === null ? [] : [ancienne])]);
 
     return this.profils.get(userId);
+  }
+
+  /* Une URL de lecture pour une clé qu'on possède DÉJÀ.
+   *
+   * La clé seule ne vaut rien : on vérifie qu'elle appartient au demandeur.
+   * Sans ce contrôle, une clé aperçue une fois — dans un journal, sur un écran
+   * partagé — se rejouerait indéfiniment, et le serveur cesserait de décider à
+   * chaque lecture. C'est toute la raison pour laquelle le compartiment n'est
+   * pas public.
+   *
+   * 404 et non 403 : dire « cette clé existe mais n'est pas à vous » apprendrait
+   * qu'elle existe. */
+  async urlDe(userId: string, cle: string): Promise<UrlMedia> {
+    const compte = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { avatarKey: true },
+    });
+    /* La clé EN ATTENTE n'en fait pas partie : elle désigne un dépôt que
+       personne n'a encore vérifié, et signer une lecture dessus servirait un
+       fichier qu'on n'a pas regardé. */
+    if (compte.avatarKey !== cle) throw new AppError("not_found", "resource not found");
+    return { url: await this.stockage.lire(cle, DUREE_LECTURE), expireDans: DUREE_LECTURE };
   }
 
   async retirer(userId: string): Promise<Profile> {
