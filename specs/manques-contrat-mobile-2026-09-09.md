@@ -163,37 +163,32 @@ Le mobile affiche déjà **« −N % »** (PR #136). C'est le seul des quatre à
 dire juste, et il est donc en désaccord avec le panneau tant que celui-ci n'est
 pas repris — un signe qui se contredit d'un écran à l'autre.
 
-**Le pourcentage est calculé À LA SAUVEGARDE**, quand l'administrateur
-configure un palier, et stocké. Le panneau montre alors immédiatement la
-réduction que ces prix donnent : on ne règle pas des montants sans voir ce
-qu'ils annoncent au client.
+**Le pourcentage se calcule à DEUX moments, pour deux usages distincts.**
+
+1. **À la sauvegarde, au panneau — pour l'aperçu.** Quand l'administrateur pose
+   « 10 crédits à 1700 », il voit aussitôt « −10 % ». On ne règle pas des
+   montants sans voir ce qu'ils annoncent au client.
+2. **À la volée, au service — pour le mobile.** Quand quelqu'un ouvre la page
+   des offres, le serveur recalcule et sert la valeur du moment.
+
+**Aucune valeur stockée ne fait donc autorité**, et c'est ce qui rend le montage
+sûr : la question du recalcul en cascade quand `credit_unit_price` change ne se
+pose plus. Il n'y a rien à invalider, rien qui puisse pourrir en silence, rien
+qu'une modification directe en base puisse rendre menteur. La source de vérité
+est structurellement la configuration.
+
+Le coût est nul : une multiplication, une soustraction, une division et un
+arrondi, sur trois à cinq lignes déjà chargées. À côté de l'aller-retour en base
+et de la sérialisation JSON déjà en cours, ce n'est pas mesurable.
+
+**Une seule implantation de la formule**, partagée par l'aperçu du panneau et le
+service. Deux implantations dériveraient, et le panneau montrerait un chiffre
+pendant que l'application en afficherait un autre.
 
 Le mobile, lui, ne calcule rien : il lit le champ servi. On ne fait confiance
 qu'au serveur, et un téléphone n'a pas à porter un traitement qu'on peut lui
 épargner — l'application n'appelle même plus `/public/config` pour cet écran,
 soit un aller-retour réseau de moins.
-
-**Une seule implantation de la formule**, partagée entre l'aperçu du panneau et
-l'écriture. Deux implantations dériveraient, et l'aperçu montrerait un chiffre
-pendant qu'un autre serait enregistré.
-
-### La cascade, qui n'est pas optionnelle
-
-La réduction dépend de DEUX sources : `credit_bundle` (montant et crédits, par
-palier) et `system_parameter.credit_unit_price` (**global**). Stockée, elle doit
-donc être recalculée **à chaque changement du prix unitaire**, pas seulement à
-l'édition d'un palier — sinon changer le prix unitaire laisse tous les paliers
-annoncer une réduction périmée, sans que rien ne le signale.
-
-Le recalcul est peu coûteux — quelques lignes, même transaction que
-l'enregistrement du paramètre. Ce qui coûte, c'est de l'oublier : la règle vit
-dans le code, pas dans le schéma, et tout chemin d'écriture doit s'en souvenir
-(migration, peuplement, correction à la main, second endpoint).
-
-**D'où l'exigence, non négociable : un test qui change `credit_unit_price` et
-vérifie que les pourcentages des paliers ont bougé.** Sans lui, la cascade
-pourrit en silence, et on retombe exactement sur la panne qu'on cherche à
-retirer.
 
 ### Le paiement doit figer ce qu'on lui a annoncé
 
