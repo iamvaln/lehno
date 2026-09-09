@@ -711,6 +711,7 @@ export const en = {
   cadrageNote: "Anything else to know? (optional)",
   cadrageNotePlaceholder: (qui: string) => "e.g. it's a joint gift with " + qui,
   cadrageLancer: "Look for ideas",
+  cadrageNoteLimite: (n: number) => n + (n <= 1 ? " character too many" : " characters too many"),
   ideeRetenir: "Keep",
   ideeLacher: "Kept",
   ideeMarquerOfferte: "This is what I gave",

@@ -169,12 +169,23 @@ export default function Preparation() {
             {detail[kind].texte}
           </Text>
           <View style={{ marginTop: nativeSpace[12] }}>
+            {/* LES IDÉES PASSENT PAR LEUR CADRAGE, le message part d'ici.
+                Ce n'est pas une inconstance : une note qu'on ne peut donner
+                qu'APRÈS coûterait un second crédit, puisque refaire est une
+                nouvelle demande. Le message, lui, n'a rien à cadrer — le
+                détour serait un écran vide de plus avant de payer. */}
             <Button
               variant="primary"
               full
               icon="sparkles"
               disabled={envoi !== null || coutDe(prix, kind) === null}
-              onPress={() => setAConfirmer(kind)}
+              onPress={() => {
+                if (kind === "gift_ideas") {
+                  routeur.push({ pathname: "/(app)/cadrage", params: { occurrenceId } });
+                  return;
+                }
+                setAConfirmer(kind);
+              }}
             >
               {t.preparer}
             </Button>

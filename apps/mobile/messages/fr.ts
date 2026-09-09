@@ -770,6 +770,7 @@ export const fr = {
   cadrageNote: "Autre chose à savoir ? (facultatif)",
   cadrageNotePlaceholder: (qui: string) => "ex. c'est un cadeau commun avec " + qui,
   cadrageLancer: "Chercher des idées",
+  cadrageNoteLimite: (n: number) => n + (n <= 1 ? " caractère de trop" : " caractères de trop"),
   ideeRetenir: "Retenir",
   ideeLacher: "Retenue",
   ideeMarquerOfferte: "C'est ce que j'ai offert",
