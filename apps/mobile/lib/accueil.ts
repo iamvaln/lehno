@@ -1,3 +1,4 @@
+import { estActive } from "@lehno/contracts";
 import type { Home, Occurrence } from "@lehno/contracts";
 
 /* L'accueil NE DÉFILE PAS.
@@ -174,4 +175,27 @@ export function resumeDeLAccueil(home: Home): Resume {
   }
 
   return { sorte: "semaine", combien: thisWeek };
+}
+
+/* L'AUTRE MOITIÉ DU PRODUIT, proposée sans insister — une ligne, un chevron.
+ *
+ * Elle DISPARAÎT dès qu'une liste existe : « une invitation qui reste après
+ * avoir été acceptée devient un reproche ». C'est la planche qui le dit, et
+ * c'est la raison d'être de cette fonction — sans la condition, la ligne
+ * resterait à vie sur l'écran le plus vu de l'application.
+ *
+ * PAS AU PREMIER LANCEMENT non plus : cet écran-là ne poursuit qu'un but,
+ * poser un premier proche. Deux invitations concurrentes n'en font aucune.
+ *
+ * Et pas si `wishlist.own` est éteint : proposer de faire une liste que le
+ * service ne sert pas ouvrirait sur un écran fermé.
+ */
+export function inviteAFaireUneListe(
+  etat: EtatDeLAccueil,
+  aUneListe: boolean,
+  actives: readonly string[],
+): boolean {
+  if (etat === "premier") return false;
+  if (aUneListe) return false;
+  return estActive(actives, "wishlist.own");
 }
