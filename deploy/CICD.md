@@ -96,6 +96,10 @@ directement.
   propre guide de provisionnement VPS — à écrire si Lehno prend son propre
   VPS plutôt que de rejoindre celui de gabee.)*
 - Le dépôt cloné dans `~/lehno` (ou `VPS_APP_DIR`).
+- **Un compartiment R2 pour les sauvegardes**, distinct de celui des images, et
+  un jeton limité à celui-ci. Vérifier après la première nuit :
+  `docker compose --env-file .env.production logs backup` doit dire
+  « uploaded » puis « pruned N old backup(s) » — et **pas** « FAILED ».
 - **Un enregistrement DNS `admin.<domaine>`** vers l'IP du VPS, en **DNS only**
   comme les autres : Traefik obtient son certificat par le défi HTTP-01, que le
   proxy de Cloudflare intercepterait. Sans cet enregistrement, le back-office se
@@ -119,6 +123,8 @@ directement.
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | stockage des images (portraits, avatars, reçus, exports). **Les quatre ensemble ou aucune.** Absentes, l'api démarre quand même et bascule sur `StockageMemoire` : les fichiers vivent en RAM, disparaissent au premier redémarrage, et rien ne le signale. Voir le fournisseur `STOCKAGE_PORT` dans `apps/api/src/app.module.ts` |
 | `ONESIGNAL_APP_ID`, `ONESIGNAL_API_KEY` | notifications poussées. **Les deux ensemble ou aucune.** Absentes, l'api démarre quand même — sans push, l'application marche, contrairement au courriel sans lequel personne ne se connecte — mais elle **l'annonce au démarrage** : `ONESIGNAL_APP_ID et ONESIGNAL_API_KEY absentes`. Si cette ligne paraît en production, les rappels du matin n'arrivent sur aucun téléphone. La clé est celle dite « REST API key » de la console OneSignal, jamais celle de l'application mobile |
 | `LEHNO_PUSH_CONSOLE` | à `1`, force l'écriture sur la console même si OneSignal est configuré — l'équivalent de `LEHNO_MAIL_CONSOLE` pour le téléphone. **En développement uniquement** : sans elle, un essai local partirait sur un vrai téléphone, et une notification poussée par erreur ne se rattrape pas, elle a déjà sonné |
+| `BACKUP_R2_ACCOUNT_ID`, `BACKUP_R2_BUCKET`, `BACKUP_R2_ACCESS_KEY_ID`, `BACKUP_R2_SECRET_ACCESS_KEY` | la sauvegarde nocturne de la base vers R2. **Préfixées exprès** : les `R2_*` sans préfixe servent au stockage des IMAGES, et les confondre écrirait les sauvegardes dans le compartiment des portraits avec les clés des portraits. Deux jetons distincts cloisonnent les deux usages. Absentes, le service démarre et échoue à chaque passage — visible dans `docker compose logs backup` |
+| `BACKUP_SCHEDULE_HOUR_UTC`, `BACKUP_RETENTION_DAYS` | heure du passage (défaut `3`) et rétention (défaut `14` jours) |
 | `SENTRY_DSN` | suivi des erreurs, optionnel |
 | `API_URL` | lue côté serveur par le rendu SSR du web — mettre `http://api:3000` (nom du service Docker, réseau interne), pas le domaine public |
 | `NEXT_PUBLIC_API_URL` | même valeur que la variable GitHub Actions ci-dessus — utile seulement à un `docker compose build` local (en production, l'image publiée la porte déjà) |
