@@ -1,6 +1,7 @@
 import {
   createWishSchema, estActive, occurrenceSchema, updateWishSchema,
-  type CreateWishInput, type GeneratedMessage, type GenerationResult, type Note,
+  type CreateWishInput, type GeneratedMessage, type GenerationKind,
+  type GenerationResult, type Note,
   type Occurrence, type ReceivedWish, type UpdateWishInput, type Wish,
 } from "@lehno/contracts";
 
@@ -282,4 +283,25 @@ export function identifiantDOccasion(brut: string | string[] | undefined): strin
   const seul = Array.isArray(brut) ? brut[0] : brut;
   const lu = occurrenceSchema.shape.id.safeParse(seul);
   return lu.success ? lu.data : null;
+}
+
+/* CE QUI A DÉJÀ ÉTÉ PRODUIT pour une occasion, par nature de génération.
+ *
+ * L'écran de préparation en a besoin autant que celui de l'occasion : sans lui
+ * il propose « Préparer » à quelqu'un qui a déjà son message, et le geste COÛTE
+ * UN CRÉDIT. On lui ferait payer deux fois la même chose sans le prévenir.
+ *
+ * Il DÉLÈGUE aux deux fonctions qui décidaient déjà, plutôt que de refiltrer :
+ * deux prédicats du même fait finissent par diverger, et c'est alors l'écran
+ * qui débite qui se trompe.
+ *
+ * Rend l'identifiant de ce qu'on peut rouvrir, ou `null` s'il n'y a rien.
+ */
+export function dejaProduit(
+  resultats: readonly GenerationResult[],
+  occurrenceId: string,
+  kind: GenerationKind,
+): string | null {
+  if (kind === "gift_ideas") return ideesDeLOccasion(resultats, occurrenceId);
+  return messageDeLOccasion(resultats, occurrenceId)?.generationId ?? null;
 }
