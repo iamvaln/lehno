@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Home, Occurrence } from "@lehno/contracts";
 import {
+  inviteAFaireUneListe,
   MAX_CARTES, MAX_RANGS, MIN_CARTES, REMPLISSAGE_PLEIN, SEUIL_DE_REDIMENSIONNEMENT,
   composeLAccueil, doitRepartirDuMaximum, etatDeLAccueil, retrecit,
 } from "../lib/accueil.js";
@@ -173,5 +174,35 @@ describe("ce que le serveur garde par-devers lui", () => {
 
   it("ne compte rien quand tout est là et tout tient", () => {
     expect(composeLAccueil([echeance(1)], REMPLISSAGE_PLEIN, 0).reste).toBe(0);
+  });
+});
+
+/* L'INVITATION À FAIRE UNE LISTE — « l'autre moitié du produit », proposée sans
+   insister. Trois conditions, et chacune protège d'un défaut précis. */
+describe("l'invitation à faire une liste", () => {
+  const TOUT = ["wishlist.own"];
+
+  it("paraît quand rien n'existe encore et que le drapeau est ouvert", () => {
+    expect(inviteAFaireUneListe("nominal", false, TOUT)).toBe(true);
+    // L'état vide aussi : c'est là que l'écran n'a rien d'autre à proposer.
+    expect(inviteAFaireUneListe("vide", false, TOUT)).toBe(true);
+  });
+
+  /* « Une invitation qui reste après avoir été acceptée devient un reproche. »
+     Sans cette condition, la ligne resterait à vie sur l'écran le plus vu. */
+  it("disparaît dès qu'une liste existe", () => {
+    expect(inviteAFaireUneListe("nominal", true, TOUT)).toBe(false);
+    expect(inviteAFaireUneListe("vide", true, TOUT)).toBe(false);
+  });
+
+  /* Le premier lancement ne poursuit qu'UN but : poser un premier proche. Deux
+     invitations concurrentes n'en font aucune. */
+  it("se tait au premier lancement", () => {
+    expect(inviteAFaireUneListe("premier", false, TOUT)).toBe(false);
+  });
+
+  // Proposer une liste que le service ne sert pas ouvrirait sur un écran fermé.
+  it("se tait quand `wishlist.own` est éteint", () => {
+    expect(inviteAFaireUneListe("nominal", false, [])).toBe(false);
   });
 });

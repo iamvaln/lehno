@@ -197,6 +197,10 @@ export default function Moi() {
                     {etatDuMur(mur) === "publie" ? t.moiMurVisible : t.moiMurDesactive}
                   </Text>
                 </Pressable>
+                {/* CHAQUE ÉTAT PORTE SON GESTE. Publié, on partage ; éteint,
+                    on invite à publier. La carte disait « Mur désactivé » et
+                    n'offrait RIEN — un constat sans issue, alors que la
+                    planche attache une action à chacun des deux états. */}
                 {adresseDuMur ? (
                   <Button
                     variant="text"
@@ -205,12 +209,16 @@ export default function Moi() {
                   >
                     {t.moiPartager}
                   </Button>
-                ) : null}
+                ) : (
+                  <Button variant="text" onPress={() => routeur.push("/(app)/monmur")}>
+                    {t.moiPublierMur}
+                  </Button>
+                )}
               </View>
             </Card>
           ) : null}
 
-          {/* LES WISHLISTS : le décompte se lit, l'écran attend §3.29. */}
+          {/* LES WISHLISTS : le décompte se lit, et chaque état porte son geste. */}
           {listes !== null ? (
             <Card surface="panel" padding={13} radius="lg" style={styles.carte}>
               <View style={styles.ligne}>
@@ -228,6 +236,12 @@ export default function Moi() {
                       : listes === 1 ? t.moiListesUne : t.moiListesN(listes)}
                   </Text>
                 </Pressable>
+                {/* Même règle que le Mur au-dessus : « Aucune liste » sans
+                    geste est une impasse. L'écran des listes existe désormais —
+                    le commentaire qui disait « attend §3.29 » est périmé. */}
+                <Button variant="text" onPress={() => routeur.push("/(app)/listes")}>
+                  {listes > 0 ? t.moiPartager : t.moiCreerListe}
+                </Button>
               </View>
             </Card>
           ) : null}

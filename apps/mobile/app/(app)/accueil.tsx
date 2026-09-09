@@ -5,13 +5,15 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
-  generationsSchema, homeSchema, type Home, type Occurrence,
+  estActive, generationsSchema, homeSchema, wishlistListSchema,
+  type Home, type Occurrence,
 } from "@lehno/contracts";
 import {
-  nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin, nativeTracking,
+  nativeBorder, nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin,
+  nativeTracking,
 } from "@lehno/tokens";
 import {
-  Banner, Button, EmptyState, EventCard, LoadingState, NotificationBell,
+  Banner, Button, EmptyState, EventCard, Icon, LoadingState, NotificationBell,
   SectionLabel, Toast, useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
@@ -22,6 +24,7 @@ import { ecranEteint, preparationOuverte } from "../../lib/navigation.js";
 import { composeLesReprises } from "../../lib/reprises.js";
 import {
   REMPLISSAGE_PLEIN, composeLAccueil, doitRepartirDuMaximum, etatDeLAccueil,
+  inviteAFaireUneListe,
   resumeDeLAccueil,
   retrecit, type Remplissage,
 } from "../../lib/accueil.js";
@@ -59,6 +62,10 @@ export default function Accueil() {
   /* Le remplissage ne se calcule pas, il se mesure — et la mesure NE FAIT QUE
      RÉTRÉCIR. Repartir du maximum à chaque rendu faisait osciller les deux
      gestes l'un contre l'autre, sans fin. */
+  /* `null` = pas encore su. On n'invite PAS tant qu'on ne sait pas : une
+     invitation qui paraît puis s'efface au retour de la requête clignote sur
+     l'écran le plus vu de l'application. */
+  const [aUneListe, setAUneListe] = useState<boolean | null>(null);
   const [remplissage, setRemplissage] = useState<Remplissage>(REMPLISSAGE_PLEIN);
   const [hauteur, setHauteur] = useState<number | null>(null);
 
@@ -85,17 +92,38 @@ export default function Accueil() {
     }
   }, [actives]);
 
+  /* SAVOIR S'IL EXISTE DÉJÀ UNE LISTE, pour ne pas inviter à en faire une.
+     Le drapeau éteint, on ne demande même pas : la ligne ne paraîtra pas de
+     toute façon, et c'est un aller-retour épargné sur l'écran le plus ouvert.
+
+     `/me/home` ne porte pas cette information — c'est signalé au serveur. En
+     l'attendant, l'appel part EN PARALLÈLE des autres, jamais à la file.
+
+     En cas d'échec on répond « il y en a une », donc on n'invite pas : offrir
+     de faire une liste à quelqu'un qui en a déjà est le reproche que la planche
+     nomme, et le silence coûte moins cher. */
+  const regardeSiListe = useCallback(async (): Promise<boolean> => {
+    if (!estActive(actives, "wishlist.own")) return true;
+    try {
+      return wishlistListSchema.parse(await appel<unknown>("/me/wishlists")).length > 0;
+    } catch {
+      return true;
+    }
+  }, [actives]);
+
   const charge = useCallback(async () => {
     try {
       /* En PARALLÈLE : l'accueil est l'écran qu'on ouvre le plus, et deux
          allers-retours en file l'un derrière l'autre doubleraient son attente
          pour une bannière. */
-      const [brut, combien] = await Promise.all([
+      const [brut, combien, deja] = await Promise.all([
         appel<unknown>("/me/home"),
         compteLesReprises(),
+        regardeSiListe(),
       ]);
       setHome(homeSchema.parse(brut));
       setReprises(combien);
+      setAUneListe(deja);
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
@@ -149,6 +177,29 @@ export default function Accueil() {
       </View>
     );
   }
+
+  /* UNE LIGNE, UN CHEVRON — proposée sans insister. C'est « l'autre moitié du
+     produit » : on tient les dates des autres, on peut aussi dire ce qu'on
+     voudrait. La planche la pose dans l'état nominal ET dans l'état vide, où
+     l'écran n'a précisément rien d'autre à offrir. */
+  const invitation = aUneListe !== null && inviteAFaireUneListe(etat, aUneListe, actives) ? (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => routeur.push("/(app)/listes")}
+      style={[styles.invitation, { borderTopColor: couleurs.borderHairline }]}
+    >
+      <Icon name="gift" size={17} color={couleurs.textMention} />
+      <View style={styles.pleine}>
+        <Text style={[styles.invitationTitre, { color: couleurs.textAccent }]}>
+          {t.accueilFaireListe}
+        </Text>
+        <Text style={[styles.invitationSous, { color: couleurs.textMention }]} numberOfLines={1}>
+          {t.accueilFaireListeSous}
+        </Text>
+      </View>
+      <Icon name="chevron-right" size={15} color={couleurs.textMention} />
+    </Pressable>
+  ) : null;
 
   const quoi = (e: Occurrence): string => [
     libelleDeLEcheance(e.kind, e.label, t),
@@ -208,6 +259,7 @@ export default function Accueil() {
             <Button variant="primary" full icon="plus" onPress={() => routeur.push("/note")}>
               {t.laisserNote}
             </Button>
+            {invitation}
           </View>
         </>
       ) : (
@@ -281,7 +333,7 @@ export default function Accueil() {
                   onPress={() => routeur.push({
                     pathname: "/(app)/occasion", params: { occurrenceId: e.id },
                   })}
-                  {...(rang === 0 && preparer ? {
+                  {...(rang === 0 ? (preparer ? {
                     /* « Préparer » sur la PREMIÈRE seulement. Le geste coûte un
                        crédit : le proposer sur trois cartes d'affilée en ferait
                        une barre d'outils au lieu d'une invitation. */
@@ -289,7 +341,23 @@ export default function Accueil() {
                     onPrepare: () => routeur.push({
                       pathname: "/(app)/preparation", params: { occurrenceId: e.id },
                     }),
-                  } : {})}
+                  } : {
+                    /* GÉNÉRATION ÉTEINTE : l'action CHANGE D'IDENTITÉ, elle ne
+                       disparaît pas. La planche est explicite — la carte « ne
+                       doit pas paraître amputée » : sans message à produire,
+                       son geste devient celui du socle, noter une idée pour la
+                       date qui approche. Une action au lieu de deux, mais une
+                       action pleine.
+
+                       Ce n'est pas un cas limite : les idées et le portrait
+                       sont refusés au contrôleur, et le message peut être
+                       éteint au lancement. C'est donc l'état PROBABLE le jour
+                       de l'ouverture, sur l'écran le plus vu. */
+                    prepareLabel: t.cartNoter,
+                    onPrepare: () => routeur.push({
+                      pathname: "/note", params: { personId: e.personId },
+                    }),
+                  }) : {})}
                   {...(rang === 0 && preparer && !envoyes[e.id] ? {
                     /* « Marquer envoyé » ne mène à aucun écran : c'est un état
                        qui change ici, et l'accusé dit à qui. La carte cesse
@@ -315,6 +383,7 @@ export default function Accueil() {
               </View>
             ))}
           </ScrollView>
+          {invitation}
         </>
       )}
 
@@ -373,4 +442,14 @@ const styles = StyleSheet.create({
   rangNom: { fontFamily: nativeFont.displayRegular, fontSize: 16 },
   rangQuoi: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: 2 },
   pied: { marginTop: "auto", paddingTop: nativeSpace[20] },
+  /* Un filet la sépare de ce qui précède : elle n'est pas du même ordre que
+     les échéances, et sans trait elle se lirait comme une quatrième carte. */
+  invitation: {
+    flexDirection: "row", alignItems: "center", gap: nativeSpace[12],
+    marginTop: nativeSpace[12], paddingTop: nativeSpace[12],
+    minHeight: nativeTouchMin, borderTopWidth: nativeBorder.width,
+  },
+  pleine: { flex: 1, minWidth: 0 },
+  invitationTitre: { fontFamily: nativeFont.bodySemibold, fontSize: 14 },
+  invitationSous: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: 1 },
 });
