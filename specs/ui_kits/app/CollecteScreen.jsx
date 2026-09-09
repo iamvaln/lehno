@@ -1,6 +1,7 @@
 import React from "react";
 import { Card } from "../../components/core/Card.jsx";
 import { Button } from "../../components/core/Button.jsx";
+import { TextField } from "../../components/forms/TextField.jsx";
 import { SectionLabel } from "../../components/core/SectionLabel.jsx";
 import { Icon } from "../../components/core/Icon.jsx";
 import { Illustration } from "../../components/brand/Illustration.jsx";
@@ -15,7 +16,9 @@ import { Banner } from "../../components/feedback/Banner.jsx";
    L'intro dit la seule chose qui compte pour décider : ce qui revient ne
    s'enregistre pas tout seul. C'est ce qui rend le partage sans risque. */
 
-export function CollecteScreen({ t, etat = "nominal", reponses = 2, onOpen }) {
+export function CollecteScreen({
+  t, etat = "nominal", qui = "Valery", reponses = 2, onOpen, onFait
+}) {
   const revoque = etat === "revoque";
 
   return (
@@ -52,13 +55,30 @@ export function CollecteScreen({ t, etat = "nominal", reponses = 2, onOpen }) {
         </div>
       </Card>
 
+      {revoque ? null : (
+        <div style={{ marginTop: 16 }}>
+          <TextField platform="mobile" multiline rows={3}
+            label={t.collecteMot(qui.split(" ")[0])}
+            placeholder={t.collecteMotExemple} hint={t.collecteMotAide} />
+        </div>
+      )}
+
       <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
+        {revoque ? null : (
+          <Button platform="mobile" full variant="outline" icon="eye"
+            onClick={() => onOpen && onOpen("surface", { etat: "collecte" })}>
+            {t.collecteApercu}
+          </Button>
+        )}
         {revoque ? (
-          <Button platform="mobile" full icon="link">{t.collecteReactiver}</Button>
+          <Button platform="mobile" full icon="link"
+          onClick={() => onFait && onFait(t.collecteReactiveFait)}>{t.collecteReactiver}</Button>
         ) : (
           <>
-            <Button platform="mobile" full icon="share-2">{t.collectePartager}</Button>
-            <Button platform="mobile" full variant="outline" icon="copy">{t.collecteCopier}</Button>
+            <Button platform="mobile" full icon="share-2"
+            onClick={() => onFait && onFait(t.resEnvoyerVia)}>{t.collectePartager}</Button>
+            <Button platform="mobile" full variant="outline" icon="copy"
+            onClick={() => onFait && onFait(t.lienCopieFait)}>{t.collecteCopier}</Button>
           </>
         )}
       </div>
@@ -84,7 +104,8 @@ export function CollecteScreen({ t, etat = "nominal", reponses = 2, onOpen }) {
       </div>
 
       {revoque ? null : (
-        <Button platform="mobile" full variant="text" style={{ marginTop: 20 }}>
+        <Button platform="mobile" full variant="text" style={{ marginTop: 20 }}
+          onClick={() => onFait && onFait(t.collecteRevoqueFait)}>
           {t.collecteRevoquer}
         </Button>
       )}

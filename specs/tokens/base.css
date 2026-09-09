@@ -1,0 +1,55 @@
+/* Remises à zéro minimales et classes utilitaires de marque.
+   Rien ici ne remplace les tokens : c'est la colle. */
+
+.lehno-display {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-weight: var(--font-display-medium);
+  letter-spacing: var(--tracking-title);
+}
+
+/* L'italique de Fraunces marque ce que quelqu'un a dit ou écrit. */
+.lehno-parole {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-style: italic;
+  font-weight: var(--font-display-regular);
+}
+
+.lehno-kicker {
+  font-family: var(--font-body);
+  font-size: var(--text-kicker);
+  font-weight: var(--font-body-semibold);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--text-mention);
+}
+
+/* Le focus clavier ne se supprime jamais. */
+.lehno-focusable:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* Ossature d'attente : elle pulse, elle ne défile pas — rien ne traverse
+   l'écran pendant un chargement. */
+.lehno-pouls {
+  background: var(--border-hairline);
+  animation: lehno-pouls 1.4s var(--ease-pose) infinite;
+}
+@keyframes lehno-pouls { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+
+.lehno-tourne { animation: lehno-tourne 720ms linear infinite; }
+@keyframes lehno-tourne { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lehno-pouls, .lehno-tourne { animation: none; }
+  .lehno-pouls { opacity: .7; }
+}
+
+/* Réservé aux lecteurs d'écran — un état d'attente doit s'annoncer même
+   quand il n'est fait que de formes. */
+.lehno-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}

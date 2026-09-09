@@ -1,0 +1,49 @@
+<!-- @dsCard group="Components" viewport="700x175" name="Navigation — barre d'onglets" subtitle="Accueil · Dates · Proches · Moi" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@0.417.0/dist/umd/lucide.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../components/_card-boot.js"></script>
+<style>
+  html, body { margin: 0; }
+  body { font-family: var(--font-body); background: var(--surface-page);
+         color: var(--text-body); padding: 18px 20px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .col { display: grid; gap: 10px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; }
+  .pane { padding: 16px 18px; }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+         font-weight: 600; color: var(--text-mention); margin-bottom: 10px; }
+</style>
+</head>
+<body style="padding:0">
+<div id="root"></div>
+<script type="text/lehno">
+const C = await window.lehnoBoot(["../core/Icon.jsx","./TabBar.jsx"]);
+const { TabBar } = C;
+function Demo() {
+  const [a, setA] = React.useState("accueil");
+  const [b, setB] = React.useState("dates");
+  const frame = { border: "1px solid var(--border-object)", borderRadius: 14, overflow: "hidden" };
+  return (
+    <div className="pair">
+      <div className="pane">
+        <div className="lbl">Thème clair</div>
+        <div style={frame}><TabBar active={a} onSelect={setA} style={{ borderTop: "none" }} /></div>
+      </div>
+      <div className="pane lehno-nuit" style={{ background: "var(--surface-page)", color: "var(--text-body)" }}>
+        <div className="lbl">Thème sombre</div>
+        <div style={frame}><TabBar active={b} onSelect={setB} style={{ borderTop: "none" }} /></div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>
+</body>
+</html>

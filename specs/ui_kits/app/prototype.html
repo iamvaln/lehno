@@ -63,6 +63,7 @@ const C = await window.lehnoBoot([
   "../../components/feedback/OfflineBanner.jsx",
   "../../components/brand/Illustration.jsx",
   "../../components/feedback/PaidActionSheet.jsx",
+  "../../components/feedback/ConfirmSheet.jsx",
   "../../components/feedback/EmptyState.jsx",
   "../../components/feedback/LoadingState.jsx",
   "../../components/navigation/TabBar.jsx",
@@ -100,39 +101,63 @@ const C = await window.lehnoBoot([
   "./BienvenueScreen.jsx",
   "./NoteScreen.jsx",
   "./EvenementScreen.jsx",
+  "./MaintenanceScreen.jsx",
+  "./ListesScreen.jsx",
   "./RechercheScreen.jsx",
   "./SouhaitScreen.jsx",
-  "./OccasionScreen.jsx"
+  "./OccasionScreen.jsx",
+  "./ReglagesHubScreen.jsx"
 ]);
 
 const {
-  COPY, PROCHES, PhoneFrame, MODELES, AppHeader, TabBar, Button,
+  COPY, PROCHES, PROCHES_LONG, SOUHAITS_PROCHE, MES_LISTES, MES_DATES, MOUVEMENTS, PhoneFrame, MODELES, AppHeader, TabBar, Button,
   AccueilScreen, DatesScreen, ProchesScreen, ProcheScreen, PreparationScreen, MoiScreen,
-  GenerationScreen, PaidActionSheet, NotificationsScreen, AValiderScreen, ReprisesScreen,
-  CollecteScreen, IdentiteScreen, PortraitScreen, StudioScreen, SurfacePubliqueScreen, CadrageIdeesScreen, RechargeScreen, ParrainageScreen, MonMurScreen,
-  ProfilScreen, ReglagesScreen, SecuriteScreen, PaiementScreen, AideScreen, ReservationsScreen,
+  GenerationScreen, PaidActionSheet, ConfirmSheet, NotificationsScreen, AValiderScreen, ReprisesScreen,
+  DonneesScreen, CompteFermeScreen, CollecteScreen, IdentiteScreen, PortraitScreen, StudioScreen, SurfacePubliqueScreen, CadrageIdeesScreen, RechargeScreen, ParrainageScreen, MonMurScreen,
+  ProfilScreen, RappelsScreen, ReglagesHubScreen, SecuriteScreen, PaiementScreen, AideScreen, ReservationsScreen,
   SplashScreen, ConnexionScreen, CodeScreen, PseudoScreen, BienvenueScreen,
-  NoteScreen, EvenementScreen, RechercheScreen, SouhaitScreen, OccasionScreen
+  NoteScreen, EvenementScreen, MaintenanceScreen, ListesScreen, RechercheScreen, SouhaitScreen, OccasionScreen
 } = C;
 
 /* Les écrans, dans l'ordre de la spec. « etats » liste ceux que l'écran sait
    jouer — la spec §6 les impose, et c'est le rail de droite qui les expose. */
+const PROFILS = {
+  tout: {},
+  lancement: {
+    eventsOther: false, topupProvider: false, credits: true, topupManual: true,
+    generation: false, wishlist: false, wishlistOwn: false, wall: false,
+    collect: true, wishes: false, reservation: false, referral: false,
+    moi: false
+  },
+  /* Le cas qui piège, à part : l'achat s'éteint et les générations restent —
+     gratuites. Aucun prix, aucun solde ne doit paraître sur leur chemin. */
+  gratuit: { credits: false, topupProvider: false, topupManual: true }
+};
+/* Les écrans qu'un profil fait disparaître : plus rien ne doit y mener. */
+const ETEINTS = {
+  gratuit: ["paiement"],
+  lancement: ["moi", "listes", "souhait", "monmur", "reservations",
+    "preparation", "generation", "portrait", "studio", "reprises",
+    "cadrage", "parrainage", "paiement"]
+};
+
 const ECRANS = [
   { id: "splash", num: "—", nom: { fr: "Ouverture", en: "Launch" }, chrome: false, etats: ["nominal"] },
   { id: "connexion", num: "3.1", nom: { fr: "Connexion", en: "Sign in" }, chrome: false, etats: ["nominal", "erreur"] },
-  { id: "code", num: "3.1", nom: { fr: "Code reçu", en: "Code" }, chrome: false, etats: ["nominal", "erreur", "expire"] },
+  { id: "code", num: "3.1", nom: { fr: "Code reçu", en: "Code" }, chrome: false, etats: ["nominal", "connu", "erreur", "expire"] },
   { id: "pseudo", num: "3.1", nom: { fr: "Pseudo", en: "Handle" }, chrome: false, etats: ["nominal", "erreur"] },
   { id: "bienvenue", num: "3.1", nom: { fr: "Bienvenue", en: "Welcome" }, chrome: false, etats: ["nominal"] },
   { id: "accueil", num: "3.2", nom: { fr: "Accueil", en: "Home" }, onglet: "accueil", etats: ["nominal", "premier", "vide", "chargement"] },
-  { id: "proches", num: "3.3", nom: { fr: "Proches", en: "People" }, onglet: "proches", etats: ["nominal", "vide", "chargement"] },
+  { id: "proches", num: "3.3", nom: { fr: "Proches", en: "People" }, onglet: "proches", etats: ["nominal", "carnet", "vide", "chargement"] },
   { id: "proche", num: "3.4", nom: { fr: "Fiche d'un proche", en: "A person" }, titre: "Valery Bah", etats: ["nominal"] },
   { id: "note", num: "3.5", nom: { fr: "Saisie d'une note", en: "Write a note" }, titre: { fr: "Nouvelle note", en: "New note" }, etats: ["nominal", "chargement", "erreur", "horsligne"] },
   { id: "evenement", num: "3.6", nom: { fr: "Ajouter une date", en: "Add a date" }, titre: { fr: "Nouvelle date", en: "New date" }, etats: ["nominal", "sensible", "erreur"] },
+  { id: "maintenance", num: "3.30", nom: { fr: "Maintenance", en: "Maintenance" }, chrome: false, etats: ["nominal", "heure"] },
   { id: "recherche", num: "3.15", nom: { fr: "Recherche", en: "Search" }, chrome: false, etats: ["nominal", "vide"] },
-  { id: "souhait", num: "3.19", nom: { fr: "Un souhait", en: "A wish" }, titre: { fr: "Souhait", en: "Wish" }, etats: ["nominal", "reserve", "vide", "horsligne", "anonyme"] },
-  { id: "occasion", num: "3.21", nom: { fr: "Une occasion", en: "An occasion" }, titre: { fr: "24 août", en: "24 Aug" }, etats: ["nominal", "sensible", "passee", "solde", "horsligne"] },
-  { id: "dates", num: "3.14", nom: { fr: "Dates", en: "Dates" }, onglet: "dates", etats: ["nominal", "liste"] },
-  { id: "preparation", num: "3.7", nom: { fr: "Préparer", en: "Prepare" }, titre: { fr: "Préparer", en: "Prepare" }, etats: ["nominal", "sensible", "solde", "horsligne"] },
+  { id: "souhait", num: "3.19", nom: { fr: "Un souhait", en: "A wish" }, titre: { fr: "Souhait", en: "Wish" }, etats: ["nominal", "reserve", "offert", "vide", "horsligne", "anonyme"] },
+  { id: "occasion", num: "3.21", nom: { fr: "Une occasion", en: "An occasion" }, titre: { fr: "24 août", en: "24 Aug" }, etats: ["nominal", "prepare", "sensible", "passee", "solde", "horsligne"] },
+  { id: "dates", num: "3.14", nom: { fr: "Dates", en: "Dates" }, onglet: "dates", etats: ["nominal", "liste", "vide"] },
+  { id: "preparation", num: "3.7", nom: { fr: "Préparer", en: "Prepare" }, titre: { fr: "Préparer", en: "Prepare" }, etats: ["nominal", "produit", "sensible", "solde", "horsligne"] },
   { id: "generation", num: "3.7", nom: { fr: "Ce que Lehno a écrit", en: "What Lehno wrote" }, titre: { fr: "Préparer", en: "Prepare" }, etats: ["message", "idees", "attente", "erreur"] },
   { id: "notifications", num: "3.13", nom: { fr: "Notifications", en: "Notifications" }, chrome: false, etats: ["nominal", "vide"] },
   { id: "valider", num: "3.8", nom: { fr: "À valider", en: "To review" }, titre: { fr: "À valider", en: "To review" }, etats: ["nominal", "vide"] },
@@ -140,38 +165,88 @@ const ECRANS = [
   { id: "collecte", num: "3.20", nom: { fr: "Lien de collecte", en: "Collection link" }, titre: { fr: "Faire compléter", en: "Have it filled in" }, etats: ["nominal", "revoque"] },
   { id: "identite", num: "3.18", nom: { fr: "Identité d'un proche", en: "Their details" }, titre: { fr: "Valery Bah", en: "Valery Bah" }, etats: ["nominal", "collecte"] },
   { id: "cadrage", num: "3.7", nom: { fr: "Cadrer les idées", en: "Frame the ideas" }, titre: { fr: "Cadrer les idées", en: "Frame the ideas" }, etats: ["nominal", "solde"] },
-  { id: "surface", num: "3.12", nom: { fr: "Un lien public", en: "A public link" }, titre: { fr: "Awa Diop", en: "Awa Diop" }, etats: ["voeu", "connecte", "mur", "collecte", "revoque", "voeuxclos"] },
+  { id: "surface", num: "3.12", nom: { fr: "Un lien public", en: "A public link" }, titre: { fr: "Célarine", en: "Célarine" }, etats: ["voeu", "connecte", "mur", "liste", "collecte", "revoque", "voeuxclos"] },
   { id: "studio", num: "3.7", nom: { fr: "Studio du portrait", en: "Portrait studio" }, titre: { fr: "Le studio", en: "The studio" }, etats: ["nominal", "solde"] },
   { id: "portrait", num: "3.22", nom: { fr: "Un portrait", en: "A portrait" }, titre: { fr: "Le portrait", en: "The portrait" }, etats: ["nominal", "avalider", "partage", "vide"] },
-  { id: "recharge", num: "3.9", nom: { fr: "Recharger", en: "Top up" }, titre: { fr: "Recharger", en: "Top up" }, etats: ["nominal", "attente", "abouti", "echec"] },
+  { id: "recharge", num: "3.9", nom: { fr: "Recharger", en: "Top up" }, titre: { fr: "Recharger", en: "Top up" }, etats: ["nominal", "recap", "attente", "abouti", "echec"] },
   { id: "parrainage", num: "3.9", nom: { fr: "Parrainage", en: "Referral" }, titre: { fr: "Parrainage", en: "Referral" }, etats: ["nominal", "vide"] },
-  { id: "monmur", num: "3.10", nom: { fr: "Mon Mur", en: "My Wall" }, titre: { fr: "Mon Mur", en: "My Wall" }, etats: ["nominal", "prive", "aucunmot"] },
+  { id: "listes", num: "3.29", nom: { fr: "Mes wishlists", en: "My wishlists" }, titre: { fr: "Mes wishlists", en: "My wishlists" }, etats: ["nominal", "vide", "creation"] },
+  { id: "monmur", num: "3.10", nom: { fr: "Mon Mur", en: "My Wall" }, titre: { fr: "Mon Mur", en: "My Wall" }, etats: ["nominal", "prive", "aucunmot", "epingle"] },
   { id: "profil", num: "3.23", nom: { fr: "Mon profil", en: "My profile" }, titre: { fr: "Mon profil", en: "My profile" }, etats: ["nominal", "erreur"] },
-  { id: "reglages", num: "3.11", nom: { fr: "Rappels", en: "Reminders" }, titre: { fr: "Rappels", en: "Reminders" }, etats: ["nominal", "refuse"] },
+  { id: "rappels", num: "3.11", nom: { fr: "Rappels", en: "Reminders" }, titre: { fr: "Rappels", en: "Reminders" }, etats: ["nominal", "refuse", "muet"] },
   { id: "securite", num: "3.24", nom: { fr: "Sécurité", en: "Security" }, titre: { fr: "Sécurité", en: "Security" }, etats: ["nominal", "inhabituelle"] },
   { id: "paiement", num: "3.25", nom: { fr: "Paiement", en: "Payment" }, titre: { fr: "Paiement", en: "Payment" }, etats: ["nominal", "vide", "expire"] },
   { id: "reservations", num: "3.27", nom: { fr: "Mes réservations", en: "My reservations" }, titre: { fr: "Réservations", en: "Reservations" }, etats: ["nominal", "vide"] },
+  { id: "donnees", num: "3.31", nom: { fr: "Mes données", en: "My data" }, titre: { fr: "Mes données", en: "My data" }, etats: ["nominal", "suppression"] },
+  { id: "compteferme", num: "—", nom: { fr: "Compte fermé", en: "Account closed" },
+    chrome: false, etats: ["nominal"] },
   { id: "aide", num: "3.26", nom: { fr: "Aide", en: "Help" }, titre: { fr: "Aide", en: "Help" }, etats: ["nominal"] },
-  { id: "moi", num: "3.17", nom: { fr: "Moi", en: "Me" }, onglet: "moi", etats: ["nominal"] }
+  { id: "moi", num: "3.17", nom: { fr: "Moi", en: "Me" }, onglet: "moi", etats: ["nominal", "premier", "sansListe", "prive"] },
+  { id: "reglagesHub", num: "3.28", nom: { fr: "Réglages", en: "Settings" }, onglet: "reglagesHub", etats: ["nominal"] }
 ];
 
 const ETIQUETTES = {
-  fr: { nominal: "Nominal", premier: "Premier lancement", vide: "Vide", chargement: "Chargement", expire: "Code expiré",
-        erreur: "Erreur", horsligne: "Hors connexion", sensible: "Date sensible",
-        solde: "Solde insuffisant", reserve: "Réservé", anonyme: "Réservé, sans nom", voeu: "Un vœu", connecte: "Reconnu", mur: "Un Mur", collecte: "Une collecte", revoque: "Lien révoqué", voeuxclos: "Vœux clos", passee: "Passée",
-        message: "Le message", idees: "Les idées", portrait: "Le portrait", attente: "Attente",
-        revoque: "Lien révoqué", collecte: "Née d'une collecte", avalider: "À approuver", partage: "Déjà partagé",
-        attente: "Attente mobile money", abouti: "Paiement abouti", echec: "Paiement échoué",
-        prive: "Hors ligne", refuse: "Notifications refusées", inhabituelle: "Connexion inhabituelle", expire: "Expirée",
-        aucunmot: "Aucun mot reçu" },
-  en: { nominal: "Default", premier: "First launch", vide: "Empty", chargement: "Loading", expire: "Expired code",
-        erreur: "Error", horsligne: "Offline", sensible: "Sensitive date",
-        solde: "Not enough credits", reserve: "Reserved", anonyme: "Reserved, no name", voeu: "A note", connecte: "Recognised", mur: "A Wall", collecte: "A collection", revoque: "Revoked link", voeuxclos: "Wishes closed", passee: "Past",
-        message: "The message", idees: "The ideas", portrait: "The portrait", attente: "Waiting",
-        revoque: "Revoked link", collecte: "From a collection", avalider: "To approve", partage: "Already shared",
-        attente: "Mobile money wait", abouti: "Payment went through", echec: "Payment failed",
-        prive: "Offline", refuse: "Notifications off", inhabituelle: "Unusual sign-in", expire: "Expired",
-        aucunmot: "No note received" }
+  fr: { nominal: "Nominal", carnet: "Carnet fourni", premier: "Premier lancement", vide: "Vide",
+        chargement: "Chargement", erreur: "Erreur", horsligne: "Hors connexion",
+        sensible: "Date sensible", solde: "Solde insuffisant", reserve: "Réservé",
+        offert: "Déjà offert", anonyme: "Réservé, sans nom", voeu: "Un vœu", connecte: "Reconnu",
+        mur: "Un Mur", liste: "Une wishlist", collecte: "Une collecte", revoque: "Lien révoqué",
+        voeuxclos: "Vœux clos", passee: "Passée", heure: "Heure de retour connue",
+        sansListe: "Sans wishlist", message: "Le message", idees: "Les idées",
+        portrait: "Le portrait", attente: "Attente", avalider: "À approuver",
+        partage: "Déjà partagé", recap: "Avant de payer", abouti: "Paiement abouti",
+        echec: "Paiement échoué", prive: "Mur non publié", refuse: "Notifications refusées",
+        inhabituelle: "Connexion inhabituelle", expire: "Expiré",
+        aucunmot: "Aucun mot reçu", epingle: "Un mot épinglé", nouveau: "Création",
+        produit: "Déjà produit", prepare: "Déjà travaillée", connu: "Compte existant", suppression: "Fermer mon compte", muet: "Tous les canaux coupés", creation: "Nouvelle wishlist" },
+  en: { nominal: "Default", carnet: "Full notebook", premier: "First launch", vide: "Empty",
+        chargement: "Loading", erreur: "Error", horsligne: "Offline",
+        sensible: "Sensitive date", solde: "Not enough credits", reserve: "Reserved",
+        offert: "Already given", anonyme: "Reserved, no name", voeu: "A note", connecte: "Recognised",
+        mur: "A Wall", liste: "A wishlist", collecte: "A collection", revoque: "Revoked link",
+        voeuxclos: "Wishes closed", passee: "Past", heure: "Return time known",
+        sansListe: "No wishlist", message: "The message", idees: "The ideas",
+        portrait: "The portrait", attente: "Waiting", avalider: "To approve",
+        partage: "Already shared", recap: "Before paying", abouti: "Payment went through",
+        echec: "Payment failed", prive: "Wall unpublished", refuse: "Notifications off",
+        inhabituelle: "Unusual sign-in", expire: "Expired",
+        aucunmot: "No note received", epingle: "One note pinned", nouveau: "Creation",
+        produit: "Already generated", prepare: "Already worked on", connu: "Existing account", suppression: "Close my account", muet: "All channels off", creation: "New wishlist" }
+};
+
+/* Le même identifiant d'état ne dit pas la même chose partout : « liste » est
+   une vue sur Dates et une wishlist sur une surface publique. L'écran a donc le
+   dernier mot sur le libellé, et le dictionnaire général sert de repli. */
+const ETIQ_ECRAN = {
+  dates:     { liste: { fr: "Vue liste", en: "List view" } },
+  identite:  { collecte: { fr: "Née d'une collecte", en: "From a collection" } },
+  code:      { expire: { fr: "Code expiré", en: "Expired code" } },
+  paiement:  { expire: { fr: "Carte expirée", en: "Card expired" } },
+  recharge:  { attente: { fr: "Attente mobile money", en: "Mobile money wait" } },
+  collecte:  { revoque: { fr: "Lien révoqué", en: "Revoked link" } },
+  monmur:    { prive: { fr: "Mur non publié", en: "Wall unpublished" } },
+  souhait:   { horsligne: { fr: "Hors connexion", en: "Offline" } }
+};
+
+const nomEtat = (ecranId, k, langue) => {
+  const par = ETIQ_ECRAN[ecranId];
+  if (par && par[k]) return par[k][langue];
+  return (ETIQUETTES[langue] || {})[k] || k;
+};
+
+/* Chaque surface publique dépend de son drapeau : l'aperçu visiteur reste
+   ouvert tant qu'une seule de ses pages existe, mais il ne propose que les
+   pages ouvertes. */
+const ETAT_DRAPEAU = {
+  surface: { voeu: "wishes", voeuxclos: "wishes", mur: "wall",
+    liste: "wishlistOwn", connecte: "wishlistOwn",
+    collecte: "collect", revoque: "collect" }
+};
+const etatsOuverts = (ecr, flags) => {
+  const carte = ETAT_DRAPEAU[ecr.id];
+  if (!carte) return ecr.etats;
+  const gardes = ecr.etats.filter((k) => !carte[k] || flags[carte[k]] !== false);
+  return gardes.length ? gardes : ecr.etats;
 };
 
 function App() {
@@ -180,41 +255,107 @@ function App() {
   const [nuit, setNuit] = React.useState(false);
   const [langue, setLangue] = React.useState("fr");
   const [modele, setModele] = React.useState("standard");
+  const [profil, setProfil] = React.useState("tout");
   const [os, setOs] = React.useState("ios");
+  const [notation, setNotation] = React.useState("barre");
   const [feuille, setFeuille] = React.useState(null);
+  /* Le retrait d'un souhait : ce qu'il emporte dépend de l'état, et l'écran
+     n'apprend l'issue qu'une fois accordée. */
+  const [retrait, setRetrait] = React.useState(null);
   /* Le sujet du clic, retenu jusqu'au détail : c'est ce qui manquait pour que
-     toucher Awa ouvre la fiche d'Awa. */
+     toucher Célarine ouvre la fiche d'Célarine. */
   const [sujet, setSujet] = React.useState(null);
+  /* La charge du clic, au-delà du nom : la note qu'on vient de toucher. */
+  const [charge, setCharge] = React.useState(null);
   const [solde, setSolde] = React.useState(4);
+  const [produits, setProduits] = React.useState({ message: true });
   const [toast, setToast] = React.useState(null);
 
   React.useEffect(() => { document.body.classList.toggle("lehno-nuit", nuit); }, [nuit]);
 
-  const t = { ...COPY[langue], nuit };
+  const t = {
+    ...COPY[langue], nuit,
+    decompte: notation === "phrase" ? COPY[langue].decomptePhrase : COPY[langue].decompteBarre
+  };
   const ecran = ECRANS.find((e) => e.id === ecranId) || ECRANS[4];
 
   /* Changer d'écran remet l'état sur celui que le nouvel écran sait jouer :
      un « hors connexion » n'a pas de sens sur la connexion. */
+  const pile = React.useRef([]);
+  const empiler = () => pile.current.push({ id: ecranId, etat, sujet, charge });
+
+  const flags = PROFILS[profil] || PROFILS.tout;
+  const eteints = ETEINTS[profil] || [];
+
   const aller = (id) => {
     const suivant = ECRANS.find((e) => e.id === id);
     if (!suivant) return;
+    if (suivant.onglet) pile.current = [];
+    else if (id !== ecranId) empiler();
     setEcranId(id);
-    if (suivant.etats.indexOf(etat) < 0) setEtat(suivant.etats[0]);
+    const ouverts = etatsOuverts(suivant, flags);
+    if (ouverts.indexOf(etat) < 0) setEtat(ouverts[0]);
   };
 
-  const props = { t, etat, qui: sujet || undefined,
-    onOpen: (id, personne) => { setSujet(personne && personne.nom ? personne.nom : null); aller(id); },
+  /* Le retour rend l'écran d'où l'on vient, avec son sujet et son état — sans
+     pile, il ramenait tout le monde à l'accueil. */
+  const retour = () => {
+    const p = pile.current.pop();
+    if (!p) { setEcranId("accueil"); setEtat("nominal"); return; }
+    setEcranId(p.id); setEtat(p.etat); setSujet(p.sujet); setCharge(p.charge);
+  };
+
+  /* Le palier se crédite une fois, quand le paiement aboutit — pas à chaque
+     passage sur l'écran d'issue. */
+  const credite = React.useRef(false);
+  React.useEffect(() => {
+    const abouti = ecranId === "recharge" && etat === "abouti";
+    if (abouti && !credite.current) { credite.current = true; setSolde((v) => v + 12); }
+    if (!abouti) credite.current = false;
+  }, [ecranId, etat]);
+
+  const props = { t, etat, flags, qui: sujet || undefined, note: charge && charge.note,
+    depuis: charge && charge.jour ? charge : undefined,
+    quand: charge && charge.date ? charge : undefined,
+    onSupprimer: () => { setCharge(null); aller("proche"); },
+    onOpen: (id, personne) => {
+      setSujet(personne && personne.nom ? personne.nom : null);
+      setCharge(personne || null);
+      aller(id);
+      if (personne && personne.etat) {
+        const cible = ECRANS.find((e) => e.id === id);
+        if (cible && cible.etats.indexOf(personne.etat) >= 0) setEtat(personne.etat);
+      }
+    },
     onSuite: () => aller(ecran.id === "splash" ? "connexion"
     : ecran.id === "connexion" ? "code"
-    : ecran.id === "code" ? "pseudo" : ecran.id === "pseudo" ? "bienvenue" : "accueil"),
-    onRetour: () => aller("proches"), onEnregistrer: () => aller("accueil"),
+    : ecran.id === "code" ? (etat === "connu" ? "accueil" : "pseudo")
+    : ecran.id === "pseudo" ? "bienvenue" : "accueil"),
+    /* Une date enregistrée se retrouve là où on va la chercher : le calendrier.
+       Les autres formulaires reviennent à l'accueil. */
+    onRetour: retour,
+    onEnregistrer: () => aller(ecran.id === "evenement" ? "dates" : "accueil"),
+    onRetirer: (reserve, fait) => setRetrait({ reserve, fait }),
     onInviter: () => aller("parrainage"),
     onRecherche: () => aller("recherche"), base: "../../", solde,
+    mouvements: MOUVEMENTS[langue],
+    onLangue: (k) => setLangue(k),
 
-    /* Le chemin payant : rien ne se lance sans que le coût soit annoncé. */
-    onLancer: (quoi) => setFeuille(quoi),
+    /* Le chemin payant : rien ne se lance sans que le coût soit annoncé — et
+       quand il n'y a plus de coût, la feuille de confirmation n'a plus rien à
+       annoncer : le geste part directement. */
+    onLancer: (quoi) => {
+      if (flags.credits === false) {
+        empiler();
+        setEcranId("generation");
+        setEtat(quoi === "idees" ? "idees" : "message");
+        return;
+      }
+      setFeuille(quoi);
+    },
     /* Un portrait est une image : il a son propre écran. */
     onVoir: (quoi) => {
+      empiler();
       if (quoi === "portrait") { setEcranId("portrait"); setEtat("nominal"); return; }
       setEcranId("generation"); setEtat(quoi === "idees" ? "idees" : "message");
     },
@@ -223,8 +364,7 @@ function App() {
     onEnvoyer: () => { setToast(t.resEnvoyerVia); setTimeout(() => setToast(null), 2400); },
     onCopier: () => { setToast(t.resCopie); setTimeout(() => setToast(null), 2200); },
     onFait: (m) => { setToast(m); setTimeout(() => setToast(null), 2600); },
-    onPayer: () => { setEcranId("recharge"); setEtat("attente");
-      setTimeout(() => { setEtat("abouti"); setSolde((v) => v + 12); }, 2400); } };
+    onPayer: () => { empiler(); setEcranId("recharge"); setEtat("attente"); } };
 
   const NOMS = { portrait: t.prepPortraitTitre, idees: t.prepIdeesTitre, message: t.prepMessageTitre };
   const RESULTATS = { portrait: t.prepPortraitTexte, idees: t.prepIdeesTexte, message: t.prepMessageTexte };
@@ -236,9 +376,11 @@ function App() {
     const quoi = feuille;
     setFeuille(null);
     setSolde((v) => Math.max(0, v - 1));
+    empiler();
     setEcranId("generation");
     setEtat("attente");
     setTimeout(() => {
+      setProduits((v) => ({ ...v, [quoi]: true }));
       if (quoi === "portrait") { setEcranId("portrait"); setEtat("avalider"); return; }
       setEtat(quoi === "idees" ? "idees" : "message");
     }, 2200);
@@ -251,41 +393,92 @@ function App() {
     case "code": vue = <CodeScreen {...props} />; break;
     case "pseudo": vue = <PseudoScreen {...props} />; break;
     case "bienvenue": vue = <BienvenueScreen {...props} />; break;
-    case "proches": vue = <ProchesScreen {...props} gens={PROCHES} />; break;
-    case "proche": vue = <ProcheScreen {...props} />; break;
-    case "note": vue = <NoteScreen {...props} />; break;
-    case "evenement": vue = <EvenementScreen {...props} />; break;
+    case "proches": vue = <ProchesScreen {...props}
+      gens={etat === "carnet" ? PROCHES_LONG : PROCHES}
+      etat={etat === "carnet" ? "nominal" : etat} />; break;
+    case "proche": vue = <ProcheScreen {...props}
+      personne={charge && charge.nom ? charge : undefined} />; break;
+    case "note": vue = <NoteScreen {...props} gens={PROCHES} />; break;
+    case "evenement": vue = <EvenementScreen {...props} gens={PROCHES} />; break;
+    case "maintenance": vue = <MaintenanceScreen {...props} onReessayer={() => aller("accueil")} />; break;
     case "recherche": vue = <RechercheScreen {...props} gens={PROCHES} />; break;
-    case "souhait": vue = <SouhaitScreen {...props} />; break;
-    case "occasion": vue = <OccasionScreen {...props} />; break;
+    case "souhait": vue = <SouhaitScreen {...props}
+      key={(charge && charge.nouveau ? "nouveau" : "fiche")
+        + (charge && charge.mien === false ? "-pour" : "")}
+      mien={!(charge && charge.mien === false)}
+      nouveau={!!(charge && charge.nouveau)}
+      souhait={charge && charge.quoi ? charge : undefined} />; break;
+    case "occasion": vue = <OccasionScreen {...props}
+      souhaits={SOUHAITS_PROCHE[langue]} />; break;
     case "dates": vue = <DatesScreen {...props} />; break;
-    case "preparation": vue = <PreparationScreen {...props} />; break;
+    case "preparation": vue = <PreparationScreen {...props} faits={produits} />; break;
     case "generation": vue = <GenerationScreen {...props} />; break;
     case "notifications": vue = <NotificationsScreen {...props} />; break;
     case "valider": vue = <AValiderScreen {...props} />; break;
     case "reprises": vue = <ReprisesScreen {...props} />; break;
     case "collecte": vue = <CollecteScreen {...props} />; break;
-    case "identite": vue = <IdentiteScreen {...props} />; break;
+    case "identite": vue = <IdentiteScreen {...props}
+      key={charge && charge.nouveau ? "nouveau" : "fiche"}
+      nouveau={!!(charge && charge.nouveau)} />; break;
     case "portrait": vue = <PortraitScreen {...props} />; break;
     case "studio": vue = <StudioScreen {...props} />; break;
-    case "surface": vue = <SurfacePubliqueScreen {...props} />; break;
+    case "surface": {
+      const mienne = sujet === "Valentine";
+      const maListe = mienne
+        ? (MES_LISTES[langue].find((x) => x.id === (charge && charge.listeId))
+           || MES_LISTES[langue][0])
+        : null;
+      const leProche = mienne ? null : PROCHES.find((p) => p.nom === sujet);
+      vue = <SurfacePubliqueScreen {...props} mien={mienne}
+        souhaits={mienne ? maListe.souhaits : SOUHAITS_PROCHE[langue]}
+        listeQuand={mienne ? maListe.quand
+          : (leProche ? (langue === "fr" ? leProche.date : (leProche.dateEn || leProche.date))
+             : undefined)} />;
+      break;
+    }
     case "cadrage": vue = <CadrageIdeesScreen {...props} />; break;
     case "recharge": vue = <RechargeScreen {...props} />; break;
     case "parrainage": vue = <ParrainageScreen {...props} />; break;
-    case "monmur": vue = <MonMurScreen {...props} />; break;
+    case "listes": vue = <ListesScreen {...props}
+      souhaits={SOUHAITS_PROCHE[langue]} listes={MES_LISTES[langue]}
+      mesDates={MES_DATES[langue]} />; break;
+    case "monmur": vue = <MonMurScreen {...props}
+      onglet={charge && charge.onglet ? charge.onglet : "page"} />; break;
     case "profil": vue = <ProfilScreen {...props} />; break;
-    case "reglages": vue = <ReglagesScreen {...props} />; break;
+    case "rappels": vue = <RappelsScreen {...props} />; break;
+    case "reglagesHub": vue = <ReglagesHubScreen {...props} />; break;
     case "securite": vue = <SecuriteScreen {...props} />; break;
     case "paiement": vue = <PaiementScreen {...props} />; break;
+    case "donnees": vue = <DonneesScreen {...props}
+      onFerme={() => aller("compteferme")} />; break;
+    case "compteferme": vue = <CompteFermeScreen {...props}
+      onSuite={() => aller("connexion")} />; break;
     case "aide": vue = <AideScreen {...props} />; break;
     case "reservations": vue = <ReservationsScreen {...props} />; break;
     case "moi": vue = <MoiScreen {...props} />; break;
-    default: vue = <AccueilScreen {...props} echeances={PROCHES} />;
+    default: vue = <AccueilScreen {...props}
+      echeances={flags.eventsOther === false
+        ? PROCHES.filter((p) => p.type === "anniversaire") : PROCHES} />;
   }
 
   const chrome = ecran.chrome !== false;
-  const titre = typeof ecran.titre === "string" ? ecran.titre
+  let titre = typeof ecran.titre === "string" ? ecran.titre
     : ecran.titre ? ecran.titre[langue] : undefined;
+  /* Une note existante ne s'ouvre pas sous « Nouvelle note ». */
+  if (ecran.id === "note" && charge && charge.note) titre = t.noteTitreModifier;
+  /* La fiche écrit le nom en grand : la barre n'a pas à le redire. */
+  if (ecran.id === "proche") titre = undefined;
+  if (ecran.id === "surface") titre = etat === "collecte" ? "Valentine" : (sujet || "Célarine");
+  /* La wishlist d'un proche écrit son nom en grand : la barre reste nue. */
+  if (ecran.id === "listes" && sujet) titre = undefined;
+  if (ecran.id === "souhait" && charge && charge.nouveau) titre = t.souhaitAjouterTitre;
+  if (ecran.id === "evenement" && flags.eventsOther === false) titre = t.evtTitreAnniv;
+  /* Une identité créée de zéro ne porte pas encore de nom. */
+  if (ecran.id === "identite") titre = charge && charge.nouveau ? t.ajouterProche : (sujet || "Valery Bah");
+  /* Une occasion porte la date qu'on a touchée, pas celle du gabarit. */
+  if (ecran.id === "occasion" && charge && charge.date) {
+    titre = langue === "fr" ? charge.date : (charge.dateEn || charge.date);
+  }
 
   const Bascule = ({ label, valeur, options, onSet }) => (
     <div style={{ marginBottom: 14 }}>
@@ -314,6 +507,19 @@ function App() {
           options={[["se", "SE"], ["standard", "Courant"], ["max", "Grand"]]} onSet={setModele} />
         <Bascule label="Système" valeur={os}
           options={[["ios", "iOS"], ["android", "Android"]]} onSet={setOs} />
+        <Bascule label="Décompte" valeur={notation}
+          options={[["barre", "J−3"], ["phrase", "dans 3 jours"]]} onSet={setNotation} />
+        {/* Le profil de lancement n'est pas une variante : c'est le point de
+            départ. Un drapeau naît éteint. */}
+        <Bascule label="Drapeaux" valeur={profil}
+          options={[["tout", "Tout allumé"], ["lancement", "Lancement"], ["gratuit", "Crédits éteints"]]}
+          onSet={(k) => {
+            setProfil(k);
+            const perdus = ETEINTS[k] || [];
+            if (perdus.indexOf(ecranId) >= 0) { setSujet(null); setCharge(null); aller("accueil"); return; }
+            const ouverts = etatsOuverts(ecran, PROFILS[k] || PROFILS.tout);
+            if (ouverts.indexOf(etat) < 0) setEtat(ouverts[0]);
+          }} />
 
         <div className="lbl" style={{ marginTop: 20 }}>Solde</div>
         <div className="lehno-display" style={{ fontSize: 21, marginTop: 4 }}>
@@ -328,8 +534,9 @@ function App() {
 
         <div className="lbl" style={{ marginTop: 20 }}>Écrans</div>
         <div className="rail">
-          {ECRANS.map((e) => (
-            <button key={e.id} type="button" aria-current={e.id === ecranId} onClick={() => aller(e.id)}>
+          {ECRANS.filter((e) => eteints.indexOf(e.id) < 0).map((e) => (
+            <button key={e.id} type="button" aria-current={e.id === ecranId}
+              onClick={() => { setSujet(null); setCharge(null); aller(e.id); }}>
               <span className="num">{e.num}</span>{e.nom[langue]}
             </button>
           ))}
@@ -337,12 +544,27 @@ function App() {
       </div>
 
       <PhoneFrame os={os} modele={modele} pleinEcran={ecran.id === "splash"}
-        etiquette={ecran.num + " · " + ETIQUETTES[langue][etat]}>
+        etiquette={ecran.num + " · " + nomEtat(ecran.id, etat, langue)}
+        onVoile={() => { setFeuille(null); setRetrait(null); }}
+        feuille={feuille ? (
+          <PaidActionSheet t={t} titre={NOMS[feuille]} resultat={RESULTATS[feuille]}
+            cout={1} solde={solde}
+            onConfirmer={confirmer}
+            onRecharger={() => { setFeuille(null); aller("moi"); }}
+            onAnnuler={() => setFeuille(null)} />
+        ) : retrait ? (
+          <ConfirmSheet destructif
+            titre={t.souhaitRetraitTitre}
+            texte={retrait.reserve ? t.souhaitRetraitReserve : t.souhaitRetraitTexte}
+            confirmer={t.souhaitRetraitConfirmer} annuler={t.souhaitRetraitGarder}
+            onConfirmer={() => { const f = retrait.fait; setRetrait(null); f(); }}
+            onAnnuler={() => setRetrait(null)} />
+        ) : null}>
         {chrome ? (
-          <AppHeader dark={nuit} base="../../"
+          <AppHeader t={t} dark={nuit} base="../../"
             notifications={ecran.onglet ? 2 : 0}
             onCloche={() => aller("notifications")}
-            onBack={ecran.onglet ? undefined : () => aller("accueil")}
+            onBack={ecran.onglet ? undefined : retour}
             title={titre} />
         ) : null}
         <div style={{
@@ -350,21 +572,6 @@ function App() {
           display: "flex", flexDirection: "column"
         }}>
           {vue}
-
-          {feuille ? (
-            <>
-              <div onClick={() => setFeuille(null)} style={{
-                position: "absolute", inset: 0, background: "rgba(15,13,19,.42)", zIndex: 8
-              }} />
-              <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 9 }}>
-                <PaidActionSheet t={t} titre={NOMS[feuille]} resultat={RESULTATS[feuille]}
-                  cout={1} solde={solde}
-                  onConfirmer={confirmer}
-                  onRecharger={() => { setFeuille(null); aller("moi"); }}
-                  onAnnuler={() => setFeuille(null)} />
-              </div>
-            </>
-          ) : null}
 
           {toast ? (
             <div style={{
@@ -382,8 +589,9 @@ function App() {
                 { id: "accueil", label: t.ongletAccueil, icon: "house" },
                 { id: "dates", label: t.ongletDates, icon: "calendar" },
                 { id: "proches", label: t.ongletProches, icon: "heart" },
-                { id: "moi", label: t.ongletMoi, icon: "user" }
-              ]} />
+                flags.moi === false ? null : { id: "moi", label: t.ongletMoi, icon: "user" },
+                { id: "reglagesHub", label: t.ongletReglages, icon: "settings" }
+              ].filter(Boolean)} />
           </div>
         ) : null}
       </PhoneFrame>
@@ -391,9 +599,9 @@ function App() {
       <div className="side">
         <div className="lbl">États de cet écran</div>
         <div className="rail">
-          {ecran.etats.map((k) => (
+          {etatsOuverts(ecran, flags).map((k) => (
             <button key={k} type="button" aria-current={k === etat} onClick={() => setEtat(k)}>
-              {ETIQUETTES[langue][k]}
+              {nomEtat(ecran.id, k, langue)}
             </button>
           ))}
         </div>

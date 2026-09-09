@@ -1,0 +1,112 @@
+/* Le back-office — un système parent, pas un clone.
+   Ce que l'admin garde du produit : les rôles de couleur, le violet qui agit,
+   le rouge qui détruit, les deux courbes, la règle du focus.
+   Ce qu'il change : Fraunces disparaît (elle appartient au produit ; un journal
+   d'audit n'a pas à être intime), la densité monte, les rayons se resserrent,
+   et une surface d'en-tête apparaît — un outil a des barres, une application non.
+   S'applique en posant la classe .lehno-admin sur <body>. */
+
+.lehno-admin {
+  /* Un seul caractère. La hiérarchie se fait au poids et à la taille. */
+  --font-display: var(--font-body);
+  --font-display-settings: normal;
+  --font-display-regular: 600;
+  --font-display-medium: 700;
+
+  /* Échelle basse : un tableau de 40 lignes ne se lit pas en 16 px. */
+  --text-display-xl: 30px;
+  --text-display-l:  26px;
+  --text-display-m:  21px;
+  --text-display-s:  18px;
+  --text-display-xs: 15px;
+  --text-body-l:     15px;
+  --text-body-m:     14px;
+  --text-body-s:     13px;
+  --text-body-xs:    12px;
+  --text-mention-s:  11px;
+  --leading-display: 1.2;
+  --leading-body:    1.5;
+  --tracking-display: -0.015em;
+  --tracking-title:   -0.01em;
+
+  /* Contrôles plus courts : à la souris, 44 px de cible n'a plus de sens. */
+  --control-height: 32px;
+  --control-pad-x:  13px;
+  --row-height:     44px;
+
+  --radius-xs:  5px;
+  --radius-sm:  6px;
+  --radius-md:  6px;
+  --radius-lg:  8px;
+  --radius-xl:  10px;
+  --radius-2xl: 12px;
+
+  /* Une surface de plus que le produit : les barres de l'outil. */
+  --surface-chrome: #F7F6FA;
+  --surface-page:   #FFFFFF;
+  --surface-panel:  #F2F0F7;
+  --surface-card:   #FFFFFF;
+  --surface-band:   #221F2B;
+
+  --border-hairline: #E8E5EF;
+  --border-object:   #DCD8E6;
+
+  --sidebar-width: 232px;
+  --topbar-height: 52px;
+
+  /* Les séries de données. Une rampe de violet plutöt qu'un arc-en-ciel : dans un
+     outil, la couleur d'une série ne veut rien dire d'autre que « pas la même ».
+     L'abricot ne sert qu'à l'axe qui s'oppose — le coût en face du revenu. */
+  --data-1: #4A3D7C;
+  --data-2: #7B6BB7;
+  --data-3: #A99AD8;
+  --data-4: #CFC5EC;
+  --data-accent: #C98A4B;
+  --data-grid: var(--border-hairline);
+}
+
+/* La ligne cochée : le violet du système, très dilué. Pas un quatrième violet. */
+.lehno-admin { --surface-selected: color-mix(in oklab, var(--action) 7%, var(--surface-card)); }
+
+.lehno-admin.lehno-nuit {
+  --surface-selected: color-mix(in oklab, var(--action) 18%, var(--surface-card));
+  --surface-chrome: #131219;
+  --surface-page:   #17161F;
+  --surface-panel:  #1E1C29;
+  --surface-card:   #1B1928;
+  --surface-band:   #2E2945;
+  --border-hairline: #262433;
+  --border-object:   #34314A;
+
+  --data-1: #C3B4EE;
+  --data-2: #9C8BD8;
+  --data-3: #7B6BB7;
+  --data-4: #5A4B93;
+  --data-accent: #E3B25C;
+}
+
+/* La coquille sous 900 px. Un outil d'exploitation se consulte parfois sur un
+   écran étroit — un incident ne choisit pas son moment. On ne réduit pas la
+   densité : on retire la barre latérale de la grille et on la fait glisser.
+   `!important` parce que la coquille porte ses styles en ligne. */
+@media (max-width: 900px) {
+  .lehno-admin .admin-shell { grid-template-columns: 1fr !important; }
+  .lehno-admin .admin-rail {
+    position: fixed !important; top: 0; left: 0; z-index: 20;
+    transform: translateX(-100%);
+    transition: transform var(--transition-screen);
+    box-shadow: 0 0 0 100vmax transparent;
+  }
+  .lehno-admin .admin-rail[data-ouvert] { transform: none; }
+  .lehno-admin .admin-burger { display: grid !important; }
+  .lehno-admin .admin-corps > main { padding: 16px 16px 36px !important; }
+  .lehno-admin .admin-corps > header { padding: 0 16px !important; }
+}
+
+@media (max-width: 620px) {
+  .lehno-admin .admin-compte { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lehno-admin .admin-rail { transition: none; }
+}

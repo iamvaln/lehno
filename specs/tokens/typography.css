@@ -1,0 +1,42 @@
+:root {
+  /* Deux familles, et l'écart entre les deux fait toute l'élégance :
+     un titre qui a du caractère, un texte qui s'efface. */
+  --font-display: Fraunces, Georgia, "Times New Roman", serif;
+  --font-body:    Karla, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Instance Fraunces de la marque — identique au logotype. */
+  --font-display-settings: "SOFT" 40, "WONK" 1;
+  --font-display-regular: 400;
+  --font-display-medium:  500;
+
+  --font-body-regular:  400;
+  --font-body-medium:   500;
+  --font-body-semibold: 600;
+  --font-body-bold:     700;
+
+  /* Échelle — display en Fraunces, texte en Karla. */
+  --text-display-xl:  76px;   /* héros marketing */
+  --text-display-l:   50px;   /* titre de planche, clôture */
+  --text-display-m:   38px;   /* titre de section */
+  --text-display-s:   30px;   /* titre de vue */
+  --text-display-xs:  22px;   /* nom d'une personne, titre de carte */
+
+  --text-body-l:      18px;   /* chapeau */
+  --text-body-m:      16px;   /* texte courant, libellés mobiles */
+  --text-body-s:      15px;   /* texte dense, libellés web */
+  --text-body-xs:     13.5px; /* aide, légende */
+  --text-mention-s:   11.5px; /* ligne de provenance */
+  --text-kicker:      11px;   /* sur-titre capitales */
+  --text-tab:         11px;   /* libellé d'onglet, de trois à quatre */
+  --text-tab-serre:   10.5px; /* à cinq onglets, sur l'appareil le plus étroit */
+
+  --leading-display:  1.05;
+  --leading-title:    1.15;
+  --leading-body:     1.55;
+  --leading-roomy:    1.6;
+
+  --tracking-display: -0.03em;
+  --tracking-title:   -0.02em;
+  --tracking-body:    0;
+  --tracking-kicker:  0.14em;
+}

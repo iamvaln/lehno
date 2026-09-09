@@ -1,0 +1,72 @@
+<!-- @dsCard group="Components" viewport="700x310" name="Contenu — décompte, parole, provenance" subtitle="Les deux conventions propres à Lehno" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@0.417.0/dist/umd/lucide.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../components/_card-boot.js"></script>
+<style>
+  html, body { margin: 0; }
+  body { font-family: var(--font-body); background: var(--surface-page);
+         color: var(--text-body); padding: 18px 20px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .col { display: grid; gap: 10px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; }
+  .pane { padding: 16px 18px; }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+         font-weight: 600; color: var(--text-mention); margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/lehno">
+const C = await window.lehnoBoot(["../core/Icon.jsx","../core/Card.jsx","../core/SectionLabel.jsx","./Countdown.jsx","./Provenance.jsx","./Quote.jsx"]);
+const { Countdown, Provenance, Quote, Card, SectionLabel } = C;
+function Demo() {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
+      <div className="col" style={{ gap: 16 }}>
+        <div>
+          <div className="lbl">Le décompte</div>
+          <div className="row" style={{ gap: 20 }}>
+            <Countdown days={3} size="l" />
+            <div className="col" style={{ gap: 8, justifyItems: "start" }}>
+              <Countdown days={9} />
+              <Countdown days={3} locale="en" size="s" />
+              <Countdown days={0} />
+            </div>
+          </div>
+        </div>
+        <div>
+          <div className="lbl">La parole — Fraunces italique</div>
+          <Quote size={15.5}>Il a parlé d'un moulin à café manuel, le sien rend l'âme.</Quote>
+          <div style={{ fontSize: 15, marginTop: 10 }}>Deux dates approchent cette semaine.</div>
+          <div style={{ fontSize: 11.5, color: "var(--text-mention)", marginTop: 4 }}>
+            ↑ le produit qui parle, en Karla romain
+          </div>
+        </div>
+      </div>
+      <div className="col" style={{ gap: 12 }}>
+        <div className="lbl">La ligne de provenance</div>
+        <Card padding={16} radius="lg">
+          <SectionLabel>Idées cadeaux</SectionLabel>
+          <Quote size={15} style={{ marginTop: 6 }}>Il a parlé d'un moulin à café manuel.</Quote>
+          <Provenance origin="noté" date="en mars" />
+        </Card>
+        <Card padding={16} radius="lg">
+          <SectionLabel>Brouillon</SectionLabel>
+          <Quote size={15} style={{ marginTop: 6 }}>Valery, 36 ans et toujours cette manie de refaire le monde à minuit.</Quote>
+          <Provenance origin="écrit à partir de 9 notes sur Valery" />
+        </Card>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>
+</body>
+</html>

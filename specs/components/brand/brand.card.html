@@ -1,0 +1,64 @@
+<!-- @dsCard group="Components" viewport="700x225" name="Marque — logotype et pastille" subtitle="Fichiers vectorisés, jamais du texte composé" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@0.417.0/dist/umd/lucide.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../components/_card-boot.js"></script>
+<style>
+  html, body { margin: 0; }
+  body { font-family: var(--font-body); background: var(--surface-page);
+         color: var(--text-body); padding: 18px 20px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .col { display: grid; gap: 10px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; }
+  .pane { padding: 16px 18px; }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+         font-weight: 600; color: var(--text-mention); margin-bottom: 10px; }
+</style>
+</head>
+<body style="padding:0">
+<div id="root"></div>
+<script type="text/lehno">
+const C = await window.lehnoBoot(["./Wordmark.jsx","./BrandMark.jsx"]);
+const { Wordmark, BrandMark } = C;
+const B = "../../";
+function Demo() {
+  return (
+    <div className="pair">
+      <div className="pane">
+        <div className="lbl">Fond clair</div>
+        <div className="row" style={{ gap: 16 }}>
+          <BrandMark base={B} size={52} />
+          <Wordmark base={B} height={26} />
+        </div>
+        <div className="row" style={{ gap: 12, marginTop: 20 }}>
+          <BrandMark base={B} variant="ronde" size={34} />
+          <BrandMark base={B} variant="claire" size={34} />
+          <BrandMark base={B} variant="encre" size={34} />
+          <BrandMark base={B} variant="uneEncre" size={34} />
+          <BrandMark base={B} variant="favicon" size={28} />
+        </div>
+      </div>
+      <div className="pane lehno-nuit" style={{ background: "var(--surface-page)", color: "var(--text-body)" }}>
+        <div className="lbl">Fond sombre — la pastille ne change pas</div>
+        <div className="row" style={{ gap: 16 }}>
+          <BrandMark base={B} size={52} />
+          <Wordmark base={B} variant="blanc" height={26} />
+        </div>
+        <div style={{ fontSize: 11.5, color: "var(--text-mention)", marginTop: 20, lineHeight: 1.45 }}>
+          La variante « encre » est faite pour un fond clair : sur une page sombre
+          elle ne mesure que 1,14:1.
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>
+</body>
+</html>

@@ -25,8 +25,32 @@ function BarreEtat({ os, modele, heure, claire }) {
     padding: iOS ? "0 26px" : "0 16px"
   };
   const jauge = (
-    <span style={{ display: "flex", gap: 5, alignItems: "center", opacity: .8 }}>
-      <span style={{ width: 15, height: 9, border: "1.4px solid currentColor", borderRadius: 2 }} />
+    <span style={{ display: "flex", gap: 5, alignItems: "flex-end", opacity: .9 }}>
+      {/* Réseau : quatre barres croissantes, la dernière éteinte. */}
+      <span style={{ display: "flex", gap: 1.5, alignItems: "flex-end" }}>
+        {[4, 6, 8, 10].map((h, i) => (
+          <span key={h} style={{
+            width: 2.5, height: h, borderRadius: 1,
+            background: "currentColor", opacity: i === 3 ? .3 : 1
+          }} />
+        ))}
+      </span>
+      {/* Wifi : trois arcs. */}
+      <svg width="14" height="11" viewBox="0 0 16 12" fill="none" style={{ display: "block" }}>
+        <path d="M1 4.2a10 10 0 0 1 14 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M3.6 6.9a6.4 6.4 0 0 1 8.8 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M6.3 9.5a2.6 2.6 0 0 1 3.4 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+      {/* Batterie : coque, téton, charge. */}
+      <span style={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <span style={{
+          width: 22, height: 11, borderRadius: 3, boxSizing: "border-box",
+          border: "1.2px solid currentColor", padding: 1.5, display: "flex"
+        }}>
+          <span style={{ width: "72%", background: "currentColor", borderRadius: 1.5 }} />
+        </span>
+        <span style={{ width: 1.6, height: 4, borderRadius: "0 2px 2px 0", background: "currentColor", opacity: .55 }} />
+      </span>
     </span>
   );
   if (iOS) {
@@ -52,7 +76,7 @@ function BarreEtat({ os, modele, heure, claire }) {
 /* « pleinEcran » : l'écran occupe aussi la zone de la barre d'état, comme le
    fait une ouverture ou une photo en pleine page. La barre passe alors en blanc,
    puisque c'est l'écran qui porte son fond et non plus la page. */
-export function PhoneFrame({ children, os = "ios", modele = "standard", heure = "9:41", etiquette, auto = false, pleinEcran = false }) {
+export function PhoneFrame({ children, os = "ios", modele = "standard", heure = "8:30", etiquette, auto = false, pleinEcran = false, feuille, onVoile }) {
   const m = MODELES[modele] || MODELES.standard;
   const iOS = os === "ios";
   const encoche = m.encoche && iOS;
@@ -94,13 +118,45 @@ export function PhoneFrame({ children, os = "ios", modele = "standard", heure = 
             }} />
           ) : null}
 
-          <div style={{
+          {/* Le modèle est écrit sur le conteneur d'écran : un écran serré — la
+              saisie d'un code, une confirmation — peut alors se resserrer sur
+              un petit téléphone sans qu'on lui passe une propriété de plus.
+
+              La racine d'un écran est en border-box : presque toutes portent
+              une hauteur de 100 % et un rembourrage, et en content-box les
+              deux s'additionnent — l'écran dépassait de son propre rembourrage
+              et faisait défiler une page qui tenait. */}
+          <div data-modele={modele} style={{
             flex: 1, minHeight: 0, display: "flex", flexDirection: "column",
             paddingTop: pleinEcran ? 0 : m.safeTop,
             paddingBottom: auto && m.safeBas && !pleinEcran ? m.safeBas : 0
           }}>
+            {/* Le rythme vertical est écrit ici, une fois, et dépend du gabarit :
+                le SE se resserre, les autres respirent. Sans ça, les valeurs
+                trouvées pour le petit écran devenaient la règle partout, et un
+                écran courant se retrouvait tassé en haut avec un vide au pied. */}
+            <style>{`
+              [data-modele] > *, [data-modele] > * > * { box-sizing: border-box; }
+              [data-modele] { --ry-haut: 8px; --ry-titre: 16px; --ry-bloc: 20px; --ry-item: 10px; }
+              [data-modele="se"] { --ry-haut: 2px; --ry-titre: 8px; --ry-bloc: 12px; --ry-item: 8px; }
+            `}</style>
             {children}
           </div>
+
+          {/* Une feuille modale se monte ici, au-dessus de l'en-tête : posée
+              dans l'écran, elle laissait la flèche de retour cliquable et le
+              bandeau du haut en pleine lumière pendant la question. */}
+          {feuille ? (
+            <>
+              <div onClick={onVoile} style={{
+                position: "absolute", inset: 0, zIndex: 8,
+                background: "rgba(15,13,19,.42)"
+              }} />
+              <div style={{
+                position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 9
+              }}>{feuille}</div>
+            </>
+          ) : null}
 
           {/* iOS a son indicateur d'accueil ; Android sa barre de navigation. */}
           {m.safeBas ? (iOS ? (

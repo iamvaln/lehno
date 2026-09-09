@@ -2,6 +2,8 @@ import React from "react";
 import { Card } from "../../components/core/Card.jsx";
 import { SectionLabel } from "../../components/core/SectionLabel.jsx";
 import { Button } from "../../components/core/Button.jsx";
+import { Icon } from "../../components/core/Icon.jsx";
+import { TextField } from "../../components/forms/TextField.jsx";
 import { Quote } from "../../components/content/Quote.jsx";
 import { Provenance } from "../../components/content/Provenance.jsx";
 import { Illustration } from "../../components/brand/Illustration.jsx";
@@ -83,11 +85,28 @@ function Attente({ t, onQuitter }) {
 }
 
 export function GenerationScreen({
-  t, etat = "message", qui = "Valery Bah", solde = 3, onEnvoyer, onCopier, onRetour, onOpen
+  t, etat = "message", qui = "Valery Bah", solde = 3, flags = {},
+  onEnvoyer, onCopier, onRetour, onOpen, onFait, onLancer
 }) {
+  /* LE PIÈGE DU BRIEF : l'achat éteint ne ferme pas les générations, il les rend
+     gratuites. Un coût annoncé ou un solde rappelé mentirait à quelqu'un qui
+     vient de recevoir quelque chose sans payer — les deux sortent de l'écran. */
+  const gratuit = flags.credits === false;
+
   /* Les hooks AVANT tout return anticipé : leur nombre ne peut pas dépendre de
      l'état, et le prototype change l'état sur la même instance. */
-  const [choisie, setChoisie] = React.useState(null);
+  /* Une idée a trois sorts : rien, retenue, offerte. Retenir la range dans les
+     notes du proche — on revient dessus plus tard, quand le cadeau est parti.
+     Un seul cadeau se donne : marquer l'un comme offert relâche les autres. */
+  const [sorts, setSorts] = React.useState({});
+  const poser = (i, sort) => setSorts((v) => {
+    if (sort === "offerte") return { ...v, [i]: "offerte" };
+    return { ...v, [i]: sort };
+  });
+  const [ajuste, setAjuste] = React.useState(false);
+  const langueMsg = t.langue === "fr" ? "fr" : "en";
+  const [texte, setTexte] = React.useState(MESSAGE[langueMsg]);
+  React.useEffect(() => { setTexte(MESSAGE[langueMsg]); setAjuste(false); }, [langueMsg]);
 
   if (etat === "attente") return <Attente t={t} onQuitter={() => onOpen && onOpen("accueil")} />;
 
@@ -103,7 +122,8 @@ export function GenerationScreen({
           <h1 className="lehno-display" style={{
             fontSize: 21, margin: "18px 0 0", fontWeight: 500, maxWidth: "24ch"
           }}>{t.genErreurTitre}</h1>
-          <Button platform="mobile" full icon="refresh-cw" style={{ marginTop: 22 }}>
+          <Button platform="mobile" full icon="refresh-cw" style={{ marginTop: 22 }}
+            onClick={() => onLancer && onLancer(etat === "idees" ? "idees" : "message")}>
             {t.genReessayer}
           </Button>
         </div>
@@ -121,12 +141,15 @@ export function GenerationScreen({
         <div className="lehno-display" style={{ fontSize: 22, margin: "2px 0 14px" }}>{t.resIdeesTitre}</div>
         <div style={{ display: "grid", gap: 8 }}>
           {IDEES[langue].map((idee, i) => {
-            const prise = choisie === i;
+            const sort = sorts[i];
+            const offerte = sort === "offerte";
+            const retenue = sort === "retenue";
             return (
               <div key={idee} style={{
                 padding: "13px 14px", borderRadius: "var(--radius-lg)",
-                border: "1px solid " + (prise ? "var(--action)" : "var(--border-object)"),
-                background: prise ? "var(--action-quiet-bg)" : "transparent"
+                border: "1px solid " + (offerte ? "var(--feedback-success)"
+                  : retenue ? "var(--action)" : "var(--border-object)"),
+                background: retenue || offerte ? "var(--action-quiet-bg)" : "transparent"
               }}>
                 <div style={{ display: "flex", gap: 11, alignItems: "baseline" }}>
                   <span className="lehno-display" style={{
@@ -134,12 +157,47 @@ export function GenerationScreen({
                   }}>{i + 1}</span>
                   <span style={{ flex: 1, fontSize: 14.5, lineHeight: 1.45 }}>{idee}</span>
                 </div>
-                <button type="button" onClick={() => setChoisie(prise ? null : i)}
-                  className="lehno-focusable" style={{
-                    all: "unset", cursor: "pointer", display: "block", marginTop: 9,
-                    marginLeft: 25, fontFamily: "var(--font-body)", fontSize: 13,
-                    fontWeight: 600, color: prise ? "var(--feedback-success)" : "var(--text-accent)"
-                  }}>{prise ? t.ideeChoisie : t.ideeChoisir}</button>
+
+                {offerte ? (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 6, marginTop: 9, marginLeft: 25,
+                    fontSize: 13, fontWeight: 600, color: "var(--feedback-success)"
+                  }}>
+                    <Icon name="check" size={14} strokeWidth={2.4} /> {t.ideeOfferte}
+                  </div>
+                ) : (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 14, marginTop: 9, marginLeft: 25,
+                    flexWrap: "wrap"
+                  }}>
+                    <button type="button" className="lehno-focusable"
+                      onClick={() => {
+                        poser(i, retenue ? null : "retenue");
+                        if (!retenue && onFait) onFait(t.ideeRetenueFait(qui));
+                      }}
+                      style={{
+                        all: "unset", cursor: "pointer", display: "inline-flex",
+                        alignItems: "center", gap: 6, minHeight: "var(--touch-min)",
+                        fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 600,
+                        color: retenue ? "var(--text-mention)" : "var(--text-accent)"
+                      }}>
+                      <Icon name={retenue ? "bookmark-check" : "bookmark"} size={14} />
+                      {retenue ? t.ideeLacher : t.ideeRetenir}
+                    </button>
+                    {retenue ? (
+                      <button type="button" className="lehno-focusable"
+                        onClick={() => { poser(i, "offerte"); if (onFait) onFait(t.ideeOfferteFait); }}
+                        style={{
+                          all: "unset", cursor: "pointer", display: "inline-flex",
+                          alignItems: "center", gap: 6, minHeight: "var(--touch-min)",
+                          fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 600,
+                          color: "var(--text-accent)"
+                        }}>
+                        <Icon name="gift" size={14} /> {t.ideeMarquerOfferte}
+                      </button>
+                    ) : null}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -147,9 +205,13 @@ export function GenerationScreen({
         <Provenance origin={t.langue === "fr" ? "écrit à partir de 9 notes sur Valery"
           : "written from 9 notes about Valery"} />
         <div style={{ display: "grid", gap: 8, marginTop: 20 }}>
-          <Button platform="mobile" full variant="outline" icon="refresh-cw">{t.resRegenerer}</Button>
+          <Button platform="mobile" full variant="outline" icon="refresh-cw"
+            onClick={() => onLancer && onLancer("idees")}>{t.resRegenerer}</Button>
         </div>
-        <CreditIndicator t={t} depense={1} solde={solde} onRecharger={() => onOpen && onOpen("recharge")} style={{ marginTop: 14 }} />
+        {gratuit ? null : (
+          <CreditIndicator t={t} depense={1} solde={solde}
+            onRecharger={() => onOpen && onOpen("recharge")} style={{ marginTop: 14 }} />
+        )}
       </div>
     );
   }
@@ -162,25 +224,48 @@ export function GenerationScreen({
   return (
     <div style={{ padding: "0 16px 18px" }}>
       <div className="lehno-display" style={{ fontSize: 22, marginBottom: 12 }}>{t.resMessageTitre}</div>
-      <Card surface="panel" padding={18} radius="lg">
-        <Quote size={17}>{MESSAGE[langue]}</Quote>
-        <Provenance origin={t.langue === "fr" ? "écrit à partir de 9 notes sur Valery"
-          : "written from 9 notes about Valery"} />
-      </Card>
+      {/* Ajuster ne quitte pas l'écran : le texte s'ouvre là où on le lit, et
+          les actions d'envoi cèdent la place tant qu'on écrit. */}
+      {ajuste ? (
+        <TextField multiline rows={7} platform="mobile" autoFocus label={t.resAjuster}
+          value={texte} onChange={(ev) => setTexte(ev.target.value)} />
+      ) : (
+        <Card surface="panel" padding={18} radius="lg">
+          <Quote size={17}>{texte}</Quote>
+          <Provenance origin={t.langue === "fr" ? "écrit à partir de 9 notes sur Valery"
+            : "written from 9 notes about Valery"} />
+        </Card>
+      )}
 
       <div style={{ display: "grid", gap: 8, marginTop: 18 }}>
-        <Button platform="mobile" full icon="send" onClick={onEnvoyer}>{t.resEnvoyerVia}</Button>
-        <Button platform="mobile" full variant="outline" icon="copy" onClick={onCopier}>
-          {t.resCopierTexte}
-        </Button>
-        <Button platform="mobile" full variant="text" icon="pencil">{t.resAjuster}</Button>
-        <Button platform="mobile" full variant="text" icon="refresh-cw">{t.resRegenerer}</Button>
+        {ajuste ? (
+          <>
+            <Button platform="mobile" full icon="check"
+              onClick={() => setAjuste(false)}>{t.resAjusteFini}</Button>
+            <Button platform="mobile" full variant="text"
+              onClick={() => { setTexte(MESSAGE[langue]); setAjuste(false); }}>{t.resAjusteAnnuler}</Button>
+          </>
+        ) : (
+          <>
+            <Button platform="mobile" full icon="send" onClick={onEnvoyer}>{t.resEnvoyerVia}</Button>
+            <Button platform="mobile" full variant="outline" icon="copy" onClick={onCopier}>
+              {t.resCopierTexte}
+            </Button>
+            <Button platform="mobile" full variant="text" icon="pencil"
+              onClick={() => setAjuste(true)}>{t.resAjuster}</Button>
+            <Button platform="mobile" full variant="text" icon="refresh-cw"
+              onClick={() => onLancer && onLancer("message")}>{t.resRegenerer}</Button>
+          </>
+        )}
       </div>
 
       <p style={{
         margin: "16px 0 0", fontSize: 12.5, color: "var(--text-mention)", lineHeight: 1.5
       }}>{t.envoiRappel}</p>
-      <CreditIndicator t={t} depense={1} solde={solde} onRecharger={() => onOpen && onOpen("recharge")} style={{ marginTop: 10 }} />
+      {gratuit ? null : (
+        <CreditIndicator t={t} depense={1} solde={solde}
+          onRecharger={() => onOpen && onOpen("recharge")} style={{ marginTop: 10 }} />
+      )}
     </div>
   );
 }
