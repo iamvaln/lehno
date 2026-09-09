@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   notificationPreferencesSchema, profileSchema,
   type DigestFrequency, type NotificationPreferenceItem,
@@ -67,18 +67,24 @@ export default function Rappels() {
 
   useEffect(() => { void charge(); }, [charge]);
 
-  /* LA PERMISSION SE LIT À L'OUVERTURE, sans la demander. Cet écran laisse
+  /* LA PERMISSION SE RELIT À CHAQUE RETOUR SUR L'ÉCRAN, pas seulement au
+     montage. Le bouton ci-dessous envoie AUX RÉGLAGES DU TÉLÉPHONE : on quitte
+     l'application, on autorise, on revient — et sans cette relecture le bandeau
+     serait toujours là, à dire que c'est refusé alors qu'on vient de
+     l'accorder. L'écran contredirait le geste qu'il a lui-même demandé.
+
+     La permission se lit sans la demander. Cet écran laisse
      allumer la poussée ; si le téléphone la refuse, la bascule s'allume et
      RIEN N'ARRIVE — un réglage qui ment sans que personne ne puisse le voir.
 
      On ne demande pas la permission ici : poser la question système à chaque
      ouverture la ferait refuser par lassitude, et sur iOS une permission
      refusée deux fois ne se redemande plus. */
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let vivant = true;
     void permissionAccordee().then((p) => { if (vivant) setPoussee(p); });
     return () => { vivant = false; };
-  }, []);
+  }, []));
 
   /* ON POSE L'ÉTAT AVANT LA RÉPONSE, et on le remet si elle refuse.
      Un interrupteur qui attend un aller-retour avant de bouger donne
