@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { Occurrence, Wishlist } from "@lehno/contracts";
+import type {
+  Occurrence, PublicWish, SharedWishlist, Wishlist,
+} from "@lehno/contracts";
 import {
-  listesRangees, occasionsOuvrables, peutPartager, resteAOffrir,
+  apercuSansSouhait, etatDuSouhaitMontre, listeCourante, listesRangees,
+  occasionsOuvrables, peutChercherDesIdees, peutPartager, quandDeLaListe,
+  resteAOffrir, souhaitsMontres,
 } from "../lib/listes.js";
 
 const uuid = (n: number): string =>
@@ -100,5 +104,116 @@ describe("quand une liste se partage", () => {
   // Une liste vide demanderait à un proche de choisir dans rien.
   it("ne se partage pas vide", () => {
     expect(peutPartager(liste(1, { wishCount: 0 }))).toBe(false);
+  });
+});
+
+const souhaitPublic = (n: number, p: Partial<PublicWish> = {}): PublicWish => ({
+  id: uuid(300 + n), label: "Un carnet", imageUrl: null, details: null, link: null,
+  price: null, currency: null, isReserved: false, isFulfilled: false,
+  reservedByMe: false, ...p,
+});
+
+const partagee = (souhaits: PublicWish[]): SharedWishlist => ({
+  state: "ok", ownerFirstName: "Awa", ownerAvatarUrl: null, occasionLabel: null,
+  occasionDate: "2026-09-03", acceptsReservations: true, wishes: souhaits,
+});
+
+describe("la liste qu'on regarde", () => {
+  /* L'identifiant retenu peut venir d'un lien profond, ou désigner une liste
+     supprimée ailleurs : on ne le croit jamais sur parole. */
+  it("retombe sur la première quand l'identifiant ne désigne rien", () => {
+    expect(listeCourante([liste(1), liste(2)], uuid(999))?.id).toBe(uuid(1));
+  });
+
+  it("rend celle qu'on a choisie quand elle existe", () => {
+    expect(listeCourante([liste(1), liste(2)], uuid(2))?.id).toBe(uuid(2));
+  });
+
+  // `null` seulement quand il n'y a rien à montrer : autrement l'écran se
+  // retrouverait vide en tenant pourtant des listes.
+  it("ne rend rien quand il n'y a aucune liste", () => {
+    expect(listeCourante([], uuid(1))).toBeNull();
+  });
+});
+
+describe("la date d'une liste", () => {
+  it("se formate quand elle existe au calendrier", () => {
+    expect(quandDeLaListe("2026-09-03", "fr")).not.toBeNull();
+  });
+
+  /* Le contrat vérifie la FORME, pas le calendrier : « 2026-02-31 » passe sa
+     validation. `Intl` le reporterait en mars sans rien dire, et la liste
+     annoncerait une date que personne n'a saisie. */
+  it("refuse une date qui n'existe pas plutôt que de la reporter", () => {
+    expect(quandDeLaListe("2026-02-31", "fr")).toBeNull();
+  });
+
+  it("refuse une date tronquée", () => {
+    expect(quandDeLaListe("2026-09", "fr")).toBeNull();
+  });
+});
+
+describe("chercher des idées", () => {
+  it("se propose sur une liste vivante quand la génération d'idées est ouverte", () => {
+    expect(peutChercherDesIdees(liste(1), ["generation.ideas"])).toBe(true);
+  });
+
+  // La génération se paie : la proposer pour un anniversaire d'il y a onze mois
+  // ferait dépenser un crédit pour rien.
+  it("ne se propose pas sur une liste archivée", () => {
+    expect(peutChercherDesIdees(liste(1, { isArchived: true }), ["generation.ideas"]))
+      .toBe(false);
+  });
+
+  // Trois natures de génération, trois drapeaux : le message allumé n'ouvre pas
+  // les idées.
+  it("ne se propose pas quand seul le message est ouvert", () => {
+    expect(peutChercherDesIdees(liste(1), ["generation.message"])).toBe(false);
+  });
+});
+
+describe("l'aperçu de la page partagée", () => {
+  it("montre les souhaits que le serveur sert", () => {
+    expect(souhaitsMontres(partagee([souhaitPublic(1)]))).toHaveLength(1);
+  });
+
+  // Un lien révoqué n'a plus de souhaits à montrer, et la forme n'en porte pas :
+  // l'écran doit pouvoir le demander sans se garder lui-même.
+  it("ne montre rien d'un lien révoqué", () => {
+    expect(souhaitsMontres({ state: "revoked" })).toEqual([]);
+  });
+
+  /* LE PIÈGE QUE L'APERÇU EXISTE POUR ATTRAPER : `wishCount` compte tous mes
+     souhaits, la page publique n'en montre que les publics. Sept souhaits tous
+     privés se partagent — et s'ouvrent sur rien. */
+  it("avoue une page qui ne montre aucun souhait", () => {
+    expect(apercuSansSouhait(partagee([]))).toBe(true);
+  });
+
+  it("ne l'avoue pas quand la page montre quelque chose", () => {
+    expect(apercuSansSouhait(partagee([souhaitPublic(1)]))).toBe(false);
+  });
+
+  // Un lien révoqué n'est pas une page vide : c'est un autre message, et les
+  // confondre ferait dire « tous vos souhaits sont privés » à tort.
+  it("ne confond pas un lien révoqué avec une page vide", () => {
+    expect(apercuSansSouhait({ state: "revoked" })).toBe(false);
+  });
+});
+
+describe("l'état d'un souhait vu du dehors", () => {
+  it("ne dit rien d'un souhait libre", () => {
+    expect(etatDuSouhaitMontre(souhaitPublic(1))).toBeNull();
+  });
+
+  it("dit réservé", () => {
+    expect(etatDuSouhaitMontre(souhaitPublic(1, { isReserved: true }))).toBe("reserve");
+  });
+
+  // Offert l'emporte : c'est l'état final, et un cadeau déjà offert reste
+  // réservé au contrat.
+  it("dit offert plutôt que réservé quand les deux tiennent", () => {
+    expect(etatDuSouhaitMontre(souhaitPublic(1, { isReserved: true, isFulfilled: true })))
+      .toBe("offert");
   });
 });

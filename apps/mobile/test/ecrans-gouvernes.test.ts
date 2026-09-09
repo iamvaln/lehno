@@ -24,6 +24,9 @@ const GOUVERNÉS: Readonly<Record<string, string>> = {
   // — celui-là ouvre la liste REÇUE d'un autre.
   souhaits: "listes",
   listes: "listes",
+  /* L'aperçu d'une wishlist lit `/me/wishlists/:id/share` : même surface,
+     donc même drapeau que la liste elle-même. */
+  "apercu-liste": "listes",
   monmur: "monmur",
   apercu: "monmur",
   valider: "valider",
