@@ -50,26 +50,43 @@ export function comptePourVerser(
   return comptes[0] ?? null;
 }
 
-/* LE CANAL SE DÉDUIT DU COMPTE, faute d'être demandé.
+/* LES MOYENS QU'ON PEUT PROPOSER, et ils tiennent au COMPTE.
  *
  * `declarePaymentSchema` exige un `channelId` — le barème des frais en dépend.
- * La maquette du versement manuel ne pose jamais la question : elle montre un
- * compte, et c'est tout. On rattache donc par l'OPÉRATEUR, seul lien commun
- * entre un compte de collecte et un canal.
+ * Le seul lien commun entre un compte de collecte et un canal est l'OPÉRATEUR :
+ * l'argent part vers ce compte-là, donc il passe par cet opérateur-là, et
+ * proposer le canal d'un autre ferait chiffrer des frais qui ne s'appliqueront
+ * jamais.
  *
- * Deux canaux du même opérateur rendent la déduction ambiguë — et c'est
- * exactement ce qui arrive quand les canaux se dédoublent en automatique et
- * manuel, ce que le contrat ne distingue pas encore. On rend alors `null` :
- * mieux vaut ne pas offrir la déclaration que l'envoyer sur un barème choisi
- * au hasard, puisque c'est lui qui décide de ce que la personne verse en plus.
+ * On garde les DEUX canaux d'un même opérateur quand il y en a deux : ils ne
+ * portent pas le même barème, `label` les distingue, et en fondre un dans
+ * l'autre ferait choisir à la place de quelqu'un ce qu'il paiera en plus.
+ * C'est la même raison qu'à l'enregistrement d'une méthode — voir
+ * `canauxProposables` dans `paiement.ts`.
+ */
+export function moyensDeVersement(
+  canaux: readonly PaymentChannel[],
+  compte: CollectionAccount,
+): PaymentChannel[] {
+  const vise = compte.operator.trim().toLowerCase();
+  return canaux.filter((c) => c.operator.trim().toLowerCase() === vise);
+}
+
+/* LE CANAL QU'ON PEUT POSER D'AVANCE, quand il n'y a rien à choisir.
+ *
+ * Un seul canal chez l'opérateur du compte : la question ne se pose pas, et la
+ * poser ferait faire un geste qui n'ouvre aucune alternative.
+ *
+ * Plusieurs : on ne pose RIEN. Le barème décide de ce que la personne verse en
+ * plus ; en choisir un au hasard pour lui épargner un appui reviendrait à
+ * choisir à sa place ce qu'elle paie. L'écran montre alors la liste — c'est
+ * « Comment payer » de la maquette, qui trouve ici son objet.
  */
 export function canalPourLeCompte(
   canaux: readonly PaymentChannel[],
   compte: CollectionAccount,
 ): PaymentChannel | null {
-  const memes = canaux.filter(
-    (c) => c.operator.trim().toLowerCase() === compte.operator.trim().toLowerCase(),
-  );
+  const memes = moyensDeVersement(canaux, compte);
   return memes.length === 1 ? memes[0]! : null;
 }
 

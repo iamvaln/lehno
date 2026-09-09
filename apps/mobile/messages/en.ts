@@ -320,6 +320,7 @@ export const en = {
   versementDelai: "The credit lands once the transfer is checked.",
   versementAutre: "Without paying",
   versementInviter: (n: number) => n + (n <= 1 ? " credit" : " credits") + " per person you invite",
+  versementNumero: "The number",
   mouvAutrefois: "Earlier",
   mouvNote: "The wording here is the wording on your statement and in our records.",
   mouvVideTitre: "No movement",
@@ -484,6 +485,7 @@ export const en = {
   rechargeAboutiTexte: (n: number) => n + " credits are on your account.",
   rechargeEchecTitre: "The payment didn't go through",
   rechargeEchecTexte: "Nothing was taken.",
+  rechargeCarte: "Bank card",
   parrainageTitre: "Invite someone, you both gain",
   parrainageTexte: (pourEux: number, pourMoi: number) => "Your code gives "
     + pourEux + (pourEux <= 1 ? " credit" : " credits") + " to whoever signs up, and "
