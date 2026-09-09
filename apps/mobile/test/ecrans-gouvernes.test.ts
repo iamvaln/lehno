@@ -30,6 +30,9 @@ const GOUVERNÉS: Readonly<Record<string, string | readonly string[]>> = {
   // — celui-là ouvre la liste REÇUE d'un autre.
   souhaits: "listes",
   listes: "listes",
+  /* L'aperçu d'une wishlist lit `/me/wishlists/:id/share` : même surface,
+     donc même drapeau que la liste elle-même. */
+  "apercu-liste": "listes",
   monmur: "monmur",
   apercu: "monmur",
   valider: "valider",
@@ -39,6 +42,11 @@ const GOUVERNÉS: Readonly<Record<string, string | readonly string[]>> = {
   paiement: "paiement",
   reprises: "reprises",
   souhait: ["listes", "souhait"],
+  /* Le cadrage précède la recherche d'idées : c'est `generation.ideas` qui le
+     gouverne, pas `generation.message`. La préparation, elle, n'est pas ici —
+     elle tient dès qu'UNE des deux natures tient, et se garde par
+     `preparationOuverte`. */
+  cadrage: "cadrage",
 };
 
 const identifiants = (valeur: string | readonly string[]): readonly string[] =>

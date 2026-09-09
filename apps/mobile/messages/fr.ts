@@ -332,6 +332,12 @@ export const fr = {
   versementDelai: "Le crédit est posé après vérification du versement.",
   versementAutre: "Sans payer",
   versementInviter: (n: number) => n + (n <= 1 ? " crédit" : " crédits") + " par personne invitée",
+  /* L'ÉTIQUETTE, jamais le numéro. Le compte de collecte vient de
+     `/me/collection-accounts`, qui ne rend que les comptes visibles ET actifs.
+     Écrit ici, il enverrait l'argent au mauvais endroit le jour où il change,
+     et personne ne s'en apercevrait avant de chercher un versement qui n'est
+     jamais arrivé — `messages.test.ts` rougit si un numéro revient. */
+  versementNumero: "Le numéro",
   mouvAutrefois: "Plus tôt",
   mouvNote: "Les libellés sont ceux qui figurent sur votre relevé et dans nos registres.",
   mouvVideTitre: "Aucun mouvement",
@@ -498,6 +504,13 @@ export const fr = {
   rechargeTitre: "Combien de crédits ?",
   rechargeIntro: "Un crédit par contenu créé pour vous.",
   rechargeUnite: (n: number) => n === 1 ? "1 crédit" : n + " crédits",
+  /* LE SIGNE EST CELUI DU CONTRAT, et il était à l'envers.
+     La maquette écrit « −17 % » : une remise sur le prix, qu'elle calcule
+     elle-même en comparant le prix au crédit de deux paliers. Le serveur, lui,
+     sert `bonusPercent` — « la remise, en clair : +20 % offerts », des crédits
+     EN PLUS pour le même prix. Rendre « −20 % » pour un bonus de 20 %
+     annoncerait une réduction qui n'existe pas, et la convertir en remise
+     reviendrait à refaire côté client un calcul que l'administration règle. */
   rechargeEconomie: (p: number) => "−" + p + " %",
   rechargeAttenteEnCours: "En attente",
   rechargeAttenteSecours: "Si rien ne s'affiche, composez le code de votre opérateur :",
@@ -518,6 +531,10 @@ export const fr = {
   rechargeAboutiTexte: (n: number) => n + " crédits sont sur votre compte.",
   rechargeEchecTitre: "Le paiement n'a pas abouti",
   rechargeEchecTexte: "Rien n'a été prélevé.",
+  /* Le pendant de `rechargeMobile` : la nature du canal, dite sous son nom.
+     Deux canaux du même opérateur portent deux barèmes et se distinguent par
+     leur `label` ; ces deux mots-ci disent seulement par quoi on paie. */
+  rechargeCarte: "Carte bancaire",
   parrainageTitre: "Invitez, et gagnez tous les deux",
   /* Les deux montants sont SERVIS : celui de l'invité par `/public/config`,
      celui du parrain par `/me/referral`. Écrits en dur, ils promettraient
@@ -567,6 +584,12 @@ export const fr = {
   collecteRecu: (n: number) => n === 1 ? "Une réponse reçue" : n + " réponses reçues",
   collecteAucune: "Aucune réponse pour l'instant.",
   collecteRevoqueTexte: "Ce lien ne mène plus à rien. Vous pouvez en créer un autre.",
+  collecteRevenu: "Ce qui est revenu",
+  collecteApercuTitre: "La page qui s'ouvrira",
+  collecteApercuInvite: (qui: string) => "L'invitation vient de " + qui + ".",
+  collecteApercuDate: "La date de naissance y est déjà proposée, à confirmer.",
+  collecteApercuDateAbsente: "La date de naissance y est demandée.",
+  collecteApercuMur: "Un lien discret y mène à votre Mur.",
 
   /* ─── Identité d'un proche (3.18) ─── */
   evtLabel: "Le libellé",
@@ -770,6 +793,7 @@ export const fr = {
   cadrageNote: "Autre chose à savoir ? (facultatif)",
   cadrageNotePlaceholder: (qui: string) => "ex. c'est un cadeau commun avec " + qui,
   cadrageLancer: "Chercher des idées",
+  cadrageNoteLimite: (n: number) => n + (n <= 1 ? " caractère de trop" : " caractères de trop"),
   ideeRetenir: "Retenir",
   ideeLacher: "Retenue",
   ideeMarquerOfferte: "C'est ce que j'ai offert",
@@ -960,4 +984,9 @@ export const fr = {
   listeArchivee: "Archivée",
   listeArchiveeTexte: "L'occasion est passée. Les réservations sont closes ; la liste reste là pour l'an prochain.",
   listeMesDatesAucune: "Aucune date à vous pour l'instant.",
+  /* L'aperçu de la liste partagée. « On ne diffuse pas une page qu'on n'a pas
+     vue » : ces trois lignes servent l'écran qui la montre avant l'envoi. */
+  listeRevoquer: "Révoquer le lien",
+  listeRevoqueFait: "Lien révoqué.",
+  listeApercuRien: "Aucun de vos souhaits n'est visible : ils sont tous privés.",
 };

@@ -320,6 +320,7 @@ export const en = {
   versementDelai: "The credit lands once the transfer is checked.",
   versementAutre: "Without paying",
   versementInviter: (n: number) => n + (n <= 1 ? " credit" : " credits") + " per person you invite",
+  versementNumero: "The number",
   mouvAutrefois: "Earlier",
   mouvNote: "The wording here is the wording on your statement and in our records.",
   mouvVideTitre: "No movement",
@@ -484,6 +485,7 @@ export const en = {
   rechargeAboutiTexte: (n: number) => n + " credits are on your account.",
   rechargeEchecTitre: "The payment didn't go through",
   rechargeEchecTexte: "Nothing was taken.",
+  rechargeCarte: "Bank card",
   parrainageTitre: "Invite someone, you both gain",
   parrainageTexte: (pourEux: number, pourMoi: number) => "Your code gives "
     + pourEux + (pourEux <= 1 ? " credit" : " credits") + " to whoever signs up, and "
@@ -526,6 +528,12 @@ export const en = {
   collecteRecu: (n: number) => n === 1 ? "One reply received" : n + " replies received",
   collecteAucune: "No replies yet.",
   collecteRevoqueTexte: "This link leads nowhere now. You can create another one.",
+  collecteRevenu: "What came back",
+  collecteApercuTitre: "The page that opens",
+  collecteApercuInvite: (qui: string) => "The invitation comes from " + qui + ".",
+  collecteApercuDate: "The birth date is already filled in, to confirm.",
+  collecteApercuDateAbsente: "The birth date is asked for.",
+  collecteApercuMur: "A discreet link points to your Wall.",
   evtLabel: "The label",
   evtLabelAide: "As you write it — it shows untranslated.",
   evtNatureSensible: "Sensitive",
@@ -711,6 +719,7 @@ export const en = {
   cadrageNote: "Anything else to know? (optional)",
   cadrageNotePlaceholder: (qui: string) => "e.g. it's a joint gift with " + qui,
   cadrageLancer: "Look for ideas",
+  cadrageNoteLimite: (n: number) => n + (n <= 1 ? " character too many" : " characters too many"),
   ideeRetenir: "Keep",
   ideeLacher: "Kept",
   ideeMarquerOfferte: "This is what I gave",
@@ -886,4 +895,9 @@ export const en = {
   listeArchivee: "Archived",
   listeArchiveeTexte: "The occasion has passed. Reservations are closed; the list stays for next year.",
   listeMesDatesAucune: "No dates of your own yet.",
+  /* The shared list preview. "You don't send out a page you haven't seen" :
+     these three lines serve the screen that shows it before sending. */
+  listeRevoquer: "Revoke the link",
+  listeRevoqueFait: "Link revoked.",
+  listeApercuRien: "None of your wishes are visible: they are all private.",
 };
