@@ -114,6 +114,45 @@ services:
       - traefik.http.routers.${STACK:-lehno}-web.tls.certresolver=le
       - traefik.http.services.${STACK:-lehno}-web.loadbalancer.server.port=3000
 
+  # ── Sauvegarde de la base (vidage nocturne vers R2) ────────────────────────
+  #
+  # Modèle repris du sidecar de gabee, éprouvé depuis six semaines sur ce même
+  # VPS — avec sa purge corrigée : `aws s3 rm` n'accepte pas `--no-progress`,
+  # et le passer faisait remonter chaque nuit RÉUSSIE comme un échec. Voir
+  # ops/backup/bin/backup-once.
+  #
+  # LES VARIABLES SONT PRÉFIXÉES, et ce n'est pas de la cosmétique : Lehno
+  # emploie déjà R2_BUCKET et R2_ACCESS_KEY_ID pour le stockage des IMAGES.
+  # Réutiliser ces noms ferait écrire les sauvegardes dans le compartiment des
+  # portraits, avec les clés des portraits. Deux jetons distincts permettent en
+  # outre de cloisonner : celui des images ne peut pas toucher aux sauvegardes.
+  backup:
+    build:
+      context: ./ops/backup
+    image: ${REGISTRY:-ghcr.io/iamvaln}/lehno-backup:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_R2_ENDPOINT: ${BACKUP_R2_ENDPOINT}
+      BACKUP_R2_BUCKET: ${BACKUP_R2_BUCKET}
+      BACKUP_R2_PREFIX: ${BACKUP_R2_PREFIX:-backups}
+      # Le SDK d'AWS lit les identifiants sous CES noms-là : on y projette les
+      # nôtres ici, pour que les variables du fichier d'environnement restent
+      # lisibles et distinctes de celles du stockage d'images.
+      AWS_ACCESS_KEY_ID: ${BACKUP_R2_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_R2_SECRET_ACCESS_KEY}
+      BACKUP_SCHEDULE_HOUR_UTC: ${BACKUP_SCHEDULE_HOUR_UTC:-3}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    depends_on:
+      db:
+        condition: service_healthy
+    # « internal » seulement : il parle à la base et à R2 par sortie réseau. Il
+    # n'a rien à exposer, donc aucune étiquette Traefik.
+    networks: [internal]
+
   # ── Back-office (Vite, fichiers statiques servis par nginx) ─────────────────
   #
   # Il n'existait sur aucun serveur : le back-office ne tournait que sur les
