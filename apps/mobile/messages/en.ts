@@ -465,7 +465,7 @@ export const en = {
   rechargeTitre: "How many credits?",
   rechargeIntro: "One credit per piece created for you.",
   rechargeUnite: (n: number) => n === 1 ? "1 credit" : n + " credits",
-  rechargeEconomie: (p: number) => "+" + p + "% free",
+  rechargeEconomie: (p: number) => "−" + p + "%",
   rechargeAttenteEnCours: "Waiting",
   rechargeAttenteSecours: "If nothing shows up, dial your operator's code:",
   rechargeRecapTitre: "Before you pay",

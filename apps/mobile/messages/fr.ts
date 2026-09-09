@@ -511,7 +511,7 @@ export const fr = {
      EN PLUS pour le même prix. Rendre « −20 % » pour un bonus de 20 %
      annoncerait une réduction qui n'existe pas, et la convertir en remise
      reviendrait à refaire côté client un calcul que l'administration règle. */
-  rechargeEconomie: (p: number) => "+" + p + " % offerts",
+  rechargeEconomie: (p: number) => "−" + p + " %",
   rechargeAttenteEnCours: "En attente",
   rechargeAttenteSecours: "Si rien ne s'affiche, composez le code de votre opérateur :",
   rechargeRecapTitre: "Avant de payer",

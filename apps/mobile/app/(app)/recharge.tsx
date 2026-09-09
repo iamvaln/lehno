@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   collectionAccountsSchema, creditBalanceSchema, creditBundlesSchema,
   CREDIT_REASON_LABELS, paymentChannelsSchema, paymentDetailSchema,
-  paymentPreviewSchema, paymentsSchema,
+  paymentPreviewSchema, paymentsSchema, publicConfigSchema,
   type CollectionAccount, type CreditBundle, type CreditTransaction,
   type PaymentChannel, type PaymentDetail, type PaymentPreview,
 } from "@lehno/contracts";
@@ -18,7 +18,7 @@ import {
   SectionLabel, TextField, Toast, useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
-import { appel, ErreurDApi } from "../../lib/api.js";
+import { appel, appelPublic, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
 import { dateCourte } from "../../lib/carnet.js";
@@ -30,7 +30,7 @@ import {
 import {
   apercuDemandable, corpsDApercu, etapeDeLaRecharge, iconeDuMoyen, montantEnClair,
   natureDeLAttente, paiementASuivre, paiementDuLien, paliersOrdonnes,
-  palierParDefaut, recapDuPaiement, rienNAEtePreleve, suivreEncore,
+  palierParDefaut, recapDuPaiement, reductionDuPalier, rienNAEtePreleve, suivreEncore,
   SUIVI_INTERVALLE_MS,
 } from "../../lib/recharge.js";
 
@@ -70,6 +70,11 @@ export default function Recharge() {
 
   const [solde, setSolde] = useState<number | null>(null);
   const [mouvements, setMouvements] = useState<CreditTransaction[]>([]);
+  /* Le prix d'UN crédit, d'où se déduit la réduction de chaque palier. Il vaut
+     0 tant qu'il n'est pas lu : `reductionDuPalier` rend alors `null` partout,
+     donc aucune ligne de réduction — mieux qu'un pourcentage calculé sur un
+     plein tarif imaginaire pendant le premier rendu. */
+  const [prixUnitaire, setPrixUnitaire] = useState(0);
   const [paliers, setPaliers] = useState<CreditBundle[]>([]);
   const [comptes, setComptes] = useState<CollectionAccount[]>([]);
   const [canaux, setCanaux] = useState<PaymentChannel[]>([]);
@@ -107,11 +112,23 @@ export default function Recharge() {
       /* Les paliers sont servis sans garde ; le reste suit `topup.manual`.
          Demander ce que le drapeau ferme rendrait un 404 qu'on afficherait
          comme une panne. */
-      const bundles = creditBundlesSchema.parse(
-        await appel<unknown>("/me/credit-bundles"),
-      ).bundles;
+      /* LES DEUX MOITIÉS DE LA RÉDUCTION, demandées ensemble. Le palier porte
+         ce qu'on paie ; `/public/config` porte le plein tarif d'un crédit. Ni
+         l'un ni l'autre ne suffit, et les demander l'un après l'autre ferait
+         un rendu intermédiaire où les paliers s'affichent sans leur réduction,
+         qui apparaîtrait ensuite — un prix qui bouge sous les yeux.
+
+         `/public/config` est PUBLIQUE : elle ne suit pas `topup.manual` et
+         répond sans session. */
+      const [brutBundles, brutConfig] = await Promise.all([
+        appel<unknown>("/me/credit-bundles"),
+        appelPublic<unknown>("/public/config"),
+      ]);
+      const bundles = creditBundlesSchema.parse(brutBundles).bundles;
+      const prix = publicConfigSchema.parse(brutConfig).creditUnitPrice;
+      setPrixUnitaire(prix);
       setPaliers(bundles);
-      setPalier((deja) => deja ?? palierParDefaut(bundles));
+      setPalier((deja) => deja ?? palierParDefaut(bundles, prix));
 
       if (manuel) {
         const [brutComptes, brutCanaux, brutPaiements] = await Promise.all([
@@ -400,7 +417,7 @@ export default function Recharge() {
   }
 
   const recents = mouvementsRecents(mouvements);
-  const recap = apercu ? recapDuPaiement(apercu) : null;
+  const recap = apercu ? recapDuPaiement(apercu, prixUnitaire) : null;
   /* Un versement ne se déclare que si TOUT est là : un compte servi, un canal
      choisi ou déduit, un palier, et les deux champs. Il manque l'un d'eux, le
      bouton reste éteint — mieux qu'un envoi refusé après coup. */
@@ -570,9 +587,9 @@ export default function Recharge() {
                     {/* La remise vient du serveur, avec son signe : ce sont des
                         crédits EN PLUS, pas une réduction sur le prix. Nulle,
                         la ligne n'existe pas plutôt que d'afficher « +0 % ». */}
-                    {p.bonusPercent !== null && p.bonusPercent > 0 ? (
+                    {reductionDuPalier(p, prixUnitaire) !== null ? (
                       <Text style={[styles.bonus, { color: couleurs.feedbackSuccess }]}>
-                        {t.rechargeEconomie(p.bonusPercent)}
+                        {t.rechargeEconomie(reductionDuPalier(p, prixUnitaire)!)}
                       </Text>
                     ) : null}
                     <Text style={[styles.prix, { color: couleurs.textBody }]}>
