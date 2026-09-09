@@ -1,10 +1,36 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import sharp from "sharp";
 import type { DepotAvatar, Profile } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { ProfileService } from "./profile.service.js";
 import { AppError } from "../common/errors.js";
 import type { StockagePort } from "../stockage/stockage.port.js";
+
+/* `sharp` se charge À LA DEMANDE, et son absence ne fait pas tomber le serveur.
+ *
+ * C'est une bibliothèque NATIVE : elle tient à des binaires compilés pour la
+ * plateforme, et l'image de production tourne sur Alpine (musl), pas sur ce
+ * qu'on a sous la main en écrivant. Une importation en tête de fichier lie le
+ * DÉMARRAGE de l'API à sa présence — et personne ne pourrait plus se connecter
+ * parce qu'une photo de profil ne sait pas se redimensionner.
+ *
+ * Chargée ici, l'absence coûte ce qu'elle doit coûter : la confirmation d'une
+ * photo refuse, en le disant. Tout le reste continue.
+ */
+type Sharp = (typeof import("sharp"))["default"];
+let outil: Sharp | null = null;
+
+async function image(): Promise<Sharp> {
+  if (outil !== null) return outil;
+  try {
+    outil = (await import("sharp")).default;
+    return outil;
+  } catch {
+    /* `internal_error`, et non `generation_unavailable` : celui-là dit qu'un
+       fournisseur d'IA ne répond pas, ce qui serait mentir. Ici c'est le serveur
+       qui ne sait pas faire ce qu'il devrait — 500, et c'est notre faute. */
+    throw new AppError("internal_error", "image processing unavailable");
+  }
+}
 
 /* Les bornes du dépôt.
  *
@@ -138,8 +164,9 @@ export class AvatarService {
 
   private async recomposer(octets: Buffer, userId: string, enAttente: string): Promise<Buffer> {
     try {
-      const image = sharp(octets, { failOn: "error" });
-      const { format } = await image.metadata();
+      const sharp = await image();
+      const entree = sharp(octets, { failOn: "error" });
+      const { format } = await entree.metadata();
       if (format === undefined || !FORMATS.has(format)) {
         throw new AppError("validation_failed", "unsupported image format");
       }
@@ -148,12 +175,18 @@ export class AvatarService {
          visage sort du cadre. On lit l'orientation, on l'applique, puis on jette
          les métadonnées — sharp ne les recopie pas par défaut, et c'est
          justement ce qu'on veut. */
-      return await image
+      return await entree
         .rotate()
         .resize(COTE, COTE, { fit: "cover", position: "attention" })
         .jpeg({ quality: 82 })
         .toBuffer();
     } catch (echec) {
+      /* UNE PANNE DE CHEZ NOUS NE DÉTRUIT PAS LE DÉPÔT. L'outil manquant est
+         notre affaire, pas celle de qui vient de monter sa photo : on laisse
+         l'attente en place, et une confirmation plus tard aboutira. Un fichier
+         refusé, lui, s'oublie — le garder ferait reprendre à la confirmation
+         suivante un objet qu'on vient de rejeter. */
+      if (echec instanceof AppError && echec.code === "internal_error") throw echec;
       await this.oublier(userId, enAttente);
       if (echec instanceof AppError) throw echec;
       // Un fichier qui n'est pas une image, ou qui ment sur ce qu'il est.

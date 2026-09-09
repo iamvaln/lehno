@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AvatarService } from "../src/me/avatar.service.js";
@@ -159,5 +159,37 @@ describe("la photo de profil", () => {
     await deposer(await photoAvecPosition());
     const profil = await avatars.confirmer(userId);
     expect(profil.avatarUrl).toContain("memoire://lecture/");
+  });
+
+  /* `sharp` est une bibliothèque NATIVE : elle tient à des binaires compilés
+     pour la plateforme, et l'image de production tourne sur Alpine. Son absence
+     ne doit PAS empêcher quelqu'un de se connecter — une photo de profil qui ne
+     sait pas se redimensionner n'est pas une raison de fermer l'application.
+
+     Ce test éprouve la conséquence : le dépôt reste EN ATTENTE. Une panne de
+     chez nous ne détruit pas ce que l'utilisateur vient de monter, et une
+     confirmation plus tard aboutira. */
+  it("survit à l'absence de l'outil d'image, sans détruire le dépôt", async () => {
+    await deposer(await photoAvecPosition());
+    const { avatarPendingKey } = await db.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { avatarPendingKey: true },
+    });
+
+    vi.doMock("sharp", () => { throw new Error("binaire absent"); });
+    vi.resetModules();
+    const { AvatarService: Sans } = await import("../src/me/avatar.service.js");
+    const sans = new Sans(
+      db.prisma as never, stockage, new ProfileService(db.prisma as never, stockage),
+    );
+
+    await expect(sans.confirmer(userId)).rejects.toMatchObject({ code: "internal_error" });
+
+    const apres = await db.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { avatarPendingKey: true, avatarKey: true },
+    });
+    expect(apres.avatarPendingKey).toBe(avatarPendingKey);
+    expect(apres.avatarKey).toBeNull();
+    vi.doUnmock("sharp");
+    vi.resetModules();
   });
 });
