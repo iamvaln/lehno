@@ -80,58 +80,39 @@ export function paliersOrdonnes(paliers: readonly CreditBundle[]): CreditBundle[
  * Aucune remise nulle part : le premier. Pas de palier du tout : rien, et le
  * bouton reste éteint plutôt que d'inventer un montant.
  */
-export function palierParDefaut(
-  paliers: readonly CreditBundle[],
-  prixUnitaire: number,
-): string | null {
+export function palierParDefaut(paliers: readonly CreditBundle[]): string | null {
   const ordonnes = paliersOrdonnes(paliers);
-  /* La MÊME vérité que celle affichée. Choisir d'après `bonusPercent` alors
-     que l'écran montre la réduction déduite ferait présélectionner un palier
-     qui n'est pas celui qui affiche le meilleur chiffre. */
-  const avecRemise = ordonnes.find((p) => reductionDuPalier(p, prixUnitaire) !== null);
+  /* La MÊME source que celle affichée : le champ servi. Choisir sur un autre
+     critère ferait présélectionner un palier qui n'est pas celui qui montre le
+     meilleur chiffre. */
+  const avecRemise = ordonnes.find((p) => p.bonusPercent !== null && p.bonusPercent > 0);
   return (avecRemise ?? ordonnes[0])?.id ?? null;
 }
 
-/* LA RÉDUCTION SE DÉDUIT, elle ne se recopie pas.
+/* LE MOBILE NE CALCULE PAS LA RÉDUCTION, et c'est une décision, pas un oubli.
  *
- * Deux montants sont servis, et ils suffisent : `creditUnitPrice` par
- * `/public/config` — le prix d'UN crédit, réglé en administration — et
- * `amount` / `credits` par `/me/credit-bundles`. Le plein tarif du palier est
- * donc `credits × prixUnitaire`, et ce qu'on économise en est l'écart.
+ * On ne fait confiance qu'au SERVEUR, et un téléphone n'a pas à porter un
+ * traitement qu'on peut lui épargner. `bonusPercent` est donc affiché tel
+ * qu'il vient — l'application ne le vérifie pas, ne le recompose pas, et
+ * n'appelle pas `/public/config` pour se faire un avis : un aller-retour
+ * réseau de moins sur l'appareil, et c'est le réseau qui pèse sur un
+ * téléphone, pas le calcul.
  *
- * POURQUOI PAS `bonusPercent`. Le contrat le porte, la base le stocke
- * (`bonus_percent`, un entier saisi à la main), et RIEN ne le rattache aux
- * chiffres qu'il résume. Un palier peut annoncer « 20 % » quand son rapport
- * prix/crédits en vaut cinq : aucun test ne tombe, ni ici ni au serveur, et
- * c'est l'argument de vente qui ment. Un nombre déduit ne peut pas se
- * désaccorder de ses opérandes — il EST ses opérandes.
+ * LA DETTE EST AU SERVEUR, et elle est écrite. `credit_bundle.bonus_percent`
+ * est aujourd'hui un entier SAISI À LA MAIN au panneau, que rien ne rattache
+ * aux montants qu'il résume : un palier peut annoncer 20 % quand son rapport
+ * prix/crédits en vaut cinq. Il a été décidé le 9 septembre que le serveur le
+ * CALCULE au moment de servir, depuis `credits × credit_unit_price` et
+ * `amount` — voir `specs/manques-contrat-mobile-2026-09-09.md` §9.
  *
- * TROIS CAS RENDENT `null`, et aucun n'est une erreur :
- *   - prix unitaire nul ou absent : il n'y a pas de plein tarif à comparer ;
- *   - palier au plein tarif : « −0 % » n'apprend rien et fait douter — on
- *     cherche ce qu'on n'a pas vu, on relit, on recompte ;
- *   - palier PLUS CHER que le plein tarif : on se tairait plutôt que d'écrire
- *     « −(−8) % ». L'administration peut poser ce montant, et l'écran n'a pas
- *     à commenter une majoration qu'il ne sait pas nommer.
+ * Le contrat n'a pas à changer pour ça : seul le remplissage du champ change.
+ * C'est pourquoi l'écran lit `bonusPercent` et rien d'autre — le jour où le
+ * serveur le calcule, il n'y a rien à retoucher ici.
+ *
+ * Une réduction, pas un bonus : elle abaisse le prix, elle n'augmente pas les
+ * crédits. D'où « −N % », comme la planche l'écrit. Le nom du champ dit le
+ * contraire de ce qu'il porte ; c'est signalé au même endroit.
  */
-export function reductionDuPalier(
-  palier: Pick<CreditBundle, "amount" | "credits">,
-  prixUnitaire: number,
-): number | null {
-  if (prixUnitaire <= 0 || palier.credits <= 0) return null;
-  const pleinTarif = palier.credits * prixUnitaire;
-  /* Arrondi à l'entier : le contrat n'a jamais servi de décimale sur ce
-     nombre, et « −16,67 % » sur un argument de vente se lit moins bien qu'il
-     ne rassure. */
-  const pourcentage = Math.round(((pleinTarif - palier.amount) / pleinTarif) * 100);
-  /* UNE SEULE GARDE POUR LES TROIS SILENCES, et c'est délibéré. J'avais écrit
-     un `if (economie <= 0) return null` au-dessus ; la preuve par la panne l'a
-     dit inutile — le relâcher ne faisait tomber aucun test, parce qu'un plein
-     tarif donne 0 et qu'un palier plus cher donne un négatif, que celui-ci
-     refuse déjà tous les deux. Deux gardes pour une règle, c'est une de trop :
-     celle qu'on croit tenir n'est pas celle qui tient. */
-  return pourcentage > 0 ? pourcentage : null;
-}
 
 // ── Le moyen de payer ───────────────────────────────────────────────────────
 
@@ -178,14 +159,14 @@ export interface Recap {
  * n'existe que s'il y a quelque chose à dire — même règle que `bonusPercent`
  * au contrat, « la ligne ne doit alors pas exister plutôt qu'afficher +0 % ».
  */
-export function recapDuPaiement(apercu: PaymentPreview, prixUnitaire: number): Recap {
+export function recapDuPaiement(apercu: PaymentPreview): Recap {
   return {
     credits: apercu.credits,
-    /* DÉDUITE ICI AUSSI, et par la même fonction. L'aperçu porte lui aussi un
-       `bonusPercent` ; s'en servir ferait un récapitulatif qui contredit la
-       liste des paliers dont il vient — le pire endroit pour un désaccord de
-       chiffres, juste avant de payer. */
-    bonus: reductionDuPalier(apercu, prixUnitaire),
+    /* Le champ servi, ici comme sur la liste des paliers. Deux sources
+       différentes feraient un récapitulatif qui contredit la liste dont il
+       vient — le pire endroit pour un désaccord de chiffres, juste avant de
+       payer. */
+    bonus: apercu.bonusPercent !== null && apercu.bonusPercent > 0 ? apercu.bonusPercent : null,
     montant: apercu.amount,
     frais: apercu.fee > 0 ? apercu.fee : null,
     total: apercu.amountToSend,
