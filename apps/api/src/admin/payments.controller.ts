@@ -14,6 +14,7 @@ import { AuditService } from "./audit.service.js";
 import { prixUnitaireDuJour } from "../payments/prix-unitaire.js";
 import { poserLAuteurEtLeMotif } from "./historisation.js";
 import { fraisDe } from "../payments/frais.js";
+import type { StockagePort } from "../stockage/stockage.port.js";
 
 /**
  * La saisie manuelle d'un paiement — voie `manual`.
@@ -30,6 +31,7 @@ export class AdminPaymentsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly journal: AuditService,
+    @Inject("STOCKAGE_PORT") private readonly stockage: StockagePort,
   ) {}
 
   async saisir(auteurId: string, entree: z.infer<typeof saisiePaiementSchema>) {
@@ -179,7 +181,7 @@ export class AdminPaymentsService {
     const ecart = recu === null || attendu === null ? null : recu - attendu;
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const resultat = await this.prisma.$transaction(async (tx) => {
         // L'état courant se ferme, le nouveau s'ouvre. La base n'en tolère
         // qu'un seul ouvert : c'est ce qui rend la durée de chacun lisible.
         await tx.paymentStatusHistory.updateMany({
@@ -194,9 +196,14 @@ export class AdminPaymentsService {
             status: etat,
             ...(recu !== null ? { receivedAmount: recu } : {}),
             ...(confirme ? { providerRef: entree.reference } : { failureReason: entree.reason }),
-            // Le reçu s'efface une fois la demande traitée : une photo de
-            // justificatif n'a aucune raison de rester une fois qu'elle a
-            // servi, et elle ne prouvait rien de toute façon.
+            /* Le reçu s'efface une fois la demande traitée : il a servi à
+               trancher, et une pièce déposée par quelqu'un n'a pas à rester
+               après ça.
+               LA COLONNE SEULE NE SUFFIT PAS. Elle était remise à nul et le
+               FICHIER restait dans le compartiment — plus rien ne le
+               désignait, donc aucun ménage ne pouvait le retrouver : chaque
+               paiement tranché y abandonnait son reçu, facturé indéfiniment.
+               L'effacement réel se fait APRÈS la transaction (voir plus bas). */
             proofKey: null,
           },
         });
@@ -251,6 +258,25 @@ export class AdminPaymentsService {
 
         return { id, etat, creditsOctroyes, ecart };
       });
+      /* LE FICHIER PART APRÈS LE COMMIT, jamais dedans.
+       *
+       * L'ordre n'est pas un détail : effacé dans la transaction, un retour
+       * arrière laisserait une ligne qui désigne un objet détruit — un reçu
+       * introuvable sur un paiement encore en attente, c'est-à-dire la pièce
+       * manquante au moment où l'on en a besoin. Après le commit, le pire cas
+       * est un fichier oublié, qui ne casse rien.
+       *
+       * Muet en cas d'échec, comme `RecuService.balayer` : la décision est
+       * prise, les crédits sont octroyés, et rendre une erreur ici ferait
+       * croire que rien n'a eu lieu. */
+      if (paiement.proofKey !== null) {
+        try {
+          await this.stockage.effacer(paiement.proofKey);
+        } catch {
+          // Volontairement muet : voir le commentaire ci-dessus.
+        }
+      }
+      return resultat;
     } catch (echec) {
       // Le perdant de la course : l'index unique a refusé son octroi, et sa
       // transaction entière est défaite. Le paiement reste celui qu'a écrit le
