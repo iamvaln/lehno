@@ -10905,6 +10905,10 @@
                         "format": "uri",
                         "nullable": true
                       },
+                      "imageKey": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "details": {
                         "type": "string",
                         "nullable": true
@@ -10949,6 +10953,7 @@
                       "label",
                       "link",
                       "imageUrl",
+                      "imageKey",
                       "details",
                       "price",
                       "currency",
@@ -11249,6 +11254,10 @@
                       "format": "uri",
                       "nullable": true
                     },
+                    "imageKey": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "details": {
                       "type": "string",
                       "nullable": true
@@ -11293,6 +11302,7 @@
                     "label",
                     "link",
                     "imageUrl",
+                    "imageKey",
                     "details",
                     "price",
                     "currency",
@@ -11602,6 +11612,10 @@
                       "format": "uri",
                       "nullable": true
                     },
+                    "imageKey": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "details": {
                       "type": "string",
                       "nullable": true
@@ -11646,6 +11660,7 @@
                     "label",
                     "link",
                     "imageUrl",
+                    "imageKey",
                     "details",
                     "price",
                     "currency",
@@ -12679,6 +12694,10 @@
                         "format": "uri",
                         "nullable": true
                       },
+                      "imageKey": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "details": {
                         "type": "string",
                         "nullable": true
@@ -12719,6 +12738,7 @@
                       "label",
                       "link",
                       "imageUrl",
+                      "imageKey",
                       "details",
                       "price",
                       "currency",
@@ -13024,6 +13044,10 @@
                       "format": "uri",
                       "nullable": true
                     },
+                    "imageKey": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "details": {
                       "type": "string",
                       "nullable": true
@@ -13064,6 +13088,7 @@
                     "label",
                     "link",
                     "imageUrl",
+                    "imageKey",
                     "details",
                     "price",
                     "currency",
@@ -13846,6 +13871,10 @@
                       "format": "uri",
                       "nullable": true
                     },
+                    "imageKey": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "details": {
                       "type": "string",
                       "nullable": true
@@ -13886,6 +13915,7 @@
                     "label",
                     "link",
                     "imageUrl",
+                    "imageKey",
                     "details",
                     "price",
                     "currency",

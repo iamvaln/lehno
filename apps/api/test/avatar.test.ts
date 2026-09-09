@@ -34,10 +34,10 @@ describe("la photo de profil", () => {
 
   const deposer = async (contenu: Buffer): Promise<void> => {
     await avatars.depot(userId);
-    const { avatarPendingKey } = await db.prisma.user.findUniqueOrThrow({
-      where: { id: userId }, select: { avatarPendingKey: true },
+    const { depotEnCoursKey } = await db.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { depotEnCoursKey: true },
     });
-    stockage.poser(avatarPendingKey!, contenu);
+    stockage.poser(depotEnCoursKey!, contenu);
   };
 
   beforeAll(async () => { db = await withDatabase(); }, 120_000);
@@ -64,10 +64,10 @@ describe("la photo de profil", () => {
     const depot = await avatars.depot(userId);
     expect(Object.keys(depot).sort()).toEqual(["expireDans", "tailleMax", "typeMime", "url"]);
 
-    const { avatarPendingKey } = await db.prisma.user.findUniqueOrThrow({
-      where: { id: userId }, select: { avatarPendingKey: true },
+    const { depotEnCoursKey } = await db.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { depotEnCoursKey: true },
     });
-    expect(avatarPendingKey).toMatch(/^avatars\//);
+    expect(depotEnCoursKey).toMatch(/^avatars\//);
   });
 
   /* La recomposition n'est pas un raffinement : c'est elle qui retire les
@@ -95,13 +95,13 @@ describe("la photo de profil", () => {
     await deposer(Buffer.from("<?php echo 'bonjour'; ?>"));
     await expect(avatars.confirmer(userId)).rejects.toBeInstanceOf(AppError);
 
-    const { avatarKey, avatarPendingKey } = await db.prisma.user.findUniqueOrThrow({
-      where: { id: userId }, select: { avatarKey: true, avatarPendingKey: true },
+    const { avatarKey, depotEnCoursKey } = await db.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { avatarKey: true, depotEnCoursKey: true },
     });
     expect(avatarKey).toBeNull();
     // Le dépôt refusé ne reste pas en attente : sinon la confirmation suivante
     // reprendrait un objet qu'on vient de rejeter.
-    expect(avatarPendingKey).toBeNull();
+    expect(depotEnCoursKey).toBeNull();
   });
 
   it("refuse au-delà de la borne, sans la recalculer côté client", async () => {
@@ -121,8 +121,8 @@ describe("la photo de profil", () => {
      laisserait remplacer l'image vérifiée par une autre, après coup. */
   it("range l'image vérifiée sous une clé neuve", async () => {
     await avatars.depot(userId);
-    const { avatarPendingKey: deposee } = await db.prisma.user.findUniqueOrThrow({
-      where: { id: userId }, select: { avatarPendingKey: true },
+    const { depotEnCoursKey: deposee } = await db.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { depotEnCoursKey: true },
     });
     stockage.poser(deposee!, await photoAvecPosition());
     await avatars.confirmer(userId);
@@ -171,8 +171,8 @@ describe("la photo de profil", () => {
      confirmation plus tard aboutira. */
   it("survit à l'absence de l'outil d'image, sans détruire le dépôt", async () => {
     await deposer(await photoAvecPosition());
-    const { avatarPendingKey } = await db.prisma.user.findUniqueOrThrow({
-      where: { id: userId }, select: { avatarPendingKey: true },
+    const { depotEnCoursKey } = await db.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { depotEnCoursKey: true },
     });
 
     vi.doMock("sharp", () => { throw new Error("binaire absent"); });
@@ -185,9 +185,9 @@ describe("la photo de profil", () => {
     await expect(sans.confirmer(userId)).rejects.toMatchObject({ code: "internal_error" });
 
     const apres = await db.prisma.user.findUniqueOrThrow({
-      where: { id: userId }, select: { avatarPendingKey: true, avatarKey: true },
+      where: { id: userId }, select: { depotEnCoursKey: true, avatarKey: true },
     });
-    expect(apres.avatarPendingKey).toBe(avatarPendingKey);
+    expect(apres.depotEnCoursKey).toBe(depotEnCoursKey);
     expect(apres.avatarKey).toBeNull();
     vi.doUnmock("sharp");
     vi.resetModules();
@@ -223,9 +223,102 @@ describe("la photo de profil", () => {
      tout le contrôle de la confirmation. */
   it("ne signe jamais un dépôt non confirmé", async () => {
     await avatars.depot(userId);
-    const { avatarPendingKey } = await db.prisma.user.findUniqueOrThrow({
-      where: { id: userId }, select: { avatarPendingKey: true },
+    const { depotEnCoursKey } = await db.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { depotEnCoursKey: true },
     });
-    await expect(avatars.urlDe(userId, avatarPendingKey!)).rejects.toMatchObject({ code: "not_found" });
+    await expect(avatars.urlDe(userId, depotEnCoursKey!)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  /* LA PHOTO D'UN SOUHAIT suit exactement le même chemin, et subit le même
+     examen : elle vient du même inconnu — un appareil photo — et porte les
+     mêmes métadonnées. */
+  describe("la photo d'un souhait", () => {
+    const unSouhait = async (proprietaire: string): Promise<string> => {
+      const personne = await db.prisma.person.create({
+        data: { userId: proprietaire, displayName: "Awa", isSelf: true, register: "familier", language: "fr" },
+      });
+      const evenement = await db.prisma.event.create({
+        data: {
+          personId: personne.id, authorUserId: proprietaire, kind: "birthday",
+          eventNature: "happy", referenceDate: new Date("1994-03-07"),
+        },
+      });
+      const occurrence = await db.prisma.eventOccurrence.create({
+        data: {
+          eventId: evenement.id, userId: proprietaire,
+          occurrenceDate: new Date("2026-03-07"), occurrenceYear: 2026, status: "upcoming",
+        },
+      });
+      const souhait = await db.prisma.ownerWish.create({
+        data: { eventOccurrenceId: occurrence.id, label: "Un carnet", isPublic: true },
+      });
+      return souhait.id;
+    };
+
+    it("rattache la photo au souhait, métadonnées retirées", async () => {
+      const souhaitId = await unSouhait(userId);
+      await avatars.depotSouhait(userId, souhaitId);
+      const { depotEnCoursKey } = await db.prisma.user.findUniqueOrThrow({
+        where: { id: userId }, select: { depotEnCoursKey: true },
+      });
+      stockage.poser(depotEnCoursKey!, await photoAvecPosition());
+
+      await avatars.confirmerSouhait(userId);
+
+      const souhait = await db.prisma.ownerWish.findUniqueOrThrow({ where: { id: souhaitId } });
+      expect(souhait.imageKey).not.toBeNull();
+      expect(souhait.imageKey).not.toBe(depotEnCoursKey);
+      const servie = await sharp(stockage.contenuDe(souhait.imageKey!)).metadata();
+      expect(servie.exif).toBeUndefined();
+    });
+
+    /* Le souhait doit être À LUI, et on le vérifie AU DÉPÔT : refuser après une
+       montée ferait payer le forfait pour rien. */
+    it("refuse d'ouvrir un dépôt sur le souhait d'un autre", async () => {
+      const autre = await db.prisma.user.create({
+        data: { email: "bila@example.com", username: "bila", referralCode: "B1" },
+      });
+      const sien = await unSouhait(autre.id);
+      await expect(avatars.depotSouhait(userId, sien)).rejects.toMatchObject({ code: "not_found" });
+    });
+
+    /* La confirmation ne dit pas ce qu'elle vise : c'est le dépôt qui l'a fixé.
+       Appeler la mauvaise route rattacherait une photo de souhait à un avatar. */
+    it("refuse de confirmer un dépôt qui visait autre chose", async () => {
+      const souhaitId = await unSouhait(userId);
+      await avatars.depotSouhait(userId, souhaitId);
+      const { depotEnCoursKey } = await db.prisma.user.findUniqueOrThrow({
+        where: { id: userId }, select: { depotEnCoursKey: true },
+      });
+      stockage.poser(depotEnCoursKey!, await photoAvecPosition());
+
+      await expect(avatars.confirmer(userId)).rejects.toMatchObject({ code: "conflict" });
+
+      const inchange = await db.prisma.user.findUniqueOrThrow({
+        where: { id: userId }, select: { avatarKey: true },
+      });
+      expect(inchange.avatarKey).toBeNull();
+    });
+
+    it("signe la lecture d'une photo de souhait qui est la sienne", async () => {
+      const souhaitId = await unSouhait(userId);
+      await avatars.depotSouhait(userId, souhaitId);
+      const { depotEnCoursKey } = await db.prisma.user.findUniqueOrThrow({
+        where: { id: userId }, select: { depotEnCoursKey: true },
+      });
+      stockage.poser(depotEnCoursKey!, await photoAvecPosition());
+      await avatars.confirmerSouhait(userId);
+
+      const souhait = await db.prisma.ownerWish.findUniqueOrThrow({ where: { id: souhaitId } });
+      await expect(avatars.urlDe(userId, souhait.imageKey!)).resolves.toMatchObject({
+        expireDans: expect.any(Number) as number,
+      });
+
+      const autre = await db.prisma.user.create({
+        data: { email: "kine@example.com", username: "kine", referralCode: "K1" },
+      });
+      await expect(avatars.urlDe(autre.id, souhait.imageKey!))
+        .rejects.toMatchObject({ code: "not_found" });
+    });
   });
 });

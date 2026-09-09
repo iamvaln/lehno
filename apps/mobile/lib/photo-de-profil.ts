@@ -55,11 +55,12 @@ export async function choisirUnePhoto(): Promise<
  * change rien tant qu'il n'est pas confirmé, et c'est la confirmation qui relit
  * les octets, vérifie le type et recompose l'image.
  */
-export async function envoyerLaPhoto(photo: ChoixPhoto): Promise<Profile> {
-  const depot = depotAvatarSchema.parse(await appel<unknown>("/me/profile/avatar/depot", {
-    method: "POST",
-  }));
-
+/* La montée elle-même, partagée : profil et souhait déposent pareil, et les
+   deux bornes — la taille, le type — viennent du serveur. */
+async function deposerLeFichier(
+  photo: ChoixPhoto,
+  depot: { url: string; typeMime: string; tailleMax: number },
+): Promise<void> {
   const octets = await (await fetch(photo.uri)).blob();
   /* Refusé AVANT de monter : envoyer cinq mégaoctets pour se les faire refuser
      ensuite ferait payer le forfait deux fois. La borne vient du serveur, elle
@@ -75,9 +76,34 @@ export async function envoyerLaPhoto(photo: ChoixPhoto): Promise<Profile> {
     body: octets,
   });
   if (!montee.ok) throw new Error("depot_refuse");
+}
+
+export async function envoyerLaPhoto(photo: ChoixPhoto): Promise<Profile> {
+  const depot = depotAvatarSchema.parse(await appel<unknown>("/me/profile/avatar/depot", {
+    method: "POST",
+  }));
+
+  await deposerLeFichier(photo, depot);
 
   // Aucun corps : le serveur sait quelle clé il a délivrée, et à qui.
   return profileSchema.parse(await appel<unknown>("/me/profile/avatar", { method: "POST" }));
+}
+
+/**
+ * La photo d'un souhait, par le MÊME chemin.
+ *
+ * Le serveur retient ce que le dépôt vise : la confirmation ne le dit pas, et
+ * ne peut donc pas se tromper de souhait. Rien à rendre — l'écran relit sa
+ * liste, qui portera la clé.
+ */
+export async function envoyerLaPhotoDuSouhait(
+  souhaitId: string, photo: ChoixPhoto,
+): Promise<void> {
+  const depot = depotAvatarSchema.parse(
+    await appel<unknown>(`/me/owner-wishes/${souhaitId}/photo/depot`, { method: "POST" }),
+  );
+  await deposerLeFichier(photo, depot);
+  await appel<unknown>(`/me/owner-wishes/${souhaitId}/photo`, { method: "POST" });
 }
 
 export async function retirerLaPhoto(): Promise<Profile> {

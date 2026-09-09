@@ -9,6 +9,7 @@ const SOUHAIT = {
   label: "Un cours de céramique",
   link: null,
   imageUrl: null,
+  imageKey: null,
   details: null,
   price: null,
   currency: null,

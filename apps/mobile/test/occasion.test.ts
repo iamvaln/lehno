@@ -93,6 +93,7 @@ const souhait = (n: number, quoi: string, reste: Partial<Wish> = {}): Wish => ({
   label: quoi,
   link: null,
   imageUrl: null,
+  imageKey: null,
   details: null,
   price: null,
   currency: null,

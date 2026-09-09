@@ -12,7 +12,8 @@ const uuid = (n: number): string =>
 
 const souhait = (n: number, p: Partial<OwnerWish> = {}): OwnerWish => ({
   id: uuid(n), wishlistId: uuid(1), label: "Un moulin à café", link: null,
-  imageUrl: null, details: null, price: null, currency: null,
+  imageUrl: null,
+  imageKey: null, details: null, price: null, currency: null,
   status: "available", isPublic: true, position: null, reservedByName: null, ...p,
 });
 

@@ -29,6 +29,7 @@ type LigneSouhait = {
   label: string;
   link: string | null;
   imageUrl: string | null;
+  imageKey: string | null;
   details: string | null;
   price: { toNumber(): number } | null;
   currency: string | null;
@@ -354,6 +355,7 @@ function rendre(
     label: l.label,
     link: l.link,
     imageUrl: l.imageUrl,
+    imageKey: l.imageKey,
     details: l.details,
     // Decimal → nombre : un Decimal sérialisé sortirait en chaîne, et un client
     // qui compare des prix comparerait des chaînes — « 9 000 » passerait alors
