@@ -29,7 +29,9 @@ Titulaire et compte fusionnés. Racine du cloisonnement multi-tenant.
 | email_verified | boolean | non | — | false | Passe à true après vérification OTP |
 | username | citext | non | oui | — | Pseudo public unique |
 | display_name | text | oui | — | — | Nom d'affichage libre (facultatif) |
-| avatar_url | text | oui | — | — | Photo de profil ; nul si l'initiale est utilisée. Reprise sur le `Wall` et auprès de la signature d'un `GeneratedProfile` |
+| avatar_key | text | oui | — | — | **La clé** de la photo dans le stockage, jamais son URL : une URL présignée expire, la ranger donnerait des liens morts et lierait la donnée au fournisseur. Le serveur signe une lecture à chaque affichage et décide alors qui y a droit. Nul si l'initiale est utilisée |
+| depot_en_cours_key | text | oui | — | — | Le dépôt **en cours** : sa clé, engendrée par le serveur en signant l'URL. Une seule place par personne — on choisit, on dépose, on confirme, et les trois se suivent. Accepter une clé venue du client laisserait pointer sa photo vers celle d'un autre |
+| depot_en_cours_cible | text | oui | — | — | À quoi rattacher le dépôt : `avatar`, ou `souhait:<id>`. Sans elle, la confirmation recevrait la cible du client, qui pourrait alors rattacher sa photo au souhait de quelqu'un d'autre |
 | referral_code | varchar(16) | non | oui | généré | Jeton de partage de parrainage ; **pas** un credential |
 | referred_by | uuid | oui | — | — | FK → user(id) on delete set null ; parrain éventuel |
 | status | user_status (enum) | non | — | 'active' | `active` \| `suspended` \| `pending_deletion` (désactivé, dans le délai de grâce) \| `deleted` |
@@ -38,10 +40,14 @@ Titulaire et compte fusionnés. Racine du cloisonnement multi-tenant.
 | gender | person_gender (enum) | oui | — | 'unspecified' | **Sert l'accord grammatical** de ce que l'utilisateur signe : *je suis fier* ou *fière*. Demandé au studio, à la première génération |
 | ui_language | varchar(10) | non | — | 'fr' | Langue de l'interface (code BCP 47, ex. `fr`, `en`) ; distincte de `person.language`, la langue de communication propre à chaque proche |
 | theme | ui_theme (enum) | non | — | 'system' | Apparence choisie : `system` (suit l'appareil) \| `light` \| `dark` |
-| timezone | varchar(64) | non | — | 'Africa/Douala' | Fuseau IANA ; décide de « aujourd'hui » et de l'heure des envois |
+| timezone | varchar(64) | non | — | 'UTC' | Fuseau IANA ; décide de « aujourd'hui » et de l'heure des envois |
 | send_hour | smallint | non | — | 9 | Heure locale des rappels et récapitulatifs (0–23) |
 | digest_frequency | digest_frequency (enum) | non | — | 'monthly' | `monthly` \| `weekly` \| `never` |
 | reminder_lead_days | smallint | oui | — | — | Délai d'anticipation par défaut des rappels ; nul = valeur du `SystemParameter`. Un `Schedule` peut le surcharger |
+| activation_emails_opted_out | boolean | non | — | false | Refus des courriels d'activation, distinct du récapitulatif : se désabonner de l'un ne doit pas éteindre l'autre |
+| accepted_terms_at | timestamptz | oui | — | — | Quand les conditions ont été acceptées |
+| accepted_terms_version | varchar(32) | oui | — | — | **La version acceptée**, lue dans le document servi et jamais dans une constante : une constante finirait par mentir le jour où les conditions changent, et on enregistrerait des acceptations de la mauvaise version |
+| erased_at | timestamptz | oui | — | — | Quand la ligne a été **vidée**, pas quand la suppression a été demandée. Seul marqueur d'idempotence de l'effacement : `status` ne peut pas le porter, la ligne restant `deleted` avant comme après. Écrit en dernier, ce qui rend l'effacement reprenable |
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
@@ -99,7 +105,8 @@ Moyen de paiement enregistré par un `User` pour ses recharges, et destination d
 | provider_ref | text | oui | — | — | Référence chez le prestataire, pour une carte tokenisée ; nul pour un compte mobile money |
 | msisdn | text | oui | — | — | Numéro du compte mobile money, **chiffré au repos** ; nécessaire pour initier une transaction et verser un remboursement. Nul pour une carte |
 | kind | payment_method_kind (enum) | non | — | — | `mobile_money` (cas le plus courant sur le marché visé) \| `card` |
-| brand | varchar(40) | oui | — | — | Opérateur (`MTN MoMo`, `Orange Money`) ou réseau de carte, pour l'affichage |
+| operator | varchar(40) | oui | — | — | L'opérateur **normalisé** (`mtn`, `orange`), celui sur lequel on filtre et on rapproche un canal d'encaissement. Distinct de `brand`, qui est un libellé d'affichage : rapprocher deux méthodes sur un libellé ferait dépendre l'appariement de la casse et des espaces |
+| brand | varchar(40) | oui | — | — | Opérateur (`MTN MoMo`, `Orange Money`) ou réseau de carte, **pour l'affichage seulement** |
 | last4 | varchar(4) | oui | — | — | Derniers chiffres du numéro de téléphone ou de la carte, pour l'affichage |
 | expires_at | date | oui | — | — | Échéance éventuelle |
 | last_used_at | timestamptz | oui | — | — | Dernier paiement réussi ou tenté avec cette méthode ; **détermine celle qui est proposée par défaut** à l'achat |
@@ -129,6 +136,8 @@ Achat de crédits réglé par un `User`. Alimente l'historique des paiements et 
 | provider_ref | text | oui | oui | — | Référence de la transaction. Chez le prestataire pour `provider` ; **saisie par l'administrateur** sur les voies manuelles, à la confirmation. Nulle tant qu'elle n'est pas connue — d'où l'unicité partielle, sur les valeurs présentes |
 | payment_channel_id | uuid | oui | — | — | FK → payment_channel(id) on delete restrict ; le canal employé, et son barème |
 | fee_amount | numeric(12,2) | oui | — | — | Les frais **annoncés à l'aperçu**, figés ici. Pas ceux que le canal porte aujourd'hui : changer un taux ne doit pas fausser rétroactivement la comptabilité |
+| credit_unit_price | numeric(12,2) | oui | — | — | Le prix unitaire **du jour de l'achat**, figé. Sans lui, « quelle réduction cette personne a-t-elle obtenue ? » n'est plus reconstructible après un changement de prix. Nul sur les lignes antérieures, et il doit le rester : les remplir avec le prix d'aujourd'hui écrirait le mensonge qu'ils empêchent |
+| bundle_amount | numeric(12,2) | oui | — | — | Le prix du palier acheté. Il double `amount` **à dessein** : c'est ce qui rend un écart entre le facturé et l'affiché détectable au lieu d'invisible. `credit_bundle_id` étant en `set null`, supprimer un palier ferait sinon perdre jusqu'à sa référence |
 | expected_amount | numeric(12,2) | oui | — | — | Ce qu'on **attend sur le compte**, calculé à l'aperçu depuis le montant, les frais et `fee_borne_by` |
 | received_amount | numeric(12,2) | oui | — | — | Ce que l'administrateur a **constaté sur le compte**. Comparé à `expected_amount` : un écart se traite, il ne se devine pas |
 | direction | payment_direction (enum) | non | — | 'charge' | `charge` (achat) \| `refund` (remboursement) |
@@ -253,15 +262,18 @@ Jeton de rafraîchissement d'une session. Sa rotation permet de détecter le vol
 
 ## WaitlistSignup
 
-Adresse déposée sur la liste d'attente pendant le pré-lancement. **Rattachée à aucun `User`** : déposer son adresse ne crée pas de compte.
+Adresse déposée sur la liste d'attente pendant le pré-lancement. **Rattachée à aucun `User` au dépôt** : déposer son adresse ne crée pas de compte. Le lien vers le compte s'écrit plus tard, à l'inscription, et c'est lui qui donne droit au `waitlist_bonus`.
 
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
-| email | citext | non | oui | — | |
-| locale | varchar(10) | oui | — | — | Langue de la page au dépôt |
-| source | varchar(40) | oui | — | — | Provenance, si connue |
-| ip | inet | oui | — | — | Limitation d'abus |
+| email | citext | non | oui | — | L'adresse **telle qu'elle a été écrite** ; c'est elle qu'on renvoie et qu'on affiche |
+| email_canonical | citext | non | oui | — | La même, **normalisée** : points et suffixe `+…` retirés là où le fournisseur les ignore. C'est cette colonne qui empêche une même boîte de prendre dix places sur la liste en variant l'écriture — l'unicité sur `email` seul ne l'arrête pas |
+| locale | varchar(10) | oui | — | — | Langue de la page au dépôt ; décide de la langue de l'invitation |
+| source | varchar(64) | oui | — | — | Provenance, si connue |
+| invited_at | timestamptz | oui | — | — | Quand l'invitation est partie. Nul = pas encore invité, et c'est ce qui rend l'envoi reprenable sans réinviter deux fois |
+| converted_user_id | uuid | oui | oui | — | FK → user(id) on delete set null ; le compte finalement créé. Unique : une inscription en attente ne se réclame qu'une fois |
+| converted_at | timestamptz | oui | — | — | Quand l'inscription a abouti. C'est l'écart avec `invited_at` qui dit ce que la liste a réellement rapporté |
 | created_at | timestamptz | non | — | now() | |
 
 ## SupportRequest
@@ -292,6 +304,32 @@ Avis laissé depuis l'application.
 | app_version | varchar(20) | oui | — | — | |
 | created_at | timestamptz | non | — | now() | |
 
+## ContactMessage
+
+Message envoyé depuis le formulaire de contact du **site public**. Rattaché à aucun `User` : on écrit sans avoir de compte, et souvent justement parce qu'on n'en a pas.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| name | text | non | — | — | Tel qu'écrit |
+| email | text | non | — | — | Adresse de réponse. **Pas de `citext` ni d'unicité** : ce n'est pas un identifiant, et la même personne peut écrire deux fois |
+| subject | varchar(32) | non | — | — | Le sujet choisi dans la liste, pas un texte libre : c'est ce qui permet d'orienter sans lire |
+| message | text | non | — | — | |
+| locale | varchar(10) | oui | — | — | Langue de la page ; décide de la langue de la réponse |
+| created_at | timestamptz | non | — | now() | |
+
+## RateLimitHit
+
+Une frappe comptée par le limiteur. **Éphémère** : la table se purge, elle ne s'archive pas.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| key | text | non | — | — | La clé comptée : `otp:<adresse>`, `otp:ip:<adresse IP>`, etc. **Jamais lue en clair ailleurs** — elle sert à compter, pas à identifier, et n'entre ni dans un journal ni dans une réponse |
+| created_at | timestamptz | non | — | now() | |
+
+- **Le compte vit en base et non en mémoire** : plusieurs instances du service partagent le même plafond, et un redémarrage ne remet pas les compteurs à zéro — ce qui reviendrait à offrir une nouvelle salve à qui insiste.
+
 ## DataExportRequest
 
 Demande d'export de ses données personnelles.
@@ -315,6 +353,7 @@ Trace de toutes les tentatives de connexion, consultable par l'`Admin`.
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
 | user_id | uuid | oui | — | — | FK → user(id) on delete set null ; nul si e-mail inconnu |
 | attempted_email | citext | oui | — | — | E-mail saisi (utile si `user_id` nul) |
+| method | login_method (enum) | oui | — | — | Par quelle voie : `otp` \| `google` \| `apple`. Nulle sur les lignes antérieures à la connexion fédérée |
 | result | login_result (enum) | non | — | — | `success` \| `failure` |
 | ip | inet | oui | — | — | Adresse IP |
 | user_agent | text | oui | — | — | Agent / appareil |
@@ -473,6 +512,7 @@ Trait caractéristique d'un proche, **extrait des notes** par la passe de classe
 | value | text | non | — | — | La valeur, telle qu'elle a été dite |
 | note_id | uuid | oui | — | — | FK → note(id) on delete set null ; **la note d'où il vient** |
 | observed_at | date | non | — | — | Date de la note dont il est tiré |
+| is_public | boolean | non | — | false | Exposé sur la surface publique du proche. **Faux par défaut** : un trait tiré d'une note privée ne devient pas visible parce qu'il a été extrait — c'est un geste, jamais une conséquence |
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `attribute_kind` : `color`, `animal`, `food`, `drink`, `clothing_size`, `shoe_size`, `fragrance`, `style`, `hobby`, `occupation`, `avoid`.
@@ -509,7 +549,8 @@ Souhait **qu'un proche m'a fait connaître**, ou que j'ai noté pour lui, rattac
 | author_user_id | uuid | oui | — | — | FK → user(id) on delete set null ; **auteur** (null si contribution anonyme). Cloisonnement via l'occurrence → event → person |
 | label | text | non | — | — | Intitulé du souhait |
 | link | text | oui | — | — | URL éventuelle |
-| image_url | text | oui | — | — | Photo de l'objet, facultative ; recomposée et servie depuis le stockage (voir 9.6 de la spécification technique) |
+| image_url | text | oui | — | — | Adresse d'une image **extérieure**, celle d'une boutique par exemple, telle qu'elle a été collée. Distincte de `image_key`, qui désigne une photo déposée chez nous : la première n'est pas la nôtre et peut disparaître sans prévenir |
+| image_key | text | oui | — | — | **La clé** de la photo dans le stockage. Jamais une URL : une URL présignée expire, et la ranger donnerait des liens morts. Le serveur signe une lecture à chaque affichage — c'est aussi ce qui lui permet de vérifier, à ce moment-là, que le demandeur y a droit |
 | details | text | oui | — | — | Précisions libres : taille, couleur, référence, où le trouver |
 | price | numeric(12,2) | oui | — | — | Prix indicatif |
 | currency | varchar(3) | oui | — | — | Code ISO 4217 si `price` renseigné |
@@ -551,7 +592,9 @@ Palier d'achat de crédits. **Réglé par l'administration** : montant, crédits
 | amount | numeric(12,2) | non | — | — | Prix du palier |
 | currency | varchar(3) | non | — | 'XAF' | Code ISO 4217 |
 | credits | integer | non | — | — | Crédits obtenus, remise comprise |
-| bonus_percent | smallint | oui | — | — | Remise annoncée à l'écran ; nulle sur les petits paliers |
+
+> **Aucune colonne de remise.** Elle se **déduit** de `amount`, `credits` et du paramètre `credit_unit_price` (voir `apps/api/src/payments/remise.ts`). Le `bonus_percent` d'autrefois était saisi à la main et rien ne le rattachait aux montants qu'il résume : un palier pouvait annoncer 20 % quand son rapport en valait cinq, et aucun test ne tombait — il n'y avait rien à comparer. Aucune valeur rangée ne peut donc plus mentir sur ce qu'un palier vaut, et la question du recalcul en cascade quand le prix unitaire change ne se pose plus.
+
 | position | smallint | non | — | — | Ordre d'affichage |
 | is_active | boolean | non | — | true | |
 | updated_at | timestamptz | non | — | now() | |
@@ -618,6 +661,23 @@ chaque client, et à devoir tous les corriger le jour où MTN change son barème
   comptabilité.
 - Sa modification est une action sensible : elle passe au journal d'audit.
 
+## PaymentChannelHistory
+
+L'**historique temporel** d'un canal de paiement : chaque barème, avec la période où il a fait foi.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| payment_channel_id | uuid | non | — | — | FK → payment_channel(id) on delete cascade |
+| *(toutes les colonnes du canal)* | | | | | `kind`, `operator`, `country`, `label`, `fee_percent`, `fee_fixed`, `fee_min`, `fee_max`, `fee_borne_by`, `currency`, `is_active`, `position`, `updated_at` — recopiées telles quelles |
+| valid_from | timestamptz | non | — | — | Début de validité |
+| valid_to | timestamptz | oui | — | — | Fin de validité ; **nul pour la version en service** |
+| changed_by | uuid | oui | — | — | FK → admin(id) on delete set null |
+| reason | text | non | — | — | Pourquoi le barème change ; obligatoire — c'est un levier qui décide de ce qu'un client paie |
+| reason_code | varchar(48) | oui | — | — | Le motif choisi dans la liste (voir `AuditReason`) |
+
+- **Le paiement fige déjà ses propres frais** (`payment.fee_amount`) : cette table ne sert donc pas à recalculer un paiement passé, mais à répondre à « quand ce taux a-t-il changé, et qui l'a décidé ? ». Les deux sont nécessaires — l'un explique une ligne, l'autre explique une décision.
+
 ## CollectionAccount
 
 Un compte d'opérateur sur lequel les clients versent. **Géré depuis le
@@ -672,6 +732,8 @@ La correspondance, pour qui lisait l'ancienne table :
 ## GiftGiven
 
 Ce qui a été offert à un proche, une année donnée. **Sans cette trace, rien n'empêche de proposer en 2027 le cadeau de 2026** — or c'est la mémoire que le produit promet.
+
+> **Pas encore en base.** Cette entité est décrite mais n'existe dans aucune migration à ce jour. Elle reste ici parce qu'elle est **décidée**, pas parce qu'elle est livrée — et la distinction compte : quelqu'un qui lit ce document pour écrire une requête doit savoir avant, pas au moment où sa jointure échoue.
 
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
@@ -730,7 +792,8 @@ Sa raison d'être est d'**être partagé** : c'est la surface la plus visible du
 | event_occurrence_id | uuid | non | — | — | FK → event_occurrence(id) on delete cascade ; une occasion **de l'utilisateur lui-même** |
 | label | text | non | — | — | Intitulé du souhait |
 | link | text | oui | — | — | URL éventuelle |
-| image_key | text | oui | — | — | Photo de l'objet, facultative |
+| image_url | text | oui | — | — | Adresse d'une image **extérieure**, celle d'une boutique par exemple, telle qu'elle a été collée. Distincte de `image_key`, qui désigne une photo déposée chez nous : la première n'est pas la nôtre et peut disparaître sans prévenir |
+| image_key | text | oui | — | — | **La clé** de la photo dans le stockage. Jamais une URL : une URL présignée expire, et la ranger donnerait des liens morts. Le serveur signe une lecture à chaque affichage — c'est aussi ce qui lui permet de vérifier, à ce moment-là, que le demandeur y a droit |
 | details | text | oui | — | — | Taille, couleur, référence, où le trouver |
 | price | numeric(12,2) | oui | — | — | Prix indicatif |
 | currency | varchar(3) | oui | — | — | Code ISO 4217 si `price` renseigné |
@@ -786,7 +849,6 @@ Vue publique curée sur la self-Person de l'utilisateur.
 |---|---|---|---|---|---|
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
 | user_id | uuid | non | oui | — | Un `Wall` par utilisateur |
-| slug | varchar(40) | non | oui | — | Segment d'URL public |
 | is_enabled | boolean | non | — | false | Le mur est-il publié |
 | show_birthday_date | boolean | non | — | true | Exposer la date d'anniversaire |
 | welcome_message | text | oui | — | — | Mot d'accueil personnel, facultatif ; s'affiche sous le message d'accueil composé par le produit à partir du prénom |
@@ -794,6 +856,7 @@ Vue publique curée sur la self-Person de l'utilisateur.
 | updated_at | timestamptz | non | — | now() | |
 
 - Le contenu exposé dérive de la self-Person : catégories `interests` marquées publiques et `owner_wish.is_public = true`. La visibilité par élément vit sur ces entités, pas sur le `Wall`.
+- **L'adresse publique est le pseudo**, `user.username`, et le mur ne porte donc pas de segment à lui. Un second identifiant d'URL ferait deux choses à garder uniques, deux à réserver, deux à changer le jour où quelqu'un renomme son compte — et une adresse imprimée qui cesserait de correspondre à celle affichée dans l'application.
 - **Pas de `wishlist_item` ici.** Cette ligne visait autrefois `wishlist_item.is_public` ; c'était une confusion entre les deux tables de souhaits. Un `WishlistItem` est ce qu'un proche m'a confié : il est privé, ne se partage pas, et son booléen — désormais `is_shortlisted` — n'est qu'un repère personnel. Ce qui se publie est `OwnerWish`, dont c'est la raison d'être.
 
 ## CollectionLink
@@ -881,6 +944,10 @@ Souhait individuel d'une `Submission`, porté en ligne (plutôt qu'en blob) pour
 
 Portrait généré et persistant. C'est une **image** que l'utilisateur envoie à son proche, accompagnée d'un mot.
 
+> **Pas encore en base.** Cette entité est décrite mais n'existe dans aucune migration à ce jour. Elle reste ici parce qu'elle est **décidée**, pas parce qu'elle est livrée — et la distinction compte : quelqu'un qui lit ce document pour écrire une requête doit savoir avant, pas au moment où sa jointure échoue.
+
+La chaîne de production du portrait n'existe pas encore côté serveur : l'action payante, le drapeau et la chaîne de modèles sont en place, mais ni gabarit d'invite, ni table de résultat, ni charge utile au contrat. Le lancement refuse la nature `portrait` **avant tout débit**.
+
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
@@ -925,6 +992,7 @@ Brouillon de message de vœux, persistant.
 | event_occurrence_id | uuid | non | — | — | FK → event_occurrence(id) on delete cascade ; l'année concernée |
 | user_id | uuid | non | — | — | Cloisonnement |
 | content | text | non | — | — | Brouillon (éditable) |
+| short_content | text | oui | — | — | La version courte, pour le format vertical. **Elle manque parfois** : elle sort du même appel, n'a pas de crédit à elle, et mieux vaut rendre le message sans elle que perdre les deux. Le client se replie alors sur le texte long |
 | status | generated_message_status (enum) | non | — | 'generated' | `generated` \| `edited` \| `sent` |
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
@@ -948,12 +1016,10 @@ Message d'anniversaire reçu d'un tiers via le `CollectionLink` du `Wall`, ratta
 | author_name | text | oui | — | — | Nom de l'auteur tel que soumis (si anonyme) |
 | content | text | non | — | — | Le message de vœux |
 | status | received_wish_status (enum) | non | — | 'pending' | `pending` \| `approved` \| `rejected` (modéré avant affichage) |
-| is_public | boolean | non | — | false | **Inactif** : les vœux reçus restent privés, le Mur n'a pas de livre d'or. Champ conservé pour une éventuelle publication ultérieure |
-| show_author | boolean | non | — | true | **Inactif**, comme `is_public` : afficherait le nom de l'auteur si la publication était ouverte un jour |
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `received_wish_status` : `pending`, `approved`, `rejected`.
-- Modéré par l'owner (`pending` → `approved` / `rejected`), puis **conservé en privé** : un vœu approuvé se lit dans son Mur côté application et ne s'affiche jamais sur la page publique. Les champs `is_public` et `show_author` restent en place mais **ne sont pas exploités** en l'état. Entrant ; distinct de `wishlist_item` et de `generated_message`.
+- Modéré par l'owner (`pending` → `approved` / `rejected`), puis **conservé en privé** : un vœu approuvé se lit dans son Mur côté application et ne s'affiche jamais sur la page publique. La table **ne porte aucun champ de publication** : les vœux reçus restent privés, le Mur n'a pas de livre d'or, et ouvrir cette porte demanderait d'abord de décider ce qu'on montre. Entrant ; distinct de `wishlist_item` et de `generated_message`.
 
 ---
 
@@ -983,8 +1049,11 @@ Exécution d'une action premium.
 | event_occurrence_id | uuid | oui | — | — | Cible : l'occurrence pour laquelle la génération est lancée ; FK → event_occurrence(id) on delete set null |
 | prompt_template_id | uuid | oui | — | — | FK → prompt_template(id) on delete set null ; **la version exacte du gabarit qui a produit ce contenu** |
 | credits_spent | integer | non | — | — | Recopié à l'exécution (fige l'historique) |
+| orientation | varchar(40) | oui | — | — | L'orientation demandée pour un message. Retenue ici et pas seulement dans le gabarit : c'est elle qu'on relit pour comprendre ce qui a été produit |
+| idempotency_key | varchar(128) | oui | — | — | Rend deux appuis maladroits reconnaissables comme **une seule** demande : unique par compte, la relance rejoint l'exécution en cours au lieu d'en créer une seconde — donc ne débite qu'une fois |
 | status | action_run_status (enum) | non | — | — | `success` \| `failure` |
 | internal_cost | numeric(12,6) | oui | — | — | Coût IA réel = agrégat des `ai_usage` ; interne, non facturé |
+| failure_code | varchar(40) | oui | — | — | Le **code** de l'échec, jamais un message de fournisseur — ceux-là recopient parfois l'invite, donc les notes. C'est lui que l'écran d'attente lit pour dire pourquoi, et lui qui déclenche le rendu du crédit |
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `action_run_status` : `success`, `failure`.
@@ -999,18 +1068,18 @@ Registre des mouvements de crédits. Le solde d'un `User` en est la somme.
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
 | user_id | uuid | non | — | — | Titulaire |
 | type | credit_txn_type (enum) | non | — | — | `grant` \| `purchase` \| `consumption` \| `adjustment` |
+| source | credit_source (enum) | non | — | — | **D'où vient le mouvement**, là où `type` ne dit que son sens. Deux `grant` de +5 ne se distinguent pas par leur type : l'un est le cadeau d'inscription, l'autre le bonus de parrainage — c'est cette colonne qui permet de savoir ce que chaque geste a coûté |
 | amount | integer | non | — | — | Signé (+ crédit, − débit) |
-| action_run_id | uuid | oui | — | — | FK → action_run(id) ; si `consumption` |
 | referral_id | uuid | oui | — | — | FK → referral(id) ; si `grant` de parrainage |
 | payment_id | uuid | oui | — | — | FK → payment(id) on delete restrict ; si `purchase`, et sur l'ajustement qui reprend un remboursement |
-| promo_code_id | uuid | oui | — | — | FK → promo_code(id) ; si `grant` de code promo |
 | reason | text | oui | — | — | Libellé libre (octroi direct, ajustement admin…) |
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `credit_txn_type` : `grant`, `purchase`, `consumption`, `adjustment`.
+- Enum `credit_source` : `signup_grant`, `referral_bonus`, `waitlist_bonus`, `purchase`, `manual_topup`, `promo_code`, `gift`, `reward`, `consumption`, `refund`, `correction`. `waitlist_bonus` est à part de `gift` à dessein : le premier est systématique et se compte — sans la distinction, on ne saurait pas ce que la liste d'attente a rapporté.
 - Solde = `sum(amount) where user_id = ?`. Aucune colonne de solde stockée.
 - **Un paiement et un octroi sont deux choses.** Le `Payment` porte l'argent et un cycle de vie qui lui est propre (`pending` → `succeeded` / `failed` / `expired` / `refunded`) ; la `CreditTransaction` porte le mouvement en crédits, et n'existe qu'une fois le paiement abouti. Les fondre en une seule ligne obligerait à écrire un mouvement dès l'initiation, puis à le défaire si l'opérateur refuse — un solde qui monte et redescend au gré d'un paiement en attente.
-- **Chaque ligne dit d'où elle vient.** `payment_id` pour un achat, `referral_id` pour un parrainage, `promo_code_id` pour un code, `action_run_id` pour une consommation. Sans ce pointeur, une ligne de +20 crédits ne se rattache à rien : on ne saurait ni quel paiement l'a produite, ni quoi reprendre lors d'un remboursement — la ligne d'ajustement n'aurait aucun moyen de désigner l'achat qu'elle annule, et un litige se règlerait à l'estime.
+- **Chaque ligne dit d'où elle vient.** `source` porte le geste ; `payment_id` désigne l'achat, `referral_id` le parrainage. Sans ce pointeur, une ligne de +20 crédits ne se rattache à rien : on ne saurait ni quel paiement l'a produite, ni quoi reprendre lors d'un remboursement — la ligne d'ajustement n'aurait aucun moyen de désigner l'achat qu'elle annule, et un litige se règlerait à l'estime.
 - **Unicité partielle sur `payment_id` là où `type = 'purchase'`.** C'est ce qui rend l'octroi unique STRUCTUREL plutôt que dépendant du code qui le vérifie : un paiement se résout par trois voies — notification, interrogation, confirmation manuelle — et deux d'entre elles peuvent constater le succès à quelques secondes d'écart. Sans la contrainte, le compte est crédité deux fois. Même logique que l'unicité sur `referral.invited_user_id`.
 - **`on delete restrict` et non `cascade`** : effacer un paiement ne doit pas faire disparaître le crédit qu'il a produit. Un solde qui change parce qu'on a nettoyé une table est un solde qu'on ne peut plus expliquer.
 
@@ -1035,6 +1104,10 @@ Trace d'un parrainage.
 
 Code octroyant des crédits : campagne ou coupon.
 
+> **Pas encore en base.** Cette entité est décrite mais n'existe dans aucune migration à ce jour. Elle reste ici parce qu'elle est **décidée**, pas parce qu'elle est livrée — et la distinction compte : quelqu'un qui lit ce document pour écrire une requête doit savoir avant, pas au moment où sa jointure échoue.
+
+La valeur `promo_code` existe pourtant dans l'enum `credit_source` : la provenance est prévue, le code qui l'attribuerait ne l'est pas.
+
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
@@ -1054,6 +1127,8 @@ Code octroyant des crédits : campagne ou coupon.
 ## PromoCodeRedemption (association)
 
 Trace d'utilisation d'un `PromoCode` par un `User` (pour appliquer `once_per_user` et `max_uses`).
+
+> **Pas encore en base**, comme `PromoCode` dont elle dépend.
 
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
@@ -1102,6 +1177,39 @@ Compte d'exploitation, distinct des données d'un `User`.
 - **`support`** : consultation des comptes, suspension/rétablissement, modération, traitement des suppressions en cours, consultation des paiements. **`admin`** : tout cela, plus les paramètres globaux, les modèles d'IA, les codes promotionnels, les ajustements de crédits et remboursements (y compris la levée du blocage anti-fraude), l'effacement immédiat d'un compte, le journal d'audit et la gestion des accès admin.
 - L'authentification admin peut réutiliser le mécanisme OTP (à préciser à l'implémentation).
 
+## AdminOtpCode
+
+Code à usage unique pour la connexion d'un `Admin`. **Table à part de `OtpCode`**, et ce n'est pas de la duplication : un code d'administration et un code d'utilisateur n'ont ni la même durée, ni les mêmes plafonds, ni le même risque. Les mêler ferait qu'un plafond touché d'un côté fermerait l'autre.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| admin_id | uuid | non | — | — | FK → admin(id) on delete cascade |
+| target_email | text | non | — | — | L'adresse visée, recopiée : le code reste explicable si l'adresse de l'admin change ensuite |
+| code_hash | text | non | — | — | Code **haché**, jamais en clair |
+| expires_at | timestamptz | non | — | — | Courte durée |
+| consumed_at | timestamptz | oui | — | — | Renseigné à la consommation ; un code ne sert qu'une fois |
+| attempts | integer | non | — | 0 | Compteur de tentatives |
+| created_at | timestamptz | non | — | now() | |
+
+## AdminRefreshToken
+
+Jeton de rafraîchissement d'une session d'administration, **par familles**, avec détection de rejeu.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| admin_id | uuid | non | — | — | FK → admin(id) on delete cascade |
+| family_id | uuid | non | — | — | **La lignée** : chaque rafraîchissement engendre un jeton enfant dans la même famille. Un jeton déjà consommé qu'on représente trahit un vol — on révoque alors la famille entière, pas la seule ligne |
+| token_hash | text | non | oui | — | Haché, jamais en clair |
+| parent_id | uuid | oui | — | — | Le jeton dont celui-ci est issu ; nul pour le premier de la lignée |
+| expires_at | timestamptz | non | — | — | |
+| consumed_at | timestamptz | oui | — | — | Un jeton ne se rafraîchit qu'une fois |
+| revoked_at | timestamptz | oui | — | — | Révocation explicite, ou emportée par la révocation de la famille |
+| user_agent | text | oui | — | — | Pour que la liste des sessions soit lisible |
+| ip | inet | oui | — | — | Idem ; jamais renvoyée au client |
+| created_at | timestamptz | non | — | now() | |
+
 ## AIModel
 
 Catalogue des modèles d'IA et configuration de routage.
@@ -1111,14 +1219,33 @@ Catalogue des modèles d'IA et configuration de routage.
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
 | provider | varchar(40) | non | — | — | Fournisseur |
 | model_key | varchar(80) | non | — | — | Identifiant du modèle chez le fournisseur |
-| priority | integer | non | — | — | Ordre de préférence / repli (plus bas = prioritaire) |
+| capability | ai_capability (enum) | non | — | 'text' | Ce que le modèle sait produire : `text` \| `image`. Une tâche d'image ne peut pas se router vers un modèle de texte |
 | cost_input | numeric(12,6) | oui | — | — | Repère de coût par unité en entrée |
 | cost_output | numeric(12,6) | oui | — | — | Repère de coût par unité en sortie |
 | enabled | boolean | non | — | true | Activable/désactivable à chaud |
+| consecutive_failures | integer | non | — | 0 | Le disjoncteur : trois échecs **d'affilée** écartent le modèle. Un seul échec est du bruit ; attendre le dixième laisse neuf générations tomber |
+| outage_until | timestamptz | oui | — | — | Écarté jusqu'à cette date. Cinq minutes : une panne de fournisseur dure rarement moins, et une éviction plus longue priverait de son primaire bien après le rétablissement |
+| outage_reason | varchar(200) | oui | — | — | Ce qui a fait sauter le disjoncteur |
 | created_at | timestamptz | non | — | now() | |
 | updated_at | timestamptz | non | — | now() | |
 
 - Unicité logique (`provider`, `model_key`).
+- L'**ordre de repli** ne vit pas ici : il appartient à la tâche, et se lit dans `AITaskRoute` (`task`, `rank`). Un rang unique par modèle interdirait qu'un même modèle soit primaire pour une tâche et secondaire pour une autre.
+
+## AITaskRoute
+
+L'**ordre de repli** d'une tâche : quels modèles essayer, et dans quel ordre.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| task | ai_task (enum) | non | — | — | La tâche routée |
+| model_id | uuid | non | — | — | FK → ai_model(id) on delete cascade |
+| rank | integer | non | — | — | 1 = primaire, puis les replis |
+
+- Unicité sur (`task`, `rank`) et sur (`task`, `model_id`).
+- **Le rang appartient à la tâche, pas au modèle.** Une colonne `priority` sur `AIModel` — ce que ce document décrivait — interdisait qu'un même modèle soit primaire pour le classement des notes et second pour le message. C'est pourtant le cas courant : un modèle rapide et bon marché passe devant sur les passes d'arrière-plan et derrière sur ce qu'un client lit.
+- Moins de trois rangs, ou un même fournisseur répété dans la chaîne, **avertit sans refuser** : deux fournisseurs seulement produisent des images, et refuser rendrait ces tâches inconfigurables.
 
 ## StudioConfig
 
@@ -1127,7 +1254,9 @@ Configuration d'ensemble du studio. **Un brouillon se modifie librement ; une pu
 | Champ | Type | Null | Unique | Défaut | Notes |
 |---|---|---|---|---|---|
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
-| version | integer | non | oui | — | S'incrémente à chaque publication |
+| kind | studio_config_kind (enum) | non | — | — | Ce que la configuration règle : `message` \| `portrait`. Les deux vivent séparément — publier des ambiances ne doit pas remettre en service des orientations qu'on était en train de reprendre |
+| version | integer | oui | — | — | **Nulle tant que le brouillon n'est pas publié** : un numéro attribué à la création ferait des trous dans la suite à chaque brouillon abandonné, et deux brouillons ouverts en même temps se disputeraient le même numéro. Unique par `kind` une fois posé |
+| fingerprint | varchar(64) | non | — | — | L'empreinte des `settings`. Elle rend une republication à l'identique reconnaissable : sans elle, republier deux fois le même réglage crée deux versions que rien ne distingue, et l'historique cesse de dire ce qui a changé |
 | state | studio_config_state (enum) | non | — | 'draft' | `draft` \| `published` \| `superseded` |
 | settings | jsonb | non | — | — | Orientations actives et leur ordre, ambiances, motif, modèle par production, gabarits retenus |
 | published_at | timestamptz | oui | — | — | |
@@ -1136,7 +1265,7 @@ Configuration d'ensemble du studio. **Un brouillon se modifie librement ; une pu
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `studio_config_state` : `draft`, `published`, `superseded`.
-- **Une seule version publiée à la fois** : index unique partiel là où `state` vaut `published`. Publier fait passer la précédente à `superseded`.
+- **Une seule version publiée à la fois, par `kind`** : index unique partiel là où `state` vaut `published`. Publier fait passer la précédente à `superseded`.
 - **Le retour arrière republie une version antérieure**, sans la reconstruire.
 - **Rien ne se publie sans essai** : au moins une `StudioTrial` doit exister sur le brouillon.
 
@@ -1162,13 +1291,19 @@ Essai d'une configuration sur un profil de simulation. **Sert la décision, jama
 |---|---|---|---|---|---|
 | id | uuid | non | oui (PK) | gen_random_uuid() | |
 | studio_config_id | uuid | non | — | — | FK → studio_config(id) on delete cascade ; la version essayée |
-| studio_profile_id | uuid | non | — | — | FK → studio_profile(id) on delete set null |
+| studio_profile_id | uuid | oui | — | — | FK → studio_profile(id) on delete set null. Nul quand le profil de simulation a été supprimé depuis : l'essai reste lisible, avec son coût et son verdict, sans la fiche qui l'a servi |
 | admin_id | uuid | oui | — | — | FK → admin(id) on delete set null |
+| provider | varchar(40) | non | — | — | Fournisseur réellement employé, **copié** : le routage change, l'essai doit rester explicable |
+| model_key | varchar(80) | non | — | — | Modèle réellement employé, copié pour la même raison |
+| ambiance_id | varchar(60) | oui | — | — | L'ambiance essayée, quand il s'agit d'un portrait. Retenue ici parce qu'un essai gardé doit pouvoir se rejouer à l'identique |
 | output | jsonb | oui | — | — | Le message produit, la référence de l'image |
 | cost | numeric(12,6) | oui | — | — | Coût réel de l'essai |
 | status | ai_usage_status (enum) | non | — | — | `success` \| `error` \| `timeout` |
+| error_code | varchar(80) | oui | — | — | Le code de l'échec ; jamais le message du fournisseur |
+| verdict | studio_trial_verdict (enum) | oui | — | — | Ce que l'administrateur en a fait : `kept` \| `discarded`. **Nul tant qu'il n'a pas tranché** — et c'est un état à part entière, pas un défaut : un essai qu'on n'a pas encore jugé ne se compte ni parmi les bons ni parmi les mauvais |
 | created_at | timestamptz | non | — | now() | |
 
+- Enum `studio_trial_verdict` : `kept`, `discarded`.
 - **Un essai coûte en argent réel** sans consommer de crédit ni toucher un compte. L'écran affiche son coût et le cumul du jour ; un plafond quotidien (`SystemParameter` `studio_trial_daily_cap`) évite qu'une après-midi de réglages passe inaperçue.
 - Les productions d'essai s'enregistrent dans `AIUsage` avec un `action_run_id` nul, comme les autres appels sans production visible.
 
@@ -1206,14 +1341,16 @@ Trace d'un appel modèle. Elle couvre **tous** les appels, y compris ceux qui ne
 | origin | ai_origin (enum) | non | — | 'user_action' | Ce qui l'a déclenché : un geste, un traitement programmé, une reprise |
 | correlation_id | varchar(64) | oui | — | — | Identifiant de corrélation, le même que celui des journaux techniques |
 | user_id | uuid | oui | — | — | FK → user(id) on delete set null ; rapporte le coût à un compte |
-| ai_model_id | uuid | oui | — | — | FK → ai_model(id) on delete set null ; modèle effectivement utilisé |
+| model_id | uuid | oui | — | — | FK → ai_model(id) on delete set null ; modèle effectivement utilisé |
 | provider | varchar(40) | non | — | — | Copié (traçabilité même si `ai_model` évolue) |
 | model_key | varchar(80) | non | — | — | Copié |
+| attempt | integer | non | — | — | Le rang de la tentative dans la chaîne de repli. Sans lui, deux lignes du même appel ne se distinguent pas, et le coût d'un repli passe pour celui d'un succès |
 | tokens_in | integer | oui | — | — | Tokens en entrée |
 | tokens_out | integer | oui | — | — | Tokens en sortie |
 | cost | numeric(12,6) | oui | — | — | Coût réel calculé de cet appel |
 | latency_ms | integer | oui | — | — | Latence |
 | status | ai_usage_status (enum) | non | — | — | `success` \| `error` \| `timeout` |
+| error_code | varchar(80) | oui | — | — | Le **code**, jamais le message du fournisseur : ceux-là recopient parfois l'invite, donc les notes — les mots privés de quelqu'un sur un tiers n'ont rien à faire dans une trace |
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `ai_usage_status` : `success`, `error`, `timeout`.
@@ -1233,6 +1370,8 @@ Journal des actions sensibles (admin et compte).
 | actor_type | audit_actor (enum) | non | — | — | `admin` \| `user` |
 | actor_id | uuid | non | — | — | Réfère à admin(id) ou user(id) selon `actor_type` |
 | action | varchar(64) | non | — | — | Ex. `credit_adjust`, `link_revoke`, `wall_moderate`, `data_delete` |
+| reason | text | oui | — | — | **Le motif, en clair.** Un journal qui dit qui a fait quoi sans dire pourquoi ne se relit pas : c'est la question qu'on pose six mois plus tard, et la seule à laquelle l'horodatage ne répond pas |
+| reason_code | varchar(48) | oui | — | — | Le motif **choisi dans la liste** (`AuditReason`), quand le geste en propose une. Le code se compte et se filtre, là où le texte libre ne se compare pas d'une ligne à l'autre |
 | target_type | varchar(40) | oui | — | — | Type d'entité visée |
 | target_id | uuid | oui | — | — | Identifiant visé |
 | metadata | jsonb | oui | — | — | Détails contextuels |
@@ -1244,6 +1383,53 @@ Journal des actions sensibles (admin et compte).
 ---
 
 # 7. Rappels
+
+## AuditReason
+
+Les **motifs proposés** aux gestes d'administration. Une liste tenue en base, pas dans le code : ajouter un motif ne doit pas demander une livraison.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| code | varchar(48) | non | oui | — | Le code stable, **jamais traduit** : c'est lui que `audit_log.reason_code` recopie et qu'on agrège |
+| label_fr | varchar(120) | non | — | — | Libellé français |
+| label_en | varchar(120) | non | — | — | Libellé anglais |
+| is_active | boolean | non | — | true | Un motif se retire de la liste **sans disparaître** : les lignes de journal qui le citent doivent rester lisibles |
+| updated_at | timestamptz | non | — | now() | |
+
+- **Pourquoi un code en plus du libellé** : les libellés sont bilingues, et le même geste s'inscrivait « Fraude suspectée » ou « Suspected fraud » selon la langue au moment du clic. Rien ne s'agrégeait.
+
+## AuditReasonScope
+
+À quels **gestes** un motif est proposé.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| reason_id | uuid | non | — | — | FK → audit_reason(id) on delete cascade |
+| geste | varchar(48) | non | — | — | Le geste concerné (`credit_adjust`, `user_suspend`…) |
+| position | smallint | oui | — | — | Ordre d'affichage dans la liste |
+
+- Unicité sur (`reason_id`, `geste`).
+- **Un motif sert plusieurs gestes**, et tous les motifs ne conviennent pas à tous : proposer « Erreur de saisie » à une suspension de compte ferait choisir n'importe quoi, et le comptage ne dirait plus rien.
+
+## AuditReasonHistory · AuditReasonScopeHistory
+
+L'**historique temporel** des deux tables ci-dessus : chaque version d'un motif, avec la période où elle a fait foi.
+
+| Champ | Type | Null | Unique | Défaut | Notes |
+|---|---|---|---|---|---|
+| id | uuid | non | oui (PK) | gen_random_uuid() | |
+| audit_reason_id · audit_reason_scope_id | uuid | non | — | — | La ligne dont ceci est une version |
+| *(les colonnes de la table d'origine)* | | | | | Recopiées telles quelles |
+| valid_from | timestamptz | non | — | — | Début de validité |
+| valid_to | timestamptz | oui | — | — | Fin de validité ; **nul pour la version courante** |
+| changed_by | uuid | oui | — | — | FK → admin(id) on delete set null |
+| reason | text | non | — | — | Pourquoi cette modification ; obligatoire |
+| reason_code | varchar(48) | oui | — | — | Le motif choisi, quand il y en a un |
+
+- **Une liste de motifs qui change sans trace rendrait le journal illisible** : un code renommé ou désactivé ferait paraître incohérentes des lignes de journal parfaitement correctes au moment où elles ont été écrites. `valid_to` nul désigne la version en service.
+- Modifier un motif **n'écrase pas** : on ferme la version courante et on en ouvre une nouvelle.
 
 ## Notification
 
@@ -1285,7 +1471,7 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | notification_platform | ios, android |
 | support_request_status | open, answered, closed |
 | export_status | pending, ready, failed, expired |
-| otp_reason | email_verification, login |
+| otp_reason | email_verification, login, account_deletion |
 | login_result | success, failure |
 | identity_provider | google, apple |
 | payment_method_kind | mobile_money, card |
@@ -1320,17 +1506,37 @@ Trace d'un rappel ou d'une relance émis vers l'utilisateur.
 | illustration_family | nature, animal, abstract |
 | generated_message_status | generated, edited, sent |
 | received_wish_status | pending, approved, rejected |
-| action_run_status | success, failure |
+| action_run_status | pending, success, failure |
 | credit_txn_type | grant, purchase, consumption, adjustment |
 | referral_status | invited, registered, credited |
 | param_value_type | number, money, duration, boolean, string |
 | admin_role | support, admin |
-| ai_usage_status | success, error, timeout |
+| ai_usage_status | success, error, timeout, refused |
 | ai_purpose | note_classification, sensitive_detection, portrait, gift_ideas, wish_message |
 | ai_origin | user_action, scheduled_job, retry, studio_trial |
 | prompt_kind | message, illustration, photo_style, note_classification, sensitive_detection |
 | studio_config_state | draft, published, superseded |
 | audit_actor | admin, user |
-| notification_type | event_reminder, event_day_of, digest, contribution_received, wish_received, enrichment_nudge_global, enrichment_nudge_person, generation_ready, payment_succeeded, payment_failed, credits_received, login_code, security, account |
+| notification_type | event_reminder, event_day_of, digest, contribution_received, wish_received, wish_reserved, wish_reservation_cancelled, enrichment_nudge_global, enrichment_nudge_person, activation_first_person, activation_first_note, activation_unused_credits, activation_collect_link, activation_invite, generation_ready, payment_succeeded, payment_failed, credits_received, login_code, security, account |
 | notification_channel | email, push, in_app |
-| notification_status | pending, sent, read, failed |
+| notification_status | pending, sent, read, failed, invalid |
+| notification_platform | ios, android |
+| device_platform | ios, android |
+| login_method | otp, google, apple |
+| credit_source | signup_grant, referral_bonus, waitlist_bonus, purchase, manual_topup, promo_code, gift, reward, consumption, refund, correction |
+| ai_capability | text, image |
+| ai_task | note_classification, sensitive_detection, message, gift_ideas, illustration, photo_style |
+| studio_config_kind | message, portrait |
+| studio_trial_verdict | kept, discarded |
+| data_export_status | pending, ready, failed, expired |
+
+**`ai_task` et `ai_purpose` ne se recouvrent pas, et c'est délibéré** : le premier
+nomme ce qu'un appel de modèle SERT, le second ce que l'utilisateur ACHÈTE. Un
+portrait est **une** action payante et **plusieurs** appels — le texte, puis
+l'image. Les fondre ferait disparaître l'un des deux comptages, et c'est
+justement leur écart qui donne la marge.
+
+Les enums `portrait_orientation`, `portrait_visual`, `illustration_family` et
+`generated_profile_status` décrivent le **portrait**, dont la production
+n'existe pas encore côté serveur : ils ne sont pas posés en base à ce jour.
+Voir `GeneratedProfile`.
