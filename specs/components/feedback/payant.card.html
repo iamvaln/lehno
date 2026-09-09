@@ -1,0 +1,85 @@
+<!-- @dsCard group="Components" viewport="760x430" name="Crédits et dates sensibles" subtitle="Le coût s'annonce avant l'action ; une date sensible change le ton" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@0.417.0/dist/umd/lucide.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../components/_card-boot.js"></script>
+<style>
+  html, body { margin: 0; }
+  body { font-family: var(--font-body); background: var(--surface-page); color: var(--text-body); padding: 18px 20px; }
+  .pair { display: grid; grid-template-columns: 340px 1fr; gap: 28px; align-items: start; }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+         font-weight: 600; color: var(--text-mention); margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/lehno">
+const C = await window.lehnoBoot(["../core/Icon.jsx","../core/Button.jsx","../core/Tag.jsx","../core/Card.jsx","../core/SectionLabel.jsx","../core/Avatar.jsx","../content/Countdown.jsx","../content/Provenance.jsx","../content/Quote.jsx","../content/EventCard.jsx","../content/CategoryTag.jsx","../content/CreditIndicator.jsx","../feedback/Banner.jsx","../feedback/SensitiveBanner.jsx","../feedback/PaidActionSheet.jsx","../feedback/EmptyState.jsx","../feedback/LoadingState.jsx","../feedback/OfflineBanner.jsx","../navigation/NotificationBell.jsx"]);
+const { PaidActionSheet, CreditIndicator, SensitiveBanner, Button, Card, SectionLabel, CategoryTag, NotificationBell } = C;
+
+function Demo() {
+  const [solde, setSolde] = React.useState(4);
+  return (
+    <div className="pair">
+      <div>
+        <div className="lbl">Avant toute génération</div>
+        <div style={{ border: "1px solid var(--border-hairline)", borderRadius: "0 0 14px 14px", overflow: "hidden" }}>
+          <PaidActionSheet
+            titre="Le portrait de Valery"
+            resultat="Quelques lignes sur lui, écrites à partir de vos 9 notes."
+            cout={1} solde={solde} />
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <Button variant="text" onClick={() => setSolde(solde > 0 ? 0 : 4)}>
+            {solde > 0 ? "Voir avec un solde insuffisant" : "Voir avec 4 crédits"}
+          </Button>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gap: 20 }}>
+        <div>
+          <div className="lbl">Le coût sous une action</div>
+          <Card padding={15} radius="lg">
+            <Button platform="mobile" full>Écrire le message</Button>
+            <CreditIndicator cout={1} solde={4} style={{ marginTop: 10 }} />
+          </Card>
+          <div style={{ display: "flex", gap: 18, alignItems: "center", marginTop: 12 }}>
+            <CreditIndicator cout={1} solde={0} />
+            <CreditIndicator solde={4} variant="solde" />
+          </div>
+        </div>
+
+        <div>
+          <div className="lbl">Une date sensible</div>
+          <SensitiveBanner />
+          <div style={{ fontSize: 11.5, color: "var(--text-mention)", marginTop: 8, lineHeight: 1.45 }}>
+            Sa présence retire les idées de cadeau de l'écran.
+          </div>
+        </div>
+
+        <div>
+          <div className="lbl">Classement d'une note · cloche</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <CategoryTag categorie="idee" onReclasser={() => {}} />
+            <CategoryTag categorie="nogo" onReclasser={() => {}} />
+            <CategoryTag categorie="aclasser" onReclasser={() => {}} />
+            <CategoryTag categorie="gout" />
+            <span style={{ marginLeft: 14 }}><NotificationBell nonLus={2} /></span>
+            <NotificationBell nonLus={0} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>
+</body>
+</html>

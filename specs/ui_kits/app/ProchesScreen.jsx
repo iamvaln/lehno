@@ -17,6 +17,12 @@ const LIBELLE = {
    colonne, appliqué à un bouton. */
 export function ProchesScreen({ t, gens = [], etat = "nominal", onOpen, onRecherche }) {
   const [tri, setTri] = React.useState({ cle: "date", sens: 1 });
+  /* Un carnet se lit par pages : vingt fiches d'abord, la suite à la demande.
+     Changer de tri renvoie à la première page — sans quoi on garderait
+     cinquante lignes ouvertes sur un ordre qu'on vient de quitter. */
+  const PAGE = 20;
+  const [montres, setMontres] = React.useState(PAGE);
+  React.useEffect(() => { setMontres(PAGE); }, [tri.cle, tri.sens, gens.length]);
 
   const basculer = (cle) => setTri((v) =>
     v.cle === cle ? { cle, sens: -v.sens } : { cle, sens: 1 });
@@ -44,10 +50,25 @@ export function ProchesScreen({ t, gens = [], etat = "nominal", onOpen, onRecher
   ];
 
   return (
-    <div style={{ padding: "0 16px 18px" }}>
-      <h1 className="lehno-display" style={{
-        fontSize: 27, letterSpacing: "-.025em", margin: "6px 0 14px", fontWeight: 500
-      }}>{t.prochesTitre}</h1>
+    <div style={{ padding: "var(--ry-haut) 16px 18px" }}>
+      {/* Le carnet s'agrandit depuis le carnet : l'ajout se tient sur la ligne
+          du titre, atteignable sans traverser cinquante fiches. */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 12, margin: "0 0 var(--ry-titre)"
+      }}>
+        <h1 className="lehno-display" style={{
+          fontSize: 27, letterSpacing: "-.025em", margin: 0, fontWeight: 500, flex: 1
+        }}>{t.prochesTitre}</h1>
+        <button type="button" aria-label={t.ajouterProche} className="lehno-focusable"
+          onClick={() => onOpen && onOpen("identite", { nouveau: true })} style={{
+            all: "unset", cursor: "pointer", display: "grid", placeItems: "center",
+            width: "var(--touch-min)", height: "var(--touch-min)", flex: "none",
+            borderRadius: "var(--radius-pill)", background: "var(--action)",
+            color: "var(--text-on-accent)"
+          }}>
+          <Icon name="plus" size={19} strokeWidth={2} />
+        </button>
+      </div>
 
       <button type="button" onClick={onRecherche} className="lehno-focusable" style={{
         all: "unset", boxSizing: "border-box", cursor: "pointer", width: "100%",
@@ -64,10 +85,10 @@ export function ProchesScreen({ t, gens = [], etat = "nominal", onOpen, onRecher
       ) : etat === "vide" ? (
         <EmptyState illustration="annuaire-vide" titre={t.videAnnuaireTitre}
           texte={t.videAnnuaireTexte} action={t.ajouterProche}
-          onAction={() => onOpen && onOpen("evenement")} />
+          onAction={() => onOpen && onOpen("identite", { nouveau: true })} />
       ) : (
         <>
-          <div style={{ display: "flex", gap: 8, margin: "14px 0 4px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 8, margin: "var(--ry-titre) 0 4px", flexWrap: "wrap" }}>
             {criteres.map((c) => {
               const actif = tri.cle === c.cle;
               return (
@@ -93,7 +114,7 @@ export function ProchesScreen({ t, gens = [], etat = "nominal", onOpen, onRecher
           </div>
 
           <div style={{ display: "grid" }}>
-            {liste.map((p, i) => (
+            {liste.slice(0, montres).map((p, i) => (
               <button key={p.id} type="button" onClick={() => onOpen && onOpen("proche", p)}
                 className="lehno-focusable" style={{
                   all: "unset", boxSizing: "border-box", cursor: "pointer",
@@ -122,12 +143,31 @@ export function ProchesScreen({ t, gens = [], etat = "nominal", onOpen, onRecher
                 {p.jours == null ? (
                   <span style={{ fontSize: 12.5, color: "var(--text-accent)", fontWeight: 600 }}>{t.completer}</span>
                 ) : p.jours <= 7 ? (
-                  <Countdown days={p.jours} size="s" locale={t.langue} />
+                  <Countdown label={p.jours === 0 ? t.aujourdhui : t.decompte(p.jours)} today={p.jours === 0} size="s" />
                 ) : null}
                 <Icon name="chevron-right" size={15} color="var(--text-mention)" />
               </button>
             ))}
           </div>
+
+          {liste.length > montres ? (
+            <button type="button" onClick={() => setMontres((v) => v + PAGE)}
+              className="lehno-focusable" style={{
+                all: "unset", boxSizing: "border-box", cursor: "pointer", width: "100%",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                minHeight: "var(--touch-min)", marginTop: 12,
+                borderRadius: "var(--radius-sm)", border: "1px solid var(--border-object)",
+                fontFamily: "var(--font-body)", fontSize: 14, fontWeight: 600,
+                color: "var(--text-accent)"
+              }}>
+              {t.prochesReste(liste.length - montres)}
+              <Icon name="chevron-down" size={15} />
+            </button>
+          ) : liste.length > PAGE ? (
+            <div style={{
+              textAlign: "center", marginTop: 12, fontSize: 12.5, color: "var(--text-mention)"
+            }}>{t.prochesCompte(liste.length)}</div>
+          ) : null}
         </>
       )}
     </div>

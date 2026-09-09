@@ -1,0 +1,22 @@
+:root {
+  --radius-xs:     8px;    /* petite pastille, bouton secondaire mobile */
+  --radius-sm:     10px;   /* bouton web */
+  --radius-md:     12px;   /* bouton mobile, badge de magasin */
+  --radius-lg:     13px;   /* carte interne */
+  --radius-xl:     18px;   /* carte de contenu */
+  --radius-2xl:    22px;   /* écran, grande carte */
+  --radius-pill:   999px;  /* étiquette de goût */
+  --radius-tile:   22%;    /* pastille de marque, proportionnelle */
+
+  --border-width:      1px;
+  --border-width-firm: 2px;
+
+  --focus-width:  2px;
+  --focus-offset: 2px;
+
+  /* Une seule ombre, et seulement pour une maquette d'appareil posée sur un
+     fond teinté. L'interface, elle, ne porte pas d'ombre : elle se sépare par
+     les filets et les aplats. */
+  --shadow-device: 0 18px 40px rgba(34, 31, 43, 0.10);
+  --shadow-none:   none;
+}

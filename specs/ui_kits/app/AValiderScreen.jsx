@@ -22,23 +22,23 @@ const CONTRIBS = {
     { id: "c1", qui: "Valery Bah", genre: "validerSouhait",
       texte: "Un moulin à café manuel, le mien rend l'âme.",
       origine: "déposé par Valery", quand: "hier" },
-    { id: "c2", qui: "Awa Diop", genre: "validerGout",
+    { id: "c2", qui: "Célarine", genre: "validerGout",
       texte: "La céramique, depuis le cours de l'an dernier.",
-      origine: "déposé par Awa", quand: "hier" },
+      origine: "déposé par Célarine", quand: "hier" },
     { id: "c3", qui: "Vous", genre: "validerVoeu",
       texte: "Bon anniversaire — cette année encore, tu as tenu tout le monde debout.",
-      origine: "déposé par Awa", quand: "il y a 3 jours" }
+      origine: "déposé par Célarine", quand: "il y a 3 jours" }
   ],
   en: [
     { id: "c1", qui: "Valery Bah", genre: "validerSouhait",
       texte: "A hand coffee grinder, mine is giving up.",
       origine: "sent by Valery", quand: "yesterday" },
-    { id: "c2", qui: "Awa Diop", genre: "validerGout",
+    { id: "c2", qui: "Célarine", genre: "validerGout",
       texte: "Ceramics, since last year's class.",
-      origine: "sent by Awa", quand: "yesterday" },
+      origine: "sent by Célarine", quand: "yesterday" },
     { id: "c3", qui: "You", genre: "validerVoeu",
       texte: "Happy birthday — another year of keeping everyone standing.",
-      origine: "sent by Awa", quand: "3 days ago" }
+      origine: "sent by Célarine", quand: "3 days ago" }
   ]
 };
 

@@ -1,0 +1,24 @@
+:root {
+  /* Deux courbes seulement — celles du logo animé :
+     « pose » pour ce qui apparaît, « traverse » pour ce qui se déplace.
+     Rien ne rebondit, rien ne dépasse. */
+  --ease-pose:     cubic-bezier(0.22, 0.8, 0.24, 1);
+  --ease-traverse: cubic-bezier(0.36, 0, 0.16, 1);
+  --ease-state:    ease-out;
+
+  --duration-state:  120ms;  /* survol, focus, changement d'état d'un bouton */
+  --duration-enter:  220ms;  /* carte, accordéon, bascule de thème */
+  --duration-screen: 340ms;  /* changement d'écran, panneau qui entre */
+
+  --transition-state: var(--duration-state) var(--ease-state);
+  --transition-enter: var(--duration-enter) var(--ease-pose);
+  --transition-screen: var(--duration-screen) var(--ease-traverse);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-state:  0ms;
+    --duration-enter:  0ms;
+    --duration-screen: 0ms;
+  }
+}

@@ -62,16 +62,21 @@ function Choix({ options, valeur, onSet, t }) {
   );
 }
 
-export function IdentiteScreen({ t, etat = "nominal", qui = "Valery Bah", onEnregistrer }) {
-  const [registre, setRegistre] = React.useState("registreAmical");
-  const [relation, setRelation] = React.useState("relAmi");
-  const [canal, setCanal] = React.useState("canalWhatsapp");
+export function IdentiteScreen({
+  t, etat = "nominal", qui = "Valery Bah", nouveau = false, onEnregistrer, onFait
+}) {
+  /* Une fiche qu'on ouvre depuis un proche porte ce qu'on sait de lui ; une
+     fiche qu'on crée ne porte rien — ni nom, ni ville, ni registre choisi à sa
+     place, et rien à supprimer. */
+  const [registre, setRegistre] = React.useState(nouveau ? null : "registreAmical");
+  const [relation, setRelation] = React.useState(nouveau ? null : "relAmi");
+  const [canal, setCanal] = React.useState(nouveau ? null : "canalWhatsapp");
   const venueDeCollecte = etat === "collecte";
 
   return (
     <div style={{ padding: "0 16px 18px", display: "flex", flexDirection: "column", minHeight: "100%" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 13, margin: "6px 0 18px" }}>
-        <Avatar name={qui} size={52} />
+        <Avatar name={nouveau ? "?" : qui} size={52} />
         <div>
           <div className="lehno-display" style={{ fontSize: 20 }}>{t.identiteTitre}</div>
           <div style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 1 }}>
@@ -81,10 +86,10 @@ export function IdentiteScreen({ t, etat = "nominal", qui = "Valery Bah", onEnre
       </div>
 
       <div style={{ display: "grid", gap: 14 }}>
-        <TextField platform="mobile" label={t.champNom} defaultValue={qui} />
+        <TextField platform="mobile" label={t.champNom} defaultValue={nouveau ? "" : qui} />
         {/* Le nom d'usage, distinct du nom des listes : c'est lui qui parle. */}
-        <TextField platform="mobile" label={t.champAppelle} defaultValue={qui.split(" ")[0]}
-          hint={t.champAppelleAide} />
+        <TextField platform="mobile" label={t.champAppelle}
+          defaultValue={nouveau ? "" : qui.split(" ")[0]} hint={t.champAppelleAide} />
       </div>
 
       <div style={{ marginTop: 22 }}>
@@ -95,7 +100,7 @@ export function IdentiteScreen({ t, etat = "nominal", qui = "Valery Bah", onEnre
       {/* Le souvenir garde la nuance que la liste écrase. */}
       <div style={{ marginTop: 20 }}>
         <TextField platform="mobile" label={t.champRelationHint}
-          defaultValue={t.langue === "fr" ? "On a fait la fac ensemble" : "We were at uni together"}
+          defaultValue={nouveau ? "" : (t.langue === "fr" ? "On a fait la fac ensemble" : "We were at uni together")}
           hint={t.champRelationHintAide} />
       </div>
 
@@ -121,7 +126,7 @@ export function IdentiteScreen({ t, etat = "nominal", qui = "Valery Bah", onEnre
       </div>
 
       <div style={{ marginTop: 22, display: "grid", gap: 14 }}>
-        <TextField platform="mobile" label={t.champVille} defaultValue="Douala"
+        <TextField platform="mobile" label={t.champVille} defaultValue={nouveau ? "" : "Douala"}
           hint={t.champVilleAide} />
         <TextField platform="mobile" label={t.champLangueProche}
           defaultValue={t.langue === "fr" ? "Français" : "English"} />
@@ -131,16 +136,19 @@ export function IdentiteScreen({ t, etat = "nominal", qui = "Valery Bah", onEnre
         {t.enregistrer}
       </Button>
 
+      {nouveau ? null : (
       <div style={{
         marginTop: "auto", paddingTop: 28, borderTop: "1px solid var(--border-hairline)"
       }}>
-        <Button platform="mobile" full variant="destructive-outline" icon="trash-2">
+        <Button platform="mobile" full variant="destructive-outline" icon="trash-2"
+          onClick={() => onFait && onFait(t.ficheSupprimeeFait)}>
           {t.identiteSupprimer}
         </Button>
         <p style={{
           margin: "8px 0 0", fontSize: 12, color: "var(--text-mention)", textAlign: "center"
         }}>{t.identiteSupprimerAide}</p>
       </div>
+      )}
     </div>
   );
 }

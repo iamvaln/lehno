@@ -13,8 +13,16 @@ import { Illustration } from "../../components/brand/Illustration.jsx";
    parrainage qui a besoin d'un paragraphe d'explication n'est pas un cadeau,
    c'est un contrat. */
 
-export function ParrainageScreen({ t, etat = "nominal" }) {
+export function ParrainageScreen({ t, etat = "nominal", onFait }) {
   const filleuls = etat === "vide" ? 0 : 3;
+  /* Le bouton confirme lui-même, comme sur le Mur : l'accusé se lit là où le
+     geste a eu lieu, et s'effeface seul après deux secondes. */
+  const [copie, setCopie] = React.useState(false);
+  React.useEffect(() => {
+    if (!copie) return;
+    const id = setTimeout(() => setCopie(false), 2200);
+    return () => clearTimeout(id);
+  }, [copie]);
 
   return (
     <div style={{
@@ -41,8 +49,10 @@ export function ParrainageScreen({ t, etat = "nominal" }) {
       </Card>
 
       <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
-        <Button platform="mobile" full icon="share-2">{t.parrainagePartager}</Button>
-        <Button platform="mobile" full variant="outline" icon="copy">{t.collecteCopier}</Button>
+        <Button platform="mobile" full icon="share-2"
+          onClick={() => onFait && onFait(t.resEnvoyerVia)}>{t.parrainagePartager}</Button>
+        <Button platform="mobile" full variant="outline" icon={copie ? "check" : "copy"}
+          onClick={() => setCopie(true)}>{copie ? t.murPrivCopie : t.collecteCopier}</Button>
       </div>
 
       <div style={{ marginTop: 26 }}>

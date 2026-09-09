@@ -1,0 +1,53 @@
+<!-- @dsCard group="Components" viewport="760x430" name="Échéance — la brique réutilisée" subtitle="Une seule carte porte les actions : la plus proche" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@0.417.0/dist/umd/lucide.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../components/_card-boot.js"></script>
+<style>
+  html, body { margin: 0; }
+  body { font-family: var(--font-body); background: var(--surface-page); color: var(--text-body); padding: 18px 20px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; align-items: start; }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+         font-weight: 600; color: var(--text-mention); margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/lehno">
+const C = await window.lehnoBoot(["../core/Icon.jsx","../core/Button.jsx","../core/Tag.jsx","../core/Card.jsx","../core/SectionLabel.jsx","../core/Avatar.jsx","../content/Countdown.jsx","../content/Provenance.jsx","../content/Quote.jsx","../content/EventCard.jsx","../content/CategoryTag.jsx","../content/CreditIndicator.jsx","../feedback/Banner.jsx","../feedback/SensitiveBanner.jsx","../feedback/PaidActionSheet.jsx","../feedback/EmptyState.jsx","../feedback/LoadingState.jsx","../feedback/OfflineBanner.jsx","../navigation/NotificationBell.jsx"]);
+const { EventCard } = C;
+function Demo() {
+  return (
+    <div className="pair">
+      <div>
+        <div className="lbl">La plus proche — aplat, note, deux actions</div>
+        <EventCard imminent nom="Célarine" jours={0} dateLabel="aujourd'hui" precision="36 ans"
+          note="Un cours de céramique, tout près de chez Célarine."
+          noteOrigine="noté" noteDate="en mars" />
+      </div>
+      <div>
+        <div className="lbl">Les suivantes — des lignes calmes</div>
+        <div style={{ display: "grid", gap: 10 }}>
+          <EventCard nom="Valery Bah" jours={3} dateLabel="24 août" precision="36 ans" onOuvrir={() => {}} />
+          <EventCard nom="Mathias & Rose" type="mariage" typeLabel="Mariage" jours={9} dateLabel="30 août" precision="5 ans" onOuvrir={() => {}} />
+          <EventCard nom="Maman" type="retraite" typeLabel="Retraite" jours={12} dateLabel="2 sept." onOuvrir={() => {}} />
+          <EventCard nom="Nour & moi" type="etape" typeLabel="Étape" jours={24} dateLabel="14 sept." precision="Six mois" onOuvrir={() => {}} />
+        </div>
+        <div style={{ fontSize: 11.5, color: "var(--text-mention)", marginTop: 12, lineHeight: 1.45 }}>
+          L'anniversaire ne porte pas de tag : signaler le cas courant revient à ne rien signaler.
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>
+</body>
+</html>

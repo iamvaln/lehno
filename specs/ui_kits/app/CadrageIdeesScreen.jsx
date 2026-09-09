@@ -8,7 +8,7 @@ import { CreditIndicator } from "../../components/content/CreditIndicator.jsx";
 
    Deux champs, tous deux facultatifs, et c'est le point : on peut lancer sans
    rien dire. Mais un budget change tout ce qui suit, et un détail que les notes
-   ignorent — « cadeau commun avec Awa » — évite une liste hors sujet. Les
+   ignorent — « cadeau commun avec Célarine » — évite une liste hors sujet. Les
    demander après aurait coûté un second crédit.
 
    Le budget est libre, par paliers proposés : une fourchette imposée obligerait
@@ -16,7 +16,14 @@ import { CreditIndicator } from "../../components/content/CreditIndicator.jsx";
 
 const PALIERS = ["5 000 F", "15 000 F", "30 000 F"];
 
-export function CadrageIdeesScreen({ t, etat = "nominal", solde = 4, onLancer, onOpen }) {
+export function CadrageIdeesScreen({
+  t, etat = "nominal", solde = 4, flags = {}, onLancer, onOpen
+}) {
+  /* LE PIÈGE DU BRIEF : l'achat éteint ne ferme pas les générations, il les rend
+     gratuites. Un coût annoncé ou un solde rappelé mentirait à quelqu'un qui
+     vient de recevoir quelque chose sans payer — les deux sortent de l'écran. */
+  const gratuit = flags.credits === false;
+
   const [budget, setBudget] = React.useState("");
   const insuffisant = etat === "solde";
   const dispo = insuffisant ? 0 : solde;
@@ -52,8 +59,10 @@ export function CadrageIdeesScreen({ t, etat = "nominal", solde = 4, onLancer, o
       </div>
 
       <div style={{ marginTop: "auto", paddingTop: 24 }}>
-        <CreditIndicator t={t} cout={1} solde={dispo}
-          onRecharger={() => onOpen && onOpen("recharge")} style={{ marginBottom: 10 }} />
+        {gratuit ? null : (
+          <CreditIndicator t={t} cout={1} solde={dispo}
+            onRecharger={() => onOpen && onOpen("recharge")} style={{ marginBottom: 10 }} />
+        )}
         <Button platform="mobile" full onClick={() => onLancer && onLancer("idees")}>
           {t.cadrageLancer}
         </Button>

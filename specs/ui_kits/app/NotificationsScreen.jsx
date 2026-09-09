@@ -37,7 +37,10 @@ function Ligne({ icone, texte, quand, nonLu, decompte, onOuvrir, t }) {
         <span style={{ fontSize: 12, color: "var(--text-mention)" }}>{quand}</span>
       </span>
 
-      {decompte != null ? <Countdown days={decompte} size="s" locale={t.langue} /> : null}
+      {decompte != null ? (
+        <Countdown size="s" today={decompte === 0}
+          label={decompte === 0 ? t.aujourdhui : t.decompte(decompte)} />
+      ) : null}
       {nonLu ? (
         <span style={{
           width: 7, height: 7, borderRadius: "50%", background: "var(--action)",
@@ -48,10 +51,23 @@ function Ligne({ icone, texte, quand, nonLu, decompte, onOuvrir, t }) {
   );
 }
 
-export function NotificationsScreen({ t, etat = "nominal", onOpen }) {
+export function NotificationsScreen({ t, etat = "nominal", flags = {}, onOpen }) {
+  /* CINQ NATURES, ET ELLE DOIT RESTER CRÉDIBLE À TROIS. La collecte éteinte
+     retire les contributions et les vœux ; les portraits éteints retirent
+     l'avis de production. Ce qui reste — les dates, les rappels, les crédits —
+     se recolle : les intertitres de jour ne survivent pas à leur contenu, et
+     une journée vidée de ses lignes disparaît avec son titre. */
+  const collecte = flags.collect !== false;
+  const portraits = flags.generation !== false;
+  const argent = flags.credits !== false;
   if (etat === "vide") {
     return (
-      <div style={{ padding: "8px 16px 18px" }}>
+      /* Un écran vide n'a pas de contenu à aligner en haut : le bloc se pose au
+         milieu de la hauteur disponible. */
+      <div style={{
+        padding: "8px 16px 18px", minHeight: "100%", display: "flex",
+        flexDirection: "column", justifyContent: "center"
+      }}>
         <EmptyState illustration="rien-approche" titre={t.notifsVideTitre} texte={t.notifsVideTexte} />
       </div>
     );
@@ -72,30 +88,40 @@ export function NotificationsScreen({ t, etat = "nominal", onOpen }) {
         }}>{t.notifsToutLu}</button>
       </div>
 
-      <div className="lehno-kicker">{t.notifsAujourdhui}</div>
-      <div style={{ marginTop: 4 }}>
-        <Ligne t={t} icone="cake" nonLu decompte={0}
-          texte={t.notifAujourdhui("Awa Diop")}
-          quand={t.langue === "fr" ? "ce matin" : "this morning"}
-          onOuvrir={() => onOpen && onOpen("occasion", { nom: "Awa Diop" })} />
-        <Ligne t={t} icone="inbox" nonLu
-          texte={t.notifContribution(2)}
-          quand={t.langue === "fr" ? "ce matin" : "this morning"}
-          onOuvrir={() => onOpen && onOpen("valider")} />
-      </div>
-
-      <div className="lehno-kicker" style={{ marginTop: 22 }}>{t.notifsAvant}</div>
-      <div style={{ marginTop: 4 }}>
-        <Ligne t={t} icone="calendar" decompte={3}
-          texte={t.notifRappel("Valery Bah", 3)} quand={hier}
-          onOuvrir={() => onOpen && onOpen("occasion", { nom: "Valery Bah" })} />
-        <Ligne t={t} icone="sparkles"
-          texte={t.notifPortrait("Awa Diop")} quand={hier}
-          onOuvrir={() => onOpen && onOpen("generation")} />
-        <Ligne t={t} icone="coins"
-          texte={t.notifCredits(2)} quand={jours(4)}
-          onOuvrir={() => onOpen && onOpen("moi")} />
-      </div>
+      {[
+        { cle: "jour", titre: t.notifsAujourdhui, lignes: [
+          <Ligne key="a" t={t} icone="cake" nonLu decompte={0}
+            texte={t.notifAujourdhui("Célarine")}
+            quand={t.langue === "fr" ? "ce matin" : "this morning"}
+            onOuvrir={() => onOpen && onOpen("occasion", { nom: "Célarine" })} />,
+          collecte ? (
+            <Ligne key="b" t={t} icone="inbox" nonLu
+              texte={t.notifContribution(2)}
+              quand={t.langue === "fr" ? "ce matin" : "this morning"}
+              onOuvrir={() => onOpen && onOpen("valider")} />
+          ) : null
+        ].filter(Boolean) },
+        { cle: "avant", titre: t.notifsAvant, lignes: [
+          <Ligne key="c" t={t} icone="calendar" decompte={3}
+            texte={t.notifRappel("Valery Bah", 3)} quand={hier}
+            onOuvrir={() => onOpen && onOpen("occasion", { nom: "Valery Bah" })} />,
+          portraits ? (
+            <Ligne key="d" t={t} icone="sparkles"
+              texte={t.notifPortrait("Célarine")} quand={hier}
+              onOuvrir={() => onOpen && onOpen("generation")} />
+          ) : null,
+          argent ? (
+            <Ligne key="e" t={t} icone="coins"
+              texte={t.notifCredits(2)} quand={jours(4)}
+              onOuvrir={() => onOpen && onOpen("recharge")} />
+          ) : null
+        ].filter(Boolean) }
+      ].filter((g) => g.lignes.length).map((g, i) => (
+        <div key={g.cle} style={{ marginTop: i ? 22 : 0 }}>
+          <div className="lehno-kicker">{g.titre}</div>
+          <div style={{ marginTop: 4 }}>{g.lignes}</div>
+        </div>
+      ))}
     </div>
   );
 }
