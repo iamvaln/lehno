@@ -18,7 +18,13 @@ import { CLES_DRAPEAUX } from "@lehno/contracts";
  * laisserait passer en silence — précisément le cas qu'on veut rendre
  * impossible.
  */
-const GOUVERNÉS: Readonly<Record<string, string>> = {
+/* La valeur peut être UNE clé ou PLUSIEURS, et la seconde forme n'est pas une
+   commodité : le détail d'un souhait sert les deux natures — le mien, gouverné
+   par `wishlist.own`, et l'idée notée pour un proche, gouvernée par `wishlist`.
+   Il porte donc deux gardes. N'en exiger qu'une laisserait l'autre disparaître
+   sans qu'un test tombe, et un lien profond ouvrirait l'écran sur une route que
+   le serveur a fermée. */
+const GOUVERNÉS: Readonly<Record<string, string | readonly string[]>> = {
   // Les souhaits d'une liste passent par `/me/wishlists/:id/wishes` et
   // `/me/owner-wishes` : c'est `wishlist.own` qui les gouverne, pas `wishlist`
   // — celui-là ouvre la liste REÇUE d'un autre.
@@ -35,6 +41,7 @@ const GOUVERNÉS: Readonly<Record<string, string>> = {
   reservations: "reservations",
   paiement: "paiement",
   reprises: "reprises",
+  souhait: ["listes", "souhait"],
   /* Le cadrage précède la recherche d'idées : c'est `generation.ideas` qui le
      gouverne, pas `generation.message`. La préparation, elle, n'est pas ici —
      elle tient dès qu'UNE des deux natures tient, et se garde par
@@ -42,18 +49,23 @@ const GOUVERNÉS: Readonly<Record<string, string>> = {
   cadrage: "cadrage",
 };
 
+const identifiants = (valeur: string | readonly string[]): readonly string[] =>
+  typeof valeur === "string" ? [valeur] : valeur;
+
 const source = (nom: string): string =>
   readFileSync(new URL(`../app/(app)/${nom}.tsx`, import.meta.url), "utf8");
 
 describe("les écrans gouvernés se gardent eux-mêmes", () => {
-  for (const [ecran, id] of Object.entries(GOUVERNÉS)) {
-    it(`${ecran} refuse de s'ouvrir quand ${id} est éteint`, () => {
-      const s = source(ecran);
-      expect(s).toContain("ecranEteint(");
-      // L'identifiant employé doit être celui que `navigation.ts` connaît :
-      // un nom approchant passerait par le `default` et ne garderait rien.
-      expect(s).toContain(`ecranEteint("${id}"`);
-    });
+  for (const [ecran, valeur] of Object.entries(GOUVERNÉS)) {
+    for (const id of identifiants(valeur)) {
+      it(`${ecran} refuse de s'ouvrir quand ${id} est éteint`, () => {
+        const s = source(ecran);
+        expect(s).toContain("ecranEteint(");
+        // L'identifiant employé doit être celui que `navigation.ts` connaît :
+        // un nom approchant passerait par le `default` et ne garderait rien.
+        expect(s).toContain(`ecranEteint("${id}"`);
+      });
+    }
   }
 
   /* DEUX GARDES, ET IL EN FAUT DEUX.
@@ -109,7 +121,8 @@ describe("la table nomme des écrans que la navigation connaît", () => {
     const connus = new Set(
       [...nav.matchAll(/case "([a-z.]+)":/g)].map((m) => m[1]!),
     );
-    const inconnus = [...new Set(Object.values(GOUVERNÉS))].filter((id) => !connus.has(id));
+    const nommes = Object.values(GOUVERNÉS).flatMap(identifiants);
+    const inconnus = [...new Set(nommes)].filter((id) => !connus.has(id));
     expect(inconnus).toEqual([]);
   });
 
