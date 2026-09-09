@@ -313,19 +313,6 @@ export default function Profil() {
         </View>
 
         <View>
-          <SectionLabel>{t.champLangue}</SectionLabel>
-          {/* Un choix, pas un champ libre : deux valeurs se lisent d'un coup, et
-              le kit n'offrait qu'un champ parce qu'il ne pouvait rien ouvrir. */}
-          <Choix
-            options={["fr", "en"] as const}
-            libelle={(v) => (v === "fr" ? "Français" : "English")}
-            valeur={saisie.langue}
-            pose={(v) => setSaisie({ ...saisie, langue: v ?? saisie.langue })}
-          />
-          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilLangueAide}</Text>
-        </View>
-
-        <View>
           <SectionLabel>{t.champTheme}</SectionLabel>
           {/* TROIS choix, pas deux. « Système » est la valeur par défaut au
               contrat, et la seule qui laisse l'appareil décider : un sélecteur

@@ -4,12 +4,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { creditBalanceSchema } from "@lehno/contracts";
 import {
-  nativeBorder, nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin, nativeTracking,
+  nativeBorder, nativeFont, nativeLetterSpacing, nativeRadius, nativeSpace,
+  nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
 import {
   Banner, Card, CreditIndicator, Icon, SectionLabel, useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
+import type { Langue } from "../../messages/index.js";
+
+/* Les deux langues, déclarées UNE fois. Les écrire à l'appel du `map` en
+   ferait une seconde liste à tenir à jour à côté du dictionnaire. */
+const LANGUES: readonly Langue[] = ["fr", "en"];
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
@@ -32,7 +38,7 @@ import { corpsDeDeconnexion, sectionsDeReglages, type Rang, type Section } from 
  * l'empêche de devenir un second menu.
  */
 export default function Reglages() {
-  const { t, langue } = useLangue();
+  const { t, langue, choisis } = useLangue();
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
@@ -101,6 +107,26 @@ export default function Reglages() {
      libellé se suffit. */
   const valeurDuRang: Partial<Record<Rang["cle"], string>> = {
     donnees: t.moiDonneesValeur,
+  };
+
+  /* LA LANGUE S'APPLIQUE AU PREMIER APPUI, sans enregistrement à part.
+     C'est la planche qui la pose ici plutôt que dans le profil, et elle a
+     raison : quelqu'un dont l'interface est dans la mauvaise langue doit
+     pouvoir la corriger SANS traverser un formulaire écrit dans cette
+     langue-là. Un réglage de secours ne se met pas au fond d'un tiroir.
+
+     L'interface change d'abord, l'enregistrement suit. `uiLanguage` décide
+     aussi de la langue des COURRIELS : la garder au serveur n'est donc pas un
+     détail de confort. Son échec est silencieux — interrompre quelqu'un pour
+     une préférence d'affichage qu'il vient de voir s'appliquer ferait payer
+     cher une chose qui se refait en un appui. */
+  const changeLaLangue = (vers: Langue): void => {
+    if (vers === langue) return;
+    choisis(vers);
+    void appel<unknown>("/me/profile", {
+      method: "PATCH",
+      body: JSON.stringify({ uiLanguage: vers }),
+    }).catch(() => { /* silencieux à dessein */ });
   };
 
   const ouvre = (rang: Rang): void => {
@@ -175,6 +201,32 @@ export default function Reglages() {
               )}
             </Pressable>
           ))}
+          {/* LA LANGUE SUIT LE PROFIL, comme la planche la pose : c'est le même
+              ordre de question — qui je suis, dans quelle langue on me parle. */}
+          {section.cle === "compte" ? (
+            <View style={[styles.rang, {
+              borderTopWidth: nativeBorder.width, borderTopColor: couleurs.borderHairline,
+            }]}>
+              <Icon name="languages" size={17} color={couleurs.textMention} />
+              <Text style={[styles.libelle, { color: couleurs.textBody }]}>{t.moiLangue}</Text>
+              <View style={[styles.bascule, { borderColor: couleurs.borderObject }]}>
+                {LANGUES.map((cle) => (
+                  <Pressable
+                    key={cle}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: langue === cle }}
+                    onPress={() => changeLaLangue(cle)}
+                    style={[styles.basculeChoix, langue === cle
+                      ? { backgroundColor: couleurs.action } : null]}
+                  >
+                    <Text style={[styles.basculeTexte, {
+                      color: langue === cle ? couleurs.textOnAccent : couleurs.textSecondary,
+                    }]}>{cle === "fr" ? "Français" : "English"}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
         </View>
       ))}
     </ScrollView>
@@ -182,6 +234,11 @@ export default function Reglages() {
 }
 
 const styles = StyleSheet.create({
+  /* Une bascule, pas deux boutons : le cadre commun dit que les deux valeurs
+     s'excluent, ce que deux boutons séparés laisseraient croire cumulables. */
+  bascule: { flexDirection: "row", borderRadius: nativeRadius.pill, borderWidth: nativeBorder.width, overflow: "hidden" },
+  basculeChoix: { paddingHorizontal: nativeSpace[12], paddingVertical: nativeSpace[6] },
+  basculeTexte: { fontFamily: nativeFont.bodySemibold, fontSize: 13 },
   valeur: { fontFamily: nativeFont.bodyRegular, fontSize: 13 },
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
   titre: {
