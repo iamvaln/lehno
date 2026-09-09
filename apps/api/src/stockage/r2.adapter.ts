@@ -65,6 +65,18 @@ export class StockageR2 implements StockagePort {
     );
   }
 
+  /* Lire chez soi, sans passer par une URL signée : le serveur a déjà les
+     droits, et un aller-retour par le CDN pour inspecter ce qu'on vient de
+     recevoir serait un détour payé pour rien. */
+  async contenu(cle: string): Promise<Buffer> {
+    const objet = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: cle }),
+    );
+    const octets = await objet.Body?.transformToByteArray();
+    if (octets === undefined) throw new Error(`objet vide : ${cle}`);
+    return Buffer.from(octets);
+  }
+
   async ecrire(prefixe: Prefixe, contenu: Buffer, typeMime: string): Promise<string> {
     const c = fabriquerCle(prefixe, extensionDe(typeMime));
     await this.client.send(new PutObjectCommand({

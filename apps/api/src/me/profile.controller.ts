@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Inject, Patch, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, Inject, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
-import { updateProfileSchema, usernameSchema, type Profile, type UpdateProfileInput } from "@lehno/contracts";
+import { updateProfileSchema, usernameSchema, type DepotAvatar, type Profile, type UpdateProfileInput } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { ProfileService } from "./profile.service.js";
+import { AvatarService } from "./avatar.service.js";
 
 // Posé par AuthGuard (voir auth/auth.guard.ts) : req.userId. Type minimal,
 // pas de dépendance à @types/express (absent de ce paquet).
@@ -15,7 +16,42 @@ const usernameQuerySchema = z.object({ username: usernameSchema }).strict();
 @UseGuards(AuthGuard)
 export class ProfileController {
   // @Inject explicite : voir ProfileService, même contrainte esbuild/vitest.
-  constructor(@Inject(ProfileService) private readonly profile: ProfileService) {}
+  constructor(
+    @Inject(ProfileService) private readonly profile: ProfileService,
+    @Inject(AvatarService) private readonly avatar: AvatarService,
+  ) {}
+
+  /* LE DÉPÔT NE PASSE PAS PAR L'API. Cette route ne rend qu'une URL signée,
+     valable quelques minutes ; le client dépose dessus, puis confirme.
+     Une photo de deux mégaoctets qui traverse le serveur occupe une connexion
+     pour rien, et un téléphone en zone lente la tiendrait longtemps.
+     200 et non 201 : rien n'est créé ici, on délivre une permission. */
+  @Post("avatar/depot")
+  @HttpCode(200)
+  depot(@Req() req: AuthedRequest): Promise<DepotAvatar> {
+    return this.avatar.depot(req.userId);
+  }
+
+  /* La confirmation ne porte AUCUN corps : le serveur sait quelle clé il a
+     délivrée et à qui. Accepter une clé venue du client laisserait pointer son
+     avatar vers celle d'un autre — un reçu, un export — et nous ferions ensuite
+     signer une lecture dessus.
+     C'est ici que les octets se relisent : type vérifié d'après le CONTENU,
+     dimensions bornées, image recomposée — donc métadonnées retirées, dont la
+     position géographique. */
+  @Post("avatar")
+  @HttpCode(200)
+  confirmer(@Req() req: AuthedRequest): Promise<Profile> {
+    return this.avatar.confirmer(req.userId);
+  }
+
+  // 200 avec le profil, et non 204 : l'écran vient de changer, il doit pouvoir
+  // se redessiner sans redemander.
+  @Delete("avatar")
+  @HttpCode(200)
+  retirer(@Req() req: AuthedRequest): Promise<Profile> {
+    return this.avatar.retirer(req.userId);
+  }
 
   @Get()
   get(@Req() req: AuthedRequest): Promise<Profile> {

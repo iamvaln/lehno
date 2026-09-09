@@ -3,6 +3,7 @@ import type { INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import jwt from "jsonwebtoken";
 import { createHash, randomBytes } from "node:crypto";
+import { StockageMemoire } from "../src/stockage/memoire.adapter.js";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { ownerWishSchema, sharedWishlistSchema, wishlistSchema } from "@lehno/contracts";
 import { WishlistService } from "../src/me/wishlist.service.js";
@@ -123,6 +124,7 @@ describe("mes listes de souhaits, leur partage et leur réservation", () => {
       new RateLimitService(db.prisma as never),
       new OtpService(db.prisma as never, PEPPER),
       boite,
+      new StockageMemoire(),
     );
     awa = await compte("awa");
     bila = await compte("bila");

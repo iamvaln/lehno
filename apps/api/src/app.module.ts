@@ -36,6 +36,7 @@ import { ConsoleMailAdapter } from "./mail/console.adapter.js";
 import { ResendAdapter } from "./mail/resend.adapter.js";
 import { ProfileController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
+import { AvatarService } from "./me/avatar.service.js";
 import { PersonController } from "./me/person.controller.js";
 import { PersonService } from "./me/person.service.js";
 import { EventController } from "./me/event.controller.js";
@@ -364,6 +365,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     { provide: FOURNISSEURS_IA, useFactory: () => construireAdaptateurs() },
     FeatureGuard,
     ProfileService,
+    AvatarService,
     TenantRepository,
     EventService,
     OccurrenceService,

@@ -6,6 +6,7 @@ import type {
   VerifyReservationInput,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
+import type { StockagePort } from "../stockage/stockage.port.js";
 import { RateLimitService } from "../common/rate-limit.service.js";
 import { assertUsableEmail, canonicalEmail } from "../common/email.js";
 import { AppError } from "../common/errors.js";
@@ -59,6 +60,7 @@ export class SharedWishlistService {
     // sans que rien ne le dise.
     @Inject(OtpService) private readonly otp: OtpService,
     @Inject("MAIL_PORT") private readonly mail: MailPort,
+    @Inject("STOCKAGE_PORT") private readonly stockage: StockagePort,
   ) {}
 
   // ── La page ───────────────────────────────────────────────────────────────
@@ -107,7 +109,14 @@ export class SharedWishlistService {
         ?? occurrence.event.person.displayName
         ?? occurrence.user.displayName
         ?? occurrence.user.username),
-      ownerAvatarUrl: occurrence.event.person.avatarUrl ?? occurrence.user.avatarUrl,
+      /* La photo du proche est une URL déjà rangée ; celle du COMPTE est une
+         clé, qui se signe à la lecture. Deux origines, deux traitements — et
+         c'est le serveur qui décide, à chaque affichage, si celui qui demande a
+         le droit. */
+      ownerAvatarUrl: occurrence.event.person.avatarUrl
+        ?? (occurrence.user.avatarKey === null
+          ? null
+          : await this.stockage.lire(occurrence.user.avatarKey)),
       occasionLabel: occurrence.event.label ?? null,
       occasionDate: jour(occurrence.occurrenceDate),
       // Calculé ICI, pas au client : deux versions du parc et deux fuseaux

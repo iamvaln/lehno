@@ -19,12 +19,18 @@ import {
   corpsDeMiseAJour, doitVerifierLaDisponibilite, peutEnregistrer, pseudoRecevable,
   type SaisieDeProfil,
 } from "../../lib/profil.js";
+import { choisirUnePhoto, envoyerLaPhoto, retirerLaPhoto } from "../../lib/photo-de-profil.js";
 
 /* Mon profil — §3.23.
  *
  * CE QUI SE CHANGE ICI se lit dans ce que le contrat accepte, pas dans ce que
- * la maquette dessine. `updateProfileSchema` prend le pseudo, le nom, la
- * langue et le genre. Pas l'adresse, pas la photo.
+ * la maquette dessine. `updateProfileSchema` prend le pseudo, le nom, la langue
+ * et le genre. Pas l'adresse.
+ *
+ * LA PHOTO NE PASSE PAS PAR CE FORMULAIRE, et ce n'est pas un oubli : elle ne
+ * s'envoie pas au serveur mais DIRECTEMENT au stockage, sur une URL qu'il
+ * signe. Une URL ne se pose donc jamais à la main — sinon n'importe qui ferait
+ * pointer son avatar où il veut.
  *
  * LA MAQUETTE DESSINE L'ADRESSE EN CHAMP MODIFIABLE, et je ne la suis pas :
  * c'est le moyen de connexion. La changer bascule l'identité du compte et
@@ -51,6 +57,42 @@ export default function Profil() {
   const [libre, setLibre] = useState<boolean | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [echec, setEchec] = useState<string | null>(null);
+  const [photoEnCours, setPhotoEnCours] = useState(false);
+
+  /* Le refus de permission n'est pas une panne : il est durable, et l'écran dit
+     où le reprendre plutôt que de laisser un bouton qui n'ouvre rien.
+     L'annulation, elle, ne dit rien — on vient de fermer le sélecteur soi-même. */
+  const changerLaPhoto = async (): Promise<void> => {
+    const choix = await choisirUnePhoto();
+    if (choix.issue === "refusee") { setEchec(t.photoRefusee); return; }
+    // Le rétrécissement se fait sur le cas RETENU : lister les deux autres
+    // laisse TypeScript avec l'union entière.
+    if (choix.issue !== "choisie") return;
+
+    setPhotoEnCours(true);
+    setEchec(null);
+    try {
+      setProfil(await envoyerLaPhoto(choix.photo));
+    } catch (souci) {
+      setEchec(souci instanceof Error && souci.message === "trop_lourde"
+        ? t.photoTropLourde
+        : t.photoEchec);
+    } finally {
+      setPhotoEnCours(false);
+    }
+  };
+
+  const retirerLaSienne = async (): Promise<void> => {
+    setPhotoEnCours(true);
+    setEchec(null);
+    try {
+      setProfil(await retirerLaPhoto());
+    } catch {
+      setEchec(t.photoEchec);
+    } finally {
+      setPhotoEnCours(false);
+    }
+  };
 
   const charge = useCallback(async () => {
     try {
@@ -175,11 +217,38 @@ export default function Profil() {
         <Icon name="chevron-left" size={20} color={couleurs.textBody} />
       </Pressable>
 
-      {/* L'avatar SANS « changer la photo » : aucune route ne l'accepte —
-          `updateProfileSchema` ne porte pas `avatarUrl`, et il n'existe pas de
-          dépôt de fichier. Le bouton du kit n'ouvrirait rien. */}
+      {/* La photo se dépose EN DIRECT sur le stockage, sans traverser l'API :
+          le serveur signe une URL, le téléphone monte dessus, puis confirme.
+          C'est la confirmation qui relit les octets et recompose l'image — donc
+          qui retire les métadonnées, position géographique comprise. */}
       <View style={styles.portrait}>
-        <Avatar name={saisie.nom || profil.username} size={76} />
+        <Avatar
+          name={saisie.nom || profil.username}
+          size={76}
+          {...(profil.avatarUrl === null ? {} : { src: profil.avatarUrl })}
+        />
+        <View style={styles.photoActions}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={photoEnCours}
+            onPress={() => { void changerLaPhoto(); }}
+          >
+            <Text style={[styles.photoLien, { color: couleurs.textAccent }]}>
+              {photoEnCours ? t.photoEnvoi : t.photoChanger}
+            </Text>
+          </Pressable>
+          {/* « Retirer » n'existe que s'il y a quelque chose à retirer : un
+              bouton qui ne défait rien fait douter de ce qu'on voit. */}
+          {profil.avatarUrl === null ? null : (
+            <Pressable
+              accessibilityRole="button"
+              disabled={photoEnCours}
+              onPress={() => { void retirerLaSienne(); }}
+            >
+              <Text style={[styles.photoLien, { color: couleurs.textAccent }]}>{t.photoRetirer}</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {echec ? (
@@ -275,6 +344,8 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   portrait: { alignItems: "center", marginTop: nativeSpace[8], marginBottom: nativeSpace[24] },
+  photoActions: { flexDirection: "row", gap: nativeSpace[16], marginTop: nativeSpace[10] },
+  photoLien: { fontFamily: nativeFont.bodySemibold, fontSize: 14.5 },
   champs: { gap: nativeSpace[14] },
   lecture: { fontFamily: nativeFont.bodyRegular, fontSize: 14.5, marginTop: nativeSpace[6] },
   aide: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[6] },
