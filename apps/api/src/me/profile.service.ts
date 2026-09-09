@@ -43,13 +43,18 @@ export class ProfileService {
      compartiment public laisserait un lien partagé une fois ouvert pour
      toujours. */
   private async rendre(u: { gender: string | null; avatarKey: string | null }): Promise<Profile> {
-    /* `avatarKey` ne SORT PAS : le contrat est `.strict()`, et surtout la clé
-       n'a rien à faire chez le client — il ne doit jamais pouvoir la nommer. */
-    const { avatarKey, ...reste } = u;
+    /* `avatarKey` SORT désormais, et c'est voulu : elle ne donne aucun accès
+       par elle-même — il faut la présenter à `/me/media/url`, qui vérifie
+       qu'elle appartient au demandeur. Ce qui ne sort toujours pas, c'est la
+       clé d'un dépôt EN COURS : celle-là, le client pourrait la remplacer. */
     return {
-      ...(reste as unknown as Profile),
+      ...(u as unknown as Profile),
       gender: u.gender === "female" || u.gender === "male" ? u.gender : null,
-      avatarUrl: avatarKey === null ? null : await this.stockage.lire(avatarKey),
+      /* LES DEUX : l'URL pour afficher tout de suite, la clé pour ranger.
+         L'URL est un laissez-passer jetable — elle change à chaque lecture, et
+         un cache indexé dessus retéléchargerait à chaque affichage. La clé, elle,
+         ne bouge que quand la photo change. */
+      avatarUrl: u.avatarKey === null ? null : await this.stockage.lire(u.avatarKey),
     };
   }
 

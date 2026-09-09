@@ -29,6 +29,16 @@ export const profileSchema = z.object({
      laisserait un lien partagé une fois ouvert pour toujours.
      À ranger nulle part côté client : elle sera morte au prochain écran. */
   avatarUrl: z.string().url().nullable(),
+  /* LA CLÉ, à côté de l'URL, et c'est ce qui rend le cache possible.
+   *
+   * L'URL est un laissez-passer jetable : elle change à chaque lecture, donc un
+   * cache HTTP indexé dessus retélécharge à chaque affichage. La clé, elle, ne
+   * change que quand la photo change — c'est sur elle qu'un client range son
+   * fichier, et c'est elle qui lui dit qu'il n'a rien à retélécharger.
+   *
+   * Elle ne donne aucun accès par elle-même : il faut la présenter à
+   * `/me/media/url`, qui vérifie qu'elle appartient bien au demandeur. */
+  avatarKey: z.string().nullable(),
   email: z.string().email(),
   emailVerified: z.boolean(),
   uiLanguage: z.enum(["fr", "en"]),
@@ -102,3 +112,23 @@ export type DepotAvatar = z.infer<typeof depotAvatarSchema>;
 /* La confirmation ne porte AUCUN corps : le serveur sait déjà quelle clé il a
    délivrée, à qui, et pour quel type. Le client dit seulement « c'est
    déposé ». */
+
+/* Une URL de lecture, à la demande, pour une clé qu'on possède déjà.
+ *
+ * Elle existe pour le CACHE : un client qui garde ses images localement les
+ * range par clé, et ne redemande une URL que lorsqu'il n'a pas le fichier — ou
+ * que le laissez-passer a expiré en cours de téléchargement.
+ *
+ * La clé seule ne vaut RIEN : cette route vérifie qu'elle appartient au
+ * demandeur. Sans ce contrôle, une clé aperçue une fois se rejouerait
+ * indéfiniment, et le serveur cesserait de décider à chaque lecture.
+ */
+export const urlMediaSchema = z.object({ cle: z.string().min(1).max(200) }).strict();
+
+export const urlMediaRenduSchema = z.object({
+  url: z.string().url(),
+  /** Secondes avant que l'URL ne meure. Le client redemande, il ne devine pas. */
+  expireDans: z.number().int().positive(),
+}).strict();
+
+export type UrlMedia = z.infer<typeof urlMediaRenduSchema>;

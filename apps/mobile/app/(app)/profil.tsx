@@ -20,6 +20,7 @@ import {
   type SaisieDeProfil,
 } from "../../lib/profil.js";
 import { choisirUnePhoto, envoyerLaPhoto, retirerLaPhoto } from "../../lib/photo-de-profil.js";
+import { imageLocale, oublierLesAutres } from "../../lib/images-locales.js";
 
 /* Mon profil — §3.23.
  *
@@ -58,6 +59,11 @@ export default function Profil() {
   const [envoi, setEnvoi] = useState(false);
   const [echec, setEchec] = useState<string | null>(null);
   const [photoEnCours, setPhotoEnCours] = useState(false);
+  /* Le fichier LOCAL, pas l'URL du serveur : une photo de profil ne change pas
+     trois fois par jour, et la retélécharger à chaque écran coûte du forfait
+     pour rien. Nul tant qu'on ne l'a pas — l'avatar montre alors ses initiales,
+     ce qui est un état, pas une erreur. */
+  const [photoLocale, setPhotoLocale] = useState<string | null>(null);
 
   /* Le refus de permission n'est pas une panne : il est durable, et l'écran dit
      où le reprendre plutôt que de laisser un bouton qui n'ouvre rien.
@@ -72,7 +78,11 @@ export default function Profil() {
     setPhotoEnCours(true);
     setEchec(null);
     try {
-      setProfil(await envoyerLaPhoto(choix.photo));
+      const misAJour = await envoyerLaPhoto(choix.photo);
+      setProfil(misAJour);
+      // La nouvelle porte une clé neuve : l'ancienne ne sert plus à rien.
+      await oublierLesAutres([misAJour.avatarKey]);
+      setPhotoLocale(await imageLocale(misAJour.avatarKey));
     } catch (souci) {
       setEchec(souci instanceof Error && souci.message === "trop_lourde"
         ? t.photoTropLourde
@@ -87,6 +97,8 @@ export default function Profil() {
     setEchec(null);
     try {
       setProfil(await retirerLaPhoto());
+      setPhotoLocale(null);
+      await oublierLesAutres([]);
     } catch {
       setEchec(t.photoEchec);
     } finally {
@@ -98,6 +110,10 @@ export default function Profil() {
     try {
       const lu = profileSchema.parse(await appel<unknown>("/me/profile"));
       setProfil(lu);
+      /* La photo se sert du DISQUE si on l'a déjà — un aller-retour de moins, et
+         elle paraît même sans réseau. Sinon elle se télécharge une fois, et
+         restera. */
+      void imageLocale(lu.avatarKey).then(setPhotoLocale);
       /* Ouvrir cet écran RÉCONCILIE les deux : l'appareil peut avoir changé de
          langue, ou le compte avoir été réglé depuis un autre téléphone. Ce que
          le serveur a retenu fait foi — c'est lui qui envoie les courriels. */
@@ -225,7 +241,9 @@ export default function Profil() {
         <Avatar
           name={saisie.nom || profil.username}
           size={76}
-          {...(profil.avatarUrl === null ? {} : { src: profil.avatarUrl })}
+          // Le fichier LOCAL, jamais l'URL : il paraît hors connexion, et sans
+          // aller-retour quand tout va bien.
+          {...(photoLocale === null ? {} : { src: photoLocale })}
         />
         <View style={styles.photoActions}>
           <Pressable

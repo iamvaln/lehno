@@ -192,4 +192,40 @@ describe("la photo de profil", () => {
     vi.doUnmock("sharp");
     vi.resetModules();
   });
+
+  /* LA CLÉ SEULE NE VAUT RIEN. Sans ce contrôle, une clé aperçue une fois — sur
+     un écran partagé, dans un journal — se rejouerait indéfiniment, et le
+     serveur cesserait de décider à chaque lecture. C'est toute la raison pour
+     laquelle le compartiment n'est pas public.
+
+     404 et non 403 : dire « cette clé existe mais n'est pas à vous »
+     apprendrait qu'elle existe. */
+  it("ne signe que les clés de celui qui demande", async () => {
+    await deposer(await photoAvecPosition());
+    await avatars.confirmer(userId);
+    const { avatarKey } = await db.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { avatarKey: true },
+    });
+
+    const autre = await db.prisma.user.create({
+      data: { email: "bila@example.com", username: "bila", referralCode: "B1" },
+    });
+    await expect(avatars.urlDe(autre.id, avatarKey!)).rejects.toMatchObject({ code: "not_found" });
+    await expect(avatars.urlDe(userId, "avatars/inventee")).rejects.toMatchObject({ code: "not_found" });
+
+    const signee = await avatars.urlDe(userId, avatarKey!);
+    expect(signee.url).toContain("memoire://lecture/");
+    expect(signee.expireDans).toBeGreaterThan(0);
+  });
+
+  /* La clé d'un dépôt EN COURS ne se signe pas : elle désigne un objet que
+     personne n'a vérifié, et servir un fichier qu'on n'a pas regardé annulerait
+     tout le contrôle de la confirmation. */
+  it("ne signe jamais un dépôt non confirmé", async () => {
+    await avatars.depot(userId);
+    const { avatarPendingKey } = await db.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { avatarPendingKey: true },
+    });
+    await expect(avatars.urlDe(userId, avatarPendingKey!)).rejects.toMatchObject({ code: "not_found" });
+  });
 });

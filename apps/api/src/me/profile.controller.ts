@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Inject, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
-import { updateProfileSchema, usernameSchema, type DepotAvatar, type Profile, type UpdateProfileInput } from "@lehno/contracts";
+import { updateProfileSchema, urlMediaSchema, usernameSchema, type DepotAvatar, type Profile, type UpdateProfileInput, type UrlMedia } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { ProfileService } from "./profile.service.js";
@@ -75,5 +75,39 @@ export class ProfileController {
     @Query(new ZodValidationPipe(usernameQuerySchema)) query: { username: string },
   ): Promise<{ available: boolean }> {
     return { available: await this.profile.usernameAvailable(query.username, req.userId) };
+  }
+}
+
+/* LES MÉDIAS, sur leur propre chemin.
+ *
+ * `me/profile/media/...` les rangerait sous le profil, alors qu'ils viendront
+ * aussi des souhaits et des portraits. Un chemin par ressource obligerait chaque
+ * client à savoir de quelle famille vient l'image qu'il veut afficher — or il ne
+ * connaît qu'une clé.
+ */
+@Controller("me/media")
+@UseGuards(AuthGuard)
+export class MediaController {
+  constructor(@Inject(AvatarService) private readonly avatar: AvatarService) {}
+
+  /* UNE URL DE LECTURE, À LA DEMANDE, pour une clé qu'on possède déjà.
+   *
+   * Elle existe pour le CACHE : un client qui garde ses images localement les
+   * range par clé, et ne redemande une URL que lorsqu'il n'a pas le fichier.
+   * Sans elle, il faudrait relire tout le profil pour un laissez-passer.
+   *
+   * La clé seule ne vaut RIEN — le service vérifie qu'elle appartient au
+   * demandeur. Sans ce contrôle, une clé aperçue une fois se rejouerait
+   * indéfiniment, et le serveur cesserait de décider à chaque lecture.
+   *
+   * POST et non GET : une clé dans un chemin finit dans les journaux d'accès,
+   * les référents et le presse-papier de qui repartage une adresse. */
+  @Post("url")
+  @HttpCode(200)
+  urlMedia(
+    @Req() req: AuthedRequest,
+    @Body(new ZodValidationPipe(urlMediaSchema)) corps: { cle: string },
+  ): Promise<UrlMedia> {
+    return this.avatar.urlDe(req.userId, corps.cle);
   }
 }

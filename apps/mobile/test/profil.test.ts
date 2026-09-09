@@ -10,6 +10,7 @@ const PROFIL: Profile = {
   username: "valentine",
   displayName: "Valentine",
   avatarUrl: null,
+  avatarKey: null,
   email: "valentine@exemple.fr",
   emailVerified: true,
   uiLanguage: "fr",

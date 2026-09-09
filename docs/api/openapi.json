@@ -4233,6 +4233,10 @@
                       "format": "uri",
                       "nullable": true
                     },
+                    "avatarKey": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "email": {
                       "type": "string",
                       "format": "email"
@@ -4278,6 +4282,7 @@
                     "username",
                     "displayName",
                     "avatarUrl",
+                    "avatarKey",
                     "email",
                     "emailVerified",
                     "uiLanguage",
@@ -4579,6 +4584,10 @@
                       "format": "uri",
                       "nullable": true
                     },
+                    "avatarKey": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "email": {
                       "type": "string",
                       "format": "email"
@@ -4624,6 +4633,7 @@
                     "username",
                     "displayName",
                     "avatarUrl",
+                    "avatarKey",
                     "email",
                     "emailVerified",
                     "uiLanguage",
