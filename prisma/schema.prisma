@@ -193,6 +193,7 @@ model User {
   authoredReceivedWishes  ReceivedWish[]           @relation("voeux_ecrits")
 
   @@map("user")
+  generatedIdeaSets       GeneratedIdeaSet[]
 }
 
 enum ReferralStatus {
@@ -653,6 +654,7 @@ model EventOccurrence {
   @@unique([eventId, occurrenceDate])
   @@index([userId, occurrenceDate])
   @@map("event_occurrence")
+  generatedIdeaSets GeneratedIdeaSet[]
 }
 
 model Note {
@@ -820,6 +822,7 @@ model WishlistItem {
 
   @@index([eventOccurrenceId])
   @@map("wishlist_item")
+  fromIdea          GeneratedIdea?
 }
 
 /**
@@ -1598,6 +1601,94 @@ model GeneratedMessage {
   @@map("generated_message")
 }
 
+/// L'avis qu'on porte sur une idée proposée. FACULTATIF, et il le reste :
+/// aucune idée n'exige d'être notée, et l'absence d'avis n'est pas un « ni
+/// l'un ni l'autre » — c'est « personne n'a répondu », ce qui ne se compte pas
+/// de la même façon dans une moyenne.
+enum IdeaFeedback {
+  up
+  down
+}
+
+/**
+ * UN JEU D'IDÉES produit par une génération.
+ *
+ * C'est lui que `resultId` désigne au contrat, comme `generated_message` pour
+ * un message. Un jeu par exécution — d'où l'unicité : relancer produit un autre
+ * jeu, il ne complète pas le précédent.
+ *
+ * IL SURVIT À L'EFFACEMENT DU COMPTE, délié. Décidé le 9 septembre : une idée
+ * de cadeau n'appartient à personne, et les avis portés dessus servent à
+ * mesurer la pertinence des invites bien après que le compte qui les a demandées
+ * a disparu. C'est le traitement de `feedback` et d'`action_run`, pas celui de
+ * `generated_message` — d'où `SetNull` ici là où le message est en `Cascade`.
+ */
+model GeneratedIdeaSet {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actionRunId       String   @unique @map("action_run_id") @db.Uuid
+  /// Nuls après l'effacement du compte : le jeu reste, ce qu'il désignait
+  /// n'existe plus. Nullables POUR ÇA, jamais pour un jeu neuf.
+  userId            String?  @map("user_id") @db.Uuid
+  eventOccurrenceId String?  @map("event_occurrence_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  actionRun  ActionRun        @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  user       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  occurrence EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
+  ideas      GeneratedIdea[]
+
+  @@index([userId, createdAt])
+  @@map("generated_idea_set")
+}
+
+/**
+ * UNE IDÉE du jeu.
+ *
+ * NOTER ET RETENIR SONT DEUX GESTES DISTINCTS, et les confondre détruirait le
+ * signal qu'on vient chercher. Quelqu'un peut trouver une idée excellente et ne
+ * pas la retenir — budget, déjà offerte l'an dernier, pas pour cette
+ * personne-là. « Bonne idée, mauvais moment » est précisément ce qui distingue
+ * une invite qui produit du juste d'une invite qui produit du plausible.
+ * Déduire l'avis de l'acceptation mesurerait l'occasion, plus la pertinence.
+ */
+model GeneratedIdea {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  setId    String  @map("set_id") @db.Uuid
+  label    String
+  details  String?
+  /// L'ordre dans lequel le modèle les a rendues. Conservé : une idée mieux
+  /// notée en cinquième position qu'en première dit quelque chose sur le
+  /// gabarit, et le tri par avis l'effacerait.
+  position Int     @db.SmallInt
+  /// Une fourchette indicative, dans la devise du jeu. Nulle quand le modèle
+  /// n'en propose pas — l'inventer vaudrait moins que se taire.
+  priceMin Decimal? @map("price_min") @db.Decimal(12, 2)
+  priceMax Decimal? @map("price_max") @db.Decimal(12, 2)
+  currency String?  @db.VarChar(3)
+
+  /// Nul tant que personne n'a répondu. Voir `IdeaFeedback`.
+  /// L'avis et sa date vont ENSEMBLE — une contrainte en base le tient : un avis
+  /// sans date ne se compare pas dans le temps, une date sans avis ne désigne
+  /// rien. Retirer son avis remet les deux à nul.
+  feedback   IdeaFeedback?
+  feedbackAt DateTime?     @map("feedback_at") @db.Timestamptz
+
+  /// Le souhait né de cette idée, s'il y en a un. `SetNull` et non `Cascade` :
+  /// retirer le souhait de la liste ne doit pas effacer l'idée ni son avis —
+  /// c'est même le cas intéressant, « on l'a retenue puis abandonnée ».
+  wishlistItemId String?       @unique @map("wishlist_item_id") @db.Uuid
+  acceptedAt     DateTime?     @map("accepted_at") @db.Timestamptz
+
+  set          GeneratedIdeaSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  wishlistItem WishlistItem?    @relation(fields: [wishlistItemId], references: [id], onDelete: SetNull)
+
+  @@index([setId, position])
+  /// Pour la question qui justifie tout ça : « quelle version d'invite plaît
+  /// le plus ». Elle se pose sur l'avis, jointe à l'exécution puis au gabarit.
+  @@index([feedback])
+  @@map("generated_idea")
+}
+
 /**
  * Le catalogue des actions qui consomment des crédits.
  * Les codes sont ceux du dictionnaire, et ils ne recouvrent PAS les valeurs
@@ -1683,6 +1774,7 @@ model ActionRun {
   @@index([createdAt])
   @@index([status, createdAt])
   @@map("action_run")
+  ideaSet          GeneratedIdeaSet?
 }
 
 /**
