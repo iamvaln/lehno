@@ -96,6 +96,13 @@ export default function Reglages() {
     deconnexion: t.moiDeconnexion,
   };
 
+  /* Tous les rangs n'ont pas de valeur — la table est donc PARTIELLE, et c'est
+     voulu : forcer une valeur sur chacun obligerait à en inventer là où le
+     libellé se suffit. */
+  const valeurDuRang: Partial<Record<Rang["cle"], string>> = {
+    donnees: t.moiDonneesValeur,
+  };
+
   const ouvre = (rang: Rang): void => {
     /* PAS DE CONFIRMATION. La maquette n'en pose pas, et elle a raison : le
        geste se défait en redemandant un code, et une question posée à chaque
@@ -152,6 +159,15 @@ export default function Reglages() {
               >
                 {libelleDuRang[rang.cle]}
               </Text>
+              {/* CE QUE LE RANG CONTIENT, dit avant qu'on l'ouvre. « Mes
+                  données » ne se devine pas : la valeur annonce « Exporter,
+                  supprimer », et l'on sait s'il faut entrer. Un rang muet oblige
+                  à ouvrir pour savoir, puis à revenir. */}
+              {valeurDuRang[rang.cle] ? (
+                <Text style={[styles.valeur, { color: couleurs.textMention }]}>
+                  {valeurDuRang[rang.cle]}
+                </Text>
+              ) : null}
               {/* Pas de chevron sur un geste : il n'emmène nulle part, et la
                   flèche promettrait un écran derrière. */}
               {rang.geste ? null : (
@@ -166,6 +182,7 @@ export default function Reglages() {
 }
 
 const styles = StyleSheet.create({
+  valeur: { fontFamily: nativeFont.bodyRegular, fontSize: 13 },
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
   titre: {
     fontFamily: nativeFont.displayMedium, fontSize: 27,
