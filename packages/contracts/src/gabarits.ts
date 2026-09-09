@@ -342,6 +342,17 @@ export type ContexteIdees = {
   readonly nomDUsage: string;
   readonly relation: string | null;
   readonly genreDuProche: "female" | "male" | "other" | "unspecified";
+  /* UNE OCCASION SENSIBLE NE FERME RIEN, elle réoriente.
+   *
+   * J'avais d'abord voulu refuser d'y proposer quoi que ce soit. C'était faux,
+   * et c'était refuser le cas où l'application sert le mieux : à un deuil, on
+   * offre des fleurs, on contribue aux frais, on paie un déplacement, on
+   * apporte des boissons, on vient. Ce ne sont pas de moindres cadeaux — ce
+   * sont ceux qui comptent.
+   *
+   * Ce qui change n'est donc pas la permission mais la NATURE de ce qu'on
+   * propose : de l'objet qui fait plaisir au soutien qui soulage. */
+  readonly occasionSensible: boolean;
   /** L'âge, seulement si l'utilisateur l'a demandé. */
   readonly age: number | null;
   /** Ce que les notes disent. Jamais `dislikes_nogo` — voir `aEviter`. */
@@ -415,7 +426,38 @@ export function consigneSystemeIdees(c: ContexteIdees): string {
     publie.push("", fr ? "À ÉCARTER" : "TO AVOID", ...c.gardeFous.map((g) => `- ${g}`));
   }
 
-  return [...regles, ...publie].join("\n");
+  /* LA CONTRAINTE DE L'OCCASION SENSIBLE PASSE EN TÊTE, avant tout le reste —
+     même raisonnement que pour le message : enfouie au milieu d'une longue
+     consigne elle se dilue, et c'est la seule erreur de ce gabarit qui ne se
+     rattrape pas. Proposer une bouteille de champagne pour un décès ne se
+     répare pas par une seconde génération. */
+  const sensible = fr
+    ? [
+      "CETTE OCCASION EST SENSIBLE — deuil, maladie, épreuve.",
+      "On ne fait pas plaisir : ON SOULAGE. Proposez ce qui aide vraiment —",
+      "une contribution aux frais, de quoi couvrir un déplacement, ce que la",
+      "circonstance demande matériellement, un geste de présence.",
+      "Aucune réjouissance, aucun objet de célébration, aucun mot de fête.",
+      "Ne conseillez pas, ne consolez pas : le « pourquoi » dit à quoi le geste",
+      "sert, pas ce que la personne devrait ressentir.",
+      "",
+    ]
+    : [
+      "THIS OCCASION IS A SENSITIVE ONE — bereavement, illness, hardship.",
+      "You are not pleasing anyone: YOU ARE EASING A BURDEN. Suggest what",
+      "genuinely helps — a contribution to costs, covering a journey, what the",
+      "circumstance materially calls for, a gesture of presence.",
+      "No celebration, no festive object, no congratulation.",
+      "Do not advise, do not console: the \"why\" says what the gesture is for,",
+      "not what the person ought to feel.",
+      "",
+    ];
+
+  return [
+    ...(c.occasionSensible ? sensible : []),
+    ...regles,
+    ...publie,
+  ].join("\n");
 }
 
 /* La demande : la matière, le budget, et la forme attendue.
@@ -487,6 +529,16 @@ export function inviteIdees(c: ContexteIdees): string {
    * se contrôle qu'à condition d'avoir un champ à mesurer. Une prose libre
    * obligerait à découper au petit bonheur, et un découpage raté reprendrait un
    * crédit pour un contenu utilisable. */
+  /* Rappelée ici aussi, brièvement. La consigne système la porte en tête, mais
+     la demande est le champ où le modèle lit la matière — et vingt notes sur
+     quelqu'un qu'on aime pousseraient à la fête si rien ne le retenait au
+     moment de choisir. */
+  if (c.occasionSensible) {
+    l.push("", fr
+      ? "RAPPEL : occasion sensible. Ce qui soulage, jamais ce qui célèbre."
+      : "REMINDER: sensitive occasion. What eases, never what celebrates.");
+  }
+
   l.push("", fr
     ? `RENDEZ EXACTEMENT ${IDEES.demandees} IDÉES, en JSON strict et rien d'autre :`
     : `RETURN EXACTLY ${IDEES.demandees} IDEAS, as strict JSON and nothing else:`);

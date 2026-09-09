@@ -173,7 +173,7 @@ describe("le gabarit du message", () => {
 describe("le gabarit des idées de cadeaux", () => {
   const base: ContexteIdees = {
     langue: "fr", nomDUsage: "Awa", relation: "ma marraine",
-    genreDuProche: "female", age: null, notes: [], aEviter: [],
+    genreDuProche: "female", occasionSensible: false, age: null, notes: [], aEviter: [],
     texteLibre: null, budget: null,
   };
 
@@ -240,6 +240,34 @@ describe("le gabarit des idées de cadeaux", () => {
      catalogue d'une enseigne change, la personne à qui on offre non. */
   it("interdit de nommer une marque", () => {
     expect(consigneSystemeIdees(base)).toContain("aucune enseigne");
+  });
+
+  /* UNE OCCASION SENSIBLE NE FERME RIEN, elle réoriente — et c'est une
+     correction. Refuser d'y proposer quoi que ce soit fermait le cas où
+     l'application sert le mieux : à un deuil on offre des fleurs, on contribue
+     aux frais, on paie un déplacement, on apporte des boissons, on vient. Ce
+     ne sont pas de moindres cadeaux, ce sont ceux qui comptent. */
+  it("réoriente vers le soutien sur une occasion sensible, sans rien refuser", () => {
+    const s = consigneSystemeIdees({ ...base, occasionSensible: true });
+    expect(s).toContain("ON SOULAGE");
+    expect(s).toContain("contribution aux frais");
+    // Elle réoriente : les règles de production restent là, entières.
+    expect(s).toContain("RÈGLES ABSOLUES");
+  });
+
+  /* EN TÊTE, avant tout le reste. Enfouie au milieu d'une longue consigne elle
+     se dilue — et proposer une bouteille de champagne pour un décès ne se
+     répare pas par une seconde génération. */
+  it("met la contrainte sensible avant les règles générales", () => {
+    const s = consigneSystemeIdees({ ...base, occasionSensible: true });
+    expect(s.indexOf("CETTE OCCASION EST SENSIBLE")).toBeLessThan(s.indexOf("RÈGLES ABSOLUES"));
+  });
+
+  // Rappelée dans la demande aussi : c'est le champ où le modèle lit la
+  // matière, et vingt notes sur quelqu'un qu'on aime pousseraient à la fête.
+  it("rappelle la contrainte au moment de choisir", () => {
+    expect(inviteIdees({ ...base, occasionSensible: true })).toContain("Ce qui soulage");
+    expect(inviteIdees(base)).not.toContain("Ce qui soulage");
   });
 
   /* Ce que l'administration publie s'ajoute EN QUEUE : un modèle suit plus
