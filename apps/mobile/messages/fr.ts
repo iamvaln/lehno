@@ -567,6 +567,12 @@ export const fr = {
   collecteRecu: (n: number) => n === 1 ? "Une réponse reçue" : n + " réponses reçues",
   collecteAucune: "Aucune réponse pour l'instant.",
   collecteRevoqueTexte: "Ce lien ne mène plus à rien. Vous pouvez en créer un autre.",
+  collecteRevenu: "Ce qui est revenu",
+  collecteApercuTitre: "La page qui s'ouvrira",
+  collecteApercuInvite: (qui: string) => "L'invitation vient de " + qui + ".",
+  collecteApercuDate: "La date de naissance y est déjà proposée, à confirmer.",
+  collecteApercuDateAbsente: "La date de naissance y est demandée.",
+  collecteApercuMur: "Un lien discret y mène à votre Mur.",
 
   /* ─── Identité d'un proche (3.18) ─── */
   evtLabel: "Le libellé",
