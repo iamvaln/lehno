@@ -60,3 +60,32 @@ describe("les boutons qui ne portent qu'une icône se disent", () => {
     });
   }
 });
+
+/* UN AVATAR NE RÉPÈTE PAS LE NOM QU'ON LIT À CÔTÉ.
+ *
+ * `Avatar` portait `accessibilityLabel={name}` — l'intention était juste, « le
+ * lecteur annonce la personne, pas image ». Mais dans TOUS les endroits où il
+ * paraît, le nom est écrit à côté : le rang du carnet s'annonçait « Awa, Awa,
+ * rien de noté encore, compléter ».
+ *
+ * Constaté dans la hiérarchie d'accessibilité du simulateur, pas deviné.
+ *
+ * Ce test lie le composant à cet usage : le jour où un avatar devra parler,
+ * c'est ce test qu'il faudra contredire — en connaissance de cause.
+ */
+describe("l'avatar se tait, le nom est écrit à côté", () => {
+  const source = readFileSync(
+    new URL("../../../packages/ui-native/src/core/Avatar.tsx", import.meta.url), "utf8",
+  );
+
+  it("ne porte pas d'étiquette d'accessibilité", () => {
+    expect(source).not.toMatch(/accessibilityLabel=\{name\}/);
+  });
+
+  /* Masqué, pas seulement sans étiquette : sans cela l'initiale dessinée —
+     « A » — se lirait à la place du nom, ce qui est pire qu'un doublon. */
+  it("se retire de l'arbre d'accessibilité, descendants compris", () => {
+    expect(source).toMatch(/accessibilityElementsHidden: true/);
+    expect(source).toMatch(/importantForAccessibility: "no-hide-descendants"/);
+  });
+});
