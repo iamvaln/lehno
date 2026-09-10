@@ -52,6 +52,10 @@ export const wallSchema = z.object({
   slug: z.string(),
   isEnabled: z.boolean(),
   showBirthdayDate: z.boolean(),
+  /* Exposer la liste de souhaits, ou la taire. Sans lui, le Mur publiait
+     `wishLinkUrl` sans qu'on puisse s'y opposer autrement qu'en fermant le Mur
+     entier — donc en cachant aussi tout le reste. */
+  showWishlist: z.boolean(),
   // S'affiche sous le message d'accueil que le produit compose à partir du
   // prénom : il l'accompagne, il ne le remplace pas.
   welcomeMessage: z.string().nullable(),
@@ -73,6 +77,7 @@ export type Wall = z.infer<typeof wallSchema>;
 export const updateWallSchema = z.object({
   isEnabled: z.boolean().optional(),
   showBirthdayDate: z.boolean().optional(),
+  showWishlist: z.boolean().optional(),
   welcomeMessage: z.string().trim().max(500).nullable().optional(),
   /* L'ENSEMBLE de ce qui est exposé, pas un ajout ni un retrait.
      Un patch élément par élément laisserait une case décochée à l'écran rester

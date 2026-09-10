@@ -204,6 +204,16 @@ export const paymentChannelSchema = z.object({
   country: z.string(),
   label: z.string(),
   /**
+   * Le code à composer quand l'application de l'opérateur ne s'ouvre pas — et
+   * **elle ne s'ouvre pas souvent**. L'écran d'attente d'un versement le montre
+   * en repli ; sans lui, il dit « ouvrez votre application » à quelqu'un dont
+   * l'application ne s'ouvre pas.
+   *
+   * Nul quand l'opérateur n'en a pas, ou qu'on ne le connaît pas encore : la
+   * ligne ne doit alors pas s'afficher plutôt que de proposer un code inventé.
+   */
+  ussd: z.string().nullable(),
+  /**
    * Qui supporte les frais. **Ça change le sens du calcul**, pas seulement son
    * affichage : sur le mobile money le client paie en plus — un palier à 1 000
    * fait verser 1 020 et il en arrive 1 000. La carte fera l'inverse.

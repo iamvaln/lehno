@@ -47,6 +47,17 @@ export const publicWallSchema = z.object({
    * n'a aucune règle à connaître, et ne peut donc pas proposer un bouton qui
    * mènerait à un 404. */
   wishLinkToken: z.string().nullable(),
+  /* Le jeton de la LISTE DE SOUHAITS de l'occasion en cours, ou nul.
+   *
+   * À ne pas confondre avec `wishLinkToken` juste au-dessus, qui ouvre le
+   * dépôt d'un VŒU — un mot qu'on écrit. Celui-ci ouvre la liste : ce qu'on
+   * peut offrir, et ce qui est déjà pris.
+   *
+   * Nul quand le propriétaire ne l'expose pas (`showWishlist`), quand il n'y a
+   * pas de liste sur l'occasion en cours, ou quand le drapeau est éteint. Le
+   * serveur résout les trois : un client n'a aucune règle à connaître, et ne
+   * peut donc pas proposer un bouton qui mènerait à un 404. */
+  wishlistToken: z.string().nullable(),
 }).strict();
 
 export type PublicWall = z.infer<typeof publicWallSchema>;

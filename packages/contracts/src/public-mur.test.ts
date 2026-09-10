@@ -12,12 +12,24 @@ describe("le Mur public", () => {
     birthday: "03-14",
     interests: [{ kind: "hobby" as const, value: "la randonnée" }],
     wishLinkToken: null,
+    wishlistToken: null,
   };
 
   /* Garde l'ANNÉE hors du Mur. L'année dirait l'âge à tout visiteur, ce que
      §3.4 ne demande nulle part — elle ne parle que d'une « simple mention » de
      la date. Le jour où quelqu'un « simplifierait » en servant la date de
      naissance entière, ce test tombe. */
+  /* DEUX JETONS QUI N'OUVRENT PAS LA MÊME PORTE. `wishLinkToken` ouvre le
+     DÉPÔT d'un vœu — un mot qu'un visiteur écrit. `wishlistToken` ouvre la
+     LISTE — ce qu'on peut offrir, et ce qui est déjà pris.
+     Seul le second se règle : la liste dit ce qu'on convoite, là où un vœu
+     déposé ne dit rien de celui qui le reçoit. */
+  it("distingue le dépôt d'un vœu de la liste de souhaits", () => {
+    const mur = publicWallSchema.parse({ ...MUR, wishLinkToken: "abc", wishlistToken: null });
+    expect(mur.wishLinkToken).toBe("abc");
+    expect(mur.wishlistToken).toBeNull();
+  });
+
   it("n'annonce que le jour et le mois de l'anniversaire", () => {
     expect(publicWallSchema.parse(MUR).birthday).toBe("03-14");
     expect(publicWallSchema.safeParse({ ...MUR, birthday: "1990-03-14" }).success).toBe(false);

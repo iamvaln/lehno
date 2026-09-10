@@ -18296,6 +18296,10 @@
                           "label": {
                             "type": "string"
                           },
+                          "ussd": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "feeBorneBy": {
                             "type": "string",
                             "enum": [
@@ -18314,6 +18318,7 @@
                           "operator",
                           "country",
                           "label",
+                          "ussd",
                           "feeBorneBy",
                           "currency"
                         ],
@@ -25897,6 +25902,9 @@
                     "showBirthdayDate": {
                       "type": "boolean"
                     },
+                    "showWishlist": {
+                      "type": "boolean"
+                    },
                     "welcomeMessage": {
                       "type": "string",
                       "nullable": true
@@ -25953,6 +25961,7 @@
                     "slug",
                     "isEnabled",
                     "showBirthdayDate",
+                    "showWishlist",
                     "welcomeMessage",
                     "publicUrl",
                     "wishLinkUrl",
@@ -26181,6 +26190,9 @@
                   "showBirthdayDate": {
                     "type": "boolean"
                   },
+                  "showWishlist": {
+                    "type": "boolean"
+                  },
                   "welcomeMessage": {
                     "type": "string",
                     "maxLength": 500,
@@ -26215,6 +26227,9 @@
                       "type": "boolean"
                     },
                     "showBirthdayDate": {
+                      "type": "boolean"
+                    },
+                    "showWishlist": {
                       "type": "boolean"
                     },
                     "welcomeMessage": {
@@ -26273,6 +26288,7 @@
                     "slug",
                     "isEnabled",
                     "showBirthdayDate",
+                    "showWishlist",
                     "welcomeMessage",
                     "publicUrl",
                     "wishLinkUrl",
@@ -26545,6 +26561,10 @@
                     "wishLinkToken": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "wishlistToken": {
+                      "type": "string",
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -26553,7 +26573,8 @@
                     "welcomeMessage",
                     "birthday",
                     "interests",
-                    "wishLinkToken"
+                    "wishLinkToken",
+                    "wishlistToken"
                   ],
                   "additionalProperties": false
                 }
@@ -29902,6 +29923,12 @@
                           "rejected"
                         ]
                       },
+                      "isPublic": {
+                        "type": "boolean"
+                      },
+                      "showAuthor": {
+                        "type": "boolean"
+                      },
                       "createdAt": {
                         "type": "string"
                       }
@@ -29912,6 +29939,8 @@
                       "authorName",
                       "content",
                       "status",
+                      "isPublic",
+                      "showAuthor",
                       "createdAt"
                     ],
                     "additionalProperties": false
@@ -30192,6 +30221,12 @@
                         "rejected"
                       ]
                     },
+                    "isPublic": {
+                      "type": "boolean"
+                    },
+                    "showAuthor": {
+                      "type": "boolean"
+                    },
                     "createdAt": {
                       "type": "string"
                     }
@@ -30202,6 +30237,8 @@
                     "authorName",
                     "content",
                     "status",
+                    "isPublic",
+                    "showAuthor",
                     "createdAt"
                   ],
                   "additionalProperties": false
@@ -30479,6 +30516,10 @@
                     "wishLinkToken": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "wishlistToken": {
+                      "type": "string",
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -30487,7 +30528,8 @@
                     "welcomeMessage",
                     "birthday",
                     "interests",
-                    "wishLinkToken"
+                    "wishLinkToken",
+                    "wishlistToken"
                   ],
                   "additionalProperties": false
                 }

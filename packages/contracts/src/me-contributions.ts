@@ -165,8 +165,39 @@ export const receivedWishSchema = z.object({
   authorName: z.string().nullable(),
   content: z.string(),
   status: z.enum(RECEIVED_WISH_STATUSES),
+  /* DEUX INTERRUPTEURS QUI NE DISENT PAS LA MÊME CHOSE.
+   *
+   * `isPublic` décide si le vœu paraît sur le Mur ; `showAuthor`, si le nom de
+   * qui l'a écrit paraît avec. Les fondre obligerait à choisir entre « je le
+   * montre avec son nom » et « je ne le montre pas » — or « je le montre sans
+   * dire de qui » est précisément ce qu'on veut d'un mot maladroit qu'on garde
+   * quand même.
+   *
+   * Faux tous les deux à l'arrivée : un vœu reçu n'est pas public parce qu'il
+   * est arrivé, il le devient parce que son destinataire l'a décidé. */
+  isPublic: z.boolean(),
+  showAuthor: z.boolean(),
   createdAt: z.string(),
 }).strict();
+
+/* Ce qu'on bascule sur un vœu reçu.
+ *
+ * Montrer l'auteur d'un vœu qu'on n'expose pas ne veut rien dire — la base le
+ * refuse, et le contrat le refuse ici pour que l'écran l'apprenne avant
+ * d'envoyer. Retirer la publication retire donc l'auteur avec elle. */
+export const receivedWishVisibilitySchema = z.object({
+  isPublic: z.boolean().optional(),
+  showAuthor: z.boolean().optional(),
+}).strict()
+  .refine((v) => v.isPublic !== undefined || v.showAuthor !== undefined, {
+    message: "au moins un champ doit être fourni",
+  })
+  .refine((v) => !(v.showAuthor === true && v.isPublic === false), {
+    path: ["showAuthor"],
+    message: "montrer l'auteur suppose que le vœu soit exposé",
+  });
+
+export type ReceivedWishVisibilityInput = z.infer<typeof receivedWishVisibilitySchema>;
 
 export type ReceivedWish = z.infer<typeof receivedWishSchema>;
 

@@ -47,6 +47,9 @@ export class RechargeService {
     return lignes.map((c) => ({
       id: c.id, kind: c.kind, operator: c.operator, country: c.country,
       label: c.label, feeBorneBy: c.feeBorneBy, currency: c.currency,
+      // Nul quand l'opérateur n'en a pas : l'écran d'attente n'affiche alors
+      // pas la ligne, plutôt que de proposer un code inventé.
+      ussd: c.ussd,
     }));
   }
 
