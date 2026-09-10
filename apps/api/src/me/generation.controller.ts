@@ -8,6 +8,8 @@ import {
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { FlagsService } from "../flags/flags.service.js";
+import { StudioConfigurationService } from "../studio/configuration.service.js";
+import { verifierLaSelection } from "../studio/selection.js";
 import { AppError } from "../common/errors.js";
 import { GenerationService } from "./generation.service.js";
 
@@ -27,17 +29,15 @@ const DRAPEAU: Record<GenerationKind, CleDrapeau> = {
   portrait: "generation.portrait",
 };
 
-/* CE QUI SE PRODUIT VRAIMENT, aujourd'hui.
+/* LA LISTE DES NATURES PRODUITES A DISPARU, et c'est ce qu'annonçait son
+ * commentaire : « elle disparaîtra quand les productions existeront ». Les
+ * trois en ont une.
  *
- * Les trois natures existent au registre des actions payantes et ont chacune
- * leur drapeau ; une seule a une chaîne de production. Accepter les deux autres
- * ici les ferait DÉBITER puis échouer — c'est la seule chose qu'on ne veut pas :
- * le refus, lui, ne coûte rien et les deux écrans le traitent proprement.
- *
- * Cette liste disparaîtra quand les productions existeront. Elle est séparée du
- * drapeau à dessein : « éteint » et « pas encore construit » sont deux états
- * différents, et les confondre ferait croire qu'allumer suffit. */
-const PRODUITES = new Set<GenerationKind>(["wish_message", "gift_ideas"]);
+ * Ce qui la remplace n'est pas rien : un `switch` EXHAUSTIF plus bas. Sans lui,
+ * une quatrième nature ajoutée au contrat retomberait en silence sur le
+ * message — elle serait débitée, produite, et rendue comme un message de vœux.
+ * Le compilateur refuse désormais d'ajouter une nature sans lui donner son
+ * chemin. */
 
 type AuthedRequest = { userId: string };
 
@@ -97,6 +97,7 @@ export class GenerationController {
   constructor(
     @Inject(GenerationService) private readonly generation: GenerationService,
     @Inject(FlagsService) private readonly flags: FlagsService,
+    @Inject(StudioConfigurationService) private readonly configs: StudioConfigurationService,
   ) {}
 
   @Post()
@@ -115,8 +116,33 @@ export class GenerationController {
     /* Allumée, mais pas encore construite. Un code DIFFÉRENT de l'extinction,
        parce que ce n'est pas la même chose : là il n'y a rien à allumer. Et
        AVANT le débit — les deux écrans traitent ce refus sans faire payer. */
-    if (!PRODUITES.has(corps.kind))
-      throw new AppError("resource_inactive", `generation "${corps.kind}" is not available yet`);
+    /* LE PORTRAIT VISE UN PROCHE, pas une occasion — le contrat le refuse
+       d'ailleurs dans l'autre sens. Il se traite donc AVANT la garde ci-dessous,
+       qui exige une occurrence pour les deux autres natures. */
+    if (corps.kind === "portrait") {
+      if (!corps.personId)
+        throw new AppError("validation_failed", "a person is required");
+
+      /* LA SÉLECTION SE VÉRIFIE CONTRE LE CATALOGUE PUBLIÉ, et avant le débit.
+         Un téléphone garde son catalogue en mémoire : sans ce contrôle, une
+         ambiance retirée hier passerait encore aujourd'hui, et le crédit
+         partirait pour un style qu'on ne sert plus. */
+      const publie = await this.configs.enService("portrait");
+      if (!publie)
+        throw new AppError("resource_inactive", "no published portrait configuration");
+      const selection = verifierLaSelection(
+        this.configs.reglagesPortraitDe(publie),
+        corps.studioSelection,
+      );
+
+      const portrait = await this.generation.lancerPortrait(req.userId, corps.personId, selection, {
+        ...(corps.language === undefined ? {} : { langue: corps.language }),
+        ...(corps.briefText === undefined ? {} : { texteLibre: corps.briefText }),
+        ...(corps.senderNote === undefined ? {} : { motDeLExpediteur: corps.senderNote }),
+        ...(corps.idempotencyKey === undefined ? {} : { cle: corps.idempotencyKey }),
+      });
+      return this.rendre(await this.generation.lire(req.userId, portrait.actionRunId) as LigneExecution);
+    }
 
     if (!corps.occurrenceId)
       throw new AppError("validation_failed", "an occurrence is required");
@@ -137,6 +163,14 @@ export class GenerationController {
       });
       return this.rendre(await this.generation.lire(req.userId, jeu.actionRunId) as LigneExecution);
     }
+
+    /* LA GARDE EXHAUSTIVE. `corps.kind` ne peut plus valoir que `wish_message`
+       ici ; l'affectation à `never` le prouve à la compilation. Une quatrième
+       nature ajoutée au contrat sans son chemin fait échouer ce fichier, au
+       lieu de retomber en silence sur le message — débitée, produite, et rendue
+       comme un vœu. */
+    const restant: "wish_message" = corps.kind;
+    void restant;
 
     /* L'orientation voyage dans `studioSelection`, que le contrat commun refuse
        pour un message — « le studio n'a de sens que pour un portrait ». Elle
