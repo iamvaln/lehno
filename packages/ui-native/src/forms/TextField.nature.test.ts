@@ -107,3 +107,29 @@ describe("une année de naissance", () => {
   });
 });
 
+
+/* UN NUMÉRO DE TÉLÉPHONE — celui depuis lequel on a versé.
+ *
+ * Il retombait sur « texte » : clavier alphabétique, majuscule et correcteur
+ * actifs. On tapait donc son numéro sur des lettres, avec le correcteur qui
+ * proposait des mots. Vu à l'écran, sur l'écran de déclaration d'un versement.
+ */
+describe("un numéro de téléphone", () => {
+  it("ouvre un pavé téléphonique, pas un clavier de lettres", () => {
+    const r = reglagesDeSaisie("telephone");
+    expect(r.keyboardType).toBe("phone-pad");
+    expect(r.autoCorrect).toBe(false);
+    expect(r.autoCapitalize).toBe("none");
+  });
+
+  /* `phone-pad` et non `number-pad` : un numéro porte parfois un « + », des
+     espaces, des tirets. Le pavé des chiffres seuls les refuserait, et
+     quelqu'un qui colle un numéro international resterait coincé. */
+  it("laisse passer la ponctuation d'un numéro", () => {
+    expect(nettoiePourLaNature("telephone", "+237 691 23 45 67")).toBe("+237 691 23 45 67");
+  });
+
+  it("s'arrête à la borne du contrat", () => {
+    expect(reglagesDeSaisie("telephone").maxLength).toBe(32);
+  });
+});

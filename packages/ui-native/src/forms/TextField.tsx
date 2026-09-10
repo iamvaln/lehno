@@ -28,16 +28,27 @@ export interface TextFieldProps {
   /* Ce que dit la touche de retour. « send » sur un formulaire qui part,
      « next » quand un champ suit — un libellé faux promet le mauvais geste. */
   returnKeyType?: "done" | "go" | "next" | "send" | undefined;
+  /* LA BORNE DU CONTRAT, quand elle diffère de celle de la nature.
+     La nature règle le CLAVIER — ce qui s'affiche, ce qui se corrige ; le
+     contrat règle la LONGUEUR, et deux champs de même nature n'ont pas
+     forcément la même. Un code de parrainage tient en 16 caractères, une
+     référence d'opérateur en 120 : même clavier, deux bornes. */
+  maxLength?: number | undefined;
 }
 
 export function TextField({
   label, hint, value, placeholder, nature = "texte",
   invalid = false, valide = false, multiline = false, autoFocus, onChangeText,
-  onSubmitEditing, returnKeyType,
+  onSubmitEditing, returnKeyType, maxLength,
 }: TextFieldProps) {
   const couleurs = useCouleurs();
   const s = styleDeChamp({ couleurs, invalide: invalid, valide, multiligne: multiline });
   const reglages = reglagesDeSaisie(nature);
+  /* La borne de l'APPELANT l'emporte : c'est celle du contrat, plus proche de
+     la vérité que le défaut de la nature. Deux champs de même clavier n'ont pas
+     forcément la même longueur — un code de parrainage tient en 16, une
+     référence d'opérateur en 120. */
+  const borne = maxLength ?? reglages.maxLength;
 
   return (
     <View style={s.conteneur}>
@@ -67,7 +78,7 @@ export function TextField({
         {...(reglages.keyboardType ? { keyboardType: reglages.keyboardType } : {})}
         {...(reglages.textContentType ? { textContentType: reglages.textContentType } : {})}
         {...(reglages.autoComplete ? { autoComplete: reglages.autoComplete } : {})}
-        {...(reglages.maxLength ? { maxLength: reglages.maxLength } : {})}
+        {...(borne ? { maxLength: borne } : {})}
       />
       {hint ? <Text style={s.aide}>{hint}</Text> : null}
     </View>

@@ -512,11 +512,21 @@ export default function Recharge() {
               <View style={{ gap: nativeSpace[12], marginTop: nativeSpace[14] }}>
                 <TextField
                   label={t.versementNumeroEmploye}
+                  /* Un NUMÉRO : pavé téléphonique, ni majuscule ni correcteur.
+                     Sans nature, il retombait sur « texte » — on tapait son
+                     numéro sur un clavier de lettres, correcteur actif. */
+                  nature="telephone"
                   value={depuis}
                   onChangeText={setDepuis}
                 />
                 <TextField
                   label={t.versementReference}
+                  /* « MP240829.1432.A47219 » : la majuscule automatique et le
+                     correcteur la déformeraient. Le contrat la veut LIBRE —
+                     « les opérateurs ne s'accordent sur rien » — donc on ne
+                     nettoie rien, et la borne est la sienne : 120. */
+                  nature="reference"
+                  maxLength={120}
                   value={reference}
                   placeholder={t.versementReferenceExemple}
                   hint={t.versementReferenceAide}

@@ -11,7 +11,9 @@ import type { TextInputProps } from "react-native";
  * d'adresse la reçoit sans que personne y pense.
  */
 
-export const NATURES_DE_CHAMP = ["texte", "email", "pseudo", "reference", "annee", "code"] as const;
+export const NATURES_DE_CHAMP = [
+  "texte", "email", "pseudo", "reference", "telephone", "annee", "code",
+] as const;
 export type NatureDeChamp = (typeof NATURES_DE_CHAMP)[number];
 
 export interface ReglagesDeSaisie {
@@ -78,6 +80,25 @@ export function reglagesDeSaisie(nature: NatureDeChamp): ReglagesDeSaisie {
      * sur une date de naissance. Et sans borne, on y saisissait cinq chiffres.
      *
      * Le pavé numérique reste : c'est la seule chose qui était juste. */
+    /* UN NUMÉRO DE TÉLÉPHONE — celui depuis lequel on a versé.
+     *
+     * Il retombait sur « texte » : clavier alphabétique, majuscule et
+     * correcteur actifs. On tapait donc son numéro sur des lettres, avec le
+     * correcteur qui proposait des mots. Vu à l'écran.
+     *
+     * `phone-pad` plutôt que `number-pad` : un numéro peut porter un « + »,
+     * des espaces, des tirets — le pavé des chiffres seuls les refuserait, et
+     * quelqu'un qui colle un numéro international se retrouverait coincé. */
+    case "telephone":
+      return {
+        autoCapitalize: "none",
+        autoCorrect: false,
+        spellCheck: false,
+        keyboardType: "phone-pad",
+        textContentType: "telephoneNumber",
+        autoComplete: "tel",
+        maxLength: 32,
+      };
     case "annee":
       return {
         autoCapitalize: "none",
