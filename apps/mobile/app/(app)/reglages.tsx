@@ -79,7 +79,7 @@ export default function Reglages() {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
     } finally {
       await effaceLesJetons();
-      routeur.replace("/(connexion)");
+      routeur.replace("/(connexion)/ouverture");
     }
   };
 

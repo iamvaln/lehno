@@ -94,7 +94,11 @@ export default function Code() {
          connectée. Il voyage donc jusqu'à l'écran du pseudo, et meurt là. */
       if (issue.outcome === "session") {
         await poseLesJetons(issue);
-        routeur.replace("/");
+        /* VERS L'ACCUEIL, PAS VERS « / » — voir la bienvenue. La racine est
+           revendiquée par deux fichiers, et le routeur y choisissait l'écran
+           d'ouverture, qui repart sans condition vers la connexion. On venait
+           de ranger les jetons et l'on retombait sur le formulaire. */
+        routeur.replace("/(app)/accueil");
         return;
       }
 

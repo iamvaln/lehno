@@ -131,7 +131,7 @@ export default function Fermeture() {
           {t.supprGrace(apercu?.gracePeriodDays ?? 0, fini.supportEmail)}
         </Text>
         <View style={styles.pied}>
-          <Button full onPress={() => routeur.replace("/(connexion)")}>{t.supprRevenir}</Button>
+          <Button full onPress={() => routeur.replace("/(connexion)/ouverture")}>{t.supprRevenir}</Button>
         </View>
       </View>
     );

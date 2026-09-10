@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CLES_DRAPEAUX } from "@lehno/contracts";
 
@@ -132,5 +132,37 @@ describe("la table nomme des écrans que la navigation connaît", () => {
     const nav = readFileSync(new URL("../lib/navigation.ts", import.meta.url), "utf8");
     const lus = [...nav.matchAll(/ouvert\("([a-z.]+)"\)/g)].map((m) => m[1]!);
     expect(lus.filter((c) => !CLES_DRAPEAUX.includes(c as never))).toEqual([]);
+  });
+});
+
+/* LA RACINE N'APPARTIENT QU'À LA PORTE.
+ *
+ * L'écran d'ouverture s'appelait `(connexion)/index.tsx`. Un groupe ne change
+ * pas l'URL : DEUX fichiers revendiquaient « / », et le routeur choisissait
+ * l'ouverture — qui repart SANS CONDITION vers le formulaire de connexion.
+ *
+ * Conséquence, sur les deux chemins qui comptent : la fin d'une inscription et
+ * la connexion d'un compte connu font toutes deux `replace("/")` APRÈS avoir
+ * rangé les jetons. On avait donc une session valide et l'on retombait devant
+ * le formulaire — le défaut signalé « quand on clique sur Commencer, ça nous
+ * ramène à la page de login ».
+ *
+ * Le test interdit qu'un second fichier reprenne la racine. Rien d'autre ne le
+ * signalerait : les deux écrans compilent, et celui qui gagne dépend de
+ * l'ordre de résolution du routeur.
+ */
+describe("un seul fichier tient la racine", () => {
+  const racines = readdirSync(new URL("../app/", import.meta.url), { withFileTypes: true })
+    .flatMap((e) => {
+      if (e.name === "index.tsx") return ["app/index.tsx"];
+      // Un dossier ENTRE PARENTHÈSES est un groupe : il ne pose pas de segment
+      // d'URL, donc son `index` tombe sur la même adresse que celui du dessus.
+      if (!e.isDirectory() || !e.name.startsWith("(")) return [];
+      const dedans = readdirSync(new URL(`../app/${e.name}/`, import.meta.url));
+      return dedans.includes("index.tsx") ? [`app/${e.name}/index.tsx`] : [];
+    });
+
+  it("n'a qu'un seul prétendant à « / »", () => {
+    expect(racines).toEqual(["app/index.tsx"]);
   });
 });
