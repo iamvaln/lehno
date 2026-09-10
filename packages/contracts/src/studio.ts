@@ -165,6 +165,47 @@ export const reglagesMessageSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["orientations"], message: "au moins une orientation doit rester active" });
 });
 
+/* LA PALETTE D'UNE AMBIANCE — quatre couleurs, et le modèle d'image n'en
+ * emploie aucune autre.
+ *
+ * ELLE EST ICI ET NON DANS LES JETONS, alors que ce sont les mêmes valeurs.
+ * Trois raisons, et la première décide :
+ *
+ * 1. LE PORTRAIT FIGE SA CONFIGURATION. Une image approuvée trois mois après
+ *    son brief est composée avec les réglages d'alors. Si la palette vivait
+ *    dans le code, changer un jeton changerait rétroactivement ce qu'un ancien
+ *    portrait produirait — et l'image ne correspondrait plus au texte qu'on
+ *    avait relu.
+ * 2. Elle se règle SANS LIVRAISON. Une patte visuelle se cherche : on essaie,
+ *    on regarde, on ajuste. Passer par un déploiement à chaque essai la
+ *    figerait avant qu'elle ne soit trouvée.
+ * 3. L'API n'a alors aucune raison de dépendre du système de design.
+ *
+ * Les valeurs de départ viennent de la charte — voir `PortraitComposition` —,
+ * mais ce sont des VALEURS DE DÉPART, pas un miroir qu'il faudrait tenir à
+ * jour.
+ */
+export const compositionReglageSchema = z.object({
+  id: z.string().regex(/^[a-z0-9_]{1,60}$/),
+  actif: z.boolean(),
+  libelle: bilingueSchema,
+  description: bilingueFacultatifSchema,
+  /* LA GAMME DE CETTE COMPOSITION — quatre couleurs, et le modèle d'image n'en
+     emploie aucune autre.
+     UNE PAR COMPOSITION, et non une pour toutes : une illustration destinée à
+     un fond d'encre ne peut pas employer la gamme d'une sur papier blanc, elle
+     y disparaîtrait. C'est la composition qui pose le fond ; c'est donc elle
+     qui décide de ce qui s'y voit. */
+  palette: z.tuple([
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  ]),
+}).strict();
+
+export type CompositionReglage = z.infer<typeof compositionReglageSchema>;
+
 export const reglagesPortraitSchema = z.object({
   motifs: z.object({
     /** Le seul qui accepte du texte par-dessus (§3.4). */
@@ -177,6 +218,15 @@ export const reglagesPortraitSchema = z.object({
   }).strict(),
   voiesImage: z.array(voieImageReglageSchema).min(1),
   ambiances: z.array(ambianceReglageSchema),
+  /* LES COMPOSITIONS — papier, lilas, encre. Réglées au panneau bien avant,
+   * puis CHOISIES par le client au moment de générer.
+   *
+   * Ce sont DEUX PARAMÈTRES distincts que le client donne : le type de rendu
+   * (nature, animal, abstrait) dit ce qu'on dessine ; la composition dit dans
+   * quelle gamme et sur quel fond ça se pose. Les confondre — comme le faisait
+   * une palette unique — reviendrait à peindre pareil pour un fond blanc et
+   * pour un fond d'encre. */
+  compositions: z.array(compositionReglageSchema).min(1),
 }).strict().superRefine((r, ctx) => {
   const doublon = (ids: string[]): string | null => {
     const vus = new Set<string>();
@@ -247,6 +297,15 @@ export function partieLueParLeModelePortrait(r: ReglagesPortrait): unknown {
   return {
     motifs: r.motifs,
     modeles: r.modeles,
+    /* LES GAMMES ENTRENT DANS L'EMPREINTE. Elles sont lues par le modèle —
+       c'est même la contrainte la plus forte qu'on lui pose. En changer une
+       sans réclamer un nouvel essai laisserait publier une gamme que personne
+       n'a vue.
+       Les libellés n'y sont PAS : renommer « encre » en « nuit » ne change rien
+       de ce que le modèle rend. */
+    compositions: [...r.compositions]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((c) => ({ id: c.id, palette: c.palette })),
     ambiances: [...r.ambiances]
       .sort((a, b) => a.id.localeCompare(b.id))
       .map((a) => ({ id: a.id, groupe: a.groupe, consigne: a.consigne })),
@@ -281,6 +340,11 @@ export function matierePourEmpreintePortrait(r: ReglagesPortrait): string {
 
 const GROUPE_ORIENTATION = "orientation";
 const GROUPE_IMAGE = "image";
+/* LA COMPOSITION est le SECOND paramètre que le client donne, à côté du type de
+   rendu. Elle est à la RACINE et non derrière la voie d'image : on choisit sa
+   gamme même quand aucune image n'est produite — la voie « aucune » pose le
+   motif sur le fond de la composition, et ce fond se choisit. */
+const GROUPE_COMPOSITION = "composition";
 
 /** Le groupe qu'une voie d'image ouvre. `aucune` n'ouvre rien : c'est la fin. */
 const GROUPE_OUVERT: Record<VoieImage, GroupeAmbiance | null> = {
@@ -363,6 +427,26 @@ export function catalogueServi(
     }));
 
   const racines = [GROUPE_ORIENTATION];
+
+  const compositions = p.compositions
+    .filter((c) => c.actif)
+    .map((c) => ({
+      id: c.id, label: dit(c.libelle), description: ditOuNul(c.description),
+      /* La gamme ne descend PAS au client : elle sert au modèle d'image, et
+         l'écran montre la composition, pas ses quatre codes hexadécimaux. Le
+         client la verra à l'image. */
+      warning: null, revealsGroup: null,
+    }));
+
+  if (compositions.length > 0) {
+    groupes.push({
+      id: GROUPE_COMPOSITION,
+      label: langue === "fr" ? "La composition" : "The composition",
+      defaultChoiceId: compositions[0]!.id,
+      choices: compositions,
+    });
+    racines.push(GROUPE_COMPOSITION);
+  }
 
   if (voies.length > 0) {
     groupes.push({
@@ -542,6 +626,31 @@ export function reglagesMessageDeDepart(): ReglagesMessage {
 export function reglagesPortraitDeDepart(): ReglagesPortrait {
   return reglagesPortraitSchema.parse({
     motifs: { bande: "trame_de_hampes", fondSansImage: "registres" },
+    /* LES TROIS COMPOSITIONS DE LA CHARTE, avec leurs gammes.
+       Chacune tient sur SON fond : la gamme du papier joue sur un blanc cassé,
+       celle de l'encre doit rester visible sur un fond sombre — d'où le clair
+       en tête là où le papier met un lilas. Ce sont des valeurs de départ ; le
+       panneau les ajuste sans livraison. */
+    compositions: [
+      {
+        id: "papier", actif: true,
+        libelle: { fr: "Papier", en: "Paper" },
+        description: { fr: "Un blanc cassé, sobre. Le plus discret des trois.", en: "An off-white, understated. The quietest of the three." },
+        palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#5A4B93"],
+      },
+      {
+        id: "lilas", actif: true,
+        libelle: { fr: "Lilas", en: "Lilac" },
+        description: { fr: "Le violet de la marque, en fond.", en: "The brand violet, as a ground." },
+        palette: ["#FFFFFF", "#5A4B93", "#F0CFB4", "#221F2B"],
+      },
+      {
+        id: "encre", actif: true,
+        libelle: { fr: "Encre", en: "Ink" },
+        description: { fr: "Un fond sombre. Les couleurs y sonnent plus fort.", en: "A dark ground. Colours ring louder on it." },
+        palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#FFFFFF"],
+      },
+    ],
     /* LES DEUX CLIENTS D'IMAGE, RÉPARTIS — et c'est délibéré.
      *
      * Il n'y en a que deux qui produisent des images, et on veut pouvoir les

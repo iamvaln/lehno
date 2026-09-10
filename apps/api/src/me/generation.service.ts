@@ -600,6 +600,9 @@ export class GenerationService {
              qui ne correspond pas au texte qu'on vient de relire. */
           visualPath: selection.voie,
           ...(selection.ambiance === null ? {} : { ambianceId: selection.ambiance.id }),
+          // La gamme se relira dans la configuration : on fige LEQUEL, pas les
+          // quatre couleurs — les recopier ici les ferait diverger d'elle.
+          compositionId: selection.composition.id,
           /* LA CONFIGURATION QUI A PRODUIT CE BRIEF. L'approbation relira SA
              consigne, pas celle du catalogue courant : reformuler une ambiance
              entre les deux temps composerait l'image avec un texte et le brief

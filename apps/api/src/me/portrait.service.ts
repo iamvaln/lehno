@@ -112,6 +112,18 @@ export class PortraitService {
     if (ligne.ambianceId !== null && ambiance === null)
       throw new AppError("internal_error", "the recorded ambiance is absent from its own configuration");
 
+    /* LA GAMME DE LA COMPOSITION CHOISIE, relue dans la configuration d'origine
+       — et non « la première » ni « celle par défaut ». Une illustration
+       destinée à un fond d'encre n'emploie pas la gamme du papier : elle y
+       disparaîtrait. C'est la composition qui pose le fond, donc elle qui
+       décide de ce qui s'y voit. */
+    const composition = ligne.compositionId === null
+      ? null
+      : reglages.compositions.find((c) => c.id === ligne.compositionId) ?? null;
+    if (composition === null)
+      throw new AppError("resource_inactive", "the chosen composition is no longer published");
+    const gamme = composition.palette;
+
     const cle = voie === "photo" ? reglages.modeles.photo_style : reglages.modeles.illustration;
     const modele = await this.modeleDemande(cle);
     const adaptateur = this.adaptateurs[modele.provider];
@@ -121,10 +133,16 @@ export class PortraitService {
        AUCUN CRÉDIT N'EST REPRIS : il a payé le texte, qui est là. */
     if (!adaptateur) throw new AppError("resource_inactive", "no image provider configured");
 
-    const motif = voie === "aucune" ? reglages.motifs.fondSansImage : reglages.motifs.bande;
+    /* LE MOTIF NE PART PLUS AU MODÈLE. Il recevait la chaîne
+       `trame_de_hampes` — un identifiant, du charabia —, pour un motif que
+       `PortraitComposition` dessine de toute façon. Le fond, la bande, le texte
+       et la marque du pied appartiennent à la composition, qui les pose au
+       pixel près et à l'identique. Le modèle rend une ILLUSTRATION SEULE.
+       Ce qui part à sa place : LA PALETTE. C'est elle qui rend une image Lehno
+       reconnaissable au-delà de son cadre. */
     const resultat = await this.routeur.appelerUnSeulModele(
       voie === "photo" ? "photo_style" : "illustration",
-      { invite: inviteImagePortrait({ mots }, ambiance?.consigne.fr ?? null, motif) },
+      { invite: inviteImagePortrait({ mots }, ambiance?.consigne.fr ?? null, gamme) },
       adaptateur,
       modele,
       { origine: "user_action", userId, actionRunId: ligne.actionRunId },

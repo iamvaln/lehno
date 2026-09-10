@@ -711,22 +711,74 @@ export function invitePortrait(c: ContextePortrait): string {
   return l.join("\n");
 }
 
-/* CE QUI PART AU MODÈLE D'IMAGE : le brief, et la consigne d'ambiance. RIEN
- * D'AUTRE — ni note, ni attribut, ni nom.
+/* CE QUI PART AU MODÈLE D'IMAGE : le brief, la consigne d'ambiance, et la
+ * palette. RIEN D'AUTRE — ni note, ni attribut, ni nom.
  *
  * C'est la fonction qui tient la promesse du gabarit ci-dessus. La composer ici
  * plutôt que dans le service la met sous le même test que le reste, et empêche
- * qu'un appelant pressé y rajoute « juste les notes, pour aider ». */
+ * qu'un appelant pressé y rajoute « juste les notes, pour aider ».
+ *
+ * ─── LE MODÈLE NE COMPOSE PAS, IL ILLUSTRE
+ *
+ * Il rendait aussi le motif de marque — et recevait pour cela la chaîne
+ * `trame_de_hampes`, un IDENTIFIANT. Du charabia, pour un motif que
+ * `PortraitComposition` dessine de toute façon. Le fond, la bande, le texte, la
+ * marque du pied : tout cela appartient à la composition, qui les pose au pixel
+ * près et à l'identique.
+ *
+ * Un modèle d'image écrit mal et ne sait pas reproduire une marque. Lui laisser
+ * ces deux-là donnerait une dédicace mal orthographiée sur un cadeau, et un
+ * logotype approximatif. La règle est donc : il rend une ILLUSTRATION SEULE,
+ * qui vient se poser dans un cadre qu'il ne connaît pas.
+ *
+ * ─── LA PATTE, ELLE, PASSE PAR LA PALETTE
+ *
+ * Le portrait est « le seul contenu du produit qui sorte de l'application en
+ * portant la marque ». Pour qu'une image Lehno se reconnaisse, il ne suffit pas
+ * que le cadre soit à nous : l'illustration elle-même doit tenir dans la gamme.
+ *
+ * Les quatre couleurs viennent de l'ambiance de composition, pas d'ici — c'est
+ * la charte qui les tient, et les recopier les ferait diverger le jour où elle
+ * change. */
 export function inviteImagePortrait(
   brief: { readonly mots: readonly string[] },
   consigneAmbiance: string | null,
-  motif: string,
+  palette: readonly [string, string, string, string],
+  langue: LangueGeneration = "fr",
 ): string {
+  const fr = langue === "fr";
   const parties: string[] = [];
+
   if (consigneAmbiance) parties.push(consigneAmbiance);
   parties.push(brief.mots.join(", "));
-  /* Le motif de marque, nommé au modèle. C'est le seul élément d'identité
-     visuelle qui traverse : le reste de la mise en page appartient au produit. */
-  parties.push(motif);
+
+  parties.push(fr
+    ? [
+      "PALETTE — n'employez QUE ces couleurs, et rien d'autre :",
+      ...palette.map((c) => `- ${c}`),
+      "Le fond reste vide et uni. La composition posera le sien derrière.",
+    ].join("\n")
+    : [
+      "PALETTE — use ONLY these colours, nothing else:",
+      ...palette.map((c) => `- ${c}`),
+      "Leave the background empty and plain. The composition will place its own behind.",
+    ].join("\n"));
+
+  /* CE QU'ON LUI INTERDIT, et c'est aussi important que ce qu'on lui demande.
+     Un modèle ajoute volontiers un cadre, une légende, une signature — autant
+     d'éléments que la composition pose elle-même, et qui feraient doublon en
+     travers du sien. */
+  parties.push(fr
+    ? [
+      "AUCUN TEXTE, aucun mot, aucune lettre, aucun chiffre dans l'image.",
+      "Aucun cadre, aucune bordure, aucune signature, aucun filigrane.",
+      "Une forme et une ambiance, jamais une scène racontée.",
+    ].join("\n")
+    : [
+      "NO TEXT, no words, no letters, no digits in the image.",
+      "No frame, no border, no signature, no watermark.",
+      "One shape and one mood, never a narrated scene.",
+    ].join("\n"));
+
   return parties.join("\n\n");
 }
