@@ -471,6 +471,30 @@ export const fr = {
     },
 
     reglages: {
+      formulaire: {
+        modifier: "Modifier",
+        ajouterCanal: "Ajouter un canal",
+        ajouterCompte: "Ajouter un compte",
+        titrePalier: "Modifier le palier",
+        titreCanalNeuf: "Ajouter un canal",
+        titreCanal: "Modifier le canal",
+        titreCompteNeuf: "Ajouter un compte de collecte",
+        titreCompte: "Modifier le compte de collecte",
+        consequence: "Prend effet dès l'enregistrement, pour tous les clients. Le journal d'audit garde ce geste et son motif.",
+        precedente: "Avant",
+        oui: "Oui",
+        non: "Non",
+        champs: {
+          fraisFixe: "Frais fixes",
+          fraisMin: "Frais minimum",
+          fraisMax: "Frais maximum",
+          ussd: "Code USSD de secours",
+          nature: "Nature",
+          position: "Ordre d'affichage",
+          actif: "En service",
+        },
+      },
+
       paliers: {
         titre: "Paliers d'achat",
         sous: "Ce qu'on propose à l'achat. Aucune saisie libre : le plus petit palier fixe le minimum.",

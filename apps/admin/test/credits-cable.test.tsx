@@ -231,6 +231,50 @@ describe("les crédits et paiements", () => {
     expect(screen.queryByText(t.credits.detail.ouvrirRecu)).not.toBeInTheDocument();
   });
 
+  /* LES RÉGLAGES S'ÉCRIVENT ENFIN. Paliers, canaux et comptes de collecte
+     étaient servis en lecture seule : l'API savait les modifier depuis le
+     premier jour, l'écran n'offrait rien. Changer un prix se faisait en SQL. */
+  it("modifie un palier, et n'envoie que ce qui a changé", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+    await utilisateur.click(await screen.findByText(t.credits.onglets.reglages));
+
+    await utilisateur.click((await screen.findAllByLabelText(t.table.actions))[0]!);
+    await utilisateur.click(await screen.findByText(t.credits.reglages.formulaire.modifier));
+
+    const montant = screen.getByLabelText(t.credits.reglages.paliers.col.montant);
+    await utilisateur.clear(montant);
+    await utilisateur.type(montant, "1500");
+    await utilisateur.selectOptions(screen.getByLabelText(t.confirmation.motif), t.credits.decision.dialogueConfirmer.motifs[0]!);
+    await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
+
+    const envoi = appels.mock.calls.find(([u, i]) => String(u).includes("/admin/credit-bundles/") && i?.method === "PATCH");
+    expect(envoi).toBeDefined();
+    const corps = JSON.parse(String(envoi?.[1]?.body)) as Record<string, unknown>;
+    /* SEUL LE MONTANT PART. Un PATCH complet réécrirait des champs qu'on n'a
+       pas touchés — et sur un canal, ouvrirait une version d'historique qui ne
+       change rien, datée d'aujourd'hui. */
+    expect(corps["montant"]).toBe(1500);
+    expect(corps["credits"]).toBeUndefined();
+    expect(corps["reason"]).toBe(t.credits.decision.dialogueConfirmer.motifs[0]);
+  });
+
+  /* Le support n'atteint pas les réglages DU TOUT — l'onglet ne lui est pas
+     rendu. « On retire, on ne grise pas » : un onglet visible mais sans geste
+     inviterait à demander la permission, et ferait de l'écran une négociation. */
+  it("ne rend pas l'onglet des réglages au support", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur, "support");
+
+    /* « Paiements » figure aussi dans la navigation : on interroge la barre
+       d'onglets, pas la page entière. */
+    const onglets = await screen.findByRole("tablist");
+    expect(within(onglets).getByText(t.credits.onglets.mouvements)).toBeInTheDocument();
+    expect(within(onglets).queryByText(t.credits.onglets.reglages)).not.toBeInTheDocument();
+  });
+
   it("confirmer envoie le montant constaté, la référence et le motif", async () => {
     const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
