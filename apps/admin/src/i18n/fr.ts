@@ -75,6 +75,7 @@ export const fr = {
     acces: "Accès administrateurs",
     parametres: "Paramètres",
     fonctionnalites: "Fonctionnalités",
+    motifs: "Motifs d'audit",
     modeles: "Modèles d'IA",
     studio: "Studio du portrait",
     atelier: "L'Atelier",
@@ -129,6 +130,38 @@ export const fr = {
 
   // Toute action qui change un état passe par là, et porte un motif : c'est ce
   // qui fait que le journal d'audit dit quelque chose.
+  motifs: {
+    titre: "Motifs d'audit",
+    sous: "Ce qu'on propose de choisir quand un geste demande une raison. Un code se retire, il ne se renomme pas.",
+    ajouter: "Ajouter un motif",
+    modifier: "Modifier",
+    enService: "En service",
+    retire: "Retiré",
+    aucunGeste: "Aucun geste",
+    col: { code: "Code", fr: "Français", en: "Anglais", gestes: "Gestes", etat: "État" },
+    champs: {
+      code: "Code",
+      codeAide: "Minuscules, chiffres et tirets bas. Il ne se renomme jamais : c'est lui qu'on compte.",
+      codeFige: "Il identifie ce motif dans tout l'historique. Le renommer couperait en deux ce qu'il a justifié.",
+      codeFaux: "Une lettre en tête, puis lettres, chiffres ou tirets bas.",
+      fr: "Libellé français",
+      en: "Libellé anglais",
+      gestes: "Gestes concernés",
+      gestesAide: "Séparés par des virgules — par exemple : parameter_update, credit_adjust. Un motif hors de la portée d'un geste est refusé au moment de s'en servir.",
+      actif: "En service",
+      actifAide: "Retiré, il cesse d'être proposé. Ce qu'il a déjà justifié reste lisible.",
+    },
+    vide: {
+      titre: "Aucun motif",
+      texte: "Les motifs proposés aux gestes d'administration apparaissent ici.",
+    },
+    dialogue: {
+      titreCreation: "Ajouter ce motif",
+      titreModification: "Modifier ce motif",
+      consequence: "Il sera proposé aux gestes indiqués, dès l'enregistrement. Le journal d'audit garde ce geste et son motif.",
+      motifs: ["Nouveau cas rencontré", "Libellé à corriger", "Motif devenu inutile"],
+    },
+  },
   confirmation: {
     motif: "Motif",
     motifAide: "Le journal d'audit garde ce geste et son motif.",

@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Metriques, StatsTransactions, Studio, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, StatsTransactions, Studio, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -280,6 +280,7 @@ export function App(): ReactNode {
   const [tourSuppressions, setTourSuppressions] = useState(0);
   const [tourModeles, setTourModeles] = useState(0);
   const [tourDrapeaux, setTourDrapeaux] = useState(0);
+  const [tourMotifs, setTourMotifs] = useState(0);
   const [tourCredits, setTourCredits] = useState(0);
   const [tourAcces, setTourAcces] = useState(0);
   const [tourProfil, setTourProfil] = useState(0);
@@ -597,7 +598,11 @@ export function App(): ReactNode {
     () => (connecte
       ? api.appeler("/admin/reasons/all", { schema: motifsAdminSchema })
       : Promise.resolve(null)),
-    [connecte],
+    /* `tourMotifs` relit le registre après une écriture — et cette lecture-là
+       sert DEUX choses : l'écran des motifs, et les listes proposées dans tous
+       les dialogues de l'outil. Ajouter un motif doit donc le rendre
+       immédiatement choisissable, sans recharger la page. */
+    [connecte, tourMotifs],
   );
 
   /* Les motifs d'un geste, dans la langue de lecture. Vide quand le registre
@@ -1357,6 +1362,37 @@ export function App(): ReactNode {
                 }
               })();
             }}
+            onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "motifs") {
+    /* ÉCRIRE ET RELIRE, comme les drapeaux. Une écriture qui échoue laisse
+       l'état d'avant à l'écran, et c'est lui qui fait foi : on relit dans tous
+       les cas. */
+    const ecrireMotif = (chemin: string, methode: "POST" | "PATCH", corps: unknown): void => {
+      void (async () => {
+        try {
+          await api.appeler(chemin, { methode, corps });
+        } catch (echec) {
+          if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+        } finally {
+          setTourMotifs((n) => n + 1);
+        }
+      })();
+    };
+    vue = (
+      <Ressource
+        etat={etatMotifs}
+        t={t}
+        enfant={(registre) => (registre ? (
+          <Motifs
+            role={role}
+            langue={langue}
+            motifs={registre.motifs}
+            onCreer={(motif, raison) => ecrireMotif("/admin/reasons", "POST", { ...motif, reason: raison })}
+            onModifier={(id, champs, raison) => ecrireMotif(`/admin/reasons/${id}`, "PATCH", { ...champs, reason: raison })}
             onRetour={aller}
           />
         ) : null)}

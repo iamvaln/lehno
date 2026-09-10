@@ -12,6 +12,7 @@ export { Profil } from "./Profil.js";
 export { Lecture, type LectureProps } from "./Lecture.js";
 export { Modeles, type ModelesProps } from "./Modeles.js";
 export { Drapeaux, type DrapeauxProps } from "./Drapeaux.js";
+export { Motifs, type MotifsProps } from "./Motifs.js";
 export { Credits, type CreditsProps } from "./Credits.js";
 export { SaisiePaiement, type SaisiePaiementProps } from "./SaisiePaiement.js";
 export { Acces, type AccesProps } from "./Acces.js";
