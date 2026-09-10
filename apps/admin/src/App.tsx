@@ -50,6 +50,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 import { useRessource } from "./api/hooks.js";
 import {
   canauxSchema, catalogueIaSchema, chainesIaSchema, comptesAdminSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  urlMediaRenduSchema,
   pageAssistanceSchema, pageContactSchema, pageAttenteSchema, pageRetoursSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
@@ -849,6 +850,26 @@ export function App(): ReactNode {
                   // On relit dans tous les cas : après un refus, l'état affiché
                   // est celui d'avant, et c'est lui qui fait foi.
                   setTourCredits((n) => n + 1);
+                }
+              })();
+            }}
+            /* LA PIÈCE S'OUVRE À LA DEMANDE, dans un onglet à part.
+               On demande l'URL au moment du clic et on l'ouvre aussitôt : elle
+               est signée pour quelques minutes, et la garder dans l'état ferait
+               un lien mort au deuxième clic — un lien mort sur une pièce
+               justificative se lit comme une pièce manquante.
+               `noopener` : la page ouverte ne doit pas pouvoir manipuler
+               l'outil qui l'a ouverte, et c'est un fichier déposé par un
+               tiers. */
+            onOuvrirLeRecu={() => {
+              void (async () => {
+                try {
+                  const { url } = await api.appeler(`/admin/payments/${paiementOuvert}/proof`, {
+                    schema: urlMediaRenduSchema,
+                  });
+                  window.open(url, "_blank", "noopener,noreferrer");
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
                 }
               })();
             }}

@@ -345,10 +345,13 @@ export const en: typeof fr = {
 
     detail: {
       titre: "Payment",
+      ouvrirRecu: "Open the receipt",
+      sansRecu: "No receipt uploaded",
       groupes: { operation: "The operation", montants: "The amounts", histoire: "Its history" },
       champs: {
         reference: "Reference", compte: "Collection account", frais: "Fee",
         montant: "Bundle price", attendu: "Expected on the account", recu: "Observed",
+        recuPiece: "Receipt",
         ecart: "Gap", motifEchec: "Reason for refusal", credits: "Credits",
       },
       histoire: { etat: "State", debut: "Since", duree: "Duration", origine: "Triggered by", parQui: "By", motif: "Reason" },
@@ -417,17 +420,20 @@ export const en: typeof fr = {
       paliers: {
         titre: "Purchase bundles",
         sous: "What we offer. No free amounts: the smallest bundle sets the minimum.",
+        vide: { titre: "No bundle", texte: "Credit purchase offers appear here. With no bundle, nobody can top up." },
         col: { montant: "Price", credits: "Credits", remise: "Discount", position: "Order", etat: "State" },
       },
       canaux: {
         titre: "Channels and fees",
         sous: "What the service offers, and what the operator takes. A channel is never deleted, only switched off.",
+        vide: { titre: "No channel", texte: "Collection methods and their fees appear here. With no channel, no payment can be declared." },
         col: { libelle: "Channel", pays: "Country", frais: "Fee", portes: "Borne by", etat: "State" },
         portes: { payer: "The client", payee: "The service" },
       },
       comptes: {
         titre: "Collection accounts",
         sous: "The accounts clients transfer to.",
+        vide: { titre: "No collection account", texte: "The accounts clients pay into appear here. With no account, a manual payment has no destination." },
         col: { libelle: "Account", operateur: "Operator", numero: "Number", visible: "In the app", etat: "State" },
         visible: "Offered", masque: "Hidden",
       },
