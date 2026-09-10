@@ -28,8 +28,30 @@ export type Parcours = "operateur" | "manuel" | "aucun";
  * qu'un humain intervienne.
  */
 export function parcoursDeRecharge(actives: readonly string[]): Parcours {
-  if (estActive(actives, "topup.provider")) return "operateur";
+  /* LA VOIE AUTOMATIQUE L'EMPORTE — quand elle existe. Aujourd'hui elle
+     n'existe pas : `startPaymentSchema` est déclaré au contrat et branché à
+     AUCUNE route ; `preview`, la déclaration, la liste et la lecture sont
+     toutes sous `topup.manual`.
+
+     Or le drapeau, lui, s'allume. Les deux allumés — la configuration de
+     développement — l'écran choisissait « opérateur » et n'offrait PLUS RIEN :
+     ni palier, ni moyen de payer, ni explication. Une page de solde et
+     d'historique, sans le geste qui lui donne son nom. Vu à l'écran.
+
+     On préfère donc la voie qui ABOUTIT. Ce n'est pas un renoncement à
+     l'ordre : le jour où la route arrive, cette condition tombe et la voie
+     automatique reprend la main. La garde du dessous dit ce qu'il faudra
+     retirer.
+
+     Le serveur a résolu le même problème pour les générations : un drapeau
+     allumé sur une nature non construite rend `resource_inactive` plutôt que
+     de laisser croire. Ici, faute de route, c'est au client de ne pas croire.
+
+     CE QU'IL FAUDRA REMETTRE le jour où la route existe : les deux lignes
+     ci-dessous dans l'ordre inverse. Le test qui suit ce fichier le dit aussi,
+     pour que personne n'ait à retrouver ce commentaire. */
   if (estActive(actives, "topup.manual")) return "manuel";
+  if (estActive(actives, "topup.provider")) return "operateur";
   return "aucun";
 }
 

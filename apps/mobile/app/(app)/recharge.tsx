@@ -657,7 +657,8 @@ export default function Recharge() {
              Un écran de recharge qui n'affiche plus rien du tout ferait croire
              à une panne là où il n'y a qu'une voie fermée. */
           <Card surface="panel" padding={16} radius="lg">
-            <Text style={[styles.mention, { color: couleurs.textSecondary }]}>{t.moiSolde}</Text>
+            {/* UNE SEULE FOIS — `CreditIndicator` porte déjà son libellé, et le
+                rend à côté du nombre. Même doublon que sur « Moi ». */}
             <CreditIndicator label={t.moiSolde} balance={solde} variant="solde" />
           </Card>
         )}
