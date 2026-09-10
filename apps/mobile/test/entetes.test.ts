@@ -32,6 +32,11 @@ const ENTETES: Readonly<Record<string, string>> = {
   aide: "enteteAide",
   reservations: "enteteReservations",
   reprises: "enteteReprises",
+  listes: "enteteListes",
+  monmur: "enteteMonMur",
+  collecte: "enteteCollecte",
+  valider: "enteteValider",
+  mouvements: "enteteMouvements",
 };
 
 const source = (nom: string): string =>
@@ -40,8 +45,7 @@ const source = (nom: string): string =>
 describe("les écrans empilés disent où l'on est", () => {
   for (const [ecran, cle] of Object.entries(ENTETES)) {
     it(`${ecran} porte son en-tête`, () => {
-      const s = source(ecran);
-      expect(s).toContain(`<ScreenHeader titre={t.${cle}}`);
+      expect(source(ecran)).toContain(`<ScreenHeader titre={t.${cle}}`);
     });
 
     /* LA FLÈCHE À LA MAIN EST LE DÉFAUT LUI-MÊME : c'est elle qui tenait lieu

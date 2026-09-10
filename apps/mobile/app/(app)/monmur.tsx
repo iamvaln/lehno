@@ -12,8 +12,8 @@ import {
   nativeBorder, nativeFont, nativeRadius, nativeSpace, nativeTouchMin,
 } from "@lehno/tokens";
 import {
-  Banner, Button, Card, EmptyState, Icon, LoadingState, Quote, SectionLabel,
-  Toast, useCouleurs,
+  Banner, Button, Card, EmptyState, Icon, LoadingState, Quote, ScreenHeader, SectionLabel,
+  Toast, useCouleurs
 } from "@lehno/ui-native";
 import { Bascule } from "../../composants/Bascule.js";
 import { useLangue } from "../../lib/langue.js";
@@ -140,14 +140,7 @@ export default function MonMur() {
      l'écran de panne et celui de chargement la perdaient, et avec elle le
      seul moyen visible de revenir. `retours.test.ts` le vérifie. */
   const retour = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t.retour}
-      onPress={() => routeur.back()}
-      style={styles.retour}
-    >
-      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-    </Pressable>
+    <ScreenHeader titre={t.enteteMonMur} retour={t.retour} onRetour={() => routeur.back()} />
   );
 
   if (echec && !mur) {

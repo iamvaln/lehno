@@ -411,6 +411,11 @@ export const fr = {
   enteteAide: "Aide",
   enteteReservations: "Réservations",
   enteteReprises: "En cours",
+  enteteListes: "Mes wishlists",
+  enteteMonMur: "Mon Mur",
+  enteteCollecte: "Faire compléter",
+  enteteValider: "À valider",
+  enteteMouvements: "Les mouvements",
 
   /* Moi (3.17) — ce que je montre de moi. Du contenu, qui se partage. */
   moiSous: "Ce que vous montrez de vous.",

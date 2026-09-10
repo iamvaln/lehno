@@ -17,8 +17,8 @@ import {
   nativeBorder, nativeFont, nativeRadius, nativeSpace, nativeTouchMin,
 } from "@lehno/tokens";
 import {
-  Banner, Button, Card, EmptyState, Icon, LoadingState, SectionLabel, Tag, TextField,
-  Toast, useCouleurs,
+  Banner, Button, Card, EmptyState, Icon, LoadingState, ScreenHeader, SectionLabel, Tag,
+  TextField, Toast, useCouleurs
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -132,14 +132,7 @@ export default function Listes() {
      l'écran de panne et celui de chargement la perdaient, et avec elle le
      seul moyen visible de revenir. `retours.test.ts` le vérifie. */
   const retour = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t.retour}
-      onPress={() => routeur.back()}
-      style={styles.retour}
-    >
-      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-    </Pressable>
+    <ScreenHeader titre={t.enteteListes} retour={t.retour} onRetour={() => routeur.back()} />
   );
 
   if (echec && listes === null) {

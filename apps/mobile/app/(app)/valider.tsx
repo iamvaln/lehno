@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { submissionSchema, type Submission } from "@lehno/contracts";
 import { nativeBorder, nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
-  Banner, Button, Card, EmptyState, Icon, LoadingState, SectionLabel, Toast,
-  useCouleurs,
+  Banner, Button, Card, EmptyState, LoadingState, ScreenHeader, SectionLabel, Toast,
+  useCouleurs
 } from "@lehno/ui-native";
 import { Bascule } from "../../composants/Bascule.js";
 import { useLangue } from "../../lib/langue.js";
@@ -105,14 +105,7 @@ export default function Valider() {
      l'écran de panne et celui de chargement la perdaient, et avec elle le
      seul moyen visible de revenir. `retours.test.ts` le vérifie. */
   const retour = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t.retour}
-      onPress={() => routeur.back()}
-      style={styles.retour}
-    >
-      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-    </Pressable>
+    <ScreenHeader titre={t.enteteValider} retour={t.retour} onRetour={() => routeur.back()} />
   );
 
   if (echec && contributions === null) {
