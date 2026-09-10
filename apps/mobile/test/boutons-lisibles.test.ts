@@ -116,3 +116,28 @@ describe("une bascule se touche partout", () => {
     expect(source).toMatch(/importantForAccessibility="no-hide-descendants"/);
   });
 });
+
+/* UNE SEULE PASTILLE, ET UNE SEULE RANGÉE DE JOURS.
+ *
+ * `Pastille` était définie TROIS FOIS — `note.tsx`, `evenement.tsx`,
+ * l'identité — avec des noms de props différents (`onPress` là, `appuie` ici)
+ * et des styles recopiés. Trois dessins pour un même geste finissent par
+ * diverger, et rien ne le signale : chacun compile.
+ *
+ * Ce test refuse qu'une quatrième copie apparaisse.
+ */
+describe("les gestes partagés ne se recopient pas", () => {
+  const ecransDuDossier = (dossier: string): string[] =>
+    readdirSync(new URL(`../app/${dossier}`, import.meta.url), { withFileTypes: true })
+      .flatMap((e) => (e.isDirectory()
+        ? ecransDuDossier(`${dossier}${e.name}/`)
+        : e.name.endsWith(".tsx") ? [`${dossier}${e.name}`] : []));
+
+  it("aucun écran ne redéfinit Pastille", () => {
+    const coupables = ecransDuDossier("").filter((f) =>
+      /function Pastille\b/.test(
+        readFileSync(new URL(`../app/${f}`, import.meta.url), "utf8"),
+      ));
+    expect(coupables).toEqual([]);
+  });
+});

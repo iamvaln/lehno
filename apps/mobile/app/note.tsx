@@ -13,6 +13,7 @@ import {
   Avatar, Banner, Button, Icon, LoadingState, SectionLabel, TextField,
   chassisDeFeuille, useCouleurs,
 } from "@lehno/ui-native";
+import { Pastille } from "../composants/Pastille.js";
 import { useLangue } from "../lib/langue.js";
 import { appel, ErreurDApi } from "../lib/api.js";
 import { messageDErreur } from "../lib/session.js";
@@ -360,14 +361,14 @@ export default function Note() {
                       <Pastille
                         actif={retenue === null}
                         libelle={t.noteOccasionDurable}
-                        onPress={() => setOccasion(null)}
+                        appuie={() => setOccasion(null)}
                       />
                       {offertes.map((o) => (
                         <Pastille
                           key={o.id}
                           actif={retenue === o.id}
                           libelle={`${libelleDeLEcheance(o.kind, o.label, t)} · ${dateCourte(o.occurrenceDate, langue)}`}
-                          onPress={() => setOccasion(retenue === o.id ? null : o.id)}
+                          appuie={() => setOccasion(retenue === o.id ? null : o.id)}
                         />
                       ))}
                     </ScrollView>
@@ -432,33 +433,6 @@ export default function Note() {
    défile, parce qu'une feuille n'a pas la hauteur d'un écran. Réappuyer sur
    l'active la retire : une occasion choisie par erreur doit se défaire sans
    vider la note. */
-function Pastille({ actif, libelle, onPress }: {
-  actif: boolean;
-  libelle: string;
-  onPress: () => void;
-}) {
-  const couleurs = useCouleurs();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: actif }}
-      onPress={onPress}
-      style={[styles.pastille, {
-        borderColor: actif ? "transparent" : couleurs.borderObject,
-        backgroundColor: actif ? couleurs.action : "transparent",
-      }]}
-    >
-      <Text
-        numberOfLines={1}
-        style={[styles.pastilleTexte, {
-          color: actif ? couleurs.textOnAccent : couleurs.textSecondary,
-        }]}
-      >
-        {libelle}
-      </Text>
-    </Pressable>
-  );
-}
 
 const styles = StyleSheet.create({
   plein: { flex: 1 },

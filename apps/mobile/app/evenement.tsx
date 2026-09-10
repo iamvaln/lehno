@@ -12,6 +12,8 @@ import {
 } from "@lehno/tokens";
 import { Avatar, Banner, Button, Icon, SectionLabel, TextField, useCouleurs } from "@lehno/ui-native";
 import { useLangue } from "../lib/langue.js";
+import { Pastille } from "../composants/Pastille.js";
+import { RangeeDeJours } from "../composants/RangeeDeJours.js";
 import { appel, ErreurDApi } from "../lib/api.js";
 import { messageDErreur } from "../lib/session.js";
 import { useTypesOuverts } from "../lib/MetadonneesProvider.js";
@@ -390,21 +392,11 @@ export default function Evenement() {
           {type && demandeLaDate(type) ? (
             <>
               <Text style={[styles.sousTitre, { color: couleurs.textSecondary }]}>{t.evtJour}</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={styles.rangee}
-              >
-                {jours.map((j) => (
-                  <Pastille
-                    key={j}
-                    actif={borneLeJour(jour, mois, annee) === j}
-                    libelle={String(j)}
-                    appuie={() => setJour(j)}
-                  />
-                ))}
-              </ScrollView>
+              <RangeeDeJours
+                jours={jours}
+                actif={borneLeJour(jour, mois, annee)}
+                choisit={setJour}
+              />
 
               <Text style={[styles.sousTitre, { color: couleurs.textSecondary }]}>{t.evtMois}</Text>
               <View style={styles.pastilles}>
@@ -505,32 +497,6 @@ export default function Evenement() {
 /* Une pastille de choix, comme sur l'identité : trois à douze valeurs se lisent
    d'un coup, et un sélecteur natif cacherait le choix derrière un geste de
    plus. La cible tactile ne descend pas sous le minimum du système. */
-function Pastille({ actif, libelle, icone, appuie }: {
-  actif: boolean;
-  libelle: string;
-  icone?: string | undefined;
-  appuie: () => void;
-}) {
-  const couleurs = useCouleurs();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: actif }}
-      onPress={appuie}
-      style={[styles.pastille, {
-        borderColor: actif ? "transparent" : couleurs.borderObject,
-        backgroundColor: actif ? couleurs.action : "transparent",
-      }]}
-    >
-      {icone ? (
-        <Icon name={icone} size={16} color={actif ? couleurs.textOnAccent : couleurs.textSecondary} />
-      ) : null}
-      <Text style={[styles.pastilleTexte, {
-        color: actif ? couleurs.textOnAccent : couleurs.textSecondary,
-      }]}>{libelle}</Text>
-    </Pressable>
-  );
-}
 
 const styles = StyleSheet.create({
   manque: { fontFamily: nativeFont.bodyRegular, fontSize: 14.5, lineHeight: 21, marginTop: nativeSpace[8] },

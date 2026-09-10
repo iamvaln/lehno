@@ -16,6 +16,8 @@ import {
   Avatar, Button, Icon, SectionLabel, TextField, useCouleurs,
 } from "@lehno/ui-native";
 import { Choix } from "../../../composants/Choix.js";
+import { Pastille } from "../../../composants/Pastille.js";
+import { RangeeDeJours } from "../../../composants/RangeeDeJours.js";
 import { useLangue } from "../../../lib/langue.js";
 import { appel, ErreurDApi } from "../../../lib/api.js";
 import { messageDErreur } from "../../../lib/session.js";
@@ -237,21 +239,7 @@ export default function Identite() {
               sélecteur natif demanderait une année — et c'est justement elle
               qu'on ignore le plus souvent. */}
           <Text style={[styles.sousTitre, { color: couleurs.textSecondary }]}>{t.evtJour}</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.rangee}
-          >
-            {JOURS.map((j) => (
-              <Pastille
-                key={j}
-                actif={jourNe === j}
-                libelle={String(j)}
-                appuie={() => setJourNe(j)}
-              />
-            ))}
-          </ScrollView>
+          <RangeeDeJours actif={jourNe} choisit={setJourNe} />
 
           <Text style={[styles.sousTitre, { color: couleurs.textSecondary }]}>{t.evtMois}</Text>
           <View style={styles.pastilles}>
@@ -392,33 +380,4 @@ const styles = StyleSheet.create({
   danger: { marginTop: nativeSpace[28], paddingTop: nativeSpace[24], borderTopWidth: nativeBorder.width },
 });
 
-/* TROISIÈME COPIE DE CETTE PASTILLE — après `note.tsx` et `evenement.tsx`, qui
-   la définissent chacun de son côté avec des noms de props différents (`onPress`
-   là, `appuie` ici). Elle mérite d'être extraite dans `composants/` ; je ne le
-   fais pas dans le même commit que le champ qui manquait, pour que la
-   correction reste lisible. */
-function Pastille({ actif, libelle, appuie }: {
-  actif: boolean;
-  libelle: string;
-  appuie: () => void;
-}) {
-  const couleurs = useCouleurs();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: actif }}
-      onPress={appuie}
-      style={[styles.pastille, {
-        borderColor: actif ? "transparent" : couleurs.borderObject,
-        backgroundColor: actif ? couleurs.action : "transparent",
-      }]}
-    >
-      <Text style={[styles.pastilleTexte, {
-        color: actif ? couleurs.textOnAccent : couleurs.textSecondary,
-      }]}>{libelle}</Text>
-    </Pressable>
-  );
-}
-
-const JOURS = Array.from({ length: 31 }, (_, i) => i + 1);
 
