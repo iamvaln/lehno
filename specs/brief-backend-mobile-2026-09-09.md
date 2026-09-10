@@ -322,3 +322,45 @@ me/data-export.service.ts:125  (export seulement)
 Tant que 1 et 2 ne sont pas faits, le mobile ne peut rien y faire : il n'a aucun
 moyen de créer une fiche `isSelf`, le champ n'existant pas au contrat de
 création.
+
+---
+
+## 11. `GET /me/persons/{id}` rend toujours `nextOccurrence: null` et `notesCount: 0`
+
+Vu à l'appareil le 10 septembre 2026 : la LISTE des proches affiche « Awa —
+Rien de noté encore · 10 sept. », et la FICHE du même proche, un écran plus
+loin, n'affiche aucun sous-titre. La date est là, la fiche ne la dit pas.
+
+```
+// me/person.service.ts:200
+async get(userId: string, id: string): Promise<Person> {
+  return rendre(await this.depot.persons(userId).findOrThrow(id));
+}
+```
+
+`rendre` prend un second paramètre `details` facultatif, et retombe sinon sur
+des valeurs par défaut :
+
+```
+notesCount: details?.notesCount ?? 0,
+nextOccurrence: details?.nextOccurrence ?? null,
+```
+
+Le commentaire qui le justifie dit vrai — « une fiche qui vient d'être créée n'a
+ni note ni échéance, et le dire coûterait deux requêtes pour deux valeurs
+connues d'avance » —, mais il parle de la CRÉATION. `get` emprunte le même
+chemin, sur une fiche qui, elle, a des notes et des dates. Le contrat promet les
+deux champs sans condition ; la lecture unitaire rend deux valeurs fausses.
+
+**Ce que ça donne à l'écran** : la fiche d'un proche (§3.18) compose son
+sous-titre depuis `nextOccurrence` — « anniversaire · 3 sept. ». Il ne paraît
+jamais. `notesCount` y est aussi toujours nul, même si l'écran ne s'en sert pas
+encore.
+
+**Ce qu'il faut** : que `get` charge les mêmes détails que la liste — la
+fonction existe déjà (`person.service.ts:59`), elle prend un tableau d'`ids` et
+sert la liste. Un appel à un élément suffit.
+
+Le mobile pourrait interroger `/me/occurrences?personId=` pour compenser, mais
+ce serait une requête de plus pour une donnée que le contrat annonce déjà sur la
+fiche — et une seconde vérité à tenir d'accord avec la première.
