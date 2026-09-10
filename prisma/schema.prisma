@@ -841,7 +841,14 @@ model Wishlist {
   /// Une seule liste par occasion : « un cadeau de Noël n'est pas un cadeau de
   /// mariage », et deux listes sur la même occasion rendraient le partage
   /// ambigu — laquelle le lien ouvrirait-il ?
-  eventOccurrenceId String   @unique @map("event_occurrence_id") @db.Uuid
+  eventOccurrenceId String    @unique @map("event_occurrence_id") @db.Uuid
+  /// Nul veut dire « le nom se compose depuis l'occasion ». Le remplir par
+  /// défaut avec ce libellé le figerait le jour où l'occasion change de nom, et
+  /// personne ne saurait pourquoi les deux ne s'accordent plus.
+  name              String?   @db.VarChar(120)
+  /// Après quoi la liste ne reçoit plus de réservation. Nul veut dire
+  /// « jusqu'à l'occasion », qui est le cas ordinaire.
+  closesAt          DateTime? @map("closes_at") @db.Timestamptz
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -2186,6 +2193,10 @@ model PaymentChannel {
   feeMin     Decimal?          @map("fee_min") @db.Decimal(12, 2)
   feeMax     Decimal?          @map("fee_max") @db.Decimal(12, 2)
   feeBorneBy FeeBearer         @default(payer) @map("fee_borne_by")
+  /// Le code à composer quand l'application de l'opérateur ne s'ouvre pas — et
+  /// elle ne s'ouvre pas souvent. Sur le CANAL et non sur le compte de
+  /// collecte : le code appartient à l'opérateur, pas au numéro.
+  ussd       String?           @db.VarChar(32)
   currency   String            @default("XAF") @db.VarChar(3)
   isActive   Boolean           @default(true) @map("is_active")
   position   Int?              @db.SmallInt
@@ -2219,6 +2230,10 @@ model PaymentChannelHistory {
   feeMin           Decimal?          @map("fee_min") @db.Decimal(12, 2)
   feeMax           Decimal?          @map("fee_max") @db.Decimal(12, 2)
   feeBorneBy       FeeBearer         @map("fee_borne_by")
+  /// Recopié du canal, comme le reste : une colonne ajoutée d'un seul côté
+  /// ferait mentir la reprise — « quelle configuration était en vigueur »
+  /// rendrait un canal sans son code.
+  ussd             String?           @db.VarChar(32)
   currency         String            @db.VarChar(3)
   isActive         Boolean           @map("is_active")
   position         Int?              @db.SmallInt
@@ -2434,6 +2449,10 @@ model Wall {
   userId           String   @unique @map("user_id") @db.Uuid
   isEnabled        Boolean  @default(false) @map("is_enabled")
   showBirthdayDate Boolean  @default(true) @map("show_birthday_date")
+  /// Le Mur exposait le lien de la liste sans qu'on puisse le TAIRE : il fallait
+  /// fermer le Mur entier pour la cacher. Faux par défaut, comme `is_enabled` —
+  /// ce qui se publie se décide, ça ne s'hérite pas.
+  showWishlist     Boolean  @default(false) @map("show_wishlist")
   welcomeMessage   String?  @map("welcome_message")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
@@ -2581,6 +2600,15 @@ model ReceivedWish {
   authorName           String?            @map("author_name")
   content              String
   status               ReceivedWishStatus @default(pending)
+  /// DEUX INTERRUPTEURS QUI NE DISENT PAS LA MÊME CHOSE : le premier décide si
+  /// le vœu paraît sur le Mur, le second si le nom de qui l'a écrit paraît avec.
+  /// Les fondre supprimerait « je le montre sans dire de qui » — exactement ce
+  /// qu'on veut d'un mot maladroit qu'on garde quand même.
+  /// Faux tous les deux : un vœu n'est pas public parce qu'il est arrivé, il le
+  /// devient parce que son destinataire l'a décidé. Une contrainte en base
+  /// interdit l'auteur sans le vœu.
+  isPublic             Boolean            @default(false) @map("is_public")
+  showAuthor           Boolean            @default(false) @map("show_author")
   createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz
 
   occurrence EventOccurrence     @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
