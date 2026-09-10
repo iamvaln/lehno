@@ -102,9 +102,28 @@ export default function Preparation() {
     }
   };
 
+  /* LA FLÈCHE VIT DANS LES TROIS ÉTATS, pas seulement dans le nominal.
+   *
+   * L'écran d'erreur n'en portait pas : on y arrivait par un bouton — « Chercher
+   * des idées » sur une liste sans occasion — et il n'affichait plus que
+   * « Cette demande n'est pas valide » et « Réessayer », qui réessaie la même
+   * demande invalide. La seule issue visible était la barre d'onglets, qui fait
+   * perdre sa place. Vu à l'appareil. */
+  const retour = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t.retour}
+      onPress={() => routeur.back()}
+      style={styles.retour}
+    >
+      <Icon name="chevron-left" size={22} color={couleurs.textBody} />
+    </Pressable>
+  );
+
   if (echec && !occasion) {
     return (
-      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[12] }]}>
+        {retour}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -117,7 +136,8 @@ export default function Preparation() {
 
   if (!occasion) {
     return (
-      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[12] }]}>
+        {retour}
         <LoadingState variant="liste" rows={2} title={t.chargement} />
       </View>
     );
@@ -143,7 +163,7 @@ export default function Preparation() {
     /* LA FEUILLE EST SŒUR DU DÉFILEMENT, jamais son enfant. Rendue dedans, elle
        se range à la suite des cartes : sur un petit écran elle s'ouvrait sous
        la ligne de flottaison, coût et boutons hors champ, et son voile ne
-       couvrait que sa propre boîte. `ecrans-sans-surcouche-defilante` le
+       couvrait que sa propre boîte. `surcouches.test.ts` le
        vérifie. */
     <View style={[styles.ecran, { backgroundColor: couleurs.surfacePage }]}>
     <ScrollView
@@ -153,14 +173,7 @@ export default function Preparation() {
         paddingBottom: insets.bottom + nativeSpace[24],
       }]}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.retour}
-        onPress={() => routeur.back()}
-        style={styles.retour}
-      >
-        <Icon name="chevron-left" size={22} color={couleurs.textBody} />
-      </Pressable>
+      {retour}
 
       <Text style={[styles.titre, { color: couleurs.textBody }]}>
         {t.prepPour(occasion.personDisplayName)}

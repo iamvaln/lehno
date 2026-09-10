@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fr } from "../messages/fr.js";
 import type {
   Occurrence, PublicWish, SharedWishlist, Wishlist,
 } from "@lehno/contracts";
@@ -6,6 +7,8 @@ import {
   apercuSansSouhait, etatDuSouhaitMontre, listeCourante, listesRangees,
   occasionsOuvrables, peutChercherDesIdees, peutPartager, quandDeLaListe,
   resteAOffrir, souhaitsMontres,
+  ouvertureDeListe,
+  nomDeLaListe,
 } from "../lib/listes.js";
 
 const uuid = (n: number): string =>
@@ -218,5 +221,123 @@ describe("l'état d'un souhait vu du dehors", () => {
   it("dit offert plutôt que réservé quand les deux tiennent", () => {
     expect(etatDuSouhaitMontre(souhaitPublic(1, { isReserved: true, isFulfilled: true })))
       .toBe("offert");
+  });
+});
+
+/* OUVRIR UNE LISTE SANS DATE À SOI.
+ *
+ * L'écran était un CUL-DE-SAC, vu à l'appareil sur un compte neuf : les dates
+ * qu'on saisit d'abord sont celles de ses proches, jamais les siennes.
+ * « Nouvelle wishlist » s'ouvrait donc sur « Aucune date à vous pour
+ * l'instant », « Enregistrer » éteint, et rien d'autre — pas un champ, pas un
+ * lien —, pendant que l'accueil invitait à « Faire ma wishlist ».
+ */
+describe("ce qu'on envoie pour ouvrir une liste", () => {
+  const OCCASION = "11111111-1111-4111-8111-111111111111";
+
+  /* `.strict()` REFUSE LA REQUÊTE ENTIÈRE pour une clé en trop, et `name`
+     exige au moins un caractère. Une chaîne vide se retire donc, elle ne
+     s'envoie pas — l'absence, elle, passe. */
+  it("n'envoie pas un nom vide", () => {
+    expect(ouvertureDeListe(OCCASION, "")).toEqual({ occurrenceId: OCCASION });
+    expect(ouvertureDeListe(OCCASION, "   ")).toEqual({ occurrenceId: OCCASION });
+  });
+
+  it("n'envoie pas d'occasion quand il n'y en a pas", () => {
+    expect(ouvertureDeListe(null, "Ma crémaillère")).toEqual({ name: "Ma crémaillère" });
+  });
+
+  it("porte les deux quand les deux sont là", () => {
+    expect(ouvertureDeListe(OCCASION, "Mes trente ans"))
+      .toEqual({ occurrenceId: OCCASION, name: "Mes trente ans" });
+  });
+
+  /* Le serveur le dit — « une liste sans occasion a besoin d'un nom ». On le
+     vérifie ici AUSSI, non par défiance : c'est ce qui permet d'éteindre le
+     bouton plutôt que de faire découvrir la règle par un refus après coup. */
+  it("ne compose rien sans occasion ni nom", () => {
+    expect(ouvertureDeListe(null, "")).toBeNull();
+    expect(ouvertureDeListe(null, "  ")).toBeNull();
+  });
+
+  /* Les blancs de bordure viennent du clavier, pas de l'intention : le schéma
+     les coupe (`trim()`), et deux listes « Noël » et « Noël  » se
+     ressembleraient sans se ranger ensemble. */
+  it("coupe les blancs de bordure", () => {
+    expect(ouvertureDeListe(null, "  Noël ")).toEqual({ name: "Noël" });
+  });
+});
+
+/* COMMENT LA LISTE S'APPELLE. Le nom saisi partait à la trappe : la carte le
+   composait toujours depuis l'occasion, et une liste sans occasion s'affichait
+   « Autre ». Vu à l'appareil sur la liste qu'on venait de créer. */
+describe("le nom d'une liste", () => {
+  const T = fr;
+
+  it("préfère le nom donné par le propriétaire", () => {
+    expect(nomDeLaListe(
+      { name: "Ma crémaillère", eventKind: "birthday", eventLabel: null }, T,
+    )).toBe("Ma crémaillère");
+  });
+
+  /* Nul veut dire « composez-le depuis l'occasion », et c'est le client qui
+     compose : le serveur rendrait une chaîne figée le jour où l'occasion
+     change de nom. */
+  it("compose depuis l'occasion quand il n'y en a pas", () => {
+    expect(nomDeLaListe({ name: null, eventKind: "birthday", eventLabel: null }, T))
+      .toBe(T.typeAnniversaire);
+    expect(nomDeLaListe({ name: null, eventKind: "other", eventLabel: "Crémaillère" }, T))
+      .toBe("Crémaillère");
+  });
+
+  /* SANS OCCASION NI NOM, il ne reste que « Autre » — c'est ce qu'on voyait, et
+     ce que le serveur empêche désormais à l'ouverture. Le cas subsiste pour les
+     listes ouvertes avant, et il ne doit pas rendre `undefined`. */
+  it("ne rend jamais rien du tout", () => {
+    expect(nomDeLaListe({ name: null, eventKind: null, eventLabel: null }, T))
+      .toBe(T.typeAutre);
+  });
+
+  // Un nom fait de blancs n'est pas un nom : il laisserait une carte muette.
+  it("ne retient pas un nom fait de blancs", () => {
+    expect(nomDeLaListe({ name: "   ", eventKind: "other", eventLabel: "Noël" }, T))
+      .toBe("Noël");
+  });
+});
+
+/* CHERCHER DES IDÉES DEMANDE UNE OCCASION.
+ *
+ * Le geste ouvre §3.7, qui lit `/me/occurrences/{id}`. Sur une liste qui n'en
+ * vise aucune, il n'y a pas d'`id` à lui passer : le bouton menait à « Cette
+ * demande n'est pas valide », un écran rouge dont « Réessayer » réessaie la même
+ * demande invalide. Vu à l'appareil, sur la première liste sans occasion qu'il
+ * devenait possible d'ouvrir.
+ */
+describe("chercher des idées pour une liste", () => {
+  const IDEES = ["generation.ideas"];
+  const liste = (p: Partial<Wishlist>): Wishlist => ({
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    occurrenceId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    name: null, occurrenceDate: "2026-12-25", eventKind: "other", eventLabel: "Noël",
+    wishCount: 0, reservedCount: 0, isShared: false, closesAt: null, isArchived: false,
+    ...p,
+  });
+
+  it("se propose sur une liste qui vise une occasion", () => {
+    expect(peutChercherDesIdees(liste({}), IDEES)).toBe(true);
+  });
+
+  it("ne se propose pas sans occasion", () => {
+    expect(peutChercherDesIdees(liste({ occurrenceId: null }), IDEES)).toBe(false);
+  });
+
+  /* Une date passée ne se prépare plus : le geste coûte un crédit, et le cadeau
+     ne s'offrira pas. */
+  it("ne se propose pas sur une liste archivée", () => {
+    expect(peutChercherDesIdees(liste({ isArchived: true }), IDEES)).toBe(false);
+  });
+
+  it("ne se propose pas quand la nature est éteinte", () => {
+    expect(peutChercherDesIdees(liste({}), [])).toBe(false);
   });
 });

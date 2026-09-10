@@ -189,3 +189,54 @@ nominal : `apercu`, `apercu-liste`, `listes`, `monmur`, `mouvements`,
 `souhaits`, `valider`, `note`, `portrait`, `proches/recherche`. **À ouvrir à
 l'appareil** avant de conclure — c'est ainsi que les huit précédents ont été
 trouvés, et la lecture du code n'y suffisait pas.
+
+---
+
+## G. La wishlist sans occasion — trouvé à l'appareil, 10 septembre 2026
+
+### Un cul-de-sac au premier geste
+
+Un compte neuf n'a **aucune date à lui** : les premières dates qu'on saisit sont
+celles de ses proches. « Nouvelle wishlist » s'ouvrait donc sur « L'occasion /
+Aucune date à vous pour l'instant. », « Enregistrer » éteint, et rien d'autre —
+pas un champ, pas un lien. L'accueil invitait pourtant à « Faire ma wishlist ».
+
+Le contrat, lui, avait bougé (#160) : `occurrenceId` est facultative, `name`
+existe, et la maquette porte les deux depuis le début — `listeNouvNom`,
+`listeNouvSansOccasion`, `listeNouvSansOccasionAide` étaient **traduits dans
+l'application et employés nulle part**. De la copie morte, comme `parrainValide`
+au §A1.
+
+Corrigé : le champ du nom, et « Sans occasion » en tête des choix.
+
+### Trois défauts trouvés dans la foulée, sur le même écran
+
+- **Le nom saisi ne s'affichait nulle part.** La carte composait toujours son
+  titre depuis l'occasion ; une liste sans occasion s'intitulait « Autre ».
+  `nomDeLaListe` préfère désormais `name`, et compose depuis l'occasion quand
+  il est nul — ce que le contrat demande explicitement au client.
+- **Le clavier cachait le pied**, qui porte les deux seuls gestes de l'écran. Et
+  sans `keyboardShouldPersistTaps`, le premier appui hors du champ était mangé
+  par le renvoi du clavier : on tapait sur « Sans occasion », rien ne se
+  cochait, et il fallait taper deux fois sans comprendre pourquoi.
+- **« Chercher des idées » menait à un écran rouge** sur une liste sans
+  occasion : le geste ouvre §3.7, qui lit `/me/occurrences/{id}`, et il n'y avait
+  pas d'`id` à passer.
+
+### Ce qui reste à trancher : les états d'erreur sans issue
+
+L'écran rouge ci-dessus n'avait **aucune flèche de retour** — il n'affichait que
+« Cette demande n'est pas valide » et « Réessayer », qui réessaie la même demande
+invalide. La seule issue visible était la barre d'onglets, qui fait perdre sa
+place. Corrigé sur `preparation`.
+
+**Le motif est général : 43 retours anticipés sur 22 écrans** rendent leur état
+d'erreur ou de chargement sans le moyen de revenir que porte leur état nominal.
+Le geste système — balayage iOS, retour Android — marche encore, donc ce n'est
+pas un piège ; c'est l'affordance qui disparaît au moment précis où l'on en a le
+plus besoin.
+
+C'est la même racine qu'au §F : il n'y a pas de châssis d'écran. Chaque écran
+dessine son en-tête dans sa branche nominale, et l'oublie dans les autres. Un
+`ScreenHeader` rendu AVANT le branchement le réglerait partout d'un coup — c'est
+la forme à retenir quand les vingt-cinq écrans du §F seront repris.

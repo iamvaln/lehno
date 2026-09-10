@@ -132,7 +132,7 @@ export default function Securite() {
        Rendus dedans, ils se rangent à la suite de la liste : la feuille
        s'ouvrait sous la ligne de flottaison sur un petit écran, et l'accusé se
        posait au bas du CONTENU au lieu du bas de l'écran — donc hors champ dès
-       que la liste dépassait. `ecrans-sans-surcouche-defilante` le vérifie. */
+       que la liste dépassait. `surcouches.test.ts` le vérifie. */
     <View style={[styles.ecran, { backgroundColor: couleurs.surfacePage }]}>
     <ScrollView
       style={styles.ecran}

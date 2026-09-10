@@ -3,19 +3,59 @@ import type {
   Occurrence, PublicWish, SharedWishlist, Wishlist,
 } from "@lehno/contracts";
 import { dateCourte } from "./carnet.js";
+import { libelleDeLEcheance } from "./libelles.js";
+import type { Messages } from "../messages/index.js";
 
 /* Mes wishlists — §3.29.
  *
- * UNE LISTE EST SON OCCASION. Le contrat ne lui donne pas de nom : elle porte
- * `occurrenceId`, sa date et la nature de l'événement — « un cadeau de Noël
- * n'est pas un cadeau de mariage ». La maquette propose un champ « nom de la
- * liste », « sans occasion » et une clôture ; rien de tout cela n'existe, et
- * les poser ferait un formulaire dont trois champs sur quatre se perdraient —
- * ou, pire, une requête refusée en bloc, `createWishlistSchema` étant
- * `.strict()`. Un champ dont la saisie s'évapore est pire qu'un champ absent :
- * il promet. Le manque est relevé dans `specs/remontees-mobile-2026-08-29.md`
- * (§3 bis) ; il se rouvre le jour où le contrat bouge, pas avant.
+ * UNE LISTE N'EST PLUS FORCÉMENT SON OCCASION. Elle l'a été : le contrat
+ * n'acceptait qu'une `occurrenceId`, obligatoire, et l'écran s'en tenait là —
+ * « il se rouvre le jour où le contrat bouge, pas avant ». Le contrat a bougé
+ * (#160) : `occurrenceId` est facultative, et `name` existe.
+ *
+ * Ce que ça change se voyait à l'appareil, et c'était un CUL-DE-SAC. Un compte
+ * neuf n'a aucune date à lui — les dates qu'on saisit d'abord sont celles de
+ * ses proches. « Nouvelle wishlist » s'ouvrait donc sur « Aucune date à vous
+ * pour l'instant », « Enregistrer » éteint, et rien d'autre : pas un champ, pas
+ * un lien. L'accueil invitait pourtant à « Faire ma wishlist ».
+ *
+ * La clôture réglable (`closesAt`) reste, elle, à faire : le contrat la porte,
+ * la maquette l'offre en interrupteur, l'écran ne la propose pas encore.
  */
+
+/* ── Ouvrir une liste ─────────────────────────────────────────────────────── */
+
+/* CE QU'ON ENVOIE, et rien de plus.
+ *
+ * `createWishlistSchema` est `.strict()` : une clé en trop fait refuser la
+ * requête ENTIÈRE. On n'envoie donc `occurrenceId` que s'il y en a une, et
+ * `name` que s'il a été saisi — jamais une chaîne vide, que le schéma refuse
+ * (`min(1)`) alors que l'absence, elle, passe.
+ *
+ * SANS OCCASION, LE NOM EST OBLIGATOIRE, et c'est le serveur qui le dit :
+ * « une liste sans occasion a besoin d'un nom ». Le vérifier ici aussi n'est
+ * pas de la défiance — c'est ce qui permet d'éteindre le bouton plutôt que de
+ * faire découvrir la règle par un refus après coup.
+ *
+ * AVEC une occasion, le nom reste facultatif : il se compose d'elle —
+ * « Liste de Célarine, anniversaire 2026 ».
+ */
+export interface OuvertureDeListe {
+  occurrenceId?: string;
+  name?: string;
+}
+
+export function ouvertureDeListe(
+  occurrenceId: string | null,
+  nom: string,
+): OuvertureDeListe | null {
+  const propre = nom.trim();
+  if (occurrenceId === null && propre === "") return null;
+  return {
+    ...(occurrenceId === null ? {} : { occurrenceId }),
+    ...(propre === "" ? {} : { name: propre }),
+  };
+}
 
 /* CE QU'ON PEUT ENCORE OUVRIR.
  *
@@ -95,6 +135,30 @@ export function listeCourante(
   return rangees.find((l) => l.id === choisi) ?? rangees[0] ?? null;
 }
 
+/* COMMENT LA LISTE S'APPELLE.
+ *
+ * `name` D'ABORD, quand le propriétaire en a donné un. Nul veut dire, au
+ * contrat, « composez-le depuis l'occasion » — et c'est le client qui compose,
+ * délibérément : le serveur rendrait une chaîne figée le jour où l'occasion
+ * change de nom, et personne ne saurait pourquoi les deux ne s'accordent plus.
+ *
+ * Le nom saisi partait à la trappe : la carte composait toujours depuis
+ * l'occasion, et une liste sans occasion s'affichait « Autre » — le nom qu'on
+ * venait de taper n'apparaissait nulle part. Vu à l'appareil, sur la liste
+ * qu'on vient de créer.
+ */
+export function nomDeLaListe(
+  liste: Pick<Wishlist, "name" | "eventKind" | "eventLabel">,
+  t: Messages,
+): string {
+  if (liste.name !== null && liste.name.trim() !== "") return liste.name;
+  /* `eventKind` est une chaîne libre au contrat, pas l'énumération : on ne
+     retient que l'anniversaire, tout le reste tombe sur « Autre ». */
+  return libelleDeLEcheance(
+    liste.eventKind === "birthday" ? "birthday" : "other", liste.eventLabel, t,
+  );
+}
+
 /* LA DATE, OU L'AVEU QU'IL N'Y EN A PAS.
  *
  * Le contrat vérifie la FORME — `^\d{4}-\d{2}-\d{2}$` — et pas le calendrier :
@@ -117,20 +181,25 @@ export function quandDeLaListe(occurrenceDate: string | null, langue: string): s
   return dateCourte(occurrenceDate, langue);
 }
 
-/* CHERCHER DES IDÉES POUR UNE OCCASION PASSÉE N'A PAS DE SENS — et la
-   génération se PAIE. Proposer le geste sur une liste archivée ferait dépenser
-   un crédit pour un anniversaire d'il y a onze mois.
-
-   Le drapeau se lit ici plutôt qu'à l'écran pour la raison habituelle : la
-   décision se teste, le rendu non. Et le COÛT ne se décide pas ici — il se
-   règle en administration, et c'est l'écran de préparation qui l'annonce avant
-   de débiter. Un « 1 crédit » écrit en dur, comme dans le kit, afficherait
-   l'ancien tarif sur tout un parc. */
+/* CHERCHER DES IDÉES POUR CETTE LISTE.
+ *
+ * IL FAUT UNE OCCASION, et pas seulement le drapeau. Le geste ouvre §3.7, qui
+ * lit `/me/occurrences/{id}` : sur une liste qui ne vise aucune occasion — « ce
+ * qui me ferait plaisir », qu'on tient toute l'année —, il n'y a pas d'`id` à
+ * lui passer. Le bouton menait alors à « Cette demande n'est pas valide », un
+ * écran rouge sans retour. Vu à l'appareil, sur la première liste sans occasion
+ * qu'il devenait possible d'ouvrir.
+ *
+ * Une liste archivée ne le propose pas non plus : préparer pour une date passée
+ * ferait payer un crédit pour un cadeau qu'on n'offrira plus.
+ */
 export function peutChercherDesIdees(
   liste: Wishlist,
   actives: readonly string[],
 ): boolean {
-  return !liste.isArchived && estActive(actives, "generation.ideas");
+  return liste.occurrenceId !== null
+    && !liste.isArchived
+    && estActive(actives, "generation.ideas");
 }
 
 /* ── L'aperçu : ce que verront les visiteurs ────────────────────────────── */

@@ -136,7 +136,7 @@ export default function Reservations() {
     /* L'ACCUSÉ EST FRÈRE DU DÉFILEMENT, jamais son enfant : posé en absolu, il
        s'ancre au bas de sa boîte parente — le CONTENU s'il vit dedans, donc
        hors champ dès que la liste dépasse un écran.
-       `ecrans-sans-surcouche-defilante` le vérifie. */
+       `surcouches.test.ts` le vérifie. */
     <View style={[styles.ecran, { backgroundColor: couleurs.surfacePage }]}>
     <ScrollView
       style={styles.ecran}
