@@ -273,6 +273,18 @@
   max-height: 46vh;
   overflow-y: auto;
 }
+/* DANS UN DIALOGUE, LE RANG SE MET EN PILE. `.admin-rang` réserve 180 à 260 px
+   à l'étiquette : sur une page de réglages, c'est ce qui aligne les champs ;
+   dans un dialogue large de 420 px, il ne reste qu'un moignon où l'on ne lit
+   pas ce qu'on vient de taper. Un code de motif y paraissait comme
+   « essai_de_ver ».
+
+   La règle vit ici, et non dans chaque écran, parce que le dialogue est le seul
+   à contraindre la largeur : c'est lui qui sait, pas le formulaire. */
+.admin-dialogue-corps .admin-rang {
+  grid-template-columns: 1fr;
+  gap: var(--space-8);
+}
 .admin-dialogue-motif {
   margin-top: var(--space-16);
 }
