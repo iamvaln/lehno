@@ -140,8 +140,14 @@ export default function Preparation() {
   };
 
   return (
+    /* LA FEUILLE EST SŒUR DU DÉFILEMENT, jamais son enfant. Rendue dedans, elle
+       se range à la suite des cartes : sur un petit écran elle s'ouvrait sous
+       la ligne de flottaison, coût et boutons hors champ, et son voile ne
+       couvrait que sa propre boîte. `ecrans-sans-surcouche-defilante` le
+       vérifie. */
+    <View style={[styles.ecran, { backgroundColor: couleurs.surfacePage }]}>
     <ScrollView
-      style={{ backgroundColor: couleurs.surfacePage }}
+      style={styles.ecran}
       contentContainerStyle={[styles.page, {
         paddingTop: insets.top + nativeSpace[12],
         paddingBottom: insets.bottom + nativeSpace[24],
@@ -249,6 +255,8 @@ export default function Preparation() {
           </View>
         </View>
       ))}
+    </ScrollView>
+
       {/* Le coût est LU EN BASE, jamais écrit ici : il se règle en
           administration sans livraison, et un écran qui annonce un prix avant
           de débiter ne peut pas se tromper. Une action dont le prix n'est pas
@@ -270,15 +278,20 @@ export default function Preparation() {
           pasMaintenant={t.feuillePasMaintenant}
           cout={coutARegler}
           solde={solde}
+          insetBas={insets.bottom}
           onConfirmer={() => {
             const kind = aConfirmer;
             setAConfirmer(null);
             void lance(kind);
           }}
+          /* Solde insuffisant, « Recharger » DEVIENT l'action principale de la
+             feuille. Sans destination, le seul geste offert était muet : on
+             lisait « il ne vous en reste pas assez » et rien n'y menait. */
+          onRecharger={() => { setAConfirmer(null); routeur.push("/(app)/recharge"); }}
           onAnnuler={() => setAConfirmer(null)}
         />
       ) : null}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -297,6 +310,7 @@ const styles = StyleSheet.create({
     fontFamily: nativeFont.bodySemibold, fontSize: 11,
     letterSpacing: 0.9, textTransform: "uppercase",
   },
+  ecran: { flex: 1 },
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
   retour: {
     width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],

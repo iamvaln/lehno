@@ -140,8 +140,13 @@ export default function Reservations() {
   if (eteint) return <EcranFerme />;
 
   return (
+    /* L'ACCUSÉ EST FRÈRE DU DÉFILEMENT, jamais son enfant : posé en absolu, il
+       s'ancre au bas de sa boîte parente — le CONTENU s'il vit dedans, donc
+       hors champ dès que la liste dépasse un écran.
+       `ecrans-sans-surcouche-defilante` le vérifie. */
+    <View style={[styles.ecran, { backgroundColor: couleurs.surfacePage }]}>
     <ScrollView
-      style={{ backgroundColor: couleurs.surfacePage }}
+      style={styles.ecran}
       contentContainerStyle={[styles.page, {
         paddingTop: insets.top + nativeSpace[8],
         paddingBottom: insets.bottom + nativeSpace[24],
@@ -185,14 +190,19 @@ export default function Reservations() {
           <Button variant="text" onPress={() => void libere(r)}>{t.reservLiberer}</Button>
         </View>
       ))}
-      {accuse ? (
-        <Toast intent="success" onDismiss={() => setAccuse(null)}>{accuse}</Toast>
-      ) : null}
     </ScrollView>
+
+      {accuse ? (
+        <Toast intent="success" insetBas={insets.bottom} onDismiss={() => setAccuse(null)}>
+          {accuse}
+        </Toast>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  ecran: { flex: 1 },
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
   aumilieu: { justifyContent: "center" },
   retour: {

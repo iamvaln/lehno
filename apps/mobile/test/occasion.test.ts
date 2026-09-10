@@ -481,7 +481,7 @@ describe("ce qui a déjà été produit", () => {
 
   it("rend l'exécution à rouvrir pour des idées", () => {
     const g = execution(1, "gift_ideas", OCCASION, "succeeded", "2026-01-01");
-    expect(dejaProduit([{ generation: g, message: null }], OCCASION, "gift_ideas"))
+    expect(dejaProduit([{ generation: g, message: null, ideas: null }], OCCASION, "gift_ideas"))
       .toBe(g.id);
   });
 

@@ -128,8 +128,14 @@ export default function Securite() {
   };
 
   return (
+    /* LA FEUILLE ET L'ACCUSÉ SONT SŒURS DU DÉFILEMENT, jamais ses enfants.
+       Rendus dedans, ils se rangent à la suite de la liste : la feuille
+       s'ouvrait sous la ligne de flottaison sur un petit écran, et l'accusé se
+       posait au bas du CONTENU au lieu du bas de l'écran — donc hors champ dès
+       que la liste dépassait. `ecrans-sans-surcouche-defilante` le vérifie. */
+    <View style={[styles.ecran, { backgroundColor: couleurs.surfacePage }]}>
     <ScrollView
-      style={{ backgroundColor: couleurs.surfacePage }}
+      style={styles.ecran}
       contentContainerStyle={[styles.page, {
         paddingTop: insets.top + nativeSpace[8],
         paddingBottom: insets.bottom + nativeSpace[24],
@@ -226,6 +232,7 @@ export default function Securite() {
           </View>
         ) : null}
       </View>
+    </ScrollView>
 
       {demande ? (
         <ConfirmSheet
@@ -245,11 +252,12 @@ export default function Securite() {
           {accuse}
         </Toast>
       ) : null}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  ecran: { flex: 1 },
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
   retour: {
     width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
