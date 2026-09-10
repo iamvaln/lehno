@@ -116,6 +116,15 @@ export const wishlistSchema = z.object({
   // L'occasion à laquelle la liste appartient : « un cadeau de Noël n'est pas
   // un cadeau de mariage ».
   occurrenceId: z.string().uuid(),
+  /* LE NOM QUE LE PROPRIÉTAIRE DONNE, ou nul.
+   *
+   * Nul veut dire « composez-le depuis l'occasion » — « Liste de Célarine,
+   * anniversaire 2026 ». Le serveur ne le compose PAS à sa place : il rendrait
+   * une chaîne figée le jour où l'occasion change de nom, et personne ne
+   * saurait pourquoi les deux ne s'accordent plus. Le client a déjà
+   * `eventLabel` et `occurrenceDate` pour l'écrire, et il sait dans quelle
+   * langue. */
+  name: z.string().nullable(),
   occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   eventKind: z.string(),
   eventLabel: z.string().nullable(),
@@ -127,8 +136,17 @@ export const wishlistSchema = z.object({
   // Un lien de partage actif existe-t-il ? La révocation le remet à faux, et
   // l'écran repropose alors de partager.
   isShared: z.boolean(),
-  /* L'occasion est passée : la liste s'affiche encore — on veut revoir ce
-     qu'on avait demandé — mais n'accepte plus de réservation. */
+  /* QUAND LA LISTE SE FERME, si le propriétaire l'a devancée.
+   *
+   * Nul veut dire « jusqu'à l'occasion », qui est le cas ordinaire. On la
+   * devance pour avoir le temps d'acheter : une liste d'anniversaire close
+   * trois jours avant laisse ces trois jours pour aller chercher ce qui a été
+   * réservé. */
+  closesAt: z.string().nullable(),
+  /* L'occasion est passée, OU la clôture est franchie : la liste s'affiche
+     encore — on veut revoir ce qu'on avait demandé — mais n'accepte plus de
+     réservation. Le serveur résout les deux ; un client qui comparerait les
+     dates lui-même se tromperait de fuseau. */
   isArchived: z.boolean(),
 }).strict();
 
@@ -140,7 +158,26 @@ export type Wishlist = z.infer<typeof wishlistSchema>;
    publierait ce que ce proche n'a jamais accepté de publier. */
 export const createWishlistSchema = z.object({
   occurrenceId: z.string().uuid(),
+  /* Facultatif à l'ouverture : on ouvre une liste pour y mettre des souhaits,
+     pas pour la baptiser. Le nom se pose ensuite, quand on a une raison de le
+     changer. */
+  name: z.string().trim().min(1).max(120).optional(),
+  closesAt: z.string().datetime().optional(),
 }).strict();
+
+/* Renommer une liste, ou déplacer sa clôture.
+ *
+ * `null` remet au défaut — « composez le nom depuis l'occasion », « fermez à
+ * l'occasion ». Sans lui, un nom posé une fois ne pourrait plus être retiré,
+ * seulement remplacé par un autre. */
+export const updateWishlistSchema = z.object({
+  name: z.string().trim().min(1).max(120).nullable().optional(),
+  closesAt: z.string().datetime().nullable().optional(),
+}).strict().refine((v) => Object.keys(v).length > 0, {
+  message: "au moins un champ doit être fourni",
+});
+
+export type UpdateWishlistInput = z.infer<typeof updateWishlistSchema>;
 
 export type CreateWishlistInput = z.infer<typeof createWishlistSchema>;
 

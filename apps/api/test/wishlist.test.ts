@@ -132,6 +132,41 @@ describe("mes listes de souhaits, leur partage et leur réservation", () => {
 
   // ── Tenir sa liste ────────────────────────────────────────────────────────
 
+
+  /* LE NOM ET LA CLÔTURE, deux réglages qui reviennent au défaut.
+   *
+   * `null` ne vide pas un champ obligatoire : il remet « composez le nom depuis
+   * l'occasion » et « fermez à l'occasion ». C'est la seule façon de revenir en
+   * arrière quand l'occasion a été renommée depuis. */
+  it("laisse nommer une liste, puis revenir au nom de l'occasion", async () => {
+    const liste = await listes.create(awa, await monOccasion(awa));
+
+    const nommee = await listes.update(awa, liste.id, { name: "Pour mes 30 ans" });
+    expect(nommee.name).toBe("Pour mes 30 ans");
+
+    const rendue = await listes.update(awa, liste.id, { name: null });
+    expect(rendue.name).toBeNull();
+  });
+
+  /* UNE CLÔTURE FRANCHIE ARCHIVE LA LISTE, sans attendre l'occasion. On la
+     devance pour avoir le temps d'acheter : une liste close trois jours avant
+     laisse ces trois jours pour aller chercher ce qui a été réservé.
+     Le serveur résout les deux causes — occasion passée OU clôture franchie —
+     parce qu'un client qui comparerait les dates lui-même se tromperait de
+     fuseau, et divergerait du serveur qui refuse les réservations. */
+  it("archive une liste dont la clôture est franchie, avant l'occasion", async () => {
+    const liste = await listes.create(awa, await monOccasion(awa));
+    expect(liste.isArchived).toBe(false);
+
+    const hier = new Date(Date.now() - 24 * 3600_000).toISOString();
+    const close = await listes.update(awa, liste.id, { closesAt: hier });
+    expect(close.isArchived).toBe(true);
+
+    // Et on revient en arrière : la clôture retirée, la liste rouvre.
+    const rouverte = await listes.update(awa, liste.id, { closesAt: null });
+    expect(rouverte.isArchived).toBe(false);
+  });
+
   it("ouvre une liste sur une occasion à soi et y note un souhait", async () => {
     const o = await monOccasion(awa);
     const liste = await listes.create(awa, o);

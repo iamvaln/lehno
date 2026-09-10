@@ -3,8 +3,8 @@ import {
   Patch, Post, Req, UseGuards,
 } from "@nestjs/common";
 import {
-  createWishlistSchema, createOwnerWishSchema, updateOwnerWishSchema,
-  type CreateWishlistInput, type CreateOwnerWishInput, type UpdateOwnerWishInput,
+  createWishlistSchema, updateWishlistSchema, createOwnerWishSchema, updateOwnerWishSchema,
+  type CreateWishlistInput, type UpdateWishlistInput, type CreateOwnerWishInput, type UpdateOwnerWishInput,
   type DepotAvatar, type MyReservation, type OwnerWish, type Wishlist, type WishlistShare,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -40,11 +40,29 @@ export class WishlistsController {
     @Req() req: AuthedRequest,
     @Body(new ZodValidationPipe(createWishlistSchema)) body: CreateWishlistInput,
   ): Promise<Wishlist> {
-    const liste = await this.listes.create(req.userId, body.occurrenceId);
+    const liste = await this.listes.create(req.userId, body.occurrenceId, {
+      ...(body.name === undefined ? {} : { name: body.name }),
+      ...(body.closesAt === undefined ? {} : { closesAt: body.closesAt }),
+    });
     // Ni l'occasion, ni sa date : §16.4 interdit de transporter du contenu, et
     // la date d'un anniversaire en est. Le fait suffit à mesurer la boucle.
     this.mesure.emettre(req.userId, "wishlist.created", {});
     return liste;
+  }
+
+  /* RENOMMER, OU DÉPLACER LA CLÔTURE.
+   *
+   * `null` remet au défaut — « composez le nom depuis l'occasion », « fermez à
+   * l'occasion ». Sans lui, un nom posé une fois ne pourrait plus être retiré,
+   * seulement remplacé par un autre : on ne reviendrait jamais au libellé qui
+   * suit l'occasion quand celle-ci est renommée. */
+  @Patch(":id")
+  renommer(
+    @Req() req: AuthedRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(updateWishlistSchema)) body: UpdateWishlistInput,
+  ): Promise<Wishlist> {
+    return this.listes.update(req.userId, id, body);
   }
 
   @Get(":id/wishes")

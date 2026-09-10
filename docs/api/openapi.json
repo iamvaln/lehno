@@ -12133,6 +12133,10 @@
                         "type": "string",
                         "format": "uuid"
                       },
+                      "name": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "occurrenceDate": {
                         "type": "string",
                         "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
@@ -12155,6 +12159,10 @@
                       "isShared": {
                         "type": "boolean"
                       },
+                      "closesAt": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "isArchived": {
                         "type": "boolean"
                       }
@@ -12162,12 +12170,14 @@
                     "required": [
                       "id",
                       "occurrenceId",
+                      "name",
                       "occurrenceDate",
                       "eventKind",
                       "eventLabel",
                       "wishCount",
                       "reservedCount",
                       "isShared",
+                      "closesAt",
                       "isArchived"
                     ],
                     "additionalProperties": false
@@ -12391,6 +12401,15 @@
                   "occurrenceId": {
                     "type": "string",
                     "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "closesAt": {
+                    "type": "string",
+                    "format": "date-time"
                   }
                 },
                 "required": [
@@ -12417,6 +12436,10 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "name": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "occurrenceDate": {
                       "type": "string",
                       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
@@ -12439,6 +12462,10 @@
                     "isShared": {
                       "type": "boolean"
                     },
+                    "closesAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "isArchived": {
                       "type": "boolean"
                     }
@@ -12446,12 +12473,14 @@
                   "required": [
                     "id",
                     "occurrenceId",
+                    "name",
                     "occurrenceDate",
                     "eventKind",
                     "eventLabel",
                     "wishCount",
                     "reservedCount",
                     "isShared",
+                    "closesAt",
                     "isArchived"
                   ],
                   "additionalProperties": false
