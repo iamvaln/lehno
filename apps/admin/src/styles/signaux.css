@@ -265,6 +265,14 @@
   font-size: var(--text-body-s);
   color: var(--text-secondary);
 }
+/* Le formulaire, quand le dialogue en porte un. Il défile pour lui seul : sur
+   un écran court, un dialogue haut ferait sortir le motif et les deux boutons
+   hors de vue, et on enregistrerait sans avoir vu ce qui reste à remplir. */
+.admin-dialogue-corps {
+  margin-top: var(--space-16);
+  max-height: 46vh;
+  overflow-y: auto;
+}
 .admin-dialogue-motif {
   margin-top: var(--space-16);
 }

@@ -853,6 +853,10 @@ export function App(): ReactNode {
                 }
               })();
             }}
+            /* LES CINQ ROUTES DES RÉGLAGES, derrière un seul rappel.
+               La cible dit laquelle, `id` nul dit qu'on crée. Le motif voyage
+               DANS le corps — il n'est pas un en-tête ni un paramètre : c'est
+               une donnée du geste, que le serveur exige et journalise. */
             /* LA PIÈCE S'OUVRE À LA DEMANDE, dans un onglet à part.
                On demande l'URL au moment du clic et on l'ouvre aussitôt : elle
                est signée pour quelques minutes, et la garder dans l'état ferait
@@ -933,6 +937,37 @@ export function App(): ReactNode {
       role,
       langue,
       onglet: ongletCredits,
+      onEnregistrerReglage: (
+        cible: "palier" | "canal" | "compte",
+        id: string | null,
+        valeurs: Record<string, unknown>,
+        motif: string,
+      ) => {
+        /* LES CINQ ROUTES DES RÉGLAGES, derrière un seul rappel.
+           La cible dit laquelle, `id` nul dit qu'on crée. Le motif voyage DANS
+           le corps — il n'est ni un en-tête ni un paramètre : c'est une donnée
+           du geste, que le serveur exige et journalise. */
+        const chemins = {
+          palier: "/admin/credit-bundles",
+          canal: "/admin/payment-channels",
+          compte: "/admin/collection-accounts",
+        } as const;
+        void (async () => {
+          try {
+            await api.appeler(id === null ? chemins[cible] : `${chemins[cible]}/${id}`, {
+              methode: id === null ? "POST" : "PATCH",
+              corps: { ...valeurs, reason: motif },
+            });
+          } catch (echec) {
+            if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+          } finally {
+            /* On relit dans tous les cas : après un refus, ce qui est affiché
+               est l'état d'avant, et c'est lui qui fait foi. */
+            setTourCredits((n) => n + 1);
+          }
+        })();
+      },
+
       onOnglet: setOngletCredits,
       filtreEtat: filtresPaiements.etat,
       filtreMode: filtresPaiements.mode,
