@@ -176,28 +176,32 @@ export default function Souhaits() {
             const qui = nomDuReserveur(s);
             return (
               <Card key={s.id} surface="panel" padding={15} radius="lg" style={styles.carte}>
-                <View style={styles.entete}>
+                {/* LA RANGÉE ENTIÈRE EST LA PORTE, pas le seul chevron.
+                    La carte ne dit ni le prix, ni le lien, ni la provenance :
+                    sans cette porte, §3.19 ne serait atteignable que par un lien
+                    profond. Mais la porte était une icône de 18 points élargie
+                    de 8 — 34 au total, sous les 44 de la charte — collée au bord
+                    droit, pendant que l'intitulé, lui, ne répondait pas. On
+                    visait le nom du souhait et il ne se passait rien.
+
+                    Le libellé annoncé est l'intitulé — « bouton » répété huit
+                    fois ne dirait pas lequel on ouvre. Le chevron reste, en
+                    ornement : il dit qu'il y a un ailleurs. */}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={s.label}
+                  onPress={() => routeur.push({
+                    pathname: "/(app)/souhait", params: { liste: id, id: s.id },
+                  })}
+                  style={styles.entete}
+                >
                   <Text style={[styles.quoi, { color: couleurs.textBody }]} numberOfLines={2}>
                     {s.label}
                   </Text>
                   {etat === "offert" ? <Tag tone="quiet">{t.souhaitOffertEtat}</Tag> : null}
                   {etat === "reserve" ? <Tag tone="quiet">{t.souhaitReserve}</Tag> : null}
-                  {/* LE DÉTAIL EXISTE, ET IL FAUT UNE PORTE. La carte ne dit ni
-                      le prix, ni le lien, ni la provenance : sans ce chevron,
-                      §3.19 ne serait atteignable que par un lien profond. Le
-                      libellé annoncé est l'intitulé du souhait — « bouton »
-                      répété huit fois ne dirait pas lequel on ouvre. */}
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={s.label}
-                    onPress={() => routeur.push({
-                      pathname: "/(app)/souhait", params: { liste: id, id: s.id },
-                    })}
-                    hitSlop={8}
-                  >
-                    <Icon name="chevron-right" size={18} color={couleurs.textMention} />
-                  </Pressable>
-                </View>
+                  <Icon name="chevron-right" size={18} color={couleurs.textMention} />
+                </Pressable>
 
                 {s.price !== null && s.currency ? (
                   <Text style={[styles.mention, { color: couleurs.textSecondary }]}>
@@ -314,7 +318,12 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   carte: { marginTop: nativeSpace[12] },
-  entete: { flexDirection: "row", alignItems: "center", gap: nativeSpace[10] },
+  /* `minHeight` À LA CHARTE : la rangée porte la cible tactile, et un intitulé
+     court la ferait sinon plus basse que le doigt qui la vise. */
+  entete: {
+    flexDirection: "row", alignItems: "center",
+    gap: nativeSpace[10], minHeight: nativeTouchMin,
+  },
   quoi: { flex: 1, fontFamily: nativeFont.bodySemibold, fontSize: 15 },
   mention: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[6] },
   actions: { marginTop: nativeSpace[8] },
