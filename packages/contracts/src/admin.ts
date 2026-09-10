@@ -564,6 +564,9 @@ export const canalSchema = z.object({
   fraisMax: z.number().nullable(),
   /** `payer` : le client verse en plus. `payee` : c'est prélevé sur le versement. */
   fraisPortesPar: z.enum(["payer", "payee"]),
+  /** Le code à composer quand l'application de l'opérateur ne s'ouvre pas. Nul
+   *  quand il n'y en a pas : l'écran d'attente n'affiche alors pas la ligne. */
+  ussd: z.string().nullable(),
   devise: z.string(),
   actif: z.boolean(),
   position: z.number().int().nullable(),

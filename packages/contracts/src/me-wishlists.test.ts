@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   createOwnerWishSchema, createWishlistSchema, myReservationSchema,
   ownerWishSchema, updateOwnerWishSchema, wishlistSchema,
+
+  createWishlistSchema, updateWishlistSchema,
 } from "./me-wishlists.js";
 import {
   publicWishSchema, reserveWishSchema, sharedWishlistSchema,
@@ -26,6 +28,37 @@ const SOUHAIT = {
   position: null,
   reservedByName: null,
 };
+
+describe("le nom et la clôture d'une liste", () => {
+  const OCCASION = "3f2504e0-4f89-11d3-9a0c-0305e82c3305";
+
+  /* ON OUVRE UNE LISTE POUR Y METTRE DES SOUHAITS, pas pour la baptiser. Le nom
+     se pose ensuite, quand on a une raison de le changer. */
+  it("ouvre une liste sans exiger de nom", () => {
+    expect(() => createWishlistSchema.parse({ occurrenceId: OCCASION })).not.toThrow();
+  });
+
+  /* `null` REMET AU DÉFAUT, il ne vide pas un champ obligatoire : le nom
+     redevient « composé depuis l'occasion ». Sans lui, un nom posé une fois ne
+     pourrait plus qu'être remplacé — jamais retiré. */
+  it("laisse revenir au nom composé depuis l'occasion", () => {
+    expect(() => updateWishlistSchema.parse({ name: null })).not.toThrow();
+    expect(() => updateWishlistSchema.parse({ closesAt: null })).not.toThrow();
+  });
+
+  // Un corps vide ne change rien : il ferait croire à un geste qui n'a pas eu
+  // lieu, et l'écran afficherait l'état d'avant en pensant l'avoir changé.
+  it("refuse une modification qui ne modifie rien", () => {
+    expect(() => updateWishlistSchema.parse({})).toThrow();
+  });
+
+  // Une clôture est un instant, pas un jour : « ferme le 24 » ne dit pas à
+  // quelle heure, et deux fuseaux n'en tireraient pas la même réponse.
+  it("veut un instant daté, pas un jour", () => {
+    expect(() => updateWishlistSchema.parse({ closesAt: "2026-12-24" })).toThrow();
+    expect(() => updateWishlistSchema.parse({ closesAt: "2026-12-24T18:00:00.000Z" })).not.toThrow();
+  });
+});
 
 describe("mes listes de souhaits", () => {
   it("lit un de mes souhaits", () => {
@@ -68,6 +101,7 @@ describe("mes listes de souhaits", () => {
     const liste = wishlistSchema.parse({
       id: ID, occurrenceId: ID2, occurrenceDate: "2026-08-24",
       eventKind: "birthday", eventLabel: null,
+      name: null, closesAt: null,
       wishCount: 7, reservedCount: 3, isShared: true, isArchived: false,
     });
     expect(liste.reservedCount).toBe(3);

@@ -1021,7 +1021,10 @@ Message d'anniversaire reçu d'un tiers via le `CollectionLink` du `Wall`, ratta
 | created_at | timestamptz | non | — | now() | |
 
 - Enum `received_wish_status` : `pending`, `approved`, `rejected`.
-- Modéré par l'owner (`pending` → `approved` / `rejected`), puis **conservé en privé** : un vœu approuvé se lit dans son Mur côté application et ne s'affiche jamais sur la page publique. La table **ne porte aucun champ de publication** : les vœux reçus restent privés, le Mur n'a pas de livre d'or, et ouvrir cette porte demanderait d'abord de décider ce qu'on montre. Entrant ; distinct de `wishlist_item` et de `generated_message`.
+- Modéré par l'owner (`pending` → `approved` / `rejected`), **puis exposé ou non, un par un**. Cette ligne disait le contraire — « la table ne porte aucun champ de publication, le Mur n'a pas de livre d'or, et ouvrir cette porte demanderait d'abord de décider ce qu'on montre ». La maquette a décidé ce qu'on montre, et c'est ce qui lève la réserve : `is_public` par vœu, jamais en bloc, et `show_author` à part.
+- **Modérer et exposer sont deux gestes.** Approuver dit « je garde ce mot » ; exposer dit « et je le montre ». Les fondre publierait tout ce qu'on approuve — or on approuve pour classer, pas pour publier. Seul un vœu approuvé peut s'exposer : publier un vœu en attente sauterait la modération, qui est la seule chose qui protège le Mur de ce qu'un inconnu y écrit.
+- **Deux booléens et non un**, parce que « je le montre sans dire de qui » est exactement ce qu'on veut d'un mot maladroit qu'on garde quand même. L'inverse ne veut rien dire : une contrainte en base refuse `show_author` sans `is_public`, et retirer la publication retire l'auteur avec elle.
+- Faux tous les deux à l'arrivée : un vœu n'est pas public parce qu'il est arrivé. Entrant ; distinct de `wishlist_item` et de `generated_message`.
 
 ---
 

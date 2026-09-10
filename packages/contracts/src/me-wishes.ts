@@ -38,6 +38,22 @@ export const wishSchema = z.object({
      `owner` a été noté de sa propre main. Laisser le client l'écrire ferait
      passer une supposition pour une confidence — le serveur le pose. */
   origin: z.enum(WISH_ORIGINS),
+  /* D'OÙ IL VIENT, EN CLAIR — et pas seulement sous quelle étiquette.
+   *
+   * `origin` dit la CATÉGORIE ; ces deux-là disent le fait. « Collecté » ne
+   * rappelle pas qui l'a dit ni quand : trois mois plus tard, on regarde une
+   * ligne sans savoir si elle vient de sa sœur en janvier ou d'un collègue la
+   * semaine dernière — et c'est précisément ce qui décide si on l'offre.
+   *
+   * `originNote` porte le mot de celui qui a contribué, ou le « pourquoi » de
+   * l'idée retenue. Nul sur un souhait noté de sa propre main : il n'y a rien à
+   * rapporter, on était là.
+   *
+   * `originAt` est la date du GESTE D'ORIGINE — la contribution, la génération
+   * — et non celle de la ligne. Les deux diffèrent : on retient une idée
+   * produite la veille, on valide une contribution reçue le mois dernier. */
+  originNote: z.string().nullable(),
+  originAt: z.string().nullable(),
   /* Le REPÈRE PERSONNEL : « ce qui m'intéresse », invisible pour tout autre
      que moi et sans effet sur la disponibilité. Il s'appelait `isPublic`, nom
      hérité d'`OwnerWish` où il décide bien de ce qui paraît sur la liste

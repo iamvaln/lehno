@@ -69,12 +69,12 @@ export class MurService {
    * `upsert` sur `userId`, qui est unique : deux ouvertures simultanées de
    * l'écran ne créent pas deux Murs, c'est la base qui tranche.
    */
-  private async ligne(userId: string): Promise<{ isEnabled: boolean; showBirthdayDate: boolean; welcomeMessage: string | null }> {
+  private async ligne(userId: string): Promise<{ isEnabled: boolean; showBirthdayDate: boolean; showWishlist: boolean; welcomeMessage: string | null }> {
     return this.prisma.wall.upsert({
       where: { userId },
       create: { userId },
       update: {},
-      select: { isEnabled: true, showBirthdayDate: true, welcomeMessage: true },
+      select: { isEnabled: true, showBirthdayDate: true, showWishlist: true, welcomeMessage: true },
     });
   }
 
@@ -172,6 +172,7 @@ export class MurService {
       slug: compte.username,
       isEnabled: mur.isEnabled,
       showBirthdayDate: mur.showBirthdayDate,
+      showWishlist: mur.showWishlist,
       welcomeMessage: mur.welcomeMessage,
       /* `/m/<pseudo>`, le chemin que le site sert RÉELLEMENT.
          Cette adresse composait `${site}/<pseudo>` — un chemin qui n'existe
@@ -206,6 +207,7 @@ export class MurService {
       const champs: Record<string, unknown> = {};
       if (input.isEnabled !== undefined) champs["isEnabled"] = input.isEnabled;
       if (input.showBirthdayDate !== undefined) champs["showBirthdayDate"] = input.showBirthdayDate;
+      if (input.showWishlist !== undefined) champs["showWishlist"] = input.showWishlist;
       if (input.welcomeMessage !== undefined) champs["welcomeMessage"] = input.welcomeMessage;
       if (Object.keys(champs).length > 0) {
         await tx.wall.update({ where: { userId }, data: champs });
@@ -290,7 +292,7 @@ export class MurService {
     id: string;
     username: string;
     displayName: string | null;
-    mur: { showBirthdayDate: boolean; welcomeMessage: string | null };
+    mur: { showBirthdayDate: boolean; showWishlist: boolean; welcomeMessage: string | null };
   }): Promise<PublicWall> {
     const moi = await this.soi(entree.id);
 
@@ -307,9 +309,10 @@ export class MurService {
        conditions doivent tenir ensemble — un lien vivant, une fenêtre ouverte,
        et le drapeau `wishes` allumé. Laisser le client en juger lui ferait
        proposer un bouton qui mène à un 404 le jour où l'une tombe. */
-    const [fenetre, voeuxActifs] = await Promise.all([
+    const [fenetre, voeuxActifs, listesActives] = await Promise.all([
       this.fenetreCourante(entree.id),
       this.flags.estActif("wishes"),
+      this.flags.estActif("wishlist.own"),
     ]);
     let wishLinkToken: string | null = null;
     if (voeuxActifs && fenetre?.ouverte) {
@@ -318,6 +321,21 @@ export class MurService {
         select: { token: true },
       });
       wishLinkToken = lien?.token ?? null;
+    }
+
+    /* LA LISTE, résolue de la même façon et sous les mêmes conditions — plus
+       une : le propriétaire doit l'avoir exposée. C'est le seul des deux qui se
+       règle, parce que la liste dit ce qu'on possède déjà et ce qu'on convoite,
+       là où un vœu déposé ne dit rien de celui qui le reçoit.
+       La fenêtre vaut pour les deux : hors de la période de l'occasion, il n'y
+       a pas de liste courante à montrer. */
+    let wishlistToken: string | null = null;
+    if (listesActives && entree.mur.showWishlist && fenetre?.ouverte) {
+      const partage = await this.prisma.wishlistShareLink.findFirst({
+        where: { wishlist: { eventOccurrenceId: fenetre.occurrenceId }, isActive: true },
+        select: { token: true },
+      });
+      wishlistToken = partage?.token ?? null;
     }
 
     return {
@@ -333,6 +351,7 @@ export class MurService {
         .filter((a) => a.isPublic)
         .map((a) => ({ kind: a.kind as NatureExposable, value: a.value })),
       wishLinkToken,
+      wishlistToken,
     };
   }
 

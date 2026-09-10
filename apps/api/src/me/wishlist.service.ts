@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
 import type {
-  CreateOwnerWishInput, MyReservation, OwnerWish, UpdateOwnerWishInput,
+  CreateOwnerWishInput, MyReservation, OwnerWish, UpdateOwnerWishInput, UpdateWishlistInput,
   Wishlist, WishlistShare,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -83,18 +83,30 @@ export class WishlistService {
       return {
         id: l.id,
         occurrenceId: l.eventOccurrenceId,
+        // Nul veut dire « composez-le depuis l'occasion » : le serveur ne le
+        // compose pas à la place du client, qui a `eventLabel` et la date, et
+        // qui sait dans quelle langue il affiche.
+        name: l.name,
         occurrenceDate: jour(l.occurrence.occurrenceDate),
         eventKind: l.occurrence.event.kind,
         eventLabel: l.occurrence.event.label ?? null,
         wishCount: total,
         reservedCount: reserves,
         isShared: l.shareLinks.length > 0,
-        isArchived: estPassee(l.occurrence.occurrenceDate),
+        closesAt: l.closesAt?.toISOString() ?? null,
+        /* DEUX CAUSES, UN SEUL DRAPEAU. L'occasion est passée, ou la clôture
+           que le propriétaire a posée est franchie. Le client n'a pas à
+           comparer des dates lui-même : il se tromperait de fuseau, et sa
+           réponse divergerait de celle du serveur qui refuse les
+           réservations. */
+        isArchived:
+          estPassee(l.occurrence.occurrenceDate)
+          || (l.closesAt !== null && l.closesAt.getTime() <= Date.now()),
       };
     });
   }
 
-  async create(userId: string, occurrenceId: string): Promise<Wishlist> {
+  async create(userId: string, occurrenceId: string, options: { name?: string; closesAt?: string } = {}): Promise<Wishlist> {
     /* L'occasion doit être une occasion À MOI — au sens de la self-Person, pas
        seulement du compte. `event_occurrence.user_id` dit à qui appartient le
        carnet ; il vaut aussi pour l'anniversaire d'un proche. Ouvrir une liste
@@ -110,7 +122,13 @@ export class WishlistService {
     // `event_occurrence_id` tranche sans course, là où deux appels simultanés
     // ouvriraient deux listes sur la même occasion.
     try {
-      await this.prisma.wishlist.create({ data: { eventOccurrenceId: occurrenceId } });
+      await this.prisma.wishlist.create({
+        data: {
+          eventOccurrenceId: occurrenceId,
+          ...(options.name === undefined ? {} : { name: options.name }),
+          ...(options.closesAt === undefined ? {} : { closesAt: new Date(options.closesAt) }),
+        },
+      });
     } catch {
       throw new AppError("conflict", "une liste existe déjà pour cette occasion");
     }
@@ -149,6 +167,31 @@ export class WishlistService {
       },
     });
     return lignes.map((l) => rendre(liste.id, l as unknown as LigneSouhait, l.reservations[0] ?? null));
+  }
+
+  /**
+   * Renommer une liste, ou déplacer sa clôture.
+   *
+   * `null` REMET AU DÉFAUT, il ne vide pas un champ obligatoire : le nom
+   * redevient « composé depuis l'occasion », la clôture redevient « à
+   * l'occasion ». C'est la seule façon de revenir en arrière — sans lui, un nom
+   * posé une fois ne pourrait plus qu'être remplacé.
+   */
+  async update(userId: string, id: string, input: UpdateWishlistInput): Promise<Wishlist> {
+    const liste = await this.mienneOuAbsente(userId, id);
+    await this.prisma.wishlist.update({
+      where: { id: liste.id },
+      data: {
+        ...(input.name === undefined ? {} : { name: input.name }),
+        ...(input.closesAt === undefined
+          ? {}
+          : { closesAt: input.closesAt === null ? null : new Date(input.closesAt) }),
+      },
+    });
+    const rendues = await this.list(userId);
+    const rendue = rendues.find((l) => l.id === id);
+    if (!rendue) throw new AppError("internal_error", "liste modifiée puis introuvable");
+    return rendue;
   }
 
   async createWish(userId: string, wishlistId: string, input: CreateOwnerWishInput): Promise<OwnerWish> {

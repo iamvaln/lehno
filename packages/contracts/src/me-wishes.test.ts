@@ -16,8 +16,34 @@ const SOUHAIT = {
   status: "available" as const,
   origin: "owner" as const,
   isShortlisted: false,
+  originNote: null,
+  originAt: null,
   reservedByName: null,
 };
+
+describe("la provenance d'un souhait", () => {
+  /* `origin` dit la CATÉGORIE, ces deux champs disent le FAIT. « Collecté » ne
+     rappelle ni qui l'a dit ni quand : trois mois plus tard, on regarde une
+     ligne sans savoir si elle vient de sa sœur en janvier ou d'un collègue la
+     semaine dernière — et c'est ce qui décide si on l'offre. */
+  it("porte le mot et la date, à côté de la catégorie", () => {
+    const lu = wishSchema.parse({
+      ...SOUHAIT, origin: "collected" as const,
+      originNote: "Elle en parle depuis Noël", originAt: "2026-01-04T09:00:00.000Z",
+    });
+    expect(lu.originNote).toBe("Elle en parle depuis Noël");
+    expect(lu.originAt).toBe("2026-01-04T09:00:00.000Z");
+  });
+
+  /* Nuls sur un souhait noté de sa propre main : il n'y a rien à rapporter, on
+     était là. C'est le cas ordinaire, et il ne doit pas obliger à inventer une
+     provenance pour remplir le champ. */
+  it("les laisse nuls quand on l'a noté soi-même", () => {
+    const lu = wishSchema.parse({ ...SOUHAIT, origin: "owner" as const });
+    expect(lu.originNote).toBeNull();
+    expect(lu.originAt).toBeNull();
+  });
+});
 
 describe("les souhaits", () => {
   it("se lit sans prix", () => {

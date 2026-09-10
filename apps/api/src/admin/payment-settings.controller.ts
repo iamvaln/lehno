@@ -50,6 +50,10 @@ const canalCreationSchema = z.object({
   fraisMin: z.number().min(0).nullable().optional(),
   fraisMax: z.number().min(0).nullable().optional(),
   fraisPortesPar: z.enum(["payer", "payee"]).optional(),
+  /* Le code USSD de secours. Nullable ET optionnel, et les deux ne disent pas
+     la même chose : absent = « ne touche pas », nul = « retire-le ». Sans le
+     second, on ne pourrait plus effacer un code devenu faux. */
+  ussd: z.string().trim().min(1).max(32).nullable().optional(),
   devise: z.string().length(3).optional(),
   position: z.number().int().nullable().optional(),
   reason: motifSchema,
@@ -66,6 +70,10 @@ const canalModificationSchema = z.object({
   fraisMin: z.number().min(0).nullable().optional(),
   fraisMax: z.number().min(0).nullable().optional(),
   fraisPortesPar: z.enum(["payer", "payee"]).optional(),
+  /* Le code USSD de secours. Nullable ET optionnel, et les deux ne disent pas
+     la même chose : absent = « ne touche pas », nul = « retire-le ». Sans le
+     second, on ne pourrait plus effacer un code devenu faux. */
+  ussd: z.string().trim().min(1).max(32).nullable().optional(),
   position: z.number().int().nullable().optional(),
   actif: z.boolean().optional(),
   reason: motifSchema,
@@ -196,6 +204,7 @@ export class PaymentSettingsService {
         fraisMin: c.feeMin === null ? null : Number(c.feeMin),
         fraisMax: c.feeMax === null ? null : Number(c.feeMax),
         fraisPortesPar: c.feeBorneBy,
+        ussd: c.ussd,
         devise: c.currency,
         actif: c.isActive,
         position: c.position,
@@ -225,6 +234,7 @@ export class PaymentSettingsService {
             ...(entree.fraisMin !== undefined ? { feeMin: entree.fraisMin } : {}),
             ...(entree.fraisMax !== undefined ? { feeMax: entree.fraisMax } : {}),
             ...(entree.fraisPortesPar !== undefined ? { feeBorneBy: entree.fraisPortesPar } : {}),
+            ...(entree.ussd !== undefined ? { ussd: entree.ussd } : {}),
             ...(entree.devise !== undefined ? { currency: entree.devise } : {}),
             ...(entree.position !== undefined ? { position: entree.position } : {}),
           },
@@ -251,6 +261,7 @@ export class PaymentSettingsService {
             ...(entree.fraisMin !== undefined ? { feeMin: entree.fraisMin } : {}),
             ...(entree.fraisMax !== undefined ? { feeMax: entree.fraisMax } : {}),
             ...(entree.fraisPortesPar !== undefined ? { feeBorneBy: entree.fraisPortesPar } : {}),
+            ...(entree.ussd !== undefined ? { ussd: entree.ussd } : {}),
             ...(entree.position !== undefined ? { position: entree.position } : {}),
             ...(entree.actif !== undefined ? { isActive: entree.actif } : {}),
           },

@@ -10953,6 +10953,14 @@
                           "owner"
                         ]
                       },
+                      "originNote": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "originAt": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "isShortlisted": {
                         "type": "boolean"
                       },
@@ -10973,6 +10981,8 @@
                       "currency",
                       "status",
                       "origin",
+                      "originNote",
+                      "originAt",
                       "isShortlisted",
                       "reservedByName"
                     ],
@@ -11302,6 +11312,14 @@
                         "owner"
                       ]
                     },
+                    "originNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "originAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "isShortlisted": {
                       "type": "boolean"
                     },
@@ -11322,6 +11340,8 @@
                     "currency",
                     "status",
                     "origin",
+                    "originNote",
+                    "originAt",
                     "isShortlisted",
                     "reservedByName"
                   ],
@@ -11660,6 +11680,14 @@
                         "owner"
                       ]
                     },
+                    "originNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "originAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "isShortlisted": {
                       "type": "boolean"
                     },
@@ -11680,6 +11708,8 @@
                     "currency",
                     "status",
                     "origin",
+                    "originNote",
+                    "originAt",
                     "isShortlisted",
                     "reservedByName"
                   ],
@@ -12133,6 +12163,10 @@
                         "type": "string",
                         "format": "uuid"
                       },
+                      "name": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "occurrenceDate": {
                         "type": "string",
                         "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
@@ -12155,6 +12189,10 @@
                       "isShared": {
                         "type": "boolean"
                       },
+                      "closesAt": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "isArchived": {
                         "type": "boolean"
                       }
@@ -12162,12 +12200,14 @@
                     "required": [
                       "id",
                       "occurrenceId",
+                      "name",
                       "occurrenceDate",
                       "eventKind",
                       "eventLabel",
                       "wishCount",
                       "reservedCount",
                       "isShared",
+                      "closesAt",
                       "isArchived"
                     ],
                     "additionalProperties": false
@@ -12391,6 +12431,15 @@
                   "occurrenceId": {
                     "type": "string",
                     "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "closesAt": {
+                    "type": "string",
+                    "format": "date-time"
                   }
                 },
                 "required": [
@@ -12417,6 +12466,10 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "name": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "occurrenceDate": {
                       "type": "string",
                       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
@@ -12439,6 +12492,10 @@
                     "isShared": {
                       "type": "boolean"
                     },
+                    "closesAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "isArchived": {
                       "type": "boolean"
                     }
@@ -12446,12 +12503,14 @@
                   "required": [
                     "id",
                     "occurrenceId",
+                    "name",
                     "occurrenceDate",
                     "eventKind",
                     "eventLabel",
                     "wishCount",
                     "reservedCount",
                     "isShared",
+                    "closesAt",
                     "isArchived"
                   ],
                   "additionalProperties": false
@@ -18296,6 +18355,10 @@
                           "label": {
                             "type": "string"
                           },
+                          "ussd": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "feeBorneBy": {
                             "type": "string",
                             "enum": [
@@ -18314,6 +18377,7 @@
                           "operator",
                           "country",
                           "label",
+                          "ussd",
                           "feeBorneBy",
                           "currency"
                         ],
@@ -25897,6 +25961,9 @@
                     "showBirthdayDate": {
                       "type": "boolean"
                     },
+                    "showWishlist": {
+                      "type": "boolean"
+                    },
                     "welcomeMessage": {
                       "type": "string",
                       "nullable": true
@@ -25953,6 +26020,7 @@
                     "slug",
                     "isEnabled",
                     "showBirthdayDate",
+                    "showWishlist",
                     "welcomeMessage",
                     "publicUrl",
                     "wishLinkUrl",
@@ -26181,6 +26249,9 @@
                   "showBirthdayDate": {
                     "type": "boolean"
                   },
+                  "showWishlist": {
+                    "type": "boolean"
+                  },
                   "welcomeMessage": {
                     "type": "string",
                     "maxLength": 500,
@@ -26215,6 +26286,9 @@
                       "type": "boolean"
                     },
                     "showBirthdayDate": {
+                      "type": "boolean"
+                    },
+                    "showWishlist": {
                       "type": "boolean"
                     },
                     "welcomeMessage": {
@@ -26273,6 +26347,7 @@
                     "slug",
                     "isEnabled",
                     "showBirthdayDate",
+                    "showWishlist",
                     "welcomeMessage",
                     "publicUrl",
                     "wishLinkUrl",
@@ -26545,6 +26620,10 @@
                     "wishLinkToken": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "wishlistToken": {
+                      "type": "string",
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -26553,7 +26632,8 @@
                     "welcomeMessage",
                     "birthday",
                     "interests",
-                    "wishLinkToken"
+                    "wishLinkToken",
+                    "wishlistToken"
                   ],
                   "additionalProperties": false
                 }
@@ -29902,6 +29982,12 @@
                           "rejected"
                         ]
                       },
+                      "isPublic": {
+                        "type": "boolean"
+                      },
+                      "showAuthor": {
+                        "type": "boolean"
+                      },
                       "createdAt": {
                         "type": "string"
                       }
@@ -29912,6 +29998,8 @@
                       "authorName",
                       "content",
                       "status",
+                      "isPublic",
+                      "showAuthor",
                       "createdAt"
                     ],
                     "additionalProperties": false
@@ -30192,6 +30280,12 @@
                         "rejected"
                       ]
                     },
+                    "isPublic": {
+                      "type": "boolean"
+                    },
+                    "showAuthor": {
+                      "type": "boolean"
+                    },
                     "createdAt": {
                       "type": "string"
                     }
@@ -30202,6 +30296,8 @@
                     "authorName",
                     "content",
                     "status",
+                    "isPublic",
+                    "showAuthor",
                     "createdAt"
                   ],
                   "additionalProperties": false
@@ -30479,6 +30575,10 @@
                     "wishLinkToken": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "wishlistToken": {
+                      "type": "string",
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -30487,7 +30587,8 @@
                     "welcomeMessage",
                     "birthday",
                     "interests",
-                    "wishLinkToken"
+                    "wishLinkToken",
+                    "wishlistToken"
                   ],
                   "additionalProperties": false
                 }
