@@ -264,6 +264,21 @@ export class GenerationService {
       include: { event: { include: { person: true } } },
     });
     const proche = occurrence.event.person;
+    /* LA LANGUE VIENT DU COMPTE, pas du proche — et c'est l'inverse du message.
+     *
+     * Un message est ADRESSÉ au proche : il part chez lui, il doit être dans sa
+     * langue, et `rassembler` lit donc `person.language`. Une liste d'idées
+     * n'est envoyée à personne : c'est celui qui cherche qui la lit, pour
+     * décider quoi acheter. La rendre dans la langue de sa marraine anglophone
+     * lui donnerait des idées qu'il ne peut pas lire, et qu'il a payées.
+     *
+     * `user.ui_language` est d'ailleurs la seule des deux qui soit sûre : elle
+     * est non nulle avec un défaut, là où `person.language` est facultative et
+     * vide sur la plupart des fiches. */
+    const moi = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { uiLanguage: true },
+    });
+
     const notes = await this.prisma.note.findMany({
       where: { personId: proche.id },
       orderBy: { createdAt: "desc" },
@@ -290,8 +305,7 @@ export class GenerationService {
        ce qui vaut pour toutes les productions, et rien tant que le studio n'a
        pas de configuration propre aux idées. */
     return {
-      // La langue du PROCHE, comme pour le message : c'est de lui qu'on parle.
-      langue: options.langue ?? (proche.language === "en" ? "en" : "fr"),
+      langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
       nomDUsage: proche.callingName ?? proche.displayName,
       relation: proche.relationHint ?? proche.relation ?? null,
       genreDuProche: proche.gender ?? "unspecified",
