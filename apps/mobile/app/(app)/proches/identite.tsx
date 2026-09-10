@@ -279,7 +279,7 @@ export default function Identite() {
           {anneeConnue ? (
             <TextField
               label={t.identAnnee}
-              nature="code"
+              nature="annee"
               value={anneeNee}
               onChangeText={setAnneeNee}
             />

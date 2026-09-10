@@ -11,7 +11,7 @@ import type { TextInputProps } from "react-native";
  * d'adresse la reçoit sans que personne y pense.
  */
 
-export const NATURES_DE_CHAMP = ["texte", "email", "pseudo", "reference", "code"] as const;
+export const NATURES_DE_CHAMP = ["texte", "email", "pseudo", "reference", "annee", "code"] as const;
 export type NatureDeChamp = (typeof NATURES_DE_CHAMP)[number];
 
 export interface ReglagesDeSaisie {
@@ -70,6 +70,22 @@ export function reglagesDeSaisie(nature: NatureDeChamp): ReglagesDeSaisie {
         // La borne du contrat, et elle seule.
         maxLength: 16,
       };
+    /* UNE ANNÉE, ET PAS UN CODE À USAGE UNIQUE.
+     *
+     * Le champ d'année de naissance empruntait la nature « code » : il en
+     * héritait `textContentType: "oneTimeCode"` et `autoComplete: "sms-otp"`,
+     * donc iOS proposait LE DERNIER CODE REÇU PAR SMS au-dessus du clavier —
+     * sur une date de naissance. Et sans borne, on y saisissait cinq chiffres.
+     *
+     * Le pavé numérique reste : c'est la seule chose qui était juste. */
+    case "annee":
+      return {
+        autoCapitalize: "none",
+        autoCorrect: false,
+        spellCheck: false,
+        keyboardType: "number-pad",
+        maxLength: 4,
+      };
     case "code":
       return {
         autoCapitalize: "none",
@@ -106,6 +122,8 @@ export function nettoiePourLaNature(nature: NatureDeChamp, saisie: string): stri
        code collé depuis un message arrive souvent avec une espace. */
     case "reference":
       return saisie.trim();
+    // Des chiffres seulement, comme un code — la borne, elle, diffère.
+    case "annee":
     case "code":
       return saisie.replace(/\D/g, "");
     default:

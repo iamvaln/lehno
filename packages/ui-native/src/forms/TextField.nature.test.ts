@@ -81,3 +81,29 @@ describe("une référence qu'on recopie", () => {
   });
 });
 
+/* UNE ANNÉE N'EST PAS UN CODE À USAGE UNIQUE.
+ *
+ * Le champ d'année de naissance empruntait la nature « code ». Il en héritait
+ * `textContentType: "oneTimeCode"` et `autoComplete: "sms-otp"` : iOS proposait
+ * LE DERNIER CODE REÇU PAR SMS au-dessus du clavier, sur une date de naissance.
+ * Et faute de borne, on y saisissait cinq chiffres — vu à l'écran, « 19905 ».
+ */
+describe("une année de naissance", () => {
+  it("ne propose pas le dernier code reçu par SMS", () => {
+    const r = reglagesDeSaisie("annee");
+    expect(r.textContentType).toBeUndefined();
+    expect(r.autoComplete).toBeUndefined();
+    // Ce que « code » fait, et qu'il ne faut pas ici.
+    expect(reglagesDeSaisie("code").textContentType).toBe("oneTimeCode");
+  });
+
+  it("s'arrête à quatre chiffres", () => {
+    expect(reglagesDeSaisie("annee").maxLength).toBe(4);
+  });
+
+  it("garde le pavé numérique, et n'accepte que des chiffres", () => {
+    expect(reglagesDeSaisie("annee").keyboardType).toBe("number-pad");
+    expect(nettoiePourLaNature("annee", "19a90")).toBe("1990");
+  });
+});
+
