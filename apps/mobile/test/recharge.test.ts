@@ -41,7 +41,7 @@ const apercu = (forme: Partial<PaymentPreview> = {}): PaymentPreview => ({
 
 const canal = (kind: PaymentChannel["kind"]): PaymentChannel => ({
   id: uuid(300), kind, operator: "MTN", country: "CM", label: "MTN Cameroun",
-  feeBorneBy: "payer", currency: "XAF",
+  ussd: null, feeBorneBy: "payer", currency: "XAF",
 });
 
 describe("où l'on en est du parcours", () => {

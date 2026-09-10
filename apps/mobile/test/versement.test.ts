@@ -20,7 +20,7 @@ const compte = (n: number, operator: string): CollectionAccount => ({
 
 const canal = (n: number, operator: string): PaymentChannel => ({
   id: uuid(100 + n), kind: "mobile_money", operator, country: "CM",
-  label: operator + " Cameroun", feeBorneBy: "payer", currency: "XAF",
+  label: operator + " Cameroun", ussd: null, feeBorneBy: "payer", currency: "XAF",
 });
 
 const mouvement = (n: number, montant: number, quand: string): CreditTransaction => ({

@@ -79,17 +79,19 @@ const produit = (m: GeneratedMessage): GenerationResult => ({
        prouver, et l'écran ouvrirait un 404 en production. */
     id: `9${m.id.slice(1)}`,
   },
-  message: m,
+  message: m, ideas: null,
 });
 
 const enCours = (n: number, vise: string, quand: string): GenerationResult => ({
   generation: execution(n, "wish_message", vise, "running", quand),
-  message: null,
+  message: null, ideas: null,
 });
 
 const souhait = (n: number, quoi: string, reste: Partial<Wish> = {}): Wish => ({
   id: uuid(400 + n),
   occurrenceId: OCCASION,
+  // Aucune provenance : ces cas ne l'éprouvent pas.
+  originNote: null, originAt: null,
   label: quoi,
   link: null,
   imageUrl: null,
@@ -109,6 +111,8 @@ const voeu = (
 ): ReceivedWish => ({
   id: uuid(500 + n),
   occurrenceId: vise,
+  // Rien d'exposé : ces cas éprouvent la modération, pas la publication.
+  isPublic: false, showAuthor: false,
   authorName: `Rose ${n}`,
   content: `vœu ${n}`,
   status: statut,
@@ -260,7 +264,7 @@ describe("les idées déjà trouvées", () => {
 
   it("rend l'exécution aboutie de cette occasion", () => {
     const gen = execution(1, "gift_ideas", OCCASION, "succeeded", "2026-01-01");
-    expect(ideesDeLOccasion([{ generation: gen, message: null }], OCCASION)).toBe(gen.id);
+    expect(ideesDeLOccasion([{ generation: gen, message: null, ideas: null }], OCCASION)).toBe(gen.id);
   });
 
   /* Une exécution QUI TOURNE n'a rien à revoir, et une qui a ÉCHOUÉ a rendu son
@@ -270,19 +274,19 @@ describe("les idées déjà trouvées", () => {
     const attente = execution(2, "gift_ideas", OCCASION, "running", "2026-01-01");
     const rate = execution(3, "gift_ideas", OCCASION, "failed", "2026-02-01");
     expect(ideesDeLOccasion([
-      { generation: attente, message: null },
-      { generation: rate, message: null },
+      { generation: attente, message: null, ideas: null },
+      { generation: rate, message: null, ideas: null },
     ], OCCASION)).toBeNull();
   });
 
   it("ne prend pas un message pour des idées", () => {
     const gen = execution(4, "wish_message", OCCASION, "succeeded", "2026-01-01");
-    expect(ideesDeLOccasion([{ generation: gen, message: null }], OCCASION)).toBeNull();
+    expect(ideesDeLOccasion([{ generation: gen, message: null, ideas: null }], OCCASION)).toBeNull();
   });
 
   it("ignore une autre occasion", () => {
     const gen = execution(5, "gift_ideas", AUTRE, "succeeded", "2026-01-01");
-    expect(ideesDeLOccasion([{ generation: gen, message: null }], OCCASION)).toBeNull();
+    expect(ideesDeLOccasion([{ generation: gen, message: null, ideas: null }], OCCASION)).toBeNull();
   });
 });
 

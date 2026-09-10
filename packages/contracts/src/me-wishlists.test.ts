@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  createOwnerWishSchema, createWishlistSchema, myReservationSchema,
-  ownerWishSchema, updateOwnerWishSchema, wishlistSchema,
-
-  createWishlistSchema, updateWishlistSchema,
+  createOwnerWishSchema, createWishlistSchema, updateWishlistSchema,
+  myReservationSchema, ownerWishSchema, updateOwnerWishSchema, wishlistSchema,
 } from "./me-wishlists.js";
 import {
   publicWishSchema, reserveWishSchema, sharedWishlistSchema,

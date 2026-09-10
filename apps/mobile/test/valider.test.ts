@@ -6,6 +6,8 @@ const mot = (n: number, status: ReceivedWish["status"], quand: string): Received
   id: `${String(n).padStart(8, "0")}-0000-4000-8000-000000000000`,
   occurrenceId: "11111111-1111-4111-8111-111111111111",
   authorName: "Ana", content: "Bon anniversaire", status, createdAt: quand,
+  // Rien d'exposé : ces cas éprouvent la modération, pas la publication.
+  isPublic: false, showAuthor: false,
 });
 
 describe("le sort d'un mot reçu", () => {

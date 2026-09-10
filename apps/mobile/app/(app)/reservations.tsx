@@ -132,7 +132,12 @@ export default function Reservations() {
                 « ce que je dois acheter avant telle date », jamais l'un sans
                 l'autre. */}
             <Text style={[styles.qui, { color: couleurs.textMention }]} numberOfLines={1}>
-              {r.ownerDisplayName} · {dateCourte(r.occurrenceDate, langue)}
+              {/* SANS OCCASION, pas de date à annoncer : le nom du
+                  propriétaire tient seul la ligne plutôt qu'un séparateur qui
+                  ne sépare rien. */}
+              {r.occurrenceDate === null
+                ? r.ownerDisplayName
+                : `${r.ownerDisplayName} · ${dateCourte(r.occurrenceDate, langue)}`}
             </Text>
           </View>
           {/* `showIdentity` est une DONNÉE : elle dit si l'on s'est fait

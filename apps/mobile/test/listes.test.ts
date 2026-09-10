@@ -13,6 +13,7 @@ const uuid = (n: number): string =>
 
 const liste = (n: number, p: Partial<Wishlist> = {}): Wishlist => ({
   id: uuid(n), occurrenceId: uuid(100 + n), occurrenceDate: "2026-09-03",
+  name: null, closesAt: null,
   eventKind: "birthday", eventLabel: null, wishCount: 7, reservedCount: 3,
   isShared: false, isArchived: false, ...p,
 });

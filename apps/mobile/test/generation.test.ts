@@ -45,6 +45,8 @@ const resultat = (
     createdAt: "2026-08-26T10:00:00Z",
   },
   message,
+  // Aucune idée : ces cas éprouvent le message.
+  ideas: null,
 });
 
 describe("l'écran s'ouvre en observateur", () => {

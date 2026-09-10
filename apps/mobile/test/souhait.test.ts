@@ -34,6 +34,7 @@ const MIEN: OwnerWish = {
 const IDEE: Wish = {
   id: ID,
   occurrenceId: OCCASION,
+  originNote: null, originAt: null,
   label: "Un vinyle de Manu Dibango",
   link: null,
   imageUrl: null,

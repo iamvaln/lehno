@@ -16,7 +16,7 @@ const interet = (n: number, isPublic: boolean): WallInterest => ({
 });
 
 const mur = (isEnabled: boolean): Wall => ({
-  slug: "valentine", isEnabled, showBirthdayDate: true, welcomeMessage: null,
+  slug: "valentine", isEnabled, showBirthdayDate: true, showWishlist: false, welcomeMessage: null,
   publicUrl: "https://lehno.app/valentine", wishLinkUrl: null, interests: [],
 });
 
@@ -24,6 +24,8 @@ const mot = (n: number, quand: string, auteur: string | null): ReceivedWish =>
   receivedWishSchema.parse({
     id: uuid(n), occurrenceId: uuid(100), authorName: auteur,
     content: `mot ${n}`, status: "pending", createdAt: quand,
+    // Rien d'exposé : ces cas éprouvent le sas, pas la publication.
+    isPublic: false, showAuthor: false,
   });
 
 

@@ -36,7 +36,9 @@ export function ListePartagee(
   { t, langue, jeton, liste, joursRestants }: {
     t: Messages; langue: Langue; jeton: string;
     liste: Ouverte;
-    joursRestants: number;
+    /** Nul quand la liste ne vise aucune occasion : il n'y a rien à
+     *  décompter, et le compte à rebours ne s'affiche pas. */
+    joursRestants: number | null;
   },
 ): ReactNode {
   const [etat, setEtat] = useState<Ouverte>(liste);
@@ -125,15 +127,20 @@ export function ListePartagee(
                     (me-events.ts), et la forme publique ne porte pas le genre
                     de l'occasion. La date seule vaut mieux qu'une virgule
                     orpheline devant elle. */}
-                {etat.occasionLabel === null
-                  ? dateEnToutesLettres(etat.occasionDate, langue)
-                  : interpoler(t.listeOccasion, {
-                      occasion: etat.occasionLabel,
-                      date: dateEnToutesLettres(etat.occasionDate, langue),
-                    })}
+                {/* SANS OCCASION, il ne reste que le nom que le
+                    propriétaire a donné — c'est le seul repère de la liste, et
+                    le serveur le sert dans `occasionLabel`. */}
+                {etat.occasionDate === null
+                  ? etat.occasionLabel
+                  : etat.occasionLabel === null
+                    ? dateEnToutesLettres(etat.occasionDate, langue)
+                    : interpoler(t.listeOccasion, {
+                        occasion: etat.occasionLabel,
+                        date: dateEnToutesLettres(etat.occasionDate, langue),
+                      })}
               </div>
             </div>
-            {joursRestants >= 0 ? (
+            {joursRestants !== null && joursRestants >= 0 ? (
               <div style={{ marginLeft: "auto" }}>
                 <Countdown days={joursRestants} locale={langue} size="s" />
               </div>
