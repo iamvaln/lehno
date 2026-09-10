@@ -136,6 +136,8 @@ Achat de crédits réglé par un `User`. Alimente l'historique des paiements et 
 | provider_ref | text | oui | oui | — | Référence de la transaction. Chez le prestataire pour `provider` ; **saisie par l'administrateur** sur les voies manuelles, à la confirmation. Nulle tant qu'elle n'est pas connue — d'où l'unicité partielle, sur les valeurs présentes |
 | payment_channel_id | uuid | oui | — | — | FK → payment_channel(id) on delete restrict ; le canal employé, et son barème |
 | fee_amount | numeric(12,2) | oui | — | — | Les frais **annoncés à l'aperçu**, figés ici. Pas ceux que le canal porte aujourd'hui : changer un taux ne doit pas fausser rétroactivement la comptabilité |
+| credit_unit_price | numeric(12,2) | oui | — | — | Le prix unitaire **du jour de l'achat**, figé. Sans lui, « quelle réduction cette personne a-t-elle obtenue ? » n'est plus reconstructible après un changement de prix. Nul sur les lignes antérieures, et il doit le rester : les remplir avec le prix d'aujourd'hui écrirait le mensonge qu'ils empêchent |
+| bundle_amount | numeric(12,2) | oui | — | — | Le prix du palier acheté. Il double `amount` **à dessein** : c'est ce qui rend un écart entre le facturé et l'affiché détectable au lieu d'invisible. `credit_bundle_id` étant en `set null`, supprimer un palier ferait sinon perdre jusqu'à sa référence |
 | expected_amount | numeric(12,2) | oui | — | — | Ce qu'on **attend sur le compte**, calculé à l'aperçu depuis le montant, les frais et `fee_borne_by` |
 | received_amount | numeric(12,2) | oui | — | — | Ce que l'administrateur a **constaté sur le compte**. Comparé à `expected_amount` : un écart se traite, il ne se devine pas |
 | direction | payment_direction (enum) | non | — | 'charge' | `charge` (achat) \| `refund` (remboursement) |
@@ -590,14 +592,17 @@ Palier d'achat de crédits. **Réglé par l'administration** : montant, crédits
 | amount | numeric(12,2) | non | — | — | Prix du palier |
 | currency | varchar(3) | non | — | 'XAF' | Code ISO 4217 |
 | credits | integer | non | — | — | Crédits obtenus, remise comprise |
-| bonus_percent | smallint | oui | — | — | Remise annoncée à l'écran ; nulle sur les petits paliers. **Saisie à la main, et rien ne la rattache à `amount` et `credits`** : un palier peut annoncer 20 % quand son rapport en vaut cinq. La PR #153 la supprime au profit d'un calcul — cette ligne disparaîtra avec elle |
+
+> **Aucune colonne de remise.** Elle se **déduit** de `amount`, `credits` et du paramètre `credit_unit_price` (voir `apps/api/src/payments/remise.ts`, et `apps/api/src/payments/prix-unitaire.ts` pour la lecture du paramètre). Le `bonus_percent` d'autrefois était saisi à la main et rien ne le rattachait aux montants qu'il résume : un palier pouvait annoncer 20 % quand son rapport en valait cinq, et aucun test ne tombait — il n'y avait rien à comparer. Aucune valeur rangée ne peut donc plus mentir sur ce qu'un palier vaut, et la question du recalcul en cascade quand le prix unitaire change ne se pose plus.
+
 | position | smallint | non | — | — | Ordre d'affichage |
 | is_active | boolean | non | — | true | |
 | updated_at | timestamptz | non | — | now() | |
 
 - **Aucune saisie libre d'un montant** : on achète un palier, et rien d'autre. Le plus petit palier fixe le minimum d'achat.
 - **La remise s'affiche** — c'est un argument de vente, pas un calcul caché.
-- Valeurs de départ, à ajuster depuis l'administration : 500 F → 5 crédits · 1 000 F → 10 · 2 000 F → 22 (+10 %) · 5 000 F → 57 (+15 %) · 10 000 F → 120 (+20 %).
+- **C'est une réduction de volume, pas un bonus de crédits.** On achète en lot, donc le crédit coûte moins cher : le prix baisse, rien n'est offert en plus. D'où « −N % » partout, et le champ `discountPercent` au contrat — il s'appelait `bonusPercent` et disait donc l'inverse de ce qu'il portait.
+- Valeurs de départ, à ajuster depuis l'administration : 500 F → 5 crédits · 1 000 F → 10 · 2 000 F → 22 (−10 %) · 5 000 F → 57 (−15 %) · 10 000 F → 120 (−20 %).
 
 ## PaymentChannel
 

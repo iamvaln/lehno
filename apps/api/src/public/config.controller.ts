@@ -1,6 +1,7 @@
 import { Controller, Get, Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service.js";
 import type { PublicConfig } from "@lehno/contracts";
+import { PRIX_UNITAIRE_PAR_DEFAUT } from "../payments/prix-unitaire.js";
 
 @Injectable()
 export class ConfigService {
@@ -18,7 +19,10 @@ export class ConfigService {
     };
     return {
       signupFreeCredits: num("signup_free_credits", 5),
-      creditUnitPrice: num("credit_unit_price", 100),
+      // Le MÊME défaut que la remise, et pris au même endroit : deux valeurs
+      // divergentes feraient annoncer un prix ici et une réduction calculée
+      // sur un autre là-bas, sur la même offre.
+      creditUnitPrice: num("credit_unit_price", PRIX_UNITAIRE_PAR_DEFAUT),
       currency: "XAF",
       referralBonusInvited: num("referral_bonus_invited", 0),
     };

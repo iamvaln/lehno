@@ -6,6 +6,8 @@ import type {
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { fraisDe, type Bareme } from "./frais.js";
+import { remiseDe } from "./remise.js";
+import { prixUnitaireDuJour } from "./prix-unitaire.js";
 
 /* La recharge par palier, voie semi-manuelle.
  *
@@ -19,16 +21,20 @@ export class RechargeService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async paliers(): Promise<CreditBundle[]> {
-    const lignes = await this.prisma.creditBundle.findMany({
-      where: { isActive: true },
-      orderBy: { position: "asc" },
-    });
+    const [lignes, unitaire] = await Promise.all([
+      this.prisma.creditBundle.findMany({
+        where: { isActive: true },
+        orderBy: { position: "asc" },
+      }),
+      prixUnitaireDuJour(this.prisma),
+    ]);
     return lignes.map((b) => ({
       id: b.id,
       amount: Number(b.amount),
       currency: b.currency,
       credits: b.credits,
-      bonusPercent: b.bonusPercent,
+      // DÉDUIT, plus lu : voir remise.ts pour ce que la colonne saisie coûtait.
+      discountPercent: remiseDe(unitaire, Number(b.amount), b.credits),
       position: b.position,
     }));
   }
@@ -100,6 +106,7 @@ export class RechargeService {
   async apercu(entree: PaymentPreviewInput): Promise<PaymentPreview> {
     const { palier, canal } = await this.lireOffre(entree.bundleId, entree.channelId);
     const f = fraisDe(this.bareme(canal), Number(palier.amount));
+    const unitaire = await prixUnitaireDuJour(this.prisma);
     return {
       amount: Number(palier.amount),
       fee: f.frais,
@@ -107,7 +114,11 @@ export class RechargeService {
       expectedOnAccount: f.attenduSurLeCompte,
       currency: palier.currency,
       credits: palier.credits,
-      bonusPercent: palier.bonusPercent,
+      /* La MÊME formule que la liste des paliers, pas une seconde lecture :
+         l'aperçu doit annoncer exactement ce que la carte annonçait, sinon le
+         chiffre change entre l'écran qui fait choisir et celui qui fait
+         payer. */
+      discountPercent: remiseDe(unitaire, Number(palier.amount), palier.credits),
     };
   }
 
@@ -126,6 +137,7 @@ export class RechargeService {
       throw new AppError("resource_inactive", "this collection account is no longer available");
 
     const f = fraisDe(this.bareme(canal), Number(palier.amount));
+    const unitaire = await prixUnitaireDuJour(this.prisma);
 
     /* Deux déclarations ne peuvent pas citer le même versement.
      *
@@ -158,6 +170,14 @@ export class RechargeService {
            qu'on va le lire. */
         feeAmount: f.frais,
         expectedAmount: f.attenduSurLeCompte,
+        /* Ce que valait un crédit CE JOUR-LÀ, et ce que le palier coûtait.
+           Même doctrine que `feeAmount` juste au-dessus : sans eux, « quelle
+           réduction cette personne a-t-elle obtenue ? » n'est plus
+           reconstructible après un changement de prix — et `creditBundleId`
+           étant en SetNull, supprimer un palier ferait perdre jusqu'à sa
+           référence. */
+        creditUnitPrice: unitaire,
+        bundleAmount: palier.amount,
         status: "pending",
       },
       include: { collectionAccount: true },

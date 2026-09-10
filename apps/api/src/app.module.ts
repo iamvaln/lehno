@@ -16,6 +16,7 @@ import { AttributsService } from "./me/attributs.service.js";
 import { GenerationService } from "./me/generation.service.js";
 import { GenerationController, MessagesController } from "./me/generation.controller.js";
 import { RechargeService } from "./payments/recharge.service.js";
+import { RecuService } from "./payments/recu.service.js";
 import { MethodesService } from "./payments/methodes.service.js";
 import { MethodesController } from "./payments/methodes.controller.js";
 import {
@@ -356,6 +357,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     AttributsService,
     GenerationService,
     RechargeService,
+    RecuService,
     MethodesService,
     CatalogueIAService,
     RouteurIAService,

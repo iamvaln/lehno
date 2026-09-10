@@ -512,13 +512,12 @@ export const fr = {
   rechargeTitre: "Combien de crédits ?",
   rechargeIntro: "Un crédit par contenu créé pour vous.",
   rechargeUnite: (n: number) => n === 1 ? "1 crédit" : n + " crédits",
-  /* LE SIGNE EST CELUI DU CONTRAT, et il était à l'envers.
-     La maquette écrit « −17 % » : une remise sur le prix, qu'elle calcule
-     elle-même en comparant le prix au crédit de deux paliers. Le serveur, lui,
-     sert `bonusPercent` — « la remise, en clair : +20 % offerts », des crédits
-     EN PLUS pour le même prix. Rendre « −20 % » pour un bonus de 20 %
-     annoncerait une réduction qui n'existe pas, et la convertir en remise
-     reviendrait à refaire côté client un calcul que l'administration règle. */
+  /* LE SIGNE EST CELUI DE LA MAQUETTE, et le contrat le dit enfin aussi.
+     La maquette écrit « −17 % » : une réduction sur le prix. Le serveur servait
+     `bonusPercent` — un nom qui annonçait des crédits EN PLUS pour le même
+     prix, soit l'inverse de ce que la valeur portait. Le champ s'appelle
+     maintenant `discountPercent` et se déduit des montants ; les deux disent la
+     même chose, et le signe n'a plus à être arbitré ici. */
   rechargeEconomie: (p: number) => "−" + p + " %",
   rechargeAttenteEnCours: "En attente",
   rechargeAttenteSecours: "Si rien ne s'affiche, composez le code de votre opérateur :",

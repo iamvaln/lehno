@@ -85,33 +85,33 @@ export function palierParDefaut(paliers: readonly CreditBundle[]): string | null
   /* La MÊME source que celle affichée : le champ servi. Choisir sur un autre
      critère ferait présélectionner un palier qui n'est pas celui qui montre le
      meilleur chiffre. */
-  const avecRemise = ordonnes.find((p) => p.bonusPercent !== null && p.bonusPercent > 0);
+  const avecRemise = ordonnes.find((p) => p.discountPercent !== null && p.discountPercent > 0);
   return (avecRemise ?? ordonnes[0])?.id ?? null;
 }
 
 /* LE MOBILE NE CALCULE PAS LA RÉDUCTION, et c'est une décision, pas un oubli.
  *
  * On ne fait confiance qu'au SERVEUR, et un téléphone n'a pas à porter un
- * traitement qu'on peut lui épargner. `bonusPercent` est donc affiché tel
+ * traitement qu'on peut lui épargner. `discountPercent` est donc affiché tel
  * qu'il vient — l'application ne le vérifie pas, ne le recompose pas, et
  * n'appelle pas `/public/config` pour se faire un avis : un aller-retour
  * réseau de moins sur l'appareil, et c'est le réseau qui pèse sur un
  * téléphone, pas le calcul.
  *
- * LA DETTE EST AU SERVEUR, et elle est écrite. `credit_bundle.bonus_percent`
- * est aujourd'hui un entier SAISI À LA MAIN au panneau, que rien ne rattache
- * aux montants qu'il résume : un palier peut annoncer 20 % quand son rapport
- * prix/crédits en vaut cinq. Il a été décidé le 9 septembre que le serveur le
- * CALCULE au moment de servir, depuis `credits × credit_unit_price` et
- * `amount` — voir `specs/manques-contrat-mobile-2026-09-09.md` §9.
+ * LA DETTE ÉTAIT AU SERVEUR, et elle est réglée. `credit_bundle.bonus_percent`
+ * était un entier SAISI À LA MAIN au panneau, que rien ne rattachait aux
+ * montants qu'il résume : un palier pouvait annoncer 20 % quand son rapport
+ * prix/crédits en valait cinq. Le serveur le DÉDUIT désormais au moment de
+ * servir, depuis `credits × credit_unit_price` et `amount` — voir
+ * `apps/api/src/payments/remise.ts` et
+ * `specs/manques-contrat-mobile-2026-09-09.md` §9.
  *
- * Le contrat n'a pas à changer pour ça : seul le remplissage du champ change.
- * C'est pourquoi l'écran lit `bonusPercent` et rien d'autre — le jour où le
- * serveur le calcule, il n'y a rien à retoucher ici.
+ * Rien n'a changé ici que le nom du champ, et c'est ce qui a rendu la reprise
+ * indolore : l'écran lisait déjà la valeur servie et rien d'autre.
  *
  * Une réduction, pas un bonus : elle abaisse le prix, elle n'augmente pas les
- * crédits. D'où « −N % », comme la planche l'écrit. Le nom du champ dit le
- * contraire de ce qu'il porte ; c'est signalé au même endroit.
+ * crédits. D'où « −N % », comme la planche l'écrit — et le champ s'appelle
+ * maintenant `discountPercent`, qui le dit.
  */
 
 // ── Le moyen de payer ───────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ export interface Recap {
  *
  * LES FRAIS NULS NE SE MONTRENT PAS. « frais 0 » n'apprend rien et fait
  * douter : on cherche ce qu'on n'a pas vu, on relit, on recompte. La ligne
- * n'existe que s'il y a quelque chose à dire — même règle que `bonusPercent`
+ * n'existe que s'il y a quelque chose à dire — même règle que `discountPercent`
  * au contrat, « la ligne ne doit alors pas exister plutôt qu'afficher +0 % ».
  */
 export function recapDuPaiement(apercu: PaymentPreview): Recap {
@@ -166,7 +166,7 @@ export function recapDuPaiement(apercu: PaymentPreview): Recap {
        différentes feraient un récapitulatif qui contredit la liste dont il
        vient — le pire endroit pour un désaccord de chiffres, juste avant de
        payer. */
-    bonus: apercu.bonusPercent !== null && apercu.bonusPercent > 0 ? apercu.bonusPercent : null,
+    bonus: apercu.discountPercent !== null && apercu.discountPercent > 0 ? apercu.discountPercent : null,
     montant: apercu.amount,
     frais: apercu.fee > 0 ? apercu.fee : null,
     total: apercu.amountToSend,

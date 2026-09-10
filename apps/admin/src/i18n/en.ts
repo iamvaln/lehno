@@ -417,7 +417,7 @@ export const en: typeof fr = {
       paliers: {
         titre: "Purchase bundles",
         sous: "What we offer. No free amounts: the smallest bundle sets the minimum.",
-        col: { montant: "Price", credits: "Credits", remise: "Bonus", position: "Order", etat: "State" },
+        col: { montant: "Price", credits: "Credits", remise: "Discount", position: "Order", etat: "State" },
       },
       canaux: {
         titre: "Channels and fees",
