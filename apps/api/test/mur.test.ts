@@ -100,8 +100,35 @@ describe("le Mur et la collecte", () => {
   it("naît non publié, et sa page est alors introuvable", async () => {
     const vu = await mur.get(awa);
     expect(vu.isEnabled).toBe(false);
-    expect(vu.publicUrl).toBe(`${SITE}/awa`);
+    expect(vu.publicUrl).toBe(`${SITE}/m/awa`);
     await expect(mur.parPseudo("awa")).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  /* LES ADRESSES SERVIES OUVRENT SUR QUELQUE CHOSE — c'est la seule chose que
+     cette épreuve garde, et elle manquait.
+   *
+   * Le Mur composait `${site}/<pseudo>` et `${site}/wish/<jeton>` : deux
+   * chemins que le site ne sert pas. Le premier est celui que l'application
+   * affiche et que « Partager » envoie ; il partait mort, et celui qui
+   * l'ouvrait concluait que le Mur n'existait pas.
+   *
+   * Rien ne pouvait le voir : une chaîne bien formée qui désigne une page
+   * absente reste une chaîne bien formée. D'où une garde qui compare aux CINQ
+   * surfaces que le site sert vraiment — `/c/`, `/i/`, `/l/`, `/m/`, `/v/` —
+   * plutôt qu'à la forme d'une URL. Ajouter une sixième surface au site sans
+   * la déclarer ici fera tomber ce test, et c'est voulu. */
+  it("compose des adresses que le site sert vraiment", async () => {
+    const SURFACES = ["c", "i", "l", "m", "v"];
+    const segment = (url: string): string => url.slice(SITE.length + 1).split("/")[0] ?? "";
+
+    const vu = await mur.get(awa);
+    expect(SURFACES).toContain(segment(vu.publicUrl));
+
+    /* Le lien de vœux n'existe que dans sa fenêtre : on la fabrique, sans quoi
+       l'épreuve passerait sur un `null` sans rien avoir vérifié. */
+    await soi(awa, 2);
+    const lien = await mur.lienDeVoeux(awa);
+    expect(segment(lien.url)).toBe("v");
   });
 
   /* Garde le 404 sur le Mur d'un compte SUSPENDU. Une suspension qui laisse la
