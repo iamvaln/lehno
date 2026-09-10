@@ -105,9 +105,21 @@ export default function Identite() {
       };
       if (creation) {
         await appel<unknown>("/me/persons", { method: "POST", body: JSON.stringify(corps) });
-      } else {
-        await appel<unknown>(`/me/persons/${id}`, { method: "PATCH", body: JSON.stringify(corps) });
+        /* ON REMPLACE, ON NE REVIENT PAS. Cet écran vit dans la pile de
+           l'onglet des proches, et `back()` ramène à l'écran PRÉCÉDENT — qui
+           peut appartenir à un autre onglet, l'accueil quand on crée son
+           premier proche depuis l'état vide. Le formulaire restait alors sur la
+           pile : revenir à « Proches » rouvrait la saisie qu'on venait
+           d'enregistrer, encore remplie, au lieu du carnet.
+
+           Remplacer le pose sur le carnet — où le proche qu'on vient de créer
+           se voit, ce qui est aussi la meilleure réponse à ce qu'on a fait. */
+        routeur.replace("/(app)/proches");
+        return;
       }
+      await appel<unknown>(`/me/persons/${id}`, { method: "PATCH", body: JSON.stringify(corps) });
+      // Une correction revient d'où elle vient : la fiche qu'on était en train
+      // de lire, et qu'on veut retrouver telle qu'on l'a laissée.
       routeur.back();
     } catch (e) {
       setErreur(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
