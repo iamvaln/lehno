@@ -20,6 +20,8 @@ const PAIEMENTS = { items: [PAIEMENT], nextCursor: null };
 const DETAIL = {
   ...PAIEMENT, etat: "succeeded", recuSurLeCompte: 900, ecart: -100,
   reference: "MP260826.1200.A11111", motifEchec: null, frais: 20,
+  // La PRÉSENCE d'un reçu, jamais sa clé — voir paiementDetailSchema.
+  recu: false,
   compteCollecte: "Orange Money principal",
   histoire: [
     {
@@ -42,7 +44,7 @@ const MOUVEMENTS = {
 };
 
 const PALIERS = { items: [{ id: "b-1", montant: 1000, devise: "XAF", credits: 10, remisePourcent: null, position: 2, actif: true }] };
-const CANAUX = { items: [{ id: "c-1", nature: "mobile_money", operateur: "mtn_momo", pays: "CM", libelle: "MTN Mobile Money", fraisPourcent: 2, fraisFixe: 0, fraisMin: null, fraisMax: null, fraisPortesPar: "payer", devise: "XAF", actif: true, position: 1 }] };
+const CANAUX = { items: [{ id: "c-1", nature: "mobile_money", operateur: "mtn_momo", pays: "CM", libelle: "MTN Mobile Money", fraisPourcent: 2, fraisFixe: 0, fraisMin: null, fraisMax: null, fraisPortesPar: "payer", devise: "XAF", ussd: null, actif: true, position: 1 }] };
 const COMPTES = { items: [{ id: "a-1", libelle: "Orange Money principal", operateur: "orange_money", numero: "690000000", visibleDansApp: true, actif: true, position: 1 }] };
 
 const reponse = (statut: number, corps?: unknown): Response =>

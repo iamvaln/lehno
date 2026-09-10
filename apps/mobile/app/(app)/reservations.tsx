@@ -132,7 +132,12 @@ export default function Reservations() {
                 « ce que je dois acheter avant telle date », jamais l'un sans
                 l'autre. */}
             <Text style={[styles.qui, { color: couleurs.textMention }]} numberOfLines={1}>
-              {r.ownerDisplayName} · {dateCourte(r.occurrenceDate, langue)}
+              {/* SANS OCCASION, on ne met pas de point milieu devant le vide :
+                  une liste qui ne vise aucune date n'a rien à annoncer, et
+                  « Awa · » se lirait comme une date qui n'a pas chargé. */}
+              {r.occurrenceDate === null
+                ? r.ownerDisplayName
+                : `${r.ownerDisplayName} · ${dateCourte(r.occurrenceDate, langue)}`}
             </Text>
           </View>
           {/* `showIdentity` est une DONNÉE : elle dit si l'on s'est fait
