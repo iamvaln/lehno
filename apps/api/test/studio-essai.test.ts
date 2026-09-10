@@ -7,6 +7,8 @@ import { StudioEssaiService } from "../src/studio/essai.service.js";
 import {
   SEUIL_PANNE, reglagesMessageDeDepart,
   type ProfilContenu, type ReglagesMessage,
+
+  reglagesPortraitDeDepart,
 } from "@lehno/contracts";
 import { StockageMemoire } from "../src/stockage/memoire.adapter.js";
 
@@ -228,6 +230,65 @@ describe("l'essai du studio", () => {
   /* Un modèle qu'on ne connaît pas n'est pas une panne, c'est une erreur de
      saisie : on refuse AVANT d'écrire quoi que ce soit, plutôt que d'écrire
      une ligne de dépense qui ne se rattache à aucun modèle du catalogue. */
+  /* L'ESSAI DU PORTRAIT PASSE PAR LE BRIEF, comme la production.
+   *
+   * Il envoyait les notes du profil DIRECTEMENT au modèle d'image. Deux
+   * conséquences : les notes traversaient jusqu'au fournisseur — comme celles
+   * d'un vrai carnet le faisaient avant —, et surtout l'établi n'éprouvait plus
+   * ce que la production rend. C'est le trou même que le découpage en deux
+   * configurations a bouché ailleurs : « publier un changement de style de
+   * dessin se débloquait avec un essai qui avait produit un texte ». */
+  it("passe par le brief, et n'envoie au modèle d'image que les mots retenus", async () => {
+    const brief = JSON.stringify({
+      mots: ["la terre sous les ongles", "un four qui chauffe"],
+      phrase: "Celle qui recommence jusqu'à ce que ça tienne.",
+    });
+    /* UN SEUL DOUBLE POUR LES DEUX APPELS : le premier rend le brief, le second
+       l'image. C'est ce qui permet de lire ce que chacun a reçu. */
+    let appel = 0;
+    const double = faux(() => ({ contenu: appel++ === 0 ? brief : "aW1hZ2U=" }));
+    monter({ anthropic: double, xai: double, openai: double });
+
+    /* Les modèles que les réglages désignent, ET la chaîne du brief : celui-ci
+       passe par le routeur, pas par un modèle nommé — comme en production. */
+    await modele("openai", "gpt-image-2");
+    const cerveau = await modele("anthropic", "brief");
+    await db.prisma.aITaskRoute.create({
+      data: { task: "portrait_brief", modelId: cerveau.id, rank: 1 },
+    });
+    const p = await profil();
+    await essais.essayerPortrait(adminId, reglagesPortraitDeDepart(), p.id, "nature");
+
+    expect(vus).toHaveLength(2);
+    // Le brief reçoit la matière, comme le modèle de texte de la production.
+    expect(vus[0]!.invite).toContain("Reprise de la poterie");
+    expect(vus[0]!.invite).toContain("les surprises");
+    // L'image ne reçoit QUE les mots retenus.
+    expect(vus[1]!.invite).toContain("la terre sous les ongles");
+    expect(vus[1]!.invite).not.toContain("Reprise de la poterie");
+    expect(vus[1]!.invite).not.toContain("Léa");
+  });
+
+  /* Un établi doit dire LEQUEL des deux appels a raté. Sans ça, on reprend un
+     réglage d'image pour un défaut de texte — et on cherche longtemps. */
+  it("nomme l'échec du brief plutôt que de le confondre avec celui de l'image", async () => {
+    const double = faux(() => ({ contenu: "pas du JSON" }));
+    monter({ anthropic: double, xai: double, openai: double });
+
+    await modele("openai", "gpt-image-2");
+    const cerveau = await modele("anthropic", "brief");
+    await db.prisma.aITaskRoute.create({
+      data: { task: "portrait_brief", modelId: cerveau.id, rank: 1 },
+    });
+    const p = await profil();
+    const { essai } = await essais.essayerPortrait(adminId, reglagesPortraitDeDepart(), p.id, "nature");
+
+    expect(essai.etat).toBe("error");
+    expect(essai.erreur).toBe("brief_failed");
+    // L'image n'a PAS été appelée : on ne paie pas un dessin sans brief.
+    expect(vus).toHaveLength(1);
+  });
+
   it("refuse un modèle absent du catalogue sans rien écrire", async () => {
     monter({ anthropic: faux(() => ({ contenu: "voilà" })) });
     const p = (await profil()).id;

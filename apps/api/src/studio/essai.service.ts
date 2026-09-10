@@ -2,7 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import {
   consigneSysteme, invite, profilContenuSchema,
-  type ContexteMessage, type EssaiStudio, type ProfilContenu,
+  consigneSystemePortrait, invitePortrait, inviteImagePortrait,
+  type ContexteMessage, type ContextePortrait, type EssaiStudio, type ProfilContenu,
   type ReglagesMessage, type ReglagesPortrait, type VerdictEssai,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -185,10 +186,40 @@ export class StudioEssaiService {
       };
     }
 
+    /* LE BRIEF D'ABORD, comme en production.
+     *
+     * L'essai envoyait les notes du profil DIRECTEMENT au modèle d'image. Ce
+     * n'est plus ce que fait la production : un modèle de texte lit les notes
+     * et rend les mots qui comptent, et c'est eux seuls qui traversent.
+     *
+     * Sans ce premier appel ici, l'établi n'éprouverait plus ce que la
+     * production rend — le trou même que le découpage en deux configurations a
+     * bouché ailleurs : « publier un changement de style de dessin se
+     * débloquait avec un essai qui avait produit un texte ».
+     *
+     * Le modèle du brief n'est PAS un réglage du studio : il vient de la chaîne
+     * `portrait_brief`, comme en production. Le studio règle ce qui touche à
+     * l'image ; le brief est du texte. */
+    const brief = await this.briefDuProfil(ambiance, contenu);
+    if (brief === null) {
+      return {
+        configId: config.id,
+        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, ambianceId, modele, {
+          status: "error", errorCode: "brief_failed",
+        })),
+      };
+    }
+
     const tache = ambiance.groupe === "photo_style" ? "photo_style" as const : "illustration" as const;
     const resultat = await this.routeur.appelerUnSeulModele(
       tache,
-      { invite: this.composerPortrait(ambiance.consigne[contenu.langue], contenu) },
+      {
+        invite: inviteImagePortrait(
+          brief,
+          ambiance.consigne[contenu.langue],
+          ambiance.groupe === "photo_style" ? reglages.motifs.bande : reglages.motifs.fondSansImage,
+        ),
+      },
       adaptateur,
       modele,
       { origine: "studio_trial", userId: null, actionRunId: null },
@@ -213,19 +244,58 @@ export class StudioEssaiService {
     return { configId: config.id, essai: await this.rendre(ligne) };
   }
 
-  /* La consigne de l'ambiance, et le profil. RIEN D'AUTRE.
+  /* LE BRIEF DU PROFIL SIMULÉ, par le même gabarit que la production.
    *
-   * Les garde-fous et la consigne commune appartiennent au message : les
-   * glisser ici enverrait au modèle d'image des instructions sur des tournures
-   * de phrase, et l'empreinte du portrait retomberait à chaque fois qu'on
-   * reformulerait un garde-fou du texte. */
-  private composerPortrait(consigne: string, profil: ProfilContenu): string {
-    const parties = [consigne];
-    /* Le CONTENU des notes, pas leur structure : le modèle d'image n'a que
-       faire d'une catégorie ou d'une date. */
-    if (profil.notes.length > 0) parties.push(profil.notes.map((n) => n.contenu).join(" "));
-    if (profil.texteLibre) parties.push(profil.texteLibre);
-    return parties.join("\n\n");
+   * Il remplace un assemblage qui collait les notes du profil derrière la
+   * consigne d'ambiance et envoyait le tout au modèle d'image. Deux raisons de
+   * l'avoir retiré : la production ne fait plus ça, et l'établi doit montrer ce
+   * qui tournera ; et les notes du profil ne traversent plus jusqu'au
+   * fournisseur d'image, comme celles d'un vrai carnet.
+   *
+   * `null` quand le brief échoue. L'essai le consigne alors comme une erreur
+   * nommée plutôt que de remonter : un établi doit dire LEQUEL des deux appels
+   * a raté, sans quoi on reprend un réglage d'image pour un défaut de texte. */
+  private async briefDuProfil(
+    ambiance: { groupe: string; consigne: { fr: string; en: string } },
+    profil: ProfilContenu,
+  ): Promise<{ mots: string[] } | null> {
+    const contexte: ContextePortrait = {
+      langue: profil.langue,
+      orientation: profil.orientation,
+      nomDUsage: profil.nomDUsage,
+      relation: profil.relation,
+      genreDuProche: profil.genreDuProche,
+      notes: profil.notes.map((n) => ({ categorie: n.categorie, contenu: n.contenu })),
+      /* Un profil simulé n'a pas d'attributs : il porte des notes et un texte
+         libre, pas de goûts relevés. Le gabarit sait s'en passer — il le dit
+         quand il n'a ni l'un ni l'autre. */
+      attributs: [],
+      /* Le profil PORTE ses rejets — le schéma l'exige. Ils entrent dans le
+         brief comme une interdiction, exactement comme un `dislikes_nogo` d'un
+         vrai carnet : c'est le seul endroit où ils sont tenables, puisque le
+         modèle d'image ne verra jamais que les mots retenus. */
+      aEviter: profil.aEviter,
+      texteLibre: profil.texteLibre,
+      consigneAmbiance: ambiance.consigne[profil.langue],
+    };
+
+    try {
+      const reponse = await this.routeur.executer(
+        "portrait_brief",
+        { invite: invitePortrait(contexte), systeme: consigneSystemePortrait(contexte) },
+        this.adaptateurs,
+        { origine: "studio_trial", userId: null, actionRunId: null },
+      );
+      const objet = JSON.parse(
+        reponse.contenu.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "").trim(),
+      ) as { mots?: unknown };
+      const mots = Array.isArray(objet.mots)
+        ? objet.mots.filter((m): m is string => typeof m === "string")
+        : [];
+      return mots.length > 0 ? { mots } : null;
+    } catch {
+      return null;
+    }
   }
 
   private composer(reglages: ReglagesMessage, profil: ProfilContenu): { systeme: string; invite: string } {
