@@ -34,6 +34,8 @@ export interface TransactionManuelleProps {
   comptes: CompteChoisi[];
   onChercher: (terme: string) => void;
   onEcrire: (mouvement: MouvementManuel) => void;
+  /** Les motifs que le registre propose pour `credit_adjust`. */
+  motifs?: readonly { code: string; libelle: string }[];
   onRetour?: (id?: string) => void;
 }
 
@@ -50,7 +52,7 @@ const OPTIONS: Record<Option, { nature: MouvementManuel["nature"]; signe: 1 | -1
 const ENTIER_POSITIF = /^\d+$/;
 
 export function TransactionManuelle({
-  langue = "fr", comptes, onChercher, onEcrire, onRetour,
+  langue = "fr", comptes, onChercher, onEcrire, onRetour, motifs = [],
 }: TransactionManuelleProps): ReactNode {
   const t = messages(langue);
   const d = t.transactionManuelle;
@@ -136,15 +138,20 @@ export function TransactionManuelle({
           titre={d.dialogue.titre}
           consequence={d.dialogue.consequence}
           destructif={signe === -1}
-          motifs={d.dialogue.motifs}
+          /* Les motifs du REGISTRE, et non la liste du dictionnaire : le
+             serveur exige le code sur `credit_adjust` et refuse en 422 sans
+             lui. La liste locale ne portait que des libellés, qui ne se
+             comptent pas — ils sont bilingues. */
+          motifs={motifs.length > 0 ? motifs : d.dialogue.motifs}
           libelles={t.confirmation}
-          onConfirmer={(motif) => {
+          onConfirmer={(motif, code) => {
             setConfirme(false);
             onEcrire({
               utilisateurId: compte.id,
               montant: signe * quantite,
               nature: OPTIONS[option].nature,
               reason: motif,
+              ...(code !== undefined ? { reasonCode: code } : {}),
             });
           }}
           onAnnuler={() => setConfirme(false)}

@@ -50,7 +50,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 import { useRessource } from "./api/hooks.js";
 import {
   canauxSchema, catalogueIaSchema, chainesIaSchema, comptesAdminSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
-  urlMediaRenduSchema,
+  urlMediaRenduSchema, motifsAdminSchema,
   pageAssistanceSchema, pageContactSchema, pageAttenteSchema, pageRetoursSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
@@ -576,6 +576,42 @@ export function App(): ReactNode {
     [section, tourModeles],
   );
 
+  /* LE REGISTRE DES MOTIFS, lu UNE FOIS pour tout l'outil.
+   *
+   * Le serveur EXIGE un code de motif sur tout geste qui en propose — c'est la
+   * table qui décide, pas le schéma. L'outil n'en envoyait aucun : neuf gestes
+   * étaient refusés en 422, dont changer un paramètre, confirmer un versement
+   * et ajuster des crédits. Rien ne le signalait, parce que les épreuves
+   * d'écran simulent le serveur et que celles de l'API envoient le code.
+   *
+   * Un seul appel, et non un par dialogue : les motifs ne changent pas pendant
+   * une séance, et quinze appels au moment d'ouvrir quinze dialogues feraient
+   * clignoter chaque confirmation. */
+  const etatMotifs = useRessource(
+    /* APRÈS LA CONNEXION, jamais avant. Sans la dépendance à `connecte`, la
+       lecture partait au montage — c'est-à-dire sur l'écran de connexion, sans
+       jeton : elle rendait 401, et n'était jamais reprise. Les listes de motifs
+       restaient vides, et tout geste que le registre couvre repartait sans
+       code, donc en 422. Le défaut se voyait à l'écran, pas dans les épreuves :
+       celles-ci ouvrent l'application AVEC une session déjà écrite. */
+    () => (connecte
+      ? api.appeler("/admin/reasons/all", { schema: motifsAdminSchema })
+      : Promise.resolve(null)),
+    [connecte],
+  );
+
+  /* Les motifs d'un geste, dans la langue de lecture. Vide quand le registre
+     n'en propose pas : le dialogue retombe alors sur « Autre — préciser », et
+     le serveur n'exige rien. */
+  const motifsDe = (geste: string): { code: string; libelle: string }[] =>
+    (etatMotifs.statut === "pret" ? etatMotifs.donnees?.motifs ?? [] : [])
+      /* RETIRÉS EXCLUS. Le registre les garde pour qu'on puisse les remettre,
+         mais le serveur refuse un code retiré : les proposer ferait échouer le
+         geste après coup, avec un motif choisi dans une liste qu'on venait
+         d'offrir. */
+      .filter((m) => m.actif && m.gestes.includes(geste))
+      .map((m) => ({ code: m.code, libelle: langue === "en" ? m.en : m.fr }));
+
   const etatDrapeaux = useRessource(
     () => (section === "fonctionnalites"
       ? api.appeler("/admin/feature-flags", { schema: drapeauxAdminSchema })
@@ -901,6 +937,7 @@ export function App(): ReactNode {
     vue = (
       <TransactionManuelle
         langue={langue}
+        motifs={motifsDe("credit_adjust")}
         comptes={(etatComptesMouvement.statut === "pret" && etatComptesMouvement.donnees
           ? etatComptesMouvement.donnees.items
           : []
@@ -937,6 +974,8 @@ export function App(): ReactNode {
       role,
       langue,
       onglet: ongletCredits,
+      motifsConfirmer: motifsDe("payment_confirm"),
+      motifsRejeter: motifsDe("payment_reject"),
       onEnregistrerReglage: (
         cible: "palier" | "canal" | "compte",
         id: string | null,
@@ -1279,9 +1318,14 @@ export function App(): ReactNode {
             // son accès, et le serveur refuse les deux.
             moiId={page.items.find((a) => a.email === api.session()?.email)?.id ?? ""}
             comptes={page.items}
+            motifsDuGeste={motifsDe}
             onInviter={(invitation) => ecrireAcces("/admin/admins", "POST", invitation)}
-            onChangerRole={(id, role, reason) => ecrireAcces(`/admin/admins/${id}`, "PATCH", { role, reason })}
-            onRevoquer={(id, reason) => ecrireAcces(`/admin/admins/${id}`, "DELETE", { reason })}
+            onChangerRole={(id, role, reason, reasonCode) => ecrireAcces(`/admin/admins/${id}`, "PATCH", {
+              role, reason, ...(reasonCode !== undefined ? { reasonCode } : {}),
+            })}
+            onRevoquer={(id, reason, reasonCode) => ecrireAcces(`/admin/admins/${id}`, "DELETE", {
+              reason, ...(reasonCode !== undefined ? { reasonCode } : {}),
+            })}
             onRetour={aller}
           />
         ) : null)}
@@ -1375,12 +1419,16 @@ export function App(): ReactNode {
                 }
               })();
             }}
-            onBasculer={(modele, actif, motif) => {
+            motifsDuGeste={motifsDe}
+            onBasculer={(modele, actif, motif, code) => {
               void (async () => {
                 try {
                   await api.appeler("/admin/ai-models", {
                     methode: "PATCH",
-                    corps: { id: modele.id, enabled: actif, reason: motif },
+                    corps: {
+                      id: modele.id, enabled: actif, reason: motif,
+                      ...(code !== undefined ? { reasonCode: code } : {}),
+                    },
                   });
                 } catch (echec) {
                   /* Le serveur refuse d'éteindre le dernier modèle en service
@@ -1632,7 +1680,8 @@ export function App(): ReactNode {
                 }
               })();
             }}
-            onEnregistrer={(valeurs, motif) => {
+            motifs={motifsDe("parameter_update")}
+            onEnregistrer={(valeurs, motif, code) => {
               void (async () => {
                 // Un paramètre à la fois : le serveur écrit et journalise chaque
                 // clé dans sa propre transaction, et une écriture refusée ne
@@ -1642,7 +1691,13 @@ export function App(): ReactNode {
                   if (!avant || String(avant.valeur) === String(parametre.valeur)) continue;
                   await api.appeler("/admin/parameters", {
                     methode: "PATCH",
-                    corps: { key: parametre.cle, value: String(parametre.valeur), reason: motif },
+                    corps: {
+                      key: parametre.cle, value: String(parametre.valeur), reason: motif,
+                      /* LE CODE, exigé par le serveur sur tout geste que le
+                         registre couvre. Sans lui : 422 `reason_code_unknown`,
+                         et le paramètre ne change pas. */
+                      ...(code !== undefined ? { reasonCode: code } : {}),
+                    },
                   });
                 }
                 setTourParametres((n) => n + 1);

@@ -54,8 +54,19 @@ const reponse = (statut: number, corps?: unknown): Response =>
     headers: corps === undefined ? {} : { "content-type": "application/json" },
   });
 
+/* LE REGISTRE DES MOTIFS, comme en production : l'outil le lit au démarrage et
+   en tire ceux de chaque geste. Sans lui, les listes seraient vides — et c'est
+   exactement l'état qui rendait ces gestes impossibles. */
+const MOTIFS = {
+  motifs: [
+    { id: "11111111-1111-4111-8111-111111111111", code: "cost_too_high", fr: "Coût trop élevé", en: "Cost too high", actif: true, gestes: ["ai_model_disable"] },
+    { id: "22222222-2222-4222-8222-222222222222", code: "back_to_normal", fr: "Retour à la normale", en: "Back to normal", actif: true, gestes: ["ai_model_enable"] },
+  ],
+};
+
 function serveur(routes: Record<string, (url: string, init?: RequestInit) => Response>) {
   const appels = vi.fn((url: string, init?: RequestInit) => {
+    if (url.includes("/admin/reasons")) return Promise.resolve(reponse(200, MOTIFS));
     for (const [chemin, rendre] of Object.entries(routes)) {
       if (url.includes(chemin)) return Promise.resolve(rendre(url, init));
     }
@@ -144,14 +155,18 @@ describe("les modèles d'IA", () => {
     await utilisateur.click(await screen.findByRole("menuitem", { name: t.modeles.eteindre }));
     await utilisateur.selectOptions(
       screen.getByLabelText(t.confirmation.motif),
-      t.modeles.dialogueEteindre.motifs[0] as string,
+      "cost_too_high",
     );
     await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
 
     await waitFor(() => {
       expect(ecritures(appels)).toHaveLength(1);
       const corps = JSON.parse((ecritures(appels)[0]?.[1] as RequestInit).body as string);
-      expect(corps).toEqual({ id: "m-1", enabled: false, reason: t.modeles.dialogueEteindre.motifs[0] });
+      /* LE CODE PART AVEC LE MOTIF : le serveur l'exige sur `ai_model_disable`,
+         et refusait en 422 sans lui. */
+      expect(corps).toEqual({
+        id: "m-1", enabled: false, reason: "Coût trop élevé", reasonCode: "cost_too_high",
+      });
     });
   });
 
@@ -173,7 +188,7 @@ describe("les modèles d'IA", () => {
     await utilisateur.click(await screen.findByRole("menuitem", { name: t.modeles.eteindre }));
     await utilisateur.selectOptions(
       screen.getByLabelText(t.confirmation.motif),
-      t.modeles.dialogueEteindre.motifs[0] as string,
+      "cost_too_high",
     );
     await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
 

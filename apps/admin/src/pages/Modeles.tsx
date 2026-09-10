@@ -31,13 +31,16 @@ export interface ModelesProps {
   langue?: Langue;
   modeles: ModeleIa[];
   chaines?: ChaineIa[];
-  onBasculer?: (modele: ModeleIa, actif: boolean, motif: string) => void;
+  onBasculer?: (modele: ModeleIa, actif: boolean, motif: string, code?: string) => void;
+  /** Les motifs du registre, par geste — allumer et éteindre n'ont pas les mêmes. */
+  motifsDuGeste?: (geste: string) => readonly { code: string; libelle: string }[];
   onReordonner?: (tache: string, modeleIds: string[], motif: string) => void;
   onRetour?: (id: string) => void;
 }
 
 export function Modeles({
   role, langue = "fr", modeles, chaines = [], onBasculer, onReordonner, onRetour,
+  motifsDuGeste = () => [],
 }: ModelesProps): ReactNode {
   const t = messages(langue);
   const [geste, setGeste] = useState<ModeleIa | null>(null);
@@ -190,7 +193,9 @@ export function Modeles({
           destructif={geste.actif}
           titre={dialogue.titre.replace("{modele}", geste.modele)}
           consequence={dialogue.consequence}
-          motifs={[...dialogue.motifs]}
+          /* Le serveur exige le code sur `ai_model_enable` et
+             `ai_model_disable` : sans lui, basculer un modèle rend 422. */
+          motifs={motifsDuGeste(geste.actif ? "ai_model_disable" : "ai_model_enable")}
           libelles={{
             motif: t.confirmation.motif,
             choisir: t.confirmation.motifManquant,
@@ -201,8 +206,8 @@ export function Modeles({
             confirmer: t.confirmation.confirmer,
           }}
           onAnnuler={() => setGeste(null)}
-          onConfirmer={(motif) => {
-            onBasculer?.(geste, !geste.actif, motif);
+          onConfirmer={(motif, code) => {
+            onBasculer?.(geste, !geste.actif, motif, code);
             setGeste(null);
           }}
         />
