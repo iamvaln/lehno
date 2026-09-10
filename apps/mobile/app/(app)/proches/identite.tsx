@@ -10,7 +10,7 @@ import {
   type PersonRelation,
 } from "@lehno/contracts";
 import {
-  nativeBorder, nativeFont, nativeSpace,
+  nativeBorder, nativeFont, nativeRadius, nativeSpace,
 } from "@lehno/tokens";
 import {
   Avatar, Button, Icon, SectionLabel, TextField, useCouleurs,
@@ -22,6 +22,9 @@ import { messageDErreur } from "../../../lib/session.js";
 import {
   CLES_DE_CANAL, CLES_DE_GENRE, CLES_DE_REGISTRE, CLES_DE_RELATION,
 } from "../../../lib/libelles.js";
+import { naissanceAEnvoyer, naissanceLue } from "../../../lib/carnet.js";
+import { nomsDesMois } from "../../../lib/evenement.js";
+import { Bascule } from "../../../composants/Bascule.js";
 
 /* L'identité d'un proche — et sa création.
  *
@@ -55,6 +58,14 @@ export default function Identite() {
   const [nom, setNom] = useState("");
   const [appelle, setAppelle] = useState("");
   const [relation, setRelation] = useState<PersonRelation | null>(null);
+  /* LA NAISSANCE — le champ qui manquait. Sans lui, on créait un proche, on se
+     voyait refuser son anniversaire faute de naissance, et l'écran renvoyait
+     vers CETTE fiche, qui ne l'offrait pas. La promesse du produit — être là le
+     jour J — était inatteignable. */
+  const [jourNe, setJourNe] = useState<number | null>(null);
+  const [moisNe, setMoisNe] = useState<number | null>(null);
+  const [anneeNee, setAnneeNee] = useState("");
+  const [anneeConnue, setAnneeConnue] = useState(true);
   const [genre, setGenre] = useState<PersonGender | null>(null);
   const [souvenir, setSouvenir] = useState("");
   const [registre, setRegistre] = useState<PersonRegister | null>(null);
@@ -75,6 +86,13 @@ export default function Identite() {
     setRegistre(fiche.register);
     setCanal(fiche.preferredChannel);
     setVille(fiche.city ?? "");
+    /* On ne montre PAS l'année de support quand elle est inconnue : l'afficher
+       la ferait passer pour un fait, alors qu'elle est notre invention. */
+    const nee = naissanceLue(fiche.birthDate, fiche.birthYearKnown);
+    setJourNe(nee.jour);
+    setMoisNe(nee.mois);
+    setAnneeNee(nee.annee ? String(nee.annee) : "");
+    setAnneeConnue(nee.anneeConnue);
     setPret(true);
   }, [id]);
 
@@ -102,6 +120,14 @@ export default function Identite() {
         ...(registre ? { register: registre } : {}),
         ...(canal ? { preferredChannel: canal } : {}),
         ...(ville.trim() ? { city: ville.trim() } : {}),
+        /* Rien tant que la date est incomplète : un jour sans mois ferait une
+           date bancale que le serveur refuserait sans dire laquelle des deux
+           moitiés manquait. */
+        ...(naissanceAEnvoyer({
+          jour: jourNe, mois: moisNe,
+          annee: anneeNee.trim() ? Number(anneeNee.trim()) : null,
+          anneeConnue,
+        }) ?? {}),
       };
       if (creation) {
         await appel<unknown>("/me/persons", { method: "POST", body: JSON.stringify(corps) });
@@ -205,6 +231,63 @@ export default function Identite() {
         </View>
 
         <View style={[styles.bloc]}>
+          <SectionLabel>{t.identNaissance}</SectionLabel>
+          {/* JOUR PUIS MOIS, comme l'écran d'événement les pose : une rangée
+              qui défile pour les trente et un, une grille pour les douze. Un
+              sélecteur natif demanderait une année — et c'est justement elle
+              qu'on ignore le plus souvent. */}
+          <Text style={[styles.sousTitre, { color: couleurs.textSecondary }]}>{t.evtJour}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.rangee}
+          >
+            {JOURS.map((j) => (
+              <Pastille
+                key={j}
+                actif={jourNe === j}
+                libelle={String(j)}
+                appuie={() => setJourNe(j)}
+              />
+            ))}
+          </ScrollView>
+
+          <Text style={[styles.sousTitre, { color: couleurs.textSecondary }]}>{t.evtMois}</Text>
+          <View style={styles.pastilles}>
+            {nomsDesMois(langue).map((nom, i) => (
+              <Pastille
+                key={nom}
+                actif={moisNe === i + 1}
+                libelle={nom}
+                appuie={() => setMoisNe(i + 1)}
+              />
+            ))}
+          </View>
+
+          {/* L'ANNÉE EST À PART, et elle se déclare inconnue. On sait le jour et
+              le mois d'un anniversaire bien plus souvent que l'âge — et le
+              contrat porte `birthYearKnown` exactement pour ça : « on suit
+              alors l'anniversaire sans pouvoir annoncer d'âge ». */}
+          <View style={styles.bascule}>
+            <Bascule
+              actif={!anneeConnue}
+              libelle={t.identAnneeInconnue}
+              onBascule={() => setAnneeConnue((v) => !v)}
+            />
+          </View>
+          {anneeConnue ? (
+            <TextField
+              label={t.identAnnee}
+              nature="code"
+              value={anneeNee}
+              onChangeText={setAnneeNee}
+            />
+          ) : null}
+          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.identNaissanceAide}</Text>
+        </View>
+
+        <View style={[styles.bloc]}>
           {/* DEUX valeurs, parce que c'est un accord et non une identité :
               un accord français n'a que deux formes. Aucune phrase de
               l'interface ne s'en sert — seule la génération le reçoit. */}
@@ -282,6 +365,20 @@ export default function Identite() {
 }
 
 const styles = StyleSheet.create({
+  /* Reprises telles quelles de l'écran d'événement : le jour et le mois s'y
+     choisissent de la même façon, et deux dessins pour un même geste se
+     mettraient à diverger. */
+  sousTitre: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[12] },
+  pastilles: { flexDirection: "row", flexWrap: "wrap", gap: nativeSpace[6], marginTop: nativeSpace[8] },
+  rangee: { flexDirection: "row", gap: nativeSpace[6], paddingTop: nativeSpace[8] },
+  pastille: {
+    minHeight: 38, minWidth: 38, paddingHorizontal: nativeSpace[14],
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: nativeSpace[6],
+    borderRadius: nativeRadius.pill, borderWidth: nativeBorder.width,
+  },
+  pastilleTexte: { fontFamily: nativeFont.bodySemibold, fontSize: 13 },
+  bascule: { marginTop: nativeSpace[12] },
+
   retour: { width: 44, height: 44, marginLeft: -nativeSpace[12], alignItems: "center", justifyContent: "center" },
   entete: { flexDirection: "row", alignItems: "center", gap: nativeSpace[12], marginBottom: nativeSpace[16] },
   titres: { flex: 1, minWidth: 0 },
@@ -294,3 +391,34 @@ const styles = StyleSheet.create({
   erreur: { fontFamily: nativeFont.bodyRegular, fontSize: 13.5, marginTop: nativeSpace[12] },
   danger: { marginTop: nativeSpace[28], paddingTop: nativeSpace[24], borderTopWidth: nativeBorder.width },
 });
+
+/* TROISIÈME COPIE DE CETTE PASTILLE — après `note.tsx` et `evenement.tsx`, qui
+   la définissent chacun de son côté avec des noms de props différents (`onPress`
+   là, `appuie` ici). Elle mérite d'être extraite dans `composants/` ; je ne le
+   fais pas dans le même commit que le champ qui manquait, pour que la
+   correction reste lisible. */
+function Pastille({ actif, libelle, appuie }: {
+  actif: boolean;
+  libelle: string;
+  appuie: () => void;
+}) {
+  const couleurs = useCouleurs();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: actif }}
+      onPress={appuie}
+      style={[styles.pastille, {
+        borderColor: actif ? "transparent" : couleurs.borderObject,
+        backgroundColor: actif ? couleurs.action : "transparent",
+      }]}
+    >
+      <Text style={[styles.pastilleTexte, {
+        color: actif ? couleurs.textOnAccent : couleurs.textSecondary,
+      }]}>{libelle}</Text>
+    </Pressable>
+  );
+}
+
+const JOURS = Array.from({ length: 31 }, (_, i) => i + 1);
+
