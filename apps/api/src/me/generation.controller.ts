@@ -37,7 +37,7 @@ const DRAPEAU: Record<GenerationKind, CleDrapeau> = {
  * Cette liste disparaîtra quand les productions existeront. Elle est séparée du
  * drapeau à dessein : « éteint » et « pas encore construit » sont deux états
  * différents, et les confondre ferait croire qu'allumer suffit. */
-const PRODUITES = new Set<GenerationKind>(["wish_message"]);
+const PRODUITES = new Set<GenerationKind>(["wish_message", "gift_ideas"]);
 
 type AuthedRequest = { userId: string };
 
@@ -52,6 +52,14 @@ type LigneExecution = {
   generatedMessage: {
     id: string; eventOccurrenceId: string; content: string; shortContent: string | null;
     status: string; createdAt: Date; updatedAt: Date;
+  } | null;
+  ideaSet: {
+    id: string; eventOccurrenceId: string | null; createdAt: Date;
+    ideas: {
+      id: string; label: string; details: string | null;
+      priceMin: unknown; priceMax: unknown; currency: string | null;
+      feedback: string | null; wishlistItemId: string | null;
+    }[];
   } | null;
 };
 
@@ -113,6 +121,23 @@ export class GenerationController {
     if (!corps.occurrenceId)
       throw new AppError("validation_failed", "an occurrence is required");
 
+    if (corps.kind === "gift_ideas") {
+      const jeu = await this.generation.lancerIdees(req.userId, corps.occurrenceId, {
+        ...(corps.language === undefined ? {} : { langue: corps.language }),
+        ...(corps.briefText === undefined ? {} : { texteLibre: corps.briefText }),
+        /* Les bornes seulement. LA DEVISE EST POSÉE PAR LE SERVICE, et le
+           contrat ne la porte pas : la demander au client la rendrait
+           négociable par qui envoie la requête, et ferait entrer « FCFA » ou
+           « francs » dans une colonne de trois caractères. La poser ici plutôt
+           qu'au service donnerait deux endroits où la changer. */
+        ...(corps.budget === undefined ? {} : {
+          budget: { min: corps.budget.min ?? null, max: corps.budget.max ?? null },
+        }),
+        ...(corps.idempotencyKey === undefined ? {} : { cle: corps.idempotencyKey }),
+      });
+      return this.rendre(await this.generation.lire(req.userId, jeu.actionRunId) as LigneExecution);
+    }
+
     /* L'orientation voyage dans `studioSelection`, que le contrat commun refuse
        pour un message — « le studio n'a de sens que pour un portrait ». Elle
        passe donc par `tone`, le seul champ libre que le lancement porte pour
@@ -148,6 +173,7 @@ export class GenerationController {
 
   private rendre(l: LigneExecution): GenerationResult {
     const message = l.generatedMessage;
+    const jeu = l.ideaSet;
     const generation: Generation = {
       id: l.id,
       kind: l.premiumAction.code as Generation["kind"],
@@ -156,14 +182,15 @@ export class GenerationController {
          des deux est donc toujours nulle, et le client affiche celle qui est
          là plutôt que d'en déduire laquelle attendre. */
       personId: null,
-      occurrenceId: l.generatedMessage?.eventOccurrenceId ?? l.eventOccurrenceId ?? null,
+      occurrenceId: l.generatedMessage?.eventOccurrenceId ?? jeu?.eventOccurrenceId ?? l.eventOccurrenceId ?? null,
       status: GenerationService.ETAT[l.status] ?? "failed",
       creditsSpent: l.creditsSpent,
       /* Le CODE, jamais un message de fournisseur : ceux-là recopient parfois
          l'invite, donc les notes — les mots privés de quelqu'un sur un tiers
          n'ont rien à faire dans une réponse d'erreur. */
       failureReason: l.failureCode,
-      resultId: message?.id ?? null,
+      // Le message OU le jeu d'idées : une exécution n'en produit jamais deux.
+      resultId: message?.id ?? jeu?.id ?? null,
       createdAt: l.createdAt.toISOString(),
     };
     return {
@@ -176,6 +203,24 @@ export class GenerationController {
         status: message.status as GeneratedMessage["status"],
         createdAt: message.createdAt.toISOString(),
         updatedAt: message.updatedAt.toISOString(),
+      },
+      ideas: jeu === null ? null : {
+        id: jeu.id,
+        occurrenceId: jeu.eventOccurrenceId,
+        ideas: jeu.ideas.map((i) => ({
+          id: i.id,
+          label: i.label,
+          details: i.details,
+          /* `Decimal` se sérialise en chaîne s'il traverse tel quel, et le
+             client lirait « 5000.00 » là où il attend un nombre. Nul reste nul
+             — une idée sans prix n'en a pas, elle n'en a pas un qui vaut zéro. */
+          priceMin: i.priceMin === null ? null : Number(i.priceMin),
+          priceMax: i.priceMax === null ? null : Number(i.priceMax),
+          currency: i.currency,
+          feedback: i.feedback as "up" | "down" | null,
+          wishlistItemId: i.wishlistItemId,
+        })),
+        createdAt: jeu.createdAt.toISOString(),
       },
     };
   }

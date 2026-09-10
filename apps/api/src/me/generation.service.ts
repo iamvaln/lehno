@@ -1,9 +1,9 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import {
-  consigneSysteme, invite,
+  consigneSysteme, invite, consigneSystemeIdees, inviteIdees, IDEES,
   MOTS_MESSAGE, MOTS_MESSAGE_COURT, ORIENTATIONS_SENSIBLES,
-  type ContexteMessage, type Orientation,
+  type ContexteMessage, type ContexteIdees, type Orientation,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
@@ -19,6 +19,17 @@ import { FOURNISSEURS_IA } from "../ia/adaptateurs/index.js";
  * confiance qu'on garde. */
 
 const ACTION_MESSAGE = "wish_message";
+const ACTION_IDEES = "gift_ideas";
+
+/* La devise des fourchettes de prix.
+ *
+ * Elle ne vient PAS du modèle : lui demander un code ISO reviendrait à ranger
+ * « FCFA », « francs » ou « XOF » selon son humeur, dans une colonne de trois
+ * caractères que le client affiche tel quel. Elle ne vient pas non plus du
+ * palier de crédits — un prix de cadeau n'a rien à voir avec un achat de
+ * crédits. C'est celle du marché servi, et le jour où il y en a deux, elle se
+ * lira sur la fiche du proche ou sur le compte.  */
+const DEVISE = "XAF";
 
 /* Au-delà de quoi une exécution restée en attente est tenue pour perdue.
  *
@@ -31,6 +42,10 @@ const SEUIL_ABANDON_MS = 60 * 60 * 1000;
    VÉRIFIABLE : « le message fait-il deux à quatre phrases » ne se contrôle pas,
    « les deux champs sont-ils là » se contrôle. */
 type SortieMessage = { message: string; court: string };
+
+/** Une idée telle que le modèle la rend, une fois vérifiée. La fourchette est
+ *  absente ou complète — jamais une borne seule. */
+type SortieIdee = { titre: string; pourquoi: string; min?: number; max?: number };
 
 const compterLesMots = (s: string): number => s.trim().split(/\s+/).filter(Boolean).length;
 
@@ -108,11 +123,12 @@ export class GenerationService {
    * écriture séparées, deux demandes simultanées liraient toutes deux un solde
    * suffisant et débiteraient deux fois un crédit qui n'existait qu'une. */
   private async debiter(
-    userId: string, occurrenceId: string, orientation: Orientation, cle: string | null,
+    userId: string, occurrenceId: string, orientation: Orientation | null, cle: string | null,
+    code: string = ACTION_MESSAGE,
   ) {
     try {
       const execution = await this.prisma.$transaction(async (tx) => {
-        const action = await tx.premiumAction.findUnique({ where: { code: ACTION_MESSAGE } });
+        const action = await tx.premiumAction.findUnique({ where: { code } });
         if (!action || !action.enabled)
           throw new AppError("resource_inactive", "this action is not available");
 
@@ -135,7 +151,13 @@ export class GenerationService {
         const execution = await tx.actionRun.create({
           data: {
             userId, premiumActionId: action.id, creditsSpent: action.creditCost,
-            status: "pending", orientation,
+            status: "pending",
+            /* Nulle pour les idées : l'orientation est une notion du MESSAGE —
+               « notre relation », « une motivation ». Écrire « gift_ideas » ici
+               pour remplir la colonne mélangerait deux registres dans le même
+               champ, et l'analyse des orientations compterait des lignes qui
+               n'en ont pas. */
+            ...(orientation === null ? {} : { orientation }),
             /* LA CIBLE, écrite dès le lancement et non seulement sur le message
                produit. Une génération qui échoue n'a pas de message : sans
                elle, l'écran d'attente n'aurait ni nom à afficher ni de quoi
@@ -169,6 +191,227 @@ export class GenerationService {
       });
       return { execution: dejaLa, dejaLancee: true as const };
     }
+  }
+
+  // ── Les idées de cadeaux ──────────────────────────────────────────────────
+
+  /* Lancer une production d'idées.
+   *
+   * Même architecture que le message, et pour les mêmes raisons : le débit et
+   * l'appel sont deux transactions, et `reconcilierLesEnCours` rattrape ce qui
+   * reste en route. Elle n'est pas recopiée — `debiter`, `rendreLeCredit` et
+   * la reconciliation sont partagés ; seuls le contexte, l'invite et la lecture
+   * de la sortie diffèrent.
+   *
+   * PAS DE REFUS D'ENTRÉE sur une occasion sensible, à la différence du
+   * message. On y offre des fleurs, on contribue aux frais, on paie un
+   * déplacement : ce ne sont pas de moindres cadeaux, ce sont ceux qui
+   * comptent. C'est le GABARIT qui réoriente vers le soutien — voir
+   * `consigneSystemeIdees` — pas une garde qui ferme. */
+  async lancerIdees(
+    userId: string, occurrenceId: string,
+    options: {
+      langue?: "fr" | "en";
+      texteLibre?: string | null;
+      budget?: { min: number | null; max: number | null } | null;
+      cle?: string | null;
+    } = {},
+  ) {
+    const occurrence = await this.depot.occurrences(userId).findOrThrow(occurrenceId);
+    const contexte = await this.rassemblerIdees(userId, occurrence.id, options);
+
+    const { execution, dejaLancee } = await this.debiter(
+      userId, occurrence.id, null, options.cle ?? null, ACTION_IDEES,
+    );
+
+    /* Déjà lancée sous cette clé : on REJOINT plutôt que de recommencer. Même
+       raisonnement que pour le message — rien n'a été débité deux fois,
+       l'unicité en base s'en est chargée. */
+    if (dejaLancee) {
+      const jeu = await this.prisma.generatedIdeaSet.findUnique({
+        where: { actionRunId: execution.id },
+        include: { ideas: { orderBy: { position: "asc" } } },
+      });
+      if (jeu) return jeu;
+      throw new AppError("conflict", "this generation is already running");
+    }
+
+    try {
+      const idees = await this.produireIdees(contexte, userId, execution.id);
+      return await this.conclureIdees(execution.id, userId, occurrence.id, idees);
+    } catch (err: unknown) {
+      await this.rendreLeCredit(execution.id, userId, this.codeDe(err));
+      throw err;
+    }
+  }
+
+  /* La matière des idées.
+   *
+   * Une différence avec le message, et elle compte : les notes rangées en
+   * `gift_ideas` sont ÉCARTÉES du message — « les idées de cadeaux n'ont rien à
+   * faire dans un message » — et ce sont ici les plus utiles de toutes. C'est
+   * ce que la personne a noté en pensant précisément à quoi offrir. */
+  private async rassemblerIdees(
+    userId: string, occurrenceId: string,
+    options: {
+      langue?: "fr" | "en";
+      texteLibre?: string | null;
+      budget?: { min: number | null; max: number | null } | null;
+    },
+  ): Promise<ContexteIdees> {
+    const occurrence = await this.prisma.eventOccurrence.findUniqueOrThrow({
+      where: { id: occurrenceId },
+      include: { event: { include: { person: true } } },
+    });
+    const proche = occurrence.event.person;
+    /* LA LANGUE VIENT DU COMPTE, pas du proche — et c'est l'inverse du message.
+     *
+     * Un message est ADRESSÉ au proche : il part chez lui, il doit être dans sa
+     * langue, et `rassembler` lit donc `person.language`. Une liste d'idées
+     * n'est envoyée à personne : c'est celui qui cherche qui la lit, pour
+     * décider quoi acheter. La rendre dans la langue de sa marraine anglophone
+     * lui donnerait des idées qu'il ne peut pas lire, et qu'il a payées.
+     *
+     * `user.ui_language` est d'ailleurs la seule des deux qui soit sûre : elle
+     * est non nulle avec un défaut, là où `person.language` est facultative et
+     * vide sur la plupart des fiches. */
+    const moi = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { uiLanguage: true },
+    });
+
+    const notes = await this.prisma.note.findMany({
+      where: { personId: proche.id },
+      orderBy: { createdAt: "desc" },
+      include: { categories: { include: { category: true } } },
+    });
+
+    /* `dislikes_nogo` part À PART, comme une interdiction — et l'enjeu est plus
+       direct que pour un message : mêlée à la matière, « elle déteste le
+       parfum » deviendrait une idée de parfum. */
+    const aEviter: string[] = [];
+    const matiere: ContexteIdees["notes"][number][] = [];
+    for (const n of notes) {
+      const codes = n.categories.map((c) => c.category.code);
+      if (codes.includes("dislikes_nogo")) { aEviter.push(n.content); continue; }
+      matiere.push({
+        categorie: codes[0] ?? null,
+        date: n.createdAt.toISOString().slice(0, 10),
+        contenu: n.content,
+      });
+    }
+
+    /* Ce que l'atelier a publié pour le MESSAGE ne s'applique pas ici : ses
+       consignes parlent de ton et de tournure, pas d'objets. On ne lit donc que
+       ce qui vaut pour toutes les productions, et rien tant que le studio n'a
+       pas de configuration propre aux idées. */
+    return {
+      langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
+      nomDUsage: proche.callingName ?? proche.displayName,
+      relation: proche.relationHint ?? proche.relation ?? null,
+      genreDuProche: proche.gender ?? "unspecified",
+      occasionSensible: occurrence.event.eventNature === "sensitive",
+      /* Nul, exactement comme pour le message : « on ne rappelle pas son âge à
+         quelqu'un sur une déduction ». Le gabarit sait s'en passer, et le jour
+         où la fiche portera un âge assumé, les deux le liront au même endroit. */
+      age: null,
+      notes: matiere,
+      aEviter,
+      texteLibre: options.texteLibre ?? null,
+      // La devise se pose ICI et nulle part ailleurs — voir DEVISE.
+      budget: options.budget ? { ...options.budget, devise: DEVISE } : null,
+    };
+  }
+
+  private async produireIdees(
+    contexte: ContexteIdees, userId: string, actionRunId: string,
+  ): Promise<SortieIdee[]> {
+    const reponse = await this.routeur.executer(
+      "gift_ideas",
+      { invite: inviteIdees(contexte), systeme: consigneSystemeIdees(contexte) },
+      this.adaptateurs,
+      { userId, actionRunId, origine: "user_action" },
+    );
+    return this.lireLesIdees(reponse.contenu);
+  }
+
+  /* Ce que le modèle rend, vérifié.
+   *
+   * ON GARDE CE QUI EST UTILISABLE plutôt que de tout refuser. Un modèle qui
+   * rend huit idées au lieu de cinq n'a pas suivi la consigne, mais les cinq
+   * premières valent ce qu'elles valent : reprendre un crédit pour un excès de
+   * zèle serait une punition à l'envers. On refuse seulement en dessous du
+   * minimum, où il n'y a plus de liste à montrer. */
+  private lireLesIdees(brut: string): SortieIdee[] {
+    let objet: unknown;
+    try {
+      objet = JSON.parse(brut.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "").trim());
+    } catch {
+      throw new RefusModele("unparseable");
+    }
+
+    const brutes = (objet as { idees?: unknown }).idees;
+    if (!Array.isArray(brutes)) throw new RefusModele("empty_message");
+
+    const retenues: SortieIdee[] = [];
+    for (const x of brutes.slice(0, IDEES.max)) {
+      const o = x as Partial<{ titre: string; pourquoi: string; prixMin: number; prixMax: number }>;
+      if (typeof o.titre !== "string" || o.titre.trim().length === 0) continue;
+      if (typeof o.pourquoi !== "string" || o.pourquoi.trim().length === 0) continue;
+
+      /* La fourchette ne s'accepte QUE complète et ordonnée. Une borne seule ou
+         inversée serait rangée telle quelle et affichée telle quelle — mieux
+         vaut ne rien annoncer qu'un prix qu'on ne sait pas lire. La base porte
+         d'ailleurs la même règle, et refuserait la ligne. */
+      const min = typeof o.prixMin === "number" && Number.isFinite(o.prixMin) ? o.prixMin : null;
+      const max = typeof o.prixMax === "number" && Number.isFinite(o.prixMax) ? o.prixMax : null;
+      const fourchette = min !== null && max !== null && min >= 0 && min <= max
+        ? { min, max }
+        : null;
+
+      retenues.push({
+        titre: o.titre.trim(),
+        pourquoi: o.pourquoi.trim(),
+        ...(fourchette === null ? {} : fourchette),
+      });
+    }
+
+    /* Sous le minimum, il n'y a plus de liste : deux idées ne donnent rien à
+       comparer, et le refus d'une seule la vide. On rend le crédit. */
+    if (retenues.length < IDEES.min) throw new RefusModele("length_out_of_range");
+    return retenues;
+  }
+
+  private async conclureIdees(
+    actionRunId: string, userId: string, occurrenceId: string, idees: SortieIdee[],
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const depense = await tx.aIUsage.aggregate({
+        where: { actionRunId }, _sum: { cost: true },
+      });
+      await tx.actionRun.update({
+        where: { id: actionRunId },
+        data: { status: "success", internalCost: depense._sum.cost },
+      });
+
+      return tx.generatedIdeaSet.create({
+        data: {
+          actionRunId, userId, eventOccurrenceId: occurrenceId,
+          ideas: {
+            create: idees.map((i, rang) => ({
+              label: i.titre,
+              details: i.pourquoi,
+              position: rang,
+              /* La devise vient de la CONFIGURATION, jamais du modèle : lui
+                 demander un code ISO reviendrait à ranger « FCFA », « francs »
+                 ou « XOF » selon son humeur, dans une colonne de trois
+                 caractères que le client affiche tel quel. */
+              ...(i.min === undefined ? {} : { priceMin: i.min, priceMax: i.max, currency: DEVISE }),
+            })),
+          },
+        },
+        include: { ideas: { orderBy: { position: "asc" } } },
+      });
+    });
   }
 
   /* Le rattrapage des exécutions restées en attente.
@@ -288,7 +531,14 @@ export class GenerationService {
   async lire(userId: string, id: string) {
     const execution = await this.prisma.actionRun.findFirst({
       where: { id, userId },
-      include: { premiumAction: true, generatedMessage: true },
+      /* Le jeu d'idées voyage avec l'exécution, comme le message : le client
+         suit UN SEUL objet, et lui faire recoller un état et un résultat venus
+         de deux chemins l'obligerait à gérer le moment où l'un est arrivé et
+         l'autre pas. */
+      include: {
+        premiumAction: true, generatedMessage: true,
+        ideaSet: { include: { ideas: { orderBy: { position: "asc" } } } },
+      },
     });
     if (!execution) throw new AppError("not_found", "unknown generation");
     return execution;
@@ -299,7 +549,10 @@ export class GenerationService {
       where: { userId },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { premiumAction: true, generatedMessage: true },
+      include: {
+        premiumAction: true, generatedMessage: true,
+        ideaSet: { include: { ideas: { orderBy: { position: "asc" } } } },
+      },
     });
   }
 

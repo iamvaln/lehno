@@ -36,6 +36,27 @@ export const startGenerationSchema = z.object({
      nouveau côté serveur, qui décide seul. */
   studioSelection: z.record(z.string().min(1).max(64), z.string().min(1).max(64)).optional(),
 
+  /* LE BUDGET, et il change la nature de la réponse plutôt que son ton.
+   *
+   * Sans lui, un modèle propose au hasard de l'échelle : un abonnement à
+   * cinquante mille francs à côté d'un bracelet à huit cents. La liste devient
+   * inutilisable non parce que les idées sont mauvaises, mais parce qu'on ne
+   * peut en retenir aucune sans refaire le tri soi-même.
+   *
+   * Les deux bornes sont facultatives SÉPARÉMENT — « jusqu'à 20 000 » est la
+   * façon dont on pense un budget bien plus souvent qu'un intervalle fermé.
+   * Aucune devise ici : elle vient de la configuration. La demander au client
+   * ferait entrer « FCFA » ou « francs » dans une colonne de trois caractères,
+   * et surtout la rendrait négociable par qui envoie la requête. */
+  budget: z.object({
+    min: z.number().nonnegative().optional(),
+    max: z.number().positive().optional(),
+  }).strict().refine((b) => b.min !== undefined || b.max !== undefined, {
+    message: "un budget porte au moins une borne",
+  }).refine((b) => b.min === undefined || b.max === undefined || b.min <= b.max, {
+    message: "la borne basse ne dépasse pas la haute",
+  }).optional(),
+
   // Ce que l'utilisateur ajoute pour orienter le dessin. Conservé le temps de
   // la génération seulement, et l'écran le dit là où on le remplit.
   briefText: z.string().trim().max(280).optional(),
@@ -70,6 +91,13 @@ export const startGenerationSchema = z.object({
   // Le studio ne règle qu'une image : les idées et le message n'en ont pas.
   if (v.studioSelection) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["studioSelection"], message: "le studio n'a de sens que pour un portrait" });
+  }
+  /* UN BUDGET NE VAUT QUE POUR DES IDÉES. On n'achète rien avec un message ni
+     avec un portrait, et l'accepter en silence ferait croire qu'il agit — le
+     genre de champ qu'on renseigne pendant des mois avant de découvrir qu'il
+     n'a jamais rien changé. */
+  if (v.budget && v.kind !== "gift_ideas") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["budget"], message: "un budget ne vaut que pour des idées de cadeaux" });
   }
 });
 
@@ -184,6 +212,57 @@ export const updateMessageSchema = z.object({
 
 export type UpdateMessageInput = z.infer<typeof updateMessageSchema>;
 
+// ── Les idées produites ─────────────────────────────────────────────────────
+
+/**
+ * Une idée du jeu.
+ *
+ * **Noter et retenir sont deux gestes distincts**, et les confondre détruirait
+ * le signal qu'on vient chercher. Quelqu'un peut trouver une idée excellente et
+ * ne pas la retenir — budget, déjà offerte l'an dernier, pas pour cette
+ * personne-là. « Bonne idée, mauvais moment » est précisément ce qui distingue
+ * une invite qui produit du juste d'une invite qui produit du plausible.
+ */
+export const generatedIdeaSchema = z.object({
+  id: z.string().uuid(),
+  label: z.string(),
+  /** Ce qui, dans les notes, mène à cette idée. C'est lui qui la rend retenable
+   *  plutôt que générique : « un carnet » ne vaut rien, « un carnet, parce
+   *  qu'elle écrit dans le train tous les matins » se retient. */
+  details: z.string().nullable(),
+  /** Une fourchette indicative, ou rien. Jamais une borne seule : un prix qu'on
+   *  ne sait pas lire vaut moins que pas de prix du tout. */
+  priceMin: z.number().nullable(),
+  priceMax: z.number().nullable(),
+  currency: z.string().nullable(),
+  /** `null` = personne n'a répondu, ce qui n'est PAS « ni l'un ni l'autre » et
+   *  ne se compte pas de la même façon dans une moyenne. */
+  feedback: z.enum(["up", "down"]).nullable(),
+  /** Le souhait né de cette idée, s'il y en a un. Reste nul quand on l'a notée
+   *  sans la retenir — et c'est le cas le plus fréquent. */
+  wishlistItemId: z.string().uuid().nullable(),
+}).strict();
+
+export type GeneratedIdea = z.infer<typeof generatedIdeaSchema>;
+
+/** Le jeu produit par une génération. C'est lui que `resultId` désigne. */
+export const generatedIdeaSetSchema = z.object({
+  id: z.string().uuid(),
+  occurrenceId: z.string().uuid().nullable(),
+  ideas: z.array(generatedIdeaSchema),
+  createdAt: z.string(),
+}).strict();
+
+export type GeneratedIdeaSet = z.infer<typeof generatedIdeaSetSchema>;
+
+/** Ce qu'on porte sur une idée. `null` retire l'avis — un avis se change et se
+ *  reprend, sans quoi un doigt qui glisse serait définitif. */
+export const ideaFeedbackSchema = z.object({
+  feedback: z.enum(["up", "down"]).nullable(),
+}).strict();
+
+export type IdeaFeedbackInput = z.infer<typeof ideaFeedbackSchema>;
+
 /**
  * Ce que rend le lancement, puis chaque interrogation.
  *
@@ -195,6 +274,11 @@ export const generationResultSchema = z.object({
   generation: generationSchema,
   /** Nul tant que l'exécution n'a pas abouti — et pour toujours si elle échoue. */
   message: generatedMessageSchema.nullable(),
+  /* Le jeu d'idées, quand c'en était une. Un champ par nature plutôt qu'un
+     `result` polymorphe : le client sait ce qu'il a demandé, et une union
+     l'obligerait à discriminer avant de lire. Les deux sont nuls sur une
+     génération qui a échoué. */
+  ideas: generatedIdeaSetSchema.nullable(),
 }).strict();
 
 export const generationsSchema = z.object({

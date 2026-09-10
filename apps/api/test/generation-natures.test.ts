@@ -19,7 +19,7 @@ const jamais = (): never => {
 
 const controleur = (allumes: CleDrapeau[]): GenerationController =>
   new GenerationController(
-    { lancerMessage: jamais, lire: jamais } as unknown as GenerationService,
+    { lancerMessage: jamais, lancerIdees: jamais, lire: jamais } as unknown as GenerationService,
     { estActif: async (cle: CleDrapeau) => allumes.includes(cle) } as unknown as FlagsService,
   );
 
@@ -34,12 +34,18 @@ describe("le drapeau qui garde un lancement est celui de la nature demandée", (
      rien changer. */
   it("ne demande pas le drapeau du message pour des idées", async () => {
     const sansLeMessage: CleDrapeau[] = ["generation.ideas", "generation.portrait"];
+    /* Le service double lève : atteindre son cri prouve que les deux refus —
+       drapeau éteint, nature non produite — ont été franchis. Si le drapeau du
+       message était encore exigé, on tomberait sur un `not_found` avant.
+       Ce cas attendait `resource_inactive` tant que les idées n'étaient pas
+       produites ; elles le sont, et il vérifie maintenant la même chose par le
+       seul chemin qui reste. */
     await expect(
       controleur(sansLeMessage).lancer(
         { userId: "u" },
         demande({ kind: "gift_ideas", occurrenceId: OCCURRENCE }),
       ),
-    ).rejects.toMatchObject({ code: "resource_inactive" });
+    ).rejects.toThrow("le service ne devait pas être appelé");
   });
 
   /* `not_found`, comme FeatureGuard : une nature éteinte n'a pas à révéler
@@ -67,13 +73,21 @@ describe("le drapeau qui garde un lancement est celui de la nature demandée", (
      production ne s'allume nulle part. Confondre les deux ferait chercher un
      interrupteur qui n'existe pas. */
   it("distingue l'extinction de l'absence de production", async () => {
-    await expect(
-      controleur(TOUS).lancer({ userId: "u" }, demande({ kind: "gift_ideas", occurrenceId: OCCURRENCE })),
-    ).rejects.toMatchObject({ code: "resource_inactive" });
-
+    /* Le portrait reste la nature SANS chaîne de production : allumé partout,
+       il refuse quand même, et par un code différent de l'extinction.
+       Les idées ont quitté cette liste — elles se produisent depuis. Le jour où
+       le portrait la quittera aussi, ce cas n'aura plus de sujet et devra
+       disparaître plutôt que d'être rafistolé sur une nature inventée. */
     await expect(
       controleur(TOUS).lancer({ userId: "u" }, demande({ kind: "portrait", personId: PROCHE })),
     ).rejects.toMatchObject({ code: "resource_inactive" });
+
+    // Et la comparaison qui donne son sens au cas : éteint, le même portrait
+    // répond `not_found`. Deux refus, deux causes, deux codes.
+    const sansLePortrait = TOUS.filter((c) => c !== "generation.portrait");
+    await expect(
+      controleur(sansLePortrait).lancer({ userId: "u" }, demande({ kind: "portrait", personId: PROCHE })),
+    ).rejects.toMatchObject({ code: "not_found" });
   });
 
   it("laisse passer le message quand son drapeau est allumé", async () => {

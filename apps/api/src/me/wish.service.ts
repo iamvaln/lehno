@@ -7,7 +7,7 @@ import { AppError } from "../common/errors.js";
 // La ligne telle que Prisma la rend. Écrite ici plutôt qu'importée de
 // @prisma/client : `price` y est un Decimal, et le contrat veut un nombre —
 // la conversion doit se voir, pas se deviner.
-type Ligne = {
+export type Ligne = {
   id: string;
   eventOccurrenceId: string;
   label: string;
@@ -114,7 +114,11 @@ export class WishService {
   }
 }
 
-function rendre(l: Ligne): Wish {
+/* Exportée pour `IdeeController` : retenir une idée crée un souhait, et ce
+   souhait doit sortir sous la MÊME forme que ceux de `/me/wishes`. Une seconde
+   mise en forme divergerait — un champ ajouté ici manquerait là-bas, sur le même
+   objet vu par le même écran. */
+export function rendre(l: Ligne): Wish {
   return {
     id: l.id,
     occurrenceId: l.eventOccurrenceId,
