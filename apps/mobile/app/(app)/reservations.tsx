@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { myReservationListSchema, type MyReservation } from "@lehno/contracts";
 import { nativeBorder, nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
-  Banner, Button, EmptyState, Icon, LoadingState, Toast, useCouleurs,
+  Banner, Button, EmptyState, Icon, LoadingState, ScreenHeader, Toast, useCouleurs
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -69,14 +69,7 @@ export default function Reservations() {
   useEffect(() => { if (!eteint) void charge(); }, [charge, eteint]);
 
   const retour = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t.retour}
-      onPress={() => routeur.back()}
-      style={styles.retour}
-    >
-      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-    </Pressable>
+    <ScreenHeader titre={t.enteteReservations} retour={t.retour} onRetour={() => routeur.back()} />
   );
 
   if (echec && reservations === null) {
@@ -205,10 +198,6 @@ const styles = StyleSheet.create({
   ecran: { flex: 1 },
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
   aumilieu: { justifyContent: "center" },
-  retour: {
-    width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
-    alignItems: "center", justifyContent: "center",
-  },
   intro: {
     fontFamily: nativeFont.bodyRegular, fontSize: 14, marginTop: nativeSpace[8],
     marginBottom: nativeSpace[8],

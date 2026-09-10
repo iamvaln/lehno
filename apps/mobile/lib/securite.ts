@@ -44,8 +44,30 @@ export type NatureDAppareil = "mobile" | "ordinateur" | "inconnu";
 export function natureDeLAppareil(userAgent: string | null): NatureDAppareil {
   if (!userAgent) return "inconnu";
   const ua = userAgent.toLowerCase();
+
+  /* TROIS PASSES, ET L'ORDRE PORTE TOUTE LA DÉCISION.
+   *
+   * 1. Le mot qui NOMME l'appareil l'emporte : « Android » vaut téléphone même
+   *    quand l'en-tête dit aussi « Linux » — Dalvik annonce les deux, et lire
+   *    « Linux » d'abord ferait un ordinateur de chaque téléphone Android.
+   * 2. Puis le bureau.
+   * 3. Puis, seulement, NOTRE PROPRE EN-TÊTE. */
   if (/iphone|ipod|android|mobile/.test(ua)) return "mobile";
   if (/macintosh|windows|linux|x11|ipad/.test(ua)) return "ordinateur";
+
+  /* `cfnetwork` / `darwin` — l'en-tête de notre application iOS.
+   *
+   * Une application iOS n'annonce jamais « iPhone » : c'est le navigateur qui
+   * le dit. `URLSession` compose « <app>/<version> CFNetwork/… Darwin/… », et
+   * Expo Go fait de même. Sans ces deux mots, la session ouverte depuis le
+   * téléphone qu'on tient portait l'icône « appareil inconnu », et CHAQUE
+   * iPhone en production aurait fait pareil : sur un écran qu'on ouvre pour
+   * retrouver SA ligne, c'était la seule qui ne se reconnaissait pas.
+   *
+   * En dernier, donc : une application de bureau annoncerait aussi
+   * `CFNetwork`, mais elle dit « Macintosh », et la passe 2 l'a déjà prise. */
+  if (/cfnetwork|darwin/.test(ua)) return "mobile";
+
   return "inconnu";
 }
 

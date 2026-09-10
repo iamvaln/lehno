@@ -5,9 +5,10 @@ import { useRouter } from "expo-router";
 import {
   PERSON_GENDERS, profileSchema, usernameAvailabilitySchema, type Profile,
 } from "@lehno/contracts";
-import { nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
+import { nativeFont, nativeSpace } from "@lehno/tokens";
 import {
-  Avatar, Banner, Button, Icon, LoadingState, SectionLabel, TextField, useTheme,
+  Avatar, Banner, Button, LoadingState, ScreenHeader, SectionLabel, TextField,
+  useTheme
 } from "@lehno/ui-native";
 import { Choix } from "../../composants/Choix.js";
 import { useLangue } from "../../lib/langue.js";
@@ -224,14 +225,7 @@ export default function Profil() {
         paddingBottom: insets.bottom + nativeSpace[24],
       }]}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.retour}
-        onPress={() => routeur.back()}
-        style={styles.retour}
-      >
-        <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-      </Pressable>
+      <ScreenHeader titre={t.enteteProfil} retour={t.retour} onRetour={() => routeur.back()} />
 
       {/* La photo se dépose EN DIRECT sur le stockage, sans traverser l'API :
           le serveur signe une URL, le téléphone monte dessus, puis confirme.
@@ -344,10 +338,6 @@ export default function Profil() {
 
 const styles = StyleSheet.create({
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
-  retour: {
-    width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
-    alignItems: "center", justifyContent: "center",
-  },
   portrait: { alignItems: "center", marginTop: nativeSpace[8], marginBottom: nativeSpace[24] },
   photoActions: { flexDirection: "row", gap: nativeSpace[16], marginTop: nativeSpace[10] },
   photoLien: { fontFamily: nativeFont.bodySemibold, fontSize: 14.5 },

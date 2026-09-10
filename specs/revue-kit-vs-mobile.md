@@ -141,3 +141,51 @@ choses qui existent. Il faut ouvrir la planche à côté.
 C'est possible depuis cette revue : la planche s'ouvre enfin, `components/`
 ayant été importé. Il lui faut un serveur local — `file://` refuse les `fetch`
 qu'elle fait pour charger les écrans.
+
+---
+
+## F. L'en-tête d'écran — trouvé à l'appareil, 10 septembre 2026
+
+Le diff de clés ne pouvait pas l'attraper : le nom d'un écran ne vit pas dans
+`copy.js`, mais dans le registre du prototype (`prototype.html`), où chaque
+écran empilé porte `titre: { fr, en }`. Vingt-cinq écrans en ont un.
+
+### Ce qui a été corrigé
+
+**Huit écrans ne disaient pas où l'on était.** On y arrivait par une rangée des
+réglages — « Sécurité et connexions », « Mes données », « Rappels et
+notifications » — et l'écran s'ouvrait sur une flèche seule, puis directement
+sur l'étiquette de son premier bloc, en petites capitales grises.
+
+Vu à l'appareil sur `securite` et sur `reprises` ; les six autres écrivaient le
+même en-tête, au caractère près : `profil`, `paiement`, `rappels`, `donnees`,
+`aide`, `reservations`.
+
+Ils emploient désormais `ScreenHeader` — flèche et nom sur la même ligne, comme
+l'`AppHeader` de la planche —, avec les libellés du registre : « Sécurité »,
+« Mon profil », « Paiement », « Rappels », « Mes données », « Aide »,
+« Réservations », « En cours ». `entetes.test.ts` les tient.
+
+### Ce qui reste à trancher
+
+**Vingt-cinq écrans dessinent encore leur flèche à la main.** La planche n'a
+qu'un `AppHeader`, porté par le châssis ; l'application n'a pas de châssis, et
+chaque écran répète six lignes de `Pressable`. Deux conséquences :
+
+- la cible tactile, le recul du bord et l'icône se recopient — c'est le genre de
+  détail qu'une réécriture perd sans que rien ne le dise ;
+- **la cloche n'existe que sur l'accueil.** La planche la pose sur tous les
+  écrans empilés, à droite de l'en-tête. `ScreenHeader` a la fente (`fin`) ;
+  personne ne l'emploie encore.
+
+La plupart de ces écrans disent tout de même où l'on est, mais **par un grand
+titre de page** — « Pour Awa », « Recharger », « Nouvelle date » — là où la
+planche porte les deux : le nom court dans l'en-tête, et le titre de page
+dessous quand il y en a un. Ce n'est pas un défaut ; c'est une décision à
+prendre une fois pour toutes, écran par écran.
+
+Restent ceux dont je n'ai pas pu établir à la lecture qu'ils portent un titre
+nominal : `apercu`, `apercu-liste`, `listes`, `monmur`, `mouvements`,
+`souhaits`, `valider`, `note`, `portrait`, `proches/recherche`. **À ouvrir à
+l'appareil** avant de conclure — c'est ainsi que les huit précédents ont été
+trouvés, et la lecture du code n'y suffisait pas.

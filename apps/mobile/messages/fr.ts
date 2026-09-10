@@ -396,6 +396,22 @@ export const fr = {
   moiAideCentre: "Questions et contact",
   moiDeconnexion: "Se déconnecter",
 
+  /* LE NOM DE L'ÉCRAN, dans l'en-tête, à côté de la flèche.
+   *
+   * Il manquait partout : on arrivait sur un écran empilé et la première chose
+   * lisible était l'étiquette de son premier bloc, en petites capitales grises.
+   * Les libellés sont ceux de la planche, et ils sont plus COURTS que la rangée
+   * qui y mène — « Sécurité » pour « Sécurité et connexions » : la rangée
+   * annonce, l'en-tête situe, et il partage sa ligne avec la flèche. */
+  enteteProfil: "Mon profil",
+  enteteSecurite: "Sécurité",
+  entetePaiement: "Paiement",
+  enteteRappels: "Rappels",
+  enteteDonnees: "Mes données",
+  enteteAide: "Aide",
+  enteteReservations: "Réservations",
+  enteteReprises: "En cours",
+
   /* Moi (3.17) — ce que je montre de moi. Du contenu, qui se partage. */
   moiSous: "Ce que vous montrez de vous.",
   moiPartager: "Partager",

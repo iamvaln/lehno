@@ -52,6 +52,8 @@ export * from "./forms/TextField.js";
 export * from "./forms/TextField.styles.js";
 export * from "./navigation/NotificationBell.js";
 export * from "./navigation/NotificationBell.styles.js";
+export * from "./navigation/ScreenHeader.js";
+export * from "./navigation/ScreenHeader.styles.js";
 export * from "./navigation/TabBar.js";
 export * from "./navigation/TabBar.styles.js";
 export * from "./brand/BrandMark.js";

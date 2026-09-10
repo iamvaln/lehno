@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 import {
   generationsSchema, occurrenceSchema, type GenerationResult, type Occurrence,
 } from "@lehno/contracts";
 import {
-  nativeBorder, nativeFont, nativeRadius, nativeSpace, nativeTouchMin,
+  nativeBorder, nativeFont, nativeRadius, nativeSpace,
 } from "@lehno/tokens";
 import {
-  Banner, Button, Card, Countdown, EmptyState, Icon, LoadingState, Quote, useCouleurs,
+  Banner, Button, Card, Countdown, EmptyState, Icon, LoadingState, Quote, ScreenHeader,
+  useCouleurs
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -120,14 +121,7 @@ export default function Reprises() {
 
   return (
     <View style={[styles.page, { paddingTop: insets.top + nativeSpace[12] }]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.retour}
-        onPress={() => routeur.back()}
-        style={styles.retour}
-      >
-        <Icon name="chevron-left" size={22} color={couleurs.textBody} />
-      </Pressable>
+      <ScreenHeader titre={t.enteteReprises} retour={t.retour} onRetour={() => routeur.back()} />
 
       {echec ? (
         <View style={styles.panne}>
@@ -254,10 +248,6 @@ function CarteDeReprise({ reprise, onReprendre }: {
 
 const styles = StyleSheet.create({
   page: { flex: 1, paddingHorizontal: nativeSpace[16] },
-  retour: {
-    width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
-    alignItems: "center", justifyContent: "center",
-  },
   panne: { gap: nativeSpace[12] },
   intro: {
     fontFamily: nativeFont.bodyRegular, fontSize: 14,

@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   notificationPreferencesSchema, profileSchema,
   type DigestFrequency, type NotificationPreferenceItem,
 } from "@lehno/contracts";
-import { nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
+import { nativeFont, nativeSpace } from "@lehno/tokens";
 import {
-  Banner, Button, Icon, LoadingState, SectionLabel, useCouleurs,
+  Banner, Button, LoadingState, ScreenHeader, SectionLabel, useCouleurs
 } from "@lehno/ui-native";
 import { Bascule } from "../../composants/Bascule.js";
 import { Choix } from "../../composants/Choix.js";
@@ -196,14 +196,7 @@ export default function Rappels() {
         paddingBottom: insets.bottom + nativeSpace[24],
       }]}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.retour}
-        onPress={() => routeur.back()}
-        style={styles.retour}
-      >
-        <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-      </Pressable>
+      <ScreenHeader titre={t.enteteRappels} retour={t.retour} onRetour={() => routeur.back()} />
 
       {echec ? (
         <View style={{ marginBottom: nativeSpace[12] }}>
@@ -299,10 +292,6 @@ export default function Rappels() {
 
 const styles = StyleSheet.create({
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
-  retour: {
-    width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
-    alignItems: "center", justifyContent: "center",
-  },
   bloc: { marginTop: nativeSpace[20] },
   toujours: {
     fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[24],

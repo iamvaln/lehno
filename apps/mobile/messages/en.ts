@@ -363,6 +363,16 @@ export const en = {
   moiLangue: "Language",
   moiAideCentre: "Questions and contact",
   moiDeconnexion: "Sign out",
+
+  // Les noms d'écran de l'en-tête — voir le commentaire côté français.
+  enteteProfil: "My profile",
+  enteteSecurite: "Security",
+  entetePaiement: "Payment",
+  enteteRappels: "Reminders",
+  enteteDonnees: "My data",
+  enteteAide: "Help",
+  enteteReservations: "Reservations",
+  enteteReprises: "In progress",
   moiSous: "What you show of yourself.",
   moiPartager: "Share",
   moiListes: "My wishlists",

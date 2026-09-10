@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   dataExportRequestSchema, lastDataExportSchema, type DataExportRequest,
 } from "@lehno/contracts";
-import { nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
+import { nativeFont, nativeSpace } from "@lehno/tokens";
 import {
-  Banner, Button, Icon, SectionLabel, Toast, useCouleurs,
+  Banner, Button, ScreenHeader, SectionLabel, Toast, useCouleurs
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -76,14 +76,7 @@ export default function Donnees() {
           paddingBottom: insets.bottom + nativeSpace[24],
         }]}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.retour}
-          onPress={() => routeur.back()}
-          style={styles.retour}
-        >
-          <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-        </Pressable>
+        <ScreenHeader titre={t.enteteDonnees} retour={t.retour} onRetour={() => routeur.back()} />
 
         {echec ? (
           <View style={{ marginBottom: nativeSpace[12] }}>
@@ -160,10 +153,6 @@ export default function Donnees() {
 
 const styles = StyleSheet.create({
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
-  retour: {
-    width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
-    alignItems: "center", justifyContent: "center",
-  },
   bloc: { marginTop: nativeSpace[24] },
   texte: { fontFamily: nativeFont.bodyRegular, fontSize: 14, marginTop: nativeSpace[8] },
   mention: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[8] },

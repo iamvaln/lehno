@@ -6,7 +6,7 @@ import Constants from "expo-constants";
 import { createSupportRequestSchema, type LegalDocument } from "@lehno/contracts";
 import { nativeBorder, nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
-  Banner, Button, Icon, SectionLabel, TextField, Toast, useCouleurs,
+  Banner, Button, Icon, ScreenHeader, SectionLabel, TextField, Toast, useCouleurs
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -90,14 +90,7 @@ export default function Aide() {
           paddingBottom: insets.bottom + nativeSpace[24],
         }]}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.retour}
-          onPress={() => routeur.back()}
-          style={styles.retour}
-        >
-          <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-        </Pressable>
+        <ScreenHeader titre={t.enteteAide} retour={t.retour} onRetour={() => routeur.back()} />
 
         {echec ? (
           <View style={{ marginBottom: nativeSpace[12] }}>
@@ -205,10 +198,6 @@ export default function Aide() {
 
 const styles = StyleSheet.create({
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
-  retour: {
-    width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
-    alignItems: "center", justifyContent: "center",
-  },
   bloc: { marginTop: nativeSpace[24] },
   rang: {
     flexDirection: "row", alignItems: "center", gap: nativeSpace[10],
