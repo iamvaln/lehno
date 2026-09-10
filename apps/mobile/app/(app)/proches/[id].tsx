@@ -291,10 +291,16 @@ export default function Proche() {
         </View>
       ) : null}
 
+      {/* LES DEUX SE PARTAGENT LA LARGEUR. Sans `flex`, chaque bouton prend la
+          taille de son texte : « Ajouter une note » et « Ajouter une date »
+          côte à côte débordaient de l'écran sur un iPhone SE — le second était
+          coupé net par le bord droit. La rangée est celle du kit ; c'est le
+          partage qui manquait. */}
       <View style={[styles.gestes]}>
         <Button
           variant="outline"
           icon="plus"
+          style={styles.geste}
           onPress={() => routeur.push({ pathname: "/note", params: { personId: proche.id } })}
         >
           {t.ficheAjouterNote}
@@ -302,6 +308,7 @@ export default function Proche() {
         <Button
           variant="outline"
           icon="plus"
+          style={styles.geste}
           onPress={() => routeur.push({ pathname: "/evenement", params: { personId: proche.id } })}
         >
           {t.ficheAjouterDate}
@@ -351,5 +358,8 @@ const styles = StyleSheet.create({
   /* Deux ajouts de même poids : ce qu'on a appris, et une date de plus pour
      cette personne. Côte à côte, ils ne poussent pas la fiche. */
   gestes: { flexDirection: "row", gap: nativeSpace[8], marginTop: nativeSpace[24] },
+  /* `flexShrink` autant que `flex` : sans lui, un libellé plus long que sa part
+     repousse quand même le voisin, et l'on retombe sur le débordement. */
+  geste: { flex: 1, flexShrink: 1 },
   sorties: { gap: nativeSpace[8], marginTop: nativeSpace[8] },
 });
