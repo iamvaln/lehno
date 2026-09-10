@@ -249,8 +249,13 @@ describe("la photo de profil", () => {
           occurrenceDate: new Date("2026-03-07"), occurrenceYear: 2026, status: "upcoming",
         },
       });
+      /* Un souhait appartient à sa LISTE, plus à l'occurrence : la fixture
+         ouvre donc la liste d'abord. Sans elle, la contrainte en base refuse. */
+      const liste = await db.prisma.wishlist.create({
+        data: { userId: proprietaire, eventOccurrenceId: occurrence.id },
+      });
       const souhait = await db.prisma.ownerWish.create({
-        data: { eventOccurrenceId: occurrence.id, label: "Un carnet", isPublic: true },
+        data: { wishlistId: liste.id, label: "Un carnet", isPublic: true },
       });
       return souhait.id;
     };
@@ -327,8 +332,10 @@ describe("la photo de profil", () => {
     describe("celle d'un souhait du carnet", () => {
       const unVoeuDuCarnet = async (proprietaire: string): Promise<string> => {
         const occurrenceId = await unSouhait(proprietaire).then(async (id) => {
-          const s = await db.prisma.ownerWish.findUniqueOrThrow({ where: { id } });
-          return s.eventOccurrenceId;
+          const s = await db.prisma.ownerWish.findUniqueOrThrow({
+            where: { id }, include: { wishlist: true },
+          });
+          return s.wishlist.eventOccurrenceId!;
         });
         const ligne = await db.prisma.wishlistItem.create({
           data: { eventOccurrenceId: occurrenceId, label: "Un foulard", origin: "owner" },

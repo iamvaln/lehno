@@ -12161,7 +12161,8 @@
                       },
                       "occurrenceId": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "nullable": true
                       },
                       "name": {
                         "type": "string",
@@ -12169,10 +12170,12 @@
                       },
                       "occurrenceDate": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "nullable": true
                       },
                       "eventKind": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "eventLabel": {
                         "type": "string",
@@ -12442,9 +12445,6 @@
                     "format": "date-time"
                   }
                 },
-                "required": [
-                  "occurrenceId"
-                ],
                 "additionalProperties": false
               }
             }
@@ -12464,7 +12464,8 @@
                     },
                     "occurrenceId": {
                       "type": "string",
-                      "format": "uuid"
+                      "format": "uuid",
+                      "nullable": true
                     },
                     "name": {
                       "type": "string",
@@ -12472,10 +12473,12 @@
                     },
                     "occurrenceDate": {
                       "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "nullable": true
                     },
                     "eventKind": {
-                      "type": "string"
+                      "type": "string",
+                      "nullable": true
                     },
                     "eventLabel": {
                       "type": "string",
@@ -14473,7 +14476,8 @@
                       },
                       "occurrenceDate": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "nullable": true
                       },
                       "showIdentity": {
                         "type": "boolean"
@@ -14744,7 +14748,8 @@
                         },
                         "occasionDate": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "nullable": true
                         },
                         "acceptsReservations": {
                           "type": "boolean"

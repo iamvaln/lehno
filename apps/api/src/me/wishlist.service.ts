@@ -52,34 +52,41 @@ export class WishlistService {
 
   async list(userId: string): Promise<Wishlist[]> {
     const lignes = await this.prisma.wishlist.findMany({
-      // Le cloisonnement remonte la chaîne liste → occurrence → compte, comme
-      // les souhaits de proche. `event_occurrence.user_id` suffit : la colonne
-      // existe et porte déjà le propriétaire de l'échéance.
-      where: { occurrence: { userId } },
+      /* Le cloisonnement se lit EN DIRECT. Il remontait la chaîne liste →
+         occurrence → compte, ce qui traversait une table qui ne répond pas à la
+         question — l'occurrence dit QUAND, pas À QUI — et laissait une liste
+         sans occasion hors de portée. */
+      where: { userId },
       include: {
         occurrence: { include: { event: true } },
         shareLinks: { where: { isActive: true } },
       },
-      // Les échéances les plus proches en tête : c'est celle qui approche qu'on
-      // vient tenir.
+      /* Les échéances les plus proches en tête : c'est celle qui approche qu'on
+         vient tenir. Une liste SANS occasion n'a pas de date et se range en
+         queue — Postgres place les nuls en dernier sur un tri croissant, ce qui
+         est ici le comportement voulu et non un hasard dont on profite : une
+         liste sans échéance n'a aucune raison de passer devant l'anniversaire
+         de la semaine prochaine.
+         (`nulls: "last"` ne s'écrit pas à travers une relation chez Prisma —
+         seulement sur un champ scalaire.) */
       orderBy: { occurrence: { occurrenceDate: "asc" } },
     });
 
     // Les comptes en UNE requête plutôt qu'une par liste : un carnet tient une
     // poignée d'occasions, mais la forme se garde de la boucle N+1 par principe.
-    const ids = lignes.map((l) => l.eventOccurrenceId);
-    const parOccasion = await this.prisma.ownerWish.groupBy({
-      by: ["eventOccurrenceId", "status"],
-      where: { eventOccurrenceId: { in: ids } },
+    const parListe = await this.prisma.ownerWish.groupBy({
+      by: ["wishlistId", "status"],
+      where: { wishlistId: { in: lignes.map((l) => l.id) } },
       _count: { _all: true },
     });
 
     return lignes.map((l) => {
-      const compte = parOccasion.filter((c) => c.eventOccurrenceId === l.eventOccurrenceId);
-      const total = compte.reduce((n, c) => n + c._count._all, 0);
+      const compte = parListe.filter((c) => c.wishlistId === l.id);
+      const total = compte.reduce((n, c) => n + (c._count?._all ?? 0), 0);
       const reserves = compte
         .filter((c) => c.status === "reserved")
-        .reduce((n, c) => n + c._count._all, 0);
+        .reduce((n, c) => n + (c._count?._all ?? 0), 0);
+      const fin = l.closesAt !== null && l.closesAt.getTime() <= Date.now();
       return {
         id: l.id,
         occurrenceId: l.eventOccurrenceId,
@@ -87,9 +94,12 @@ export class WishlistService {
         // compose pas à la place du client, qui a `eventLabel` et la date, et
         // qui sait dans quelle langue il affiche.
         name: l.name,
-        occurrenceDate: jour(l.occurrence.occurrenceDate),
-        eventKind: l.occurrence.event.kind,
-        eventLabel: l.occurrence.event.label ?? null,
+        /* Nuls ENSEMBLE quand la liste ne vise aucune occasion. Le client n'a
+           alors que `name` pour la désigner — d'où le fait qu'il devienne le
+           seul repère, et qu'on l'accepte à l'ouverture. */
+        occurrenceDate: l.occurrence === null ? null : jour(l.occurrence.occurrenceDate),
+        eventKind: l.occurrence?.event.kind ?? null,
+        eventLabel: l.occurrence?.event.label ?? null,
         wishCount: total,
         reservedCount: reserves,
         isShared: l.shareLinks.length > 0,
@@ -97,26 +107,32 @@ export class WishlistService {
         /* DEUX CAUSES, UN SEUL DRAPEAU. L'occasion est passée, ou la clôture
            que le propriétaire a posée est franchie. Le client n'a pas à
            comparer des dates lui-même : il se tromperait de fuseau, et sa
-           réponse divergerait de celle du serveur qui refuse les
-           réservations. */
-        isArchived:
-          estPassee(l.occurrence.occurrenceDate)
-          || (l.closesAt !== null && l.closesAt.getTime() <= Date.now()),
+           réponse divergerait de celle du serveur qui refuse les réservations.
+           Sans occasion, seule la clôture décide — une liste qu'on tient
+           indéfiniment ne s'archive jamais toute seule. */
+        isArchived: (l.occurrence !== null && estPassee(l.occurrence.occurrenceDate)) || fin,
       };
     });
   }
 
-  async create(userId: string, occurrenceId: string, options: { name?: string; closesAt?: string } = {}): Promise<Wishlist> {
+  async create(userId: string, occurrenceId: string | null, options: { name?: string; closesAt?: string } = {}): Promise<Wishlist> {
     /* L'occasion doit être une occasion À MOI — au sens de la self-Person, pas
        seulement du compte. `event_occurrence.user_id` dit à qui appartient le
        carnet ; il vaut aussi pour l'anniversaire d'un proche. Ouvrir une liste
        dessus publierait à des visiteurs ce que ce proche m'a confié en privé,
        et c'est exactement la confusion que le dictionnaire sépare entre
        `WishlistItem` et `OwnerWish`. */
-    const occurrence = await this.prisma.eventOccurrence.findFirst({
-      where: { id: occurrenceId, userId, event: { person: { isSelf: true } } },
-    });
-    if (!occurrence) throw ABSENT();
+    if (occurrenceId !== null) {
+      const occurrence = await this.prisma.eventOccurrence.findFirst({
+        where: { id: occurrenceId, userId, event: { person: { isSelf: true } } },
+      });
+      if (!occurrence) throw ABSENT();
+    }
+
+    /* SANS OCCASION, IL N'Y A RIEN À VÉRIFIER — et c'est justement pourquoi la
+       liste doit porter son propriétaire elle-même. Tant que le cloisonnement
+       passait par l'occurrence, une liste qui n'en visait aucune était
+       inaccessible à son auteur autant qu'aux autres. */
 
     // `create` plutôt qu'un findFirst suivi d'un create : l'unicité de
     // `event_occurrence_id` tranche sans course, là où deux appels simultanés
@@ -124,7 +140,8 @@ export class WishlistService {
     try {
       await this.prisma.wishlist.create({
         data: {
-          eventOccurrenceId: occurrenceId,
+          userId,
+          ...(occurrenceId === null ? {} : { eventOccurrenceId: occurrenceId }),
           ...(options.name === undefined ? {} : { name: options.name }),
           ...(options.closesAt === undefined ? {} : { closesAt: new Date(options.closesAt) }),
         },
@@ -140,9 +157,12 @@ export class WishlistService {
 
   // La liste du demandeur, ou 404. Point de passage de toutes les écritures :
   // une garde écrite une fois ne s'oublie pas au chemin suivant.
-  private async mienneOuAbsente(userId: string, wishlistId: string): Promise<{ id: string; eventOccurrenceId: string }> {
+  /* LE PROPRIÉTAIRE SE LIT SUR LA LISTE, plus par l'occurrence. La chaîne
+     traversait une table qui ne répond pas à la question, et laissait une liste
+     sans occasion introuvable. */
+  private async mienneOuAbsente(userId: string, wishlistId: string): Promise<{ id: string; eventOccurrenceId: string | null }> {
     const liste = await this.prisma.wishlist.findFirst({
-      where: { id: wishlistId, occurrence: { userId } },
+      where: { id: wishlistId, userId },
       select: { id: true, eventOccurrenceId: true },
     });
     if (!liste) throw ABSENT();
@@ -154,7 +174,7 @@ export class WishlistService {
   async listWishes(userId: string, wishlistId: string): Promise<OwnerWish[]> {
     const liste = await this.mienneOuAbsente(userId, wishlistId);
     const lignes = await this.prisma.ownerWish.findMany({
-      where: { eventOccurrenceId: liste.eventOccurrenceId },
+      where: { wishlistId: liste.id },
       // L'ordre appartient au propriétaire (brief §3) : `position` d'abord,
       // l'ancienneté ensuite pour ce qu'il n'a pas rangé. `nulls: "last"` —
       // sans quoi Postgres remonte les non rangés en tête sur un tri croissant.
@@ -198,7 +218,7 @@ export class WishlistService {
     const liste = await this.mienneOuAbsente(userId, wishlistId);
     const ligne = await this.prisma.ownerWish.create({
       data: {
-        eventOccurrenceId: liste.eventOccurrenceId,
+        wishlistId: liste.id,
         label: input.label,
         link: input.link ?? null,
         details: input.details ?? null,
@@ -242,7 +262,7 @@ export class WishlistService {
       // Le périmètre reste dans le WHERE de l'écriture, jamais seulement dans
       // la lecture d'avant : entre les deux, rien ne garantit que la ligne
       // n'ait pas changé de main.
-      where: { id, occurrence: { userId } },
+      where: { id, wishlist: { userId } },
       data: {
         ...(input.label !== undefined ? { label: input.label } : {}),
         ...(input.link !== undefined ? { link: input.link } : {}),
@@ -260,16 +280,14 @@ export class WishlistService {
       where: { id },
       include: { reservations: { where: { status: "confirmed" }, take: 1 } },
     });
-    const liste = await this.prisma.wishlist.findFirst({
-      where: { eventOccurrenceId: ligne.eventOccurrenceId },
-      select: { id: true },
-    });
-    return rendre(liste?.id ?? "", ligne as unknown as LigneSouhait, ligne.reservations[0] ?? null);
+    // La liste est PORTÉE par le souhait maintenant : plus besoin de la
+    // retrouver par l'occasion, ce qui échouait dès qu'il n'y en avait pas.
+    return rendre(ligne.wishlistId, ligne as unknown as LigneSouhait, ligne.reservations[0] ?? null);
   }
 
   async removeWish(userId: string, id: string): Promise<void> {
     const { count } = await this.prisma.ownerWish.deleteMany({
-      where: { id, occurrence: { userId } },
+      where: { id, wishlist: { userId } },
     });
     if (count === 0) throw ABSENT();
   }
@@ -278,7 +296,7 @@ export class WishlistService {
     price: { toNumber(): number } | null; currency: string | null; status: string;
   }> {
     const ligne = await this.prisma.ownerWish.findFirst({
-      where: { id, occurrence: { userId } },
+      where: { id, wishlist: { userId } },
       select: { price: true, currency: true, status: true },
     });
     if (!ligne) throw ABSENT();
@@ -338,12 +356,17 @@ export class WishlistService {
         status: "confirmed",
         OR: [{ userId }, { email: moi.email }],
       },
+      /* Le propriétaire se lit maintenant SUR LA LISTE, et l'occasion à travers
+         elle. Un souhait d'une liste sans occasion n'a pas de date : le tri le
+         range en queue — Postgres place les nuls en dernier sur un tri
+         croissant, et c'est le comportement voulu : une réservation sans
+         échéance n'a pas à passer devant celle de la semaine prochaine. */
       include: {
         ownerWish: {
-          include: { occurrence: { include: { user: true } } },
+          include: { wishlist: { include: { occurrence: true, user: true } } },
         },
       },
-      orderBy: { ownerWish: { occurrence: { occurrenceDate: "asc" } } },
+      orderBy: { ownerWish: { wishlist: { occurrence: { occurrenceDate: "asc" } } } },
     });
 
     return lignes.map((l) => ({
@@ -353,9 +376,13 @@ export class WishlistService {
       wishImageUrl: l.ownerWish.imageUrl,
       price: l.ownerWish.price === null ? null : l.ownerWish.price.toNumber(),
       currency: l.ownerWish.currency,
-      ownerDisplayName: l.ownerWish.occurrence.user.displayName ?? l.ownerWish.occurrence.user.username,
-      ownerUsername: l.ownerWish.occurrence.user.username,
-      occurrenceDate: jour(l.ownerWish.occurrence.occurrenceDate),
+      ownerDisplayName: l.ownerWish.wishlist.user.displayName ?? l.ownerWish.wishlist.user.username,
+      ownerUsername: l.ownerWish.wishlist.user.username,
+      // Nulle quand la liste ne vise aucune occasion : l'écran affiche alors le
+      // nom de la liste, qui est le seul repère qu'elle ait.
+      occurrenceDate: l.ownerWish.wishlist.occurrence === null
+        ? null
+        : jour(l.ownerWish.wishlist.occurrence.occurrenceDate),
       showIdentity: l.showIdentity,
       confirmedAt: (l.confirmedAt ?? l.createdAt).toISOString(),
     }));

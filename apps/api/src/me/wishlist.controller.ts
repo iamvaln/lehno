@@ -40,7 +40,7 @@ export class WishlistsController {
     @Req() req: AuthedRequest,
     @Body(new ZodValidationPipe(createWishlistSchema)) body: CreateWishlistInput,
   ): Promise<Wishlist> {
-    const liste = await this.listes.create(req.userId, body.occurrenceId, {
+    const liste = await this.listes.create(req.userId, body.occurrenceId ?? null, {
       ...(body.name === undefined ? {} : { name: body.name }),
       ...(body.closesAt === undefined ? {} : { closesAt: body.closesAt }),
     });
