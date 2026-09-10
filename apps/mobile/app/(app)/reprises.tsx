@@ -16,7 +16,9 @@ import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
 import { ecranEteint } from "../../lib/navigation.js";
-import { composeLesReprises, fenetreDesReprises, type Reprise } from "../../lib/reprises.js";
+import {
+  composeLesReprises, destinationDeLaReprise, fenetreDesReprises, type Reprise,
+} from "../../lib/reprises.js";
 import { EcranFerme } from "../../composants/EcranFerme.js";
 
 /* Reprises en cours — §3.16.
@@ -40,16 +42,12 @@ import { EcranFerme } from "../../composants/EcranFerme.js";
    son dessin d'une décision qui parle de rythme. */
 const COTE_DE_LA_PASTILLE = 32;
 
-/* OÙ MÈNE « REPRENDRE » — §3.7, qui n'est pas encore porté.
+/* OÙ MÈNE « REPRENDRE » : `destinationDeLaReprise`, hors de React.
  *
- * Écrit ici en UN SEUL ENDROIT plutôt qu'inventé sur chaque carte : c'est le
- * seul fil qui pende de cet écran, et il doit se voir. Le chemin ne figure pas
- * encore dans les routes typées d'expo-router — `app/(app)/generation.tsx`
- * n'existe pas —, d'où la conversion, qui tombera d'elle-même le jour où
- * l'écran arrivera. §3.16 n'est de toute façon atteignable de nulle part tant
- * que le geste n'a pas de destination : un renvoi vers un écran absent est
- * exactement ce que le handoff interdit. */
-const VERS_LA_GENERATION = "/generation" as Href;
+ * Le chemin poussé ne figure pas dans les routes typées d'expo-router — les
+ * deux écrans d'arrivée vivent hors du groupe `(app)` —, d'où la conversion.
+ * C'est la même que celle de l'occasion et de la préparation, qui poussent
+ * `/generation` de la même façon. */
 
 interface Charge {
   generations: readonly GenerationResult[];
@@ -165,7 +163,18 @@ export default function Reprises() {
         >
           <Text style={[styles.intro, { color: couleurs.textSecondary }]}>{t.reprisesIntro}</Text>
           {liste.map((r) => (
-            <CarteDeReprise key={r.id} reprise={r} onReprendre={() => routeur.push(VERS_LA_GENERATION)} />
+            <CarteDeReprise
+              key={r.id}
+              reprise={r}
+              /* Sans destination — un portrait qui se compose encore —, la carte
+                 n'offre pas le geste plutôt que de le rendre muet. */
+              {...(destinationDeLaReprise(r) === null ? {} : {
+                onReprendre: () => {
+                  const ou = destinationDeLaReprise(r)!;
+                  routeur.push({ pathname: ou.chemin, params: ou.params } as Href);
+                },
+              })}
+            />
           ))}
         </ScrollView>
       )}
@@ -175,7 +184,7 @@ export default function Reprises() {
 
 function CarteDeReprise({ reprise, onReprendre }: {
   reprise: Reprise;
-  onReprendre: () => void;
+  onReprendre?: (() => void) | undefined;
 }) {
   const { t } = useLangue();
   const couleurs = useCouleurs();
@@ -234,9 +243,11 @@ function CarteDeReprise({ reprise, onReprendre }: {
         </View>
       )}
 
-      <Button variant="outline" full style={styles.reprendre} onPress={onReprendre}>
-        {t.repriseReprendre}
-      </Button>
+      {onReprendre === undefined ? null : (
+        <Button variant="outline" full style={styles.reprendre} onPress={onReprendre}>
+          {t.repriseReprendre}
+        </Button>
+      )}
     </Card>
   );
 }

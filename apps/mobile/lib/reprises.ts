@@ -69,6 +69,11 @@ export interface Reprise {
   /* Le serveur produit encore. La carte le dit — et peut désormais dire pour
      qui, la cible étant portée par l'exécution. */
   enCours: boolean;
+  /* Le résultat produit, quand il existe. Le PORTRAIT s'ouvre par lui et non
+     par son exécution : `/portrait` lit `/me/portraits/{id}`, et lui passer
+     l'identifiant de l'exécution le ferait chercher un portrait qui n'existe
+     pas sous ce nom. Nul tant que la production travaille. */
+  resultId: string | null;
 }
 
 /* ── La fenêtre d'échéances qu'il faut pour nommer les cibles ─────────────── */
@@ -203,8 +208,48 @@ export function composeLesReprises(
       jours: echeance?.daysUntil ?? null,
       extrait: message === null ? null : extraitDe(message.content),
       enCours: generation.status === "running",
+      resultId: generation.resultId,
     });
   }
 
   return ordonne(retenues);
+}
+
+/* ── Où mène « Reprendre » ────────────────────────────────────────────────── */
+
+/* LE GESTE N'AVAIT PAS DE DESTINATION, et c'était le seul geste de l'écran.
+ *
+ * La carte poussait `/generation` SANS IDENTIFIANT. L'écran d'arrivée n'a alors
+ * rien à observer — `ouverture(undefined)` rend « sans objet » — et il fait
+ * demi-tour aussitôt. Vu de l'appareil : on appuie sur « Reprendre » et rien ne
+ * bouge. Pas d'erreur, pas d'écran : rien. Tout le travail que §3.16 promet de
+ * ne pas perdre était donc irrécupérable depuis l'écran qui le montre.
+ *
+ * Deux destinations, parce que ce sont deux écrans :
+ *
+ * — le message et les idées s'observent par leur EXÉCUTION, `/generation?id=`,
+ *   qui sonde jusqu'à l'aboutissement. C'est déjà le chemin que prennent
+ *   l'occasion et la préparation ;
+ * — le portrait se lit par son RÉSULTAT, `/portrait?id=`. Tant qu'il se
+ *   compose, ce résultat n'existe pas, et il n'y a rien à ouvrir : l'écran
+ *   n'observe pas d'exécution, et lui passer celle-ci le ferait chercher un
+ *   portrait sous un identifiant qui n'en désigne aucun.
+ *
+ * `qui` voyage avec, quand on le connaît : les deux écrans d'arrivée nomment le
+ * proche, et le rechercher ferait un appel pour une phrase.
+ */
+export interface Destination {
+  readonly chemin: "/generation" | "/portrait";
+  readonly params: { readonly id: string; readonly qui?: string };
+}
+
+export function destinationDeLaReprise(reprise: Reprise): Destination | null {
+  const qui = reprise.qui === null ? {} : { qui: reprise.qui };
+
+  if (reprise.kind === "portrait") {
+    if (reprise.resultId === null) return null;
+    return { chemin: "/portrait", params: { id: reprise.resultId, ...qui } };
+  }
+
+  return { chemin: "/generation", params: { id: reprise.id, ...qui } };
 }
