@@ -21,6 +21,9 @@ export const TACHES_IA = [
   "sensitive_detection",
   "message",
   "gift_ideas",
+  /* Le texte qui PRÉCÈDE l'image : il lit les notes et rend les mots qui
+     comptent. Ce sont eux qui partent au modèle d'image, jamais les notes. */
+  "portrait_brief",
   "illustration",
   "photo_style",
 ] as const;
@@ -35,6 +38,7 @@ export const CAPACITE_REQUISE: Record<TacheIA, CapaciteIA> = {
   sensitive_detection: "text",
   message: "text",
   gift_ideas: "text",
+  portrait_brief: "text",
   illustration: "image",
   photo_style: "image",
 };
@@ -134,6 +138,15 @@ export const CHAINES_PAR_DEFAUT: Record<TacheIA, readonly string[]> = {
     "anthropic:claude-sonnet-5",
     "deepseek:deepseek-chat",
     "xai:grok-4.6",
+  ],
+  /* Le brief prend le MEILLEUR modèle de texte, pas le moins cher. Il décide de
+     ce qu'un dessin montrera d'une personne, à partir de ce qu'on a écrit sur
+     elle en confidence — et une erreur ici se voit sur l'image, après paiement.
+     Même arbitrage que le message, pour la même raison. */
+  portrait_brief: [
+    "anthropic:claude-opus-5",
+    "anthropic:claude-sonnet-5",
+    "deepseek:deepseek-reasoner",
   ],
   illustration: ["openai:gpt-image-2", "xai:grok-imagine-image", "openai:gpt-image-1"],
   photo_style: ["openai:gpt-image-2", "xai:grok-imagine-image", "openai:gpt-image-1"],

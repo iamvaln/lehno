@@ -1467,6 +1467,17 @@ enum AITask {
   sensitive_detection
   message
   gift_ideas
+  /**
+   * LE TEXTE QUI PRÉCÈDE L'IMAGE. Il lit les notes, les attributs et le mot de
+   * l'utilisateur, et rend les mots qui comptent — jamais les notes elles-mêmes.
+   *
+   * C'est ce qui empêche les confidences de partir mot pour mot chez un
+   * fournisseur d'image : ce qui traverse est ce qu'on en a retenu. Et c'est ce
+   * qui rend les interdictions tenables — un modèle de texte sait qu'on lui
+   * interdit un sujet, là où un modèle d'image reçoit une consigne qu'il
+   * illustre.
+   */
+  portrait_brief
   // Les deux tâches d'image. Elles n'acceptent qu'un modèle de capacité
   // `image` — voir AICapability.
   illustration
