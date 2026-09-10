@@ -82,6 +82,15 @@ export default function Connexion() {
           nature="email"
           value={email}
           onChangeText={setEmail}
+          /* LA TOUCHE DE RETOUR ENVOIE, et ce n'est pas un raccourci de confort.
+             Sur un écran court, le clavier ouvert RECOUVRE le bouton : on tape
+             son adresse et il faut refermer le clavier pour trouver l'action.
+             La même garde que le bouton — une adresse qui ne ressemble à rien
+             ne part pas —, sinon la touche promettrait ce que le bouton refuse. */
+          returnKeyType="send"
+          onSubmitEditing={() => {
+            if (!envoi && ressembleAUneAdresse(email)) void demandeLeCode();
+          }}
         />
         <Button
           variant="primary"
