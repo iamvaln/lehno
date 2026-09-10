@@ -419,6 +419,8 @@ export const fr = {
   collecteMot: (qui: string) => "Un mot pour " + qui,
   collecteMotAide: "Il s'affiche en haut de la page qu'on ouvrira.",
   collecteMotExemple: "ex. dis-moi ce qui te ferait plaisir, je m'occupe du reste",
+  collecteMotEnregistrer: "Enregistrer le mot",
+  collecteMotLimite: (n: number) => `${n} caractère${n > 1 ? "s" : ""} de trop`,
   collecteApercu: "Voir la page avant d'envoyer",
   collecteRevoqueFait: "Lien révoqué.",
   lienCopieFait: "Lien copié.",

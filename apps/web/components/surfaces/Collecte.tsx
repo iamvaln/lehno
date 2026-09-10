@@ -52,7 +52,7 @@ export function Collecte(
     dejaEnvoye: PublicSubmission[];
   },
 ): ReactNode {
-  const { type, ownerDisplayName, personDisplayName, birthDate, ownerWallUsername } = formulaire;
+  const { type, ownerDisplayName, personDisplayName, birthDate, ownerWallUsername, message } = formulaire;
   const ouvert = type === "public";
 
   const [etat, setEtat] = useState<Etat>("saisie");
@@ -186,6 +186,31 @@ export function Collecte(
                   </div>
                 </div>
               </div>
+
+              {/* LE MOT DE CELUI QUI INVITE, avant le chapeau du produit.
+                  C'est la seule phrase de cette page qui ne vienne pas de nous,
+                  et elle passe donc devant : le visiteur reconnaît une voix
+                  qu'il connaît avant de lire une explication qu'il ne connaît
+                  pas. Sous le chapeau, il l'aurait prise pour de la copie.
+
+                  Cité, pas paraphrasé — d'où le trait vertical plutôt qu'une
+                  bulle : la page ne prétend pas que ces mots sont d'elle.
+
+                  `pre-wrap` garde les retours à la ligne écrits : quelqu'un qui
+                  a séparé deux phrases voulait deux phrases. */}
+              {message ? (
+                <p
+                  style={{
+                    margin: "var(--space-20) 0 0",
+                    paddingLeft: "var(--space-14)",
+                    borderLeft: "2px solid var(--border-object)",
+                    whiteSpace: "pre-wrap",
+                    textWrap: "pretty",
+                  }}
+                >
+                  {message}
+                </p>
+              ) : null}
 
               <p style={{ margin: "var(--space-14) 0 0", color: "var(--text-secondary)", textWrap: "pretty" }}>
                 {dejaEnvoye.length > 0

@@ -1,0 +1,16 @@
+-- Le mot d'accompagnement d'un lien de collecte.
+--
+-- La copie de la maquette le promet à celui qui l'écrit : « il s'affiche en
+-- haut de la page qu'on ouvrira ». Le contrat ne le portait pas, et le champ
+-- avait donc été retiré de l'écran plutôt que de laisser une saisie s'évaporer
+-- à l'envoi — ce qui est pire qu'un champ absent : on croit l'avoir écrit.
+--
+-- NULLABLE, et il doit le rester : un lien vaut sans un mot, et les liens déjà
+-- en circulation n'en ont pas. Une chaîne vide par défaut obligerait la page
+-- publique à distinguer « rien écrit » de « écrit puis effacé », alors que les
+-- deux ne montrent rien.
+--
+-- 280 caractères : ce n'est pas une lettre, c'est la phrase qui explique
+-- pourquoi on ouvre cette page. Plus long, elle pousse le formulaire sous la
+-- ligne de flottaison — et le formulaire est ce qu'on est venu remplir.
+ALTER TABLE "collection_link" ADD COLUMN "message" VARCHAR(280);

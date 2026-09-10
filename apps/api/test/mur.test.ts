@@ -283,6 +283,45 @@ describe("le Mur et la collecte", () => {
     expect(dansLaListe?.url).toBe(`${SITE}/c/${lien.token}`);
   });
 
+  /* Garde LE MOT D'ACCOMPAGNEMENT, de bout en bout : écrit avec le lien, servi
+     en haut de la page que le proche ouvrira. C'est la promesse littérale de la
+     copie — « il s'affiche en haut de la page qu'on ouvrira » —, et elle ne
+     tient que si les deux extrémités la portent. */
+  it("écrit le mot avec le lien et le sert au formulaire public", async () => {
+    const p = await db.prisma.person.create({ data: { userId: awa, displayName: "Bila" } });
+    const lien = await collecte.create(awa, {
+      type: "nominatif", personId: p.id, message: "dis-moi ce qui te ferait plaisir",
+    });
+    expect(lien.message).toBe("dis-moi ce qui te ferait plaisir");
+    expect((await collecte.formulaire(lien.token)).message).toBe("dis-moi ce qui te ferait plaisir");
+  });
+
+  /* Sans mot, la page ne cite rien — et le champ est SERVI NUL, jamais absent :
+     une clé manquante ferait distinguer au client « pas de mot » de « champ pas
+     encore déployé ». */
+  it("sert un mot nul quand rien n'a été écrit", async () => {
+    const p = await db.prisma.person.create({ data: { userId: awa, displayName: "Bila" } });
+    const lien = await collecte.create(awa, { type: "nominatif", personId: p.id });
+    expect(lien.message).toBeNull();
+    expect((await collecte.formulaire(lien.token)).message).toBeNull();
+  });
+
+  /* ROUVRIR SANS RÉÉCRIRE LE MOT NE L'EFFACE PAS. L'écran de réactivation n'a
+     pas toujours ce champ sous la main ; écrire systématiquement ce qu'il
+     envoie effacerait le mot de quiconque rouvre un lien depuis ailleurs. Le
+     retirer reste possible, mais il faut le demander. */
+  it("garde le mot quand on rouvre sans le redonner, et l'efface quand on le demande", async () => {
+    const p = await db.prisma.person.create({ data: { userId: awa, displayName: "Bila" } });
+    const premier = await collecte.create(awa, { type: "nominatif", personId: p.id, message: "un mot" });
+    await collecte.revoke(awa, premier.id);
+
+    const sansLeDire = await collecte.create(awa, { type: "nominatif", personId: p.id });
+    expect(sansLeDire.message).toBe("un mot");
+
+    const efface = await collecte.create(awa, { type: "nominatif", personId: p.id, message: null });
+    expect(efface.message).toBeNull();
+  });
+
   /* Garde la RÉOUVERTURE du lien de collecte. §3.20 dit « lien révoqué
      (réactivable) » : le jeton circule déjà chez le proche, souvent en favori,
      et c'est par lui qu'il relit le sort de ses souhaits. En frapper un second

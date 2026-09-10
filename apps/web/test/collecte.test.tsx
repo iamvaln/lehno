@@ -11,6 +11,7 @@ function formulaire(sur: Partial<PublicCollectForm> = {}): PublicCollectForm {
   return {
     type: "nominatif",
     ownerDisplayName: "Awa",
+    message: null,
     personDisplayName: "Malik",
     birthDate: "1994-05-21",
     ownerWallUsername: null,

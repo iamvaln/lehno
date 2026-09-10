@@ -12,14 +12,14 @@ import {
 } from "@lehno/tokens";
 import {
   Banner, Button, Card, EmptyState, Icon, Illustration, LoadingState,
-  SectionLabel, Tag, Toast, useCouleurs,
+  SectionLabel, Tag, TextField, Toast, useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, appelPublic, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import {
   aTrancherPour, corpsDeCreation, dateDejaProposee, designeUneFiche,
-  etatDeLaCollecte, lienVivantPour, proposeLeMur, recuesPour,
+  deTropDansLeMot, etatDeLaCollecte, lienVivantPour, motDeCollecte, motTient, proposeLeMur, recuesPour,
 } from "../../lib/collecte.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
 import { ecranEteint } from "../../lib/navigation.js";
@@ -42,11 +42,14 @@ import { EcranFerme } from "../../composants/EcranFerme.js";
  * un module natif, et l'ajouter demande une reconstruction. `Share` couvre le
  * besoin — la feuille du système propose « Copier » elle-même.
  *
- * LE MOT D'ACCOMPAGNEMENT n'a nulle part où aller. La copie promet « il
- * s'affiche en haut de la page qu'on ouvrira » ; `createCollectionLinkSchema`
- * est `.strict()` sur `type` et `personId`, et `publicCollectFormSchema` ne
- * rend rien de tel. Un champ qu'on saisirait ici s'évaporerait à l'envoi — pire
- * qu'un champ absent, parce qu'on croirait l'avoir écrit.
+ * LE MOT D'ACCOMPAGNEMENT tient sa promesse. Le contrat le porte à la création
+ * et la page publique le sert : « il s'affiche en haut de la page qu'on
+ * ouvrira » n'est plus une phrase en l'air.
+ *
+ * IL S'ENREGISTRE PAR UN GESTE, jamais en sortant du champ. Une écriture
+ * silencieuse sur un champ qu'on relit sans le vouloir modifierait ce que le
+ * proche verra sans que personne l'ait demandé. Le bouton n'apparaît donc que
+ * lorsque le texte a bougé, et disparaît une fois écrit.
  *
  * RÉACTIVER, EN REVANCHE, EXISTE : le contrat n'offre que créer et révoquer, et
  * la copie anglaise le dit elle-même — « Create a new link ». Le bouton porte
@@ -75,6 +78,11 @@ export default function Collecte() {
   const [envoi, setEnvoi] = useState(false);
   const [accuse, setAccuse] = useState<string | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
+  /* Le mot en cours de saisie, et celui qui est ENREGISTRÉ. Deux états, parce
+     que c'est leur écart qui décide d'afficher le bouton — un seul état ne
+     saurait pas dire si ce qu'on lit vient du serveur ou du clavier. */
+  const [mot, setMot] = useState("");
+  const [motEnregistre, setMotEnregistre] = useState<string | null>(null);
   const [apercu, setApercu] = useState<PublicCollectForm | null>(null);
   const [apercuEchec, setApercuEchec] = useState<string | null>(null);
 
@@ -87,7 +95,14 @@ export default function Collecte() {
         appel<unknown>("/me/submissions"),
       ]);
       setProche(personSchema.parse(brutProche));
-      setLiens(listeDeLiens.parse(brutLiens));
+      const lus = listeDeLiens.parse(brutLiens);
+      setLiens(lus);
+      /* Le mot du lien VIVANT de cette fiche. On le repose à chaque chargement :
+         l'écran se rouvre après un aller-retour, et un champ resté sur une
+         saisie abandonnée ferait croire qu'elle a été enregistrée. */
+      const sien = lienVivantPour(lus, id)?.message ?? null;
+      setMotEnregistre(sien);
+      setMot(sien ?? "");
       setContributions(listeDeContributions.parse(brutContributions));
       setEchec(null);
     } catch (e) {
@@ -104,7 +119,7 @@ export default function Collecte() {
     try {
       await appel<unknown>("/me/collection-links", {
         method: "POST",
-        body: JSON.stringify(corpsDeCreation("nominatif", id)),
+        body: JSON.stringify(corpsDeCreation("nominatif", id, motDeCollecte(mot))),
       });
       if (reactivation) setAccuse(t.collecteReactiveFait);
       await charge();
@@ -191,6 +206,15 @@ export default function Collecte() {
       </View>
     );
   }
+
+  /* ENREGISTRER LE MOT emprunte la route de création, qui ROUVRE le lien
+     existant plutôt que d'en frapper un second — c'est déjà sa règle, et le
+     jeton en circulation ne bouge donc pas. Une route de modification à part
+     n'apporterait qu'un second chemin vers la même écriture. */
+  const enregistreLeMot = async (): Promise<void> => {
+    await cree(false);
+    setMotEnregistre(motDeCollecte(mot));
+  };
 
   if (eteint) return <EcranFerme />;
 
@@ -293,6 +317,43 @@ export default function Collecte() {
             </Tag>
           </View>
         </Card>
+
+        {/* LE MOT, seulement sur un lien vivant : l'écrire pour une adresse
+            qui ne mène plus n'aurait pas de destinataire. La maquette le pose
+            au même endroit, entre le lien et les gestes — on relit ce qu'on
+            envoie juste avant de l'envoyer. */}
+        {vivant ? (
+          <View style={styles.mot}>
+            <TextField
+              multiline
+              label={t.collecteMot(proche.callingName ?? proche.displayName)}
+              placeholder={t.collecteMotExemple}
+              value={mot}
+              onChangeText={setMot}
+              invalid={!motTient(mot)}
+              /* React Native n'a pas d'état « invalide » : la faute doit vivre
+                 dans le texte d'aide, sans quoi elle ne se voit que pour qui
+                 voit le contour. Le compteur n'apparaît qu'une fois la borne
+                 dépassée — permanent sur un champ facultatif, il presserait
+                 pour rien. */
+              hint={motTient(mot) ? t.collecteMotAide : t.collecteMotLimite(deTropDansLeMot(mot))}
+            />
+            {/* Il n'apparaît que si le texte a bougé — et disparaît une fois
+                écrit. Un bouton toujours là inviterait à enregistrer ce qui
+                l'est déjà, et laisserait douter de ce qui a été retenu. */}
+            {motDeCollecte(mot) !== motEnregistre ? (
+              <Button
+                full
+                variant="outline"
+                icon="check"
+                disabled={envoi || !motTient(mot)}
+                onPress={() => void enregistreLeMot()}
+              >
+                {t.collecteMotEnregistrer}
+              </Button>
+            ) : null}
+          </View>
+        ) : null}
 
         <View style={styles.gestes}>
           {vivant ? (
@@ -419,6 +480,7 @@ const styles = StyleSheet.create({
   carte: { marginTop: nativeSpace[20] },
   ligne: { flexDirection: "row", alignItems: "center", gap: nativeSpace[10] },
   jeton: { flex: 1, fontFamily: nativeFont.displayMedium, fontSize: 17 },
+  mot: { marginTop: nativeSpace[16], gap: nativeSpace[8] },
   gestes: { marginTop: nativeSpace[14], gap: nativeSpace[8] },
   bloc: { marginTop: nativeSpace[24] },
   nom: { fontFamily: nativeFont.displayMedium, fontSize: 19 },
