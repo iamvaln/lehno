@@ -57,6 +57,12 @@ export interface CreditsProps {
     reference?: string;
     reason: string;
   }) => void;
+  /* OUVRIR LE REÇU. L'écran ne compose pas l'adresse et ne la garde pas : il
+     demande, et ce qu'on lui rend s'ouvre tout de suite. L'URL est signée pour
+     quelques minutes — la ranger dans l'état ferait un lien mort au deuxième
+     clic, et un lien mort sur une pièce justificative se lit comme une pièce
+     manquante. */
+  onOuvrirLeRecu?: () => void;
 }
 
 const TON_ETAT: Record<string, TonPastille> = {
@@ -74,7 +80,7 @@ function duree(secondes: number): string {
 export function Credits({
   role, langue = "fr", onglet = "paiements", onOnglet,
   paiements = [], paiement = null, mouvements = [], paliers = [], canaux = [], comptes = [],
-  filtreEtat = "tous", filtreMode = "tous", onFiltre, onOuvrir, onRetour, onSaisir, onDecider,
+  filtreEtat = "tous", filtreMode = "tous", onFiltre, onOuvrir, onRetour, onSaisir, onDecider, onOuvrirLeRecu,
   onExporter, exportEnCours = false,
 }: CreditsProps): ReactNode {
   const t = messages(langue);
@@ -138,6 +144,24 @@ export function Credits({
             <div className="gabarit-champ">
               <span className="gabarit-cle">{t.credits.detail.champs.reference}</span>
               <span className="gabarit-valeur">{paiement.reference ?? t.credits.paiements.nonConstate}</span>
+            </div>
+            {/* LA PIÈCE, ET LE MOYEN DE L'OUVRIR.
+                Le contrat porte `recu` — la PRÉSENCE du fichier, jamais sa clé —
+                depuis le début, et rien ne l'affichait : l'écran demandait de
+                vérifier une pièce qu'il ne montrait pas. Son absence se dit
+                aussi, et vaut mieux qu'un silence : c'est ce qui fait la
+                réclamer avant de trancher. */}
+            <div className="gabarit-champ">
+              <span className="gabarit-cle">{t.credits.detail.champs.recuPiece}</span>
+              <span className="gabarit-valeur">
+                {paiement.recu ? (
+                  <Button variant="text" icon="paperclip" onClick={() => onOuvrirLeRecu?.()}>
+                    {t.credits.detail.ouvrirRecu}
+                  </Button>
+                ) : (
+                  t.credits.detail.sansRecu
+                )}
+              </span>
             </div>
             {paiement.motifEchec ? (
               <div className="gabarit-champ">
@@ -411,6 +435,11 @@ export function Credits({
               { cle: "actif", titre: t.credits.reglages.paliers.col.etat, rendu: (p) => etat(p.actif) },
             ] as Colonne<Palier & { id: string }>[]}
             lignes={paliers}
+            /* SANS ÉTAT VIDE, un tableau se réduit à sa ligne d'en-têtes — ce
+               qui se lit comme un chargement inachevé, pas comme « il n'y en a
+               pas ». Les autres tableaux de l'outil le disent tous ; ces
+               trois-là ne le faisaient pas. */
+            vide={<EmptyState titre={t.credits.reglages.paliers.vide.titre} texte={t.credits.reglages.paliers.vide.texte} />}
           />
 
           <h2 className="gabarit-groupe-titre">{t.credits.reglages.canaux.titre}</h2>
@@ -424,6 +453,7 @@ export function Credits({
               { cle: "actif", titre: t.credits.reglages.canaux.col.etat, rendu: (c) => etat(c.actif) },
             ] as Colonne<Canal & { id: string }>[]}
             lignes={canaux}
+            vide={<EmptyState titre={t.credits.reglages.canaux.vide.titre} texte={t.credits.reglages.canaux.vide.texte} />}
           />
 
           <h2 className="gabarit-groupe-titre">{t.credits.reglages.comptes.titre}</h2>
@@ -440,6 +470,7 @@ export function Credits({
               { cle: "actif", titre: t.credits.reglages.comptes.col.etat, rendu: (c) => etat(c.actif) },
             ] as Colonne<CompteCollecte & { id: string }>[]}
             lignes={comptes}
+            vide={<EmptyState titre={t.credits.reglages.comptes.vide.titre} texte={t.credits.reglages.comptes.vide.texte} />}
           />
         </>
       ) : null}

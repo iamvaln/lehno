@@ -392,10 +392,13 @@ export const fr = {
 
     detail: {
       titre: "Paiement",
+      ouvrirRecu: "Ouvrir le reçu",
+      sansRecu: "Aucun reçu déposé",
       groupes: { operation: "L'opération", montants: "Les montants", histoire: "Son histoire" },
       champs: {
         reference: "Référence", compte: "Compte de collecte", frais: "Frais",
         montant: "Prix du palier", attendu: "Attendu sur le compte", recu: "Constaté",
+        recuPiece: "Reçu",
         ecart: "Écart", motifEchec: "Motif du refus", credits: "Crédits",
       },
       histoire: { etat: "État", debut: "Depuis", duree: "Durée", origine: "Provoqué par", parQui: "Par", motif: "Motif" },
@@ -471,17 +474,20 @@ export const fr = {
       paliers: {
         titre: "Paliers d'achat",
         sous: "Ce qu'on propose à l'achat. Aucune saisie libre : le plus petit palier fixe le minimum.",
+        vide: { titre: "Aucun palier", texte: "Les offres d'achat de crédits apparaissent ici. Sans palier, personne ne peut recharger." },
         col: { montant: "Prix", credits: "Crédits", remise: "Remise", position: "Ordre", etat: "État" },
       },
       canaux: {
         titre: "Canaux et barèmes",
         sous: "Ce que le service propose, et ce que l'opérateur prend. Un canal ne se supprime pas, il se désactive.",
+        vide: { titre: "Aucun canal", texte: "Les moyens d'encaissement et leurs frais apparaissent ici. Sans canal, aucun versement ne se déclare." },
         col: { libelle: "Canal", pays: "Pays", frais: "Frais", portes: "À la charge de", etat: "État" },
         portes: { payer: "Du client", payee: "Du service" },
       },
       comptes: {
         titre: "Comptes de collecte",
         sous: "Les comptes sur lesquels les clients versent.",
+        vide: { titre: "Aucun compte de collecte", texte: "Les comptes sur lesquels les clients versent apparaissent ici. Sans compte, le versement manuel n'a pas de destination." },
         col: { libelle: "Compte", operateur: "Opérateur", numero: "Numéro", visible: "Dans l'application", etat: "État" },
         visible: "Proposé", masque: "Masqué",
       },

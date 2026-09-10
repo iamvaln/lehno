@@ -190,6 +190,47 @@ describe("les crédits et paiements", () => {
     expect(await screen.findByText(t.credits.decision.avertissement)).toBeInTheDocument();
   });
 
+  /* LA PIÈCE S'OUVRE, et c'est tout l'objet de la reprise : l'écran demandait
+     de vérifier un reçu qu'il ne montrait pas. La route existait pourtant, et
+     son propre commentaire l'annonçait — « sans cette route, le fichier était
+     mort-né ». Elle l'est restée : rien ne l'appelait. */
+  it("ouvre le reçu déposé, par une adresse demandée au moment du clic", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    /* UNE SEULE ENTRÉE POUR LES DEUX. Le double de serveur retient la première
+       clé dont l'adresse contient le motif, et « /admin/payments/p-1 » contient
+       aussi bien le détail que son reçu : deux entrées distinctes feraient
+       répondre le détail à la demande de pièce. */
+    serveur({
+      "/admin/payments/p-1": (url) => (url.includes("/proof")
+        ? reponse(200, { url: "https://exemple.test/recu.pdf", expireDans: 600 })
+        : reponse(200, { ...DETAIL, recu: true })),
+    });
+    const ouvrirFenetre = vi.fn();
+    vi.stubGlobal("open", ouvrirFenetre);
+
+    await ouvrir(utilisateur);
+    await utilisateur.click(await screen.findByText("awa"));
+    await utilisateur.click(await screen.findByText(t.credits.detail.ouvrirRecu));
+
+    /* L'adresse n'est ni composée ni gardée : elle est signée pour quelques
+       minutes, et la ranger ferait un lien mort au deuxième clic. */
+    expect(ouvrirFenetre).toHaveBeenCalledWith(
+      "https://exemple.test/recu.pdf", "_blank", "noopener,noreferrer",
+    );
+  });
+
+  /* L'ABSENCE SE DIT AUSSI. Un silence laisserait croire qu'on a regardé ; le
+     dire est ce qui fait réclamer la pièce avant de trancher. */
+  it("dit qu'aucun reçu n'a été déposé, plutôt que de se taire", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({ "/admin/payments/p-1": () => reponse(200, { ...DETAIL, recu: false }) });
+    await ouvrir(utilisateur);
+    await utilisateur.click(await screen.findByText("awa"));
+
+    expect(await screen.findByText(t.credits.detail.sansRecu)).toBeInTheDocument();
+    expect(screen.queryByText(t.credits.detail.ouvrirRecu)).not.toBeInTheDocument();
+  });
+
   it("confirmer envoie le montant constaté, la référence et le motif", async () => {
     const utilisateur = userEvent.setup({ delay: null });
     const appels = serveur({
