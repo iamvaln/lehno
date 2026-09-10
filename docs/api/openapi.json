@@ -10953,6 +10953,14 @@
                           "owner"
                         ]
                       },
+                      "originNote": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "originAt": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "isShortlisted": {
                         "type": "boolean"
                       },
@@ -10973,6 +10981,8 @@
                       "currency",
                       "status",
                       "origin",
+                      "originNote",
+                      "originAt",
                       "isShortlisted",
                       "reservedByName"
                     ],
@@ -11302,6 +11312,14 @@
                         "owner"
                       ]
                     },
+                    "originNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "originAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "isShortlisted": {
                       "type": "boolean"
                     },
@@ -11322,6 +11340,8 @@
                     "currency",
                     "status",
                     "origin",
+                    "originNote",
+                    "originAt",
                     "isShortlisted",
                     "reservedByName"
                   ],
@@ -11660,6 +11680,14 @@
                         "owner"
                       ]
                     },
+                    "originNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "originAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "isShortlisted": {
                       "type": "boolean"
                     },
@@ -11680,6 +11708,8 @@
                     "currency",
                     "status",
                     "origin",
+                    "originNote",
+                    "originAt",
                     "isShortlisted",
                     "reservedByName"
                   ],

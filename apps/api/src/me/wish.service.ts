@@ -20,6 +20,13 @@ export type Ligne = {
   status: string;
   origin: string;
   isShortlisted: boolean;
+  /* LA PROVENANCE EN CLAIR, remontée depuis ce qui a produit ce souhait.
+   *
+   * Facultatives sur le type : les écritures qui rendent un souhait tout juste
+   * créé n'ont rien à remonter — il vient d'être noté à la main. Seule la
+   * LECTURE les charge, et c'est la seule qui en a l'usage. */
+  collected?: { submission: { submitterName: string | null; personalNote: string | null; createdAt: Date } }[];
+  fromIdea?: { details: string | null; set: { createdAt: Date } } | null;
 };
 
 @Injectable()
@@ -47,6 +54,21 @@ export class WishService {
       // l'affichage ; trier dessus ferait sauter un souhait de place à chaque
       // fois qu'on le marque, et on perdrait celui qu'on venait d'ajouter.
       orderBy: { createdAt: "desc" },
+      /* CE QUI A PRODUIT LE SOUHAIT, remonté en une requête.
+       *
+       * Les deux chaînes existaient déjà — `SubmittedWish → Submission` pour une
+       * contribution, `GeneratedIdea → GeneratedIdeaSet` pour une idée retenue —
+       * mais rien ne les servait : l'écran lisait « collecté » sans savoir de qui
+       * ni de quand. Trois mois plus tard, c'est pourtant ce qui décide si on
+       * offre. */
+      include: {
+        collected: {
+          select: { submission: { select: { submitterName: true, personalNote: true, createdAt: true } } },
+          orderBy: { createdAt: "asc" },
+          take: 1,
+        },
+        fromIdea: { select: { details: true, set: { select: { createdAt: true } } } },
+      },
     });
     return lignes.map(rendre);
   }
@@ -118,6 +140,36 @@ export class WishService {
    souhait doit sortir sous la MÊME forme que ceux de `/me/wishes`. Une seconde
    mise en forme divergerait — un champ ajouté ici manquerait là-bas, sur le même
    objet vu par le même écran. */
+/* CE QUI A PRODUIT LE SOUHAIT, en clair.
+ *
+ * `origin` dit la CATÉGORIE, ces deux champs disent le fait. Chaque origine a
+ * sa source, et une seule : une contribution porte le mot de qui l'a écrite,
+ * une idée retenue porte le « pourquoi » qui l'a fait retenir. Un souhait noté
+ * de sa propre main n'a rien à rapporter — on était là.
+ *
+ * LA DATE EST CELLE DU GESTE D'ORIGINE, pas celle de la ligne : on retient une
+ * idée produite la veille, on valide une contribution reçue le mois dernier.
+ * Rendre `createdAt` à la place serait plus simple et faux.
+ *
+ * Rendus nuls quand la lecture ne les a pas chargés : les écritures rendent un
+ * souhait qu'elles viennent de créer, et il n'a pas de provenance à remonter. */
+function provenance(l: Ligne): { originNote: string | null; originAt: string | null } {
+  const contribution = l.collected?.[0]?.submission;
+  if (contribution) {
+    return {
+      originNote: contribution.personalNote ?? contribution.submitterName ?? null,
+      originAt: contribution.createdAt.toISOString(),
+    };
+  }
+  if (l.fromIdea) {
+    return {
+      originNote: l.fromIdea.details,
+      originAt: l.fromIdea.set.createdAt.toISOString(),
+    };
+  }
+  return { originNote: null, originAt: null };
+}
+
 export function rendre(l: Ligne): Wish {
   return {
     id: l.id,
@@ -135,6 +187,7 @@ export function rendre(l: Ligne): Wish {
     status: l.status as Wish["status"],
     origin: l.origin as Wish["origin"],
     isShortlisted: l.isShortlisted,
+    ...provenance(l),
     /* Toujours nul : une `WishReservation` pointe un `OwnerWish`, jamais un
        souhait de proche — « aucune réservation ici, un souhait de proche se
        marque ». Le champ vit au contrat parce que l'énumération d'état est
