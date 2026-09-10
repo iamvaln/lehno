@@ -9,6 +9,7 @@ import { RouteurIAService, type Adaptateur } from "../ia/routeur.service.js";
 import { FOURNISSEURS_IA } from "../ia/adaptateurs/index.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
 import type { StockagePort } from "../stockage/stockage.port.js";
+import { composerLePortrait } from "./composition.js";
 
 /* Dix minutes pour une lecture : le temps de télécharger sur un réseau lent,
    sans qu'un lien recopié survive à la séance. Même durée que l'avatar et le
@@ -87,7 +88,7 @@ export class PortraitService {
      * configuration d'origine, elle y est toujours — un portrait payé
      * s'approuve, quoi qu'on ait publié depuis. */
     const reglages = await this.reglagesDuPortrait(ligne.studioConfigId);
-    const { mots } = this.motsDe(ligne.content);
+    const { mots, phrase } = this.motsDe(ligne.content);
 
     /* LA VOIE ET L'AMBIANCE SONT CELLES QU'ON A CHOISIES, figées au lancement.
      *
@@ -150,12 +151,26 @@ export class PortraitService {
     if (resultat.etat !== "success")
       throw new AppError("generation_unavailable", `image generation failed: ${resultat.code}`);
 
+    /* LA COMPOSITION, AU SERVEUR. Le modèle a rendu une illustration seule —
+       l'invite lui interdit texte, cadre et signature. C'est ici qu'elle entre
+       dans son cadre, avec la phrase et la mention `lehno.io`.
+       Pourquoi ici et pas seulement au client : le fichier rangé dans le
+       stockage est CELUI QU'ON PARTAGE. S'il sortait nu, il ne porterait rien
+       de Lehno hors de l'application. */
+    const proche = await this.prisma.person.findUniqueOrThrow({
+      where: { id: ligne.personId },
+      select: { callingName: true, displayName: true },
+    });
+    const finie = await composerLePortrait(
+      Buffer.from(resultat.contenu, "base64"),
+      composition.cadre,
+      { phrase, nom: proche.callingName ?? proche.displayName },
+    );
+
     /* CE QU'ON RANGE EST UNE CLÉ, jamais l'image. Un modèle rend un à deux
        mégaoctets de base64 ; la clé pèse soixante caractères, et l'image se lit
        par une URL signée à la demande. */
-    const cleImage = await this.stockage.ecrire(
-      "portraits", Buffer.from(resultat.contenu, "base64"), "image/png",
-    );
+    const cleImage = await this.stockage.ecrire("portraits", finie, "image/png");
 
     const approuve = await this.prisma.portrait.update({
       where: { id },

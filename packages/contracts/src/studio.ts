@@ -202,6 +202,22 @@ export const compositionReglageSchema = z.object({
     z.string().regex(/^#[0-9A-Fa-f]{6}$/),
     z.string().regex(/^#[0-9A-Fa-f]{6}$/),
   ]),
+  /* LE CADRE — ce que le serveur pose AUTOUR de l'illustration.
+   *
+   * Elles sont ici et non dans le système de design, pour la même raison que la
+   * gamme : le portrait fige sa configuration, et une image approuvée trois
+   * mois après son brief doit se composer avec les couleurs d'alors.
+   *
+   * ET LE SERVEUR COMPOSE, pas seulement le client. L'image rangée dans le
+   * stockage est celle qu'on partage : si elle sortait nue, elle ne porterait
+   * rien de Lehno hors de l'application. Le client peut recomposer à l'écran ;
+   * le fichier, lui, doit déjà être fini. */
+  cadre: z.object({
+    fond: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    bande: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    texte: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    mention: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  }).strict(),
 }).strict();
 
 export type CompositionReglage = z.infer<typeof compositionReglageSchema>;
@@ -637,18 +653,21 @@ export function reglagesPortraitDeDepart(): ReglagesPortrait {
         libelle: { fr: "Papier", en: "Paper" },
         description: { fr: "Un blanc cassé, sobre. Le plus discret des trois.", en: "An off-white, understated. The quietest of the three." },
         palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#5A4B93"],
+        cadre: { fond: "#FFFFFF", bande: "#EDEAF7", texte: "#221F2B", mention: "#5A4B93" },
       },
       {
         id: "lilas", actif: true,
         libelle: { fr: "Lilas", en: "Lilac" },
         description: { fr: "Le violet de la marque, en fond.", en: "The brand violet, as a ground." },
         palette: ["#FFFFFF", "#5A4B93", "#F0CFB4", "#221F2B"],
+        cadre: { fond: "#EDEAF7", bande: "#FFFFFF", texte: "#221F2B", mention: "#5A4B93" },
       },
       {
         id: "encre", actif: true,
         libelle: { fr: "Encre", en: "Ink" },
         description: { fr: "Un fond sombre. Les couleurs y sonnent plus fort.", en: "A dark ground. Colours ring louder on it." },
         palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#FFFFFF"],
+        cadre: { fond: "#221F2B", bande: "#17161F", texte: "#F2F0F7", mention: "#EDEAF7" },
       },
     ],
     /* LES DEUX CLIENTS D'IMAGE, RÉPARTIS — et c'est délibéré.
