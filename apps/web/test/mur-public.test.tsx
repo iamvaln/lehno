@@ -14,6 +14,7 @@ const MUR: PublicWall = {
   birthday: "03-07",
   interests: [{ kind: "hobby", value: "Afrobeat" }],
   wishLinkToken: "jeton-123",
+  wishlistToken: null,
 };
 
 /**

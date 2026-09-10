@@ -16,7 +16,7 @@ const interet = (n: number, isPublic: boolean): WallInterest => ({
 });
 
 const mur = (isEnabled: boolean): Wall => ({
-  slug: "valentine", isEnabled, showBirthdayDate: true, welcomeMessage: null,
+  slug: "valentine", isEnabled, showBirthdayDate: true, showWishlist: false, welcomeMessage: null,
   publicUrl: "https://lehno.app/valentine", wishLinkUrl: null, interests: [],
 });
 
@@ -24,6 +24,8 @@ const mot = (n: number, quand: string, auteur: string | null): ReceivedWish =>
   receivedWishSchema.parse({
     id: uuid(n), occurrenceId: uuid(100), authorName: auteur,
     content: `mot ${n}`, status: "pending", createdAt: quand,
+    // Non exposé, comme en base : le décor part de l'état réel.
+    isPublic: false, showAuthor: false,
   });
 
 

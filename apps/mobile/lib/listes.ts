@@ -45,6 +45,16 @@ export function listesRangees(listes: readonly Wishlist[]): Wishlist[] {
     if (a.isArchived !== b.isArchived) return a.isArchived ? 1 : -1;
     // Les vivantes de la plus proche à la plus lointaine ; les archivées de la
     // plus récente à la plus ancienne — on relit la dernière, pas la première.
+    /* SANS DATE, EN DERNIER — jamais mêlée aux datées.
+       Une liste sans occasion (« ce qui me ferait plaisir ») n'a rien à
+       comparer : la ranger à une place arbitraire la ferait remonter devant
+       une échéance de la semaine, ou disparaître sous des occasions de l'an
+       prochain. Les dates d'abord, dans leur ordre ; le reste ensuite, dans
+       l'ordre où le serveur les a rendues. */
+    if (a.occurrenceDate === null || b.occurrenceDate === null) {
+      if (a.occurrenceDate === b.occurrenceDate) return 0;
+      return a.occurrenceDate === null ? 1 : -1;
+    }
     return a.isArchived
       ? b.occurrenceDate.localeCompare(a.occurrenceDate)
       : a.occurrenceDate.localeCompare(b.occurrenceDate);
@@ -91,8 +101,15 @@ export function listeCourante(
  * « 2026-02-31 » passe. `Intl` le formaterait sans broncher en reportant sur
  * mars, et la liste annoncerait une date que personne n'a saisie. On préfère
  * « Sans date » : une absence se lit, un mensonge non.
+ *
+ * ELLE ACCEPTE L'ABSENCE, depuis qu'une liste peut ne viser aucune occasion.
+ * Les deux cas — pas de date du tout, et une date que le calendrier refuse —
+ * se disent pareil à l'écran, et c'est voulu : dans les deux, il n'y a rien de
+ * juste à afficher. Les distinguer obligerait chaque appelant à traiter deux
+ * absences là où une seule se lit.
  */
-export function quandDeLaListe(occurrenceDate: string, langue: string): string | null {
+export function quandDeLaListe(occurrenceDate: string | null, langue: string): string | null {
+  if (occurrenceDate === null) return null;
   const [annee, mois, jour] = occurrenceDate.split("-").map(Number);
   if (!annee || !mois || !jour) return null;
   const quand = new Date(Date.UTC(annee, mois - 1, jour));

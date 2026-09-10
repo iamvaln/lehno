@@ -45,6 +45,9 @@ const resultat = (
     createdAt: "2026-08-26T10:00:00Z",
   },
   message,
+  /* Nul pour un message : le jeu d'idées et le brouillon ne voyagent jamais
+     ensemble — une exécution produit l'un OU l'autre, selon sa nature. */
+  ideas: null,
 });
 
 describe("l'écran s'ouvre en observateur", () => {

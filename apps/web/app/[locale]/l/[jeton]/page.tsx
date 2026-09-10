@@ -79,7 +79,14 @@ export default async function Page({ params }: Proprietes): Promise<ReactNode> {
     <ListePartagee
       t={t} langue={langue} jeton={jeton}
       liste={etat.donnees}
-      joursRestants={joursEntre(aujourdhui, etat.donnees.occasionDate)}
+      /* Rien à décompter sans occasion : le compte à rebours ne s'affiche
+         alors pas, plutôt que d'annoncer un nombre de jours qui ne veut rien
+         dire. */
+      joursRestants={
+        etat.donnees.occasionDate === null
+          ? null
+          : joursEntre(aujourdhui, etat.donnees.occasionDate)
+      }
     />
   );
 }

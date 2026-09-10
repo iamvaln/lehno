@@ -11,6 +11,7 @@ const mur = (isEnabled: boolean): Wall => ({
   slug: "valentine",
   isEnabled,
   showBirthdayDate: true,
+  showWishlist: false,
   welcomeMessage: null,
   publicUrl: "https://lehno.app/valentine",
   wishLinkUrl: null,
