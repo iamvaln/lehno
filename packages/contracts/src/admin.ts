@@ -38,7 +38,14 @@ export const requeteListeSchema = z.object({
 // jusqu'à l'écran, où elle casserait la ligne.
 export const alerteSchema = z.object({
   id: z.string(),
-  cause: z.enum(["echec_modele", "paiement_bloque", "suppression_echeance", "moderation_ancienne"]),
+  /* `connexions_echouees` manquait, et l'alerte existait pourtant : le service
+     la produisait depuis le premier jour, sous un nom que le contrat ne
+     connaissait pas. C'est l'une des raisons pour lesquelles la réponse était
+     refusée en bloc — voir le commentaire de `dashboardSchema`. */
+  cause: z.enum([
+    "echec_modele", "paiement_bloque", "suppression_echeance",
+    "moderation_ancienne", "connexions_echouees",
+  ]),
   libelle: z.string(),
   ton: z.enum(["danger", "attention"]),
   section: z.string(),
@@ -63,6 +70,21 @@ export const aTraiterSchema = z.object({
   depuis: z.string(),
 }).strict();
 
+/* CE QUE LE SERVEUR REND, ET IL DOIT LE RENDRE VRAIMENT.
+ *
+ * Ce schéma et le service ont vécu six semaines dans deux formes différentes.
+ * Le serveur répondait `200` avec `{ comptes, suppressions, connexions,
+ * derniersGestes }` ; le contrat attendait `{ alertes, indicateurs, aTraiter }`
+ * et refusait la réponse. L'écran affichait donc « le chargement n'a pas
+ * abouti » sur un appel qui avait parfaitement réussi.
+ *
+ * Rien ne pouvait le voir : l'épreuve de l'API vérifiait la forme DU SERVICE,
+ * écrite à la main dans le test ; celle de l'outil simulait une réponse
+ * conforme AU CONTRAT. Les deux passaient au vert sans jamais se regarder.
+ *
+ * `DashboardService.etat()` est désormais typé `Promise<Dashboard>` : la
+ * divergence ne peut plus s'écrire, et l'épreuve de bout en bout passe la
+ * réponse réelle dans ce schéma. */
 export const dashboardSchema = z.object({
   alertes: z.array(alerteSchema).max(3),
   indicateurs: z.array(indicateurSchema),
