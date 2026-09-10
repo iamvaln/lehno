@@ -213,7 +213,7 @@ export class GenerationService {
     options: {
       langue?: "fr" | "en";
       texteLibre?: string | null;
-      budget?: { min: number | null; max: number | null; devise: string } | null;
+      budget?: { min: number | null; max: number | null } | null;
       cle?: string | null;
     } = {},
   ) {
@@ -256,7 +256,7 @@ export class GenerationService {
     options: {
       langue?: "fr" | "en";
       texteLibre?: string | null;
-      budget?: { min: number | null; max: number | null; devise: string } | null;
+      budget?: { min: number | null; max: number | null } | null;
     },
   ): Promise<ContexteIdees> {
     const occurrence = await this.prisma.eventOccurrence.findUniqueOrThrow({
@@ -317,7 +317,8 @@ export class GenerationService {
       notes: matiere,
       aEviter,
       texteLibre: options.texteLibre ?? null,
-      budget: options.budget ?? null,
+      // La devise se pose ICI et nulle part ailleurs — voir DEVISE.
+      budget: options.budget ? { ...options.budget, devise: DEVISE } : null,
     };
   }
 
@@ -530,7 +531,14 @@ export class GenerationService {
   async lire(userId: string, id: string) {
     const execution = await this.prisma.actionRun.findFirst({
       where: { id, userId },
-      include: { premiumAction: true, generatedMessage: true },
+      /* Le jeu d'idées voyage avec l'exécution, comme le message : le client
+         suit UN SEUL objet, et lui faire recoller un état et un résultat venus
+         de deux chemins l'obligerait à gérer le moment où l'un est arrivé et
+         l'autre pas. */
+      include: {
+        premiumAction: true, generatedMessage: true,
+        ideaSet: { include: { ideas: { orderBy: { position: "asc" } } } },
+      },
     });
     if (!execution) throw new AppError("not_found", "unknown generation");
     return execution;
@@ -541,7 +549,10 @@ export class GenerationService {
       where: { userId },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { premiumAction: true, generatedMessage: true },
+      include: {
+        premiumAction: true, generatedMessage: true,
+        ideaSet: { include: { ideas: { orderBy: { position: "asc" } } } },
+      },
     });
   }
 

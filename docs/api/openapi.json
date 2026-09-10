@@ -21139,6 +21139,21 @@
                       "maxLength": 64
                     }
                   },
+                  "budget": {
+                    "type": "object",
+                    "properties": {
+                      "min": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "max": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0
+                      }
+                    },
+                    "additionalProperties": false
+                  },
                   "briefText": {
                     "type": "string",
                     "maxLength": 280
@@ -21295,11 +21310,92 @@
                       ],
                       "additionalProperties": false,
                       "nullable": true
+                    },
+                    "ideas": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "occurrenceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "ideas": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "details": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "priceMin": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "priceMax": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "currency": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "feedback": {
+                                "type": "string",
+                                "enum": [
+                                  "up",
+                                  "down"
+                                ],
+                                "nullable": true
+                              },
+                              "wishlistItemId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "label",
+                              "details",
+                              "priceMin",
+                              "priceMax",
+                              "currency",
+                              "feedback",
+                              "wishlistItemId"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "occurrenceId",
+                        "ideas",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false,
+                      "nullable": true
                     }
                   },
                   "required": [
                     "generation",
-                    "message"
+                    "message",
+                    "ideas"
                   ],
                   "additionalProperties": false
                 }
@@ -21630,11 +21726,92 @@
                             ],
                             "additionalProperties": false,
                             "nullable": true
+                          },
+                          "ideas": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "occurrenceId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              },
+                              "ideas": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "details": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "priceMin": {
+                                      "type": "number",
+                                      "nullable": true
+                                    },
+                                    "priceMax": {
+                                      "type": "number",
+                                      "nullable": true
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "feedback": {
+                                      "type": "string",
+                                      "enum": [
+                                        "up",
+                                        "down"
+                                      ],
+                                      "nullable": true
+                                    },
+                                    "wishlistItemId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "label",
+                                    "details",
+                                    "priceMin",
+                                    "priceMax",
+                                    "currency",
+                                    "feedback",
+                                    "wishlistItemId"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "occurrenceId",
+                              "ideas",
+                              "createdAt"
+                            ],
+                            "additionalProperties": false,
+                            "nullable": true
                           }
                         },
                         "required": [
                           "generation",
-                          "message"
+                          "message",
+                          "ideas"
                         ],
                         "additionalProperties": false
                       }
@@ -21970,11 +22147,92 @@
                       ],
                       "additionalProperties": false,
                       "nullable": true
+                    },
+                    "ideas": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "occurrenceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "ideas": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "details": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "priceMin": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "priceMax": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "currency": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "feedback": {
+                                "type": "string",
+                                "enum": [
+                                  "up",
+                                  "down"
+                                ],
+                                "nullable": true
+                              },
+                              "wishlistItemId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "label",
+                              "details",
+                              "priceMin",
+                              "priceMax",
+                              "currency",
+                              "feedback",
+                              "wishlistItemId"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "occurrenceId",
+                        "ideas",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false,
+                      "nullable": true
                     }
                   },
                   "required": [
                     "generation",
-                    "message"
+                    "message",
+                    "ideas"
                   ],
                   "additionalProperties": false
                 }
