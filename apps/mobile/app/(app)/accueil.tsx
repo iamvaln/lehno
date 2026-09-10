@@ -172,7 +172,22 @@ export default function Accueil() {
           title={t.videCarnetTitre}
           text={t.videCarnetTexte}
           actionLabel={t.ajouterAnniversaire}
-          onAction={() => routeur.push("/evenement")}
+          /* VERS LE PROCHE, PAS VERS LA DATE — et l'écran le dit lui-même :
+             « Ajoutez un premier proche ET sa date ». Le proche d'abord.
+
+             La planche envoie ici sur `evenement`, et cela ne peut pas aboutir
+             sur un carnet vide : la feuille demande POUR QUI, la recherche ne
+             trouve personne, et elle n'offre aucun moyen d'en créer un. La
+             planche masque même le sélecteur quand il n'y a aucun candidat —
+             le premier geste de l'application ouvrait donc un formulaire
+             impossible à remplir.
+
+             Créer un proche demande un nom ET un genre (`createPersonSchema`
+             les exige tous deux — « en français on n'écrit pas à quelqu'un sans
+             le savoir »). Ce n'est pas un sous-formulaire qu'on glisse dans une
+             feuille : c'est l'écran d'identité, qui existe déjà. La date suit,
+             depuis la fiche. */
+          onAction={() => routeur.push("/(app)/proches/identite")}
         />
       </View>
     );
