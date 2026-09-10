@@ -3,6 +3,7 @@ import { Breadcrumb, PageHeader, PageTabs, FormRow } from "../composants/page/in
 import { DataTable, EmptyState, FilterBar, StatusPill, type Colonne, type TonPastille } from "../composants/donnees/index.js";
 import { ConfirmWithReason, ExportButton, RoleGate } from "../composants/actions/index.js";
 import { Button } from "../composants/base/index.js";
+import { FormulaireReglage, cequiAChange, valeursInitiales, incomplet, type Champ, type Saisie } from "./ReglagesPaiement.js";
 import { messages, type Langue } from "../i18n/index.js";
 import type { AdminRole, PaiementLigne, PaiementDetail, MouvementCredit, Palier, Canal, CompteCollecte } from "@lehno/contracts";
 
@@ -57,6 +58,17 @@ export interface CreditsProps {
     reference?: string;
     reason: string;
   }) => void;
+  /* ENREGISTRER UN RÉGLAGE DE PAIEMENT.
+     Un seul point d'entrée pour les trois : la cible dit laquelle, `id` nul
+     dit qu'on crée. Trois rappels distincts se seraient répondu de trois
+     façons, et c'est le même geste — écrire une valeur qui décide de ce qu'un
+     client paie, avec son motif. */
+  onEnregistrerReglage?: (
+    cible: "palier" | "canal" | "compte",
+    id: string | null,
+    valeurs: Saisie,
+    motif: string,
+  ) => void;
   /* OUVRIR LE REÇU. L'écran ne compose pas l'adresse et ne la garde pas : il
      demande, et ce qu'on lui rend s'ouvre tout de suite. L'URL est signée pour
      quelques minutes — la ranger dans l'état ferait un lien mort au deuxième
@@ -81,12 +93,81 @@ export function Credits({
   role, langue = "fr", onglet = "paiements", onOnglet,
   paiements = [], paiement = null, mouvements = [], paliers = [], canaux = [], comptes = [],
   filtreEtat = "tous", filtreMode = "tous", onFiltre, onOuvrir, onRetour, onSaisir, onDecider, onOuvrirLeRecu,
+  onEnregistrerReglage,
   onExporter, exportEnCours = false,
 }: CreditsProps): ReactNode {
   const t = messages(langue);
   const [montantRecu, setMontantRecu] = useState("");
   const [reference, setReference] = useState("");
   const [geste, setGeste] = useState<"confirmer" | "rejeter" | null>(null);
+  /* Le réglage ouvert : ce qu'on modifie, et les champs tels qu'ils étaient à
+     l'ouverture. On garde les CHAMPS et non seulement la ligne : c'est eux qui
+     portent la valeur précédente, et c'est contre eux qu'on calcule ce qui a
+     changé. */
+  const [reglage, setReglage] = useState<
+    { cible: "palier" | "canal" | "compte"; id: string | null; titre: string; champs: Champ[] } | null
+  >(null);
+  const [saisie, setSaisie] = useState<Saisie>({});
+
+  const f = t.credits.reglages.formulaire;
+
+  /* CE QU'ON PEUT CHANGER, ET RIEN DE PLUS. Les champs suivent les schémas du
+     serveur : ce qui n'y figure pas ne s'affiche pas ici. Sur un canal, ni la
+     nature, ni l'opérateur, ni le pays ne se modifient — « les changer ferait
+     un autre canal, et le paiement passé qui le référence deviendrait
+     inexplicable ». Un champ offert puis refusé serait pire qu'absent. */
+  const champsPalier = (p: Palier & { id: string }): Champ[] => [
+    { cle: "montant", libelle: t.credits.reglages.paliers.col.montant, genre: "nombre", valeur: p.montant, requis: true },
+    { cle: "credits", libelle: t.credits.reglages.paliers.col.credits, genre: "nombre", valeur: p.credits, requis: true },
+    { cle: "position", libelle: f.champs.position, genre: "nombre", valeur: p.position },
+    { cle: "actif", libelle: f.champs.actif, genre: "booleen", valeur: p.actif },
+  ];
+
+  const champsCanal = (c?: Canal & { id: string }): Champ[] => [
+    ...(c ? [] : [
+      {
+        cle: "nature", libelle: f.champs.nature, genre: "choix" as const, valeur: "mobile_money",
+        options: [
+          { valeur: "mobile_money", libelle: t.credits.paiements.modes.manual },
+          { valeur: "card", libelle: "Carte" },
+        ],
+      },
+      { cle: "operateur", libelle: t.credits.reglages.comptes.col.operateur, genre: "texte" as const, valeur: "", requis: true },
+      { cle: "pays", libelle: t.credits.reglages.canaux.col.pays, genre: "texte" as const, valeur: "", requis: true },
+    ]),
+    { cle: "libelle", libelle: t.credits.reglages.canaux.col.libelle, genre: "texte", valeur: c?.libelle ?? "", requis: true },
+    { cle: "fraisPourcent", libelle: t.credits.reglages.canaux.col.frais, genre: "nombre", valeur: c?.fraisPourcent ?? 0 },
+    { cle: "fraisFixe", libelle: f.champs.fraisFixe, genre: "nombre", valeur: c?.fraisFixe ?? 0 },
+    { cle: "fraisMin", libelle: f.champs.fraisMin, genre: "nombre", valeur: c?.fraisMin ?? null },
+    { cle: "fraisMax", libelle: f.champs.fraisMax, genre: "nombre", valeur: c?.fraisMax ?? null },
+    {
+      cle: "fraisPortesPar", libelle: t.credits.reglages.canaux.col.portes, genre: "choix",
+      valeur: c?.fraisPortesPar ?? "payer",
+      options: [
+        { valeur: "payer", libelle: t.credits.reglages.canaux.portes.payer },
+        { valeur: "payee", libelle: t.credits.reglages.canaux.portes.payee },
+      ],
+    },
+    { cle: "ussd", libelle: f.champs.ussd, genre: "texte", valeur: c?.ussd ?? "" },
+    { cle: "position", libelle: f.champs.position, genre: "nombre", valeur: c?.position ?? null },
+    ...(c ? [{ cle: "actif", libelle: f.champs.actif, genre: "booleen" as const, valeur: c.actif }] : []),
+  ];
+
+  const champsCompte = (c?: CompteCollecte & { id: string }): Champ[] => [
+    { cle: "libelle", libelle: t.credits.reglages.comptes.col.libelle, genre: "texte", valeur: c?.libelle ?? "", requis: true },
+    { cle: "operateur", libelle: t.credits.reglages.comptes.col.operateur, genre: "texte", valeur: c?.operateur ?? "", requis: true },
+    { cle: "numero", libelle: t.credits.reglages.comptes.col.numero, genre: "texte", valeur: c?.numero ?? "", requis: true },
+    { cle: "visibleDansApp", libelle: t.credits.reglages.comptes.col.visible, genre: "booleen", valeur: c?.visibleDansApp ?? true },
+    { cle: "position", libelle: f.champs.position, genre: "nombre", valeur: c?.position ?? null },
+    ...(c ? [{ cle: "actif", libelle: f.champs.actif, genre: "booleen" as const, valeur: c.actif }] : []),
+  ];
+
+  const ouvrirReglage = (
+    cible: "palier" | "canal" | "compte", id: string | null, titre: string, champs: Champ[],
+  ): void => {
+    setReglage({ cible, id, titre, champs });
+    setSaisie(valeursInitiales(champs));
+  };
 
   const nombre = new Intl.NumberFormat(langue === "en" ? "en-GB" : "fr-FR");
   const jour = (iso: string) => new Intl.DateTimeFormat(langue === "en" ? "en-GB" : "fr-FR", {
@@ -435,6 +516,14 @@ export function Credits({
               { cle: "actif", titre: t.credits.reglages.paliers.col.etat, rendu: (p) => etat(p.actif) },
             ] as Colonne<Palier & { id: string }>[]}
             lignes={paliers}
+            {...(role === "admin" ? {
+              /* Le nom accessible du menu vient d'ici : sans lui, le bouton
+                 n'a AUCUN nom — il reste cliquable à la souris et devient
+                 introuvable au clavier comme au lecteur d'écran. */
+              libelles: { actions: t.table.actions },
+              actions: () => [{ id: "modifier", label: f.modifier }],
+              onAction: (_id: string, ligne: Palier & { id: string }) => ouvrirReglage("palier", ligne.id, f.titrePalier, champsPalier(ligne)),
+            } : {})}
             /* SANS ÉTAT VIDE, un tableau se réduit à sa ligne d'en-têtes — ce
                qui se lit comme un chargement inachevé, pas comme « il n'y en a
                pas ». Les autres tableaux de l'outil le disent tous ; ces
@@ -442,7 +531,17 @@ export function Credits({
             vide={<EmptyState titre={t.credits.reglages.paliers.vide.titre} texte={t.credits.reglages.paliers.vide.texte} />}
           />
 
-          <h2 className="gabarit-groupe-titre">{t.credits.reglages.canaux.titre}</h2>
+          <div className="gabarit-groupe-entete">
+            <h2 className="gabarit-groupe-titre">{t.credits.reglages.canaux.titre}</h2>
+            {/* Un canal ne se supprime pas, il se désactive — d'où « ajouter »
+                et jamais « retirer ». Réservé à l'administrateur : c'est un
+                levier qui décide de ce qu'un client paie. */}
+            <RoleGate role={role} autorise={["admin"]}>
+              <Button variant="outline" icon="plus" onClick={() => ouvrirReglage("canal", null, f.titreCanalNeuf, champsCanal())}>
+                {f.ajouterCanal}
+              </Button>
+            </RoleGate>
+          </div>
           <p className="gabarit-note">{t.credits.reglages.canaux.sous}</p>
           <DataTable
             colonnes={[
@@ -453,10 +552,25 @@ export function Credits({
               { cle: "actif", titre: t.credits.reglages.canaux.col.etat, rendu: (c) => etat(c.actif) },
             ] as Colonne<Canal & { id: string }>[]}
             lignes={canaux}
+            {...(role === "admin" ? {
+              /* Le nom accessible du menu vient d'ici : sans lui, le bouton
+                 n'a AUCUN nom — il reste cliquable à la souris et devient
+                 introuvable au clavier comme au lecteur d'écran. */
+              libelles: { actions: t.table.actions },
+              actions: () => [{ id: "modifier", label: f.modifier }],
+              onAction: (_id: string, ligne: Canal & { id: string }) => ouvrirReglage("canal", ligne.id, f.titreCanal, champsCanal(ligne)),
+            } : {})}
             vide={<EmptyState titre={t.credits.reglages.canaux.vide.titre} texte={t.credits.reglages.canaux.vide.texte} />}
           />
 
-          <h2 className="gabarit-groupe-titre">{t.credits.reglages.comptes.titre}</h2>
+          <div className="gabarit-groupe-entete">
+            <h2 className="gabarit-groupe-titre">{t.credits.reglages.comptes.titre}</h2>
+            <RoleGate role={role} autorise={["admin"]}>
+              <Button variant="outline" icon="plus" onClick={() => ouvrirReglage("compte", null, f.titreCompteNeuf, champsCompte())}>
+                {f.ajouterCompte}
+              </Button>
+            </RoleGate>
+          </div>
           <p className="gabarit-note">{t.credits.reglages.comptes.sous}</p>
           <DataTable
             colonnes={[
@@ -470,9 +584,66 @@ export function Credits({
               { cle: "actif", titre: t.credits.reglages.comptes.col.etat, rendu: (c) => etat(c.actif) },
             ] as Colonne<CompteCollecte & { id: string }>[]}
             lignes={comptes}
+            {...(role === "admin" ? {
+              /* Le nom accessible du menu vient d'ici : sans lui, le bouton
+                 n'a AUCUN nom — il reste cliquable à la souris et devient
+                 introuvable au clavier comme au lecteur d'écran. */
+              libelles: { actions: t.table.actions },
+              actions: () => [{ id: "modifier", label: f.modifier }],
+              onAction: (_id: string, ligne: CompteCollecte & { id: string }) => ouvrirReglage("compte", ligne.id, f.titreCompte, champsCompte(ligne)),
+            } : {})}
             vide={<EmptyState titre={t.credits.reglages.comptes.vide.titre} texte={t.credits.reglages.comptes.vide.texte} />}
           />
         </>
+      ) : null}
+
+      {/* LE RÉGLAGE ET SON MOTIF DANS LE MÊME DIALOGUE. Les séparer ferait
+          enregistrer d'abord et justifier ensuite — donc parfois pas du tout.
+          Rien ne part tant que le motif ne dit rien, et rien ne part non plus
+          si un champ requis reste vide. */}
+      {reglage ? (
+        <ConfirmWithReason
+          titre={reglage.titre}
+          consequence={f.consequence}
+          /* Les MÊMES motifs que les autres gestes d'administration : ils
+             viennent du dictionnaire, pas d'une liste propre aux réglages —
+             deux listes se répondraient différemment dans le journal. */
+          motifs={[...t.credits.decision.dialogueConfirmer.motifs]}
+          libelles={{
+            motif: t.confirmation.motif,
+            choisir: t.confirmation.motifManquant,
+            autre: t.confirmation.autre,
+            precision: t.confirmation.autrePlaceholder,
+            journal: t.confirmation.motifAide,
+            annuler: t.confirmation.annuler,
+            confirmer: t.confirmation.confirmer,
+          }}
+          incomplet={incomplet(reglage.champs, saisie)}
+          onAnnuler={() => setReglage(null)}
+          onConfirmer={(motif) => {
+            /* À la MODIFICATION, on n'envoie que ce qui a bougé : un PATCH
+               complet réécrirait des champs qu'on n'a pas touchés, et ouvrirait
+               une version d'historique qui ne change rien — l'historique dirait
+               qu'on a modifié les frais le jour où l'on a corrigé un libellé.
+               À la CRÉATION, tout part : il n'y a rien à comparer. */
+            onEnregistrerReglage?.(
+              reglage.cible,
+              reglage.id,
+              reglage.id === null ? saisie : cequiAChange(reglage.champs, saisie),
+              motif,
+            );
+            setReglage(null);
+          }}
+        >
+          <FormulaireReglage
+            champs={reglage.champs}
+            valeurs={saisie}
+            onChanger={(cle, valeur) => setSaisie((etat) => ({ ...etat, [cle]: valeur }))}
+            libellePrecedente={f.precedente}
+            oui={f.oui}
+            non={f.non}
+          />
+        </ConfirmWithReason>
       ) : null}
     </>
   );

@@ -417,6 +417,30 @@ export const en: typeof fr = {
     },
 
     reglages: {
+      formulaire: {
+        modifier: "Edit",
+        ajouterCanal: "Add a channel",
+        ajouterCompte: "Add an account",
+        titrePalier: "Edit the bundle",
+        titreCanalNeuf: "Add a channel",
+        titreCanal: "Edit the channel",
+        titreCompteNeuf: "Add a collection account",
+        titreCompte: "Edit the collection account",
+        consequence: "Takes effect on save, for every client. The audit log keeps this action and its reason.",
+        precedente: "Before",
+        oui: "Yes",
+        non: "No",
+        champs: {
+          fraisFixe: "Fixed fee",
+          fraisMin: "Minimum fee",
+          fraisMax: "Maximum fee",
+          ussd: "Fallback USSD code",
+          nature: "Kind",
+          position: "Display order",
+          actif: "In service",
+        },
+      },
+
       paliers: {
         titre: "Purchase bundles",
         sous: "What we offer. No free amounts: the smallest bundle sets the minimum.",

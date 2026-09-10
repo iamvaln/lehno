@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { motifSchema } from "@lehno/contracts";
 import { Button } from "../base/Button.js";
 
@@ -27,6 +27,18 @@ export interface ConfirmWithReasonProps {
   libelles?: LibellesConfirmation;
   onConfirmer: (motif: string) => void;
   onAnnuler: () => void;
+  /* Ce qu'on règle, au-dessus du motif.
+   *
+   * Un réglage sensible et sa justification ne se séparent pas : les poser sur
+   * deux écrans ferait enregistrer d'abord et justifier ensuite — donc parfois
+   * pas du tout. Le dialogue reste clos tant que le motif ne dit rien, et ce
+   * qu'on a saisi ne part pas sans lui.
+   *
+   * Absent, le dialogue reste ce qu'il était : une confirmation. */
+  children?: ReactNode;
+  /** Ce qui empêche d'enregistrer, quand le formulaire lui-même n'est pas
+   *  formé. Le motif suffisant ne suffit pas si la saisie ne tient pas. */
+  incomplet?: boolean;
 }
 
 // Valeur sentinelle du champ libre : ce n'est pas un motif, c'est le choix d'en
@@ -48,6 +60,8 @@ export function ConfirmWithReason({
   libelles = {},
   onConfirmer,
   onAnnuler,
+  children,
+  incomplet = false,
 }: ConfirmWithReasonProps) {
   const [choix, setChoix] = useState("");
   const [libre, setLibre] = useState("");
@@ -76,6 +90,8 @@ export function ConfirmWithReason({
       <div className="admin-dialogue">
         <h2 className="admin-dialogue-titre" id={idTitre}>{titre}</h2>
         {consequence ? <p className="admin-dialogue-consequence">{consequence}</p> : null}
+
+        {children ? <div className="admin-dialogue-corps">{children}</div> : null}
 
         <div className="admin-dialogue-motif">
           <label className="admin-dialogue-etiquette" data-requis="true" htmlFor={idMotif}>
@@ -113,7 +129,7 @@ export function ConfirmWithReason({
           <Button variant="text" onClick={onAnnuler}>{libelles.annuler}</Button>
           <Button
             variant={destructif ? "destructive" : "primary"}
-            disabled={!suffisant}
+            disabled={!suffisant || incomplet}
             onClick={verdict.success ? () => onConfirmer(verdict.data) : undefined}
           >
             {libelles.confirmer}
