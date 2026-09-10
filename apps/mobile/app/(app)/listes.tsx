@@ -128,9 +128,24 @@ export default function Listes() {
      voile de chargement, qui ne se levait jamais. */
   if (eteint) return <EcranFerme />;
 
+  /* LA FLÈCHE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement la perdaient, et avec elle le
+     seul moyen visible de revenir. `retours.test.ts` le vérifie. */
+  const retour = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t.retour}
+      onPress={() => routeur.back()}
+      style={styles.retour}
+    >
+      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
+    </Pressable>
+  );
+
   if (echec && listes === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -144,6 +159,7 @@ export default function Listes() {
   if (listes === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <LoadingState variant="liste" rows={3} title={t.chargement} />
       </View>
     );
@@ -324,14 +340,7 @@ export default function Listes() {
           paddingBottom: insets.bottom + nativeSpace[24],
         }]}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.retour}
-          onPress={() => routeur.back()}
-          style={styles.retour}
-        >
-          <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-        </Pressable>
+        {retour}
 
         {echec ? (
           <View style={{ marginBottom: nativeSpace[12] }}>
@@ -359,8 +368,10 @@ export default function Listes() {
               <Card key={l.id} surface="panel" padding={15} radius="lg" style={styles.carte}>
                 <Pressable
                   accessibilityRole="button"
+                  /* Le nom voyage avec : l'écran d'arrivée le met en en-tête,
+                     et aller le rechercher ferait un appel pour un titre. */
                   onPress={() => routeur.push({
-                    pathname: "/(app)/souhaits", params: { id: l.id },
+                    pathname: "/(app)/souhaits", params: { id: l.id, nom: nomDeLaListe(l, t) },
                   })}
                   style={styles.entete}
                 >

@@ -143,9 +143,17 @@ export default function Rappels() {
     }
   };
 
+  /* L'EN-TÊTE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement le perdaient, et avec lui le
+     seul moyen visible de revenir. `entetes.test.ts` le vérifie. */
+  const entete = (
+    <ScreenHeader titre={t.enteteRappels} retour={t.retour} onRetour={() => routeur.back()} />
+  );
+
   if (echec && preferences === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {entete}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -159,6 +167,7 @@ export default function Rappels() {
   if (preferences === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {entete}
         <LoadingState variant="liste" rows={4} title={t.chargement} />
       </View>
     );
@@ -196,7 +205,7 @@ export default function Rappels() {
         paddingBottom: insets.bottom + nativeSpace[24],
       }]}
     >
-      <ScreenHeader titre={t.enteteRappels} retour={t.retour} onRetour={() => routeur.back()} />
+      {entete}
 
       {echec ? (
         <View style={{ marginBottom: nativeSpace[12] }}>

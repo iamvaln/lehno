@@ -68,14 +68,17 @@ export default function Reservations() {
 
   useEffect(() => { if (!eteint) void charge(); }, [charge, eteint]);
 
-  const retour = (
+  /* L'EN-TÊTE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement le perdaient, et avec lui le
+     seul moyen visible de revenir. `entetes.test.ts` le vérifie. */
+  const entete = (
     <ScreenHeader titre={t.enteteReservations} retour={t.retour} onRetour={() => routeur.back()} />
   );
 
   if (echec && reservations === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
-        {retour}
+        {entete}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -89,7 +92,7 @@ export default function Reservations() {
   if (reservations === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
-        {retour}
+        {entete}
         <LoadingState variant="liste" rows={4} title={t.chargement} />
       </View>
     );
@@ -98,7 +101,7 @@ export default function Reservations() {
   if (!reservations.length) {
     return (
       <View style={[styles.page, styles.aumilieu, { paddingTop: insets.top + nativeSpace[8] }]}>
-        {retour}
+        {entete}
         <EmptyState
           illustration="souhait-reserve"
           title={t.reservVideTitre}
@@ -145,7 +148,7 @@ export default function Reservations() {
         paddingBottom: insets.bottom + nativeSpace[24],
       }]}
     >
-      {retour}
+      {entete}
       <Text style={[styles.intro, { color: couleurs.textSecondary }]}>{t.reservIntro}</Text>
 
       {reservationsQuiTiennent(reservations).map((r, i) => (

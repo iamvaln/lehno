@@ -223,20 +223,26 @@ Corrigé : le champ du nom, et « Sans occasion » en tête des choix.
   occasion : le geste ouvre §3.7, qui lit `/me/occurrences/{id}`, et il n'y avait
   pas d'`id` à passer.
 
-### Ce qui reste à trancher : les états d'erreur sans issue
+### Les états d'erreur sans issue — corrigés partout
 
 L'écran rouge ci-dessus n'avait **aucune flèche de retour** — il n'affichait que
 « Cette demande n'est pas valide » et « Réessayer », qui réessaie la même demande
 invalide. La seule issue visible était la barre d'onglets, qui fait perdre sa
-place. Corrigé sur `preparation`.
+place.
 
-**Le motif est général : 43 retours anticipés sur 22 écrans** rendent leur état
-d'erreur ou de chargement sans le moyen de revenir que porte leur état nominal.
-Le geste système — balayage iOS, retour Android — marche encore, donc ce n'est
-pas un piège ; c'est l'affordance qui disparaît au moment précis où l'on en a le
-plus besoin.
+Le motif était général : **vingt-deux retours anticipés, sur douze écrans**,
+rendaient leur panne ou leur chargement sans le moyen de revenir que porte leur
+état nominal. Le geste système — balayage iOS, retour Android — marche encore,
+donc ce n'était pas un piège ; c'était l'affordance qui disparaît au moment
+précis où l'on en a le plus besoin.
 
-C'est la même racine qu'au §F : il n'y a pas de châssis d'écran. Chaque écran
-dessine son en-tête dans sa branche nominale, et l'oublie dans les autres. Un
-`ScreenHeader` rendu AVANT le branchement le réglerait partout d'un coup — c'est
-la forme à retenir quand les vingt-cinq écrans du §F seront repris.
+La cause est toujours la même, et c'est la racine du §F : **il n'y a pas de
+châssis d'écran.** La flèche est écrite dans la branche nominale, et les
+branches anticipées sont écrites après, ailleurs, par quelqu'un qui regarde la
+panne et pas la navigation.
+
+Le correctif la hisse dans un `const retour` — ou un `const entete` quand
+l'écran porte déjà un `ScreenHeader` — rendu dans les trois états. On la rend ou
+on ne la rend pas, mais on ne la **réécrit** plus. `retours.test.ts` le vérifie,
+et la sonde le montre : rejoué sur les sources d'avant, il nomme les
+vingt-deux branches à la bonne ligne.

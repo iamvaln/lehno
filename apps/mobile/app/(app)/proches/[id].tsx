@@ -102,11 +102,26 @@ export default function Proche() {
 
   useEffect(() => { void charge(); }, [charge]);
 
+  /* LA FLÈCHE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement la perdaient, et avec elle le
+     seul moyen visible de revenir. `retours.test.ts` le vérifie. */
+  const retour = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t.retour}
+      onPress={() => routeur.back()}
+      style={[styles.retour]}
+    >
+      <Icon name="chevron-left" size={22} color={couleurs.textBody} />
+    </Pressable>
+  );
+
   if (!proche) {
     return (
       <View style={[styles.attente, {
         backgroundColor: couleurs.surfacePage, paddingTop: insets.top + nativeSpace[24],
       }]}>
+        {retour}
         {echec ? (
           <View style={{ gap: nativeSpace[12] }}>
             <Banner intent="error">{echec}</Banner>
@@ -159,14 +174,7 @@ export default function Proche() {
         paddingHorizontal: nativeSpace[16],
       }}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.retour}
-        onPress={() => routeur.back()}
-        style={[styles.retour]}
-      >
-        <Icon name="chevron-left" size={22} color={couleurs.textBody} />
-      </Pressable>
+      {retour}
 
       <View style={[styles.entete]}>
         <Avatar

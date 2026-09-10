@@ -101,9 +101,24 @@ export default function Valider() {
     }
   };
 
+  /* LA FLÈCHE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement la perdaient, et avec elle le
+     seul moyen visible de revenir. `retours.test.ts` le vérifie. */
+  const retour = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t.retour}
+      onPress={() => routeur.back()}
+      style={styles.retour}
+    >
+      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
+    </Pressable>
+  );
+
   if (echec && contributions === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -117,23 +132,13 @@ export default function Valider() {
   if (contributions === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <LoadingState variant="liste" rows={3} title={t.chargement} />
       </View>
     );
   }
 
   const attente = aTrancher(contributions);
-
-  const retour = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t.retour}
-      onPress={() => routeur.back()}
-      style={styles.retour}
-    >
-      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-    </Pressable>
-  );
 
   if (!attente.length) {
     return (

@@ -5,7 +5,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ownerWishListSchema, type OwnerWish } from "@lehno/contracts";
 import { nativeBorder, nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
-  Banner, Button, Card, EmptyState, Icon, LoadingState, SectionLabel, Tag,
+  Banner, Button, Card, EmptyState, Icon, LoadingState, ScreenHeader, SectionLabel, Tag,
   TextField, Toast, useCouleurs,
 } from "@lehno/ui-native";
 import { Bascule } from "../../composants/Bascule.js";
@@ -45,7 +45,12 @@ export default function Souhaits() {
      quand son drapeau est éteint, mais un lien profond l'atteint encore :
      il se garde donc lui-même plutôt que de compter sur celui qui l'ouvre. */
   const eteint = ecranEteint("listes", actives);
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  /* `nom` : celui de la liste, que l'appelant connaît déjà — le rechercher
+     ferait un appel pour un titre. Même raison que `qui` sur la génération.
+     Il ne sert QU'À ÉCRIRE : un lien profond peut poser n'importe quoi ici, et
+     rien de ce qui décide ne s'y adosse. Absent, l'en-tête se rabat sur le nom
+     de la famille — mieux qu'un en-tête vide sur une arrivée directe. */
+  const { id, nom } = useLocalSearchParams<{ id?: string; nom?: string }>();
 
   const [souhaits, setSouhaits] = useState<OwnerWish[] | null>(null);
   const [saisie, setSaisie] = useState<SaisieDeSouhait>({
@@ -112,15 +117,15 @@ export default function Souhaits() {
     }
   };
 
+  /* L'EN-TÊTE DIT DANS QUELLE LISTE ON EST. Il ne portait que la flèche : on
+     ouvrait « Ma crémaillère » et l'écran ne le disait plus nulle part. La
+     planche met le nom de la liste en titre. */
   const retour = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t.retour}
-      onPress={() => routeur.back()}
-      style={styles.retour}
-    >
-      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-    </Pressable>
+    <ScreenHeader
+      titre={nom ?? t.moiListes}
+      retour={t.retour}
+      onRetour={() => routeur.back()}
+    />
   );
 
   if (echec && souhaits === null) {
@@ -242,10 +247,15 @@ export default function Souhaits() {
             );
           })
         ) : (
+          /* L'ÉTAT VIDE DIT QU'IL EST VIDE ; le formulaire dessous dit ce
+             qu'il fait. Les deux portaient « Nouveau souhait », l'un sous
+             l'autre, sans rien entre eux — l'écran s'ouvrait sur le même titre
+             écrit deux fois. `videSouhaitsTitre` existait déjà et n'était
+             employé que par l'occasion. */
           <EmptyState
             illustration="souhaits-vide"
-            title={t.souhaitAjouterTitre}
-            text={t.souhaitVisibleAide}
+            title={t.videSouhaitsTitre}
+            text={t.videSouhaitsTexte}
           />
         )}
 

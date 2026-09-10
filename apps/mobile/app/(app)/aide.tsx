@@ -82,6 +82,13 @@ export default function Aide() {
     Constants.expoConfig?.extra as { mentionsUrl?: unknown } | undefined,
   );
 
+  /* L'EN-TÊTE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement le perdaient, et avec lui le
+     seul moyen visible de revenir. `entetes.test.ts` le vérifie. */
+  const entete = (
+    <ScreenHeader titre={t.enteteAide} retour={t.retour} onRetour={() => routeur.back()} />
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
       <ScrollView
@@ -90,7 +97,7 @@ export default function Aide() {
           paddingBottom: insets.bottom + nativeSpace[24],
         }]}
       >
-        <ScreenHeader titre={t.enteteAide} retour={t.retour} onRetour={() => routeur.back()} />
+        {entete}
 
         {echec ? (
           <View style={{ marginBottom: nativeSpace[12] }}>

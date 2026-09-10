@@ -119,9 +119,16 @@ export default function Reprises() {
      l'invitation ne mène qu'à des murs. */
   if (eteint) return <EcranFerme />;
 
+  /* L'EN-TÊTE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement le perdaient, et avec lui le
+     seul moyen visible de revenir. `entetes.test.ts` le vérifie. */
+  const entete = (
+    <ScreenHeader titre={t.enteteReprises} retour={t.retour} onRetour={() => routeur.back()} />
+  );
+
   return (
     <View style={[styles.page, { paddingTop: insets.top + nativeSpace[12] }]}>
-      <ScreenHeader titre={t.enteteReprises} retour={t.retour} onRetour={() => routeur.back()} />
+      {entete}
 
       {echec ? (
         <View style={styles.panne}>

@@ -136,9 +136,24 @@ export default function MonMur() {
     void regle(corpsDExposition(apres), () => setInterets(avant));
   };
 
+  /* LA FLÈCHE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement la perdaient, et avec elle le
+     seul moyen visible de revenir. `retours.test.ts` le vérifie. */
+  const retour = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t.retour}
+      onPress={() => routeur.back()}
+      style={styles.retour}
+    >
+      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
+    </Pressable>
+  );
+
   if (echec && !mur) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -152,6 +167,7 @@ export default function MonMur() {
   if (!mur) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <LoadingState variant="liste" rows={4} title={t.chargement} />
       </View>
     );
@@ -169,14 +185,7 @@ export default function MonMur() {
           paddingBottom: insets.bottom + nativeSpace[24],
         }]}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.retour}
-          onPress={() => routeur.back()}
-          style={styles.retour}
-        >
-          <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-        </Pressable>
+        {retour}
 
         {echec ? (
           <View style={{ marginBottom: nativeSpace[12] }}>

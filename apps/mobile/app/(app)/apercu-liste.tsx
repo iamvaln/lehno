@@ -104,7 +104,10 @@ export default function ApercuDeLaListe() {
 
   if (eteint) return <EcranFerme />;
 
-  const entete = (
+  /* LA FLÈCHE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement la perdaient, et avec elle le
+     seul moyen visible de revenir. `retours.test.ts` le vérifie. */
+  const retour = (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={t.retour}
@@ -118,7 +121,7 @@ export default function ApercuDeLaListe() {
   if (echec && page === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
-        {entete}
+        {retour}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -132,6 +135,7 @@ export default function ApercuDeLaListe() {
   if (page === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <LoadingState variant="liste" rows={3} title={t.chargement} />
       </View>
     );
@@ -147,7 +151,7 @@ export default function ApercuDeLaListe() {
           paddingBottom: insets.bottom + nativeSpace[24],
         }]}
       >
-        {entete}
+        {retour}
 
         <Text style={[styles.grandTitre, { color: couleurs.textBody }]}>
           {t.listeApercu}
