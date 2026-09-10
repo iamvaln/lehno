@@ -1780,13 +1780,23 @@ model Portrait {
   visualPath    String?        @map("visual_path") @db.VarChar(20)
   /// Nulle sur la voie « aucune », qui n'ouvre aucun groupe d'ambiance.
   ambianceId    String?        @map("ambiance_id") @db.VarChar(60)
+  /// LA CONFIGURATION QUI A PRODUIT LE BRIEF, et dont l'approbation relit la
+  /// consigne. Sans elle, on lisait la configuration COURANTE : reformuler une
+  /// ambiance entre les deux temps composait l'image avec un texte et le brief
+  /// avec un autre.
+  /// L'historique existait déjà — chaque publication est une ligne, celle qu'on
+  /// remplace passe en `superseded`. Il ne manquait que le lien.
+  /// `Restrict` : une configuration citée par un portrait ne se supprime pas,
+  /// sinon la consigne qui a produit le texte est perdue.
+  studioConfigId String?       @map("studio_config_id") @db.Uuid
   status        PortraitStatus @default(generated)
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
 
-  actionRun ActionRun @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  actionRun    ActionRun     @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person       Person        @relation(fields: [personId], references: [id], onDelete: Cascade)
+  studioConfig StudioConfig? @relation(fields: [studioConfigId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
   @@index([personId])
@@ -2072,6 +2082,7 @@ model StudioConfig {
   @@index([state, createdAt])
   @@index([fingerprint])
   @@map("studio_config")
+  portraits   Portrait[]
 }
 
 /**

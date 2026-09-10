@@ -135,7 +135,7 @@ export class GenerationController {
         corps.studioSelection,
       );
 
-      const portrait = await this.generation.lancerPortrait(req.userId, corps.personId, selection, {
+      const portrait = await this.generation.lancerPortrait(req.userId, corps.personId, selection, publie.id, {
         ...(corps.language === undefined ? {} : { langue: corps.language }),
         ...(corps.briefText === undefined ? {} : { texteLibre: corps.briefText }),
         ...(corps.senderNote === undefined ? {} : { motDeLExpediteur: corps.senderNote }),

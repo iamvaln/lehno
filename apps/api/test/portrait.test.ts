@@ -25,6 +25,9 @@ describe("le portrait", () => {
   let stockage: StockageMemoire;
   let awa: string;
   let proche: string;
+  /* La configuration qui a produit le brief — c'est elle que l'approbation
+     relira, pas celle en service. Les cas la posent donc avant de lancer. */
+  let config: string;
 
   /* Le brief : des mots, une phrase, une version courte. C'est ce que le modèle
      de TEXTE rend, et c'est tout ce que le modèle d'image recevra. */
@@ -67,12 +70,13 @@ describe("le portrait", () => {
      image qu'aucun essai n'a montrée. */
   const publier = async (): Promise<void> => {
     const reglages = reglagesPortraitDeDepart();
-    await db.prisma.studioConfig.create({
+    const ligne = await db.prisma.studioConfig.create({
       data: {
         kind: "portrait", state: "published", version: 1,
         settings: reglages as never, fingerprint: randomBytes(8).toString("hex"),
       },
     });
+    config = ligne.id;
   };
 
   const selection = () =>
@@ -115,7 +119,7 @@ describe("le portrait", () => {
   describe("le texte", () => {
     it("produit un portrait en attente d'approbation, sans image", async () => {
       await crediter(5);
-      const portrait = await generation(repond(BRIEF)).lancerPortrait(awa, proche, selection());
+      const portrait = await generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config);
 
       expect(portrait.status).toBe("generated");
       expect(portrait.imageKey).toBeNull();
@@ -140,7 +144,7 @@ describe("le portrait", () => {
       });
 
       const a = repond(BRIEF);
-      await generation(a).lancerPortrait(awa, proche, selection());
+      await generation(a).lancerPortrait(awa, proche, selection(), config);
 
       expect(a.vu[0]).toContain("aime jardiner");
       expect(a.vu[0]).toContain("À NE JAMAIS ÉVOQUER");
@@ -161,7 +165,7 @@ describe("le portrait", () => {
       });
 
       const a = repond(BRIEF);
-      await generation(a).lancerPortrait(awa, proche, selection());
+      await generation(a).lancerPortrait(awa, proche, selection(), config);
 
       expect(a.vu[0]).toContain("animal : le héron");
       expect(a.vu[0]).toContain("À NE JAMAIS ÉVOQUER");
@@ -173,7 +177,7 @@ describe("le portrait", () => {
     it("rend le crédit quand le brief est illisible", async () => {
       await crediter(5);
       await expect(
-        generation(repond("pas du JSON")).lancerPortrait(awa, proche, selection()),
+        generation(repond("pas du JSON")).lancerPortrait(awa, proche, selection(), config),
       ).rejects.toThrow();
       expect(await solde()).toBe(5);
     });
@@ -184,7 +188,7 @@ describe("le portrait", () => {
       await crediter(5);
       const maigre = JSON.stringify({ mots: ["le jardin"], phrase: "Une phrase." });
       await expect(
-        generation(repond(maigre)).lancerPortrait(awa, proche, selection()),
+        generation(repond(maigre)).lancerPortrait(awa, proche, selection(), config),
       ).rejects.toThrow();
       expect(await solde()).toBe(5);
     });
@@ -193,7 +197,7 @@ describe("le portrait", () => {
   describe("l'approbation", () => {
     const unPortrait = async () => {
       await crediter(5);
-      return generation(repond(BRIEF)).lancerPortrait(awa, proche, selection());
+      return generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config);
     };
 
     /* LE CAS QUI JUSTIFIE TOUTE LA TÂCHE DE BRIEF.
@@ -233,7 +237,7 @@ describe("le portrait", () => {
       const abstrait = verifierLaSelection(reglagesPortraitDeDepart(), {
         orientation: "notre_relation", visual: "illustration", illustrationFamily: "abstrait",
       });
-      const portrait = await generation(repond(BRIEF)).lancerPortrait(awa, proche, abstrait);
+      const portrait = await generation(repond(BRIEF)).lancerPortrait(awa, proche, abstrait, config);
       expect(portrait.ambianceId).toBe("abstrait");
 
       const image = repond("aW1hZ2U=");
@@ -244,44 +248,39 @@ describe("le portrait", () => {
       expect(image.vu[0]).not.toContain("élément naturel");
     });
 
-    /* LE CATALOGUE PEUT CHANGER entre le lancement et l'approbation.
-       Désactiver une ambiance ne doit pas transformer un portrait déjà payé en
-       refus — même doctrine que `payment.feeAmount`, ce qui a été annoncé fait
-       foi. Mais si elle DISPARAÎT, sa consigne disparaît avec elle : on refuse
-       plutôt que de composer une image sans elle. */
-    it("compose encore avec une ambiance désactivée depuis, et refuse si elle a disparu", async () => {
+    /* LE CATALOGUE PEUT CHANGER entre le lancement et l'approbation, et ça ne
+       change RIEN : on relit la configuration qui a produit le brief, pas celle
+       en service. Republier, reformuler, retirer une ambiance — le portrait déjà
+       payé s'approuve avec ce qui lui a été annoncé.
+       Ce cas remplace un refus qu'on n'aurait pas dû avoir à écrire : tant qu'on
+       lisait le catalogue courant, une ambiance supprimée faisait échouer
+       l'approbation de quelqu'un qui avait déjà payé. */
+    it("approuve avec la configuration d'origine, même republiée depuis", async () => {
       await publier();
-      await crediter(5);
-      const portrait = await generation(repond(BRIEF)).lancerPortrait(awa, proche, selection());
+      const portrait = await unPortrait();
 
-      // Désactivée : le portrait passe quand même.
-      const eteinte = reglagesPortraitDeDepart();
+      // On republie SANS l'ambiance choisie, et avec une consigne reformulée.
+      const neuve = reglagesPortraitDeDepart();
       await db.prisma.studioConfig.updateMany({
         where: { kind: "portrait", state: "published" },
+        data: { state: "superseded" },
+      });
+      await db.prisma.studioConfig.create({
         data: {
+          kind: "portrait", state: "published", version: 2,
           settings: {
-            ...eteinte,
-            ambiances: eteinte.ambiances.map((a) => (a.id === "nature" ? { ...a, actif: false } : a)),
+            ...neuve,
+            ambiances: neuve.ambiances.filter((a) => a.id !== "nature"),
           } as never,
+          fingerprint: randomBytes(8).toString("hex"),
         },
       });
-      const rendu = await portraits(repond("aW1hZ2U=")).approuver(awa, portrait.id);
+
+      const image = repond("aW1hZ2U=");
+      const rendu = await portraits(image).approuver(awa, portrait.id);
       expect(rendu.status).toBe("approved");
-
-      // Disparue : on refuse, sa consigne n'existe plus nulle part.
-      await crediter(5);
-      const second = await generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), { cle: "k2" });
-      await db.prisma.studioConfig.updateMany({
-        where: { kind: "portrait", state: "published" },
-        data: {
-          settings: {
-            ...eteinte,
-            ambiances: eteinte.ambiances.filter((a) => a.id !== "nature"),
-          } as never,
-        },
-      });
-      await expect(portraits(repond("aW1hZ2U=")).approuver(awa, second.id))
-        .rejects.toMatchObject({ code: "resource_inactive" });
+      // La consigne d'ORIGINE, celle qui a produit le brief.
+      expect(image.vu[0]).toContain("élément naturel");
     });
 
     it("fabrique l'image et range une clé, jamais l'image", async () => {
@@ -315,7 +314,11 @@ describe("le portrait", () => {
        du message. Un repli ferait composer une image avec des réglages que
        personne n'a publiés — donc une image qu'aucun essai n'a montrée. */
     it("refuse d'approuver sans configuration publiée", async () => {
+      await publier();
       const portrait = await unPortrait();
+      // La configuration disparaît APRÈS le lancement : plus rien à relire.
+      await db.prisma.portrait.update({ where: { id: portrait.id }, data: { studioConfigId: null } });
+      await db.prisma.studioConfig.deleteMany({ where: { kind: "portrait" } });
       await expect(portraits(repond("aW1hZ2U=")).approuver(awa, portrait.id))
         .rejects.toMatchObject({ code: "resource_inactive" });
     });

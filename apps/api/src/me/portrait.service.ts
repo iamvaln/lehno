@@ -72,7 +72,21 @@ export class PortraitService {
     const ligne = await this.sien(userId, id);
     if (ligne.status === "approved") return this.rendre(ligne);
 
-    const reglages = await this.reglagesEnService();
+    /* LA CONFIGURATION QUI A PRODUIT LE BRIEF, pas celle en service.
+     *
+     * On lisait la courante. Reformuler la consigne d'une ambiance entre le
+     * lancement et l'approbation composait donc l'image avec un texte, et le
+     * brief avec un autre — le dessin ne correspondait plus à ce qu'on venait
+     * de relire pour l'approuver.
+     *
+     * L'historique existait déjà : chaque publication est une ligne, celle
+     * qu'on remplace passe en `superseded`. Il ne manquait que ce lien.
+     *
+     * ET ÇA SUPPRIME UN REFUS qu'on n'aurait pas dû avoir à écrire : une
+     * ambiance retirée du catalogue faisait échouer l'approbation. Dans la
+     * configuration d'origine, elle y est toujours — un portrait payé
+     * s'approuve, quoi qu'on ait publié depuis. */
+    const reglages = await this.reglagesDuPortrait(ligne.studioConfigId);
     const { mots } = this.motsDe(ligne.content);
 
     /* LA VOIE ET L'AMBIANCE SONT CELLES QU'ON A CHOISIES, figées au lancement.
@@ -92,13 +106,11 @@ export class PortraitService {
     const ambiance = ligne.ambianceId === null
       ? null
       : reglages.ambiances.find((a) => a.id === ligne.ambianceId) ?? null;
-    /* L'ambiance a disparu du catalogue depuis le lancement. Sa CONSIGNE vivait
-       là et nulle part ailleurs — la figer sur la ligne aurait doublé une donnée
-       que l'atelier reformule. On refuse plutôt que de composer sans elle : une
-       image faite sans la consigne choisie n'est pas le portrait qu'on a
-       relu. */
+    /* Elle y est, par construction : c'est la configuration qui l'a proposée.
+       Le refus qui vivait ici — « l'ambiance n'est plus publiée » — n'avait de
+       sens que tant qu'on relisait le catalogue courant. */
     if (ligne.ambianceId !== null && ambiance === null)
-      throw new AppError("resource_inactive", "the chosen ambiance is no longer published");
+      throw new AppError("internal_error", "the recorded ambiance is absent from its own configuration");
 
     const cle = voie === "photo" ? reglages.modeles.photo_style : reglages.modeles.illustration;
     const modele = await this.modeleDemande(cle);
@@ -134,15 +146,24 @@ export class PortraitService {
     return this.rendre(approuve);
   }
 
-  private async reglagesEnService(): Promise<ReglagesPortrait> {
-    const publie = await this.configs.enService("portrait");
-    /* ON REFUSE PLUTÔT QUE DE RETOMBER SUR LE GABARIT DU CODE, à la différence
-       du message. Là-bas, un repli produit un texte correct ; ici il ferait
-       composer une image avec des réglages que personne n'a publiés — donc une
-       image qu'aucun essai n'a montrée. C'est ce que « rien ne se publie sans
-       essai » existe pour empêcher. */
-    if (!publie) throw new AppError("resource_inactive", "no published portrait configuration");
-    return this.configs.reglagesPortraitDe(publie);
+  /* Les réglages du portrait : les SIENS quand il les a notés, ceux en service
+   * sinon.
+   *
+   * Le repli couvre les lignes écrites avant que le lien n'existe. Il ne couvre
+   * rien d'autre : un portrait produit depuis porte toujours sa configuration,
+   * et `Restrict` en base empêche de la supprimer sous ses pieds.
+   *
+   * ON REFUSE PLUTÔT QUE DE RETOMBER SUR LE GABARIT DU CODE, à la différence du
+   * message. Là-bas, un repli produit un texte correct ; ici il ferait composer
+   * une image avec des réglages que personne n'a publiés — donc une image
+   * qu'aucun essai n'a montrée. C'est ce que « rien ne se publie sans essai »
+   * existe pour empêcher. */
+  private async reglagesDuPortrait(configId: string | null): Promise<ReglagesPortrait> {
+    const ligne = configId === null
+      ? await this.configs.enService("portrait")
+      : await this.prisma.studioConfig.findUnique({ where: { id: configId } });
+    if (!ligne) throw new AppError("resource_inactive", "no published portrait configuration");
+    return this.configs.reglagesPortraitDe(ligne);
   }
 
   private async modeleDemande(cle: string) {

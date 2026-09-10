@@ -437,7 +437,7 @@ export class GenerationService {
    * moment depuis sa fiche, hors de toute échéance. `debiter` accepte donc une
    * occurrence nulle, et l'écran d'attente prend son nom sur `personId`. */
   async lancerPortrait(
-    userId: string, personId: string, selection: SelectionPortrait,
+    userId: string, personId: string, selection: SelectionPortrait, configId: string,
     options: { langue?: "fr" | "en"; texteLibre?: string | null; motDeLExpediteur?: string | null; cle?: string | null } = {},
   ) {
     const proche = await this.depot.persons(userId).findOrThrow(personId);
@@ -456,7 +456,7 @@ export class GenerationService {
     try {
       const brief = await this.produireLeBrief(contexte, userId, execution.id);
       return await this.conclurePortrait(
-        execution.id, userId, proche.id, selection, brief, options.motDeLExpediteur ?? null,
+        execution.id, userId, proche.id, selection, configId, brief, options.motDeLExpediteur ?? null,
       );
     } catch (err: unknown) {
       await this.rendreLeCredit(execution.id, userId, this.codeDe(err));
@@ -575,7 +575,7 @@ export class GenerationService {
 
   private async conclurePortrait(
     actionRunId: string, userId: string, personId: string, selection: SelectionPortrait,
-    brief: SortiePortrait, motDeLExpediteur: string | null,
+    configId: string, brief: SortiePortrait, motDeLExpediteur: string | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
       const depense = await tx.aIUsage.aggregate({
@@ -600,6 +600,12 @@ export class GenerationService {
              qui ne correspond pas au texte qu'on vient de relire. */
           visualPath: selection.voie,
           ...(selection.ambiance === null ? {} : { ambianceId: selection.ambiance.id }),
+          /* LA CONFIGURATION QUI A PRODUIT CE BRIEF. L'approbation relira SA
+             consigne, pas celle du catalogue courant : reformuler une ambiance
+             entre les deux temps composerait l'image avec un texte et le brief
+             avec un autre. L'historique existait — il ne manquait que ce
+             lien. */
+          studioConfigId: configId,
           content: JSON.stringify({ mots: brief.mots, phrase: brief.phrase }),
           ...(brief.phraseCourte === null ? {} : { shortContent: brief.phraseCourte }),
           ...(motDeLExpediteur === null ? {} : { senderNote: motDeLExpediteur }),
