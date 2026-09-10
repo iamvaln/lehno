@@ -18,6 +18,10 @@ export const collectionLinkSchema = z.object({
      signale. Le jeton reste servi : c'est lui qu'on révoque, qu'on compare et
      qu'on retrouve dans un journal. */
   url: z.string().url(),
+  /* Le mot tel qu'il a été écrit, pour que l'écran le relise et le corrige.
+     Servi en lecture comme le reste du lien : sans lui, rouvrir l'écran
+     présenterait un champ vide au-dessus d'un lien qui, lui, porte le mot. */
+  message: z.string().nullable(),
   personId: z.string().uuid().nullable(),
   // Le lien est durable : pas d'expiration, seulement une révocation.
   isActive: z.boolean(),
@@ -32,6 +36,21 @@ export type CollectionLink = z.infer<typeof collectionLinkSchema>;
 export const createCollectionLinkSchema = z.object({
   type: z.enum(COLLECTION_LINK_TYPES),
   personId: z.string().uuid().optional(),
+  /* LE MOT D'ACCOMPAGNEMENT, écrit par celui qui envoie le lien.
+   *
+   * « Il s'affiche en haut de la page qu'on ouvrira » — la copie de la
+   * maquette le promet à celui qui l'écrit, et c'est cette promesse qui oblige
+   * le contrat à le porter. Un champ saisi ici et perdu à l'envoi serait pire
+   * qu'un champ absent : on croirait l'avoir écrit.
+   *
+   * Facultatif, et c'est le propos : le lien vaut sans un mot. Nul plutôt que
+   * chaîne vide, pour que la page publique n'ait pas à distinguer « rien
+   * écrit » de « écrit puis effacé » — les deux ne montrent rien.
+   *
+   * Court à dessein. Ce n'est pas une lettre : c'est la phrase qui explique
+   * pourquoi on ouvre cette page. Au-delà, elle pousse le formulaire sous la
+   * ligne de flottaison — et le formulaire est ce qu'on est venu remplir. */
+  message: z.string().trim().max(280).nullable().optional(),
 }).strict().superRefine((v, ctx) => {
   if (v.type === "nominatif" && !v.personId) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["personId"], message: "un lien nominatif désigne une fiche" });

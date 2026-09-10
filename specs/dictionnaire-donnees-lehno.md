@@ -871,6 +871,7 @@ Lien de collecte, nominatif ou public, durable et révocable.
 | type | collection_link_type (enum) | non | — | — | `nominatif` \| `public` |
 | token | varchar(32) | non | oui | — | Jeton d'accès dans l'URL |
 | person_id | uuid | oui | — | — | FK → person(id) on delete cascade ; requis si `nominatif` |
+| message | varchar(280) | oui | — | — | Le mot que le propriétaire écrit **avec le lien**, affiché en haut de la page que le proche ouvrira. Nul quand il n'en a pas écrit — pas de chaîne vide, pour que la page n'ait pas à distinguer « rien écrit » de « effacé ». Il vit sur le **lien** et non sur la fiche : c'est un mot d'invitation, pas une note sur la personne, et deux liens vers le même proche peuvent en porter deux différents |
 | is_active | boolean | non | — | true | Révocable (pas d'expiration automatique) |
 | created_at | timestamptz | non | — | now() | |
 

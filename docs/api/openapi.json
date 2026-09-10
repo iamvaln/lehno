@@ -26779,6 +26779,10 @@
                         "type": "string",
                         "format": "uri"
                       },
+                      "message": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "personId": {
                         "type": "string",
                         "format": "uuid",
@@ -26796,6 +26800,7 @@
                       "type",
                       "token",
                       "url",
+                      "message",
                       "personId",
                       "isActive",
                       "createdAt"
@@ -27028,6 +27033,11 @@
                   "personId": {
                     "type": "string",
                     "format": "uuid"
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 280,
+                    "nullable": true
                   }
                 },
                 "required": [
@@ -27064,6 +27074,10 @@
                       "type": "string",
                       "format": "uri"
                     },
+                    "message": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "personId": {
                       "type": "string",
                       "format": "uuid",
@@ -27081,6 +27095,7 @@
                     "type",
                     "token",
                     "url",
+                    "message",
                     "personId",
                     "isActive",
                     "createdAt"
@@ -30453,6 +30468,10 @@
                     "ownerDisplayName": {
                       "type": "string"
                     },
+                    "message": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "personDisplayName": {
                       "type": "string",
                       "nullable": true
@@ -30470,6 +30489,7 @@
                   "required": [
                     "type",
                     "ownerDisplayName",
+                    "message",
                     "personDisplayName",
                     "birthDate",
                     "ownerWallUsername"

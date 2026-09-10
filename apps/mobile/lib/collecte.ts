@@ -49,13 +49,43 @@ export function lienPublicVivant(liens: readonly CollectionLink[]): CollectionLi
  * qu'on sait déjà où ranger ce qui reviendra, alors que c'est précisément la
  * question que la validation posera.
  */
+/* Le mot voyage NORMALISÉ, jamais brut.
+ *
+ * Vide ou blanc uniquement, c'est `null` : la page publique n'a pas à
+ * distinguer « rien écrit » de « effacé puis renvoyé », et une chaîne vide
+ * rangée en base ferait afficher un cadre citant le silence.
+ *
+ * `undefined` quand rien n'a été saisi ET qu'aucun mot n'existait : le serveur
+ * ne touche alors pas à la colonne. C'est ce qui permet de rouvrir un lien
+ * depuis un écran qui n'a pas ce champ sans effacer le mot qu'il portait. */
+/* La borne du contrat — `message: z.string().trim().max(280)` —, redite ici
+   pour que le champ arrête la frappe au lieu de laisser composer un mot que
+   l'envoi refuserait. Les deux doivent rester d'accord. */
+export const LIMITE_DU_MOT = 280;
+
+/** Ce qui dépasse la borne, en caractères. Zéro ou négatif quand le mot tient. */
+export function deTropDansLeMot(saisi: string): number {
+  return saisi.trim().length - LIMITE_DU_MOT;
+}
+
+export function motTient(saisi: string): boolean {
+  return deTropDansLeMot(saisi) <= 0;
+}
+
+export function motDeCollecte(saisi: string): string | null {
+  const propre = saisi.trim();
+  return propre.length > 0 ? propre : null;
+}
+
 export function corpsDeCreation(
   type: CollectionLink["type"],
   personId: string | null,
+  message?: string | null,
 ): CreateCollectionLinkInput {
   return createCollectionLinkSchema.parse({
     type,
     ...(type === "nominatif" && personId ? { personId } : {}),
+    ...(message === undefined ? {} : { message }),
   });
 }
 

@@ -386,6 +386,8 @@ export const en = {
   collecteMot: (qui: string) => "A word for " + qui,
   collecteMotAide: "It shows at the top of the page they open.",
   collecteMotExemple: "e.g. tell me what you'd love, I'll take care of the rest",
+  collecteMotEnregistrer: "Save the word",
+  collecteMotLimite: (n: number) => `${n} character${n > 1 ? "s" : ""} too many`,
   collecteApercu: "See the page before sending",
   collecteRevoqueFait: "Link revoked.",
   lienCopieFait: "Link copied.",

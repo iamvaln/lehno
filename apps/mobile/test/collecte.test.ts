@@ -14,7 +14,7 @@ const uuid = (n: number): string =>
 
 const lien = (n: number, p: Partial<CollectionLink> = {}): CollectionLink => ({
   id: uuid(n), type: "nominatif", token: `tok${n}`, personId: uuid(50),
-  url: `https://lehno.io/c/tok${n}`, isActive: true, createdAt: "2026-08-01T00:00:00.000Z", ...p,
+  url: `https://lehno.io/c/tok${n}`, message: null, isActive: true, createdAt: "2026-08-01T00:00:00.000Z", ...p,
 });
 
 describe("un lien révoqué ne se rallume pas", () => {
@@ -104,7 +104,7 @@ const contribution = (n: number, p: Partial<Submission> = {}): Submission => ({
 
 const page = (p: Partial<PublicCollectForm> = {}): PublicCollectForm => ({
   type: "nominatif", ownerDisplayName: "Valentine", personDisplayName: "Valery",
-  birthDate: null, ownerWallUsername: null, ...p,
+  message: null, birthDate: null, ownerWallUsername: null, ...p,
 });
 
 describe("l'état de la collecte pour une fiche", () => {

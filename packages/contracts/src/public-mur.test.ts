@@ -46,9 +46,23 @@ describe("le formulaire de collecte", () => {
   // n'aurait pas le droit de les taire.
   it("accepte une fiche tue", () => {
     expect(publicCollectFormSchema.safeParse({
-      type: "public", ownerDisplayName: "Valentine",
+      type: "public", ownerDisplayName: "Valentine", message: null,
       personDisplayName: null, birthDate: null, ownerWallUsername: null,
     }).success).toBe(true);
+  });
+
+  /* Le mot est SERVI SUR LES DEUX NATURES, et il est obligatoire dans la
+     réponse — nul, jamais absent. Une clé manquante ferait distinguer au client
+     « pas de mot » de « champ pas encore déployé », et l'un des deux chemins ne
+     serait jamais éprouvé. */
+  it("porte le mot de celui qui invite, nul quand il n'y en a pas", () => {
+    const base = {
+      type: "public" as const, ownerDisplayName: "Valentine",
+      personDisplayName: null, birthDate: null, ownerWallUsername: null,
+    };
+    expect(publicCollectFormSchema.safeParse(base).success).toBe(false);
+    expect(publicCollectFormSchema.parse({ ...base, message: "dis-moi ce qui te ferait plaisir" }).message)
+      .toBe("dis-moi ce qui te ferait plaisir");
   });
 });
 

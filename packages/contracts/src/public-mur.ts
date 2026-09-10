@@ -58,6 +58,13 @@ export const publicCollectFormSchema = z.object({
   /* Qui invite. Un lien de collecte vient de quelqu'un — le formulaire le dit,
      sans quoi le répondant ne sait pas à qui il écrit. */
   ownerDisplayName: z.string(),
+  /* Le mot de celui qui invite, ou nul.
+   *
+   * « Il s'affiche en haut de la page qu'on ouvrira. » C'est la seule chose de
+   * cette page qui ne vienne pas du produit : le reste est un formulaire, lui
+   * est une voix. Nul quand rien n'a été écrit — la page n'affiche alors pas
+   * un cadre vide. */
+  message: z.string().nullable(),
   /* La fiche visée, et sa date déjà connue : « pré-remplie si le propriétaire
      l'a déjà renseignée, à confirmer ou corriger » (§3.2). Nulles sur un lien
      PUBLIC, qui ne vise personne — les servir y révélerait une fiche à
