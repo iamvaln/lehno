@@ -89,3 +89,30 @@ describe("l'avatar se tait, le nom est écrit à côté", () => {
     expect(source).toMatch(/importantForAccessibility: "no-hide-descendants"/);
   });
 });
+
+/* UNE BASCULE SE TOUCHE PARTOUT, pas seulement sur son interrupteur.
+ *
+ * Le libellé était inerte : il fallait viser une cinquantaine de points sur un
+ * rang large de trois cent cinquante. Le geste naturel — toucher le texte — ne
+ * faisait rien. Le kit demande « 44 px partout » précisément pour ça.
+ *
+ * Constaté en pilotant l'écran d'identité : l'appui sur « Je ne connais pas
+ * l'année » ne basculait rien.
+ */
+describe("une bascule se touche partout", () => {
+  const source = readFileSync(
+    new URL("../composants/Bascule.tsx", import.meta.url), "utf8",
+  );
+
+  it("enveloppe le rang entier dans un geste", () => {
+    expect(source).toMatch(/<Pressable/);
+    expect(source).toMatch(/accessibilityRole="switch"/);
+  });
+
+  /* L'interrupteur se retire de l'arbre : sinon le libellé s'annonce deux
+     fois, une par le rang et une par l'interrupteur qui le reprend. */
+  it("ne fait pas annoncer le libellé deux fois", () => {
+    expect(source).toMatch(/accessibilityElementsHidden/);
+    expect(source).toMatch(/importantForAccessibility="no-hide-descendants"/);
+  });
+});
