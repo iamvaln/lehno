@@ -694,7 +694,11 @@ export default function Occasion() {
           pasMaintenant={t.feuillePasMaintenant}
           cout={coutDuMessage}
           solde={solde}
+          insetBas={insets.bottom}
           onConfirmer={() => { setARefaire(false); void refais(); }}
+          /* Solde insuffisant, « Recharger » devient l'action PRINCIPALE de la
+             feuille : sans destination, le seul geste offert était muet. */
+          onRecharger={() => { setARefaire(false); routeur.push("/(app)/recharge"); }}
           onAnnuler={() => setARefaire(false)}
         />
       ) : null}
