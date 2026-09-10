@@ -158,10 +158,10 @@ export default function Moi() {
       {solde !== null ? (
         <Card surface="panel" padding={15} radius="lg">
           <View style={styles.soldeLigne}>
+            {/* UNE SEULE FOIS. `CreditIndicator` PORTE déjà son libellé — il
+                le rend à côté du nombre. Le doubler d'un texte au-dessus
+                donnait « Votre solde / 5 Votre solde », vu à l'écran. */}
             <View style={styles.pleine}>
-              <Text style={[styles.mention, { color: couleurs.textSecondary }]}>
-                {t.moiSolde}
-              </Text>
               <CreditIndicator label={t.moiSolde} balance={solde} variant="solde" />
             </View>
             <Button onPress={() => routeur.push("/(app)/recharge")}>{t.moiRecharger}</Button>
