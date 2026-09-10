@@ -206,3 +206,62 @@ pas.
 
 **Ce qu'il faut** : soit un défaut neutre, soit `POST /auth/register` qui accepte
 la langue.
+
+---
+
+## 9. Le studio du message n'a aucune surface d'administration, et sa configuration semée ne se répare pas
+
+Trouvé à l'appareil le 10 septembre 2026, en lançant une génération de message
+depuis l'écran de préparation. L'application affiche « Quelque chose s'est mal
+passé de notre côté. » ; le serveur porte une `ZodError` :
+
+```
+ZodError: [
+  { "code": "invalid_type", "expected": "string", "received": "undefined",
+    "path": ["modele"], "message": "Required" },
+  { "code": "unrecognized_keys",
+    "keys": ["motifs", "modeles", "ambiances", "voiesImage"],
+    "message": "Unrecognized key(s) in object: …" }
+]
+    at StudioConfigurationService.reglagesMessageDe (studio/configuration.service.ts:86)
+    at GenerationService.rassembler (me/generation.service.ts:440)
+    at GenerationService.lancerMessage (me/generation.service.ts:65)
+```
+
+La ligne `studio_config` de nature `message` en base porte l'ANCIENNE forme —
+celle d'avant que le message et le portrait ne se règlent séparément. Elle avait
+été semée par `AmorceStudioService` sous une version antérieure du code, et
+`reglagesMessageSchema` ne la lit plus.
+
+**Trois choses manquent, et c'est leur conjonction qui rend la panne
+définitive :**
+
+1. **Aucune migration** n'a converti les lignes existantes lors du découpage.
+2. **Le semis ne rejoue jamais.** `semerUne` sort sur
+   `count({ where: { kind } }) > 0`, et c'est délibéré — « la seule chose à ne
+   pas faire ici est de remettre en service les réglages du code par-dessus ce
+   que l'administration a publié ». La garde est juste ; elle rend simplement la
+   ligne périmée éternelle.
+3. **Aucune route ne touche la configuration du message.** Le portrait a tout —
+   `GET/PATCH admin/portrait-studio/config`, `config/publish`,
+   `config/rollback`, `config/history`, profils, essais, candidats. Le message
+   n'a **rien** : ni lecture, ni enregistrement, ni publication. Il n'existe
+   donc aucun geste, ni d'administrateur ni d'exploitant, qui répare la ligne.
+
+Conséquence : sur toute installation dont la table a été semée avant le
+découpage — production comprise si elle a jamais démarré sur l'ancien code —
+**chaque `POST /me/generations` de nature `wish_message` répond 500**, et le seul
+recours est un `DELETE` en base suivi d'un redémarrage. C'est ce qu'il a fallu
+faire en local pour poursuivre la recette.
+
+**Ce qu'il faut**, par ordre de valeur :
+
+- une **surface d'administration pour le studio du message**, symétrique de
+  celle du portrait — c'est le manque de fond, les deux autres n'en sont que les
+  symptômes ;
+- une **migration** des lignes `kind = 'message'` vers la forme courante ;
+- et, en attendant, que `reglagesMessageDe` ne laisse pas fuir une `ZodError`
+  brute : une configuration publiée illisible est un incident d'exploitation, pas
+  une panne anonyme. Le journal doit nommer la ligne et sa version, et la réponse
+  doit se distinguer d'un 500 générique — sans quoi on cherche du côté du
+  mobile, comme on l'a fait ici.
