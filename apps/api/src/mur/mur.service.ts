@@ -13,6 +13,25 @@ import { nouveauJeton } from "./jetons.js";
 // base à chaque appel comme ConfigService : écrits en dur, ils deviendraient
 // faux le jour où l'administration les change, et une fenêtre fermée trop tôt
 // ne se voit qu'à l'absence de vœux.
+/* `/v/<jeton>`, le chemin du dépôt de vœux — celui que le site sert.
+ *
+ * Ces adresses composaient `/wish/<jeton>`, qui n'existe nulle part : le site
+ * ne connaît que cinq surfaces à jeton, `/c/`, `/i/`, `/l/`, `/m/` et `/v/`.
+ * Le lien partait donc mort, et rien ne le signalait — ni un test, ni un type :
+ * une chaîne bien formée qui désigne une page absente reste une chaîne bien
+ * formée.
+ *
+ * Écrit UNE fois, parce qu'il l'était deux : la lecture du Mur et la création
+ * du lien composaient chacune la sienne, et une correction sur l'une aurait
+ * laissé l'autre menteuse.
+ *
+ * La barre finale du site est retirée : sans elle, `//v/…` sort une adresse que
+ * les messageries coupent au mauvais endroit — même raison que pour le lien de
+ * collecte. */
+function adresseDeVoeux(site: string, jeton: string): string {
+  return `${site.replace(/\/+$/, "")}/v/${jeton}`;
+}
+
 const LEAD_PAR_DEFAUT = 7;
 const TRAIL_PAR_DEFAUT = 30;
 
@@ -154,10 +173,16 @@ export class MurService {
       isEnabled: mur.isEnabled,
       showBirthdayDate: mur.showBirthdayDate,
       welcomeMessage: mur.welcomeMessage,
-      publicUrl: `${this.siteUrl}/${compte.username}`,
+      /* `/m/<pseudo>`, le chemin que le site sert RÉELLEMENT.
+         Cette adresse composait `${site}/<pseudo>` — un chemin qui n'existe
+         pas : le site préfixe la langue puis tombe sur son attrape-tout, qui
+         rend 404. C'est l'adresse que l'application AFFICHE et que le bouton
+         « Partager » envoie : elle partait donc morte, et celui qui l'ouvrait
+         concluait que le Mur n'existait pas. */
+      publicUrl: `${this.siteUrl}/m/${compte.username}`,
       wishLinkUrl:
         lien && fenetre && fenetre.ouverte && lien.occurrence.id === fenetre.occurrenceId
-          ? `${this.siteUrl}/wish/${lien.token}`
+          ? adresseDeVoeux(this.siteUrl, lien.token)
           : null,
       interests: (moi?.attributes ?? []).map((a) => ({
         id: a.id,
@@ -338,7 +363,7 @@ export class MurService {
     });
     return {
       token: lien.token,
-      url: `${this.siteUrl}/wish/${lien.token}`,
+      url: adresseDeVoeux(this.siteUrl, lien.token),
       occurrenceId: lien.eventOccurrenceId,
       closesOn: fenetre.fermeLe,
     };
