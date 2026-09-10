@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { NATURES_DE_CHAMP, reglagesDeSaisie } from "./TextField.nature.js";
+import {
+  NATURES_DE_CHAMP, nettoiePourLaNature, reglagesDeSaisie,
+} from "./TextField.nature.js";
 
 describe("la nature d'un champ", () => {
   /* React Native capitalise la première lettre par défaut — `autoCapitalize`
@@ -50,3 +52,32 @@ describe("la nature d'un champ", () => {
     }
   });
 });
+
+/* UN CODE DE PARRAINAGE N'EST PAS UN PSEUDO, et la confusion coûtait le
+   premier caractère. Le serveur engendre `_XXY2YWO` ; la nature « pseudo »
+   retire les séparateurs de tête — à raison pour un pseudo, à tort ici. Le
+   champ affichait alors `XXY2YWO`, que le serveur refuse : un code valide
+   devenait invalide en silence, sans que personne puisse comprendre pourquoi. */
+describe("une référence qu'on recopie", () => {
+  it("garde le tiret bas de tête, que le pseudo retirait", () => {
+    expect(nettoiePourLaNature("reference", "_XXY2YWO")).toBe("_XXY2YWO");
+    expect(nettoiePourLaNature("pseudo", "_XXY2YWO")).toBe("XXY2YWO");
+  });
+
+  // Un code collé depuis un message arrive souvent avec une espace.
+  it("retire les espaces du collage, et rien d'autre", () => {
+    expect(nettoiePourLaNature("reference", "  _XXY2YWO ")).toBe("_XXY2YWO");
+  });
+
+  /* AUCUNE RÈGLE DE FORME : le contrat ne dit que `max(16)`. En inventer une
+     ici, c'est refuser demain un code que le serveur produira autrement. */
+  it("ne juge pas la forme du code", () => {
+    expect(nettoiePourLaNature("reference", "ab-12.XY")).toBe("ab-12.XY");
+    expect(nettoiePourLaNature("reference", "é@#")).toBe("é@#");
+  });
+
+  it("s'arrête à la borne du contrat", () => {
+    expect(reglagesDeSaisie("reference").maxLength).toBe(16);
+  });
+});
+

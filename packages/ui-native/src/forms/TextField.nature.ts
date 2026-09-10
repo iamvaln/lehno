@@ -11,7 +11,7 @@ import type { TextInputProps } from "react-native";
  * d'adresse la reçoit sans que personne y pense.
  */
 
-export const NATURES_DE_CHAMP = ["texte", "email", "pseudo", "code"] as const;
+export const NATURES_DE_CHAMP = ["texte", "email", "pseudo", "reference", "code"] as const;
 export type NatureDeChamp = (typeof NATURES_DE_CHAMP)[number];
 
 export interface ReglagesDeSaisie {
@@ -50,6 +50,26 @@ export function reglagesDeSaisie(nature: NatureDeChamp): ReglagesDeSaisie {
         // La borne du contrat : `^[a-z0-9_]{3,30}$`.
         maxLength: 30,
       };
+    /* UNE RÉFÉRENCE QU'ON RECOPIE — un code de parrainage, et rien d'autre.
+     *
+     * Elle ressemble à un pseudo et n'en est pas un : le serveur engendre
+     * `_XXY2YWO`, avec un tiret bas EN TÊTE. La nature « pseudo » retire les
+     * séparateurs initiaux — à raison, un pseudo n'en porte pas — et mangeait
+     * donc le premier caractère d'un code parfaitement valide, en silence.
+     *
+     * On ne nettoie rien ici : le contrat ne dit que `z.string().max(16)`,
+     * aucune forme. Inventer une règle de forme côté client, c'est refuser
+     * demain un code que le serveur aura commencé à produire autrement.
+     *
+     * Ni capitale automatique ni correction : ce n'est pas un mot. */
+    case "reference":
+      return {
+        autoCapitalize: "none",
+        autoCorrect: false,
+        spellCheck: false,
+        // La borne du contrat, et elle seule.
+        maxLength: 16,
+      };
     case "code":
       return {
         autoCapitalize: "none",
@@ -82,6 +102,10 @@ export function nettoiePourLaNature(nature: NatureDeChamp, saisie: string): stri
       const garde = saisie.replace(/[^a-zA-Z0-9._-]/g, "");
       return garde.replace(/^[^a-zA-Z0-9]+/, "");
     }
+    /* RIEN À NETTOYER : voir la nature ci-dessus. Le `trim` seul, parce qu'un
+       code collé depuis un message arrive souvent avec une espace. */
+    case "reference":
+      return saisie.trim();
     case "code":
       return saisie.replace(/\D/g, "");
     default:

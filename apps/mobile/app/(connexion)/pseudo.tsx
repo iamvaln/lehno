@@ -172,7 +172,10 @@ export default function Pseudo() {
         <View style={{ marginTop: nativeSpace[16] }}>
           <TextField
             label={t.champParrain}
-            nature="pseudo"
+            /* « reference », pas « pseudo » : le serveur engendre `_XXY2YWO`,
+               et la nature du pseudo retirait le tiret bas de tête — un code
+               valide devenait invalide, en silence, avant même de partir. */
+            nature="reference"
             value={parrain}
             onChangeText={setParrain}
             {...(etatParrain === "valide" ? { valide: true } : {})}
