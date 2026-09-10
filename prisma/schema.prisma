@@ -1764,6 +1764,22 @@ model Portrait {
   /// Nulle tant que le portrait n'est pas approuvé — une contrainte en base lie
   /// les deux dans les deux sens.
   imageKey      String?        @map("image_key")
+  /// CE QUI A ÉTÉ CHOISI, figé au lancement.
+  ///
+  /// Sans elles, l'approbation ne savait pas ce que l'utilisateur avait demandé
+  /// et reprenait la première voie active du catalogue : « abstrait » rendait
+  /// un paysage, sans qu'aucune erreur ne s'affiche.
+  ///
+  /// Et le brief a été composé avec la consigne de l'ambiance CHOISIE :
+  /// produire l'image avec une autre rendrait un dessin qui ne correspond pas
+  /// au texte qu'on vient de relire.
+  ///
+  /// Même doctrine que `payment.feeAmount` — le catalogue peut changer entre le
+  /// lancement et l'approbation, et désactiver une ambiance ne doit pas
+  /// transformer un portrait en attente.
+  visualPath    String?        @map("visual_path") @db.VarChar(20)
+  /// Nulle sur la voie « aucune », qui n'ouvre aucun groupe d'ambiance.
+  ambianceId    String?        @map("ambiance_id") @db.VarChar(60)
   status        PortraitStatus @default(generated)
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz

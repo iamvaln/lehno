@@ -75,22 +75,32 @@ export class PortraitService {
     const reglages = await this.reglagesEnService();
     const { mots } = this.motsDe(ligne.content);
 
-    /* LA VOIE ET L'AMBIANCE SONT CELLES DE L'EXÉCUTION, relues sur son
-       orientation… qu'on n'a pas. Le portrait ne garde pas la sélection : elle
-       a servi à composer le brief, et le brief EST le résultat.
-       On reprend donc la voie par défaut du catalogue publié — la première
-       active — plutôt que d'inventer. Le jour où l'on voudra rejouer la
-       sélection exacte, elle devra être figée sur la ligne, comme `feeAmount`
-       l'est sur un paiement. C'est une dette, et elle est écrite. */
-    const voie = reglages.voiesImage.find((v) => v.actif && v.id !== "aucune");
-    if (!voie) throw new AppError("resource_inactive", "no image path is offered");
+    /* LA VOIE ET L'AMBIANCE SONT CELLES QU'ON A CHOISIES, figées au lancement.
+     *
+     * Elles étaient relues du catalogue — la première active —, si bien que
+     * « abstrait » rendait un paysage sans qu'aucune erreur ne s'affiche. Pire :
+     * le brief a été composé avec la consigne de l'ambiance choisie, donc
+     * l'image ne correspondait pas au texte qu'on venait de relire.
+     *
+     * ON NE RELIT PAS LE CATALOGUE POUR VÉRIFIER qu'elles y sont encore. Le
+     * catalogue peut changer entre le lancement et l'approbation ; désactiver
+     * une ambiance ne doit pas transformer un portrait déjà payé en refus.
+     * Même doctrine que `payment.feeAmount` : ce qui a été annoncé fait foi. */
+    const voie = ligne.visualPath as VoieImage | null;
+    if (voie === null) throw new AppError("conflict", "this portrait has no visual path");
 
-    const ambiance = reglages.ambiances.find(
-      (a) => a.actif && a.groupe === (voie.id === "photo" ? "photo_style" : "illustration_family"),
-    );
-    if (!ambiance) throw new AppError("resource_inactive", "no ambiance is offered");
+    const ambiance = ligne.ambianceId === null
+      ? null
+      : reglages.ambiances.find((a) => a.id === ligne.ambianceId) ?? null;
+    /* L'ambiance a disparu du catalogue depuis le lancement. Sa CONSIGNE vivait
+       là et nulle part ailleurs — la figer sur la ligne aurait doublé une donnée
+       que l'atelier reformule. On refuse plutôt que de composer sans elle : une
+       image faite sans la consigne choisie n'est pas le portrait qu'on a
+       relu. */
+    if (ligne.ambianceId !== null && ambiance === null)
+      throw new AppError("resource_inactive", "the chosen ambiance is no longer published");
 
-    const cle = voie.id === "photo" ? reglages.modeles.photo_style : reglages.modeles.illustration;
+    const cle = voie === "photo" ? reglages.modeles.photo_style : reglages.modeles.illustration;
     const modele = await this.modeleDemande(cle);
     const adaptateur = this.adaptateurs[modele.provider];
     /* Aucune clé d'API pour ce fournisseur. `resource_inactive` et non
@@ -99,10 +109,10 @@ export class PortraitService {
        AUCUN CRÉDIT N'EST REPRIS : il a payé le texte, qui est là. */
     if (!adaptateur) throw new AppError("resource_inactive", "no image provider configured");
 
-    const motif = voie.id === "aucune" ? reglages.motifs.fondSansImage : reglages.motifs.bande;
+    const motif = voie === "aucune" ? reglages.motifs.fondSansImage : reglages.motifs.bande;
     const resultat = await this.routeur.appelerUnSeulModele(
-      voie.id === "photo" ? "photo_style" : "illustration",
-      { invite: inviteImagePortrait({ mots }, ambiance.consigne.fr, motif) },
+      voie === "photo" ? "photo_style" : "illustration",
+      { invite: inviteImagePortrait({ mots }, ambiance?.consigne.fr ?? null, motif) },
       adaptateur,
       modele,
       { origine: "user_action", userId, actionRunId: ligne.actionRunId },

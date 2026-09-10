@@ -217,6 +217,73 @@ describe("le portrait", () => {
       expect(envoye).not.toContain("Célarine");
     });
 
+    /* LE DÉFAUT QUE CE CAS EXISTE POUR RETENIR.
+     *
+     * L'approbation reprenait la PREMIÈRE voie active du catalogue et la
+     * première ambiance de son groupe, sans savoir ce qui avait été choisi :
+     * « abstrait » rendait un paysage, sans qu'aucune erreur ne s'affiche.
+     *
+     * Pire que l'écart visuel — le brief a été composé avec la consigne de
+     * l'ambiance CHOISIE. L'image ne correspondait donc pas au texte qu'on
+     * venait de relire pour l'approuver. */
+    it("compose l'image avec l'ambiance choisie, pas la première du catalogue", async () => {
+      await publier();
+      await crediter(5);
+      // « abstrait » n'est PAS la première ambiance active : « nature » l'est.
+      const abstrait = verifierLaSelection(reglagesPortraitDeDepart(), {
+        orientation: "notre_relation", visual: "illustration", illustrationFamily: "abstrait",
+      });
+      const portrait = await generation(repond(BRIEF)).lancerPortrait(awa, proche, abstrait);
+      expect(portrait.ambianceId).toBe("abstrait");
+
+      const image = repond("aW1hZ2U=");
+      await portraits(image).approuver(awa, portrait.id);
+
+      // La consigne de l'abstrait, pas celle de la nature.
+      expect(image.vu[0]).toContain("formes");
+      expect(image.vu[0]).not.toContain("élément naturel");
+    });
+
+    /* LE CATALOGUE PEUT CHANGER entre le lancement et l'approbation.
+       Désactiver une ambiance ne doit pas transformer un portrait déjà payé en
+       refus — même doctrine que `payment.feeAmount`, ce qui a été annoncé fait
+       foi. Mais si elle DISPARAÎT, sa consigne disparaît avec elle : on refuse
+       plutôt que de composer une image sans elle. */
+    it("compose encore avec une ambiance désactivée depuis, et refuse si elle a disparu", async () => {
+      await publier();
+      await crediter(5);
+      const portrait = await generation(repond(BRIEF)).lancerPortrait(awa, proche, selection());
+
+      // Désactivée : le portrait passe quand même.
+      const eteinte = reglagesPortraitDeDepart();
+      await db.prisma.studioConfig.updateMany({
+        where: { kind: "portrait", state: "published" },
+        data: {
+          settings: {
+            ...eteinte,
+            ambiances: eteinte.ambiances.map((a) => (a.id === "nature" ? { ...a, actif: false } : a)),
+          } as never,
+        },
+      });
+      const rendu = await portraits(repond("aW1hZ2U=")).approuver(awa, portrait.id);
+      expect(rendu.status).toBe("approved");
+
+      // Disparue : on refuse, sa consigne n'existe plus nulle part.
+      await crediter(5);
+      const second = await generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), { cle: "k2" });
+      await db.prisma.studioConfig.updateMany({
+        where: { kind: "portrait", state: "published" },
+        data: {
+          settings: {
+            ...eteinte,
+            ambiances: eteinte.ambiances.filter((a) => a.id !== "nature"),
+          } as never,
+        },
+      });
+      await expect(portraits(repond("aW1hZ2U=")).approuver(awa, second.id))
+        .rejects.toMatchObject({ code: "resource_inactive" });
+    });
+
     it("fabrique l'image et range une clé, jamais l'image", async () => {
       await publier();
       const portrait = await unPortrait();

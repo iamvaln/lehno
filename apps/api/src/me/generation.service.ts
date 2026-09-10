@@ -455,7 +455,9 @@ export class GenerationService {
 
     try {
       const brief = await this.produireLeBrief(contexte, userId, execution.id);
-      return await this.conclurePortrait(execution.id, userId, proche.id, brief, options.motDeLExpediteur ?? null);
+      return await this.conclurePortrait(
+        execution.id, userId, proche.id, selection, brief, options.motDeLExpediteur ?? null,
+      );
     } catch (err: unknown) {
       await this.rendreLeCredit(execution.id, userId, this.codeDe(err));
       throw err;
@@ -572,7 +574,7 @@ export class GenerationService {
   }
 
   private async conclurePortrait(
-    actionRunId: string, userId: string, personId: string,
+    actionRunId: string, userId: string, personId: string, selection: SelectionPortrait,
     brief: SortiePortrait, motDeLExpediteur: string | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
@@ -591,6 +593,13 @@ export class GenerationService {
       return tx.portrait.create({
         data: {
           actionRunId, userId, personId,
+          /* CE QUI A ÉTÉ CHOISI, figé. L'approbation reprenait sinon la première
+             voie active du catalogue — « abstrait » rendait un paysage. Et le
+             brief ci-dessus a été composé avec la consigne de CETTE
+             ambiance-là : en employer une autre pour l'image rendrait un dessin
+             qui ne correspond pas au texte qu'on vient de relire. */
+          visualPath: selection.voie,
+          ...(selection.ambiance === null ? {} : { ambianceId: selection.ambiance.id }),
           content: JSON.stringify({ mots: brief.mots, phrase: brief.phrase }),
           ...(brief.phraseCourte === null ? {} : { shortContent: brief.phraseCourte }),
           ...(motDeLExpediteur === null ? {} : { senderNote: motDeLExpediteur }),
