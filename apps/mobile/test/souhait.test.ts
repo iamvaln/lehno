@@ -34,7 +34,6 @@ const MIEN: OwnerWish = {
 const IDEE: Wish = {
   id: ID,
   occurrenceId: OCCASION,
-  originNote: null, originAt: null,
   label: "Un vinyle de Manu Dibango",
   link: null,
   imageUrl: null,
@@ -44,6 +43,11 @@ const IDEE: Wish = {
   currency: null,
   status: "available",
   origin: "collected",
+  /* La provenance porte désormais son VERBATIM et sa DATE. Nuls ici : le décor
+     part de ce que rend une contribution qui n'a rien dit de plus, et inventer
+     une phrase ferait éprouver un cas que rien ne produit. */
+  originNote: null,
+  originAt: null,
   isShortlisted: false,
   reservedByName: null,
 };

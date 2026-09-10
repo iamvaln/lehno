@@ -53,8 +53,6 @@ function execution(
     createdAt: "2026-08-01T10:00:00.000Z", updatedAt: "2026-08-01T10:00:00.000Z",
   };
   return {
-    // Aucune idée : ces cas éprouvent la reprise d'un message.
-    ideas: null,
     generation: {
       id: uuid(100 + n), kind, status, creditsSpent: 1,
       /* La cible vient désormais de l'EXÉCUTION, plus seulement du message
@@ -66,6 +64,9 @@ function execution(
       createdAt: "2026-08-01T10:00:00.000Z",
     },
     message,
+    /* Nul pour un message : le jeu d'idées et le brouillon ne voyagent jamais
+       ensemble — une exécution produit l'un OU l'autre, selon sa nature. */
+    ideas: null,
   };
 }
 

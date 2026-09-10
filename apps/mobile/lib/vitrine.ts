@@ -68,9 +68,9 @@ export function etatDuLien(lien: WishLink, aujourdhui: string): EtatDuLien {
 export function reservationsQuiTiennent(
   reservations: readonly MyReservation[],
 ): MyReservation[] {
-  /* SANS DATE, EN QUEUE — une réservation sur une liste sans occasion n'a
-     aucune échéance à annoncer, et ne doit pas passer devant celles qui en ont
-     une. Même règle que `listesOrdonnees`. */
+  /* Même règle que pour les listes : sans date, en dernier. Une réservation
+     sur une liste sans occasion n'a pas d'échéance à annoncer, et la glisser
+     entre deux dates ferait croire qu'elle en a une. */
   return [...reservations].sort((a, b) => {
     if (a.occurrenceDate === null || b.occurrenceDate === null) {
       if (a.occurrenceDate === b.occurrenceDate) return 0;

@@ -15,7 +15,7 @@ const methode = (p: Record<string, unknown>) => paymentMethodSchema.parse({
 const canal = (p: Record<string, unknown>) => paymentChannelSchema.parse({
   id: "22222222-2222-4222-8222-222222222222",
   kind: "mobile_money", operator: "MTN", country: "CM", label: "MTN MoMo CM",
-  ussd: null, feeBorneBy: "payer", currency: "XAF", ...p,
+  feeBorneBy: "payer", currency: "XAF", ussd: null, ...p,
 });
 
 const ID = (n: number) => `1111111${n}-1111-4111-8111-111111111111`;

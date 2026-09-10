@@ -36,8 +36,9 @@ export function ListePartagee(
   { t, langue, jeton, liste, joursRestants }: {
     t: Messages; langue: Langue; jeton: string;
     liste: Ouverte;
-    /** Nul quand la liste ne vise aucune occasion : il n'y a rien à
-     *  décompter, et le compte à rebours ne s'affiche pas. */
+    /* NULLE quand la liste ne vise aucune occasion — « ce qui me ferait
+       plaisir », sans date. Il n'y a alors rien à décompter : un zéro
+       afficherait « c'est aujourd'hui » sur une liste qui n'attend aucun jour. */
     joursRestants: number | null;
   },
 ): ReactNode {
@@ -127,9 +128,10 @@ export function ListePartagee(
                     (me-events.ts), et la forme publique ne porte pas le genre
                     de l'occasion. La date seule vaut mieux qu'une virgule
                     orpheline devant elle. */}
-                {/* SANS OCCASION, il ne reste que le nom que le
-                    propriétaire a donné — c'est le seul repère de la liste, et
-                    le serveur le sert dans `occasionLabel`. */}
+                {/* SANS DATE, le nom que le propriétaire a donné suffit :
+                    c'est le cas d'une liste qui ne vise aucune occasion. Sans
+                    nom non plus, on n'écrit rien — mieux vaut une ligne absente
+                    qu'une ligne qui annonce le vide. */}
                 {etat.occasionDate === null
                   ? etat.occasionLabel
                   : etat.occasionLabel === null

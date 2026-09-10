@@ -6,7 +6,8 @@ const mot = (n: number, status: ReceivedWish["status"], quand: string): Received
   id: `${String(n).padStart(8, "0")}-0000-4000-8000-000000000000`,
   occurrenceId: "11111111-1111-4111-8111-111111111111",
   authorName: "Ana", content: "Bon anniversaire", status, createdAt: quand,
-  // Rien d'exposé : ces cas éprouvent la modération, pas la publication.
+  // Un vœu reçu naît NON exposé : voir le contrat. Le décor part donc du
+  // même état que la base, sans quoi il éprouverait un cas qui n'arrive pas.
   isPublic: false, showAuthor: false,
 });
 

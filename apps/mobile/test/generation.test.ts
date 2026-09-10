@@ -45,7 +45,8 @@ const resultat = (
     createdAt: "2026-08-26T10:00:00Z",
   },
   message,
-  // Aucune idée : ces cas éprouvent le message.
+  /* Nul pour un message : le jeu d'idées et le brouillon ne voyagent jamais
+     ensemble — une exécution produit l'un OU l'autre, selon sa nature. */
   ideas: null,
 });
 

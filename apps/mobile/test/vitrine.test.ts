@@ -10,7 +10,8 @@ const LANCEMENT = ["collect", "referral", "topup.manual", "generation.message"];
 const mur = (isEnabled: boolean): Wall => ({
   slug: "valentine",
   isEnabled,
-  showBirthdayDate: true, showWishlist: false,
+  showBirthdayDate: true,
+  showWishlist: false,
   welcomeMessage: null,
   publicUrl: "https://lehno.app/valentine",
   wishLinkUrl: null,

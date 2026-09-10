@@ -133,7 +133,14 @@ function MenuLigne({
         aria-expanded={ancrage !== null}
         onClick={basculer}
       >
-        <Icon name="more-horizontal" size={17} />
+        {/* `ellipsis`, et surtout PAS `more-horizontal` : Lucide a renommé
+            cette icône, et le nom d'avant ne résout plus. `Icon` retombe alors
+            sur un cadre vide — le bouton restait dans le DOM, gardait sa taille
+            et son étiquette, et ne dessinait rien. Le menu d'actions de TOUS
+            les tableaux de l'outil était ainsi invisible, donc introuvable :
+            on ne pouvait plus basculer un drapeau, changer un rôle, ni traiter
+            une suppression autrement qu'au hasard du clic. */}
+        <Icon name="ellipsis" size={17} />
       </button>
       {ancrage ? (
         <div ref={panneau} role="menu" className="admin-menu" style={ancrage}>

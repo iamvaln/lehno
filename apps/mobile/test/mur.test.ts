@@ -24,7 +24,7 @@ const mot = (n: number, quand: string, auteur: string | null): ReceivedWish =>
   receivedWishSchema.parse({
     id: uuid(n), occurrenceId: uuid(100), authorName: auteur,
     content: `mot ${n}`, status: "pending", createdAt: quand,
-    // Rien d'exposé : ces cas éprouvent le sas, pas la publication.
+    // Non exposé, comme en base : le décor part de l'état réel.
     isPublic: false, showAuthor: false,
   });
 

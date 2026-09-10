@@ -79,11 +79,9 @@ export default async function Page({ params }: Proprietes): Promise<ReactNode> {
     <ListePartagee
       t={t} langue={langue} jeton={jeton}
       liste={etat.donnees}
-      /* NUL quand la liste ne vise aucune occasion — « ce qui me ferait
-         plaisir », qu'on tient toute l'année. Il n'y a alors rien à décompter,
-         et le compte à rebours ne s'affiche pas. Calculer une date depuis
-         aujourd'hui rendrait zéro, que l'écran lirait comme « c'est
-         aujourd'hui ». */
+      /* Rien à décompter sans occasion : le compte à rebours ne s'affiche
+         alors pas, plutôt que d'annoncer un nombre de jours qui ne veut rien
+         dire. */
       joursRestants={
         etat.donnees.occasionDate === null
           ? null

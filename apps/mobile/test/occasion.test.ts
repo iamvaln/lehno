@@ -79,19 +79,21 @@ const produit = (m: GeneratedMessage): GenerationResult => ({
        prouver, et l'écran ouvrirait un 404 en production. */
     id: `9${m.id.slice(1)}`,
   },
-  message: m, ideas: null,
+  message: m,
+  /* Nul : un message et un jeu d'idées ne voyagent jamais ensemble. */
+  ideas: null,
 });
 
 const enCours = (n: number, vise: string, quand: string): GenerationResult => ({
   generation: execution(n, "wish_message", vise, "running", quand),
-  message: null, ideas: null,
+  message: null,
+  /* Nul : un message et un jeu d'idées ne voyagent jamais ensemble. */
+  ideas: null,
 });
 
 const souhait = (n: number, quoi: string, reste: Partial<Wish> = {}): Wish => ({
   id: uuid(400 + n),
   occurrenceId: OCCASION,
-  // Aucune provenance : ces cas ne l'éprouvent pas.
-  originNote: null, originAt: null,
   label: quoi,
   link: null,
   imageUrl: null,
@@ -101,6 +103,8 @@ const souhait = (n: number, quoi: string, reste: Partial<Wish> = {}): Wish => ({
   currency: null,
   status: "available",
   origin: "owner",
+  originNote: null,
+  originAt: null,
   isShortlisted: false,
   reservedByName: null,
   ...reste,
@@ -111,12 +115,13 @@ const voeu = (
 ): ReceivedWish => ({
   id: uuid(500 + n),
   occurrenceId: vise,
-  // Rien d'exposé : ces cas éprouvent la modération, pas la publication.
-  isPublic: false, showAuthor: false,
   authorName: `Rose ${n}`,
   content: `vœu ${n}`,
   status: statut,
   createdAt: quand,
+  // Un vœu reçu naît NON exposé — le décor part de l'état de la base.
+  isPublic: false,
+  showAuthor: false,
 });
 
 describe("avant ou après", () => {
