@@ -218,7 +218,9 @@ describe("Edition — les configurations", () => {
 
   it("n'enregistre que sur le geste explicite", async () => {
     const onEnregistrer = vi.fn();
-    render(<Edition role="admin" onEnregistrer={onEnregistrer} />);
+    /* Les motifs viennent du REGISTRE, comme en production : l'écran ne les
+       invente plus, il reçoit ceux que le serveur propose pour ce geste. */
+    render(<Edition role="admin" onEnregistrer={onEnregistrer} motifs={[{ code: "pricing_adjustment", libelle: "Ajustement tarifaire" }]} />);
 
     const cle = parametres.economie[1]!.cle as keyof typeof fr.parametres.cles;
     const champ = screen.getByLabelText(fr.parametres.cles[cle].libelle);
@@ -233,14 +235,17 @@ describe("Edition — les configurations", () => {
 
     await userEvent.selectOptions(
       screen.getByLabelText(fr.parametres.motif.question),
-      fr.parametres.motif.motifs[0]!,
+      "pricing_adjustment",
     );
     await userEvent.click(screen.getByRole("button", { name: fr.confirmation.confirmer }));
 
     expect(onEnregistrer).toHaveBeenCalledTimes(1);
     // Telle que saisie : la base stocke du texte et porte le type à côté.
     expect(onEnregistrer.mock.calls[0]![0].economie[1].valeur).toBe("7");
-    expect(onEnregistrer.mock.calls[0]![1]).toBe(fr.parametres.motif.motifs[0]);
+    /* Le libellé pour le journal, le CODE pour le comptage — le serveur exige
+       le second sur ce geste et refuse en 422 sans lui. */
+    expect(onEnregistrer.mock.calls[0]![1]).toBe("Ajustement tarifaire");
+    expect(onEnregistrer.mock.calls[0]![2]).toBe("pricing_adjustment");
   });
 
   it("refuse d'enregistrer un réglage qui n'est pas un entier positif", async () => {

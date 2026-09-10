@@ -57,7 +57,11 @@ export interface CreditsProps {
     montantRecu?: number;
     reference?: string;
     reason: string;
+    reasonCode?: string;
   }) => void;
+  /** Les motifs du registre pour confirmer, puis pour rejeter un versement. */
+  motifsConfirmer?: readonly { code: string; libelle: string }[];
+  motifsRejeter?: readonly { code: string; libelle: string }[];
   /* ENREGISTRER UN RÉGLAGE DE PAIEMENT.
      Un seul point d'entrée pour les trois : la cible dit laquelle, `id` nul
      dit qu'on crée. Trois rappels distincts se seraient répondu de trois
@@ -94,6 +98,7 @@ export function Credits({
   paiements = [], paiement = null, mouvements = [], paliers = [], canaux = [], comptes = [],
   filtreEtat = "tous", filtreMode = "tous", onFiltre, onOuvrir, onRetour, onSaisir, onDecider, onOuvrirLeRecu,
   onEnregistrerReglage,
+  motifsConfirmer = [], motifsRejeter = [],
   onExporter, exportEnCours = false,
 }: CreditsProps): ReactNode {
   const t = messages(langue);
@@ -349,7 +354,13 @@ export function Credits({
             destructif={geste === "rejeter"}
             titre={dialogue.titre}
             consequence={dialogue.consequence}
-            motifs={[...dialogue.motifs]}
+            /* Les motifs du REGISTRE : le serveur exige le code sur
+               `payment_confirm` et `payment_reject`, et refuse en 422 sans lui.
+               La liste du dictionnaire reste le filet quand le registre ne
+               couvre pas encore le geste. */
+            motifs={(geste === "confirmer" ? motifsConfirmer : motifsRejeter).length > 0
+              ? (geste === "confirmer" ? motifsConfirmer : motifsRejeter)
+              : [...dialogue.motifs]}
             libelles={{
               motif: t.confirmation.motif,
               choisir: t.confirmation.motifManquant,
@@ -360,10 +371,14 @@ export function Credits({
               confirmer: t.confirmation.confirmer,
             }}
             onAnnuler={() => setGeste(null)}
-            onConfirmer={(motif) => {
+            onConfirmer={(motif, code) => {
               onDecider?.(geste === "confirmer"
-                ? { decision: "confirmer", montantRecu: Number(montantRecu), reference: reference.trim(), reason: motif }
-                : { decision: "rejeter", reason: motif });
+                ? {
+                  decision: "confirmer", montantRecu: Number(montantRecu),
+                  reference: reference.trim(), reason: motif,
+                  ...(code !== undefined ? { reasonCode: code } : {}),
+                }
+                : { decision: "rejeter", reason: motif, ...(code !== undefined ? { reasonCode: code } : {}) });
               setGeste(null);
             }}
           />

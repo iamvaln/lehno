@@ -157,7 +157,11 @@ export interface EditionProps {
   onArreter?: (dureeMinutes: number | null, motif: string) => void;
   onRouvrir?: (motif: string) => void;
   /** Le motif accompagne toujours l'enregistrement : sans lui, le serveur refuse. */
-  onEnregistrer?: (valeurs: Parametres, motif: string) => void;
+  /* Le motif ÉCRIT et le CODE du registre. Le serveur exige le second sur ce
+     geste — `parameter_update` propose des motifs — et refuse en 422 sans lui. */
+  onEnregistrer?: (valeurs: Parametres, motif: string, code?: string) => void;
+  /** Les motifs que le registre propose pour `parameter_update`. */
+  motifs?: readonly { code: string; libelle: string }[];
   onRetour?: (id?: string) => void;
 }
 
@@ -206,6 +210,7 @@ export function Edition({
   onArreter,
   onRouvrir,
   onEnregistrer,
+  motifs = [],
   onRetour,
 }: EditionProps): ReactNode {
   const t = messages(langue);
@@ -250,7 +255,7 @@ export function Edition({
     setDemandeMotif(true);
   };
 
-  const confirmer = (motif: string) => {
+  const confirmer = (motif: string, code?: string) => {
     setDemandeMotif(false);
     const valeurs: Parametres = {
       economie: reference.economie.map((p) => ({
@@ -264,7 +269,7 @@ export function Edition({
       typesEvenement: reference.typesEvenement.map((type) => ({ ...type, actif: actifDe(type) })),
     };
     setReference(valeurs);
-    onEnregistrer?.(valeurs, motif);
+    onEnregistrer?.(valeurs, motif, code);
     setAccuse(t.parametres.enregistre);
   };
 
@@ -399,7 +404,7 @@ export function Edition({
         <ConfirmWithReason
           titre={t.parametres.motif.titre}
           consequence={t.parametres.motif.consequence}
-          motifs={[...t.parametres.motif.motifs]}
+          motifs={motifs}
           libelles={{
             motif: t.parametres.motif.question,
             choisir: t.confirmation.motifManquant,

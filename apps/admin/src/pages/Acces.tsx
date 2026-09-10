@@ -29,9 +29,14 @@ export interface AccesProps {
   /** L'identifiant de celui qui regarde : c'est lui qu'on ne peut pas toucher. */
   moiId: string;
   comptes: CompteAdmin[];
-  onInviter: (invitation: { email: string; role: "admin" | "support"; reason: string }) => void;
-  onChangerRole: (id: string, role: "admin" | "support", reason: string) => void;
-  onRevoquer: (id: string, reason: string) => void;
+  onInviter: (invitation: { email: string; role: "admin" | "support"; reason: string; reasonCode?: string }) => void;
+  onChangerRole: (id: string, role: "admin" | "support", reason: string, reasonCode?: string) => void;
+  onRevoquer: (id: string, reason: string, reasonCode?: string) => void;
+  /* Les motifs du registre, PAR GESTE. L'écran en porte quatre — inviter,
+     promouvoir, rétrograder, révoquer — et chacun a sa propre liste : proposer
+     « Fin de contrat » pour une promotion n'aurait pas de sens, et le serveur
+     refuse d'ailleurs un code hors de sa portée. */
+  motifsDuGeste?: (geste: string) => readonly { code: string; libelle: string }[];
   onRetour?: (id: string) => void;
 }
 
@@ -40,6 +45,7 @@ type Geste = { compte: CompteAdmin; quoi: "role" | "revocation" };
 
 export function Acces({
   langue = "fr", moiId, comptes, onInviter, onChangerRole, onRevoquer, onRetour,
+  motifsDuGeste = () => [],
 }: AccesProps): ReactNode {
   const t = messages(langue);
   const [geste, setGeste] = useState<Geste | null>(null);
@@ -145,7 +151,12 @@ export function Acces({
           destructif={geste.quoi === "revocation"}
           titre={dialogue.titre.replace("{compte}", nomme(geste.compte))}
           consequence={dialogue.consequence}
-          motifs={[...dialogue.motifs]}
+          /* Les motifs du REGISTRE, par geste : révoquer, promouvoir et
+             rétrograder n'ont pas les mêmes raisons, et le serveur exige le
+             code sur les trois. */
+          motifs={motifsDuGeste(geste.quoi === "revocation"
+            ? "admin_deactivate"
+            : geste.compte.role === "support" ? "admin_promote" : "admin_demote")}
           libelles={{
             motif: t.confirmation.motif,
             choisir: t.confirmation.motifManquant,
@@ -156,11 +167,11 @@ export function Acces({
             confirmer: t.confirmation.confirmer,
           }}
           onAnnuler={() => setGeste(null)}
-          onConfirmer={(motif) => {
+          onConfirmer={(motif, code) => {
             const { compte, quoi } = geste;
             setGeste(null);
-            if (quoi === "revocation") onRevoquer(compte.id, motif);
-            else onChangerRole(compte.id, compte.role === "support" ? "admin" : "support", motif);
+            if (quoi === "revocation") onRevoquer(compte.id, motif, code);
+            else onChangerRole(compte.id, compte.role === "support" ? "admin" : "support", motif, code);
           }}
         />
       ) : null}
@@ -169,7 +180,7 @@ export function Acces({
         <ConfirmWithReason
           titre={t.acces.inviter.dialogue.titre}
           consequence={t.acces.inviter.dialogue.consequence}
-          motifs={[...t.acces.inviter.motifs]}
+          motifs={motifsDuGeste("admin_invite")}
           libelles={{
             motif: t.confirmation.motif,
             choisir: t.confirmation.motifManquant,
@@ -180,10 +191,10 @@ export function Acces({
             confirmer: t.confirmation.confirmer,
           }}
           onAnnuler={() => setConfirmeInvitation(false)}
-          onConfirmer={(motif) => {
+          onConfirmer={(motif, code) => {
             setConfirmeInvitation(false);
             setInvitation(false);
-            onInviter({ email: email.trim(), role, reason: motif });
+            onInviter({ email: email.trim(), role, reason: motif, ...(code !== undefined ? { reasonCode: code } : {}) });
             setEmail("");
           }}
         />
