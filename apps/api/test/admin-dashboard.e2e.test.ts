@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { dashboardSchema } from "@lehno/contracts";
 import type { INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
@@ -79,19 +80,21 @@ describe("administration — le tableau de bord", () => {
     await db.prisma.user.create({ data: { email: "b@e.com", username: "b", referralCode: "B", status: "suspended" } });
     const { entete } = await session("admin");
 
-    const corps = (await (await tableau(entete)).json()) as { comptes: Record<string, number> };
-    expect(corps.comptes).toMatchObject({ actifs: 1, suspendus: 1 });
+    const corps = dashboardSchema.parse(await (await tableau(entete)).json());
+    const valeur = (id: string): string | undefined => corps.indicateurs.find((i) => i.id === id)?.valeur;
+    expect(valeur("comptes_actifs")).toBe("1");
+    expect(valeur("comptes_suspendus")).toBe("1");
   });
 
   it("signale les suppressions échues, qui demandent un geste aujourd'hui", async () => {
     await enAttente(1, 40);
     const { entete } = await session("admin");
 
-    const corps = (await (await tableau(entete)).json()) as {
-      alertes: { cause: string }[]; suppressions: { echues: number };
-    };
-    expect(corps.suppressions.echues).toBe(1);
+    const corps = dashboardSchema.parse(await (await tableau(entete)).json());
     expect(corps.alertes.some((a) => a.cause === "suppression_echeance")).toBe(true);
+    /* La file porte la LIGNE, pas le décompte : c'est par elle qu'on entre dans
+       le délai de grâce, qui n'a pas d'entrée au menu. */
+    expect(corps.aTraiter.filter((l) => l.section === "suppressions")).toHaveLength(1);
   });
 
   // Une file vide n'est pas une anomalie. Le tableau le dit en ne portant
@@ -102,13 +105,42 @@ describe("administration — le tableau de bord", () => {
     expect(corps.alertes).toHaveLength(0);
   });
 
-  it("rend les derniers gestes d'administration", async () => {
-    const { compte, entete } = await session("admin");
-    await db.prisma.auditLog.create({
-      data: { actorType: "admin", actorId: compte.id, action: "parameter_update", reason: "Hausse décidée en comité" },
+  /* LA GARDE QUI MANQUAIT, et qui aurait tout évité.
+   *
+   * Cette épreuve passait la réponse dans une forme écrite À LA MAIN dans le
+   * test — celle du service. Celle de l'outil simulait une réponse conforme AU
+   * CONTRAT. Les deux étaient vertes, et l'écran affichait « le chargement n'a
+   * pas abouti » depuis six semaines sur un appel qui rendait 200.
+   *
+   * On passe désormais la réponse RÉELLE dans le schéma publié. `.strict()` y
+   * refuse aussi bien un champ en trop qu'un champ manquant : la divergence ne
+   * peut plus dormir. */
+  it("rend exactement ce que le contrat publié décrit", async () => {
+    await enAttente(1, 40);
+    await db.prisma.supportRequest.create({
+      data: {
+        userId: (await db.prisma.user.findFirstOrThrow()).id,
+        subject: "Je n'arrive pas à payer", body: "Le versement n'aboutit pas.",
+      },
     });
+    const { entete } = await session("admin");
 
-    const corps = (await (await tableau(entete)).json()) as { derniersGestes: { action: string }[] };
-    expect(corps.derniersGestes[0]?.action).toBe("parameter_update");
+    const brut = await (await tableau(entete)).json();
+    const lu = dashboardSchema.safeParse(brut);
+    expect(lu.success ? null : lu.error.issues).toBeNull();
+  });
+
+  /* Une demande sans objet attend une réponse comme les autres : elle doit
+     paraître, et se cliquer. Une ligne sans intitulé ne se clique pas. */
+  it("nomme la file d'une demande d'assistance sans objet", async () => {
+    const client = await db.prisma.user.create({
+      data: { email: "muet@e.com", username: "muet", referralCode: "MUET" },
+    });
+    await db.prisma.supportRequest.create({ data: { userId: client.id, body: "Bonjour," } });
+    const { entete } = await session("admin");
+
+    const corps = dashboardSchema.parse(await (await tableau(entete)).json());
+    const ligne = corps.aTraiter.find((l) => l.section === "assistance");
+    expect(ligne?.element).toBe("Demande sans objet");
   });
 });
