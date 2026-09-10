@@ -40,6 +40,7 @@ export const fr = {
   valider: "Valider",
   codeErreur: "Ce code ne correspond pas. Il vous reste deux essais.",
   codeExpire: "Ce code a expiré.",
+  inscriptionExpiree: "Le délai est passé. Redemandez un code pour reprendre.",
   renvoyerCode: "Renvoyer un code",
   codeRenvoiAttente: (s: number) => "Nouveau code possible dans " + s + " s",
   /* Le plafond de comptes sur cet appareil. Le ton reste factuel : ce n'est pas

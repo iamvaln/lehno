@@ -143,7 +143,22 @@ export default function Pseudo() {
     } catch (e) {
       const enveloppe = e instanceof ErreurDApi ? e.enveloppe : null;
       if (enveloppe?.code === "username_taken") setPris(true);
-      else setErreur(messageDErreur(enveloppe, langue));
+      /* LE JETON D'INSCRIPTION DURE QUINZE MINUTES, et son expiration rend
+         `unauthorized` — que le catalogue commun traduit par « Vous devez être
+         connecté ». Sur CET écran, la phrase est fausse deux fois : on n'a
+         jamais été connecté, on est en train de créer le compte ; et elle ne
+         dit pas quoi faire. On restait devant un bouton qui échoue, sans
+         comprendre.
+
+         On renvoie donc à l'adresse, avec la raison. Le jeton est mort : rien
+         de ce que porte cet écran ne peut plus aboutir, et l'y laisser ferait
+         retaper un pseudo pour un second refus. */
+      else if (enveloppe?.code === "unauthorized") {
+        routeur.replace({
+          pathname: "/(connexion)/connexion",
+          params: { raison: "inscriptionExpiree" },
+        });
+      } else setErreur(messageDErreur(enveloppe, langue));
     } finally {
       setEnvoi(false);
     }

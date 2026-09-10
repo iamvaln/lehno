@@ -37,6 +37,7 @@ export const en = {
   valider: "Confirm",
   codeErreur: "That code doesn't match. Two tries left.",
   codeExpire: "This code has expired.",
+  inscriptionExpiree: "That took too long. Ask for a new code to pick up where you left off.",
   renvoyerCode: "Send another code",
   codeRenvoiAttente: (s: number) => "New code in " + s + "s",
   plafondAppareil: "This device has already opened the number of accounts allowed. Write to us and we will sort it out.",
