@@ -141,6 +141,47 @@ describe("administration — la saisie manuelle d'un paiement", () => {
     expect(corps.attenduSurLeCompte).toBe(1000);
   });
 
+  /* CE QU'ON A ANNONCÉ, FIGÉ SUR LA LIGNE. Même doctrine que `feeAmount`,
+     mais la raison est plus forte ici : un paiement saisi à la main EST le
+     paiement contesté — celui qu'on rouvre six mois plus tard parce que
+     quelqu'un dit avoir versé autre chose que ce qui a été crédité.
+
+     L'épreuve va jusqu'au bout du scénario redouté : on change le prix
+     unitaire ET on supprime le palier. `credit_bundle_id` est en `SetNull`,
+     donc la référence disparaît — et sans ces deux montants, l'information
+     avec elle. */
+  it("fige le prix unitaire et le prix du palier, qui survivent à sa suppression", async () => {
+    const { entete } = await session("admin");
+    await db.prisma.systemParameter.upsert({
+      where: { key: "credit_unit_price" },
+      create: { key: "credit_unit_price", value: "250", valueType: "money" },
+      update: { value: "250" },
+    });
+
+    /* Un palier À NOUS, et pas celui du semis : le test le supprime, et les
+       autres épreuves du fichier lisent le palier semé — `resetDatabase` ne le
+       resème pas. Emprunter celui du décor ferait tomber les suivantes, et le
+       coupable serait introuvable. */
+    const palier = await db.prisma.creditBundle.create({
+      data: { amount: 1000, credits: 10, position: 99, currency: "XAF" },
+    });
+    await saisir(entete, { palierId: palier.id });
+
+    const ligne = await db.prisma.payment.findFirstOrThrow();
+    expect(Number(ligne.creditUnitPrice)).toBe(250);
+    expect(Number(ligne.bundleAmount)).toBe(1000);
+
+    await db.prisma.systemParameter.update({
+      where: { key: "credit_unit_price" }, data: { value: "500" },
+    });
+    await db.prisma.creditBundle.delete({ where: { id: palier.id } });
+
+    const apres = await db.prisma.payment.findUniqueOrThrow({ where: { id: ligne.id } });
+    expect(apres.creditBundleId).toBeNull();
+    expect(Number(apres.creditUnitPrice)).toBe(250);
+    expect(Number(apres.bundleAmount)).toBe(1000);
+  });
+
   // « Chaque passage d'état ouvre une ligne d'historique avec origin = admin,
   // l'identifiant de l'administrateur et un motif obligatoire. »
   it("l'histoire du paiement s'ouvre avec son auteur et son motif", async () => {

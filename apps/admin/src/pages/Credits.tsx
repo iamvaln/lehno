@@ -406,7 +406,7 @@ export function Credits({
             colonnes={[
               { cle: "montant", titre: t.credits.reglages.paliers.col.montant, aligne: "right", rendu: (p) => `${nombre.format(p.montant)} ${p.devise}` },
               { cle: "credits", titre: t.credits.reglages.paliers.col.credits, aligne: "right", rendu: (p) => nombre.format(p.credits) },
-              { cle: "remisePourcent", titre: t.credits.reglages.paliers.col.remise, rendu: (p) => (p.remisePourcent === null ? t.credits.reglages.aucuneRemise : `+${p.remisePourcent} %`) },
+              { cle: "remisePourcent", titre: t.credits.reglages.paliers.col.remise, rendu: (p) => (p.remisePourcent === null ? t.credits.reglages.aucuneRemise : `−${p.remisePourcent} %`) },
               { cle: "position", titre: t.credits.reglages.paliers.col.position, discret: true },
               { cle: "actif", titre: t.credits.reglages.paliers.col.etat, rendu: (p) => etat(p.actif) },
             ] as Colonne<Palier & { id: string }>[]}

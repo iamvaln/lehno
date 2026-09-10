@@ -722,6 +722,13 @@ export const etatTraverseSchema = z.object({
 
 export const paiementDetailSchema = paiementLigneSchema.extend({
   reference: z.string().nullable(),
+  /* LA PRÉSENCE D'UN REÇU, jamais sa clé.
+     L'administration doit voir qu'il y en a un — et surtout qu'il n'y en a pas,
+     pour le réclamer avant de trancher. La clé, elle, ne sort pas : c'est
+     `GET admin/payments/{id}/proof` qui signe une lecture, à chaque fois, pour
+     qui a le droit. Une clé rendue ici resterait valable dans un onglet ouvert,
+     un journal, un copier-coller. */
+  recu: z.boolean(),
   motifEchec: z.string().nullable(),
   frais: z.number().nullable(),
   compteCollecte: z.string().nullable(),
