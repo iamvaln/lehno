@@ -3,6 +3,7 @@ import { startGenerationSchema, type CleDrapeau } from "@lehno/contracts";
 import { GenerationController } from "../src/me/generation.controller.js";
 import type { GenerationService } from "../src/me/generation.service.js";
 import type { FlagsService } from "../src/flags/flags.service.js";
+import type { StudioConfigurationService } from "../src/studio/configuration.service.js";
 
 /* Le lancement décide de TROIS choses avant de toucher au crédit : la nature
    est-elle allumée, sait-on la produire, et la demande est-elle formée. Ces
@@ -21,6 +22,10 @@ const controleur = (allumes: CleDrapeau[]): GenerationController =>
   new GenerationController(
     { lancerMessage: jamais, lancerIdees: jamais, lire: jamais } as unknown as GenerationService,
     { estActif: async (cle: CleDrapeau) => allumes.includes(cle) } as unknown as FlagsService,
+    /* Le studio double CRIE, comme le service : ces cas s'arrêtent aux deux
+       refus du contrôleur — drapeau éteint, nature non produite —, et aucun ne
+       doit atteindre une configuration. */
+    { enService: jamais, reglagesPortraitDe: jamais } as unknown as StudioConfigurationService,
   );
 
 const TOUS: CleDrapeau[] = ["generation.message", "generation.ideas", "generation.portrait"];
@@ -68,27 +73,13 @@ describe("le drapeau qui garde un lancement est celui de la nature demandée", (
     }
   });
 
-  /* ALLUMÉE N'EST PAS CONSTRUITE, et les deux ne se disent pas pareil : une
-     nature éteinte se rallume au back-office, une nature sans chaîne de
-     production ne s'allume nulle part. Confondre les deux ferait chercher un
-     interrupteur qui n'existe pas. */
-  it("distingue l'extinction de l'absence de production", async () => {
-    /* Le portrait reste la nature SANS chaîne de production : allumé partout,
-       il refuse quand même, et par un code différent de l'extinction.
-       Les idées ont quitté cette liste — elles se produisent depuis. Le jour où
-       le portrait la quittera aussi, ce cas n'aura plus de sujet et devra
-       disparaître plutôt que d'être rafistolé sur une nature inventée. */
-    await expect(
-      controleur(TOUS).lancer({ userId: "u" }, demande({ kind: "portrait", personId: PROCHE })),
-    ).rejects.toMatchObject({ code: "resource_inactive" });
+  /* CE CAS N'A PLUS DE SUJET, et son commentaire l'annonçait : « le jour où le
+     portrait se produira, il devra disparaître plutôt que d'être rafistolé sur
+     une nature inventée ». Les trois natures se produisent.
+     Ce qu'il éprouvait — « allumée n'est pas construite » — est désormais tenu
+     par le compilateur : un `switch` exhaustif dans le contrôleur refuse une
+     nature sans chemin, au lieu de la laisser retomber sur le message. */
 
-    // Et la comparaison qui donne son sens au cas : éteint, le même portrait
-    // répond `not_found`. Deux refus, deux causes, deux codes.
-    const sansLePortrait = TOUS.filter((c) => c !== "generation.portrait");
-    await expect(
-      controleur(sansLePortrait).lancer({ userId: "u" }, demande({ kind: "portrait", personId: PROCHE })),
-    ).rejects.toMatchObject({ code: "not_found" });
-  });
 
   it("laisse passer le message quand son drapeau est allumé", async () => {
     // Le service double lève : atteindre cette exception prouve qu'aucune des

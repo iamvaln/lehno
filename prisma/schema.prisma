@@ -195,6 +195,7 @@ model User {
   @@map("user")
   generatedIdeaSets       GeneratedIdeaSet[]
   wishlists               Wishlist[]
+  portraits               Portrait[]
 }
 
 enum ReferralStatus {
@@ -588,6 +589,7 @@ model Person {
 
   @@index([userId])
   @@map("person")
+  portraits        Portrait[]
 }
 
 model Event {
@@ -1465,6 +1467,17 @@ enum AITask {
   sensitive_detection
   message
   gift_ideas
+  /**
+   * LE TEXTE QUI PRÉCÈDE L'IMAGE. Il lit les notes, les attributs et le mot de
+   * l'utilisateur, et rend les mots qui comptent — jamais les notes elles-mêmes.
+   *
+   * C'est ce qui empêche les confidences de partir mot pour mot chez un
+   * fournisseur d'image : ce qui traverse est ce qu'on en a retenu. Et c'est ce
+   * qui rend les interdictions tenables — un modèle de texte sait qu'on lui
+   * interdit un sujet, là où un modèle d'image reçoit une consigne qu'il
+   * illustre.
+   */
+  portrait_brief
   // Les deux tâches d'image. Elles n'acceptent qu'un modèle de capacité
   // `image` — voir AICapability.
   illustration
@@ -1714,6 +1727,82 @@ model GeneratedIdea {
   @@map("generated_idea")
 }
 
+/// Un portrait est produit en DEUX TEMPS : le texte au lancement, l'image à
+/// l'approbation. Le contrat le dit — « l'image composée, produite à
+/// l'approbation ». C'est aussi la modération : on relit avant de fabriquer.
+enum PortraitStatus {
+  generated
+  approved
+}
+
+/**
+ * Le portrait produit pour un proche.
+ *
+ * IL NE S'EXPOSE À AUCUNE ADRESSE PUBLIQUE, et aucune colonne ne le permet :
+ * « l'utilisateur l'enregistre et l'envoie lui-même ». Un portrait dit quelque
+ * chose d'une personne précise, et le publier engagerait quelqu'un qui n'a rien
+ * demandé.
+ *
+ * `person` en CASCADE, à la différence d'un jeu d'idées qui survit délié : une
+ * idée de cadeau ne dit rien de personne, un portrait ne parle que de lui.
+ */
+model Portrait {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actionRunId   String         @unique @map("action_run_id") @db.Uuid
+  userId        String         @map("user_id") @db.Uuid
+  personId      String         @map("person_id") @db.Uuid
+  content       String
+  /// La version courte, pour le format vertical. Elle sort du MÊME appel que le
+  /// texte : deux appels donneraient deux textes qui peuvent se contredire, et
+  /// coûteraient deux fois pour un crédit débité une fois.
+  shortContent  String?        @map("short_content")
+  /// Le mot que l'expéditeur ajoute de sa main, à côté de ce qui a été produit.
+  senderNote    String?        @map("sender_note")
+  /// UNE CLÉ, JAMAIS UNE URL : les adresses que rendent les fournisseurs
+  /// d'image expirent, souvent en une heure. Un portrait dont on garderait le
+  /// lien s'afficherait le jour même et montrerait un trou la semaine suivante.
+  /// Nulle tant que le portrait n'est pas approuvé — une contrainte en base lie
+  /// les deux dans les deux sens.
+  imageKey      String?        @map("image_key")
+  /// CE QUI A ÉTÉ CHOISI, figé au lancement.
+  ///
+  /// Sans elles, l'approbation ne savait pas ce que l'utilisateur avait demandé
+  /// et reprenait la première voie active du catalogue : « abstrait » rendait
+  /// un paysage, sans qu'aucune erreur ne s'affiche.
+  ///
+  /// Et le brief a été composé avec la consigne de l'ambiance CHOISIE :
+  /// produire l'image avec une autre rendrait un dessin qui ne correspond pas
+  /// au texte qu'on vient de relire.
+  ///
+  /// Même doctrine que `payment.feeAmount` — le catalogue peut changer entre le
+  /// lancement et l'approbation, et désactiver une ambiance ne doit pas
+  /// transformer un portrait en attente.
+  visualPath    String?        @map("visual_path") @db.VarChar(20)
+  /// Nulle sur la voie « aucune », qui n'ouvre aucun groupe d'ambiance.
+  ambianceId    String?        @map("ambiance_id") @db.VarChar(60)
+  /// LA CONFIGURATION QUI A PRODUIT LE BRIEF, et dont l'approbation relit la
+  /// consigne. Sans elle, on lisait la configuration COURANTE : reformuler une
+  /// ambiance entre les deux temps composait l'image avec un texte et le brief
+  /// avec un autre.
+  /// L'historique existait déjà — chaque publication est une ligne, celle qu'on
+  /// remplace passe en `superseded`. Il ne manquait que le lien.
+  /// `Restrict` : une configuration citée par un portrait ne se supprime pas,
+  /// sinon la consigne qui a produit le texte est perdue.
+  studioConfigId String?       @map("studio_config_id") @db.Uuid
+  status        PortraitStatus @default(generated)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  actionRun    ActionRun     @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person       Person        @relation(fields: [personId], references: [id], onDelete: Cascade)
+  studioConfig StudioConfig? @relation(fields: [studioConfigId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([personId])
+  @@map("portrait")
+}
+
 /**
  * Le catalogue des actions qui consomment des crédits.
  * Les codes sont ceux du dictionnaire, et ils ne recouvrent PAS les valeurs
@@ -1800,6 +1889,7 @@ model ActionRun {
   @@index([status, createdAt])
   @@map("action_run")
   ideaSet          GeneratedIdeaSet?
+  portrait         Portrait?
 }
 
 /**
@@ -1992,6 +2082,7 @@ model StudioConfig {
   @@index([state, createdAt])
   @@index([fingerprint])
   @@map("studio_config")
+  portraits   Portrait[]
 }
 
 /**

@@ -4,6 +4,8 @@ import {
   ORIENTATIONS_SENSIBLES, MOTS_MESSAGE, type ContexteMessage,
 
   IDEES, consigneSystemeIdees, inviteIdees, type ContexteIdees,
+
+  consigneSystemePortrait, invitePortrait, inviteImagePortrait, type ContextePortrait,
 } from "./gabarits.js";
 
 /* Le gabarit du message.
@@ -276,5 +278,94 @@ describe("le gabarit des idées de cadeaux", () => {
   it("range ce que l'atelier publie après les règles absolues", () => {
     const s = consigneSystemeIdees({ ...base, consigneCommune: "Rester sobre." });
     expect(s.indexOf("RÈGLES ABSOLUES")).toBeLessThan(s.indexOf("Rester sobre."));
+  });
+});
+
+describe("le brief du portrait", () => {
+  const base: ContextePortrait = {
+    langue: "fr", orientation: "notre_relation", nomDUsage: "Célarine",
+    relation: "ma marraine", genreDuProche: "female",
+    notes: [], attributs: [], aEviter: [], texteLibre: null, consigneAmbiance: null,
+  };
+
+  /* LA RAISON D'ÊTRE DE CE GABARIT. L'appel d'image recevait les notes brutes,
+     concaténées : « a perdu son père en mars » partait mot pour mot chez un
+     fournisseur tiers pour fabriquer un dessin. Le brief s'interpose. */
+  it("interdit de recopier une note telle quelle", () => {
+    const s = consigneSystemePortrait(base);
+    expect(s).toContain("Ne recopiez AUCUNE note telle quelle");
+    expect(s).toContain("ce qu'elle inspire");
+  });
+
+  /* ET CE QUI PART ENSUITE AU MODÈLE D'IMAGE NE CONTIENT AUCUNE MATIÈRE. C'est
+     la fonction qui tient la promesse : elle ne reçoit que le brief, donc elle
+     ne peut rien laisser filtrer même si son appelant le voulait. */
+  it("ne laisse passer au modèle d'image que le brief et l'ambiance", () => {
+    const image = inviteImagePortrait(
+      { mots: ["le jardin du matin", "les mains dans la terre"] },
+      "Composez un élément naturel.",
+      "trame de hampes",
+    );
+    expect(image).toContain("le jardin du matin");
+    expect(image).toContain("Composez un élément naturel.");
+    expect(image).toContain("trame de hampes");
+    // Rien d'autre : ni nom, ni note, ni relation.
+    expect(image).not.toContain("Célarine");
+    expect(image).not.toContain("marraine");
+  });
+
+  /* LES REJETS DEVIENNENT TENABLES ICI, et nulle part ailleurs. Un modèle
+     d'image reçoit une consigne et l'illustre ; il ne sait pas qu'on lui défend
+     un sujet. Un modèle de texte, si. */
+  it("porte les rejets comme une interdiction, avant la matière", () => {
+    const p = invitePortrait({
+      ...base,
+      aEviter: ["les chiens"],
+      notes: [{ categorie: "goûts", contenu: "aime marcher en forêt" }],
+    });
+    expect(p).toContain("À NE JAMAIS ÉVOQUER");
+    expect(p.indexOf("les chiens")).toBeLessThan(p.indexOf("aime marcher en forêt"));
+  });
+
+  /* LES ATTRIBUTS SONT LA MATIÈRE LA PLUS SÛRE : déjà rangés, déjà choisis.
+     L'ambiance « animal » dit d'ailleurs « employez celui que les notes
+     nomment » — un attribut le nomme mieux qu'une phrase en texte libre. */
+  it("emploie les goûts relevés, à côté des notes", () => {
+    const p = invitePortrait({ ...base, attributs: [{ nature: "animal", valeur: "le héron" }] });
+    expect(p).toContain("CE QU'ELLE AIME");
+    expect(p).toContain("animal : le héron");
+  });
+
+  /* L'AMBIANCE CADRE LA RECHERCHE. « Composez un animal » change ce qu'on va
+     chercher dans les notes — sans elle, le brief rendrait des mots qu'aucun
+     dessin ne saurait employer. */
+  it("dit au brief ce que le dessin sera", () => {
+    const p = invitePortrait({ ...base, consigneAmbiance: "Composez un animal." });
+    expect(p).toContain("CE QUE LE DESSIN SERA");
+    expect(p).toContain("Composez un animal.");
+    expect(invitePortrait(base)).not.toContain("CE QUE LE DESSIN SERA");
+  });
+
+  /* SANS MATIÈRE, ON NE PRÉTEND PAS DIRE QUELQU'UN. Le lien et l'orientation
+     suffisent à un motif juste, pas à un portrait. Le dire évite que le modèle
+     comble le vide en inventant une personne. */
+  it("se retient quand il n'y a ni note ni goût", () => {
+    const p = invitePortrait(base);
+    expect(p).toContain("AUCUNE MATIÈRE N'EST DISPONIBLE");
+    expect(p).toContain("qui n'affirment rien de la personne");
+  });
+
+  // Un portrait s'affiche et se montre : ce qui relève de l'intime n'a rien à
+  // y faire, même tiré d'une note que le propriétaire a écrite lui-même.
+  it("écarte l'intime, le médical et le judiciaire", () => {
+    const s = consigneSystemePortrait(base);
+    expect(s).toContain("Rien d'intime, rien de médical");
+    expect(s).toContain("Un portrait s'affiche et se montre");
+  });
+
+  // La forme est exigée en JSON parce qu'elle doit être MESURABLE : « les mots
+  // font-ils moins de sept » n'a de sens qu'avec un champ à compter.
+  it("exige une sortie mesurable", () => {
+    expect(invitePortrait(base)).toContain('{"mots":["…"],"phrase"');
   });
 });

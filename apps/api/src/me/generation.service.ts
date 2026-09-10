@@ -2,8 +2,9 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import {
   consigneSysteme, invite, consigneSystemeIdees, inviteIdees, IDEES,
+  consigneSystemePortrait, invitePortrait, MOTS_DU_PORTRAIT,
   MOTS_MESSAGE, MOTS_MESSAGE_COURT, ORIENTATIONS_SENSIBLES,
-  type ContexteMessage, type ContexteIdees, type Orientation,
+  type ContexteMessage, type ContexteIdees, type ContextePortrait, type Orientation,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
@@ -11,6 +12,7 @@ import { TenantRepository } from "../tenancy/tenant.repository.js";
 import { AppError } from "../common/errors.js";
 import { RouteurIAService, RefusModele, type Adaptateur } from "../ia/routeur.service.js";
 import { FOURNISSEURS_IA } from "../ia/adaptateurs/index.js";
+import type { SelectionPortrait } from "../studio/selection.js";
 
 /* La génération d'un message.
  *
@@ -20,6 +22,7 @@ import { FOURNISSEURS_IA } from "../ia/adaptateurs/index.js";
 
 const ACTION_MESSAGE = "wish_message";
 const ACTION_IDEES = "gift_ideas";
+const ACTION_PORTRAIT = "portrait";
 
 /* La devise des fourchettes de prix.
  *
@@ -46,6 +49,10 @@ type SortieMessage = { message: string; court: string };
 /** Une idée telle que le modèle la rend, une fois vérifiée. La fourchette est
  *  absente ou complète — jamais une borne seule. */
 type SortieIdee = { titre: string; pourquoi: string; min?: number; max?: number };
+
+/** Ce que le brief du portrait rend, une fois vérifié. Les mots sont ce que le
+ *  dessin montrera ; la phrase est ce que le portrait dit. */
+type SortiePortrait = { mots: string[]; phrase: string; phraseCourte: string | null };
 
 const compterLesMots = (s: string): number => s.trim().split(/\s+/).filter(Boolean).length;
 
@@ -123,7 +130,7 @@ export class GenerationService {
    * écriture séparées, deux demandes simultanées liraient toutes deux un solde
    * suffisant et débiteraient deux fois un crédit qui n'existait qu'une. */
   private async debiter(
-    userId: string, occurrenceId: string, orientation: Orientation | null, cle: string | null,
+    userId: string, occurrenceId: string | null, orientation: Orientation | null, cle: string | null,
     code: string = ACTION_MESSAGE,
   ) {
     try {
@@ -163,7 +170,10 @@ export class GenerationService {
                elle, l'écran d'attente n'aurait ni nom à afficher ni de quoi
                proposer de refaire — il dirait « une production a échoué » sans
                dire pour qui. */
-            eventOccurrenceId: occurrenceId,
+            /* NULLE POUR UN PORTRAIT : il vise un proche, pas une échéance.
+               L'écran d'attente prend alors son nom sur `personId` — le contrat
+               dit « l'une des deux est nulle selon la nature ». */
+            ...(occurrenceId === null ? {} : { eventOccurrenceId: occurrenceId }),
             ...(cle === null ? {} : { idempotencyKey: cle }),
           },
           select: { id: true },
@@ -410,6 +420,196 @@ export class GenerationService {
           },
         },
         include: { ideas: { orderBy: { position: "asc" } } },
+      });
+    });
+  }
+
+  // ── Le portrait ───────────────────────────────────────────────────────────
+
+  /* Lancer un portrait : LE TEXTE, et lui seul.
+   *
+   * L'image se compose à l'approbation — le contrat le dit, et c'est aussi la
+   * modération : on relit avant de fabriquer. Produire les deux d'un coup
+   * ferait payer une image que personne ne veut, et une image se refait au lieu
+   * de se retoucher.
+   *
+   * Un portrait vise UN PROCHE, jamais une occasion : il se génère à tout
+   * moment depuis sa fiche, hors de toute échéance. `debiter` accepte donc une
+   * occurrence nulle, et l'écran d'attente prend son nom sur `personId`. */
+  async lancerPortrait(
+    userId: string, personId: string, selection: SelectionPortrait, configId: string,
+    options: { langue?: "fr" | "en"; texteLibre?: string | null; motDeLExpediteur?: string | null; cle?: string | null } = {},
+  ) {
+    const proche = await this.depot.persons(userId).findOrThrow(personId);
+    const contexte = await this.rassemblerPortrait(userId, proche.id, selection, options);
+
+    const { execution, dejaLancee } = await this.debiter(
+      userId, null, selection.orientation, options.cle ?? null, ACTION_PORTRAIT,
+    );
+
+    if (dejaLancee) {
+      const deja = await this.prisma.portrait.findUnique({ where: { actionRunId: execution.id } });
+      if (deja) return deja;
+      throw new AppError("conflict", "this generation is already running");
+    }
+
+    try {
+      const brief = await this.produireLeBrief(contexte, userId, execution.id);
+      return await this.conclurePortrait(
+        execution.id, userId, proche.id, selection, configId, brief, options.motDeLExpediteur ?? null,
+      );
+    } catch (err: unknown) {
+      await this.rendreLeCredit(execution.id, userId, this.codeDe(err));
+      throw err;
+    }
+  }
+
+  /* LA MATIÈRE DU BRIEF, et elle est plus large que celle d'un message.
+   *
+   * Les ATTRIBUTS entrent — couleur, animal, style, loisir. Un message n'en a
+   * que faire : il parle. Un dessin, lui, a besoin de ce qui se montre, et un
+   * attribut le dit mieux qu'une phrase en texte libre. */
+  private async rassemblerPortrait(
+    userId: string, personId: string, selection: SelectionPortrait,
+    options: { langue?: "fr" | "en"; texteLibre?: string | null },
+  ): Promise<ContextePortrait> {
+    const proche = await this.prisma.person.findUniqueOrThrow({ where: { id: personId } });
+    const moi = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId }, select: { uiLanguage: true },
+    });
+
+    const [notes, attributs] = await Promise.all([
+      this.prisma.note.findMany({
+        where: { personId },
+        orderBy: { createdAt: "desc" },
+        include: { categories: { include: { category: true } } },
+      }),
+      this.prisma.personAttribute.findMany({
+        where: { personId },
+        orderBy: { observedAt: "desc" },
+        select: { kind: true, value: true },
+      }),
+    ]);
+
+    /* `dislikes_nogo` part À PART, comme une interdiction. C'est ICI qu'elle
+       devient tenable : le modèle d'image ne verra jamais que le brief, donc
+       seul le modèle de texte peut savoir qu'on lui défend un sujet. */
+    const aEviter: string[] = [];
+    const matiere: ContextePortrait["notes"][number][] = [];
+    for (const n of notes) {
+      const codes = n.categories.map((c) => c.category.code);
+      if (codes.includes("dislikes_nogo")) { aEviter.push(n.content); continue; }
+      matiere.push({ categorie: codes[0] ?? null, contenu: n.content });
+    }
+
+    /* `avoid` EST AUSSI UN REJET, du côté des attributs. Le laisser dans la
+       matière ferait dessiner ce que la personne fuit — et il y arriverait par
+       une autre porte que les notes, ce qui rendrait la garde à moitié
+       efficace. */
+    const gouts = attributs.filter((a) => a.kind !== "avoid");
+    for (const a of attributs) if (a.kind === "avoid") aEviter.push(a.value);
+
+    return {
+      // La langue du COMPTE : le portrait se lit par celui qui l'offre, comme
+      // les idées. Le message, lui, part chez le proche et prend la sienne.
+      langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
+      orientation: selection.orientation,
+      nomDUsage: proche.callingName ?? proche.displayName,
+      relation: proche.relationHint ?? proche.relation ?? null,
+      genreDuProche: proche.gender ?? "unspecified",
+      notes: matiere,
+      attributs: gouts.map((a) => ({ nature: a.kind, valeur: a.value })),
+      aEviter,
+      texteLibre: options.texteLibre ?? null,
+      consigneAmbiance: selection.ambiance?.consigne[options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr")] ?? null,
+    };
+  }
+
+  private async produireLeBrief(
+    contexte: ContextePortrait, userId: string, actionRunId: string,
+  ): Promise<SortiePortrait> {
+    const reponse = await this.routeur.executer(
+      "portrait_brief",
+      { invite: invitePortrait(contexte), systeme: consigneSystemePortrait(contexte) },
+      this.adaptateurs,
+      { userId, actionRunId, origine: "user_action" },
+    );
+    return this.lireLeBrief(reponse.contenu);
+  }
+
+  /* Ce que le brief rend, vérifié.
+   *
+   * ON GARDE CE QUI EST UTILISABLE, comme pour les idées : un modèle qui rend
+   * douze mots n'a pas suivi la consigne, mais les premiers valent ce qu'ils
+   * valent. On refuse sous le minimum, où il n'y a plus de portrait à
+   * composer. */
+  private lireLeBrief(brut: string): SortiePortrait {
+    let objet: unknown;
+    try {
+      objet = JSON.parse(brut.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "").trim());
+    } catch {
+      throw new RefusModele("unparseable");
+    }
+    const o = objet as Partial<{ mots: unknown; phrase: unknown; phraseCourte: unknown }>;
+
+    const mots = Array.isArray(o.mots)
+      ? o.mots
+        .filter((m): m is string => typeof m === "string" && m.trim().length > 0)
+        .map((m) => m.trim())
+        .slice(0, MOTS_DU_PORTRAIT.max)
+      : [];
+    if (mots.length < MOTS_DU_PORTRAIT.min) throw new RefusModele("length_out_of_range");
+
+    if (typeof o.phrase !== "string" || o.phrase.trim().length === 0)
+      throw new RefusModele("empty_message");
+
+    /* La version courte manque parfois. Elle n'a pas de crédit à elle : mieux
+       vaut rendre le portrait sans elle que perdre les deux. Même arbitrage que
+       pour le message. */
+    const courte = typeof o.phraseCourte === "string" && o.phraseCourte.trim().length > 0
+      ? o.phraseCourte.trim()
+      : null;
+
+    return { mots, phrase: o.phrase.trim(), phraseCourte: courte };
+  }
+
+  private async conclurePortrait(
+    actionRunId: string, userId: string, personId: string, selection: SelectionPortrait,
+    configId: string, brief: SortiePortrait, motDeLExpediteur: string | null,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const depense = await tx.aIUsage.aggregate({
+        where: { actionRunId }, _sum: { cost: true },
+      });
+      await tx.actionRun.update({
+        where: { id: actionRunId },
+        data: { status: "success", internalCost: depense._sum.cost },
+      });
+
+      /* LES MOTS SONT LE CONTENU. C'est eux que le nuage affiche, et eux qui
+         partiront au modèle d'image à l'approbation — on les range donc, plutôt
+         que de refaire un appel pour les retrouver.
+         La phrase les accompagne : elle s'affiche AVEC l'image. */
+      return tx.portrait.create({
+        data: {
+          actionRunId, userId, personId,
+          /* CE QUI A ÉTÉ CHOISI, figé. L'approbation reprenait sinon la première
+             voie active du catalogue — « abstrait » rendait un paysage. Et le
+             brief ci-dessus a été composé avec la consigne de CETTE
+             ambiance-là : en employer une autre pour l'image rendrait un dessin
+             qui ne correspond pas au texte qu'on vient de relire. */
+          visualPath: selection.voie,
+          ...(selection.ambiance === null ? {} : { ambianceId: selection.ambiance.id }),
+          /* LA CONFIGURATION QUI A PRODUIT CE BRIEF. L'approbation relira SA
+             consigne, pas celle du catalogue courant : reformuler une ambiance
+             entre les deux temps composerait l'image avec un texte et le brief
+             avec un autre. L'historique existait — il ne manquait que ce
+             lien. */
+          studioConfigId: configId,
+          content: JSON.stringify({ mots: brief.mots, phrase: brief.phrase }),
+          ...(brief.phraseCourte === null ? {} : { shortContent: brief.phraseCourte }),
+          ...(motDeLExpediteur === null ? {} : { senderNote: motDeLExpediteur }),
+        },
       });
     });
   }

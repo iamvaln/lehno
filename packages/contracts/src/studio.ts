@@ -542,8 +542,22 @@ export function reglagesMessageDeDepart(): ReglagesMessage {
 export function reglagesPortraitDeDepart(): ReglagesPortrait {
   return reglagesPortraitSchema.parse({
     motifs: { bande: "trame_de_hampes", fondSansImage: "registres" },
+    /* LES DEUX CLIENTS D'IMAGE, RÉPARTIS — et c'est délibéré.
+     *
+     * Il n'y en a que deux qui produisent des images, et on veut pouvoir les
+     * comparer sur pièce. Les poser tous les deux sur le même modèle laisserait
+     * l'autre inéprouvé : la chaîne ne descend au rang suivant qu'en cas
+     * d'échec, donc un repli qui ne se déclenche jamais n'est jamais regardé.
+     *
+     * `gpt-image-2` sur l'illustration parce que c'est la voie active
+     * aujourd'hui et que son rendu de texte décide de la bande du portrait.
+     * `grok-imagine-image` sur le style de photo, qui attend la phase 2.
+     *
+     * Ça se change au panneau sans livraison — `PATCH admin/portrait-studio/
+     * config` puis `POST config/publish`. Ces valeurs ne sont qu'un point de
+     * départ ; c'est l'essai qui tranche. */
     modeles: {
-      illustration: "xai:grok-imagine-image",
+      illustration: "openai:gpt-image-2",
       photo_style: "xai:grok-imagine-image",
     },
     voiesImage: [
