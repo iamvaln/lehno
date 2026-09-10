@@ -22,7 +22,7 @@
 -- précisément ce qui distingue une invite qui produit du juste d'une invite qui
 -- produit du plausible. Déduire l'avis de l'acceptation mesurerait l'occasion,
 -- plus la pertinence.
-CREATE TYPE "idea_feedback" AS ENUM ('up', 'down');
+CREATE TYPE "IdeaFeedback" AS ENUM ('up', 'down');
 
 CREATE TABLE "generated_idea_set" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -56,7 +56,7 @@ CREATE TABLE "generated_idea" (
     "currency" VARCHAR(3),
     -- Nul tant que PERSONNE N'A RÉPONDU — ce qui n'est pas « ni l'un ni
     -- l'autre » et ne se compte pas de la même façon dans une moyenne.
-    "feedback" "idea_feedback",
+    "feedback" "IdeaFeedback",
     "feedback_at" TIMESTAMPTZ,
     "wishlist_item_id" UUID,
     "accepted_at" TIMESTAMPTZ,
