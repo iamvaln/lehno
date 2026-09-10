@@ -117,6 +117,7 @@ export default function Evenement() {
     kind: type,
     libelle,
     date: type && demandeLaDate(type) ? date : "",
+    naissanceConnue: Boolean(proche?.birthDate),
   });
 
   const enregistre = async () => {
