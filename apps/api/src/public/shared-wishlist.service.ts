@@ -76,7 +76,10 @@ export class SharedWishlistService {
       include: {
         wishlist: {
           include: {
-            occurrence: { include: { event: { include: { person: true } }, user: true } },
+            // Le compte se lit SUR LA LISTE : c'est elle qui le porte, et une
+            // liste sans occasion n'aurait sinon pas de propriétaire à nommer.
+            user: true,
+            occurrence: { include: { event: { include: { person: true } } } },
           },
         },
       },
@@ -90,11 +93,15 @@ export class SharedWishlistService {
     if (!lien) throw ABSENT();
     if (!lien.isActive) return { state: "revoked" };
 
+    /* L'OCCASION PEUT MANQUER : une liste « ce qui me ferait plaisir » n'en
+       vise aucune. Tout ce qu'elle décrivait devient alors nul, et la page
+       s'appuie sur le nom de la liste. */
     const occurrence = lien.wishlist.occurrence;
+    const proprietaire = lien.wishlist.user;
     const souhaits = await this.prisma.ownerWish.findMany({
       // `isPublic` filtré EN BASE, jamais après coup : un souhait gardé pour
       // soi ne doit pas transiter, même pour être écarté au rendu.
-      where: { eventOccurrenceId: occurrence.id, isPublic: true },
+      where: { wishlistId: lien.wishlist.id, isPublic: true },
       orderBy: [{ position: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
       include: { reservations: { where: { status: "confirmed" }, take: 1 } },
     });
@@ -105,23 +112,31 @@ export class SharedWishlistService {
       state: "ok",
       // Le PRÉNOM d'usage, jamais l'adresse ni le nom complet : la page
       // accueille, elle ne présente pas une fiche.
-      ownerFirstName: prenom(occurrence.event.person.callingName
-        ?? occurrence.event.person.displayName
-        ?? occurrence.user.displayName
-        ?? occurrence.user.username),
+      ownerFirstName: prenom(occurrence?.event.person.callingName
+        ?? occurrence?.event.person.displayName
+        ?? proprietaire.displayName
+        ?? proprietaire.username),
       /* La photo du proche est une URL déjà rangée ; celle du COMPTE est une
          clé, qui se signe à la lecture. Deux origines, deux traitements — et
          c'est le serveur qui décide, à chaque affichage, si celui qui demande a
          le droit. */
-      ownerAvatarUrl: occurrence.event.person.avatarUrl
-        ?? (occurrence.user.avatarKey === null
+      ownerAvatarUrl: occurrence?.event.person.avatarUrl
+        ?? (proprietaire.avatarKey === null
           ? null
-          : await this.stockage.lire(occurrence.user.avatarKey)),
-      occasionLabel: occurrence.event.label ?? null,
-      occasionDate: jour(occurrence.occurrenceDate),
-      // Calculé ICI, pas au client : deux versions du parc et deux fuseaux
-      // donneraient deux réponses sur la même liste.
-      acceptsReservations: !estPassee(occurrence.occurrenceDate),
+          : await this.stockage.lire(proprietaire.avatarKey)),
+      /* Le nom que le propriétaire a donné passe DEVANT le libellé de
+         l'occasion : quand il a pris la peine d'en poser un, c'est celui-là
+         qu'il veut voir. Sans occasion, c'est de toute façon le seul. */
+      occasionLabel: lien.wishlist.name ?? occurrence?.event.label ?? null,
+      occasionDate: occurrence === null ? null : jour(occurrence.occurrenceDate),
+      /* Calculé ICI, pas au client : deux versions du parc et deux fuseaux
+         donneraient deux réponses sur la même liste.
+         DEUX CAUSES DE FERMETURE — l'occasion passée, ou la clôture posée par
+         le propriétaire. Sans occasion, seule la seconde décide : une liste
+         qu'on tient indéfiniment reste ouverte. */
+      acceptsReservations:
+        (occurrence === null || !estPassee(occurrence.occurrenceDate))
+        && (lien.wishlist.closesAt === null || lien.wishlist.closesAt.getTime() > Date.now()),
       wishes: souhaits.map((s) => ({
         id: s.id,
         label: s.label,
@@ -430,14 +445,18 @@ export class SharedWishlistService {
     try {
       const souhait = await this.prisma.ownerWish.findUniqueOrThrow({
         where: { id: wishId },
-        include: { occurrence: true, reservations: { where: { id: reservationId } } },
+        include: { wishlist: true, reservations: { where: { id: reservationId } } },
       });
       const reservation = souhait.reservations[0];
       await this.prisma.notification.create({
         data: {
-          userId: souhait.occurrence.userId,
+          userId: souhait.wishlist.userId,
           type: "wish_reservation_cancelled",
-          eventOccurrenceId: souhait.eventOccurrenceId,
+          /* Nulle quand la liste ne vise aucune occasion : la notification
+             existe quand même, elle ne se rattache simplement à aucune date. */
+          ...(souhait.wishlist.eventOccurrenceId === null
+            ? {}
+            : { eventOccurrenceId: souhait.wishlist.eventOccurrenceId }),
           channel: "in_app",
           titleKey: "wish_reservation_cancelled",
           // Le nom SEULEMENT s'il avait été autorisé — même arbitrage qu'à la
@@ -445,7 +464,9 @@ export class SharedWishlistService {
           bodyParams: reservation?.showIdentity && reservation.displayName
             ? { wishLabel: souhait.label, by: reservation.displayName }
             : { wishLabel: souhait.label },
-          targetRoute: `/wishlists/occurrence/${souhait.eventOccurrenceId}`,
+          // La route vise LA LISTE, pas l'occasion : c'est elle qu'on ouvre, et
+          // elle existe même sans occasion.
+          targetRoute: `/wishlists/${souhait.wishlistId}`,
           dedupeKey: `wish_reservation_cancelled:${reservationId}`,
           scheduledFor: new Date(),
         },
@@ -469,22 +490,31 @@ export class SharedWishlistService {
         isPublic: true,
       },
       include: {
-        occurrence: { include: { wishlist: { include: { shareLinks: { where: { isActive: true } } } } } },
+        // La liste se lit EN DIRECT : le souhait la porte, plus besoin de passer
+        // par une occasion qui peut ne pas exister.
+        wishlist: {
+          include: { occurrence: true, shareLinks: { where: { isActive: true } } },
+        },
         reservations: { where: { status: "confirmed" }, take: 1 },
       },
     });
     if (!souhait) throw ABSENT();
 
-    const liste = souhait.occurrence.wishlist;
-    // Sans liste ouverte ni lien actif, la page publique n'existe pas : le
-    // souhait n'est atteignable que par un identifiant deviné.
-    if (!liste || liste.shareLinks.length === 0) throw ABSENT();
+    const liste = souhait.wishlist;
+    // Sans lien actif, la page publique n'existe pas : le souhait n'est
+    // atteignable que par un identifiant deviné.
+    if (liste.shareLinks.length === 0) throw ABSENT();
 
     /* Ces trois-là sont des REFUS, pas des absences : le visiteur voit la page,
        il doit comprendre pourquoi le bouton ne marche pas. 422 (resource_inactive
        et conflict) plutôt que 404, qui lui ferait croire à une panne. */
-    if (estPassee(souhait.occurrence.occurrenceDate))
+    /* DEUX CAUSES DE FERMETURE, et elles ne se disent pas pareil au visiteur.
+       Sans occasion, seule la clôture posée par le propriétaire décide — une
+       liste qu'on tient indéfiniment reste ouverte. */
+    if (liste.occurrence !== null && estPassee(liste.occurrence.occurrenceDate))
       throw new AppError("resource_inactive", "cette occasion est passée");
+    if (liste.closesAt !== null && liste.closesAt.getTime() <= Date.now())
+      throw new AppError("resource_inactive", "cette liste est close");
     if (souhait.status === "fulfilled")
       throw new AppError("resource_inactive", "ce cadeau a déjà été offert");
     if (souhait.reservations.length > 0)
@@ -556,14 +586,18 @@ export class SharedWishlistService {
     try {
       const souhait = await this.prisma.ownerWish.findUniqueOrThrow({
         where: { id: wishId },
-        include: { occurrence: true, reservations: { where: { id: reservationId } } },
+        include: { wishlist: true, reservations: { where: { id: reservationId } } },
       });
       const reservation = souhait.reservations[0];
       await this.prisma.notification.create({
         data: {
-          userId: souhait.occurrence.userId,
+          userId: souhait.wishlist.userId,
           type: "wish_reserved",
-          eventOccurrenceId: souhait.eventOccurrenceId,
+          /* Nulle quand la liste ne vise aucune occasion : la notification
+             existe quand même, elle ne se rattache simplement à aucune date. */
+          ...(souhait.wishlist.eventOccurrenceId === null
+            ? {}
+            : { eventOccurrenceId: souhait.wishlist.eventOccurrenceId }),
           channel: "in_app",
           /* Le préfixe `notification.` comme les sept autres clés : sans lui,
              un client qui résout ses libellés par préfixe ne trouve jamais
@@ -577,7 +611,9 @@ export class SharedWishlistService {
           bodyParams: reservation?.showIdentity && reservation.displayName
             ? { wishLabel: souhait.label, by: reservation.displayName }
             : { wishLabel: souhait.label },
-          targetRoute: `/wishlists/occurrence/${souhait.eventOccurrenceId}`,
+          // La route vise LA LISTE, pas l'occasion : c'est elle qu'on ouvre, et
+          // elle existe même sans occasion.
+          targetRoute: `/wishlists/${souhait.wishlistId}`,
           // Une notification par réservation, pas une par passage : rejouer
           // l'appel ne doit pas en poser deux.
           dedupeKey: `wish_reserved:${reservationId}`,

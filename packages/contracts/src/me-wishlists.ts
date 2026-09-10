@@ -113,9 +113,12 @@ export type UpdateOwnerWishInput = z.infer<typeof updateOwnerWishSchema>;
 
 export const wishlistSchema = z.object({
   id: z.string().uuid(),
-  // L'occasion à laquelle la liste appartient : « un cadeau de Noël n'est pas
-  // un cadeau de mariage ».
-  occurrenceId: z.string().uuid(),
+  /* L'occasion à laquelle la liste appartient : « un cadeau de Noël n'est pas
+     un cadeau de mariage ».
+     NULLE quand la liste n'en vise aucune — « ce qui me ferait plaisir », sans
+     date. Les trois champs qui la décrivent le sont alors ensemble, et `name`
+     devient le seul repère : c'est pourquoi il s'accepte à l'ouverture. */
+  occurrenceId: z.string().uuid().nullable(),
   /* LE NOM QUE LE PROPRIÉTAIRE DONNE, ou nul.
    *
    * Nul veut dire « composez-le depuis l'occasion » — « Liste de Célarine,
@@ -125,8 +128,8 @@ export const wishlistSchema = z.object({
    * `eventLabel` et `occurrenceDate` pour l'écrire, et il sait dans quelle
    * langue. */
   name: z.string().nullable(),
-  occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  eventKind: z.string(),
+  occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  eventKind: z.string().nullable(),
   eventLabel: z.string().nullable(),
   wishCount: z.number().int().nonnegative(),
   /* COMBIEN, jamais LESQUELS ni PAR QUI : l'écran a besoin de dire « 3 sur 7
@@ -157,13 +160,28 @@ export type Wishlist = z.infer<typeof wishlistSchema>;
    la self-Person du demandeur : ouvrir une liste sur l'occasion d'un proche
    publierait ce que ce proche n'a jamais accepté de publier. */
 export const createWishlistSchema = z.object({
-  occurrenceId: z.string().uuid(),
+  /* FACULTATIVE. Une liste peut ne viser aucune occasion — « ce qui me ferait
+     plaisir », qu'on tient toute l'année. Elle a alors besoin d'un nom pour se
+     désigner : `superRefine` l'exige plus bas, sinon l'écran afficherait une
+     ligne vide dans la liste des listes. */
+  occurrenceId: z.string().uuid().optional(),
   /* Facultatif à l'ouverture : on ouvre une liste pour y mettre des souhaits,
      pas pour la baptiser. Le nom se pose ensuite, quand on a une raison de le
      changer. */
   name: z.string().trim().min(1).max(120).optional(),
   closesAt: z.string().datetime().optional(),
-}).strict();
+}).strict().superRefine((v, ctx) => {
+  /* SANS OCCASION, LE NOM DEVIENT OBLIGATOIRE. Avec une occasion, il se compose
+     depuis elle — « Liste de Célarine, anniversaire 2026 ». Sans elle, il n'y a
+     rien d'autre à afficher, et une liste sans nom ni date serait une ligne
+     vide que rien ne distingue de la suivante. */
+  if (!v.occurrenceId && v.name === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom, path: ["name"],
+      message: "une liste sans occasion a besoin d'un nom",
+    });
+  }
+});
 
 /* Renommer une liste, ou déplacer sa clôture.
  *
@@ -206,7 +224,9 @@ export const myReservationSchema = z.object({
   // Chez qui : de quoi afficher la ligne et rejoindre son Mur.
   ownerDisplayName: z.string(),
   ownerUsername: z.string(),
-  occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /* Nulle quand la liste réservée ne vise aucune occasion. L'écran affiche
+     alors le nom de la liste — le seul repère qu'elle ait. */
+  occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   // « la mention de savoir si l'on s'est fait connaître d'elle » (UX 3.27).
   showIdentity: z.boolean(),
   confirmedAt: z.string(),

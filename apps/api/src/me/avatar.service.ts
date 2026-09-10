@@ -133,7 +133,7 @@ export class AvatarService {
      apprendrait qu'il existe. */
   private async souhaitDe(userId: string, souhaitId: string): Promise<void> {
     const sien = await this.prisma.ownerWish.findFirst({
-      where: { id: souhaitId, occurrence: { userId } },
+      where: { id: souhaitId, wishlist: { userId } },
       select: { id: true },
     });
     if (!sien) throw new AppError("not_found", "resource not found");
@@ -296,7 +296,7 @@ export class AvatarService {
        propriétaire dans la même requête : chercher le souhait puis comparer
        laisserait une fenêtre où l'on saurait que la clé existe. */
     const sien = await this.prisma.ownerWish.findFirst({
-      where: { imageKey: cle, occurrence: { userId } },
+      where: { imageKey: cle, wishlist: { userId } },
       select: { id: true },
     });
     if (sien) return this.signer(cle);

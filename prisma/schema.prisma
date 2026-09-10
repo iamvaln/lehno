@@ -194,6 +194,7 @@ model User {
 
   @@map("user")
   generatedIdeaSets       GeneratedIdeaSet[]
+  wishlists               Wishlist[]
 }
 
 enum ReferralStatus {
@@ -643,7 +644,6 @@ model EventOccurrence {
   user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   notes             Note[]
   wishes            WishlistItem[]
-  ownerWishes       OwnerWish[]
   wishlist          Wishlist?
   notifications     Notification[]
   actionRuns        ActionRun[]
@@ -841,7 +841,18 @@ model Wishlist {
   /// Une seule liste par occasion : « un cadeau de Noël n'est pas un cadeau de
   /// mariage », et deux listes sur la même occasion rendraient le partage
   /// ambigu — laquelle le lien ouvrirait-il ?
-  eventOccurrenceId String    @unique @map("event_occurrence_id") @db.Uuid
+  /// LE PROPRIÉTAIRE, en clair. Il se lisait par `wishlist → event_occurrence
+  /// → user` : la chaîne traversait une table qui ne répond pas à la question —
+  /// l'occurrence dit QUAND, pas À QUI. Et une liste sans occasion n'aurait eu
+  /// aucun propriétaire du tout.
+  userId            String    @map("user_id") @db.Uuid
+  /// FACULTATIVE. « Une seule liste par occasion » reste vrai, mais une liste
+  /// peut n'en viser aucune — « ce qui me ferait plaisir », sans date. L'index
+  /// unique est donc PARTIEL : il dit la règle telle qu'elle est, au lieu de la
+  /// laisser dépendre du fait que Postgres tient les nuls pour distincts.
+  /// `SetNull` et non `Cascade` : l'occasion effacée, la liste subsiste et
+  /// redevient sans occasion, ce qui est un état légitime.
+  eventOccurrenceId String?   @map("event_occurrence_id") @db.Uuid
   /// Nul veut dire « le nom se compose depuis l'occasion ». Le remplir par
   /// défaut avec ce libellé le figerait le jour où l'occasion change de nom, et
   /// personne ne saurait pourquoi les deux ne s'accordent plus.
@@ -852,9 +863,13 @@ model Wishlist {
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  occurrence EventOccurrence     @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  occurrence EventOccurrence?    @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
   shareLinks WishlistShareLink[]
+  wishes     OwnerWish[]
 
+  @@unique([eventOccurrenceId])
+  @@index([userId])
   @@map("wishlist")
 }
 
@@ -890,11 +905,14 @@ model WishlistShareLink {
  */
 model OwnerWish {
   id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  /// Une occasion de l'utilisateur LUI-MÊME (son anniversaire, son mariage).
-  /// Le service le vérifie par `person.is_self` avant d'écrire : rien dans la
-  /// colonne ne l'impose, et une liste ouverte sur l'occasion d'un proche
-  /// publierait ce que ce proche n'a jamais accepté de publier.
-  eventOccurrenceId String         @map("event_occurrence_id") @db.Uuid
+  /// LA LISTE À LAQUELLE IL APPARTIENT. Il pointait l'occurrence, ce qui rendait
+  /// impossible une liste sans occasion et obligeait chaque lecture à passer par
+  /// une table qui ne répond pas à la question.
+  /// L'occurrence n'est PAS doublée ici : deux chemins vers la même occasion —
+  /// par la liste, et en direct — finiraient par diverger, et on découvrirait un
+  /// souhait rattaché à une occasion qui n'est plus celle de sa liste sans
+  /// savoir lequel des deux croire. Elle se lit par `wishlist.occurrence`.
+  wishlistId        String         @map("wishlist_id") @db.Uuid
   label             String
   link              String?
   imageUrl          String?        @map("image_url")
@@ -927,10 +945,10 @@ model OwnerWish {
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
 
-  occurrence   EventOccurrence   @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  wishlist     Wishlist          @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
   reservations WishReservation[]
 
-  @@index([eventOccurrenceId])
+  @@index([wishlistId])
   @@map("owner_wish")
 }
 

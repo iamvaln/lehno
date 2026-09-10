@@ -62,7 +62,10 @@ export const sharedWishlistSchema = z.discriminatedUnion("state", [
     ownerFirstName: z.string(),
     ownerAvatarUrl: z.string().url().nullable(),
     occasionLabel: z.string().nullable(),
-    occasionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    /* Nulle quand la liste ne vise aucune occasion — « ce qui me ferait
+       plaisir », sans date. La page s'appuie alors sur `occasionLabel`, qui
+       porte le nom donné par le propriétaire. */
+    occasionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
     /* Faux quand l'occasion est passée : la liste s'affiche, sans accepter de
        réservation. Le client n'a pas à comparer la date lui-même — deux
        versions du parc, deux fuseaux, deux réponses. */

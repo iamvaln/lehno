@@ -195,7 +195,9 @@ describe("l'accueil en un appel", () => {
     const echeanceDeBila = await db.prisma.eventOccurrence.findFirstOrThrow({
       where: { eventId: occasionDeBila.id },
     });
-    await db.prisma.wishlist.create({ data: { eventOccurrenceId: echeanceDeBila.id } });
+    await db.prisma.wishlist.create({
+      data: { userId: bila, eventOccurrenceId: echeanceDeBila.id },
+    });
     expect((await home.get(awa)).hasWishlist).toBe(false);
 
     const proche = await persons.create(awa, { gender: "female", displayName: "Bila" });
@@ -205,7 +207,7 @@ describe("l'accueil en un appel", () => {
     const echeance = await db.prisma.eventOccurrence.findFirstOrThrow({
       where: { eventId: occasion.id },
     });
-    await db.prisma.wishlist.create({ data: { eventOccurrenceId: echeance.id } });
+    await db.prisma.wishlist.create({ data: { userId: awa, eventOccurrenceId: echeance.id } });
     expect((await home.get(awa)).hasWishlist).toBe(true);
   });
 

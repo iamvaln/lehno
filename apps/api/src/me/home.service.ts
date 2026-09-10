@@ -74,7 +74,10 @@ export class HomeService {
       /* Même forme que ci-dessus, et pour la même raison : on veut savoir S'IL
          Y EN A, pas combien. La liste appartient à une occasion, qui appartient
          au compte — d'où le passage par `occurrence`. */
-      this.prisma.wishlist.findFirst({ where: { occurrence: { userId } }, select: { id: true } }),
+      /* EN DIRECT depuis la liste : la chaîne passait par l'occurrence, donc une
+         liste sans occasion n'aurait jamais compté — et l'accueil aurait
+         proposé d'en ouvrir une à quelqu'un qui en tient déjà une. */
+      this.prisma.wishlist.findFirst({ where: { userId }, select: { id: true } }),
       /* La cloche. Le prédicat vient du CENTRE, il n'est pas récrit ici : la
          pastille et la liste de /me/notifications doivent compter la même
          chose. Un `where: { userId, readAt: null }` écrit à la main comptait
