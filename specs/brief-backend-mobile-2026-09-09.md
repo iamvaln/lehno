@@ -265,3 +265,60 @@ faire en local pour poursuivre la recette.
   une panne anonyme. Le journal doit nommer la ligne et sa version, et la réponse
   doit se distinguer d'un 500 générique — sans quoi on cherche du côté du
   mobile, comme on l'a fait ici.
+
+---
+
+## 10. Le titulaire du compte n'a pas de fiche : `isSelf` se lit partout, ne s'écrit nulle part
+
+Trouvé à l'appareil le 10 septembre 2026, en cherchant pourquoi « Nouvelle
+wishlist » annonçait « Aucune date à vous pour l'instant » sur un compte qui
+tourne depuis deux semaines.
+
+`Person.isSelf` est `@default(false)` au schéma. **Aucun chemin de code ne le
+met jamais à `true`** — ni l'inscription, ni `POST /me/persons`, dont le schéma
+de création ne porte pas le champ. Au contrat, `isSelf` n'apparaît qu'une fois :
+en LECTURE, sur la fiche rendue.
+
+En base, sur le compte de recette : une seule personne, `is_self = f`.
+
+**Cinq lectures reposent dessus, et les cinq sont mortes :**
+
+```
+me/wishlist.service.ts:127   where: { id: occurrenceId, userId,
+                                      event: { person: { isSelf: true } } }
+mur/mur.service.ts:85        where: { userId, isSelf: true }
+mur/mur.service.ts:133       event: { kind: "birthday", person: { userId, isSelf: true } }
+mur/mur.service.ts:224       person: { userId, isSelf: true }
+me/data-export.service.ts:125  (export seulement)
+```
+
+**Ce que ça donne à l'écran**, et les trois symptômes se tiennent :
+
+- **Une wishlist ne peut jamais viser une occasion.** La garde exige une
+  occurrence dont la personne est `isSelf` ; il n'en existe aucune. C'est ce qui
+  faisait de « Nouvelle wishlist » un cul-de-sac — le mobile le contourne
+  désormais par la liste sans occasion (#G de la revue kit/mobile), mais la
+  liste *datée*, elle, reste inatteignable.
+- **« Ma date d'anniversaire » sur Mon Mur n'expose jamais rien.**
+  L'interrupteur est là, il s'allume, et `mur.service` cherche un anniversaire
+  rattaché à une personne `isSelf` qu'il ne trouve pas. L'aperçu répond
+  honnêtement « Rien n'est public pour l'instant » — mais l'interrupteur, lui,
+  promet.
+- **On ne peut inscrire sa propre date nulle part.** Le sélecteur « Pour qui »
+  de `POST /me/events` ne liste que les proches ; l'écran du profil n'a pas de
+  champ de naissance — il n'existe que sur la fiche d'un proche.
+
+**Ce qu'il faut**, et l'ordre compte :
+
+1. **Créer la fiche de soi à l'inscription**, `isSelf = true`, nommée depuis le
+   pseudo. C'est le correctif de fond : les cinq lectures se réveillent seules.
+2. **Une reprise pour les comptes existants** — ils n'en ont aucun, et rien ne
+   la leur donnera après coup.
+3. Décider ensuite **qui écrit la date de naissance du titulaire** :
+   `PATCH /me/profile` (qui ne porte pas `birthDate` aujourd'hui), ou la fiche
+   de soi par `PATCH /me/persons/{id}` — auquel cas le mobile a déjà le champ,
+   il ne lui manque que la fiche à ouvrir.
+
+Tant que 1 et 2 ne sont pas faits, le mobile ne peut rien y faire : il n'a aucun
+moyen de créer une fiche `isSelf`, le champ n'existant pas au contrat de
+création.

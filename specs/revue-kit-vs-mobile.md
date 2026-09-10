@@ -246,3 +246,32 @@ l'écran porte déjà un `ScreenHeader` — rendu dans les trois états. On la r
 on ne la rend pas, mais on ne la **réécrit** plus. `retours.test.ts` le vérifie,
 et la sonde le montre : rejoué sur les sources d'avant, il nomme les
 vingt-deux branches à la bonne ligne.
+
+---
+
+## H. Ce que la recette a trouvé et que le mobile ne peut pas corriger
+
+### La fiche de soi n'existe pas
+
+`Person.isSelf` ne s'écrit nulle part côté serveur — détaillé au §10 du brief
+backend. Trois écrans en dépendent et trois écrans mentent doucement :
+
+- **« Nouvelle wishlist »** ne peut pas viser une occasion : la garde du serveur
+  exige une occurrence rattachée à une personne `isSelf`. Le §G ci-dessus ouvre
+  la liste SANS occasion, ce qui débloque le parcours ; la liste datée reste
+  hors d'atteinte.
+- **« Ma date d'anniversaire »** sur Mon Mur s'allume et n'expose rien.
+- **« Pour qui »**, dans l'ajout d'une date, ne liste que les proches. On ne peut
+  donc pas inscrire sa propre date, et l'écran du profil n'a pas de champ de
+  naissance — il n'existe que sur la fiche d'un proche.
+
+Rien de tout cela ne se répare depuis le mobile : `POST /me/persons` ne porte
+pas `isSelf`.
+
+### Deux écrans sans nom, à trancher
+
+`evenement` (« Nouvelle date » au registre de la planche) et `note`
+(« Nouvelle note ») s'ouvrent encore sur une flèche seule. Les deux portent en
+revanche un grand titre de page qui dit de quoi il s'agit — `evtTitreAnniv`,
+et le champ de la note. C'est le cas « titre de page plutôt que nom d'écran »
+du §F : à décider une fois pour toutes, pas à corriger à l'aveugle.
