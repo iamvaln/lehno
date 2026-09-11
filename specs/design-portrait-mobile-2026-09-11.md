@@ -75,7 +75,9 @@ Conséquences :
 
 - **L'image et les familles se montrent en grille de vignettes**, légende
   dessous — libellé puis description. Ce qu'on regarde est ce qu'on aura.
-- **Les trois styles de photo aussi** : c'est un rendu, donc il se voit.
+- **La voie photo montre les mêmes vignettes** — corrigé le 11 septembre. Elle
+  ouvre la famille de l'illustration, il n'y a pas de « styles de photo » à
+  part.
 - **L'orientation reste en mots.** « Notre relation », « Ma gratitude » : c'est
   le *propos*, pas le rendu. Rien à montrer.
 - **Sans vignette publiée** (`previewUrl` nul), la grille retombe sur la
@@ -113,9 +115,13 @@ perdre un crédit ».
 
 ### 2.3 La photo : la place se tient dès maintenant
 
-Le câblage est reporté ; **le dessin ne l'est pas**. Insérer plus tard une
-troisième voie qui demande un dépôt, un recadrage et un refus dans une feuille
-dessinée pour deux coûterait bien plus que la prévoir.
+*Révisé le 11 septembre 2026, en fin de journée : le câblage n'est plus reporté.
+Le dépôt, le jugement et l'appel au modèle sont écrits — voir
+`brief-admin-studio-2026-09-11.md`. Ce qui suit reste vrai pour le dessin, aux
+deux corrections marquées près.*
+
+Insérer plus tard une troisième voie qui demande un dépôt, un recadrage et un
+refus dans une feuille dessinée pour deux coûterait bien plus que la prévoir.
 
 Trois emplacements à réserver, tous avant le paiement :
 
@@ -125,13 +131,27 @@ Trois emplacements à réserver, tous avant le paiement :
 3. **Le refus nommé** — trop sombre, trop floue, trop petite, avec sa raison
    (§4.3 : « refusée avec une raison claire, plutôt que traitée mal »).
 
-Et la phrase que §2.4 impose **au moment du dépôt** : l'image est transmise à un
-service qui la transforme, et elle n'est pas conservée. La spec ajoute qu'après
-traitement la source est effacée.
+**LA SOURCE RESTE — corrigé le 11 septembre.** Ce paragraphe disait que la photo
+était effacée après traitement, et la spec du portrait le disait aussi. C'était
+contre l'usage : **on refait un portrait pour en voir un autre**, et redemander
+un téléversement à chaque essai transformerait la recherche du bon rendu en
+corvée. Elle ne s'en va qu'au dépôt d'une autre, ou quand on la refuse.
 
-Tant que la route n'existe pas, la voie « photo » **paraît et se refuse en
-disant pourquoi** — la forme qu'a prise `recharge` pour l'opérateur. Elle ne
-disparaît pas : une voie absente se lirait comme un produit qui n'en a que deux.
+**Conséquence pour la copie** : `studioPhotoAvis` dit encore « Elle n'est pas
+conservée », dans les deux langues, et elle est traduite. Elle ne s'affiche nulle
+part — cet écran n'existe pas — mais elle est prête à partir, et elle dirait le
+contraire de ce que le serveur fait. **À réécrire avant que le dépôt soit
+construit.** Ce qui reste vrai et doit rester dit : l'image est transmise à un
+service qui la transforme.
+
+**LES AMBIANCES SONT LES MÊMES — corrigé le 11 septembre.** La voie photo ouvre
+la même famille que l'illustration : nature, animal, abstrait. Il y avait un
+groupe `photo_style` à part, et il n'a jamais eu d'ambiance — c'est ce qui
+rendait la voie invisible. Ce que la photo change n'est pas le sujet mais d'où
+l'on part.
+
+Il n'y a donc **pas de sous-choix à dessiner pour la photo** : la grille des
+familles est celle de l'illustration, et la voie photo la déplie pareil.
 
 **Le libellé importe.** « Photo » laisse croire « votre photo » alors que la
 voie décide du *modèle* appelé (`modeles.photo_style` contre
@@ -251,8 +271,12 @@ qu'on quitte et retrouve vraiment que si le client peut sonder. Le sondage est
 **déjà écrit**. Le jour où le serveur le fait, l'attente conçue au §3 le devient
 sans rien réécrire.
 
-**§C — la voie photo** : dépôt, recadrage, refus nommé. Reporté, et le dessin
-l'attend (§2.3).
+**§C — la voie photo** : ~~reporté~~ **livré** côté serveur le 11 septembre.
+`POST me/portraits/photo/depot` rend une URL signée — le client téléverse
+directement, l'image ne passe pas par l'API — puis `POST me/portraits/photo`
+juge et refuse en nommant : `trop_petite`, `trop_sombre`, `trop_floue`. Les
+seuils se règlent au studio. Le **recadrage reste au client** : le serveur reçoit
+une image déjà cadrée.
 
 ---
 

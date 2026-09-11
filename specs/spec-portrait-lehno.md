@@ -64,9 +64,11 @@ Ce que l'utilisateur règle avant de lancer la génération. Chaque choix a un d
 
 ### 2.4 Si la photo est choisie
 
-**Trois styles nommés**, définis par la marque. L'utilisateur choisit ; il n'y a pas de réglage libre.
+**Les mêmes ambiances que sans photo** — nature, animal, abstrait. *Révisé le 11 septembre 2026 : ce paragraphe annonçait « trois styles nommés, définis par la marque », et ils n'ont jamais été nommés. C'est ce qui a rendu la voie photo invisible pendant des semaines : elle ouvrait un groupe d'ambiances vide, et le catalogue la retirait avec lui.*
 
-L'écran indique, au moment du dépôt, que **l'image est transmise à un service qui la transforme** et qu'elle n'est pas conservée.
+Ce que la photo change n'est pas le **sujet** mais **d'où l'on part** : sans elle on part des mots retenus, avec elle on s'en inspire. L'ambiance décide de la forme, la photo fournit la matière.
+
+L'écran indique, au moment du dépôt, que **l'image est transmise à un service qui la transforme**.
 
 ### 2.5 Les réglages communs
 
@@ -181,7 +183,14 @@ Quatre productions distinctes, quatre briefs. Chacun précise **ce qu'on donne a
 
 **Avant l'envoi** — une photo trop sombre, trop floue ou trop petite est refusée avec une raison claire, plutôt que traitée mal.
 
-**Après le traitement** — la photo source est **effacée**. Seule l'image produite demeure. L'écran l'annonce au moment du dépôt.
+**Après le traitement** — la photo source **reste**. *Révisé le 11 septembre 2026 : ce paragraphe disait qu'elle était effacée, et l'implémentation l'a suivi avant qu'on s'aperçoive que c'était contre l'usage.* On refait un portrait **pour en voir un autre** ; redemander un téléversement à chaque essai transformerait la recherche du bon rendu en corvée.
+
+Elle ne s'en va que dans deux cas, et aucun n'est « après usage » :
+
+- **refusée** — trop sombre, trop floue, trop petite : plus rien ne la désigne ;
+- **remplacée** — on en dépose une autre, et l'ancienne devient un fichier qu'aucun portrait ne réclamera.
+
+**Ce qui reste à trancher**, et qui ne se décide pas ici : combien de temps une photo de **tiers** peut vivre chez nous. Le §7 le range déjà parmi les questions ouvertes — « une photo de tiers ne peut pas servir à entraîner un modèle » —, et la durée de conservation appartient à la même famille. Une règle de cycle de vie sur le préfixe `sources` y répondrait sans code.
 
 ### 4.4 Le classement des notes pour la sélection
 
