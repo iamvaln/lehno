@@ -290,7 +290,8 @@ git commit -m "soi : les décisions de la fiche du titulaire, hors de React"
 - Modifier : `apps/mobile/messages/fr.ts`, `apps/mobile/messages/en.ts`
 
 **Interfaces produites** — employées par les tâches 3 à 6 :
-`profilNomDUsage`, `profilNomDUsageAide`, `profilNaissance`, `profilNaissanceAide`,
+`profilNomDUsage`, `profilNomDUsageAide`, `profilVotreNaissance`,
+`profilVotreNaissanceAide`,
 `evtPourMoi`, `listeVotreDateAbsente`.
 
 - [ ] **Étape 1 — poser les clés en français**
@@ -300,11 +301,11 @@ Après `profilGenreAide` dans `apps/mobile/messages/fr.ts` :
 ```ts
   profilNomDUsage: "Comment on vous appelle",
   profilNomDUsageAide: "Si c'est autrement que par votre nom.",
-  profilNaissance: "Votre date de naissance",
+  profilVotreNaissance: "Votre date de naissance",
   /* Elle ne crée pas d'anniversaire : naissance et échéance sont deux gestes,
      ici comme sur la fiche d'un proche. La phrase le dit plutôt que de laisser
      quelqu'un attendre un rappel qui ne viendra pas. */
-  profilNaissanceAide: "Pour poser votre anniversaire, ajoutez-la ensuite dans Dates.",
+  profilVotreNaissanceAide: "Pour poser votre anniversaire, ajoutez-la ensuite dans Dates.",
   evtPourMoi: "Moi",
   listeVotreDateAbsente: "Pour ouvrir une liste sur une de vos dates, il faut d'abord une date à vous.",
 ```
@@ -316,8 +317,8 @@ Au même endroit dans `apps/mobile/messages/en.ts` :
 ```ts
   profilNomDUsage: "What people call you",
   profilNomDUsageAide: "If it is not your name.",
-  profilNaissance: "Your date of birth",
-  profilNaissanceAide: "To set your birthday, add it in Dates afterwards.",
+  profilVotreNaissance: "Your date of birth",
+  profilVotreNaissanceAide: "To set your birthday, add it in Dates afterwards.",
   evtPourMoi: "Me",
   listeVotreDateAbsente: "To open a list on one of your dates, you first need a date of your own.",
 ```
@@ -346,7 +347,7 @@ git commit -m "libellés : la naissance, le nom d'usage, et ce que la liste expl
 - Modifier : `apps/mobile/app/(app)/profil.tsx`
 
 **Interfaces consommées** — `ficheAEnvoyer`, `SaisieDeSoi` (tâche 1) ;
-`profilNomDUsage`, `profilNaissance` (tâche 2) ;
+`profilNomDUsage`, `profilVotreNaissance` (tâche 2) ;
 `naissanceLue`, `RangeeDeJours`, `Pastille`, `Bascule`, `nomsDesMois` — tous
 existants, employés par `apps/mobile/app/(app)/proches/identite.tsx:236-276`.
 
@@ -391,7 +392,7 @@ Dans `styles.champs`, **après** le bloc du genre et **avant** celui du thème :
           {/* JOUR PUIS MOIS, comme la fiche d'un proche et l'écran d'événement
               les posent. Un sélecteur natif exigerait une année — et c'est
               justement elle qu'on ignore le plus souvent. */}
-          <SectionLabel>{t.profilNaissance}</SectionLabel>
+          <SectionLabel>{t.profilVotreNaissance}</SectionLabel>
           <Text style={[styles.aide, { color: couleurs.textSecondary }]}>{t.evtJour}</Text>
           <RangeeDeJours
             actif={naissance.jour}
@@ -425,7 +426,7 @@ Dans `styles.champs`, **après** le bloc du genre et **avant** celui du thème :
               })}
             />
           ) : null}
-          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilNaissanceAide}</Text>
+          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilVotreNaissanceAide}</Text>
         </View>
 ```
 
