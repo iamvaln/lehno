@@ -232,9 +232,13 @@ C'est le même écran de composition, rouvert. Pas un second dessin à tenir.
 ## 6. Ce qui est demandé au serveur
 
 À porter au brief backend. Aucun de ces points ne bloque le reste : l'écran
-retombe proprement sur l'existant.
+retombe proprement sur l'existant. **Les trois sont vérifiés ouverts au
+11 septembre au soir**, après la livraison du studio des textes (#176) — qui
+règle le §9 du brief mais ne touche à aucun des trois.
 
-**§A — `previewUrl` sur `studioChoiceSchema`**, nullable. Nul veut dire « pas
+**§A — `previewUrl` sur `studioChoiceSchema`**, nullable. *Absent du contrat au
+11 septembre.* C'est le plus intéressant des trois, et le moins coûteux : rien
+à produire, seulement à publier. Nul veut dire « pas
 encore de référence retenue », et la grille retombe sur la description. Le geste
 qui le remplit existe presque : `PATCH /admin/portrait-studio/trials/:id` pose
 déjà un verdict ; il lui manque « c'est celle-ci qui représente l'ambiance ». La

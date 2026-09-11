@@ -278,10 +278,21 @@ vingt-deux branches à la bonne ligne.
 
 ## H. Ce que la recette a trouvé et que le mobile ne peut pas corriger
 
-### La fiche de soi n'existe pas
+### La fiche de soi — le serveur a répondu, le mobile a du travail
 
-`Person.isSelf` ne s'écrit nulle part côté serveur — détaillé au §10 du brief
-backend. Trois écrans en dépendent et trois écrans mentent doucement :
+> **Mise à jour du 11 septembre.** `GET` et `PUT /me/self` existent depuis, et
+> `ecrireSoi` pose `isSelf: true`. Ce qui suit décrivait un mur ; c'est devenu
+> une liste de choses à câbler. Reste ouvert côté serveur : les comptes ouverts
+> avant n'ont toujours aucune fiche, et rien ne la leur donne.
+>
+> **Ce que le mobile peut faire maintenant**, et qu'il ne fait pas :
+> l'écran du profil peut porter la date de naissance ; le sélecteur « Pour qui »
+> de l'ajout d'une date peut s'ouvrir à soi ; « Ma date d'anniversaire » sur Mon
+> Mur peut enfin exposer quelque chose ; et la wishlist peut viser une occasion.
+> Les quatre attendent le même geste : créer sa fiche au premier besoin.
+
+`Person.isSelf` ne s'écrivait nulle part côté serveur — détaillé au §10 du
+brief backend. Trois écrans en dépendaient et trois écrans mentaient doucement :
 
 - **« Nouvelle wishlist »** ne peut pas viser une occasion : la garde du serveur
   exige une occurrence rattachée à une personne `isSelf`. Le §G ci-dessus ouvre
@@ -292,8 +303,9 @@ backend. Trois écrans en dépendent et trois écrans mentent doucement :
   donc pas inscrire sa propre date, et l'écran du profil n'a pas de champ de
   naissance — il n'existe que sur la fiche d'un proche.
 
-Rien de tout cela ne se répare depuis le mobile : `POST /me/persons` ne porte
-pas `isSelf`.
+Rien de tout cela ne se réparait depuis le mobile : `POST /me/persons` ne porte
+pas `isSelf`. `PUT /me/self`, lui, le pose — c'est par là que ça passe
+désormais.
 
 ### Deux écrans sans nom, à trancher
 
