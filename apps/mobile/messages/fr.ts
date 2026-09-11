@@ -284,6 +284,9 @@ export const fr = {
   reglagesJ7: "Une semaine avant",
   reglagesJ1: "La veille",
   reglagesJour: "Le jour même",
+  /* « Ma propre date » et non « Mon anniversaire » : la fiche de soi peut
+     porter d'autres dates que la naissance. */
+  reglagesMaDate: "Ma propre date",
   reglagesComment: "Par quel moyen",
   reglagesPush: "Notification",
   reglagesEmail: "E-mail",
@@ -712,6 +715,10 @@ export const fr = {
   notifsVideTexte: "Les rappels et les contributions reçues apparaîtront ici.",
   notifRappel: (qui: string, j: number) => "Dans " + j + " jours : " + qui,
   notifAujourdhui: (qui: string) => "C'est aujourd'hui : " + qui,
+  // Sans nom : « Dans 7 jours : Valentine » lu par Valentine est le défaut
+  // même qu'on répare au serveur.
+  notifMaDateRappel: (j: number) => "Votre date, dans " + j + " jours",
+  notifMaDateAujourdhui: () => "C'est votre jour",
   notifContribution: (n: number) => n === 1
     ? "Une contribution attend votre relecture"
     : n + " contributions attendent votre relecture",

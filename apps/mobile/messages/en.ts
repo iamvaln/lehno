@@ -267,6 +267,7 @@ export const en = {
   reglagesJ7: "A week before",
   reglagesJ1: "The day before",
   reglagesJour: "On the day",
+  reglagesMaDate: "My own date",
   reglagesComment: "How",
   reglagesPush: "Notification",
   reglagesEmail: "Email",
@@ -636,6 +637,8 @@ export const en = {
   notifsVideTexte: "Reminders and incoming contributions will show up here.",
   notifRappel: (qui: string, j: number) => "In " + j + " days: " + qui,
   notifAujourdhui: (qui: string) => "Today: " + qui,
+  notifMaDateRappel: (j: number) => "Your date, in " + j + " days",
+  notifMaDateAujourdhui: () => "It's your day",
   notifContribution: (n: number) => n === 1
     ? "One contribution is waiting for your review"
     : n + " contributions are waiting for your review",
