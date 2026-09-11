@@ -63,21 +63,85 @@ export class AmorceStudioService implements OnModuleInit {
     nature: StudioConfigKind,
     reglages: ReglagesMessage | ReglagesPortrait,
   ): Promise<void> {
-    if ((await this.prisma.studioConfig.count({ where: { kind: nature } })) > 0) return;
+    if ((await this.prisma.studioConfig.count({ where: { kind: nature } })) === 0) {
+      await this.poser(nature, reglages, NOTE_SEMIS);
+      return;
+    }
 
-    await this.prisma.studioConfig.create({
+    /* IL EN EXISTE UNE. RESTE À SAVOIR SI ELLE SE LIT ENCORE.
+     *
+     * Le découpage message/portrait a changé la FORME des réglages sans
+     * toucher aux lignes déjà écrites : la migration leur a posé
+     * `kind = 'message'`, ce qui était le seul choix honnête sur la
+     * sémantique, mais elle a laissé la charge dans l'ancienne forme —
+     * `motifs`, `voiesImage`, `ambiances`, et un `modeles` à trois clés.
+     * Les deux schémas étant `.strict()`, plus rien ne les relisait.
+     *
+     * Sur le serveur du mobile, chaque génération de message a répondu 500
+     * pendant une semaine, et AUCUNE ROUTE NE POUVAIT RÉPARER : le semis
+     * passait son tour parce qu'une ligne existait, et il n'y a pas d'écriture
+     * de configuration de message dans l'API. Il a fallu un DELETE en base. */
+    const tete = await this.configs.enService(nature);
+    /* RIEN EN SERVICE n'est pas une panne : c'est l'état voulu du portrait
+       depuis le découpage, qui attend qu'un essai le justifie. On ne pose rien
+       — ce serait publier sans essai, la faute même que le découpage répare. */
+    if (tete === null) return;
+    if (this.configs.estLisible(tete)) return;
+
+    /* ON NE REMPLACE QUE CE QUE LE SEMIS A ÉCRIT.
+     *
+     * `published_by_admin_id` nul est la signature du semis — c'est le
+     * commentaire de tête qui l'établit. Une ligne qu'un administrateur a
+     * publiée est un choix ; la remplacer par les valeurs du code effacerait
+     * son travail sans rien dire, et on chercherait longtemps pourquoi « le
+     * réglage ne tient pas ». Le refus nommé de `reglagesMessageDe` dit alors
+     * ce qui se passe, et la réparation redevient une décision humaine. */
+    if (tete.publishedByAdminId !== null) return;
+
+    await this.prisma.$transaction(async (tx) => {
+      /* La sortante D'ABORD : l'index unique partiel n'admet qu'une seule
+         ligne `published` par nature. */
+      await tx.studioConfig.updateMany({
+        where: { kind: nature, state: "published" }, data: { state: "superseded" },
+      });
+      await this.poser(nature, reglages, NOTE_REPARATION, tx);
+    });
+  }
+
+  private async poser(
+    nature: StudioConfigKind,
+    reglages: ReglagesMessage | ReglagesPortrait,
+    note: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    await (tx ?? this.prisma).studioConfig.create({
       data: {
         kind: nature,
         state: "published",
-        version: 1,
+        /* La version se NUMÉROTE à la suite : l'index unique porte sur
+           (kind, version), et poser 1 par-dessus une ligne dépassée qui la
+           porte déjà ferait tomber la réparation sur une violation de
+           contrainte — au démarrage, donc sans que personne ne la voie. */
+        version: await this.prochaineVersion(nature, tx),
         settings: reglages as unknown as Prisma.InputJsonValue,
         fingerprint: this.configs.empreinte(nature, reglages),
         publishedAt: new Date(),
         // Personne ne l'a publiée : voir le commentaire de tête.
         publishedByAdminId: null,
-        note: "Réglages de départ, tirés du registre des gabarits.",
+        note,
       },
     });
+  }
+
+  private async prochaineVersion(
+    nature: StudioConfigKind, tx?: Prisma.TransactionClient,
+  ): Promise<number> {
+    const derniere = await (tx ?? this.prisma).studioConfig.findFirst({
+      where: { kind: nature, version: { not: null } },
+      orderBy: { version: "desc" },
+      select: { version: true },
+    });
+    return (derniere?.version ?? 0) + 1;
   }
 
   /* Les profils de simulation.
@@ -103,6 +167,10 @@ export class AmorceStudioService implements OnModuleInit {
     });
   }
 }
+
+const NOTE_SEMIS = "Réglages de départ, tirés du registre des gabarits.";
+const NOTE_REPARATION =
+  "Réglages de départ reposés : la version précédente ne se relisait plus depuis le découpage message/portrait.";
 
 const PROFILS_DE_DEPART: { libelle: string; sensible: boolean; contenu: ProfilContenu }[] = [
   {
