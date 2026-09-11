@@ -3,8 +3,8 @@ import { naissanceAEnvoyer, type SaisieDeNaissance } from "./carnet.js";
 
 /* La fiche de soi — §10 du brief backend, conception du 11 septembre.
  *
- * ELLE NE DEMANDE RIEN DE NEUF. Le nom, le genre et la langue sont déjà saisis
- * dans Mon profil ; la fiche les recopie. Le seul champ vraiment nouveau est la
+ * ELLE NE DEMANDE RIEN DE NEUF. Le nom et le genre sont déjà saisis dans Mon
+ * profil ; la fiche les recopie. Le seul champ vraiment nouveau est la
  * naissance. C'est ce qui permet de la poser au premier enregistrement du
  * profil, sans que personne ait eu à comprendre qu'il en existait une.
  */
@@ -13,7 +13,6 @@ export interface SaisieDeSoi {
   nom: string;
   nomDUsage: string;
   genre: Profile["gender"];
-  langue: Profile["uiLanguage"];
   naissance: SaisieDeNaissance;
 }
 
@@ -25,8 +24,30 @@ export interface SaisieDeSoi {
  * fiche attendre le prochain passage, plutôt que de faire découvrir la règle
  * par un refus sur un écran qui n'a rien demandé de neuf.
  *
- * Le schéma est `.strict()` : une clé vide serait refusée là où l'absence
- * passe. Tout ce qui est facultatif se répand donc conditionnellement.
+ * Tout ce qui est facultatif se répand CONDITIONNELLEMENT : `undefined` sur une
+ * clé facultative n'est pas la même chose que l'absence de la clé, et
+ * `exactOptionalPropertyTypes` refuse le premier.
+ *
+ * CE QU'ON OMET, LE SERVEUR LE GARDE. `ecrireSoi` ne pose que les clés reçues :
+ * un nom d'usage effacé à l'écran ne s'efface donc pas au serveur, qui rend
+ * l'ancien au prochain chargement. C'est assumé, et ce n'est pas propre à la
+ * fiche de soi — la fiche d'un proche fait pareil (`proches/identite.tsx`, le
+ * corps qui n'étale que ce qui est renseigné). Le corriger ici seulement ferait
+ * diverger deux écrans qui posent la même chose, sans qu'aucun texte ne dise
+ * pourquoi. Effacer un champ demandera une forme qui distingue « vide » de
+ * « pas touché », des deux côtés à la fois.
+ *
+ * LA LANGUE DE LA FICHE N'EST PAS ENVOYÉE, et c'est délibéré. `language` dit
+ * dans quelle langue on écrit À VOTRE SUJET ; `uiLanguage` dit dans quelle
+ * langue l'application et les courriels vous parlent. Aucun écran ne règle le
+ * premier — Mon profil ne porte que le second. L'envoyer reviendrait donc à
+ * recopier `uiLanguage` par-dessus la fiche à chaque enregistrement : basculer
+ * l'application en anglais un jour ferait basculer la fiche des semaines plus
+ * tard, au premier geste qui ne la concerne pas, sans que rien ne le dise.
+ * Tant qu'on ne possède pas ce champ, ne pas l'écrire vaut mieux que l'écrire
+ * au hasard d'un autre geste — le contrat le rend facultatif, et le serveur
+ * garde alors ce qu'il avait. Le régler pour de bon demanderait un
+ * `PATCH /me/self` que le serveur n'a pas (brief backend, §10).
  */
 export function ficheAEnvoyer(saisie: SaisieDeSoi): SelfPersonInput | null {
   const nom = saisie.nom.trim();
@@ -38,7 +59,6 @@ export function ficheAEnvoyer(saisie: SaisieDeSoi): SelfPersonInput | null {
   return {
     displayName: nom,
     gender: saisie.genre,
-    language: saisie.langue,
     ...(usage === "" ? {} : { callingName: usage }),
     ...(nee === null ? {} : nee),
   };

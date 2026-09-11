@@ -7,7 +7,7 @@ const NAISSANCE_VIDE = { jour: null, mois: null, annee: null, anneeConnue: true 
 
 const saisie = (p: Partial<Parameters<typeof ficheAEnvoyer>[0]> = {}) => ({
   nom: "Valentine", nomDUsage: "", genre: "female" as const,
-  langue: "fr" as const, naissance: NAISSANCE_VIDE, ...p,
+  naissance: NAISSANCE_VIDE, ...p,
 });
 
 describe("ce qu'on envoie pour poser sa fiche", () => {
@@ -22,22 +22,29 @@ describe("ce qu'on envoie pour poser sa fiche", () => {
     expect(ficheAEnvoyer(saisie({ nom: "   " }))).toBeNull();
   });
 
-  it("porte le nom, le genre et la langue", () => {
+  it("porte le nom et le genre", () => {
     expect(ficheAEnvoyer(saisie())).toEqual({
-      displayName: "Valentine", gender: "female", language: "fr",
+      displayName: "Valentine", gender: "female",
     });
   });
 
-  /* `selfPersonSchema` est `.strict()` : une clé vide serait refusée là où
-     l'absence passe. Le nom d'usage se retire donc, il ne s'envoie pas vide. */
+  /* LA LANGUE NE PART PAS. `language` dit dans quelle langue on écrit à votre
+     sujet ; aucun écran ne le règle. L'envoyer recopierait `uiLanguage`
+     par-dessus la fiche au premier enregistrement venu — une bascule de langue
+     faite des semaines plus tôt, dans Réglages, rattraperait ainsi la fiche à
+     l'occasion d'un geste qui ne la concerne pas. */
+  it("n'envoie pas la langue", () => {
+    expect(ficheAEnvoyer(saisie())).not.toHaveProperty("language");
+  });
+
+  /* UN NOM D'USAGE VIDE NE S'ENVOIE PAS. Le serveur ne pose que les clés
+     reçues : l'omettre garde donc ce qu'il a, et ne l'efface pas. C'est assumé,
+     et c'est déjà ce que fait la fiche d'un proche. */
   it("n'envoie pas un nom d'usage vide", () => {
     expect(ficheAEnvoyer(saisie({ nomDUsage: "  " })))
-      .toEqual({ displayName: "Valentine", gender: "female", language: "fr" });
+      .toEqual({ displayName: "Valentine", gender: "female" });
     expect(ficheAEnvoyer(saisie({ nomDUsage: "Vava" })))
-      .toEqual({
-        displayName: "Valentine", callingName: "Vava",
-        gender: "female", language: "fr",
-      });
+      .toEqual({ displayName: "Valentine", callingName: "Vava", gender: "female" });
   });
 
   /* La naissance passe par `naissanceAEnvoyer`, qui décide seule de ce qui
@@ -46,7 +53,7 @@ describe("ce qu'on envoie pour poser sa fiche", () => {
     expect(ficheAEnvoyer(saisie({
       naissance: { jour: 15, mois: 6, annee: 1994, anneeConnue: true },
     }))).toEqual({
-      displayName: "Valentine", gender: "female", language: "fr",
+      displayName: "Valentine", gender: "female",
       birthDate: "1994-06-15", birthYearKnown: true,
     });
   });
@@ -54,7 +61,7 @@ describe("ce qu'on envoie pour poser sa fiche", () => {
   it("n'envoie pas une naissance incomplète", () => {
     expect(ficheAEnvoyer(saisie({
       naissance: { jour: 15, mois: null, annee: null, anneeConnue: true },
-    }))).toEqual({ displayName: "Valentine", gender: "female", language: "fr" });
+    }))).toEqual({ displayName: "Valentine", gender: "female" });
   });
 });
 

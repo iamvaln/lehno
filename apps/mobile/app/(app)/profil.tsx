@@ -208,8 +208,7 @@ export default function Profil() {
          elle n'a rien d'urgent, et un profil refusé pour elle serait
          incompréhensible. */
       const fiche = ficheAEnvoyer({
-        nom: saisie.nom, nomDUsage, genre: saisie.genre,
-        langue: saisie.langue, naissance,
+        nom: saisie.nom, nomDUsage, genre: saisie.genre, naissance,
       });
       if (fiche !== null) {
         try {
