@@ -34825,6 +34825,10 @@
                         "format": "uuid",
                         "nullable": true
                       },
+                      "personDisplayName": {
+                        "type": "string",
+                        "nullable": true
+                      },
                       "submitterName": {
                         "type": "string",
                         "nullable": true
@@ -34905,6 +34909,7 @@
                       "id",
                       "linkType",
                       "personId",
+                      "personDisplayName",
                       "submitterName",
                       "relationHint",
                       "birthDate",
@@ -35161,6 +35166,10 @@
                       "format": "uuid",
                       "nullable": true
                     },
+                    "personDisplayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "submitterName": {
                       "type": "string",
                       "nullable": true
@@ -35241,6 +35250,7 @@
                     "id",
                     "linkType",
                     "personId",
+                    "personDisplayName",
                     "submitterName",
                     "relationHint",
                     "birthDate",
@@ -35549,6 +35559,10 @@
                       "format": "uuid",
                       "nullable": true
                     },
+                    "personDisplayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "submitterName": {
                       "type": "string",
                       "nullable": true
@@ -35629,6 +35643,7 @@
                     "id",
                     "linkType",
                     "personId",
+                    "personDisplayName",
                     "submitterName",
                     "relationHint",
                     "birthDate",

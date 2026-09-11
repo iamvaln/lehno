@@ -85,6 +85,23 @@ export const submissionSchema = z.object({
   linkType: z.enum(COLLECTION_LINK_TYPES),
   // Nulle tant qu'un lien public n'a pas produit sa fiche à la validation.
   personId: z.string().uuid().nullable(),
+  /**
+   * LE NOM DE LA FICHE VISÉE, pour que l'écran intitule sa carte.
+   *
+   * Il manquait, et le sas chargeait donc le CARNET ENTIER pour un mot. Le seul
+   * champ qu'il pouvait lire était `submitterName`, qui n'est accepté que sur un
+   * lien public — « sur un nominatif, le propriétaire sait déjà qui il a
+   * invité ». Sur toute contribution nominative il était donc nul, et la carte
+   * s'intitulait « Pour Sans nom » exactement là où elle avait un nom à dire.
+   *
+   * La page PUBLIQUE le sert déjà sur le même objet. La donnée était sous la
+   * main du serveur des deux côtés ; seul le côté propriétaire ne la servait
+   * pas.
+   *
+   * NUL avec `personId`, et pour la même raison : un lien public n'a pas encore
+   * de fiche tant que la contribution n'est pas validée.
+   */
+  personDisplayName: z.string().nullable(),
   submitterName: z.string().nullable(),
   // « on se connaît d'où » — une aide au rangement, pas une taxonomie.
   relationHint: z.string().nullable(),

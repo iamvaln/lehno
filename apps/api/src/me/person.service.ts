@@ -198,8 +198,31 @@ export class PersonService {
     return rendre(ligne);
   }
 
+  /**
+   * La fiche d'un proche, AVEC son décompte de notes et sa prochaine échéance.
+   *
+   * Elle les rendait nuls. Le commentaire de `rendre` le justifiait — « une
+   * fiche qui vient d'être créée n'a ni note ni échéance, et le dire coûterait
+   * deux requêtes pour deux valeurs connues d'avance » —, mais il parle de la
+   * CRÉATION. `get` empruntait le même chemin, sur une fiche qui, elle, a des
+   * notes et des dates.
+   *
+   * Ce que ça donnait à l'écran : la LISTE affichait « Awa — anniversaire ·
+   * 3 sept. », et la FICHE du même proche, un écran plus loin, n'affichait aucun
+   * sous-titre. Le contrat promet les deux champs sans condition ; la lecture
+   * unitaire en rendait deux faux.
+   *
+   * `enrichir` prend un tableau d'identifiants et sert déjà la liste — un appel
+   * à un élément suffit. Le coût est celui d'une lecture de fiche, pas d'un
+   * carnet : c'est la même requête, bornée à un.
+   */
   async get(userId: string, id: string): Promise<Person> {
-    return rendre(await this.depot.persons(userId).findOrThrow(id));
+    const ligne = await this.depot.persons(userId).findOrThrow(id);
+    /* L'APPARTENANCE EST DÉJÀ VÉRIFIÉE par `findOrThrow`, qui refuse la fiche
+       d'un autre. `enrichir` peut donc lire sans périmètre : il ne reçoit qu'un
+       identifiant dont on vient d'établir qu'il est au demandeur. */
+    const details = await this.enrichir([ligne.id]);
+    return rendre(ligne, details.get(ligne.id));
   }
 
   /** La fiche de soi, ou rien. Un compte peut ne pas en avoir. */
