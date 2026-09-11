@@ -1,7 +1,9 @@
 // apps/mobile/test/soi.test.ts
 import { describe, expect, it } from "vitest";
 import type { Person } from "@lehno/contracts";
-import { ficheAChange, ficheAEnvoyer, sansSoi, soiDabord } from "../lib/soi.js";
+import {
+  ficheAChange, ficheAEnvoyer, nomAAfficher, sansSoi, soiDabord,
+} from "../lib/soi.js";
 
 const NAISSANCE_VIDE = { jour: null, mois: null, annee: null, anneeConnue: true };
 
@@ -142,5 +144,20 @@ describe("qui est un proche", () => {
   it("laisse l'ordre reçu quand il n'y a pas de fiche", () => {
     expect(soiDabord([personne("Awa"), personne("Bah")]).map((p) => p.id))
       .toEqual(["Awa", "Bah"]);
+  });
+});
+
+/* SOI SE NOMME « MOI », PAS PAR SON NOM. Dans une liste de destinataires, son
+   propre nom se lit comme celui d'un tiers : on cherche sa ligne sans la
+   reconnaître. Le choix vit ici, et non recopié à l'écran, où la puce
+   sélectionnée finirait par dire autre chose que la ligne qu'on vient d'y
+   choisir. */
+describe("comment on nomme quelqu'un", () => {
+  it("dit « Moi » sur la fiche de soi", () => {
+    expect(nomAAfficher(personne("Valentine", true), "Moi")).toBe("Moi");
+  });
+
+  it("dit son nom sur celle d'un proche", () => {
+    expect(nomAAfficher(personne("Awa"), "Moi")).toBe("Awa");
   });
 });

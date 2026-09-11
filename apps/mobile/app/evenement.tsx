@@ -12,7 +12,7 @@ import {
 } from "@lehno/tokens";
 import { Avatar, Banner, Button, Icon, SectionLabel, TextField, useCouleurs } from "@lehno/ui-native";
 import { useLangue } from "../lib/langue.js";
-import { soiDabord } from "../lib/soi.js";
+import { nomAAfficher, soiDabord } from "../lib/soi.js";
 import { Pastille } from "../composants/Pastille.js";
 import { RangeeDeJours } from "../composants/RangeeDeJours.js";
 import { appel, ErreurDApi } from "../lib/api.js";
@@ -248,9 +248,9 @@ export default function Evenement() {
           <View style={styles.puces}>
             {proche ? (
               <View style={[styles.puce, { backgroundColor: couleurs.actionQuietBg }]}>
-                <Avatar name={proche.isSelf ? t.evtPourMoi : proche.displayName} size={24} />
+                <Avatar name={nomAAfficher(proche, t.evtPourMoi)} size={24} />
                 <Text style={[styles.puceTexte, { color: couleurs.textAccent }]}>
-                  {proche.isSelf ? t.evtPourMoi : proche.displayName}
+                  {nomAAfficher(proche, t.evtPourMoi)}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -324,9 +324,9 @@ export default function Evenement() {
                   onPress={() => { setProche(p); setOuvreLeChoix(false); }}
                   style={styles.ligne}
                 >
-                  <Avatar name={p.isSelf ? t.evtPourMoi : p.displayName} size={26} />
+                  <Avatar name={nomAAfficher(p, t.evtPourMoi)} size={26} />
                   <Text style={[styles.ligneTexte, { color: couleurs.textBody }]}>
-                    {p.isSelf ? t.evtPourMoi : p.displayName}
+                    {nomAAfficher(p, t.evtPourMoi)}
                   </Text>
                 </Pressable>
               )) : (

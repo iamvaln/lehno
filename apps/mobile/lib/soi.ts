@@ -104,6 +104,19 @@ export function sansSoi(personnes: readonly Person[]): Person[] {
   return personnes.filter((p) => !p.isSelf);
 }
 
+/* COMMENT ON NOMME QUELQU'UN QUAND CE QUELQU'UN PEUT ÊTRE SOI.
+ *
+ * Son propre nom à la place de « Moi » dans une liste de destinataires se lit
+ * comme celui d'un tiers : on cherche alors sa propre ligne parmi les autres
+ * sans la reconnaître. Le libellé vient donc de l'appelant — c'est lui qui a le
+ * dictionnaire —, mais LE CHOIX est ici : recopié à l'écran, il finit par
+ * diverger d'un endroit à l'autre du même écran, et la puce sélectionnée ne dit
+ * plus la même chose que la ligne qu'on vient d'y choisir.
+ */
+export function nomAAfficher(p: Person, moi: string): string {
+  return p.isSelf ? moi : p.displayName;
+}
+
 /* LÀ OÙ L'ON CHOISIT UNE PERSONNE POUR LUI POSER UNE DATE, soi reste offert et
  * passe en tête : c'est même le seul endroit où une date à soi se pose. En tête
  * parce que c'est la fiche qu'on cherche le plus souvent le jour où elle vient
