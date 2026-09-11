@@ -159,8 +159,67 @@ cumul du jour, comme l'atelier du portrait.
 
 ---
 
-## 7. Ce que ce document ne couvre pas
+## 7. L'historique et le retour arrière
 
-L'**historique** (`GET :nature/config/history`) est servi et mérite son écran —
-qui a publié quoi, quand, avec quelle note. Il suit la même forme que celui du
-portrait et se fait dans un second temps, une fois l'atelier posé.
+*Ajouté le 11 septembre, après coup : le présent document les renvoyait à un
+second temps, et ils sont faits.*
+
+L'**historique** (`GET :nature/config/history`) et le **retour arrière**
+(`POST config/rollback`) tiennent dans **l'atelier lui-même**, sous la
+composition — et non dans un écran jumeau de *Réglages en service* comme pour
+le portrait.
+
+C'est le raisonnement du §2, poussé d'un cran : deux écrans à onglets auraient
+**deux sélections de nature** à tenir d'accord, et l'une mentirait sur l'autre
+dès qu'on changerait d'onglet d'un seul côté. L'atelier porte déjà la nature ;
+l'historique s'y range.
+
+L'appel vit dans **la même clé** que la configuration. Hors de cette clé, on
+lirait les publications du message sous l'onglet des idées, et rien à l'écran
+ne le dirait.
+
+### Ce que le retour arrière n'offre pas
+
+| Ligne | Pourquoi le geste est fermé |
+|---|---|
+| Déjà **en service** | elle n'a rien à défaire |
+| **Brouillon** jamais publié (`version` nulle) | personne ne l'a validée ; y « revenir » la mettrait en service par la porte que la règle de publication ferme |
+| Vue par le **support** | le studio lui est fermé, §5 |
+
+Le serveur refuse ces trois cas. L'écran les ferme d'avance plutôt que d'offrir
+un geste qui échouerait.
+
+### Un défaut trouvé en ouvrant la porte
+
+`retourArriere` déclassait **toute** configuration en service avant de remettre
+la sienne — sans filtre sur la nature. Revenir sur une version du message
+rangeait donc aussi le portrait, les idées et le brief : trois natures sans
+configuration en service, **sans erreur et sans trace**, puisque le geste
+demandé réussissait.
+
+La publication portait déjà ce filtre, et son commentaire raconte l'incident
+qui le lui avait appris. Les deux gestes écrivent au même endroit ; un seul
+avait retenu la leçon.
+
+**Et le retour arrière n'était pas un geste non éprouvé** : quatre cas e2e lui
+sont consacrés. Ils restent tous sur la nature `portrait` — et avec une seule
+nature en vue, un filtre par nature ne se voit pas. Il y a là une leçon plus
+large que ce défaut : depuis que le studio porte quatre natures, **un cas qui
+n'en regarde qu'une n'éprouve plus la séparation**. L'index unique ne rattrape
+rien non plus : il n'admet qu'une publiée par nature, et zéro en satisfait la
+lettre.
+
+---
+
+## 8. Ce que ce document ne couvre toujours pas
+
+**Les essais des textes ne se relisent pas.** `POST :nature/trials` les
+enregistre, et c'est tout ce qui existe : aucune route ne les liste, aucune ne
+les juge. Le portrait a les deux — `GET trials` et `PATCH trials/:id`, qui pose
+le verdict et la référence. L'atelier des textes montre donc le dernier essai
+de la séance et le perd ensuite : rien ne permet de dire « celui-là était bon »
+ni de le retrouver demain.
+
+C'est une **lacune de l'API avant d'être une lacune d'écran** — à ouvrir côté
+serveur d'abord, puis à câbler dans un écran *Les essais* jumeau de celui du
+portrait. Le chiffrer ici serait prématuré ; le signaler ne l'est pas.
