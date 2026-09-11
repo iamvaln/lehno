@@ -323,8 +323,19 @@ jour où l'établi du message arrivera, la question du chemin se posera.
 > c'est la fiche de soi qui porte la date de naissance, `PATCH /me/profile` n'y
 > touche pas.
 >
-> **Reste le point 2** : les comptes ouverts avant n'ont toujours aucune fiche,
-> et rien ne la leur donne. Tant qu'ils ne passent pas par `PUT /me/self`, la
+> **Restent les points 1 et 2**, et le 1 pèse plus que je ne l'avais écrit :
+> `selfPersonSchema` **exige** `gender`, et l'énumération ne vaut que
+> `female | male`. Aucun client ne peut donc poser une fiche en silence — la
+> création réclame toujours une réponse humaine. Or `ecrireSoi` retombe déjà sur
+> `"unspecified"` quand le champ n'est pas fourni : **créer la fiche à
+> l'inscription, nommée depuis le pseudo, tient en quelques lignes** et
+> dispenserait tout le monde de la question au mauvais moment.
+>
+> Le point 2 reste entier : les comptes ouverts avant n'ont aucune fiche, et
+> rien ne la leur donne.
+>
+> Voir `design-fiche-de-soi-mobile-2026-09-11.md` §6 pour ce que le mobile
+> attend, et §4 pour ce qu'il fait en attendant. Tant qu'ils ne passent pas par `PUT /me/self`, la
 > wishlist datée et « Ma date d'anniversaire » restent hors d'atteinte pour
 > eux.
 >
