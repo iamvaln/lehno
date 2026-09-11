@@ -37,6 +37,7 @@
     "@testcontainers/postgresql": "^11.14.0",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.20.1",
+    "playwright-core": "^1.63.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   }
