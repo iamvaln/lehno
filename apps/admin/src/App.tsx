@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Metriques, StatsTransactions, Studio, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, StudioProfils, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, StatsTransactions, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, StudioProfils, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -55,7 +55,7 @@ import {
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
-  profilAdminSchema, catalogueGabaritsSchema,
+  profilAdminSchema,
   type Intervention,
   etatPortraitSchema, historiquePortraitSchema,
   profilsStudioSchema, candidatsStudioSchema, essaisStudioSchema,
@@ -771,12 +771,6 @@ export function App(): ReactNode {
     [section, tourStudio],
   );
 
-  const etatGabarits = useRessource(
-    () => (section === "gabarits"
-      ? api.appeler("/admin/portrait-studio/templates", { schema: catalogueGabaritsSchema })
-      : Promise.resolve(null)),
-    [section, tourStudio],
-  );
 
   const etatStudio = useRessource(
     () => (section === "studioService"
@@ -1283,35 +1277,6 @@ export function App(): ReactNode {
             langue={langue}
             essais={e.essais}
             publiees={e.publiees}
-            onRetour={aller}
-          />
-        ) : null)}
-      />
-    );
-  } else if (section === "gabarits") {
-    vue = (
-      <Ressource
-        etat={etatGabarits}
-        t={t}
-        enfant={(catalogue) => (catalogue ? (
-          <Studio
-            role={role}
-            langue={langue}
-            gabarits={catalogue.items}
-            onRevenir={(gabarit, motif) => {
-              void (async () => {
-                try {
-                  await api.appeler(`/admin/portrait-studio/templates/${gabarit.id}`, {
-                    methode: "PATCH",
-                    corps: { isActive: true, reason: motif },
-                  });
-                } catch (echec) {
-                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
-                } finally {
-                  setTourStudio((n) => n + 1);
-                }
-              })();
-            }}
             onRetour={aller}
           />
         ) : null)}

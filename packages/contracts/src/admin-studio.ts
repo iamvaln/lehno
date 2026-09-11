@@ -367,11 +367,6 @@ export const candidatsStudioSchema = z.object({
   groupesAmbiance: z.array(z.string()),
   motifs: z.array(z.string()),
   champsDuProche: z.array(z.string()),
-  /** Les gabarits en service, par genre et par clé. Vide tant que le Studio
-   *  n'a rien publié en base — voir la note de `gabarits.ts`. */
-  gabarits: z.array(z.object({
-    id: z.string(), genre: z.string(), cle: z.string(), version: z.number().int(),
-  }).strict()),
 }).strict();
 
 export type EtatMessage = z.infer<typeof etatMessageSchema>;

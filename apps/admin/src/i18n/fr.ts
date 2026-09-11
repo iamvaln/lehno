@@ -81,7 +81,6 @@ export const fr = {
     atelier: "L'Atelier",
     essais: "Les essais",
     studioService: "Réglages en service",
-    gabarits: "Gabarits de production",
     studioProfils: "Profils de simulation",
     offres: "Offres et croissance",
     metriques: "Métriques",
@@ -275,6 +274,11 @@ export const fr = {
         admin_role_update: "Changement de rôle d'un administrateur",
         admin_revoke: "Révocation d'un accès d'administrateur",
         ai_model_update: "Réglage d'un modèle d'IA",
+        /* CES DEUX-LÀ SURVIVENT AU RETRAIT DES GABARITS, et c'est voulu.
+           L'écran des gabarits de production n'existe plus — le Studio fait la
+           même chose, en marchant —, mais le JOURNAL D'AUDIT garde les gestes
+           qui ont eu lieu. Retirer ces libellés afficherait un code brut à la
+           place d'une phrase sur des lignes qu'on ne peut plus réécrire. */
         prompt_template_create: "Création d'un gabarit de production",
         prompt_template_activate: "Activation d'un gabarit de production",
         support_request_update: "Changement d'état d'une demande d'assistance",
@@ -1338,45 +1342,6 @@ export const fr = {
     },
   },
 
-  studio: {
-    titre: "Studio du portrait",
-    sous: "Les gabarits de production en service, et ce qui les a précédés.",
-    portee: "Cette entrée montre les réglages en service. La composition d'un brouillon et le banc d'essai ne sont pas encore possibles : le modèle de données ne porte pas de brouillon, et aucun fournisseur d'IA n'est branché.",
-    col: {
-      genre: "Production",
-      cle: "Gabarit",
-      version: "En service",
-      modele: "Modèle appelé",
-      parQui: "Publié par",
-      corps: "Consigne",
-    },
-    genres: {
-      message: "Message",
-      illustration: "Illustration",
-      photo_style: "Style de photo",
-      note_classification: "Classement des notes",
-      sensitive_detection: "Détection des cas sensibles",
-    },
-    version: "Version {n}",
-    aucune: "Aucune",
-    parPriorite: "Au routage par priorité",
-    parMigration: "Posé à l'installation",
-    historique: "Historique de « {cle} »",
-    revenir: "Remettre en service",
-    dialogue: {
-      titre: "Remettre la version {n} en service",
-      consequence: "La version en service se range, celle-ci reprend la main. Rien n'est reconstruit, et le changement rejoint le journal d'audit avec son motif.",
-      motifs: [
-        "Les productions se sont dégradées depuis la publication",
-        "La version en service ne tient pas ses garde-fous",
-        "Retour arrière après un essai non concluant",
-      ],
-    },
-    vide: {
-      titre: "Aucun gabarit",
-      texte: "Les gabarits de production s'inscrivent ici dès qu'une première version est publiée.",
-    },
-  },
 
   liens: {
     titre: "Liens externes",
