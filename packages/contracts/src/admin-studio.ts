@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { ORIENTATIONS } from "./gabarits.js";
 import { PERSON_REGISTERS, PERSON_RELATIONS } from "./me.js";
-import { reglagesMessageSchema, reglagesPortraitSchema } from "./studio.js";
+import {
+  reglagesMessageSchema, reglagesPortraitSchema,
+  reglagesIdeesSchema, reglagesBriefPortraitSchema,
+} from "./studio.js";
 
 /* Le Studio du portrait, côté administration — `ux-admin-lehno.md` §5.9 et le
  * brief fonctionnel du 27 août.
@@ -57,9 +60,13 @@ const configurationAvec = <T extends z.ZodTypeAny>(reglages: T) =>
 }).strict();
 
 export const configurationMessageSchema = configurationAvec(reglagesMessageSchema);
+export const configurationIdeesSchema = configurationAvec(reglagesIdeesSchema);
+export const configurationBriefPortraitSchema = configurationAvec(reglagesBriefPortraitSchema);
 export const configurationPortraitSchema = configurationAvec(reglagesPortraitSchema);
 
 export type ConfigurationMessage = z.infer<typeof configurationMessageSchema>;
+export type ConfigurationIdees = z.infer<typeof configurationIdeesSchema>;
+export type ConfigurationBriefPortrait = z.infer<typeof configurationBriefPortraitSchema>;
 export type ConfigurationPortrait = z.infer<typeof configurationPortraitSchema>;
 
 /* Les deux écrans du brief de design en un seul appel : ce qui tourne, et ce
@@ -70,14 +77,72 @@ const etatAvec = <T extends z.ZodTypeAny>(config: T) =>
   z.object({ enService: config.nullable(), brouillon: config.nullable() }).strict();
 
 export const etatMessageSchema = etatAvec(configurationMessageSchema);
+export const etatIdeesSchema = etatAvec(configurationIdeesSchema);
+export const etatBriefPortraitSchema = etatAvec(configurationBriefPortraitSchema);
 export const etatPortraitSchema = etatAvec(configurationPortraitSchema);
 
 export const historiqueMessageSchema = z.object({
   items: z.array(configurationMessageSchema),
 }).strict();
 
+export const historiqueIdeesSchema = z.object({
+  items: z.array(configurationIdeesSchema),
+}).strict();
+
+export const historiqueBriefPortraitSchema = z.object({
+  items: z.array(configurationBriefPortraitSchema),
+}).strict();
+
 export const historiquePortraitSchema = z.object({
   items: z.array(configurationPortraitSchema),
+}).strict();
+
+/* ── L'ATELIER DES TEXTES ────────────────────────────────────────────────────
+ *
+ * TROIS NATURES SUR UN SEUL JEU DE ROUTES, et non trois contrôleurs jumeaux.
+ * Le corps ne diffère que par la forme des réglages ; le reste — enregistrer,
+ * essayer, publier, revenir en arrière — est rigoureusement le même geste. Trois
+ * copies divergeraient au premier durcissement, et l'une des trois garderait
+ * l'ancienne règle sans que personne ne s'en aperçoive.
+ *
+ * Ce qui distingue les natures est validé À L'ENTRÉE, par le schéma de la
+ * nature demandée : un corps d'idées posté sur le chemin du message est refusé
+ * par `.strict()`, pas par un contrôle écrit à la main. */
+export const NATURES_TEXTE = ["message", "idees", "portrait_brief"] as const;
+export type NatureTexte = (typeof NATURES_TEXTE)[number];
+
+/** Les réglages d'une des trois générations de texte, quelle qu'elle soit. */
+export type ReglagesTexte =
+  z.infer<typeof reglagesMessageSchema>
+  | z.infer<typeof reglagesIdeesSchema>
+  | z.infer<typeof reglagesBriefPortraitSchema>;
+
+/** Les réglages d'une nature de texte, en union discriminée par le chemin. */
+export const reglagesTexteSchemas = {
+  message: reglagesMessageSchema,
+  idees: reglagesIdeesSchema,
+  portrait_brief: reglagesBriefPortraitSchema,
+} as const;
+
+export const etatTexteSchema = z.union([
+  etatMessageSchema, etatIdeesSchema, etatBriefPortraitSchema,
+]);
+export const historiqueTexteSchema = z.union([
+  historiqueMessageSchema, historiqueIdeesSchema, historiqueBriefPortraitSchema,
+]);
+export const configurationTexteSchema = z.union([
+  configurationMessageSchema, configurationIdeesSchema, configurationBriefPortraitSchema,
+]);
+
+export type EtatTexte = z.infer<typeof etatTexteSchema>;
+export type HistoriqueTexte = z.infer<typeof historiqueTexteSchema>;
+export type ConfigurationTexte = z.infer<typeof configurationTexteSchema>;
+
+/* L'ESSAI D'UN TEXTE N'A PAS D'AMBIANCE — celle du portrait en exige une parce
+   qu'elle décide du modèle d'image appelé. Ici le modèle vient de la
+   configuration elle-même, et le profil suffit à dire sur quoi on éprouve. */
+export const lancementEssaiTexteSchema = z.object({
+  profileId: z.string().uuid(),
 }).strict();
 
 /* L'enregistrement DIRECT : ce que seule l'application lit (brief §3).

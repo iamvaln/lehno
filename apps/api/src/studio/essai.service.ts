@@ -2,10 +2,24 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import {
   consigneSysteme, invite, profilContenuSchema,
+  consigneSystemeIdees, inviteIdees,
   consigneSystemePortrait, invitePortrait, inviteImagePortrait,
-  type ContexteMessage, type ContextePortrait, type EssaiStudio, type ProfilContenu,
-  type ReglagesMessage, type ReglagesPortrait, type VerdictEssai,
+  type ContexteIdees, type ContexteMessage, type ContextePortrait,
+  type EssaiStudio, type NatureTexte, type ProfilContenu,
+  type ReglagesBriefPortrait, type ReglagesIdees,
+  type ReglagesMessage, type ReglagesPortrait, type ReglagesTexte, type VerdictEssai,
 } from "@lehno/contracts";
+
+/* LA TÂCHE D'IA QUE CHAQUE NATURE ÉPROUVE. Les deux vocabulaires existaient
+   déjà et ne se recouvrent pas : `StudioConfigKind` nomme ce qui se règle,
+   `AITask` ce qui s'appelle. La table les relie en un seul endroit — les
+   confondre ferait consigner un essai d'idées sous la tâche du message, et les
+   dépenses du studio deviendraient illisibles. */
+const TACHE_DE: Record<NatureTexte, "message" | "gift_ideas" | "portrait_brief"> = {
+  message: "message",
+  idees: "gift_ideas",
+  portrait_brief: "portrait_brief",
+};
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { RouteurIAService, type Adaptateur } from "../ia/routeur.service.js";
@@ -54,9 +68,22 @@ export class StudioEssaiService {
    * C'est aussi ce qui rend la règle de publication EXACTE : un `StudioTrial`
    * porte `studio_config_id`, donc la configuration doit exister quand l'essai
    * commence. */
-  async essayer(
+  /**
+   * L'ESSAI D'UNE GÉNÉRATION DE TEXTE — message, idées, brief du portrait.
+   *
+   * UN SEUL CHEMIN POUR LES TROIS, et non trois copies. Tout est commun : le
+   * brouillon déposé avant l'appel, le modèle tiré des réglages, le refus nommé
+   * quand l'adaptateur manque, la consignation du résultat. Seule la
+   * COMPOSITION de l'invite diffère, et c'est `composerTexte` qui la porte.
+   *
+   * Cette méthode s'appelait `essayer` et ne servait que le message — et n'était
+   * branchée à AUCUN contrôleur. Les réglages des trois générations de texte
+   * étaient donc figés à ce que le semis avait posé.
+   */
+  async essayerTexte(
+    nature: NatureTexte,
     adminId: string,
-    reglages: ReglagesMessage,
+    reglages: ReglagesTexte,
     profileId: string,
   ): Promise<{ configId: string; essai: EssaiStudio }> {
     const profil = await this.prisma.studioProfile.findUnique({ where: { id: profileId } });
@@ -66,7 +93,7 @@ export class StudioEssaiService {
     const cle = reglages.modele;
     const modele = await this.modeleDemande(cle);
 
-    const config = await this.configs.deposerBrouillon("message", reglages);
+    const config = await this.configs.deposerBrouillon(nature, reglages);
 
     const adaptateur = this.adaptateurs[modele.provider];
     if (!adaptateur) {
@@ -84,10 +111,10 @@ export class StudioEssaiService {
       };
     }
 
-    const { systeme, invite: demande } = this.composer(reglages, contenu);
+    const { systeme, invite: demande } = this.composerTexte(nature, reglages, contenu);
 
     const resultat = await this.routeur.appelerUnSeulModele(
-      "message",
+      TACHE_DE[nature],
       { invite: demande, systeme },
       adaptateur,
       modele,
@@ -104,6 +131,81 @@ export class StudioEssaiService {
         : { status: resultat.etat, errorCode: resultat.code });
 
     return { configId: config.id, essai: await this.rendre(ligne) };
+  }
+
+  /** Le message, par son ancien nom. Gardé pour les appelants qui l'emploient. */
+  async essayer(
+    adminId: string, reglages: ReglagesMessage, profileId: string,
+  ): Promise<{ configId: string; essai: EssaiStudio }> {
+    return this.essayerTexte("message", adminId, reglages, profileId);
+  }
+
+  /* LA COMPOSITION, PAR NATURE — et une table, jamais un `switch` à trois
+     branches dont on oublierait une. Le `Record` indexé sur l'énumération
+     oblige le compilateur : une quatrième nature de texte non traitée ici ne
+     compile pas. */
+  private composerTexte(
+    nature: NatureTexte, reglages: ReglagesTexte, profil: ProfilContenu,
+  ): { systeme: string; invite: string } {
+    if (nature === "message") return this.composer(reglages as ReglagesMessage, profil);
+    if (nature === "idees") return this.composerIdees(reglages as ReglagesIdees, profil);
+    return this.composerBrief(reglages as ReglagesBriefPortrait, profil);
+  }
+
+  /* LES IDÉES. Le profil ne porte pas de budget — il décrit un proche, pas une
+     demande —, et c'est honnête : un essai sans budget éprouve le cas le plus
+     dur, celui où le modèle doit proposer au hasard de l'échelle. */
+  private composerIdees(
+    reglages: ReglagesIdees, p: ProfilContenu,
+  ): { systeme: string; invite: string } {
+    const retient = (champ: (typeof reglages.champsDuProche)[number]): boolean =>
+      reglages.champsDuProche.includes(champ);
+    const contexte: ContexteIdees = {
+      langue: p.langue,
+      nomDUsage: p.nomDUsage,
+      relation: retient("relation") ? p.relation : null,
+      genreDuProche: p.genreDuProche,
+      occasionSensible: p.occasionSensible,
+      age: retient("age") ? p.age : null,
+      notes: retient("notes") ? p.notes : [],
+      // `aEviter` n'est PAS filtrable : c'est une interdiction, pas une matière.
+      aEviter: p.aEviter,
+      texteLibre: retient("texte_libre") ? p.texteLibre : null,
+      budget: null,
+      ...(reglages.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
+      ...(reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
+      nombreDemande: reglages.nombreDemande,
+    };
+    return { systeme: consigneSystemeIdees(contexte), invite: inviteIdees(contexte) };
+  }
+
+  /* LE BRIEF, SANS AMBIANCE. Elle appartient à la configuration de l'IMAGE, et
+     l'essai du brief éprouve le texte : lui en poser une ferait éprouver un
+     couple qu'aucune des deux natures ne gouverne seule. L'essai du PORTRAIT,
+     lui, en pose une — c'est là qu'elle compte. */
+  private composerBrief(
+    reglages: ReglagesBriefPortrait, p: ProfilContenu,
+  ): { systeme: string; invite: string } {
+    const retient = (champ: (typeof reglages.champsDuProche)[number]): boolean =>
+      reglages.champsDuProche.includes(champ);
+    const contexte: ContextePortrait = {
+      langue: p.langue,
+      orientation: p.orientation,
+      nomDUsage: p.nomDUsage,
+      relation: retient("relation") ? p.relation : null,
+      genreDuProche: p.genreDuProche,
+      notes: retient("notes") ? p.notes.map((n) => ({ categorie: n.categorie, contenu: n.contenu })) : [],
+      // Un profil simulé porte des notes et un texte libre, pas de goûts relevés.
+      attributs: [],
+      aEviter: p.aEviter,
+      texteLibre: retient("texte_libre") ? p.texteLibre : null,
+      consigneAmbiance: null,
+      ...(reglages.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
+      ...(reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
+      motsDuPortrait: reglages.motsDuPortrait,
+      motsDeLaPhrase: reglages.motsDeLaPhrase,
+    };
+    return { systeme: consigneSystemePortrait(contexte), invite: invitePortrait(contexte) };
   }
 
   /* Le modèle DEMANDÉ, résolu dans le catalogue.

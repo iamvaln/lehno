@@ -176,7 +176,7 @@ export class StudioConfigurationService {
    * violation de contrainte que rien n'explique à l'écran. */
   async deposerBrouillon(
     nature: StudioConfigKind,
-    reglages: ReglagesMessage | ReglagesPortrait,
+    reglages: Reglages,
     tx?: Prisma.TransactionClient,
   ): Promise<LigneConfig> {
     const ecrire = async (client: Prisma.TransactionClient): Promise<LigneConfig> => {
@@ -211,7 +211,7 @@ export class StudioConfigurationService {
    * service par laquelle on publie une consigne que personne n'a vue tourner.
    */
   async enregistrerDirect(
-    nature: StudioConfigKind, reglages: ReglagesMessage | ReglagesPortrait,
+    nature: StudioConfigKind, reglages: Reglages,
   ): Promise<LigneConfig> {
     const tete = (await this.brouillon(nature)) ?? (await this.enService(nature));
     if (!tete)
