@@ -324,9 +324,9 @@ export default function Evenement() {
                   onPress={() => { setProche(p); setOuvreLeChoix(false); }}
                   style={styles.ligne}
                 >
-                  <Avatar name={p.displayName} size={26} />
+                  <Avatar name={p.isSelf ? t.evtPourMoi : p.displayName} size={26} />
                   <Text style={[styles.ligneTexte, { color: couleurs.textBody }]}>
-                    {p.displayName}
+                    {p.isSelf ? t.evtPourMoi : p.displayName}
                   </Text>
                 </Pressable>
               )) : (
