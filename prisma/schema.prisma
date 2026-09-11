@@ -1841,13 +1841,6 @@ model ActionRun {
   userId            String          @map("user_id") @db.Uuid
   premiumActionId   String          @map("premium_action_id") @db.Uuid
   eventOccurrenceId String?         @map("event_occurrence_id") @db.Uuid
-  /**
-   * La version EXACTE du gabarit qui a produit ce contenu. Sans elle,
-   * comprendre pourquoi les productions d'une semaine valaient mieux que celles
-   * de la suivante devient impossible — et c'est précisément la question qu'on
-   * pose après une publication ratée.
-   */
-  promptTemplateId  String?         @map("prompt_template_id") @db.Uuid
   // Recopié à l'exécution : le prix change, l'historique ne bouge pas.
   creditsSpent      Int             @map("credits_spent")
   /**
@@ -1880,7 +1873,6 @@ model ActionRun {
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   premiumAction    PremiumAction     @relation(fields: [premiumActionId], references: [id], onDelete: Restrict)
   occurrence       EventOccurrence?  @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
-  promptTemplate   PromptTemplate?   @relation(fields: [promptTemplateId], references: [id], onDelete: SetNull)
   usages           AIUsage[]
   generatedMessage GeneratedMessage?
 
@@ -1971,37 +1963,11 @@ model AIUsage {
   @@map("ai_usage")
 }
 
-enum PromptKind {
-  message
-  illustration
-  photo_style
-  note_classification
-  sensitive_detection
-
-  @@map("prompt_kind")
-}
 
 // Les gabarits de production du studio. **Ils vivent en base, jamais dans le
 // code** : on les ajuste au vu des résultats, sans livraison. Les versions ne se
 // modifient pas — ajuster crée une version nouvelle, l'ancienne demeure, ce qui
 // permet d'y revenir et de comprendre un écart de qualité.
-model PromptTemplate {
-  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  kind             PromptKind
-  key              String      @db.VarChar(60)
-  version          Int         @default(1)
-  body             String
-  guardrails       Json?
-  aiModelId        String?     @map("ai_model_id") @db.Uuid
-  isActive         Boolean     @default(false) @map("is_active")
-  createdByAdminId String?     @map("created_by_admin_id") @db.Uuid
-  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz
-  actionRuns       ActionRun[]
-
-  @@unique([kind, key, version])
-  @@index([kind, key])
-  @@map("prompt_template")
-}
 
 // ─── Le Studio du portrait ───────────────────────────────────────────────────
 
