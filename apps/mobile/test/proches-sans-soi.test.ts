@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /* UN ÉCRAN QUI DIT « MES PROCHES » ÉCARTE LA FICHE DE SOI.
@@ -19,6 +19,31 @@ const ECRANS: Readonly<Record<string, "sansSoi" | "soiDabord">> = {
   /* Poser une date VISE quelqu'un, et ce quelqu'un peut être soi — c'est même
      le seul endroit où une date à soi se pose. */
   "evenement": "soiDabord",
+};
+
+/* ECRANS NE FERME LA GARDE QU'À MOITIÉ : elle sait quoi faire des écrans
+ * qu'on y a mis, mais un écran neuf qui lirait `/me/persons` sans y figurer
+ * ne ferait rien tomber — la faute silencieuse que cette garde existe pour
+ * interdire, revenue par un autre chemin. DISPENSES ferme l'autre moitié :
+ * tout écran qui lit la liste sans devoir la filtrer doit s'y trouver, AVEC
+ * la raison pour laquelle `sansSoi`/`soiDabord` y serait faux — la raison
+ * est le produit de cette table, pas la ligne qui la déclenche.
+ */
+const DISPENSES: Readonly<Record<string, string>> = {
+  /* Bâtit une table id → displayName pour nommer l'auteur d'une contribution.
+     En écarter soi serait un défaut, pas une garde : une contribution qu'on
+     s'adresse à soi-même perdrait son nom dans cette table-là. */
+  "(app)/valider": "nomme l'auteur d'une contribution, y compris quand c'est soi",
+  /* Cherche délibérément `isSelf` pour retrouver SA PROPRE fiche et lister
+     ses propres échéances — le seul usage du carnet ici. `sansSoi` la
+     retirerait avant qu'on ait pu la trouver. */
+  "(app)/listes": "cherche isSelf pour retrouver sa propre fiche, sansSoi la retirerait avant",
+  /* `POST /me/persons` CRÉE un proche ; la réponse n'est même pas parsée en
+     liste. Le balayage plus bas ne distingue pas lecture et écriture — sans
+     cette entrée, une création (chemin sans identifiant, donc identique en
+     texte à une lecture) ferait tomber la garde sur un écran qui ne lit
+     jamais rien. */
+  "(app)/proches/identite": "POST crée un proche, ne lit jamais la liste",
 };
 
 const source = (nom: string): string =>
@@ -47,5 +72,47 @@ describe("le carnet et la fiche de soi", () => {
     const juste = "setCarnet(sansSoi(personListSchema.parse(brut).persons));";
     expect(emploie(faute, "sansSoi")).toBe(false);
     expect(emploie(juste, "sansSoi")).toBe(true);
+  });
+});
+
+/* LA TABLE NE VAUT QUE SI RIEN NE LUI ÉCHAPPE.
+ *
+ * `ECRANS` et `DISPENSES` sont écrites à la main, et c'est voulu pour toutes
+ * les deux — mais une table à la main ne proteste que sur ce qu'elle connaît
+ * déjà. Elle est MUETTE sur un écran qui apparaît demain et lit `/me/persons`
+ * sans qu'on l'y ait inscrit : rien ne tombe, et c'est exactement la faute
+ * que ce plan corrige, revenue par un autre chemin que celui déjà fermé plus
+ * haut. Ce test balaie donc les SOURCES pour trouver qui lit la liste, et
+ * exige que chaque trouvaille figure dans l'une des deux tables.
+ */
+const RACINE_APP = new URL("../app/", import.meta.url);
+
+/** Tous les `.tsx` sous `app/`, groupes `(…)` compris — chemin relatif à
+    `app/`, SANS extension : la forme des clés de `ECRANS` et `DISPENSES`. */
+function tousLesEcrans(dossier: URL = RACINE_APP, prefixe = ""): readonly string[] {
+  const trouves: string[] = [];
+  for (const entree of readdirSync(dossier, { withFileTypes: true })) {
+    if (entree.isDirectory()) {
+      trouves.push(...tousLesEcrans(new URL(`${entree.name}/`, dossier), `${prefixe}${entree.name}/`));
+    } else if (entree.name.endsWith(".tsx")) {
+      trouves.push(`${prefixe}${entree.name.slice(0, -".tsx".length)}`);
+    }
+  }
+  return trouves;
+}
+
+/* Sans identifiant derrière : `/me/persons/${id}` vise UNE fiche précise, pas
+   la liste, et ne peut jamais y remettre soi. Le `(?!\/)` écarte ce cas —
+   mais il laisse passer une création sans identifiant (`POST /me/persons`),
+   qui a la même forme en texte : c'est pour elle que `DISPENSES` existe. */
+const LIT_LA_LISTE = /\/me\/persons(?!\/)/;
+
+describe("aucun lecteur de /me/persons n'échappe à la table", () => {
+  it("chaque écran qui la mentionne figure dans ECRANS ou DISPENSES", () => {
+    const connus = new Set([...Object.keys(ECRANS), ...Object.keys(DISPENSES)]);
+    const oublies = tousLesEcrans().filter(
+      (ecran) => LIT_LA_LISTE.test(source(ecran)) && !connus.has(ecran),
+    );
+    expect(oublies).toEqual([]);
   });
 });
