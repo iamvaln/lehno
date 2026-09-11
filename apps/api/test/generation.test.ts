@@ -439,12 +439,25 @@ describe("la génération d'un message", () => {
     // Et la seconde demande REJOINT : elle rend le message déjà produit plutôt
     // que d'en fabriquer un autre. C'est ce qui distingue « rejoindre » de
     // « refuser ».
-    it("rend le message déjà produit plutôt que d'en refaire un", async () => {
+    /* LA SECONDE DEMANDE REJOINT LA PREMIÈRE, elle ne produit RIEN.
+     *
+     * Elle rendait le brouillon déjà écrit, du temps où le lancement attendait
+     * la production. Il rend la main avant, maintenant : une relance sous la
+     * même clé retrouve la même EXÉCUTION, et le client lit le résultat en
+     * l'interrogeant — ce que son sondage fait déjà.
+     *
+     * Ce qui compte n'a pas changé : un seul brouillon, un seul débit. */
+    it("rejoint l'exécution en cours plutôt que d'en refaire une", async () => {
       await crediter(5);
-      const premier = await lancer({ anthropic: repond() }, "ma_fierte", "clic-2");
-      const second = await lancer({ anthropic: repond() }, "ma_fierte", "clic-2");
-      expect(second.id).toBe(premier.id);
+      const premier = await service.lancerMessage(awa, occurrence, "ma_fierte" as never, { cle: "clic-2" });
+      await premier.fini;
+
+      const second = await service.lancerMessage(awa, occurrence, "ma_fierte" as never, { cle: "clic-2" });
+      expect(second.execution.id).toBe(premier.execution.id);
+      // Rien à produire : la première s'en est chargée.
+      await expect(second.fini).resolves.toBeNull();
       expect(await db.prisma.generatedMessage.count()).toBe(1);
+      expect(await solde()).toBe(4);
     });
 
     /* La seconde demande n'appelle AUCUN modèle. C'est là qu'est l'économie
@@ -453,9 +466,15 @@ describe("la génération d'un message", () => {
     it("n'appelle aucun modèle une seconde fois", async () => {
       await crediter(5);
       const modele = repond();
-      await lancer({ anthropic: modele }, "ma_fierte", "clic-3");
+      await fini(fabrique({ anthropic: modele }).lancerMessage(
+        awa, occurrence, "ma_fierte" as never, { cle: "clic-3" },
+      ));
       const appelsApresLePremier = modele.appels;
-      await lancer({ anthropic: modele }, "ma_fierte", "clic-3");
+
+      const second = await fabrique({ anthropic: modele }).lancerMessage(
+        awa, occurrence, "ma_fierte" as never, { cle: "clic-3" },
+      );
+      await second.fini;
       expect(modele.appels).toBe(appelsApresLePremier);
     });
 
