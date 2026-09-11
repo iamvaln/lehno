@@ -12,6 +12,7 @@ import {
 } from "@lehno/tokens";
 import { Avatar, Banner, Button, Icon, SectionLabel, TextField, useCouleurs } from "@lehno/ui-native";
 import { useLangue } from "../lib/langue.js";
+import { nomAAfficher, soiDabord } from "../lib/soi.js";
 import { Pastille } from "../composants/Pastille.js";
 import { RangeeDeJours } from "../composants/RangeeDeJours.js";
 import { appel, ErreurDApi } from "../lib/api.js";
@@ -87,7 +88,11 @@ export default function Evenement() {
     const page = personListSchema.parse(await appel<unknown>(
       "/me/persons?sort=alpha&direction=asc&offset=0&limit=100",
     ));
-    setCarnet(page.persons);
+    /* SOI RESTE OFFERT ICI — c'est le seul endroit où l'on pose une date à soi,
+       et c'est lui qui débloque la wishlist datée et « Ma date d'anniversaire »
+       sur le Mur. En tête : c'est la fiche qu'on cherche le jour où elle vient
+       d'exister, et la chercher au milieu du carnet serait absurde. */
+    setCarnet(soiDabord(page.persons));
   }, []);
 
   useEffect(() => { void charge(); }, [charge]);
@@ -243,9 +248,9 @@ export default function Evenement() {
           <View style={styles.puces}>
             {proche ? (
               <View style={[styles.puce, { backgroundColor: couleurs.actionQuietBg }]}>
-                <Avatar name={proche.displayName} size={24} />
+                <Avatar name={nomAAfficher(proche, t.evtPourMoi)} size={24} />
                 <Text style={[styles.puceTexte, { color: couleurs.textAccent }]}>
-                  {proche.displayName}
+                  {nomAAfficher(proche, t.evtPourMoi)}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -277,7 +282,7 @@ export default function Evenement() {
                 ) : (
                   <>
                     <Text style={[styles.champVideTexte, { color: couleurs.textMention }]}>
-                      {t.rechercher}
+                      {t.evtChercherQui}
                     </Text>
                     <Icon name="chevron-down" size={15} color={couleurs.textMention} />
                   </>
@@ -296,9 +301,9 @@ export default function Evenement() {
                 <TextInput
                   value={filtre}
                   onChangeText={setFiltre}
-                  placeholder={t.rechercher}
+                  placeholder={t.evtChercherQui}
                   placeholderTextColor={couleurs.textMention}
-                  accessibilityLabel={t.rechercher}
+                  accessibilityLabel={t.evtChercherQui}
                   autoFocus
                   autoCorrect={false}
                   style={[styles.rechercheSaisie, { color: couleurs.textBody }]}
@@ -319,9 +324,9 @@ export default function Evenement() {
                   onPress={() => { setProche(p); setOuvreLeChoix(false); }}
                   style={styles.ligne}
                 >
-                  <Avatar name={p.displayName} size={26} />
+                  <Avatar name={nomAAfficher(p, t.evtPourMoi)} size={26} />
                   <Text style={[styles.ligneTexte, { color: couleurs.textBody }]}>
-                    {p.displayName}
+                    {nomAAfficher(p, t.evtPourMoi)}
                   </Text>
                 </Pressable>
               )) : (

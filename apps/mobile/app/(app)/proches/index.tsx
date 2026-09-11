@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -13,6 +13,7 @@ import {
 import { useLangue } from "../../../lib/langue.js";
 import { appel, ErreurDApi } from "../../../lib/api.js";
 import { messageDErreur } from "../../../lib/session.js";
+import { sansSoi } from "../../../lib/soi.js";
 import {
   PAGE, basculeDeTri, dateCourte, parametresDuCarnet, presseAssezPourSAfficher,
   resteACharger, type Tri,
@@ -49,13 +50,68 @@ export default function Proches() {
      avait aucun geste à faire. Le handoff ne dessine que le nominal, le vide et
      l'attente — mais un réseau qui tombe existe aussi. */
   const [echec, setEchec] = useState<string | null>(null);
+  /* TROIS ÉTATS, PAS DEUX : `null` veut dire « on ne sait pas encore », et il
+     n'est pas la même chose que « pas de fiche ». Les confondre laissait un
+     compte QUI A une fiche avec « Voir plus · 1 restant » au premier
+     chargement, si `/me/self` tombait autrement qu'en 404 pendant que
+     `/me/persons` passait : on ne retranchait pas, alors que la liste avait
+     bien perdu la fiche.
+
+     Dans une REF, pas un état : `charge` la lit sans s'y abonner. En dépendance
+     de `useCallback`, son passage à `true` après le premier appel changeait la
+     référence de `charge` — ce qui rejouait `useEffect` ET `useFocusEffect` au
+     montage, donc un cycle de chargement entier en trop pour tout compte ayant
+     une fiche. Une ref se lit sans faire partie des dépendances, et reste
+     correcte : elle est écrite juste avant que sa valeur ne serve. */
+  const aUneFiche = useRef<boolean | null>(null);
+  /* Le curseur de pagination compte les fiches BRUTES reçues, pas celles
+     affichées : le serveur les indexe avant filtre. Passer `proches.length`
+     (déjà sans soi) en désynchronise l'offset dès que soi tombe sur une page
+     chargée — une fiche redemandée en double, une autre jamais demandée,
+     sans erreur. */
+  const [brutesRecues, setBrutesRecues] = useState(0);
 
   const charge = useCallback(async (tri: Tri, offset: number) => {
     try {
+      /* LA FICHE EXISTE-T-ELLE ? `GET /me/self` rend 404 tant que personne ne l'a
+         posée. On le demande plutôt que de deviner depuis la page courante : la
+         fiche tombe où l'ordre alphabétique la met, et un total juste une page
+         sur trois serait pire que pas de total.
+
+         DEUX RAISONS DE DEMANDER, et il faut les deux. La première page la
+         redemande à chaque fois : la fiche a pu naître entre-temps — on vient
+         de la poser dans Mon profil — et s'en tenir à ce qu'on savait
+         annoncerait un proche de trop au retour. Et tant qu'on NE SAIT PAS, on
+         redemande à n'importe quel offset : lié au seul `offset === 0`, « Voir
+         plus » reconduisait le décompte faux au lieu de le corriger, et le
+         bouton restait jusqu'à ce qu'un retour sur l'écran refasse la première
+         page. */
+      if (aUneFiche.current === null || offset === 0) {
+        try {
+          await appel<unknown>("/me/self");
+          aUneFiche.current = true;
+        } catch (souci) {
+          /* SEUL UN 404 EST UNE RÉPONSE : il dit que la fiche n'existe pas, et
+             le total du serveur est alors déjà juste. Tout le reste — réseau
+             coupé, passerelle en panne — ne dit rien de la fiche, et le prendre
+             pour une absence était visible à l'écran : `/me/persons` passait,
+             la liste arrivait sans la fiche, le total la comptait encore, et
+             « Voir plus · 1 restant » s'offrait en permanence. On reste donc
+             sur « on ne sait pas », et le prochain chargement redemandera. */
+          if (souci instanceof ErreurDApi && souci.statut === 404) aUneFiche.current = false;
+        }
+      }
       const brut = await appel<unknown>(`/me/persons${parametresDuCarnet(tri, offset)}`);
       const page = personListSchema.parse(brut);
-      setTotal(page.total);
-      setProches((v) => (offset === 0 || v === null ? page.persons : [...v, ...page.persons]));
+      /* ON NE RETRANCHE QUE SUR UNE CERTITUDE. `null` — on ne sait pas encore —
+         n'est pas « pas de fiche » : retrancher au hasard annoncerait un proche
+         de moins que la liste n'en porte, et le dernier ne viendrait jamais. */
+      setTotal(page.total - (aUneFiche.current === true ? 1 : 0));
+      setProches((v) => {
+        const lot = sansSoi(page.persons);
+        return offset === 0 || v === null ? lot : [...v, ...lot];
+      });
+      setBrutesRecues((v) => (offset === 0 ? page.persons.length : v + page.persons.length));
       setEchec(null);
     } catch (e) {
       /* Le code, traduit — jamais le message du serveur, qui est écrit pour le
@@ -78,7 +134,7 @@ export default function Proches() {
   const suite = async () => {
     if (encore || proches === null) return;
     setEncore(true);
-    try { await charge(tri, proches.length); } finally { setEncore(false); }
+    try { await charge(tri, brutesRecues); } finally { setEncore(false); }
   };
 
   const criteres = [

@@ -290,7 +290,8 @@ git commit -m "soi : les décisions de la fiche du titulaire, hors de React"
 - Modifier : `apps/mobile/messages/fr.ts`, `apps/mobile/messages/en.ts`
 
 **Interfaces produites** — employées par les tâches 3 à 6 :
-`profilNomDUsage`, `profilNomDUsageAide`, `profilNaissance`, `profilNaissanceAide`,
+`profilNomDUsage`, `profilNomDUsageAide`, `profilVotreNaissance`,
+`profilVotreNaissanceAide`,
 `evtPourMoi`, `listeVotreDateAbsente`.
 
 - [ ] **Étape 1 — poser les clés en français**
@@ -300,11 +301,11 @@ Après `profilGenreAide` dans `apps/mobile/messages/fr.ts` :
 ```ts
   profilNomDUsage: "Comment on vous appelle",
   profilNomDUsageAide: "Si c'est autrement que par votre nom.",
-  profilNaissance: "Votre date de naissance",
+  profilVotreNaissance: "Votre date de naissance",
   /* Elle ne crée pas d'anniversaire : naissance et échéance sont deux gestes,
      ici comme sur la fiche d'un proche. La phrase le dit plutôt que de laisser
      quelqu'un attendre un rappel qui ne viendra pas. */
-  profilNaissanceAide: "Pour poser votre anniversaire, ajoutez-la ensuite dans Dates.",
+  profilVotreNaissanceAide: "Pour poser votre anniversaire, ajoutez-la ensuite dans Dates.",
   evtPourMoi: "Moi",
   listeVotreDateAbsente: "Pour ouvrir une liste sur une de vos dates, il faut d'abord une date à vous.",
 ```
@@ -316,8 +317,8 @@ Au même endroit dans `apps/mobile/messages/en.ts` :
 ```ts
   profilNomDUsage: "What people call you",
   profilNomDUsageAide: "If it is not your name.",
-  profilNaissance: "Your date of birth",
-  profilNaissanceAide: "To set your birthday, add it in Dates afterwards.",
+  profilVotreNaissance: "Your date of birth",
+  profilVotreNaissanceAide: "To set your birthday, add it in Dates afterwards.",
   evtPourMoi: "Me",
   listeVotreDateAbsente: "To open a list on one of your dates, you first need a date of your own.",
 ```
@@ -346,7 +347,7 @@ git commit -m "libellés : la naissance, le nom d'usage, et ce que la liste expl
 - Modifier : `apps/mobile/app/(app)/profil.tsx`
 
 **Interfaces consommées** — `ficheAEnvoyer`, `SaisieDeSoi` (tâche 1) ;
-`profilNomDUsage`, `profilNaissance` (tâche 2) ;
+`profilNomDUsage`, `profilVotreNaissance` (tâche 2) ;
 `naissanceLue`, `RangeeDeJours`, `Pastille`, `Bascule`, `nomsDesMois` — tous
 existants, employés par `apps/mobile/app/(app)/proches/identite.tsx:236-276`.
 
@@ -391,7 +392,7 @@ Dans `styles.champs`, **après** le bloc du genre et **avant** celui du thème :
           {/* JOUR PUIS MOIS, comme la fiche d'un proche et l'écran d'événement
               les posent. Un sélecteur natif exigerait une année — et c'est
               justement elle qu'on ignore le plus souvent. */}
-          <SectionLabel>{t.profilNaissance}</SectionLabel>
+          <SectionLabel>{t.profilVotreNaissance}</SectionLabel>
           <Text style={[styles.aide, { color: couleurs.textSecondary }]}>{t.evtJour}</Text>
           <RangeeDeJours
             actif={naissance.jour}
@@ -425,7 +426,7 @@ Dans `styles.champs`, **après** le bloc du genre et **avant** celui du thème :
               })}
             />
           ) : null}
-          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilNaissanceAide}</Text>
+          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilVotreNaissanceAide}</Text>
         </View>
 ```
 
@@ -530,17 +531,37 @@ Le chemin relatif diffère : `../../lib/soi.js` sous `(app)/proches/`,
 
 - [ ] **Étape 2 — garder le compte juste**
 
-`proches/index.tsx` affiche un total. Il vient de `total`, que **le serveur
-compte avant la pagination et sans exclure soi**. Le corriger :
+`proches/index.tsx:57` fait `setTotal(page.total)`, et `:89` calcule
+`resteACharger(total, proches.length)`. **Filtrer soi casse cette arithmétique** :
+le serveur compte la fiche dans son `total`, la liste ne la porte plus, donc
+« charger plus » resterait offert sur une liste complète.
+
+Retrancher « quand la page contenait la fiche » ne marche pas : la fiche tombe
+sur une page quelconque de l'ordre alphabétique, et `total` serait juste sur
+cette page-là seulement. On demande donc directement :
+
+Dans `charge`, **avant** la première page :
 
 ```ts
-  /* LE TOTAL SUIT CE QU'ON MONTRE. Le serveur compte la fiche de soi dans son
-     `total` ; l'afficher tel quel annoncerait un proche de plus que la liste
-     n'en porte, et on chercherait longtemps lequel. */
-  const combien = sansSoi(page.persons).length;
+  /* LA FICHE EXISTE-T-ELLE ? `GET /me/self` rend 404 tant que personne ne l'a
+     posée. On le demande une fois, au chargement, plutôt que de deviner depuis
+     la page courante : la fiche tombe où l'ordre alphabétique la met, et un
+     total juste une page sur trois serait pire que pas de total. */
+  let aUneFiche = false;
+  try {
+    await appel<unknown>("/me/self");
+    aUneFiche = true;
+  } catch { /* Pas de fiche : le total du serveur est déjà juste. */ }
 ```
 
-Si l'écran lisait `page.total`, employer `combien` à la place.
+Puis, à la ligne 57 :
+
+```ts
+      setTotal(page.total - (aUneFiche ? 1 : 0));
+```
+
+`aUneFiche` doit vivre dans un `useState`, pas dans `charge` seul : la
+pagination rappelle `charge` et ne doit pas redemander la fiche à chaque page.
 
 - [ ] **Étape 3 — vérifier**
 
@@ -595,11 +616,19 @@ Dans `charge` (`evenement.tsx:87`) :
 
 - [ ] **Étape 2 — la nommer « Moi »**
 
-Là où l'écran rend le nom d'une personne du carnet, employer :
+Deux endroits, et deux seulement — `evenement.tsx:246` et `:248` :
 
 ```tsx
-{proche.isSelf ? t.evtPourMoi : proche.displayName}
+                <Avatar name={proche.isSelf ? t.evtPourMoi : proche.displayName} size={24} />
 ```
+
+```tsx
+                  {proche.isSelf ? t.evtPourMoi : proche.displayName}
+```
+
+**Pas la ligne 170**, qui filtre la recherche : on y garde le vrai nom. Taper
+« Moi » pour se trouver n'aurait pas de sens, et masquerait son propre nom à qui
+le tape.
 
 - [ ] **Étape 3 — vérifier**
 

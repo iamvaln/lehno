@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { updateProfileSchema, type Profile } from "@lehno/contracts";
 import {
-  corpsDeMiseAJour, doitVerifierLaDisponibilite, peutEnregistrer, pseudoRecevable,
-  type SaisieDeProfil,
+  corpsDeMiseAJour, doitVerifierLaDisponibilite, peutEnregistrer, pseudoPosable,
+  pseudoRecevable, type SaisieDeProfil,
 } from "../lib/profil.js";
+import { ficheAChange } from "../lib/soi.js";
 
 const PROFIL: Profile = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -137,5 +138,53 @@ describe("quand le bouton s'allume", () => {
   it("bloque sur un pseudo irrecevable, même si autre chose a changé", () => {
     expect(peutEnregistrer({ ...tel_quel(), pseudo: "va", genre: "female" }, PROFIL, true))
       .toBe(false);
+  });
+});
+
+/* LE REFUS SE LIT À PART DU REPOS, parce qu'ils n'obéissent pas à la même
+   règle. « Rien n'a changé » cède dès qu'un des deux objets de Mon profil bouge
+   — le compte, ou la fiche de soi. « Le pseudo est irrecevable » ne cède devant
+   rien.
+
+   Les avoir mêlés a produit la faute que ce bloc tient : le jour où le bouton
+   s'est ouvert à ce que la FICHE avait à dire, un pseudo mal formé a cessé de
+   l'éteindre dès qu'une date de naissance était saisie. */
+describe("le pseudo, qui ne cède devant rien", () => {
+  it("passe sur un pseudo inchangé et bien formé", () => {
+    expect(pseudoPosable(tel_quel(), PROFIL, null)).toBe(true);
+  });
+
+  it("refuse une forme que le contrat n'accepte pas", () => {
+    expect(pseudoPosable({ ...tel_quel(), pseudo: "va" }, PROFIL, true)).toBe(false);
+  });
+
+  /* `null` = pas encore de réponse, et ce n'est pas « libre » : envoyer vers un
+     refus emporterait les autres champs, puisque le corps part entier. */
+  it("attend la réponse du serveur sur un pseudo neuf", () => {
+    const neuf = { ...tel_quel(), pseudo: "valou" };
+    expect(pseudoPosable(neuf, PROFIL, null)).toBe(false);
+    expect(pseudoPosable(neuf, PROFIL, false)).toBe(false);
+    expect(pseudoPosable(neuf, PROFIL, true)).toBe(true);
+  });
+
+  /* LE CAS QUI A ÉTÉ CASSÉ SANS QU'ON LE VOIE. La composition vit à l'écran —
+     `profil.tsx`, l'attribut `disabled` du bouton — et ce test en tient la
+     forme : si l'écran la change, cette ligne doit changer avec lui. Ce qu'elle
+     retient est l'ORDRE : le refus d'abord, le repos ensuite. Sans le premier
+     terme, la naissance saisie rallumait le bouton sur un pseudo mal formé, et
+     l'appui partait vers un `PATCH` refusé qui n'écrivait ni le compte ni la
+     fiche. */
+  it("éteint le bouton sur un pseudo irrecevable, même quand la fiche a à dire", () => {
+    const saisie: SaisieDeProfil = { ...tel_quel(), pseudo: "va", genre: "female" };
+    const soi = {
+      nom: "Valentine", nomDUsage: "", genre: "female" as const,
+      naissance: { jour: 15, mois: 6, annee: 1994, anneeConnue: true },
+    };
+    // La fiche a bien quelque chose à dire : c'est ce qui rallumait le bouton.
+    expect(ficheAChange(soi, null)).toBe(true);
+
+    const eteint = !pseudoPosable(saisie, PROFIL, true)
+      || (!peutEnregistrer(saisie, PROFIL, true) && !ficheAChange(soi, null));
+    expect(eteint).toBe(true);
   });
 });

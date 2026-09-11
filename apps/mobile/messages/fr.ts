@@ -1009,8 +1009,30 @@ export const fr = {
   genreFeminin: "Féminin",
   genreMasculin: "Masculin",
   profilGenreAide: "Pour que ce que vous signez soit écrit correctement.",
+  profilNomDUsage: "Comment on vous appelle",
+  profilNomDUsageAide: "Si c'est autrement que par votre nom.",
+  profilVotreNaissance: "Votre date de naissance",
+  /* Elle ne crée pas d'anniversaire : naissance et échéance sont deux gestes,
+     ici comme sur la fiche d'un proche. La phrase le dit plutôt que de laisser
+     quelqu'un attendre un rappel qui ne viendra pas. */
+  profilVotreNaissanceAide: "Votre anniversaire ne s'en déduit pas : ajoutez-le ensuite dans Dates.",
+  evtPourMoi: "Moi",
+  /* UNE CLÉ À PART, et pas une retouche de `rechercher`. Les quatre autres
+     emplois de `rechercher` sont sur des écrans qui écartent la fiche de soi :
+     « un proche » y est juste. Ici seul, le carnet s'ouvre à soi — c'est même
+     le seul endroit où une date à soi se pose —, et le champ fermé est le
+     premier mot que lit qui arrive par « Ajouter une date » depuis les
+     wishlists. Lui annoncer qu'on cherche « un proche » démentait la liste
+     qu'il allait ouvrir, où « Moi » est en tête. */
+  evtChercherQui: "Vous ou un proche",
+  listeVotreDateAbsente: "Pour ouvrir une liste sur une de vos dates, il faut d'abord une date à vous.",
   identNaissance: "Date de naissance",
-  identNaissanceAide: "L'anniversaire s'en déduit — inutile de le poser deux fois.",
+  /* VÉRIFIÉ AU SERVEUR : l'anniversaire ne s'en déduit pas. `PersonService.create`
+     ne crée aucune occurrence, et `recalerAnniversaire` porte `if (!anniversaire)
+     return;` — il recale un anniversaire existant, il n'en crée pas. La phrase
+     d'avant promettait un rappel qui ne serait jamais venu, sur le même
+     mécanisme que l'aide d'à côté, dans l'autre sens. */
+  identNaissanceAide: "Son anniversaire ne s'en déduit pas : ajoutez-le ensuite dans Dates.",
   identAnnee: "Année",
   identAnneeInconnue: "Je ne connais pas l'année",
   ficheTopo: "Son topo",
@@ -1028,7 +1050,12 @@ export const fr = {
   topoDepuis: (note: string, quand: string) => note + ", " + quand,
   listeArchivee: "Archivée",
   listeArchiveeTexte: "L'occasion est passée. Les réservations sont closes ; la liste reste là pour l'an prochain.",
-  listeMesDatesAucune: "Aucune date à vous pour l'instant.",
+  /* ELLE NE SERT PLUS QU'UN ÉTAT, et elle doit le dire. Elle couvrait autrefois
+     deux cas confondus — n'avoir aucune date, et les avoir toutes employées —
+     où « aucune date à vous » était vrai pour le premier seulement. La rangée
+     des occasions est maintenant vide pour deux raisons distinctes, et cette
+     phrase-ci ne répond que de la seconde. */
+  listeMesDatesAucune: "Toutes vos dates portent déjà une liste.",
   /* L'aperçu de la liste partagée. « On ne diffuse pas une page qu'on n'a pas
      vue » : ces trois lignes servent l'écran qui la montre avant l'envoi. */
   listeRevoquer: "Révoquer le lien",

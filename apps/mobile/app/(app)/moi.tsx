@@ -3,9 +3,9 @@ import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
-  creditBalanceSchema, profileSchema, receivedWishListSchema, wallSchema,
+  creditBalanceSchema, personSchema, profileSchema, receivedWishListSchema, wallSchema,
   wishlistListSchema, wishLinkSchema,
-  type Profile, type Wall, type WishLink,
+  type Person, type Profile, type Wall, type WishLink,
 } from "@lehno/contracts";
 import {
   nativeBorder, nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin,
@@ -46,6 +46,7 @@ export default function Moi() {
   const { actives } = useDrapeaux();
 
   const [profil, setProfil] = useState<Profile | null>(null);
+  const [fiche, setFiche] = useState<Person | null>(null);
   const [solde, setSolde] = useState<number | null>(null);
   const [mur, setMur] = useState<Wall | null>(null);
   const [lien, setLien] = useState<WishLink | null>(null);
@@ -61,6 +62,14 @@ export default function Moi() {
       ]);
       setProfil(profileSchema.parse(brutProfil));
       setSolde(creditBalanceSchema.parse(brutCredits).balance);
+
+      /* LE NOM QUI SIGNE. `profile.displayName` n'est plus lu nulle part
+         ailleurs — voir §2.1 de la conception. `GET /me/self` rend 404 tant
+         que la fiche n'existe pas : un état, pas une panne, isolé dans son
+         propre bloc pour que l'écran s'ouvre quand même sur le pseudo. */
+      try {
+        setFiche(personSchema.parse(await appel<unknown>("/me/self")));
+      } catch { /* Pas de fiche : on garde le pseudo. */ }
 
       /* CHAQUE SURFACE NE SE DEMANDE QUE SI SON DRAPEAU TIENT. Appeler une
          route que le serveur a fermée rendrait un 404 qu'on afficherait comme
@@ -143,10 +152,10 @@ export default function Moi() {
         onPress={() => routeur.push("/(app)/profil")}
         style={styles.identite}
       >
-        <Avatar name={profil.displayName ?? profil.username} size={54} />
+        <Avatar name={fiche?.displayName ?? profil.username} size={54} />
         <View style={styles.qui}>
           <Text style={[styles.nom, { color: couleurs.textBody }]} numberOfLines={1}>
-            {profil.displayName ?? profil.username}
+            {fiche?.displayName ?? profil.username}
           </Text>
           <Text style={[styles.adresse, { color: couleurs.textSecondary }]} numberOfLines={1}>
             {t.pseudoAdresse(profil.username)}

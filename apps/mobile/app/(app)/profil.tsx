@@ -3,25 +3,32 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
-  PERSON_GENDERS, profileSchema, usernameAvailabilitySchema, type Profile,
+  PERSON_GENDERS, personSchema, profileSchema, usernameAvailabilitySchema,
+  type Person, type Profile,
 } from "@lehno/contracts";
 import { nativeFont, nativeSpace } from "@lehno/tokens";
 import {
   Avatar, Banner, Button, LoadingState, ScreenHeader, SectionLabel, TextField,
   useTheme
 } from "@lehno/ui-native";
+import { Bascule } from "../../composants/Bascule.js";
 import { Choix } from "../../composants/Choix.js";
+import { Pastille } from "../../composants/Pastille.js";
+import { RangeeDeJours } from "../../composants/RangeeDeJours.js";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { CLES_DE_GENRE, CLES_DE_THEME, THEMES_ORDONNES } from "../../lib/libelles.js";
 import { poseLApparence } from "../../lib/apparence.js";
+import { naissanceLue, type SaisieDeNaissance } from "../../lib/carnet.js";
+import { nomsDesMois } from "../../lib/evenement.js";
 import {
-  corpsDeMiseAJour, doitVerifierLaDisponibilite, peutEnregistrer, pseudoRecevable,
-  type SaisieDeProfil,
+  corpsDeMiseAJour, doitVerifierLaDisponibilite, peutEnregistrer, pseudoPosable,
+  pseudoRecevable, type SaisieDeProfil,
 } from "../../lib/profil.js";
 import { choisirUnePhoto, envoyerLaPhoto, retirerLaPhoto } from "../../lib/photo-de-profil.js";
 import { imageLocale, oublierLesAutres } from "../../lib/images-locales.js";
+import { ficheAChange, ficheAEnvoyer, type SaisieDeSoi } from "../../lib/soi.js";
 
 /* Mon profil — §3.23.
  *
@@ -65,6 +72,28 @@ export default function Profil() {
      pour rien. Nul tant qu'on ne l'a pas — l'avatar montre alors ses initiales,
      ce qui est un état, pas une erreur. */
   const [photoLocale, setPhotoLocale] = useState<string | null>(null);
+  /* LA FICHE DE SOI, à part du profil : elle vit sur `/me/self`, pas sur
+     `/me/profile`, et peut ne pas exister encore. Deux états neufs plutôt que
+     de les glisser dans `SaisieDeProfil` — ce type sert aussi `corpsDeMiseAJour`,
+     qui ne doit rien savoir de la fiche. */
+  const [nomDUsage, setNomDUsage] = useState("");
+  const [naissance, setNaissance] = useState<SaisieDeNaissance>(
+    { jour: null, mois: null, annee: null, anneeConnue: true },
+  );
+  /* LA FICHE LUE SE GARDE, elle ne se jette pas après en avoir tiré deux
+     champs : c'est elle qui dit si le bouton doit s'allumer. Sans elle, on ne
+     saurait pas distinguer une naissance qu'on vient de poser d'une naissance
+     qui était déjà là. Nulle tant qu'aucune fiche n'existe — un état, pas une
+     panne. */
+  const [fiche, setFiche] = useState<Person | null>(null);
+
+  /* LA MÊME COMPOSITION POUR LES DEUX LECTURES : ce qui allume le bouton et ce
+     qui part se composent ici, une fois. Deux compositions séparées finiraient
+     par diverger — un bouton allumé sur un envoi que `ficheAEnvoyer` refuserait
+     de composer, ou éteint sur un champ qui partirait pourtant. */
+  const saisieDeSoi = (p: SaisieDeProfil): SaisieDeSoi => ({
+    nom: p.nom, nomDUsage, genre: p.genre, naissance,
+  });
 
   /* Le refus de permission n'est pas une panne : il est durable, et l'écran dit
      où le reprendre plutôt que de laisser un bouton qui n'ouvre rien.
@@ -131,6 +160,15 @@ export default function Profil() {
         langue: lu.uiLanguage,
         theme: lu.theme,
       });
+      /* LA FICHE N'EXISTE PEUT-ÊTRE PAS, et c'est un état, pas une panne :
+         `GET /me/self` rend 404 tant que personne ne l'a posée. On lit alors
+         une naissance vide, et l'écran se comporte comme avant. */
+      try {
+        const lue = personSchema.parse(await appel<unknown>("/me/self"));
+        setFiche(lue);
+        setNomDUsage(lue.callingName ?? "");
+        setNaissance(naissanceLue(lue.birthDate, lue.birthYearKnown));
+      } catch { setFiche(null); /* Pas de fiche : les champs restent vides. */ }
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
@@ -173,10 +211,40 @@ export default function Profil() {
     setEnvoi(true);
     setEchec(null);
     try {
-      await appel<unknown>("/me/profile", {
-        method: "PATCH",
-        body: JSON.stringify(corpsDeMiseAJour(saisie, profil)),
-      });
+      /* ON N'ENVOIE PAS UN CORPS VIDE. Venir ici pour poser sa seule date de
+         naissance ne change rien au compte : le `PATCH` ne ferait qu'un
+         aller-retour de plus, qui n'écrit rien et qui peut échouer — et son
+         échec emporterait la fiche, qui elle avait quelque chose à dire. */
+      const corps = corpsDeMiseAJour(saisie, profil);
+      const compteEcrit = Object.keys(corps).length > 0;
+      if (compteEcrit) {
+        await appel<unknown>("/me/profile", { method: "PATCH", body: JSON.stringify(corps) });
+      }
+      /* LA FICHE SUIT LE COMPTE, et dans cet ordre : le genre qu'elle exige
+         vient d'être enregistré. Elle naît ici, au premier enregistrement du
+         profil, sans que personne ait eu à comprendre qu'elle existait.
+
+         SON ÉCHEC NE SE TAIT QUE S'IL RESTE QUELQUE CHOSE D'ÉCRIT. Tant que le
+         compte vient de partir, se taire est juste : il est enregistré, c'est
+         ce que la personne a demandé, et lui refuser son profil pour une fiche
+         qui n'a rien d'urgent serait incompréhensible — elle attendra le
+         prochain passage.
+
+         Mais depuis que le bouton s'allume sur la seule fiche, il existe un
+         enregistrement où AUCUN `PATCH` ne part : venir ici pour sa seule date
+         de naissance ne change rien au compte. La fiche est alors le geste
+         entier, et le taire fermait l'écran sans bandeau, sans rien d'écrit
+         nulle part, en emportant la saisie. On relance donc vers le `catch`
+         extérieur : il pose le bandeau, `routeur.back()` n'est pas atteint, et
+         ce qui a été tapé reste à l'écran pour être repris. */
+      const aEnvoyer = ficheAEnvoyer(saisieDeSoi(saisie));
+      if (aEnvoyer !== null) {
+        try {
+          await appel<unknown>("/me/self", {
+            method: "PUT", body: JSON.stringify(aEnvoyer),
+          });
+        } catch (souci) { if (!compteEcrit) throw souci; }
+      }
       /* L'INTERFACE SUIT LE RÉGLAGE, sinon il ne règle rien de ce qu'on voit.
          Sans cet appel, changer « Langue » ne changeait QUE la langue des
          courriels — en silence, sur un écran qui restait dans l'autre langue.
@@ -315,6 +383,54 @@ export default function Profil() {
           <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilGenreAide}</Text>
         </View>
 
+        <TextField
+          label={t.profilNomDUsage}
+          value={nomDUsage}
+          hint={t.profilNomDUsageAide}
+          onChangeText={setNomDUsage}
+        />
+
+        <View>
+          {/* JOUR PUIS MOIS, comme la fiche d'un proche et l'écran d'événement
+              les posent. Un sélecteur natif exigerait une année — et c'est
+              justement elle qu'on ignore le plus souvent. */}
+          <SectionLabel>{t.profilVotreNaissance}</SectionLabel>
+          <Text style={[styles.aide, { color: couleurs.textSecondary }]}>{t.evtJour}</Text>
+          <RangeeDeJours
+            actif={naissance.jour}
+            choisit={(j) => setNaissance({ ...naissance, jour: j })}
+          />
+          <Text style={[styles.aide, { color: couleurs.textSecondary }]}>{t.evtMois}</Text>
+          <View style={styles.pastilles}>
+            {nomsDesMois(langue).map((nom, i) => (
+              <Pastille
+                key={nom}
+                actif={naissance.mois === i + 1}
+                libelle={nom}
+                appuie={() => setNaissance({ ...naissance, mois: i + 1 })}
+              />
+            ))}
+          </View>
+          <View style={{ marginTop: nativeSpace[12] }}>
+            <Bascule
+              actif={!naissance.anneeConnue}
+              libelle={t.identAnneeInconnue}
+              onBascule={() => setNaissance({ ...naissance, anneeConnue: !naissance.anneeConnue })}
+            />
+          </View>
+          {naissance.anneeConnue ? (
+            <TextField
+              label={t.identAnnee}
+              nature="annee"
+              value={naissance.annee === null ? "" : String(naissance.annee)}
+              onChangeText={(v) => setNaissance({
+                ...naissance, annee: v === "" ? null : Number(v),
+              })}
+            />
+          ) : null}
+          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilVotreNaissanceAide}</Text>
+        </View>
+
         <View>
           <SectionLabel>{t.champTheme}</SectionLabel>
           {/* TROIS choix, pas deux. « Système » est la valeur par défaut au
@@ -335,7 +451,20 @@ export default function Profil() {
       <View style={{ marginTop: nativeSpace[28] }}>
         <Button
           full
-          disabled={envoi || !peutEnregistrer(saisie, profil, libre)}
+          /* LE REFUS D'ABORD, LE REPOS ENSUITE, et l'ordre est la règle.
+              `pseudoPosable` est un refus : un pseudo mal formé ou déjà pris
+              ne s'enregistre pas, quoi qu'on ait saisi par ailleurs — l'envoi
+              part entier et serait refusé entier.
+
+              Le repos, lui, cède dès qu'UN des deux objets de cet écran bouge.
+              `peutEnregistrer` ne connaît que le compte ; la naissance et le
+              nom d'usage vivent sur la fiche, et n'écouter que le premier
+              éteignait le bouton sur le seul geste que cet écran existe pour
+              rendre possible — poser sa date de naissance. */
+          disabled={envoi
+            || !pseudoPosable(saisie, profil, libre)
+            || (!peutEnregistrer(saisie, profil, libre)
+              && !ficheAChange(saisieDeSoi(saisie), fiche))}
           onPress={() => void enregistre()}
         >
           {t.enregistrer}
@@ -353,4 +482,5 @@ const styles = StyleSheet.create({
   champs: { gap: nativeSpace[14] },
   lecture: { fontFamily: nativeFont.bodyRegular, fontSize: 14.5, marginTop: nativeSpace[6] },
   aide: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[6] },
+  pastilles: { flexDirection: "row", flexWrap: "wrap", gap: nativeSpace[8] },
 });
