@@ -1017,6 +1017,14 @@ export const fr = {
      quelqu'un attendre un rappel qui ne viendra pas. */
   profilVotreNaissanceAide: "Votre anniversaire ne s'en déduit pas : ajoutez-le ensuite dans Dates.",
   evtPourMoi: "Moi",
+  /* UNE CLÉ À PART, et pas une retouche de `rechercher`. Les quatre autres
+     emplois de `rechercher` sont sur des écrans qui écartent la fiche de soi :
+     « un proche » y est juste. Ici seul, le carnet s'ouvre à soi — c'est même
+     le seul endroit où une date à soi se pose —, et le champ fermé est le
+     premier mot que lit qui arrive par « Ajouter une date » depuis les
+     wishlists. Lui annoncer qu'on cherche « un proche » démentait la liste
+     qu'il allait ouvrir, où « Moi » est en tête. */
+  evtChercherQui: "Vous ou un proche",
   listeVotreDateAbsente: "Pour ouvrir une liste sur une de vos dates, il faut d'abord une date à vous.",
   identNaissance: "Date de naissance",
   /* VÉRIFIÉ AU SERVEUR : l'anniversaire ne s'en déduit pas. `PersonService.create`

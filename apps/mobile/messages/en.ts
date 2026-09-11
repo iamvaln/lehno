@@ -911,6 +911,7 @@ export const en = {
   profilVotreNaissance: "Your date of birth",
   profilVotreNaissanceAide: "Your birthday does not follow from it: add it in Dates afterwards.",
   evtPourMoi: "Me",
+  evtChercherQui: "You or someone else",
   listeVotreDateAbsente: "To open a list on one of your dates, you first need a date of your own.",
   identNaissance: "Date of birth",
   identNaissanceAide: "Their birthday does not follow from it: add it in Dates afterwards.",

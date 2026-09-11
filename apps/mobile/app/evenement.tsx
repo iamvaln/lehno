@@ -282,7 +282,7 @@ export default function Evenement() {
                 ) : (
                   <>
                     <Text style={[styles.champVideTexte, { color: couleurs.textMention }]}>
-                      {t.rechercher}
+                      {t.evtChercherQui}
                     </Text>
                     <Icon name="chevron-down" size={15} color={couleurs.textMention} />
                   </>
@@ -301,9 +301,9 @@ export default function Evenement() {
                 <TextInput
                   value={filtre}
                   onChangeText={setFiltre}
-                  placeholder={t.rechercher}
+                  placeholder={t.evtChercherQui}
                   placeholderTextColor={couleurs.textMention}
-                  accessibilityLabel={t.rechercher}
+                  accessibilityLabel={t.evtChercherQui}
                   autoFocus
                   autoCorrect={false}
                   style={[styles.rechercheSaisie, { color: couleurs.textBody }]}
