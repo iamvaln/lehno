@@ -531,3 +531,102 @@ TOUTE contribution nominative, faute de quoi la nommer : `submitterName` n'est
 accepté que sur un lien public, « sur un nominatif, le propriétaire sait déjà
 qui il a invité ». Le seul champ que l'écran lisait était donc toujours nul là
 où il servait.
+
+---
+
+## 13. Ce qui est à soi doit se reconnaître, à chaque frontière — 11 septembre au soir
+
+**La structure ne change pas, et c'est une décision, pas un renoncement.** Une
+date à soi reste un `Event` pendu à une `Person`, et `isSelf` reste le
+séparateur. Scinder la table dupliquerait la récurrence, les échéances, les
+rappels et le calendrier pour un booléen.
+
+Mais ce séparateur ne se voit **nulle part où l'objet franchit une frontière**.
+Il n'est ni dans le contrat des échéances, ni dans le filtre du planificateur,
+ni dans le total du carnet. Chaque surface doit donc le redéduire — et quand
+elle l'oublie, **rien ne tombe** : l'écran est simplement faux, ou le courriel
+simplement absurde.
+
+C'est la même faute que celle du §10 sur `/me/persons`, à trois autres endroits.
+La règle qui les couvre tous :
+
+> **Tout objet qui porte une personne et franchit une frontière dit si cette
+> personne est le titulaire du compte.** Pas « le client peut le retrouver » —
+> il le dit.
+
+Ce paragraphe existait en creux tant que la fiche de soi n'existait pas. Elle
+existe depuis le 11 septembre ; les trois points ci-dessous sont **actifs**,
+c'est-à-dire qu'ils se produisent dès qu'un titulaire pose sa date.
+
+### 13.1 Le planificateur vous souhaite votre propre anniversaire — le plus grave
+
+`apps/api/src/me/programmation.service.ts:62-127`
+
+`garnir()` balaie **toutes** les `eventOccurrence` de l'horizon. Aucun filtre,
+aucune mention d'`isSelf` dans le fichier — vérifié. Il sélectionne
+`event.person.displayName` et le pose en `params.person` de deux notifications :
+`event_reminder` au délai réglé, et `event_day_of` le jour même.
+
+`poser()` (`:141-176`) les écrit sur `in_app` **toujours**, plus le courriel et
+la poussée selon les préférences — **activées par défaut** quand aucune ligne
+n'existe.
+
+Ce qui part donc au titulaire, mot pour mot, depuis
+`packages/i18n/src/notifications.ts:93-117` :
+
+> **« Une date pour Valentine approche »**
+> *« Le 7 novembre 2026, dans sept jours. Le bon moment pour préparer un mot. »*
+
+> **« C'est aujourd'hui pour Valentine »**
+> *« Le bon moment pour **lui** envoyer un mot. »*
+
+Par courriel, à Valentine, pour l'anniversaire de Valentine. C'est le seul point
+de cette liste qui **sort du produit** : un écran faux se corrige au prochain
+déploiement, un courriel parti ne se rattrape pas.
+
+**Deux façons de le régler, et elles ne coûtent pas la même chose.**
+
+- **Le minimum** : exclure `person: { isSelf: true }` du `findMany` de `:62`.
+  Une ligne. Le titulaire n'est plus prévenu de sa propre date — ce qui est
+  mieux que d'être mal prévenu, mais ce n'est pas ce qu'on veut.
+- **Le juste** : deux types de notification à lui, avec leurs propres phrases.
+  Ce qu'on a à rappeler sur sa propre date n'est pas d'écrire un mot, c'est de
+  **préparer sa liste, puis de la partager** — une liste que personne n'a reçue
+  ne sert à rien. Le contrat porte déjà de quoi choisir la bonne phrase :
+  `wishlist.occurrenceId`, `wishCount`, `isShared`.
+
+Le mobile ne peut rien y faire : ces envois ne passent pas par lui.
+
+### 13.2 `occurrenceSchema` ne dit pas de qui est la date
+
+`packages/contracts/src/me-events.ts:223-240`
+
+Il porte `personId` et `personDisplayName`, **pas** `isSelf`. Conséquence, vue à
+l'écran le 11 septembre au soir : l'accueil affiche « Valentine · Anniversaire ·
+7 nov. · J−57 » avec « Préparer » et « Marquer envoyé », et l'accusé dit
+« Envoyé à Valentine » (`accueil.tsx:340,383,393` ; `dates.tsx:163,320`).
+
+Un client qui voudrait trancher doit relire le carnet pour retrouver quelle
+`personId` est la sienne — **sur chaque écran qui montre une échéance**. C'est
+un appel de plus par écran pour un booléen que le serveur connaît déjà, et c'est
+la définition d'un filtre qu'une surface sur trois oubliera.
+
+**Ce qu'il faut** : `isSelf` sur l'échéance, à côté du `personDisplayName`
+qu'elle porte déjà. Une fois là, les surfaces peuvent enfin donner à sa propre
+date les gestes qui lui vont — préparer sa liste, la partager — au lieu de ceux
+d'un proche.
+
+### 13.3 `/me/persons` rend la fiche et `total` la compte
+
+Déjà écrit au §10, rappelé ici parce qu'il appartient à la même règle : un
+`?includeSelf=false`, ou l'exclusion par défaut avec un `total` d'accord avec
+elle. Le mobile filtre côté client et tient une garde
+(`apps/mobile/test/proches-sans-soi.test.ts`) pour que l'oubli ne soit plus
+silencieux — mais chaque client devra écrire la sienne.
+
+### 13.4 Et le `PATCH /me/self` du §10
+
+Même famille, même paragraphe : `PUT` est un remplacement qui exige
+`displayName` et `gender`, donc aucun écran ne peut corriger un champ seul de la
+fiche sans la lire d'abord. C'est ce qui a fait **retirer** l'écriture de
+`language` depuis le mobile plutôt que de la laisser diverger.
