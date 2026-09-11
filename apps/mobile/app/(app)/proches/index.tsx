@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -50,10 +50,20 @@ export default function Proches() {
      avait aucun geste à faire. Le handoff ne dessine que le nominal, le vide et
      l'attente — mais un réseau qui tombe existe aussi. */
   const [echec, setEchec] = useState<string | null>(null);
-  /* Vit en dehors de `charge` : la pagination le rappelle à chaque page
-     suivante, et redemander `/me/self` à chaque page interrogerait le serveur
-     pour une réponse qui ne change pas en cours de liste. */
-  const [aUneFiche, setAUneFiche] = useState(false);
+  /* Dans une REF, pas un état : `charge` la lit sans s'y abonner. En
+     dépendance de `useCallback`, son passage à `true` après le premier appel
+     changeait la référence de `charge` — ce qui rejouait `useEffect` ET
+     `useFocusEffect` au montage, donc un cycle de chargement entier en trop
+     pour tout compte ayant une fiche. Une ref se lit sans faire partie des
+     dépendances, et reste correcte : elle n'est écrite qu'à `offset === 0`,
+     juste avant que sa valeur ne serve. */
+  const aUneFiche = useRef(false);
+  /* Le curseur de pagination compte les fiches BRUTES reçues, pas celles
+     affichées : le serveur les indexe avant filtre. Passer `proches.length`
+     (déjà sans soi) en désynchronise l'offset dès que soi tombe sur une page
+     chargée — une fiche redemandée en double, une autre jamais demandée,
+     sans erreur. */
+  const [brutesRecues, setBrutesRecues] = useState(0);
 
   const charge = useCallback(async (tri: Tri, offset: number) => {
     try {
@@ -61,28 +71,27 @@ export default function Proches() {
          posée. On le demande une fois, au chargement, plutôt que de deviner depuis
          la page courante : la fiche tombe où l'ordre alphabétique la met, et un
          total juste une page sur trois serait pire que pas de total. */
-      let fiche = aUneFiche;
       if (offset === 0) {
         try {
           await appel<unknown>("/me/self");
-          fiche = true;
-        } catch { fiche = false; /* Pas de fiche : le total du serveur est déjà juste. */ }
-        setAUneFiche(fiche);
+          aUneFiche.current = true;
+        } catch { aUneFiche.current = false; /* Pas de fiche : le total du serveur est déjà juste. */ }
       }
       const brut = await appel<unknown>(`/me/persons${parametresDuCarnet(tri, offset)}`);
       const page = personListSchema.parse(brut);
-      setTotal(page.total - (fiche ? 1 : 0));
+      setTotal(page.total - (aUneFiche.current ? 1 : 0));
       setProches((v) => {
         const lot = sansSoi(page.persons);
         return offset === 0 || v === null ? lot : [...v, ...lot];
       });
+      setBrutesRecues((v) => (offset === 0 ? page.persons.length : v + page.persons.length));
       setEchec(null);
     } catch (e) {
       /* Le code, traduit — jamais le message du serveur, qui est écrit pour le
          journal et dans une langue que nous ne choisissons pas. */
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
     }
-  }, [langue, aUneFiche]);
+  }, [langue]);
 
   /* Changer de tri revient à la PREMIÈRE page : le serveur ne se souvient pas
      du décalage, et garder cinquante lignes ouvertes sur un ordre qu'on vient
@@ -98,7 +107,7 @@ export default function Proches() {
   const suite = async () => {
     if (encore || proches === null) return;
     setEncore(true);
-    try { await charge(tri, proches.length); } finally { setEncore(false); }
+    try { await charge(tri, brutesRecues); } finally { setEncore(false); }
   };
 
   const criteres = [
