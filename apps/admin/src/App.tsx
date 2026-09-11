@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Metriques, StatsTransactions, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, StudioProfils, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, StatsTransactions, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, StudioProfils, StudioTextes, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -59,6 +59,7 @@ import {
   type Intervention,
   etatPortraitSchema, historiquePortraitSchema,
   profilsStudioSchema, candidatsStudioSchema, essaisStudioSchema,
+  etatTexteSchema, essaiLanceSchema, type NatureTexte, type EssaiStudio,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
@@ -285,6 +286,10 @@ export function App(): ReactNode {
   const [tourAcces, setTourAcces] = useState(0);
   const [tourProfil, setTourProfil] = useState(0);
   const [tourStudio, setTourStudio] = useState(0);
+  /* La nature affichée par l'atelier des textes. Elle vit ici et non dans
+     l'écran : c'est elle qui décide de la route lue, donc de la ressource. */
+  const [natureTexte, setNatureTexte] = useState<NatureTexte>("message");
+  const [dernierEssaiTexte, setDernierEssaiTexte] = useState<EssaiStudio | null>(null);
   const [essaiEnCours, setEssaiEnCours] = useState(false);
   const [tourAssistance, setTourAssistance] = useState(0);
   const [ongletAssistance, setOngletAssistance] = useState<"demandes" | "contact" | "attente" | "retours">("demandes");
@@ -741,6 +746,20 @@ export function App(): ReactNode {
     [section, tourStudio],
   );
 
+  /* L'ATELIER DES TEXTES. Trois appels, comme celui du portrait : ce qui
+     tourne et ce qu'on compose, les éprouvettes, les modèles dans lesquels
+     choisir. Un écran qui n'aurait que deux des trois ne se lirait pas. */
+  const etatTextes = useRessource(
+    () => (section === "textes"
+      ? Promise.all([
+          api.appeler(`/admin/text-studio/${natureTexte}/config`, { schema: etatTexteSchema }),
+          api.appeler("/admin/portrait-studio/profiles", { schema: profilsStudioSchema }),
+          api.appeler("/admin/portrait-studio/candidates", { schema: candidatsStudioSchema }),
+        ]).then(([etat, profils, candidats]) => ({ etat, profils: profils.items, candidats }))
+      : Promise.resolve(null)),
+    [section, natureTexte, tourStudio],
+  );
+
   const etatAtelier = useRessource(
     () => (section === "atelier"
       ? Promise.all([
@@ -1156,6 +1175,67 @@ export function App(): ReactNode {
             onRetour={aller}
           />
         ) : null)}
+      />
+    );
+  } else if (section === "textes") {
+    /* Écrire puis relire, comme partout. Et le DERNIER ESSAI se retient ici :
+       c'est la réponse de `POST trials` qui le porte, et la relecture de la
+       configuration ne le rendrait pas — l'écran perdrait ce qu'on vient de
+       regarder au moment même où il en a besoin. */
+    const ecrireTexte = async (
+      chemin: string, methode: "PATCH" | "POST", corps: unknown,
+    ): Promise<unknown> => {
+      try {
+        return await api.appeler(chemin, { methode, corps });
+      } catch (echec) {
+        if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+        return null;
+      } finally {
+        setTourStudio((n) => n + 1);
+      }
+    };
+    vue = (
+      <Ressource
+        etat={etatTextes}
+        t={t}
+        enfant={(donnees) => {
+          if (!donnees) return null;
+          /* ON COMPOSE À PARTIR DE CE QUI EXISTE : le brouillon s'il y en a un,
+             la version en service sinon. Ni l'un ni l'autre — une nature jamais
+             semée — et il n'y a rien à régler : on le dit plutôt que d'ouvrir un
+             formulaire vide qui publierait des réglages inventés. */
+          const depart = donnees.etat.brouillon ?? donnees.etat.enService;
+          if (!depart) return <EmptyState titre={t.studioTextes.enService.aucune} texte={t.studioTextes.sous} />;
+          return (
+            <StudioTextes
+              role={role}
+              langue={langue}
+              nature={natureTexte}
+              onNature={(n) => { setNatureTexte(n); setDernierEssaiTexte(null); }}
+              depart={depart}
+              enService={donnees.etat.enService}
+              profils={donnees.profils}
+              candidats={donnees.candidats}
+              dernier={dernierEssaiTexte}
+              onEnregistrer={(reglages) => {
+                void ecrireTexte(`/admin/text-studio/${natureTexte}/config`, "PATCH", { reglages });
+              }}
+              onEssayer={(reglages, profileId) => {
+                void (async () => {
+                  const rendu = await ecrireTexte(
+                    `/admin/text-studio/${natureTexte}/trials`, "POST", { reglages, profileId },
+                  );
+                  const lu = essaiLanceSchema.safeParse(rendu);
+                  setDernierEssaiTexte(lu.success ? lu.data.essai : null);
+                })();
+              }}
+              onPublier={(configId, note) => {
+                void ecrireTexte("/admin/text-studio/config/publish", "POST", { configId, note });
+              }}
+              onRetour={aller}
+            />
+          );
+        }}
       />
     );
   } else if (section === "atelier") {

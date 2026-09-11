@@ -4,7 +4,7 @@ import {
   reglagesIdeesDeDepart, reglagesBriefPortraitDeDepart, reglagesMessageDeDepart,
   matierePourEmpreinteIdees, matierePourEmpreinteMessage,
   IDEES,
-  type ReglagesIdees, type ReglagesBriefPortrait,
+  type ReglagesIdees,
 } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { GenerationService } from "../src/me/generation.service.js";
