@@ -31,6 +31,24 @@ const REGLAGES = {
       consigne: bilingue("Une lumière lilas.", "Lilac light."),
     },
   ],
+  /* Troisième maquette à porter le manque, et dernière : `compositions` est
+     arrivé aux réglages du portrait sans que les serveurs simulés de l'admin le
+     suivent. `.strict()` refusait alors la configuration entière, et l'écran ne
+     rendait rien. */
+  compositions: [
+    {
+      id: "papier", actif: true,
+      libelle: bilingue("Papier", "Paper"), description: null,
+      palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#5A4B93"],
+      cadre: { fond: "#FFFFFF", bande: "#EDEAF7", texte: "#221F2B", mention: "#5A4B93" },
+    },
+    {
+      id: "encre", actif: true,
+      libelle: bilingue("Encre", "Ink"), description: null,
+      palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#FFFFFF"],
+      cadre: { fond: "#221F2B", bande: "#17161F", texte: "#F2F0F7", mention: "#EDEAF7" },
+    },
+  ],
 };
 
 const config = (sur: Record<string, unknown> = {}) => ({
