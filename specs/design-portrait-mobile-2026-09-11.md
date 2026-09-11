@@ -46,7 +46,7 @@ c'est ce qu'il ferait aujourd'hui si on lui donnait simplement sa route.
 |---|---|
 | **Composer** | On choisit ce qu'on regarde, pas des mots. Coût annoncé. |
 | **Attendre** | On nomme ce qui se passe, avec la matière du proche. On peut fermer. |
-| **Relire** | Le texte se vérifie. Le geste suivant fabrique l'image, et le dit. |
+| **Relire** | Le texte se vérifie. Le geste suivant compose l'image, et le dit. |
 | **Donner** | L'image finie s'enregistre et se partage. « Refaire » porte ses réglages. |
 
 On arrive **sur la chose**, jamais sur une liste. Payer et atterrir dans une
@@ -158,8 +158,8 @@ remettre retomberait sur le nom du compte).
 
 ### 2.5 Le pied
 
-Le coût, le solde, « Composer ». La feuille payante existante, qui annonce déjà
-les deux et bascule sur « Recharger » quand le solde ne suffit pas.
+Le coût, le solde, « Lancer le portrait ». La feuille payante existante,
+qui annonce déjà les deux et bascule sur « Recharger » quand le solde ne suffit pas.
 
 ---
 
@@ -195,8 +195,16 @@ Avant l'approbation, `imageUrl` est nul : il n'y a rien à montrer. L'écran
 affiche le **texte** qui entrera dans la bande, et c'est voulu.
 
 **Le bouton dit la suite, pas la signature.** « Approuver » se lit comme un
-engagement administratif ; ce qu'on fait est vérifier le texte **et lancer le
-dessin**. Il dit donc « Faire l'image ».
+engagement administratif ; ce qu'on fait est vérifier le texte **et lancer la
+composition de l'image**. Il dit donc **« Composer l'image »**.
+
+Le verbe est celui du produit — on compose un portrait, on compose une image —
+et il vaut pour les trois voies : l'illustration se dessine, la photo se
+traite, et sans image le motif de marque se compose quand même. « Dessiner »
+aurait menti sur deux voies de trois.
+
+Le bouton du lancement dit donc **« Lancer le portrait »**, pour que les deux
+gestes ne portent pas le même verbe à deux écrans d'écart.
 
 L'approbation appelle un modèle d'image en ligne : **la seconde attente se
 dessine comme la première**, avec ses mots à elle.
