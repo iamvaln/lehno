@@ -379,6 +379,32 @@ jour où l'établi du message arrivera, la question du chemin se posera.
 > un piège que chaque client devra éviter séparément, et qui ne se voit qu'à
 > l'exécution. Le point 1 ci-dessous — créer la fiche à l'inscription — le fait
 > disparaître pour tout le monde ; c'est un argument de plus pour lui.
+>
+> **L'échéance ne sait pas qu'elle est à soi.** Le sélecteur « Pour qui » dit
+> désormais « Moi », et la date qu'on y pose part bien sur sa propre fiche. Mais
+> l'occurrence qui en sort ressort ailleurs sous `personDisplayName`,
+> c'est-à-dire sous votre vrai nom : sur Dates (`dates.tsx:163,320`) et sur
+> l'Accueil (`accueil.tsx:340,383,393`). À `accueil.tsx:383`, l'accusé est
+> `t.envoiFait(e.personDisplayName)` — **l'accueil propose donc d'envoyer un
+> message d'anniversaire à soi-même, nommément, et confirme l'avoir fait.**
+>
+> `occurrenceSchema` porte `personId` mais **pas** `isSelf`
+> (`packages/contracts/src/me-events.ts:223-240`). Aucun de ces écrans ne peut
+> donc trancher sans un appel de plus — relire le carnet pour retrouver quelle
+> `personId` est la sienne, sur chaque écran qui montre une échéance. Ce qu'il
+> en coûte si rien ne bouge : chaque surface refera ce filtre, ou l'oubliera —
+> et l'oubli est silencieux, comme il l'a été pour `/me/persons`. Un `isSelf`
+> sur l'occurrence, à côté du `personDisplayName` qu'elle porte déjà, le règle
+> une fois pour tous les clients.
+>
+> **Demande : un `PATCH /me/self`.** `PUT` est un remplacement, et
+> `selfPersonSchema` exige `displayName` et `gender` : aucun écran ne peut donc
+> corriger UN champ de la fiche sans l'avoir lue d'abord, et sans réémettre tout
+> ce qu'il en a compris. C'est ce qui a fait retirer `language` de l'envoi du
+> mobile — Mon profil n'a pas de sélecteur pour ce champ, et le renvoyer depuis
+> `uiLanguage` faisait basculer la fiche comme effet de bord d'un geste sans
+> rapport. Avec un `PATCH`, un écran envoie ce qu'il règle et rien d'autre ; les
+> champs qu'il ne connaît pas ne sont plus son problème.
 
 Trouvé à l'appareil le 10 septembre 2026, en cherchant pourquoi « Nouvelle
 wishlist » annonçait « Aucune date à vous pour l'instant » sur un compte qui
