@@ -91,7 +91,7 @@ sélection. L'administration règle le défaut **en réordonnant**.
 l'écran doit le dire avant d'envoyer : un studio sans orientation est un écran
 client vide.
 
-#### Ce que ce tableau passait sous silence — relevé le 12 septembre
+#### Les quatre textes d'une orientation — relevé et livré le 12 septembre
 
 Une orientation n'est pas qu'un identifiant et une case. `orientationReglageSchema`
 lui donne quatre champs de texte bilingues : `libelle`, `description`,
@@ -99,11 +99,16 @@ lui donne quatre champs de texte bilingues : `libelle`, `description`,
 orientation, celle que `essai.service.ts` pose en `consigneOrientation` et qui
 part au modèle.
 
-**Aucun n'est éditable.** L'écran affiche le libellé et une case ; le texte qui
-oriente réellement la génération reste celui du semis, et le changer demande une
-livraison. C'est très exactement ce que le studio existe pour éviter, et la
-ligne du tableau ci-dessus — « liste réordonnable, chacune activable » — le
+**Aucun n'était éditable.** L'écran affichait le libellé et une case ; le texte
+qui oriente réellement la génération restait celui du semis, et le changer
+demandait une livraison — très exactement ce que le studio existe pour éviter.
+La ligne du tableau ci-dessus, « liste réordonnable, chacune activable », le
 cachait en le décrivant fidèlement.
+
+**Les quatre s'écrivent depuis un dépliage par orientation**, une seule ouverte
+à la fois : douze orientations par quatre textes par deux langues font
+quatre-vingt-seize champs, et tout ouvrir ferait perdre de vue la liste
+elle-même — qui est l'ordre, donc le défaut.
 
 **Les deux familles de l'Atelier s'appliquent ici aussi, et l'empreinte les
 départage déjà.** `partieLueParLeModeleMessage` retient des orientations
@@ -114,9 +119,31 @@ départage déjà.** `partieLueParLeModeleMessage` retient des orientations
 | `consigne` | **oui** | la modifier **redemande un essai** avant publication — l'écran sait déjà le dire |
 | `libelle`, `description`, `avertissement` | non | ne changent que ce que le client lit ; ils se corrigent sans réessayer |
 
-La `consigne` d'abord, donc, parce qu'elle seule change ce qui sort. Et le tri
-par identifiant dans l'empreinte dit l'autre moitié : **réordonner ne redemande
-pas d'essai**, puisque la position est l'ordre de l'écran, pas la matière.
+La `consigne` porte donc le liséré `admin-lu-par-le-modele`, la convention de
+l'Atelier du portrait ; les trois autres ne l'ont pas. Et le tri par identifiant
+dans l'empreinte dit l'autre moitié : **réordonner ne redemande pas d'essai**,
+puisque la position est l'ordre de l'écran, pas la matière.
+
+##### Un bilingue est entier ou nul — jamais à moitié
+
+`bilingueFacultatifSchema` est `bilingueSchema.nullable()`, et chaque côté exige
+au moins un caractère. Il n'existe donc pas d'orientation dont la description
+serait écrite en français seulement : le contrat la refuse, **et les deux
+facultatifs se retirent en entier ou pas du tout**.
+
+Deux conséquences que l'écran tient :
+
+- **il ferme l'enregistrement et NOMME l'orientation fautive** dès qu'un texte
+  n'est rempli que d'un côté. Sans le nom, il faudrait déplier les douze pour
+  trouver laquelle — et sans le contrôle, le refus tomberait après
+  l'aller-retour, sans dire d'où il vient ;
+- **un facultatif vidé des deux côtés part `null`**, jamais `{ fr: "", en: "" }`.
+  La coquille ferait refuser l'enregistrement pour un champ que l'administrateur
+  croyait avoir effacé.
+
+C'est la troisième fois que cette forme coûte du temps — elle avait déjà fait
+rougir les épreuves de l'écran le 11. Elle est écrite ici pour que la quatrième
+n'ait pas lieu.
 
 ### Les idées de cadeau
 
