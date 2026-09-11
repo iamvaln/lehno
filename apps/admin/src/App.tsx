@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Metriques, StatsTransactions, Studio, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, StatsTransactions, Studio, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, StudioProfils, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -730,6 +730,17 @@ export function App(): ReactNode {
      brouillon s'il existe, la version en service sinon), les profils contre
      lesquels essayer, les modèles dans lesquels choisir, et les essais du jour.
      Un écran qui n'aurait que trois des quatre ne se lirait pas d'un regard. */
+  /* LES PROFILS SEULS, avec leur COUVERTURE. L'Atelier lit la même route mais
+     ne garde que `items` : ce qui manque au jeu d'éprouvettes ne l'intéresse
+     pas, il applique une configuration. Ici c'est l'inverse — on entretient le
+     jeu, donc on veut d'abord savoir ce qu'il ne couvre pas. */
+  const etatProfils = useRessource(
+    () => (section === "studioProfils"
+      ? api.appeler("/admin/portrait-studio/profiles", { schema: profilsStudioSchema })
+      : Promise.resolve(null)),
+    [section, tourStudio],
+  );
+
   const etatAtelier = useRessource(
     () => (section === "atelier"
       ? Promise.all([
@@ -1122,6 +1133,37 @@ export function App(): ReactNode {
           enfant={(page) => <Assistance {...communAssistance} demandes={page?.items ?? []} />} />
       );
     }
+  } else if (section === "studioProfils") {
+    /* Écrire puis relire, comme partout : après un refus, l'état affiché est
+       celui d'avant, et c'est lui qui fait foi. */
+    const ecrireProfil = (chemin: string, methode: "PATCH" | "DELETE", corps?: unknown): void => {
+      void (async () => {
+        try {
+          await api.appeler(chemin, { methode, ...(corps === undefined ? {} : { corps }) });
+        } catch (echec) {
+          if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+        } finally {
+          setTourStudio((n) => n + 1);
+        }
+      })();
+    };
+    vue = (
+      <Ressource
+        etat={etatProfils}
+        t={t}
+        enfant={(registre) => (registre ? (
+          <StudioProfils
+            role={role}
+            langue={langue}
+            profils={registre.items}
+            manquant={registre.manquant}
+            onRenommer={(id, champs) => ecrireProfil(`/admin/portrait-studio/profiles/${id}`, "PATCH", champs)}
+            onSupprimer={(id) => ecrireProfil(`/admin/portrait-studio/profiles/${id}`, "DELETE")}
+            onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
   } else if (section === "atelier") {
     vue = (
       <Ressource

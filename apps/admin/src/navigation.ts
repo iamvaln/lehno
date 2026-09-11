@@ -20,7 +20,7 @@ export type Famille = "exploitation" | "economie" | "supervision" | "outils";
  * dépense de l'argent réel à chaque essai.
  */
 export const SECTIONS_ECONOMIE = [
-  "parametres", "fonctionnalites", "motifs", "modeles", "atelier", "essais", "studioService", "gabarits",
+  "parametres", "fonctionnalites", "motifs", "modeles", "atelier", "essais", "studioService", "gabarits", "studioProfils",
 ] as const;
 
 /**
@@ -120,7 +120,7 @@ export const NAVIGATION: { famille: Famille | null; items: readonly Entree[] }[]
       "parametres", "fonctionnalites", "motifs", "modeles",
       /* L'ordre est celui du TRAVAIL, pas celui de la livraison : on compose,
          puis on regarde ce qui tourne, puis on consulte les gabarits. */
-      { id: "studio", enfants: ["atelier", "essais", "studioService", "gabarits"] },
+      { id: "studio", enfants: ["atelier", "essais", "studioProfils", "studioService", "gabarits"] },
     ],
   },
   { famille: "supervision", items: ["metriques", "audit", "connexions"] },

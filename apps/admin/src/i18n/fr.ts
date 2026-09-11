@@ -82,6 +82,7 @@ export const fr = {
     essais: "Les essais",
     studioService: "Réglages en service",
     gabarits: "Gabarits de production",
+    studioProfils: "Profils de simulation",
     offres: "Offres et croissance",
     metriques: "Métriques",
     audit: "Journal d'audit",
@@ -160,6 +161,43 @@ export const fr = {
       titreModification: "Modifier ce motif",
       consequence: "Il sera proposé aux gestes indiqués, dès l'enregistrement. Le journal d'audit garde ce geste et son motif.",
       motifs: ["Nouveau cas rencontré", "Libellé à corriger", "Motif devenu inutile"],
+    },
+  },
+  studioProfils: {
+    titre: "Profils de simulation",
+    sous: "Les éprouvettes du studio : des fiches fictives sur lesquelles on essaie une configuration avant de la mettre en service.",
+    renommer: "Renommer",
+    supprimer: "Supprimer",
+    sensible: "Cas sensible",
+    ordinaire: "Ordinaire",
+    col: { libelle: "Profil", nature: "Nature", notes: "Notes", creeLe: "Créé le" },
+    couverture: {
+      complete: "Le jeu couvre tous les axes.",
+      manque: "Aucun profil ne couvre :",
+    },
+    axes: {
+      fiche_riche: "fiche riche", fiche_pauvre: "fiche pauvre",
+      nom_court: "nom court", nom_long: "nom long",
+      langue_fr: "français", langue_en: "anglais",
+      relation_familiale: "lien familial", relation_professionnelle: "lien professionnel",
+      cas_sensible: "cas sensible",
+    },
+    champs: {
+      libelle: "Libellé",
+      sensible: "Cas sensible",
+      sensibleAide: "Un décès, une séparation. Le studio refuse les orientations joyeuses sur ces profils — c'est ce que l'essai doit éprouver.",
+    },
+    vide: {
+      titre: "Aucun profil",
+      texte: "Sans éprouvette, aucun essai n'est possible : l'Atelier n'a rien à quoi appliquer une configuration.",
+    },
+    dialogueRenommer: {
+      titre: "Renommer ce profil",
+      consequence: "Le contenu de l'éprouvette ne change pas — seulement son nom et sa nature.",
+    },
+    dialogueSupprimer: {
+      titre: "Supprimer ce profil",
+      consequence: "Les essais qui s'en sont servis demeurent, avec leur coût et leur verdict ; ils perdent seulement le lien vers la fiche.",
     },
   },
   confirmation: {
