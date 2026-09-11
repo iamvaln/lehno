@@ -75,7 +75,17 @@ export default function Proches() {
         try {
           await appel<unknown>("/me/self");
           aUneFiche.current = true;
-        } catch { aUneFiche.current = false; /* Pas de fiche : le total du serveur est déjà juste. */ }
+        } catch (souci) {
+          /* SEUL UN 404 EST UNE RÉPONSE : il dit que la fiche n'existe pas, et
+             le total du serveur est alors déjà juste. Tout le reste — réseau
+             coupé, passerelle en panne — ne dit rien de la fiche, et le prendre
+             pour une absence était visible à l'écran : `/me/persons` passait,
+             la liste arrivait sans la fiche, le total la comptait encore, et
+             « Voir plus · 1 restant » s'offrait en permanence. On appuyait, la
+             même page revenait, le bouton restait. On garde donc ce qu'on
+             savait. */
+          if (souci instanceof ErreurDApi && souci.statut === 404) aUneFiche.current = false;
+        }
       }
       const brut = await appel<unknown>(`/me/persons${parametresDuCarnet(tri, offset)}`);
       const page = personListSchema.parse(brut);
