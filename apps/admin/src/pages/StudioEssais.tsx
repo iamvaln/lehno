@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Breadcrumb, PageHeader } from "../composants/page/index.js";
 import { EmptyState, FilterBar, StatusPill } from "../composants/donnees/index.js";
 import { messages, type Langue } from "../i18n/index.js";
-import type { ConfigurationPortrait, EssaiStudio } from "@lehno/contracts";
+import type { ConfigurationPortrait, EssaiStudio, NatureStudio } from "@lehno/contracts";
 
 /**
  * Les essais — ce qui a été produit, et ce qu'on en a pensé.
@@ -50,6 +50,7 @@ export function StudioEssais(
   const d = t.studioEssais;
   const [filtre, setFiltre] = useState<Sort | "tout">("tout");
   const [ambiance, setAmbiance] = useState<string>("tout");
+  const [nature, setNature] = useState<NatureStudio | "tout">("tout");
 
   const idsPubliees = new Set(publiees.map((c) => c.id));
 
@@ -59,16 +60,27 @@ export function StudioEssais(
   const sortDe = (e: EssaiStudio): Sort =>
     idsPubliees.has(e.configId) ? "publie" : e.verdict ?? "nonJuge";
 
+  /* LES QUATRE NATURES SE MÊLENT ICI, et c'est voulu : elles partagent la
+     table des essais, et l'on vient revoir ce qu'on a produit, pas ce qu'on a
+     réglé. Ce qui manquait était de pouvoir les DIRE — deux essais du même
+     modèle, l'un pour le portrait et l'autre pour les idées, se ressemblaient.
+     La forme de la sortie ne les sépare pas : les trois natures de texte
+     rendent toutes un message.
+     Le filtre ne paraît qu'à partir de deux natures présentes, pour la raison
+     qui vaut pour l'ambiance juste en dessous. */
+  const natures = [...new Set(essais.map((e) => e.nature))];
+  const parNature = nature === "tout" ? essais : essais.filter((e) => e.nature === nature);
+
   /* Les ambiances proposées sont celles qui ont PRODUIT quelque chose : offrir
      un filtre qui ne rend jamais rien fait douter du filtre, pas des données.
-     « Sans ambiance » couvre les essais antérieurs à la colonne et ceux du
-     message, qui n'en éprouvent aucune. */
+     « Sans ambiance » couvre les essais antérieurs à la colonne et ceux des
+     trois natures de TEXTE, qui n'en éprouvent aucune. */
   const ambiances = [...new Set(
-    essais.map((e) => e.ambianceId).filter((a): a is string => a !== null),
+    parNature.map((e) => e.ambianceId).filter((a): a is string => a !== null),
   )];
   const parAmbiance = ambiance === "tout"
-    ? essais
-    : essais.filter((e) => (ambiance === "sans" ? e.ambianceId === null : e.ambianceId === ambiance));
+    ? parNature
+    : parNature.filter((e) => (ambiance === "sans" ? e.ambianceId === null : e.ambianceId === ambiance));
   const visibles = filtre === "tout"
     ? parAmbiance
     : parAmbiance.filter((e) => sortDe(e) === filtre);
@@ -107,6 +119,22 @@ export function StudioEssais(
               ] as const).map(([value, label]) => ({ value, label })),
               onChange: (e) => setFiltre(e.target.value as Sort | "tout"),
             },
+            ...(natures.length < 2 ? [] : [{
+              cle: "nature",
+              label: d.filtre.nature,
+              valeur: nature,
+              options: [
+                { value: "tout", label: d.filtre.toutesNatures },
+                ...natures.map((n) => ({ value: n, label: d.natures[n] })),
+              ],
+              onChange: (e: { target: { value: string } }) => {
+                setNature(e.target.value as NatureStudio | "tout");
+                /* L'AMBIANCE SE REMET, sinon on garderait celle d'une nature
+                   qu'on vient de quitter : les textes n'en portent aucune, et
+                   la galerie s'ouvrirait vide sans dire pourquoi. */
+                setAmbiance("tout");
+              },
+            }]),
             ...(ambiances.length === 0 ? [] : [{
               cle: "ambiance",
               label: d.filtre.ambiance,
@@ -149,8 +177,10 @@ export function StudioEssais(
                   {/* La fiche technique en légende, jamais à la place du
                       résultat : elle explique ce qu'on regarde, elle ne le
                       remplace pas. */}
+                  {/* La nature EN TÊTE de la légende : c'est la première chose
+                      qu'on demande devant une vignette qu'on ne reconnaît pas. */}
                   <p className="admin-section-sous">
-                    {e.modele.cle} · {quand(e.quand)}
+                    {d.natures[e.nature]} · {e.modele.cle} · {quand(e.quand)}
                     {e.parQui === null ? null : ` · ${remplir(d.carte.par, { qui: e.parQui })}`}
                     {" · "}
                     {e.cout === null ? d.carte.coutInconnu : remplir(d.carte.cout, { cout: e.cout })}

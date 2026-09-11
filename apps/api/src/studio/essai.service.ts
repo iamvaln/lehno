@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, StudioConfigKind } from "@prisma/client";
 import {
   consigneSysteme, invite, profilContenuSchema,
   consigneSystemeIdees, inviteIdees,
@@ -39,6 +39,11 @@ import type { StockagePort } from "../stockage/stockage.port.js";
  */
 
 type LigneEssai = {
+  /* La nature vient de la CONFIGURATION, jamais d'une colonne recopiée ici :
+     une ligne d'essai ne peut pas changer de nature, et la recopier ouvrirait
+     la possibilité qu'elle contredise sa configuration. Toutes les lectures
+     joignent donc `config`. */
+  config: { kind: StudioConfigKind };
   id: string; studioConfigId: string; studioProfileId: string | null; adminId: string | null;
   provider: string; modelKey: string; status: string; output: unknown;
   cost: unknown; errorCode: string | null; createdAt: Date;
@@ -491,6 +496,7 @@ export class StudioEssaiService {
     issue: { status: string; output?: unknown; cost?: number | null; errorCode?: string },
   ): Promise<LigneEssai> {
     return this.prisma.studioTrial.create({
+      include: { config: { select: { kind: true } } },
       data: {
         studioConfigId: configId,
         studioProfileId: profilId,
@@ -513,7 +519,7 @@ export class StudioEssaiService {
       ...(configId === undefined ? {} : { where: { studioConfigId: configId } }),
       orderBy: { createdAt: "desc" },
       take: 100,
-      include: { admin: { select: { email: true } } },
+      include: { admin: { select: { email: true } }, config: { select: { kind: true } } },
     });
     return Promise.all(lignes.map((l) => this.rendre(l, l.admin?.email ?? null)));
   }
@@ -536,6 +542,7 @@ export class StudioEssaiService {
     return {
       id: l.id,
       configId: l.studioConfigId,
+      nature: l.config.kind,
       profilId: l.studioProfileId,
       etat: l.status as EssaiStudio["etat"],
       // Le modèle demandé, qui est aussi le seul appelé : l'essai ne replie pas.
@@ -575,7 +582,7 @@ export class StudioEssaiService {
     const misAJour = await this.prisma.studioTrial.update({
       where: { id },
       data: { verdict },
-      include: { admin: { select: { email: true } } },
+      include: { admin: { select: { email: true } }, config: { select: { kind: true } } },
     });
     return this.rendre(misAJour, misAJour.admin?.email ?? null);
   }

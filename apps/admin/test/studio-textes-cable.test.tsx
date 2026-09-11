@@ -231,6 +231,7 @@ describe("l'atelier des textes", () => {
         essai: {
           id: "44444444-4444-4444-8444-444444444444",
           configId: "11111111-1111-4111-8111-111111111111",
+          nature: "message",
           profilId: "22222222-2222-4222-8222-222222222222",
           etat: "success",
           modele: { fournisseur: "anthropic", cle: "claude-sonnet-5" },
