@@ -26784,6 +26784,10 @@
                                       "type": "string",
                                       "minLength": 1,
                                       "nullable": true
+                                    },
+                                    "previewUrl": {
+                                      "type": "string",
+                                      "nullable": true
                                     }
                                   },
                                   "required": [
@@ -26791,7 +26795,8 @@
                                     "label",
                                     "description",
                                     "warning",
-                                    "revealsGroup"
+                                    "revealsGroup",
+                                    "previewUrl"
                                   ],
                                   "additionalProperties": false
                                 },

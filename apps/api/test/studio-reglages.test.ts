@@ -212,7 +212,7 @@ describe("le catalogue servi à l'application", () => {
     const c = catalogueServi(reglagesMessageDeDepart(), modifierPortrait((r) => {
       r.voiesImage.find((v) => v.id === "photo")!.actif = true;
       r.ambiances.push({
-        id: "argentique", groupe: "photo_style", actif: true,
+        id: "argentique", groupe: "photo_style", actif: true, apercuCle: null,
         libelle: { fr: "Argentique", en: "Film" }, description: null,
         consigne: { fr: "Grain argentique, couleurs sourdes.", en: "Film grain, muted colours." },
       });

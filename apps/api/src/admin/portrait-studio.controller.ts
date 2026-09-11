@@ -160,8 +160,8 @@ export class PortraitStudioService {
     return { items: await this.essais.lister(configId) };
   }
 
-  async juger(id: string, verdict: VerdictEssai): Promise<EssaiStudio> {
-    return this.essais.juger(id, verdict);
+  async juger(id: string, verdict: VerdictEssai, reference = false): Promise<EssaiStudio> {
+    return this.essais.juger(id, verdict, reference);
   }
 
   // ── Les valeurs candidates ────────────────────────────────────────────────
@@ -313,7 +313,7 @@ export class PortraitStudioController {
     @Param("id", ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(verdictEssaiSchema)) corps: z.infer<typeof verdictEssaiSchema>,
   ) {
-    return this.service.juger(id, corps.verdict);
+    return this.service.juger(id, corps.verdict, corps.reference ?? false);
   }
 
   @Get("candidates")
