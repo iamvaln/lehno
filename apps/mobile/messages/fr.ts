@@ -8,6 +8,13 @@
 // Aucun repli d'une langue sur l'autre : un appel qui oublie sa clé doit
 // échouer, pas s'afficher dans la mauvaise langue.
 
+/* Les nombres en lettres, pour les seules valeurs que l'atelier autorise
+   (trois à six idées). En chiffres, « 4 pistes » casserait le registre de la
+   copie, qui écrit les petits nombres en toutes lettres. */
+const NOMBRES_FR: Record<number, string> = {
+  3: "Trois", 4: "Quatre", 5: "Cinq", 6: "Six",
+};
+
 export const fr = {
   connexionTitre: "Soyez là le jour J",
   connexionTexte: "Les dates de vos proches, et ce que vous savez d'eux. Le moment venu, vous avez déjà tout pour bien faire.",
@@ -783,7 +790,14 @@ export const fr = {
   prepPortraitTitre: "Un portrait",
   prepPortraitTexte: "Ce qu'il y a à retenir, écrit à partir de vos notes. À garder pour vous ou à partager.",
   prepIdeesTitre: "Des idées de cadeau",
-  prepIdeesTexte: "Cinq pistes qui lui ressemblent, du gratuit au plus cher.",
+  /* LE NOMBRE VIENT DU SERVEUR, il n'est plus écrit ici.
+     « Cinq » était en dur : régler quatre idées à l'atelier aurait laissé
+     l'écran en promettre cinq et en montrer quatre. Nul tant que la réponse
+     n'est pas là — la phrase se passe alors du chiffre plutôt que d'en
+     supposer un. */
+  prepIdeesTexte: (n: number | null) => n === null
+    ? "Des pistes qui lui ressemblent, du gratuit au plus cher."
+    : NOMBRES_FR[n] + " pistes qui lui ressemblent, du gratuit au plus cher.",
   prepMessageTitre: "Un message",
   prepMessageTexte: "Un brouillon dans votre ton, à ajuster avant d'envoyer.",
   prepDeja: "Déjà préparé",

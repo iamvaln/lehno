@@ -16,7 +16,7 @@ import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
-import { useActionsPayantes } from "../../lib/MetadonneesProvider.js";
+import { useActionsPayantes, useNombreIdees } from "../../lib/MetadonneesProvider.js";
 import { composeLaDemande, coutDe, pistesOffertes } from "../../lib/preparation.js";
 
 /* Préparer une occasion — §3.7.
@@ -114,10 +114,12 @@ export default function Preparation() {
 
   const pistes = pistesOffertes(occasion, actives);
   const sensible = occasion.nature === "sensitive";
+  // Le nombre annoncé vient du serveur : l'atelier le règle sans livraison.
+  const nombreIdees = useNombreIdees();
 
   const detail: Record<GenerationKind, { titre: string; texte: string }> = {
     wish_message: { titre: t.prepMessageTitre, texte: t.prepMessageTexte },
-    gift_ideas: { titre: t.prepIdeesTitre, texte: t.prepIdeesTexte },
+    gift_ideas: { titre: t.prepIdeesTitre, texte: t.prepIdeesTexte(nombreIdees) },
     portrait: { titre: t.fichePortraits, texte: "" },
   };
 

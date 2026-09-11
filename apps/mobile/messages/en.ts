@@ -8,6 +8,10 @@
 // Aucun repli d'une langue sur l'autre : un appel qui oublie sa clé doit
 // échouer, pas s'afficher dans la mauvaise langue.
 
+const NOMBRES_EN: Record<number, string> = {
+  3: "Three", 4: "Four", 5: "Five", 6: "Six",
+};
+
 export const en = {
   connexionTitre: "Be there on the day",
   connexionTexte: "The dates of the people you love, and what you know about them. When the day comes, you already have what you need.",
@@ -708,7 +712,10 @@ export const en = {
   prepPortraitTitre: "A portrait",
   prepPortraitTexte: "What's worth remembering, written from your notes. Keep it or share it.",
   prepIdeesTitre: "Gift ideas",
-  prepIdeesTexte: "Five directions that look like them, from free to pricier.",
+  // Le nombre vient du serveur — voir la note de la version française.
+  prepIdeesTexte: (n: number | null) => n === null
+    ? "Directions that look like them, from free to pricier."
+    : NOMBRES_EN[n] + " directions that look like them, from free to pricier.",
   prepMessageTitre: "A message",
   prepMessageTexte: "A draft in your voice, to adjust before sending.",
   prepDeja: "Already prepared",

@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import {
   reglagesIdeesDeDepart, reglagesBriefPortraitDeDepart, reglagesMessageDeDepart,
   matierePourEmpreinteIdees, matierePourEmpreinteMessage,
+  IDEES,
   type ReglagesIdees, type ReglagesBriefPortrait,
 } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
@@ -13,6 +14,8 @@ import { StudioConfigurationService } from "../src/studio/configuration.service.
 import { AmorceStudioService } from "../src/studio/amorce.service.js";
 import { RouteurIAService, type Adaptateur, type ReponseIA } from "../src/ia/routeur.service.js";
 import { CatalogueIAService } from "../src/ia/catalogue.service.js";
+import { MetadataService } from "../src/me/metadata.service.js";
+import { FlagsService } from "../src/flags/flags.service.js";
 
 /**
  * LE STUDIO DES TEXTES — trois générations, trois configurations.
@@ -348,6 +351,42 @@ describe("le studio des textes", () => {
       const repli = usages.find((u) => u.provider === tete.provider);
       expect(repli?.status).toBe("success");
       expect(repli?.attempt).toBe(tete.rank);
+    });
+  });
+
+  /* LA LIAISON JUSQU'À L'ÉCRAN.
+   *
+   * Un réglage qui atteint le modèle mais pas la COPIE ne sert qu'à moitié :
+   * « Cinq pistes qui lui ressemblent » était écrit en dur dans le mobile, et
+   * régler quatre idées à l'atelier aurait laissé l'écran en promettre cinq et
+   * en montrer quatre.
+   *
+   * `/me/metadata` et non `/me/studio/options` : les idées n'ouvrent aucun
+   * studio, et l'écran qui les annonce ne charge pas cet appel-là. C'est la
+   * même raison qui y range déjà le prix. */
+  describe("ce que l'application reçoit", () => {
+    const metadonnees = () => new MetadataService(
+      db.prisma as never,
+      new FlagsService(db.prisma as never),
+      configs,
+    ).get();
+
+    it("annonce le nombre d'idées publié", async () => {
+      await publier("idees", { ...reglagesIdeesDeDepart(), nombreDemande: 4 });
+      expect((await metadonnees()).nombreIdees).toBe(4);
+    });
+
+    /* LE SOCLE NE TOMBE PAS POUR UN CHIFFRE D'ANNONCE. Les métadonnées portent
+       les catégories, les types d'événement et les prix : les faire échouer
+       parce qu'une configuration ne se relit plus fermerait l'application
+       entière. On rend la valeur du code, qui est celle que la génération
+       emploiera de toute façon. */
+    it("retombe sur la valeur du code quand la configuration ne se relit plus", async () => {
+      await db.prisma.studioConfig.updateMany({
+        where: { kind: "idees", state: "published" },
+        data: { settings: { forme: "d'un autre temps" } as never },
+      });
+      expect((await metadonnees()).nombreIdees).toBe(IDEES.demandees);
     });
   });
 

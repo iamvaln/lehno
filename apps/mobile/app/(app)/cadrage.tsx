@@ -16,7 +16,7 @@ import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
-import { useActionsPayantes } from "../../lib/MetadonneesProvider.js";
+import { useActionsPayantes, useNombreIdees } from "../../lib/MetadonneesProvider.js";
 import { ecranEteint } from "../../lib/navigation.js";
 import { coutDe } from "../../lib/preparation.js";
 import {
@@ -56,6 +56,8 @@ export default function Cadrage() {
   const routeur = useRouter();
   const { actives } = useDrapeaux();
   const prix = useActionsPayantes();
+  // Le nombre annoncé vient du serveur : l'atelier le règle sans livraison.
+  const nombreIdees = useNombreIdees();
   const { occurrenceId } = useLocalSearchParams<{ occurrenceId?: string }>();
 
   const eteint = ecranEteint("cadrage", actives);
@@ -275,7 +277,7 @@ export default function Cadrage() {
         <PaidActionSheet
           surTitre={t.prepPour(occasion.personDisplayName)}
           titre={t.prepIdeesTitre}
-          resultat={t.prepIdeesTexte}
+          resultat={t.prepIdeesTexte(nombreIdees)}
           coutLibelle={t.creditUnite(cout)}
           soldeLibelle={t.creditReste(solde)}
           lancer={t.feuilleLancer}

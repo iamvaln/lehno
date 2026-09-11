@@ -201,6 +201,24 @@ export const metadataSchema = z.object({
     code: z.string(),
     credits: z.number().int().min(0),
   }).strict()),
+  /**
+   * COMBIEN D'IDÉES LE JEU PORTERA, tel que l'atelier l'a publié.
+   *
+   * Il est servi parce que l'application l'ANNONCE : « Cinq pistes qui lui
+   * ressemblent ». Ce nombre était écrit dans la copie du mobile, et le régler
+   * à quatre à l'atelier aurait laissé l'écran promettre cinq et en montrer
+   * quatre — un réglage qui ne change pas ce que l'utilisateur voit annoncé est
+   * pire qu'absent.
+   *
+   * ICI et non dans `/me/studio/options`, pour la raison qui vaut déjà pour le
+   * prix : les idées n'ouvrent aucun studio, et l'écran qui les annonce ne
+   * charge pas cet appel-là.
+   *
+   * Ce qui reste au serveur : la consigne de la maison, les garde-fous, les
+   * champs du proche qui partent au modèle. Rien de tout cela n'a de sens à
+   * l'écran, et l'exposer dirait au client des choses qui ne le regardent pas.
+   */
+  nombreIdees: z.number().int().min(3).max(6),
 }).strict();
 
 export type Metadata = z.infer<typeof metadataSchema>;
