@@ -233,7 +233,23 @@ celle d'avant que le message et le portrait ne se règlent séparément. Elle av
 été semée par `AmorceStudioService` sous une version antérieure du code, et
 `reglagesMessageSchema` ne la lit plus.
 
-**Trois choses manquent, et c'est leur conjonction qui rend la panne
+> **Mise à jour du 11 septembre.** Les points 1 et 2 ci-dessous sont RÉGLÉS par
+> `45fd6fa` — « une configuration devenue illisible se répare au démarrage, et
+> se dit ». Le semis relit la tête de chaîne et la remplace si elle est
+> illisible **et** portée par lui (`publishedByAdminId` nul) ; celle qu'un
+> administrateur a publiée n'est jamais touchée, et le refus nommé dit alors ce
+> qui se passe. La panne 500 rencontrée le 10 n'est plus atteignable par une
+> ligne semée.
+>
+> **Le point 3 tient toujours**, et c'est le manque de fond — vérifié le 11 sur
+> la table de routage réelle du serveur : les dix-sept routes de studio sont
+> sous `admin/portrait-studio`, `etat()` lit `enService("portrait")`,
+> `historique()` filtre `kind: "portrait"`, `trials` appelle `essayerPortrait`.
+> `StudioEssaiService.essayer` — la seule fonction qui dépose un brouillon de
+> message — n'est appelée de nulle part dans `src/` : son unique appelant est
+> `apps/api/test/studio-essai.test.ts`.
+
+**Trois choses manquaient, et c'est leur conjonction qui rendait la panne
 définitive :**
 
 1. **Aucune migration** n'a converti les lignes existantes lors du découpage.
@@ -248,23 +264,25 @@ définitive :**
    n'a **rien** : ni lecture, ni enregistrement, ni publication. Il n'existe
    donc aucun geste, ni d'administrateur ni d'exploitant, qui répare la ligne.
 
-Conséquence : sur toute installation dont la table a été semée avant le
-découpage — production comprise si elle a jamais démarré sur l'ancien code —
-**chaque `POST /me/generations` de nature `wish_message` répond 500**, et le seul
-recours est un `DELETE` en base suivi d'un redémarrage. C'est ce qu'il a fallu
-faire en local pour poursuivre la recette.
+Conséquence, telle qu'elle se présentait le 10 : sur toute installation dont la
+table a été semée avant le découpage, **chaque `POST /me/generations` de nature
+`wish_message` répondait 500**, et le seul recours était un `DELETE` en base
+suivi d'un redémarrage — ce qu'il a fallu faire en local pour poursuivre la
+recette. La réparation au démarrage a depuis fermé ce chemin.
 
-**Ce qu'il faut**, par ordre de valeur :
+**Ce qui reste à faire** : une **surface d'administration pour le studio du
+message**, symétrique de celle du portrait. C'est le manque de fond ; les deux
+autres n'en étaient que les symptômes, et ils sont soignés.
 
-- une **surface d'administration pour le studio du message**, symétrique de
-  celle du portrait — c'est le manque de fond, les deux autres n'en sont que les
-  symptômes ;
-- une **migration** des lignes `kind = 'message'` vers la forme courante ;
-- et, en attendant, que `reglagesMessageDe` ne laisse pas fuir une `ZodError`
-  brute : une configuration publiée illisible est un incident d'exploitation, pas
-  une panne anonyme. Le journal doit nommer la ligne et sa version, et la réponse
-  doit se distinguer d'un 500 générique — sans quoi on cherche du côté du
-  mobile, comme on l'a fait ici.
+Aujourd'hui, les orientations, les garde-fous et le modèle du message sont ce
+que le code a semé, et rien d'autre ne peut les changer — alors que le portrait,
+lui, se compose, s'éprouve sur des profils de simulation, se publie avec un
+motif et se remet en arrière. Le découpage du 31 août a séparé les deux
+natures ; il n'a donné d'établi qu'à une seule.
+
+`essayerPortrait` et `essayer` cohabitent d'ailleurs dans `StudioEssaiService` :
+la seconde est écrite, testée, et n'a jamais été branchée. L'essentiel du
+travail est peut-être déjà là.
 
 ---
 
