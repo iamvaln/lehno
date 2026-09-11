@@ -150,7 +150,7 @@ export class PortraitService {
      * Ici elle ne peut plus qu'être absente, et c'est un refus honnête : la
      * voie photo sans photo ne produirait qu'une illustration, et l'utilisateur
      * aurait payé autre chose que ce qu'il a demandé. */
-    const photoCle = voie === "photo" ? await this.photos.consommer(userId) : null;
+    const photoCle = voie === "photo" ? await this.photos.lire(userId) : null;
     const photo = photoCle === null ? undefined : await this.stockage.contenu(photoCle);
 
     const resultat = await this.routeur.appelerUnSeulModele(
@@ -169,12 +169,13 @@ export class PortraitService {
       { origine: "user_action", userId, actionRunId: ligne.actionRunId },
     );
 
-    /* LA SOURCE S'EFFACE, ABOUTIE OU NON. C'est ce que l'écran promet au
-       dépôt : « l'image n'est pas conservée ; après traitement la source est
-       effacée ». Un échec du modèle ne suspend pas cette promesse — c'est même
-       le cas où la garder serait le plus injustifiable, puisqu'elle n'aurait
-       servi à rien. Avant le refus, donc, et pas après. */
-    if (photoCle !== null) await this.photos.effacer(photoCle);
+    /* LA SOURCE RESTE — voir `photo-source.service`. On refait un portrait pour
+       en voir un autre, et redemander un téléversement à chaque essai
+       transformerait la recherche du bon rendu en corvée. Elle ne s'en va qu'au
+       dépôt d'une autre.
+
+       CE QUI SUIT EST DONC LE CHEMIN COURANT, pas une exception : la photo est
+       toujours là quand on repasse ici. */
 
     if (resultat.etat !== "success")
       throw new AppError("generation_unavailable", `image generation failed: ${resultat.code}`);

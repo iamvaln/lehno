@@ -21,6 +21,20 @@ async function image(): Promise<Sharp> {
   }
 }
 
+/* LA SOURCE RESTE, ET C'EST UNE DÉCISION DE PRODUIT.
+ *
+ * Une première version l'effaçait après chaque génération, sur la foi de la
+ * spec — « après le traitement, la photo source est effacée ». C'était contre
+ * l'usage : on refait un portrait pour en voir un autre, et redemander un
+ * téléversement à chaque essai rendrait la recherche du bon rendu pénible.
+ *
+ * CONSÉQUENCE À TENIR : la clé de copie `studioPhotoAvis` dit encore « Elle
+ * n'est pas conservée », dans les deux langues. Elle ne s'affiche nulle part —
+ * l'écran du dépôt n'existe pas — mais elle est prête à partir. Elle doit être
+ * réécrite avant, sans quoi l'application dira le contraire de ce que le serveur
+ * fait. Promettre un effacement qu'on n'exécute pas rassure sans protéger.
+ */
+
 /* Les valeurs du code, quand aucune configuration n'est publiée ou que la
    sienne ne porte pas encore le bloc `photo`. Elles ne sont PAS un second jeu
    de réglages : ce sont celles que `reglagesPortraitDeDepart` sème, recopiées
@@ -145,33 +159,36 @@ export class PhotoSourceService {
   }
 
   /**
-   * La photo en attente d'un compte, CONSOMMÉE.
+   * La photo acceptée d'un compte. ELLE RESTE.
    *
-   * Elle se lit et se libère d'un même geste : une photo sert à UNE génération.
-   * La laisser en place ferait qu'un second portrait partirait sur la photo du
-   * premier — sans que personne ne l'ait demandé, et sans que rien ne le dise.
+   * Elle se lisait et se libérait d'un même geste — une photo, une génération.
+   * C'était faux pour le seul usage qui compte : ON REFAIT UN PORTRAIT POUR EN
+   * VOIR UN AUTRE, et redemander un téléversement à chaque essai transformerait
+   * la recherche du bon rendu en corvée. Elle reste donc en place, et les
+   * relances repartent dessus.
    *
-   * Le fichier n'est PAS effacé ici : la génération ne l'a pas encore lu. C'est
-   * à elle de le faire quand elle a fini, par `effacer`.
+   * Elle est remplacée quand on en dépose une autre — `confirmer` efface alors
+   * celle qui ne sert plus. C'est le seul moment où elle s'en va.
    */
-  async consommer(userId: string): Promise<string> {
+  async lire(userId: string): Promise<string> {
     const compte = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId }, select: { photoSourceKey: true },
     });
     if (compte.photoSourceKey === null)
       throw new AppError("validation_failed", "no photo has been accepted for this portrait");
-    await this.prisma.user.update({ where: { id: userId }, data: { photoSourceKey: null } });
     return compte.photoSourceKey;
   }
 
   /**
-   * Effacer une photo source, après usage.
+   * Effacer une photo source devenue inutile.
    *
-   * SILENCIEUX SUR L'ÉCHEC, et c'est voulu : elle est appelée après une
-   * génération réussie, et faire échouer une production déjà payée parce que le
-   * ménage n'a pas abouti serait le mauvais arbitrage. On le JOURNALISE — une
-   * source qui reste est un manquement à ce qu'on a promis, et il faut pouvoir
-   * le voir.
+   * DEUX CAS SEULEMENT, et aucun n'est « après usage » : une photo qu'on vient
+   * de refuser, et celle qu'un nouveau dépôt remplace. Dans les deux, plus rien
+   * ne la désigne — la garder ferait vivre au stockage un fichier qu'aucun
+   * portrait ne réclamera jamais.
+   *
+   * SILENCIEUX SUR L'ÉCHEC : le ménage ne doit pas faire échouer le geste qui
+   * l'a déclenché. On le journalise, pour que la fuite se voie.
    */
   async effacer(cle: string): Promise<void> {
     try {
