@@ -388,6 +388,11 @@ jour où l'établi du message arrivera, la question du chemin se posera.
 > `t.envoiFait(e.personDisplayName)` — **l'accueil propose donc d'envoyer un
 > message d'anniversaire à soi-même, nommément, et confirme l'avoir fait.**
 >
+> **Vu à l'appareil le 11 septembre au soir**, une fois la chaîne complète
+> câblée : l'accueil affiche « Valentine · Anniversaire · 7 nov. · J−57 » avec
+> un bouton « Préparer » et un « Marquer envoyé ». Ce n'est pas une déduction —
+> c'est la première capture d'écran du produit après la livraison de la fiche.
+>
 > `occurrenceSchema` porte `personId` mais **pas** `isSelf`
 > (`packages/contracts/src/me-events.ts:223-240`). Aucun de ces écrans ne peut
 > donc trancher sans un appel de plus — relire le carnet pour retrouver quelle
