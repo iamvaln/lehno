@@ -75,15 +75,22 @@ describe("le carnet et la fiche de soi", () => {
   });
 });
 
-/* LA TABLE NE VAUT QUE SI RIEN NE LUI ÉCHAPPE.
+/* AUCUN ÉCRAN QUI ÉCRIT LE CHEMIN EN CLAIR N'ÉCHAPPE À LA TABLE.
  *
  * `ECRANS` et `DISPENSES` sont écrites à la main, et c'est voulu pour toutes
  * les deux — mais une table à la main ne proteste que sur ce qu'elle connaît
  * déjà. Elle est MUETTE sur un écran qui apparaît demain et lit `/me/persons`
  * sans qu'on l'y ait inscrit : rien ne tombe, et c'est exactement la faute
  * que ce plan corrige, revenue par un autre chemin que celui déjà fermé plus
- * haut. Ce test balaie donc les SOURCES pour trouver qui lit la liste, et
- * exige que chaque trouvaille figure dans l'une des deux tables.
+ * haut. Ce test balaie donc les SOURCES de `app/**` pour trouver qui écrit le
+ * chemin, et exige que chaque trouvaille figure dans l'une des deux tables.
+ *
+ * CE QU'IL LAISSE PASSER, et qu'il faut savoir : un écran qui obtiendrait la
+ * liste d'un auxiliaire de `lib/` — sans jamais écrire `/me/persons` chez lui —
+ * ne serait pas vu. Étendre le balayage à `lib/` coûterait ses propres
+ * dispenses, parce que `persons` y paraît dans des commentaires, et cela pour
+ * un cas qui n'existe pas encore. Le jour où un tel auxiliaire naîtra, c'est
+ * lui qu'il faudra inscrire.
  */
 const RACINE_APP = new URL("../app/", import.meta.url);
 
