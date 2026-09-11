@@ -13,6 +13,7 @@ import {
 import { useLangue } from "../../../lib/langue.js";
 import { appel, ErreurDApi } from "../../../lib/api.js";
 import { messageDErreur } from "../../../lib/session.js";
+import { sansSoi } from "../../../lib/soi.js";
 import {
   PAGE, basculeDeTri, dateCourte, parametresDuCarnet, presseAssezPourSAfficher,
   resteACharger, type Tri,
@@ -49,20 +50,39 @@ export default function Proches() {
      avait aucun geste à faire. Le handoff ne dessine que le nominal, le vide et
      l'attente — mais un réseau qui tombe existe aussi. */
   const [echec, setEchec] = useState<string | null>(null);
+  /* Vit en dehors de `charge` : la pagination le rappelle à chaque page
+     suivante, et redemander `/me/self` à chaque page interrogerait le serveur
+     pour une réponse qui ne change pas en cours de liste. */
+  const [aUneFiche, setAUneFiche] = useState(false);
 
   const charge = useCallback(async (tri: Tri, offset: number) => {
     try {
+      /* LA FICHE EXISTE-T-ELLE ? `GET /me/self` rend 404 tant que personne ne l'a
+         posée. On le demande une fois, au chargement, plutôt que de deviner depuis
+         la page courante : la fiche tombe où l'ordre alphabétique la met, et un
+         total juste une page sur trois serait pire que pas de total. */
+      let fiche = aUneFiche;
+      if (offset === 0) {
+        try {
+          await appel<unknown>("/me/self");
+          fiche = true;
+        } catch { fiche = false; /* Pas de fiche : le total du serveur est déjà juste. */ }
+        setAUneFiche(fiche);
+      }
       const brut = await appel<unknown>(`/me/persons${parametresDuCarnet(tri, offset)}`);
       const page = personListSchema.parse(brut);
-      setTotal(page.total);
-      setProches((v) => (offset === 0 || v === null ? page.persons : [...v, ...page.persons]));
+      setTotal(page.total - (fiche ? 1 : 0));
+      setProches((v) => {
+        const lot = sansSoi(page.persons);
+        return offset === 0 || v === null ? lot : [...v, ...lot];
+      });
       setEchec(null);
     } catch (e) {
       /* Le code, traduit — jamais le message du serveur, qui est écrit pour le
          journal et dans une langue que nous ne choisissons pas. */
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
     }
-  }, [langue]);
+  }, [langue, aUneFiche]);
 
   /* Changer de tri revient à la PREMIÈRE page : le serveur ne se souvient pas
      du décalage, et garder cinquante lignes ouvertes sur un ordre qu'on vient

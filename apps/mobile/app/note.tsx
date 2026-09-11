@@ -23,6 +23,7 @@ import {
   ajouteLeProche, candidatsAAjouter, envoiDeLaNote, occasionRetenue,
   occasionsOffertes, peutEnregistrer, retireLeProche,
 } from "../lib/note.js";
+import { sansSoi } from "../lib/soi.js";
 
 /* §3.5 — la saisie d'une note.
  *
@@ -111,7 +112,7 @@ export default function Note() {
         if (page.persons.length === 0) break;
         tout.push(...page.persons);
       }
-      setCarnet(tout);
+      setCarnet(sansSoi(tout));
       setEchecCarnet(null);
     } catch (e) {
       /* Un chargement qui échoue doit se DIRE, avec une sortie. Sans cela la
