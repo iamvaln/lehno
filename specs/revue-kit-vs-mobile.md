@@ -343,3 +343,29 @@ ait voulues. Trois façons d'en sortir, par ordre de préférence :
 traduits dans l'application et employés nulle part — de la copie morte, comme
 `parrainValide` au §A1. Aucune des trois ne correspond aux cinq natures
 ci-dessus.
+
+---
+
+## J. Les réservations parlent du « Mur », on réserve sur une wishlist
+
+Éprouvé de bout en bout le 11 septembre 2026 : un second compte ouvre une
+liste, la partage ; le premier réserve par le lien public, la réservation
+paraît dans « Mes réservations », « Libérer » la rend, et la page publique
+repasse à « disponible ». Le parcours tient.
+
+Reste un mot. Les deux phrases de l'écran disent **le Mur** :
+
+- « Les cadeaux que vous vous êtes réservés sur le **Mur** de vos proches. »
+- « Ce que vous réserverez sur un **Mur** apparaîtra ici. »
+
+Or on ne réserve pas sur un Mur : le Mur porte des mots, pas des souhaits, et
+il n'a rien de réservable. Ce qui se réserve est un souhait d'une **wishlist
+partagée** — c'est le lien `/l/{token}`, pas `/m/{pseudo}`.
+
+Les deux phrases viennent telles quelles de `copy.js` : c'est la planche qui le
+dit, dans les deux langues. **La maquette tranche**, donc on ne les réécrit pas
+ici — mais elles nomment la mauvaise surface, et quelqu'un qui cherche « où
+est-ce que je réserve » ira regarder son Mur.
+
+À reprendre côté copie, avec le §I : ce sont les deux seules questions de
+langue que cette recette laisse ouvertes.
