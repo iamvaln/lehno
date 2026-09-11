@@ -231,13 +231,21 @@ C'est le même écran de composition, rouvert. Pas un second dessin à tenir.
 
 ## 6. Ce qui est demandé au serveur
 
-À porter au brief backend. Aucun de ces points ne bloque le reste : l'écran
-retombe proprement sur l'existant. **Les trois sont vérifiés ouverts au
-11 septembre au soir**, après la livraison du studio des textes (#176) — qui
-règle le §9 du brief mais ne touche à aucun des trois.
+À porter au brief backend.
 
-**§A — `previewUrl` sur `studioChoiceSchema`**, nullable. *Absent du contrat au
-11 septembre.* C'est le plus intéressant des trois, et le moins coûteux : rien
+> **Relu le 11 septembre à 21 h : §A et §B sont LIVRÉS**, tous deux dans la
+> soirée, et vérifiés dans le code de `develop` — pas au message de commit.
+> Seul §C reste, et il était reporté par décision.
+>
+> Ce que ça change pour l'implémentation : elle ne part plus d'un écran qui
+> retombe sur l'existant, mais d'un serveur qui sert déjà les vignettes et rend
+> la main aussitôt. **Le §2.1 et le §3 sont désormais constructibles tels
+> qu'ils sont écrits.**
+
+**§A — `previewUrl` sur `studioChoiceSchema`**, nullable. — **LIVRÉ** (`fd4ccf7`).
+Le catalogue sert la vignette de chaque ambiance et de chaque famille ; et
+l'orientation la rend `null`, avec le raisonnement de §2.1 écrit au serveur — «
+c'est le PROPOS, pas le rendu ». *Ce qui suit était la demande.* C'est le plus intéressant des trois, et le moins coûteux : rien
 à produire, seulement à publier. Nul veut dire « pas
 encore de référence retenue », et la grille retombe sur la description. Le geste
 qui le remplit existe presque : `PATCH /admin/portrait-studio/trials/:id` pose
@@ -245,7 +253,12 @@ déjà un verdict ; il lui manque « c'est celle-ci qui représente l'ambiance �
 vignette suit la **version publiée**, comme le reste du catalogue — changer
 l'ambiance en administration change la vignette sans livraison.
 
-**§B — rendre l'exécution `running` immédiatement.** La requête de quarante
+**§B — rendre l'exécution `running` immédiatement.** — **LIVRÉ** (`e86ec0b`).
+`POST /me/generations` débite, lance la production derrière et rend aussitôt
+l'identifiant. Le crédit est rendu quand la production échoue. **Le sondage du
+mobile cesse donc de tourner à vide** — l'attente conçue au §3 devient
+constructible sans rien réécrire, comme annoncé. *Ce qui suit était la
+demande.* La requête de quarante
 secondes est fragile sur un réseau mobile, et l'attente ne devient un endroit
 qu'on quitte et retrouve vraiment que si le client peut sonder. Le sondage est
 **déjà écrit**. Le jour où le serveur le fait, l'attente conçue au §3 le devient
