@@ -435,4 +435,63 @@ describe("le studio des textes", () => {
       expect((JSON.parse(ligne!.content) as { mots: string[] }).mots).toHaveLength(9);
     });
   });
+  /* LE RETOUR ARRIÈRE, ET CE QU'IL NE DOIT PAS EMPORTER.
+   *
+   * Aucun cas ne le couvrait, et c'est ce qui a laissé passer le défaut : le
+   * geste déclassait TOUTE configuration en service, sans regarder sa nature.
+   * Revenir sur une version du message rangeait le portrait et les idées avec
+   * elle — sans erreur, sans trace, et sans que le geste demandé échoue. La
+   * moitié du studio tombait en silence, et l'on ne l'aurait appris qu'à la
+   * première génération refusée.
+   *
+   * La publication, dix lignes plus haut, filtre déjà sur la nature : un
+   * incident du même genre le lui avait appris, et son commentaire le raconte.
+   * Les deux gestes écrivent au même endroit ; un seul avait retenu la leçon.
+   *
+   * CE N'EST PAS UN GESTE NON ÉPROUVÉ : `studio-configuration.e2e.test.ts` lui
+   * consacre quatre cas. Ils restent tous sur la nature `portrait` — et avec
+   * une seule nature en vue, un filtre par nature ne se voit pas. C'est
+   * pourquoi ce cas-ci regarde LES QUATRE, et pas seulement celle sur laquelle
+   * on revient. */
+  describe("le retour arrière", () => {
+    const ADMIN = "00000000-0000-4000-8000-000000000001";
+
+    /** Une seconde version publiée par-dessus celle du semis. */
+    const publierUneSuite = async (nature: "message", reglages: unknown) => {
+      await db.prisma.studioConfig.updateMany({
+        where: { kind: nature, state: "published" }, data: { state: "superseded" },
+      });
+      await db.prisma.studioConfig.create({
+        data: {
+          kind: nature, state: "published", version: 2,
+          settings: reglages as never,
+          fingerprint: configs.empreinte(nature, reglages as never),
+          publishedAt: new Date(),
+        },
+      });
+    };
+
+    it("ne range que sa propre nature", async () => {
+      const premiere = await db.prisma.studioConfig.findFirstOrThrow({
+        where: { kind: "message", state: "published" }, select: { id: true },
+      });
+      await publierUneSuite("message", {
+        ...reglagesMessageDeDepart(), consigneCommune: "Écris plus court.",
+      });
+
+      await configs.retourArriere(ADMIN, premiere.id, "Retour arrière après un essai non concluant");
+
+      const enService = await db.prisma.studioConfig.findMany({
+        where: { state: "published" }, select: { kind: true, id: true },
+      });
+
+      /* LES QUATRE NATURES RESTENT SERVIES. Avec le défaut, il n'en restait
+         qu'une : celle sur laquelle on venait de revenir. */
+      expect(enService.map((c) => c.kind).sort()).toEqual(
+        ["idees", "message", "portrait", "portrait_brief"],
+      );
+      // Et c'est bien la version d'avant qui a repris la main.
+      expect(enService.find((c) => c.kind === "message")?.id).toBe(premiere.id);
+    });
+  });
 });

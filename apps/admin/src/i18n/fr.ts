@@ -260,6 +260,32 @@ export const fr = {
       note: "Ce qui change",
       noteAide: "Une ligne. C'est elle qu'on relira dans l'historique, pas l'écart des réglages.",
     },
+    /* L'HISTORIQUE VIT DANS L'ATELIER, et non dans un écran jumeau de
+       « Réglages en service » comme pour le portrait. Deux écrans à onglets
+       auraient deux sélections de nature à tenir d'accord, et l'une mentirait
+       sur l'autre dès qu'on changerait d'onglet d'un seul côté. */
+    historique: {
+      titre: "Les publications",
+      sous: "Chaque mise en service de cette nature, avec son auteur et son motif. C'est le journal de l'atelier.",
+      col: { version: "Version", quand: "Publiée le", parQui: "Par", note: "Ce que ça change", etat: "État" },
+      etats: { published: "En service", superseded: "Rangée", draft: "Brouillon" },
+      version: "Version {n}",
+      sansNote: "Publiée sans note.",
+      revenir: "Remettre en service",
+      aucune: {
+        titre: "Aucune publication",
+        texte: "Les mises en service de cette nature s'inscrivent ici, avec leur auteur et leur motif.",
+      },
+      dialogue: {
+        titre: "Remettre la version {n} en service",
+        consequence: "La version en service se range, celle-ci reprend la main. Rien n'est reconstruit, le brouillon en cours n'est pas touché, et le changement rejoint le journal avec son motif.",
+        motifs: [
+          "Les textes se sont dégradés depuis la publication",
+          "La version en service ne tient pas ses garde-fous",
+          "Retour arrière après un essai non concluant",
+        ],
+      },
+    },
   },
   confirmation: {
     motif: "Motif",

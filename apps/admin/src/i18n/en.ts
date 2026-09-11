@@ -241,6 +241,28 @@ export const en: typeof fr = {
       note: "What changes",
       noteAide: "One line. It is what gets read back in the history, not the diff of the settings.",
     },
+    historique: {
+      titre: "Publications",
+      sous: "Every time this kind went into service, with its author and its reason. This is the workshop's log.",
+      col: { version: "Version", quand: "Published on", parQui: "By", note: "What it changes", etat: "State" },
+      etats: { published: "In service", superseded: "Retired", draft: "Draft" },
+      version: "Version {n}",
+      sansNote: "Published without a note.",
+      revenir: "Put back in service",
+      aucune: {
+        titre: "No publication yet",
+        texte: "Each time this kind goes into service, it is recorded here with its author and its reason.",
+      },
+      dialogue: {
+        titre: "Put version {n} back in service",
+        consequence: "The version in service steps back, this one takes over. Nothing is rebuilt, the draft in progress is untouched, and the change joins the log with its reason.",
+        motifs: [
+          "Texts have got worse since the publication",
+          "The version in service does not hold its guardrails",
+          "Rolling back after an inconclusive trial",
+        ],
+      },
+    },
   },
   confirmation: {
     motif: "Reason",
