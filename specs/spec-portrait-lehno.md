@@ -68,7 +68,9 @@ Ce que l'utilisateur règle avant de lancer la génération. Chaque choix a un d
 
 Ce que la photo change n'est pas le **sujet** mais **d'où l'on part** : sans elle on part des mots retenus, avec elle on s'en inspire. L'ambiance décide de la forme, la photo fournit la matière.
 
-L'écran indique, au moment du dépôt, que **l'image est transmise à un service qui la transforme**.
+**Aucun avertissement à l'écran.** *Révisé le 11 septembre 2026 : ce paragraphe demandait que l'écran l'indique au moment du dépôt.* Le cadre est déjà posé là où on l'accepte — CGU §7 « Vos contenus » pour le droit d'usage, qui cesse avec la génération, et Confidentialité §5 « Destinataires et sous-traitants », qui nomme le sous-traitant de génération. Le répéter à chaque geste ne protège personne de plus et surcharge l'écran.
+
+La clé de copie `studioPhotoAvis` qui portait cette phrase a été retirée du mobile : elle n'était affichée nulle part, et la laisser aurait fait qu'on la reprenne un jour en croyant qu'elle était voulue.
 
 ### 2.5 Les réglages communs
 

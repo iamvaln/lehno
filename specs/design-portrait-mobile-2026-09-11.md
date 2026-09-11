@@ -137,12 +137,12 @@ contre l'usage : **on refait un portrait pour en voir un autre**, et redemander
 un téléversement à chaque essai transformerait la recherche du bon rendu en
 corvée. Elle ne s'en va qu'au dépôt d'une autre, ou quand on la refuse.
 
-**Conséquence pour la copie** : `studioPhotoAvis` dit encore « Elle n'est pas
-conservée », dans les deux langues, et elle est traduite. Elle ne s'affiche nulle
-part — cet écran n'existe pas — mais elle est prête à partir, et elle dirait le
-contraire de ce que le serveur fait. **À réécrire avant que le dépôt soit
-construit.** Ce qui reste vrai et doit rester dit : l'image est transmise à un
-service qui la transforme.
+**Et aucun avertissement à l'écran** — corrigé le 11 septembre. La clé
+`studioPhotoAvis` portait « L'image est transmise à un service qui la transforme.
+Elle n'est pas conservée. » Elle a été retirée : la seconde phrase serait devenue
+fausse, et la première est déjà dans les CGU §7 et la Confidentialité §5, qu'on
+accepte à l'inscription. Un garde-fou par écran pour une règle posée une fois
+fatigue sans protéger.
 
 **LES AMBIANCES SONT LES MÊMES — corrigé le 11 septembre.** La voie photo ouvre
 la même famille que l'illustration : nature, animal, abstrait. Il y avait un

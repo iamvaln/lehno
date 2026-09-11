@@ -701,7 +701,6 @@ export const en = {
   stylLumiereAide: "The face emerges from an ink ground.",
   stylSerigraphieAide: "Four flat tones, no gradient.",
   stylSilhouetteAide: "The outline alone, no features.",
-  studioPhotoAvis: "The image is sent to a service that transforms it. It is not kept.",
   studioNote: "Your note",
   studioNoteDefaut: (qui: string) => "Made with care by " + qui,
   studioAmbiance: "The mood",
