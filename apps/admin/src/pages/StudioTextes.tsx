@@ -73,10 +73,36 @@ const estMessage = (n: NatureTexte): boolean => n === "message";
 const estIdees = (n: NatureTexte): boolean => n === "idees";
 const estBrief = (n: NatureTexte): boolean => n === "portrait_brief";
 
+type Bilingue = { fr: string; en: string };
+
+/* UNE ORIENTATION N'EST PAS UN IDENTIFIANT ET UNE CASE. Elle porte quatre
+   textes bilingues, et c'est `consigne` qui part au modèle — `essai.service`
+   la pose en `consigneOrientation`. Tant que l'écran ne montrait que le
+   libellé et l'interrupteur, ce texte-là restait celui du semis et ne se
+   changeait que par une livraison. */
 type Orientation = {
   id: string; actif: boolean;
-  libelle: { fr: string; en: string };
+  libelle: Bilingue;
+  consigne: Bilingue;
+  /* NULLABLES, ET NON PARTIELS : `bilingueFacultatifSchema` est un bilingue
+     entier ou un nul. Une description avec le français rempli et l'anglais
+     vide n'existe pas — le contrat la refuse, et l'écran doit le dire AVANT
+     d'envoyer plutôt qu'après l'aller-retour. */
+  description: Bilingue | null;
+  avertissement: Bilingue | null;
 };
+
+/** Les deux facultatifs, nommés une fois : eux seuls se retirent en entier. */
+const FACULTATIFS = ["description", "avertissement"] as const;
+type ChampTexte = "libelle" | "consigne" | (typeof FACULTATIFS)[number];
+
+const vide = (b: Bilingue | null | undefined): boolean =>
+  (b?.fr ?? "").trim() === "" && (b?.en ?? "").trim() === "";
+
+/** Un bilingue à moitié rempli — ce que le contrat refuse, des deux côtés. */
+const boiteux = (b: Bilingue | null | undefined): boolean =>
+  b !== null && b !== undefined && !vide(b)
+  && ((b.fr ?? "").trim() === "" || (b.en ?? "").trim() === "");
 
 export function StudioTextes({
   role, langue = "fr", nature, onNature, depart, enService, historique, profils,
@@ -102,6 +128,11 @@ export function StudioTextes({
   const [publication, setPublication] = useState(false);
   const [nouveauGardeFou, setNouveauGardeFou] = useState("");
   const [aRemettre, setARemettre] = useState<ConfigurationTexte | null>(null);
+  /* Une seule orientation dépliée à la fois. Douze orientations × quatre textes
+     × deux langues font quatre-vingt-seize champs : tout ouvrir ferait une page
+     qu'on ne lit plus, et l'on perdrait de vue la liste elle-même — qui est
+     l'ordre, donc le défaut. */
+  const [depliee, setDepliee] = useState<string | null>(null);
 
   const poser = (champ: string, valeur: unknown): void =>
     setReglages((avant) => ({ ...avant, [champ]: valeur }));
@@ -114,7 +145,32 @@ export function StudioTextes({
      et l'écran le dit AVANT d'envoyer. Un studio sans orientation est un écran
      client vide — le refus doit tomber ici, pas après un aller-retour. */
   const sansOrientation = estMessage(nature) && !orientations.some((o) => o.actif);
-  const complet = !sansOrientation;
+
+  /* UN BILINGUE À MOITIÉ REMPLI SE DIT ICI. Le contrat refuse « français rempli,
+     anglais vide » sur les quatre textes : les deux obligatoires exigent leurs
+     deux côtés, et les deux facultatifs sont un bilingue ENTIER ou un nul. Sans
+     ce contrôle, on remplit le français, on enregistre, et le refus tombe après
+     l'aller-retour sans dire quelle orientation le porte. */
+  const incompletes = estMessage(nature)
+    ? orientations.filter((o) =>
+      vide(o.libelle) || boiteux(o.libelle) || vide(o.consigne) || boiteux(o.consigne)
+      || FACULTATIFS.some((c) => boiteux(o[c])))
+    : [];
+
+  const complet = !sansOrientation && incompletes.length === 0;
+
+  /* Écrire un côté d'un texte. Les deux FACULTATIFS se retirent en entier dès
+     que leurs deux côtés sont vides : y laisser `{ fr: "", en: "" }` ferait
+     refuser l'enregistrement pour un champ que l'administrateur croyait avoir
+     effacé. */
+  const poserTexte = (id: string, champ: ChampTexte, langue: Langue, valeur: string): void => {
+    poser("orientations", orientations.map((o) => {
+      if (o.id !== id) return o;
+      const apres: Bilingue = { fr: "", en: "", ...(o[champ] ?? {}), [langue]: valeur };
+      const facultatif = (FACULTATIFS as readonly string[]).includes(champ);
+      return { ...o, [champ]: facultatif && vide(apres) ? null : apres };
+    }));
+  };
 
   const deplacer = (index: number, pas: -1 | 1): void => {
     const cible = index + pas;
@@ -324,6 +380,15 @@ export function StudioTextes({
             {sansOrientation ? (
               <p className="gabarit-note" data-ton="alerte">{a.orientations.aucuneActive}</p>
             ) : null}
+            {/* On NOMME les orientations fautives : « un texte est incomplet »
+                obligerait à déplier les douze pour trouver laquelle. */}
+            {incompletes.length === 0 ? null : (
+              <p className="gabarit-note" data-ton="alerte">
+                {remplir(a.orientations.texteIncomplet, {
+                  lesquelles: incompletes.map((o) => o.libelle[langue] || o.id).join(", "),
+                })}
+              </p>
+            )}
             <ol className="admin-liste-ordonnee">
               {orientations.map((o, i) => (
                 <li key={o.id} className="admin-rang-ordonne">
@@ -362,6 +427,59 @@ export function StudioTextes({
                   >
                     ↓
                   </Button>
+                  <Button
+                    variant="text"
+                    aria-expanded={depliee === o.id}
+                    aria-controls={`txt-orient-${o.id}`}
+                    onClick={() => setDepliee(depliee === o.id ? null : o.id)}
+                  >
+                    {depliee === o.id ? a.orientations.replier : a.orientations.textes}
+                  </Button>
+
+                  {depliee !== o.id ? null : (
+                    <div id={`txt-orient-${o.id}`} className="gabarit-form">
+                      {/* LA CONSIGNE EST CE QUE LE MODÈLE LIT — d'où le liséré,
+                          comme à l'Atelier du portrait : la changer fait une
+                          empreinte neuve, donc redemande un essai avant de
+                          publier. Les trois autres textes ne sont lus que par
+                          l'application, et se corrigent sans réessayer. */}
+                      <div className="admin-lu-par-le-modele">
+                        <TexteBilingue
+                          id={`consigne-${o.id}`}
+                          label={a.orientations.consigne}
+                          aide={a.orientations.consigneAide}
+                          libelles={a.langues}
+                          valeur={o.consigne}
+                          longue
+                          onChange={(l, v) => poserTexte(o.id, "consigne", l, v)}
+                        />
+                      </div>
+                      <TexteBilingue
+                        id={`libelle-${o.id}`}
+                        label={a.orientations.libelle}
+                        aide={a.orientations.libelleAide}
+                        libelles={a.langues}
+                        valeur={o.libelle}
+                        onChange={(l, v) => poserTexte(o.id, "libelle", l, v)}
+                      />
+                      <TexteBilingue
+                        id={`description-${o.id}`}
+                        label={a.orientations.description}
+                        aide={a.orientations.facultatifAide}
+                        libelles={a.langues}
+                        valeur={o.description}
+                        onChange={(l, v) => poserTexte(o.id, "description", l, v)}
+                      />
+                      <TexteBilingue
+                        id={`avertissement-${o.id}`}
+                        label={a.orientations.avertissement}
+                        aide={a.orientations.avertissementAide}
+                        libelles={a.langues}
+                        valeur={o.avertissement}
+                        onChange={(l, v) => poserTexte(o.id, "avertissement", l, v)}
+                      />
+                    </div>
+                  )}
                 </li>
               ))}
             </ol>
@@ -516,6 +634,53 @@ export function StudioTextes({
         />
       )}
     </>
+  );
+}
+
+/** Un texte dans ses deux langues, sur un seul rang.
+ *
+ *  ENSEMBLE ET NON EN DEUX RANGS, pour la raison qui vaut pour les bornes : le
+ *  contrat n'admet pas un bilingue à moitié rempli, et deux rangs séparés
+ *  feraient lire « français » et « anglais » comme deux réglages dont on peut
+ *  n'en servir qu'un. */
+function TexteBilingue({
+  id, label, aide, libelles, valeur, longue = false, onChange,
+}: {
+  id: string;
+  label: string;
+  aide: string;
+  libelles: { fr: string; en: string };
+  valeur: Bilingue | null | undefined;
+  longue?: boolean;
+  onChange: (langue: Langue, valeur: string) => void;
+}): ReactNode {
+  const texte = valeur ?? { fr: "", en: "" };
+  return (
+    <FormRow champId={`txt-${id}-fr`} label={label} aide={aide}>
+      <div className="admin-bilingue">
+        {(["fr", "en"] as const).map((l) => (
+          <div key={l} className="admin-bilingue-cote">
+            <label htmlFor={`txt-${id}-${l}`}>{libelles[l]}</label>
+            {longue ? (
+              <textarea
+                id={`txt-${id}-${l}`}
+                className="admin-champ admin-focus gabarit-saisie"
+                rows={4}
+                maxLength={2000}
+                value={texte[l]}
+                onChange={(e) => onChange(l, e.target.value)}
+              />
+            ) : (
+              <TextField
+                id={`txt-${id}-${l}`}
+                value={texte[l]}
+                onChange={(e) => onChange(l, e.target.value)}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </FormRow>
   );
 }
 

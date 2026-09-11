@@ -316,6 +316,36 @@
   padding-left: var(--space-16);
 }
 
+/* DEUX VALEURS QUI VONT ENSEMBLE, sur un rang : les deux côtés d'un bilingue,
+   les deux bornes d'un intervalle. Empilées, on les lirait comme deux réglages
+   dont on peut ne servir qu'un — et c'est précisément ce que le contrat refuse :
+   un bilingue est entier ou nul, et un minimum au-dessus d'un maximum est rejeté.
+   La forme dit la contrainte avant que l'aide ne l'écrive.
+
+   Elles retombent l'une sous l'autre en dessous de 40rem : un rang de deux zones
+   de texte n'y tient plus, et deux colonnes illisibles valent moins que deux
+   lignes. */
+.admin-bilingue,
+.admin-bornes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-16);
+  align-items: start;
+}
+
+.admin-bilingue-cote {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+@media (max-width: 40rem) {
+  .admin-bilingue,
+  .admin-bornes {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* La galerie des essais. On vient JUGER un résultat : les vignettes se posent
    en grille, larges assez pour qu'on voie ce qui a été produit — une table de
    modèles et de dates ne dit pas si le portrait était bon. */

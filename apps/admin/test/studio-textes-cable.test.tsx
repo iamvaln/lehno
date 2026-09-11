@@ -344,4 +344,86 @@ describe("l'atelier des textes", () => {
       expect(within(ligne).queryByRole("button", { name: t.table.actions })).not.toBeInTheDocument();
     }
   });
+  /* ─── Les textes d'une orientation ──────────────────────────────────────── */
+
+  /* CE SONT CES TEXTES QUI ORIENTENT LE MODÈLE. `consigne` part en
+     `consigneOrientation` ; tant que l'écran ne montrait que le libellé et
+     l'interrupteur, la changer demandait une livraison — ce que le studio
+     existe pour éviter. */
+  const deplier = async (
+    utilisateur: ReturnType<typeof userEvent.setup>, quelle = 0,
+  ): Promise<HTMLElement> => {
+    const boutons = await screen.findAllByRole("button", { name: a.orientations.textes });
+    await utilisateur.click(boutons[quelle]!);
+    return (await screen.findByLabelText(a.orientations.consigne))
+      .closest(".admin-rang") as HTMLElement;
+  };
+
+  it("déplie une orientation et montre sa consigne", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+
+    const rang = await deplier(utilisateur);
+
+    expect(within(rang).getByLabelText(a.langues.fr)).toHaveValue("consigne");
+    expect(within(rang).getByLabelText(a.langues.en)).toHaveValue("instruction");
+  });
+
+  it("envoie la consigne modifiée, dans sa langue", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    const rang = await deplier(utilisateur);
+    await utilisateur.type(within(rang).getByLabelText(a.langues.fr), " plus courte");
+    await utilisateur.click(screen.getByRole("button", { name: a.gestes.enregistrer }));
+
+    const reglages = corpsDe(ecriture(appels, "PATCH"))["reglages"] as Record<string, unknown>;
+    const orientations = reglages["orientations"] as { consigne: { fr: string; en: string } }[];
+    expect(orientations[0]!.consigne.fr).toBe("consigne plus courte");
+    // L'autre langue n'a pas bougé : on écrit un côté, pas le couple.
+    expect(orientations[0]!.consigne.en).toBe("instruction");
+  });
+
+  /* UN BILINGUE À MOITIÉ REMPLI EST REFUSÉ PAR LE CONTRAT. L'écran le dit avant
+     d'envoyer, et NOMME l'orientation fautive : sans le nom, il faudrait
+     déplier les douze pour trouver laquelle. */
+  it("ferme l'enregistrement quand un texte n'est rempli que d'un côté", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+
+    const rang = await deplier(utilisateur);
+    await utilisateur.clear(within(rang).getByLabelText(a.langues.en));
+
+    expect(screen.getByRole("button", { name: a.gestes.enregistrer })).toBeDisabled();
+    /* On vise la NOTE, pas le nom : celui-ci paraît aussi dans la liste, et
+       chercher le nom seul rendrait deux éléments. Ce qu'on éprouve est que la
+       note le porte — sans lui, il faudrait déplier les douze. */
+    const note = screen.getByText(new RegExp(a.orientations.texteIncomplet.split("{")[0]!));
+    expect(note).toHaveTextContent("Orientation notre_relation");
+  });
+
+  /* UN FACULTATIF VIDÉ DES DEUX CÔTÉS PART NUL, et non `{ fr: "", en: "" }` :
+     le contrat exige au moins un caractère quand la clé est là, et laisser la
+     coquille ferait refuser l'enregistrement pour un champ que l'administrateur
+     croyait avoir effacé. */
+  it("retire un facultatif vidé des deux côtés", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    await deplier(utilisateur);
+    const rang = screen.getByLabelText(a.orientations.description).closest(".admin-rang") as HTMLElement;
+    await utilisateur.clear(within(rang).getByLabelText(a.langues.fr));
+    await utilisateur.clear(within(rang).getByLabelText(a.langues.en));
+
+    expect(screen.getByRole("button", { name: a.gestes.enregistrer })).toBeEnabled();
+    await utilisateur.click(screen.getByRole("button", { name: a.gestes.enregistrer }));
+
+    const reglages = corpsDe(ecriture(appels, "PATCH"))["reglages"] as Record<string, unknown>;
+    const orientations = reglages["orientations"] as { description: unknown }[];
+    expect(orientations[0]!.description).toBeNull();
+  });
 });
