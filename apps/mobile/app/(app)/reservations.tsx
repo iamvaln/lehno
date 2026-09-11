@@ -100,13 +100,18 @@ export default function Reservations() {
 
   if (!reservations.length) {
     return (
-      <View style={[styles.page, styles.aumilieu, { paddingTop: insets.top + nativeSpace[8] }]}>
+      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
         {entete}
-        <EmptyState
-          illustration="souhait-reserve"
-          title={t.reservVideTitre}
-          text={t.reservVideTexte}
-        />
+        {/* L'EN-TÊTE RESTE EN HAUT ; seul le vide se centre. Centrés
+            ensemble, les deux descendaient au milieu de l'écran et la
+            flèche flottait loin du bord. */}
+        <View style={styles.aumilieu}>
+          <EmptyState
+            illustration="souhait-reserve"
+            title={t.reservVideTitre}
+            text={t.reservVideTexte}
+          />
+        </View>
       </View>
     );
   }
@@ -200,7 +205,9 @@ export default function Reservations() {
 const styles = StyleSheet.create({
   ecran: { flex: 1 },
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
-  aumilieu: { justifyContent: "center" },
+  // Enfant de la page depuis que l'en-tête le précède : sans `flex`, il
+  // n'occupe que sa hauteur propre et n'a plus rien à centrer.
+  aumilieu: { flex: 1, justifyContent: "center" },
   intro: {
     fontFamily: nativeFont.bodyRegular, fontSize: 14, marginTop: nativeSpace[8],
     marginBottom: nativeSpace[8],

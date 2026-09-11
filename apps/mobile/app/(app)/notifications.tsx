@@ -141,13 +141,18 @@ export default function Notifications() {
 
   if (!lisibles.length) {
     return (
-      <View style={[styles.page, styles.aumilieu, { paddingTop: insets.top + nativeSpace[8] }]}>
+      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
         {retour}
-        <EmptyState
-          illustration="rien-approche"
-          title={t.notifsVideTitre}
-          text={t.notifsVideTexte}
-        />
+        {/* L'EN-TÊTE RESTE EN HAUT ; seul le vide se centre. Centrés
+            ensemble, les deux descendaient au milieu de l'écran et la
+            flèche flottait loin du bord. */}
+        <View style={styles.aumilieu}>
+          <EmptyState
+            illustration="rien-approche"
+            title={t.notifsVideTitre}
+            text={t.notifsVideTexte}
+          />
+        </View>
       </View>
     );
   }
@@ -244,7 +249,9 @@ export default function Notifications() {
 
 const styles = StyleSheet.create({
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
-  aumilieu: { justifyContent: "center" },
+  // Enfant de la page depuis que l'en-tête le précède : sans `flex`, il
+  // n'occupe que sa hauteur propre et n'a plus rien à centrer.
+  aumilieu: { flex: 1, justifyContent: "center" },
   retour: {
     width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
     alignItems: "center", justifyContent: "center",
