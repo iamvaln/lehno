@@ -327,6 +327,21 @@ export const essaiStudioSchema = z.object({
   ambianceId: z.string().max(60).nullable(),
 }).strict();
 
+/* CE QUE RENDRE UN ESSAI : la ligne d'essai, et le brouillon qu'il vient de
+ * faire naître.
+ *
+ * Les DEUX, parce que l'essai crée deux ressources — « le brouillon naît AVANT
+ * l'appel » — et que l'atelier a besoin des deux : l'essai pour montrer ce qui
+ * est sorti, la configuration pour savoir sur quoi publier ensuite. Rendre le
+ * seul essai obligerait l'écran à relire la configuration pour retrouver un
+ * identifiant que le serveur tenait déjà. */
+export const essaiLanceSchema = z.object({
+  configId: z.string().uuid(),
+  essai: essaiStudioSchema,
+}).strict();
+
+export type EssaiLance = z.infer<typeof essaiLanceSchema>;
+
 export const essaisStudioSchema = z.object({
   items: z.array(essaiStudioSchema),
 }).strict();
