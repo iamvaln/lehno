@@ -932,7 +932,7 @@ export const en = {
   topoDepuis: (note: string, quand: string) => note + ", " + quand,
   listeArchivee: "Archived",
   listeArchiveeTexte: "The occasion has passed. Reservations are closed; the list stays for next year.",
-  listeMesDatesAucune: "No dates of your own yet.",
+  listeMesDatesAucune: "All your dates already have a list.",
   /* The shared list preview. "You don't send out a page you haven't seen" :
      these three lines serve the screen that shows it before sending. */
   listeRevoquer: "Revoke the link",

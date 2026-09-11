@@ -1050,7 +1050,12 @@ export const fr = {
   topoDepuis: (note: string, quand: string) => note + ", " + quand,
   listeArchivee: "Archivée",
   listeArchiveeTexte: "L'occasion est passée. Les réservations sont closes ; la liste reste là pour l'an prochain.",
-  listeMesDatesAucune: "Aucune date à vous pour l'instant.",
+  /* ELLE NE SERT PLUS QU'UN ÉTAT, et elle doit le dire. Elle couvrait autrefois
+     deux cas confondus — n'avoir aucune date, et les avoir toutes employées —
+     où « aucune date à vous » était vrai pour le premier seulement. La rangée
+     des occasions est maintenant vide pour deux raisons distinctes, et cette
+     phrase-ci ne répond que de la seconde. */
+  listeMesDatesAucune: "Toutes vos dates portent déjà une liste.",
   /* L'aperçu de la liste partagée. « On ne diffuse pas une page qu'on n'a pas
      vue » : ces trois lignes servent l'écran qui la montre avant l'envoi. */
   listeRevoquer: "Révoquer le lien",
