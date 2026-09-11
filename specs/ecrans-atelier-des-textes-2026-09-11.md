@@ -44,7 +44,11 @@ adresses pour un seul outil.
 ### L'entrée au menu
 
 Sous **Studio du portrait**, à côté de *L'Atelier*, *Les essais*, *Réglages en
-service*, *Gabarits de production* et *Profils de simulation*.
+service* et *Profils de simulation*.
+
+> *Corrigé le 11 septembre : ce paragraphe citait aussi « Gabarits de
+> production ». L'entrée est partie — elle lisait `prompt_template`, que rien
+> n'a jamais branché à la génération.*
 
 > **À trancher par le design.** « Studio du portrait » devient un nom faux le
 > jour où il abrite l'atelier des textes. Deux issues : renommer la famille
@@ -213,13 +217,26 @@ lettre.
 
 ## 8. Ce que ce document ne couvre toujours pas
 
-**Les essais des textes ne se relisent pas.** `POST :nature/trials` les
-enregistre, et c'est tout ce qui existe : aucune route ne les liste, aucune ne
-les juge. Le portrait a les deux — `GET trials` et `PATCH trials/:id`, qui pose
-le verdict et la référence. L'atelier des textes montre donc le dernier essai
-de la séance et le perd ensuite : rien ne permet de dire « celui-là était bon »
-ni de le retrouver demain.
+> **Ce paragraphe disait le contraire, et il avait tort.** J'y affirmais que les
+> essais des textes ne se listent ni ne se jugent. Vérification faite : ils se
+> listent et se jugent depuis le premier jour.
 
-C'est une **lacune de l'API avant d'être une lacune d'écran** — à ouvrir côté
-serveur d'abord, puis à câbler dans un écran *Les essais* jumeau de celui du
-portrait. Le chiffrer ici serait prématuré ; le signaler ne l'est pas.
+**Les essais des textes se relisent — dans l'écran du portrait.** `GET
+/admin/portrait-studio/trials` n'a **aucun filtre par nature** : il rend les
+cent derniers essais, les quatre natures mêlées. `PATCH trials/:id` juge de
+même. Et l'écran *Les essais* a été bâti en le sachant — son commentaire nomme
+« ceux du message », et sa vignette a une branche pour une sortie textuelle.
+
+Ce qui manquait vraiment était plus étroit : **l'essai ne portait pas sa
+nature**. Deux essais du même modèle, l'un pour le portrait et l'autre pour les
+idées, se ressemblaient — et la forme de la sortie ne les sépare pas, les trois
+natures de texte rendant toutes un message. Le seul filtre offert, l'ambiance,
+rangeait les trois dans « Sans ambiance », avec les vieux essais du portrait.
+
+`nature` entre donc au contrat de l'essai, et la galerie s'y filtre. **Aucun
+écran *Les essais* propre aux textes n'est à faire** : ce serait un jumeau de
+plus à tenir d'accord, pour une galerie qui rend déjà tout.
+
+**Ce que le mélange laisse ouvert.** Le nom de l'écran — *Les essais*, sous
+« Studio du portrait » — continue d'annoncer moins qu'il ne montre. C'est la
+même question que le §2, et elle se tranche au même endroit : le design.
