@@ -83,12 +83,19 @@ const MENTION = "lehno.io";
 
 const pt = (part: number): number => Math.round((part * COTE) / 100);
 
-/* Le texte d'un SVG s'échappe, sinom une apostrophe ou une esperluette dans une
-   phrase produite par un modèle casserait le document entier — et l'image avec.
-   C'est du contenu venu d'un tiers : il ne se colle jamais tel quel. */
-const echapper = (t: string): string =>
-  t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+/* AUCUN ÉCHAPPEMENT ICI, et ce n'est plus un oubli.
+ *
+ * Il en fallait un tant que la phrase était posée dans un `<text>` : une
+ * apostrophe ou une esperluette venue d'un modèle cassait le document, et
+ * l'image avec. Depuis que le texte est VECTORISÉ — `tracer()` rend un chemin,
+ * et la phrase finit dans l'attribut `d` sous forme de coordonnées — plus aucun
+ * caractère du tiers n'atteint le balisage.
+ *
+ * L'échappement est donc mort avec le `<text>`, et le lint le disait. On le
+ * retire plutôt que de le taire : une fonction de sécurité qu'on garde sans
+ * l'appeler finit par rassurer quelqu'un qui croit qu'elle protège encore.
+ *
+ * Si un jour un `<text>` revient dans ce SVG, il faudra le rétablir. */
 
 /* La phrase se coupe à la largeur disponible, en mots — et la largeur se MESURE
    sur la police réelle. Compter les caractères, comme le faisait la première
