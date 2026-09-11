@@ -25,7 +25,7 @@ cette date, sur `develop`, dans le code — pas de mémoire.
 |---|---|---|
 | **1** — deux générations sur trois refusées | **clos** | `GENERATION_KINDS` porte les trois, et le contrôleur les traite |
 | **3** — `hasWishlist` | **clos** | servi (`me-home.ts`) |
-| **9** — l'établi du message | **clos** | `admin/text-studio/:nature/…` (#176) : lecture, historique, enregistrement, essais, publication, retour arrière — pour les trois natures de texte, `message`, `idees`, `portrait_brief` |
+| **9** — l'établi du message | **clos** | `admin/text-studio/:nature/…` (#176) : lecture, historique, enregistrement, essais, publication, retour arrière, pour les trois natures. **Les écrans ont suivi** — l'atelier (#180), puis l'historique et le retour arrière (#181) : une route que rien n'atteint ne ferme pas un § |
 | **10** — la fiche de soi | **clos** | `GET`/`PUT /me/self`, puis #183 : la fiche naît à l'inscription **et** une migration la donne aux comptes ouverts avant. Ce que l'implémentation mobile a appris depuis est passé au **§13** |
 | **11** — la fiche d'un proche | **clos** | `person.service.ts:219` passe par `enrichir` : la fiche rend enfin son décompte de notes et sa prochaine échéance, comme la liste |
 | **12** — le nom sur la contribution | **clos** | `personDisplayName` est au contrat (`me-contributions.ts:104`) — et le sas n'a plus à charger le carnet pour intituler une carte |
@@ -33,6 +33,18 @@ cette date, sur `develop`, dans le code — pas de mémoire.
 
 Les paragraphes ci-dessous gardent leur rédaction d'origine : ils disent ce
 qu'on a vu, quand on l'a vu. Ce tableau dit ce qui en reste.
+
+> **Une ligne d'état se revérifie au moment de FUSIONNER, pas au moment de
+> l'écrire.** Ce tableau a donné les §11 et §12 pour ouverts alors qu'ils
+> étaient clos : écrit à 12h28, le correctif (#179) fusionné à 14h06, et la PR
+> qui le portait à 20h34. Juste en l'écrivant, faux en arrivant — huit heures de
+> branche ouverte y suffisent, et plusieurs séances avancent en parallèle.
+>
+> Corollaire, appliqué le 12 : **l'état ne se dit qu'ICI.** Les §11 et §12
+> portaient encore, deux lignes sous le « CLOS » de leur propre titre, un
+> « Toujours ouvert au 11 septembre » que personne n'avait retiré. Un état écrit
+> à deux endroits finit toujours par se contredire, et l'on ne sait plus lequel
+> des deux a été relu.
 
 ## 1. Deux générations sur trois sont refusées — bloquant
 
@@ -488,7 +500,6 @@ création.
 > borné à un identifiant. La fiche d'un proche porte enfin le sous-titre que
 > la liste affichait un écran plus tôt.
 
-> **Toujours ouvert au 11 septembre**, vérifié dans le code.
 
 Vu à l'appareil le 10 septembre 2026 : la LISTE des proches affiche « Awa —
 Rien de noté encore · 10 sept. », et la FICHE du même proche, un écran plus
@@ -535,7 +546,6 @@ fiche — et une seconde vérité à tenir d'accord avec la première.
 > **Clos.** `personDisplayName` est au contrat, nullable, et le sas mobile a
 > perdu du même coup la lecture du carnet entier qu'il faisait pour un mot.
 
-> **Toujours ouvert au 11 septembre**, vérifié dans le code.
 
 Petit, et de la même famille que le §11 : la contribution rendue au propriétaire
 porte `personId`, jamais `personDisplayName`. L'écran du sas (§3.8) doit donc

@@ -91,6 +91,33 @@ sélection. L'administration règle le défaut **en réordonnant**.
 l'écran doit le dire avant d'envoyer : un studio sans orientation est un écran
 client vide.
 
+#### Ce que ce tableau passait sous silence — relevé le 12 septembre
+
+Une orientation n'est pas qu'un identifiant et une case. `orientationReglageSchema`
+lui donne quatre champs de texte bilingues : `libelle`, `description`,
+`avertissement`, et surtout **`consigne`** — l'instruction propre à cette
+orientation, celle que `essai.service.ts` pose en `consigneOrientation` et qui
+part au modèle.
+
+**Aucun n'est éditable.** L'écran affiche le libellé et une case ; le texte qui
+oriente réellement la génération reste celui du semis, et le changer demande une
+livraison. C'est très exactement ce que le studio existe pour éviter, et la
+ligne du tableau ci-dessus — « liste réordonnable, chacune activable » — le
+cachait en le décrivant fidèlement.
+
+**Les deux familles de l'Atelier s'appliquent ici aussi, et l'empreinte les
+départage déjà.** `partieLueParLeModeleMessage` retient des orientations
+`{ id, consigne }`, et rien d'autre :
+
+| Champ | Dans l'empreinte | Ce que l'écran doit en dire |
+|---|---|---|
+| `consigne` | **oui** | la modifier **redemande un essai** avant publication — l'écran sait déjà le dire |
+| `libelle`, `description`, `avertissement` | non | ne changent que ce que le client lit ; ils se corrigent sans réessayer |
+
+La `consigne` d'abord, donc, parce qu'elle seule change ce qui sort. Et le tri
+par identifiant dans l'empreinte dit l'autre moitié : **réordonner ne redemande
+pas d'essai**, puisque la position est l'ordre de l'écran, pas la matière.
+
 ### Les idées de cadeau
 
 | Champ | Forme | Règle |
