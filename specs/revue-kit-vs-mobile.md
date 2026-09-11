@@ -6,6 +6,33 @@ Comparaison des **33 écrans** du kit mobile (handoff du 27 août, importé dans
 `StudioScreen` et `SurfacePubliqueScreen` sont exclus : ils appartiennent au
 back-office et aux surfaces web publiques, pas à l'application.
 
+## La deuxième passe — à l'appareil, 10 et 11 septembre 2026
+
+La première revue s'est faite **par les clés de copie** (voir juste dessous).
+La seconde s'est faite **en pilotant l'application** sur un iPhone SE, contre
+une vraie API et une vraie base : c'est le petit écran qui dit la vérité sur ce
+qui tient et ce qui déborde, et c'est le parcours entier qui dit si un geste
+mène quelque part.
+
+Elle a touché les familles suivantes, chacune de bout en bout :
+
+| Famille | Jusqu'où |
+|---|---|
+| Génération | coût annoncé, crédit débité, brouillon relu, ajusté, partagé, refait |
+| Wishlists | liste sans occasion, souhait, prix, lien, modification |
+| Mon Mur | publication, aperçu, adresse publique |
+| Collecte | lien nominatif, contribution déposée, sas, « Retenir »/« Écarter », la note atterrit sur la fiche |
+| Réservations | second compte, liste partagée, réservation par le lien public, « Libérer » |
+| Notes | saisie, classement automatique, garde-fou |
+| Parrainage | code, partage |
+| Notifications | centre, pastille |
+
+Les sections **F à J** ci-dessous portent ce qu'elle a trouvé. Ce qui relevait
+du serveur est au brief backend (§9 à §12) ; ce qui relève de la copie reste
+ouvert, aux §I et §J.
+
+---
+
 ## Comment cette revue a été faite
 
 Par les **clés de copie**. Une clé que la planche emploie et que l'application
