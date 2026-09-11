@@ -34,6 +34,36 @@ export function demandeOuRanger(contribution: Submission): boolean {
   return contribution.linkType === "public";
 }
 
+/* DE QUI PARLE CETTE CONTRIBUTION.
+ *
+ * La carte s'intitulait « Pour Sans nom » sur TOUTE contribution nominative —
+ * c'est-à-dire précisément celles dont on connaît la cible. Elle lisait
+ * `submitterName`, que le contrat n'accepte que sur un lien PUBLIC : « sur un
+ * nominatif, le propriétaire sait déjà qui il a invité, et les redemander
+ * ferait douter le répondant d'être au bon endroit ». Le champ est donc TOUJOURS
+ * nul là où l'écran s'en servait. Vu à l'appareil.
+ *
+ * Un lien nominatif porte `personId` : le nom se lit dans le carnet, que
+ * l'écran charge déjà pour offrir « ranger sur une fiche existante ». Le
+ * contrat ne sert pas le nom directement — il pourrait, la page publique le
+ * rend déjà —, et c'est relevé au brief backend.
+ *
+ * Un lien PUBLIC, lui, ne vise personne tant qu'on n'a pas tranché : c'est le
+ * répondant qui se nomme, et « Sans nom » y est la vérité quand il s'en est
+ * abstenu.
+ */
+export function nomDeLaContribution(
+  contribution: Submission,
+  carnet: ReadonlyMap<string, string>,
+  sansNom: string,
+): string {
+  if (contribution.personId !== null) {
+    const connu = carnet.get(contribution.personId);
+    if (connu !== undefined && connu.trim() !== "") return connu;
+  }
+  return contribution.submitterName ?? sansNom;
+}
+
 /* TOUT SOUHAIT DOIT ÊTRE TRANCHÉ. « `pending` est l'état d'arrivée, pas une
    décision : le laisser passer permettrait de clore une contribution en
    laissant un souhait non tranché » — il resterait alors en suspens sans que

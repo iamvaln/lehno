@@ -364,3 +364,25 @@ sert la liste. Un appel à un élément suffit.
 Le mobile pourrait interroger `/me/occurrences?personId=` pour compenser, mais
 ce serait une requête de plus pour une donnée que le contrat annonce déjà sur la
 fiche — et une seconde vérité à tenir d'accord avec la première.
+
+---
+
+## 12. `submissionSchema` porte `personId` mais pas le nom de la fiche
+
+Petit, et de la même famille que le §11 : la contribution rendue au propriétaire
+porte `personId`, jamais `personDisplayName`. L'écran du sas (§3.8) doit donc
+charger le carnet entier pour intituler une carte — ce qu'il fait désormais,
+mais c'est une requête pour un mot.
+
+La page PUBLIQUE, elle, rend déjà `personDisplayName` sur le même objet
+(`GET /public/collect/{token}`). La donnée est sous la main du serveur des deux
+côtés ; seul le côté propriétaire ne la sert pas.
+
+**Ce qu'il faut** : `personDisplayName` sur `submissionSchema`, nul quand le
+lien est public et n'a pas encore produit sa fiche.
+
+Sans lui, le mobile s'en sort — mais la carte s'intitulait « Pour Sans nom » sur
+TOUTE contribution nominative, faute de quoi la nommer : `submitterName` n'est
+accepté que sur un lien public, « sur un nominatif, le propriétaire sait déjà
+qui il a invité ». Le seul champ que l'écran lisait était donc toujours nul là
+où il servait.
