@@ -282,13 +282,28 @@ export default function Listes() {
               })}
             </View>
           ) : (
-            /* RIEN À CHOISIR SE DIT, plutôt que de laisser une section vide
-               sous son intitulé : toutes mes dates portent déjà leur liste, ou
-               je n'en ai aucune — et dans les deux cas le geste suivant est
-               dans l'onglet des dates, pas ici. */
-            <Text style={[styles.mention, { color: couleurs.textMention, marginTop: nativeSpace[8] }]}>
-              {t.listeMesDatesAucune}
-            </Text>
+            /* AUCUNE DATE À SOI N'EST PAS « RIEN À CHOISIR » : sans date, il
+               n'y a rien à ouvrir nulle part, et le dire sans geste laisse
+               deviner où aller. Le bouton renvoie vers l'écran qui pose une
+               date — le seul — et le retour ramène ici. */
+            <View style={{ marginTop: nativeSpace[8] }}>
+              <Text style={[styles.mention, { color: couleurs.textMention }]}>
+                {t.listeVotreDateAbsente}
+              </Text>
+              {/* ON NE REMET PAS UN FORMULAIRE ICI. Un second endroit où poser
+                  sa date divergerait du premier au premier réglage ; on renvoie
+                  vers celui qui existe, et le retour ramène ici. */}
+              <View style={{ marginTop: nativeSpace[12] }}>
+                <Button
+                  variant="outline"
+                  full
+                  icon="plus"
+                  onPress={() => routeur.push("/evenement")}
+                >
+                  {t.ficheAjouterDate}
+                </Button>
+              </View>
+            </View>
           )}
 
           {echec ? (
