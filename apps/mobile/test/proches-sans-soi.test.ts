@@ -30,10 +30,6 @@ const ECRANS: Readonly<Record<string, "sansSoi" | "soiDabord">> = {
  * est le produit de cette table, pas la ligne qui la déclenche.
  */
 const DISPENSES: Readonly<Record<string, string>> = {
-  /* Bâtit une table id → displayName pour nommer l'auteur d'une contribution.
-     En écarter soi serait un défaut, pas une garde : une contribution qu'on
-     s'adresse à soi-même perdrait son nom dans cette table-là. */
-  "(app)/valider": "nomme l'auteur d'une contribution, y compris quand c'est soi",
   /* Cherche délibérément `isSelf` pour retrouver SA PROPRE fiche et lister
      ses propres échéances — le seul usage du carnet ici. `sansSoi` la
      retirerait avant qu'on ait pu la trouver. */
@@ -121,5 +117,20 @@ describe("aucun lecteur de /me/persons n'échappe à la table", () => {
       (ecran) => LIT_LA_LISTE.test(source(ecran)) && !connus.has(ecran),
     );
     expect(oublies).toEqual([]);
+  });
+
+  /* ET L'INVERSE, qui a failli nous échapper : une entrée qui désigne un écran
+     ne lisant PLUS la liste. Elle ne fait rien tomber — le balayage ne va que
+     des fichiers vers les tables — mais elle MENT, et une table à la main ne
+     vaut que ce que valent ses raisons.
+
+     Ce n'est pas une hypothèse : `(app)/valider` a porté une dispense disant
+     qu'il bâtissait une table id → nom, des heures après que
+     `personDisplayName` soit arrivé au contrat et lui ait retiré ce besoin. La
+     garde était verte et sa table était fausse. */
+  it("aucune entrée ne survit à l'écran qu'elle décrit", () => {
+    const perimees = [...Object.keys(ECRANS), ...Object.keys(DISPENSES)]
+      .filter((ecran) => !LIT_LA_LISTE.test(source(ecran)));
+    expect(perimees).toEqual([]);
   });
 });
