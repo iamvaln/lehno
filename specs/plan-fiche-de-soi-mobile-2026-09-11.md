@@ -530,17 +530,37 @@ Le chemin relatif diffère : `../../lib/soi.js` sous `(app)/proches/`,
 
 - [ ] **Étape 2 — garder le compte juste**
 
-`proches/index.tsx` affiche un total. Il vient de `total`, que **le serveur
-compte avant la pagination et sans exclure soi**. Le corriger :
+`proches/index.tsx:57` fait `setTotal(page.total)`, et `:89` calcule
+`resteACharger(total, proches.length)`. **Filtrer soi casse cette arithmétique** :
+le serveur compte la fiche dans son `total`, la liste ne la porte plus, donc
+« charger plus » resterait offert sur une liste complète.
+
+Retrancher « quand la page contenait la fiche » ne marche pas : la fiche tombe
+sur une page quelconque de l'ordre alphabétique, et `total` serait juste sur
+cette page-là seulement. On demande donc directement :
+
+Dans `charge`, **avant** la première page :
 
 ```ts
-  /* LE TOTAL SUIT CE QU'ON MONTRE. Le serveur compte la fiche de soi dans son
-     `total` ; l'afficher tel quel annoncerait un proche de plus que la liste
-     n'en porte, et on chercherait longtemps lequel. */
-  const combien = sansSoi(page.persons).length;
+  /* LA FICHE EXISTE-T-ELLE ? `GET /me/self` rend 404 tant que personne ne l'a
+     posée. On le demande une fois, au chargement, plutôt que de deviner depuis
+     la page courante : la fiche tombe où l'ordre alphabétique la met, et un
+     total juste une page sur trois serait pire que pas de total. */
+  let aUneFiche = false;
+  try {
+    await appel<unknown>("/me/self");
+    aUneFiche = true;
+  } catch { /* Pas de fiche : le total du serveur est déjà juste. */ }
 ```
 
-Si l'écran lisait `page.total`, employer `combien` à la place.
+Puis, à la ligne 57 :
+
+```ts
+      setTotal(page.total - (aUneFiche ? 1 : 0));
+```
+
+`aUneFiche` doit vivre dans un `useState`, pas dans `charge` seul : la
+pagination rappelle `charge` et ne doit pas redemander la fiche à chaque page.
 
 - [ ] **Étape 3 — vérifier**
 
@@ -595,11 +615,19 @@ Dans `charge` (`evenement.tsx:87`) :
 
 - [ ] **Étape 2 — la nommer « Moi »**
 
-Là où l'écran rend le nom d'une personne du carnet, employer :
+Deux endroits, et deux seulement — `evenement.tsx:246` et `:248` :
 
 ```tsx
-{proche.isSelf ? t.evtPourMoi : proche.displayName}
+                <Avatar name={proche.isSelf ? t.evtPourMoi : proche.displayName} size={24} />
 ```
+
+```tsx
+                  {proche.isSelf ? t.evtPourMoi : proche.displayName}
+```
+
+**Pas la ligne 170**, qui filtre la recherche : on y garde le vrai nom. Taper
+« Moi » pour se trouver n'aurait pas de sens, et masquerait son propre nom à qui
+le tape.
 
 - [ ] **Étape 3 — vérifier**
 
