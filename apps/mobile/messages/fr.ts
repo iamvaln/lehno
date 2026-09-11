@@ -1015,11 +1015,16 @@ export const fr = {
   /* Elle ne crée pas d'anniversaire : naissance et échéance sont deux gestes,
      ici comme sur la fiche d'un proche. La phrase le dit plutôt que de laisser
      quelqu'un attendre un rappel qui ne viendra pas. */
-  profilVotreNaissanceAide: "Pour poser votre anniversaire, ajoutez-la ensuite dans Dates.",
+  profilVotreNaissanceAide: "Votre anniversaire ne s'en déduit pas : ajoutez-le ensuite dans Dates.",
   evtPourMoi: "Moi",
   listeVotreDateAbsente: "Pour ouvrir une liste sur une de vos dates, il faut d'abord une date à vous.",
   identNaissance: "Date de naissance",
-  identNaissanceAide: "L'anniversaire s'en déduit — inutile de le poser deux fois.",
+  /* VÉRIFIÉ AU SERVEUR : l'anniversaire ne s'en déduit pas. `PersonService.create`
+     ne crée aucune occurrence, et `recalerAnniversaire` porte `if (!anniversaire)
+     return;` — il recale un anniversaire existant, il n'en crée pas. La phrase
+     d'avant promettait un rappel qui ne serait jamais venu, sur le même
+     mécanisme que l'aide d'à côté, dans l'autre sens. */
+  identNaissanceAide: "Son anniversaire ne s'en déduit pas : ajoutez-le ensuite dans Dates.",
   identAnnee: "Année",
   identAnneeInconnue: "Je ne connais pas l'année",
   ficheTopo: "Son topo",
