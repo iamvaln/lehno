@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "../src/App.js";
 import { magasinLocal } from "../src/api/session.js";
@@ -45,6 +45,16 @@ const config = (reglages: unknown, over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+/* Une version rangée, publiée jadis : c'est la seule sur laquelle on revient.
+   L'écran ferme le geste sur une version en service et sur un brouillon jamais
+   publié — le serveur refuse les deux. */
+const HISTORIQUE = config(REGLAGES_MESSAGE, {
+  id: "55555555-5555-4555-8555-555555555555",
+  etat: "superseded", version: 3, empreinte: "def",
+  note: "Consigne resserrée après un signalement.",
+  publieeLe: "2026-09-02T11:00:00.000Z", parQui: "sam@lehno.app",
+});
+
 const PROFILS = {
   items: [{
     id: "22222222-2222-4222-8222-222222222222",
@@ -84,6 +94,13 @@ const reponse = (statut: number, corps?: unknown): Response =>
 
 function serveur(routes: Record<string, (url: string, init?: RequestInit) => Response> = {}) {
   const table: Record<string, (url: string, init?: RequestInit) => Response> = {
+    /* L'HISTORIQUE SE DÉCLARE AVANT LA CONFIGURATION. La table se parcourt dans
+       l'ordre et compare par `includes` : « …/message/config » est un préfixe de
+       « …/message/config/history », et le déclarer après lui ferait rendre la
+       configuration à la place de l'historique — huit épreuves rouges qui ne
+       parleraient pas de l'écran. */
+    "/admin/text-studio/message/config/history": () => reponse(200, { items: [HISTORIQUE] }),
+    "/admin/text-studio/idees/config/history": () => reponse(200, { items: [] }),
     "/admin/text-studio/message/config": () => reponse(200, {
       enService: null, brouillon: config(REGLAGES_MESSAGE),
     }),
@@ -242,5 +259,88 @@ describe("l'atelier des textes", () => {
     render(<App />);
 
     expect(within(screen.getByRole("navigation")).queryByText(t.sections.studio)).not.toBeInTheDocument();
+  });
+  /* ─── L'historique, et le retour arrière ───────────────────────────────── */
+
+  it("liste les publications de la nature affichée", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    expect(await screen.findByText("Consigne resserrée après un signalement.")).toBeInTheDocument();
+    expect(appels.mock.calls.some(([u]) => String(u).includes("/text-studio/message/config/history"))).toBe(true);
+  });
+
+  /* L'HISTORIQUE SUIT LA NATURE. Le laisser hors de la clé ferait lire les
+     publications du message sous l'onglet des idées, et rien ne le dirait. */
+  it("relit l'historique en changeant de nature", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+    await screen.findByText("Consigne resserrée après un signalement.");
+
+    await utilisateur.click(screen.getByRole("tab", { name: a.natures.idees }));
+
+    expect(await screen.findByText(a.historique.aucune.titre)).toBeInTheDocument();
+    expect(screen.queryByText("Consigne resserrée après un signalement.")).not.toBeInTheDocument();
+    expect(appels.mock.calls.some(([u]) => String(u).includes("/text-studio/idees/config/history"))).toBe(true);
+  });
+
+  it("revient sur une version rangée, avec son motif", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText("Consigne resserrée après un signalement."))
+      .closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: a.historique.revenir }));
+    await utilisateur.selectOptions(
+      await screen.findByLabelText(t.confirmation.motif),
+      a.historique.dialogue.motifs[0] as string,
+    );
+    await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
+
+    await waitFor(() => {
+      const envoi = appels.mock.calls.find(([u, i]) =>
+        (i as RequestInit)?.method === "POST" && String(u).includes("/config/rollback"));
+      expect(envoi).toBeDefined();
+      /* `reason`, et non `note` : le retour arrière ne dit pas ce que la version
+         apporte — elle l'a dit à sa publication —, il dit pourquoi on y revient.
+         Et LA NATURE N'Y EST PAS : la configuration visée la porte. */
+      expect(corpsDe(envoi)).toEqual({
+        configId: "55555555-5555-4555-8555-555555555555",
+        reason: a.historique.dialogue.motifs[0],
+      });
+    });
+  });
+
+  /* DEUX LIGNES N'OFFRENT PAS LE GESTE, et le serveur refuserait les deux :
+     celle qui est DÉJÀ en service n'a rien à défaire, et un brouillon jamais
+     publié n'a été validé par personne — y « revenir » le mettrait en service
+     par la porte que la publication ferme. */
+  it("ferme le retour sur ce qui sert déjà et sur un brouillon", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({
+      "/admin/text-studio/message/config/history": () => reponse(200, {
+        items: [
+          config(REGLAGES_MESSAGE, {
+            id: "66666666-6666-4666-8666-666666666666",
+            etat: "published", version: 4, note: "Celle qui tourne.",
+            publieeLe: "2026-09-05T11:00:00.000Z", parQui: "sam@lehno.app",
+          }),
+          config(REGLAGES_MESSAGE, {
+            id: "77777777-7777-4777-8777-777777777777",
+            etat: "draft", version: null, note: "Jamais publiée.",
+          }),
+        ],
+      }),
+    });
+    await ouvrir(utilisateur);
+
+    for (const texte of ["Celle qui tourne.", "Jamais publiée."]) {
+      const ligne = (await screen.findByText(texte)).closest("tr") as HTMLElement;
+      expect(within(ligne).queryByRole("button", { name: t.table.actions })).not.toBeInTheDocument();
+    }
   });
 });

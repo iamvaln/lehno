@@ -59,7 +59,7 @@ import {
   type Intervention,
   etatPortraitSchema, historiquePortraitSchema,
   profilsStudioSchema, candidatsStudioSchema, essaisStudioSchema,
-  etatTexteSchema, essaiLanceSchema, type NatureTexte, type EssaiStudio,
+  etatTexteSchema, historiqueTexteSchema, essaiLanceSchema, type NatureTexte, type EssaiStudio,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
@@ -746,16 +746,24 @@ export function App(): ReactNode {
     [section, tourStudio],
   );
 
-  /* L'ATELIER DES TEXTES. Trois appels, comme celui du portrait : ce qui
-     tourne et ce qu'on compose, les éprouvettes, les modèles dans lesquels
-     choisir. Un écran qui n'aurait que deux des trois ne se lirait pas. */
+  /* L'ATELIER DES TEXTES. Quatre appels : ce qui tourne et ce qu'on compose,
+     ce qui a servi avant, les éprouvettes, les modèles dans lesquels choisir.
+     Un écran qui n'aurait que trois des quatre ne se lirait pas.
+
+     L'HISTORIQUE SUIT LA NATURE, comme la configuration : il est dans la même
+     clé, donc il est relu au changement d'onglet. Le laisser hors de la clé
+     ferait lire les publications du message sous l'onglet des idées, et rien à
+     l'écran ne le dirait. */
   const etatTextes = useRessource(
     () => (section === "textes"
       ? Promise.all([
           api.appeler(`/admin/text-studio/${natureTexte}/config`, { schema: etatTexteSchema }),
+          api.appeler(`/admin/text-studio/${natureTexte}/config/history`, { schema: historiqueTexteSchema }),
           api.appeler("/admin/portrait-studio/profiles", { schema: profilsStudioSchema }),
           api.appeler("/admin/portrait-studio/candidates", { schema: candidatsStudioSchema }),
-        ]).then(([etat, profils, candidats]) => ({ etat, profils: profils.items, candidats }))
+        ]).then(([etat, historique, profils, candidats]) => ({
+          etat, historique: historique.items, profils: profils.items, candidats,
+        }))
       : Promise.resolve(null)),
     [section, natureTexte, tourStudio],
   );
@@ -1214,6 +1222,7 @@ export function App(): ReactNode {
               onNature={(n) => { setNatureTexte(n); setDernierEssaiTexte(null); }}
               depart={depart}
               enService={donnees.etat.enService}
+              historique={donnees.historique}
               profils={donnees.profils}
               candidats={donnees.candidats}
               dernier={dernierEssaiTexte}
@@ -1231,6 +1240,13 @@ export function App(): ReactNode {
               }}
               onPublier={(configId, note) => {
                 void ecrireTexte("/admin/text-studio/config/publish", "POST", { configId, note });
+              }}
+              /* `reason`, et non `note` : le retour arrière ne raconte pas ce
+                 que la version apporte — elle l'a déjà dit à sa publication —,
+                 il dit POURQUOI on y revient. Le contrat nomme les deux champs
+                 différemment pour cette raison. */
+              onRevenir={(configId, motif) => {
+                void ecrireTexte("/admin/text-studio/config/rollback", "POST", { configId, reason: motif });
               }}
               onRetour={aller}
             />

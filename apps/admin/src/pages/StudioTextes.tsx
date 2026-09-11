@@ -6,7 +6,7 @@ import type {
 import { NATURES_TEXTE } from "@lehno/contracts";
 
 import { Breadcrumb, PageHeader, FormRow } from "../composants/page/index.js";
-import { EmptyState, StatusPill } from "../composants/donnees/index.js";
+import { DataTable, EmptyState, StatusPill, type Colonne } from "../composants/donnees/index.js";
 import { ConfirmWithReason } from "../composants/actions/index.js";
 import { Button, Icon, TextField } from "../composants/base/index.js";
 import { messages, type Langue } from "../i18n/index.js";
@@ -38,6 +38,8 @@ export interface StudioTextesProps {
   /** Le brouillon s'il existe, la version en service sinon. */
   depart: ConfigurationTexte;
   enService: ConfigurationTexte | null;
+  /** Les versions de cette nature, la plus récente d'abord. */
+  historique: ConfigurationTexte[];
   profils: ProfilStudio[];
   candidats: CandidatsStudio;
   /** Le dernier essai de la séance. Nul avant le premier. */
@@ -46,6 +48,9 @@ export interface StudioTextesProps {
   onEnregistrer?: (reglages: ReglagesTexte) => void;
   onEssayer?: (reglages: ReglagesTexte, profileId: string) => void;
   onPublier?: (configId: string, note: string) => void;
+  /** Remet une version antérieure en service. Elle porte sa nature ;
+   *  l'appelant ne la répète pas. */
+  onRevenir?: (configId: string, motif: string) => void;
   onRetour?: (id: string) => void;
 }
 
@@ -53,6 +58,16 @@ export interface StudioTextesProps {
    qu'en un champ par propriété : c'est l'objet ENTIER que le contrat valide, et
    le découper ici ferait diverger la forme de l'écran de celle qu'on envoie. */
 type Brouillon = Record<string, unknown>;
+
+const remplir = (gabarit: string, valeurs: Record<string, string | number>): string =>
+  Object.entries(valeurs).reduce((a, [c, v]) => a.split(`{${c}}`).join(String(v)), gabarit);
+
+/* Une publication est horodatée à la seconde ; l'heure n'apprend rien à qui
+   relit un historique, et l'afficher ferait deux colonnes larges au lieu d'une. */
+const enDate = (iso: string, langue: Langue): string =>
+  new Intl.DateTimeFormat(langue === "en" ? "en-GB" : "fr-FR", {
+    day: "numeric", month: "long", year: "numeric",
+  }).format(new Date(iso));
 
 const estMessage = (n: NatureTexte): boolean => n === "message";
 const estIdees = (n: NatureTexte): boolean => n === "idees";
@@ -64,8 +79,9 @@ type Orientation = {
 };
 
 export function StudioTextes({
-  role, langue = "fr", nature, onNature, depart, enService, profils, candidats,
-  dernier, enCours = false, onEnregistrer, onEssayer, onPublier, onRetour,
+  role, langue = "fr", nature, onNature, depart, enService, historique, profils,
+  candidats, dernier, enCours = false, onEnregistrer, onEssayer, onPublier,
+  onRevenir, onRetour,
 }: StudioTextesProps): ReactNode {
   const t = messages(langue);
   const a = t.studioTextes;
@@ -85,6 +101,7 @@ export function StudioTextes({
   const [note, setNote] = useState("");
   const [publication, setPublication] = useState(false);
   const [nouveauGardeFou, setNouveauGardeFou] = useState("");
+  const [aRemettre, setARemettre] = useState<ConfigurationTexte | null>(null);
 
   const poser = (champ: string, valeur: unknown): void =>
     setReglages((avant) => ({ ...avant, [champ]: valeur }));
@@ -109,6 +126,31 @@ export function StudioTextes({
   };
 
   const modelesDeTexte = candidats.modeles.filter((m) => m.capacite === "text");
+
+  const h = a.historique;
+  const colonnes: Colonne<ConfigurationTexte & { id: string }>[] = [
+    {
+      cle: "version",
+      titre: h.col.version,
+      rendu: (c) => (c.version === null ? "—" : remplir(h.version, { n: c.version })),
+    },
+    {
+      cle: "publieeLe",
+      titre: h.col.quand,
+      rendu: (c) => (c.publieeLe === null ? "—" : enDate(c.publieeLe, langue)),
+    },
+    { cle: "parQui", titre: h.col.parQui, rendu: (c) => c.parQui ?? "—" },
+    { cle: "note", titre: h.col.note, rendu: (c) => c.note ?? "—" },
+    {
+      cle: "etat",
+      titre: h.col.etat,
+      rendu: (c) => (
+        <StatusPill ton={c.etat === "published" ? "actif" : c.etat === "draft" ? "attente" : "neutre"}>
+          {h.etats[c.etat]}
+        </StatusPill>
+      ),
+    },
+  ];
 
   return (
     <>
@@ -392,6 +434,33 @@ export function StudioTextes({
         </div>
       </div>
 
+      {/* L'HISTORIQUE EST L'AUDIT de cette nature : publier et revenir en
+          arrière sont les deux seuls gestes qui l'écrivent, et une table qui
+          les liste avec leur auteur, leur date et leur note est déjà la
+          traçabilité exigée. La redoubler d'un journal séparé ferait lire deux
+          fois la même chose. */}
+      <section className="admin-section" role="region" aria-labelledby="txt-historique">
+        <h2 id="txt-historique" className="admin-section-titre">{h.titre}</h2>
+        <p className="admin-section-sous">{h.sous}</p>
+        <DataTable
+          colonnes={colonnes}
+          lignes={historique.map((c) => ({ ...c, id: c.id }))}
+          libelles={{ actions: t.table.actions }}
+          vide={<EmptyState titre={h.aucune.titre} texte={h.aucune.texte} />}
+          /* TROIS CAS N'OFFRENT PAS LE GESTE, et le serveur refuserait chacun :
+             le support ne revient sur rien ; une version DÉJÀ en service n'a
+             rien à défaire ; et un brouillon jamais publié — `version` nulle —
+             n'a jamais été validé par personne. Y « revenir » le mettrait en
+             service par une porte que la publication ferme. */
+          actions={(c) => (
+            role === "admin" && c.etat !== "published" && c.version !== null
+              ? [{ id: "revenir", label: h.revenir }]
+              : []
+          )}
+          onAction={(id, c) => { if (id === "revenir") setARemettre(c); }}
+        />
+      </section>
+
       {publication ? (
         <ConfirmWithReason
           titre={a.dialoguePublier.titre}
@@ -420,6 +489,32 @@ export function StudioTextes({
           </FormRow>
         </ConfirmWithReason>
       ) : null}
+
+      {aRemettre === null ? null : (
+        <ConfirmWithReason
+          titre={remplir(h.dialogue.titre, { n: aRemettre.version ?? 0 })}
+          consequence={h.dialogue.consequence}
+          motifs={[...h.dialogue.motifs]}
+          libelles={{
+            motif: t.confirmation.motif,
+            choisir: t.confirmation.motifManquant,
+            autre: t.confirmation.autre,
+            precision: t.confirmation.autrePlaceholder,
+            journal: t.confirmation.motifAide,
+            annuler: t.confirmation.annuler,
+            confirmer: t.confirmation.confirmer,
+          }}
+          onAnnuler={() => setARemettre(null)}
+          onConfirmer={(motif) => {
+            /* ON N'ENVOIE PAS LA NATURE : la configuration visée la porte, et la
+               faire répéter ouvrirait la possibilité qu'elle contredise la
+               ligne — il faudrait alors décider laquelle ment. C'est l'argument
+               que le contrôleur écrit pour lui-même. */
+            onRevenir?.(aRemettre.id, motif);
+            setARemettre(null);
+          }}
+        />
+      )}
     </>
   );
 }
