@@ -22,6 +22,16 @@ const REGLAGES = {
     libelle: bilingue("Papier", "Paper"), description: null,
     consigne: bilingue("Un papier grené.", "Grained paper."),
   }],
+  /* Même manque que dans la maquette de l'Atelier, et même effet : sans
+     `compositions`, le schéma `.strict()` refuse la configuration entière, et
+     l'écran ne rend rien. Le symptôme — « Non jugé » introuvable — ne dit rien
+     de la cause. */
+  compositions: [{
+    id: "papier", actif: true,
+    libelle: bilingue("Papier", "Paper"), description: null,
+    palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#5A4B93"],
+    cadre: { fond: "#FFFFFF", bande: "#EDEAF7", texte: "#221F2B", mention: "#5A4B93" },
+  }],
 };
 
 const config = (id: string, etat: string) => ({

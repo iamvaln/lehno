@@ -20,7 +20,7 @@ export type Famille = "exploitation" | "economie" | "supervision" | "outils";
  * dépense de l'argent réel à chaque essai.
  */
 export const SECTIONS_ECONOMIE = [
-  "parametres", "fonctionnalites", "motifs", "modeles", "atelier", "essais", "studioService", "gabarits", "studioProfils",
+  "parametres", "fonctionnalites", "motifs", "modeles", "atelier", "essais", "studioService", "studioProfils",
 ] as const;
 
 /**
@@ -109,18 +109,21 @@ export const NAVIGATION: { famille: Famille | null; items: readonly Entree[] }[]
     ],
   },
   /* Le Studio se groupe. §5.9 lui donne trois entrées — l'Atelier, les essais,
-     les réglages en service — et le kit du 29 août les nomme ainsi. Deux
-     existent aujourd'hui : les réglages, et le registre des gabarits de
-     production, qui n'est PAS le portrait mais tous les gabarits (message,
-     illustration, style de photo, classement des notes, détection des cas
-     sensibles). Le second ne perd pas son entrée parce que le premier arrive. */
+     les réglages en service — et le kit du 29 août les nomme ainsi.
+     
+     Le « registre des gabarits de production » a occupé une cinquième entrée.
+     Il lisait `prompt_template`, une première tentative de régler les invites
+     sans livraison, que rien n'a jamais branché à la génération : on pouvait y
+     composer un gabarit, le versionner, l'activer, et il ne se passait rien. Le
+     Studio fait la même chose, en mieux et en marchant. L'entrée est retirée
+     plutôt que laissée à promettre un effet qu'elle n'a pas. */
   {
     famille: "economie",
     items: [
       "parametres", "fonctionnalites", "motifs", "modeles",
       /* L'ordre est celui du TRAVAIL, pas celui de la livraison : on compose,
-         puis on regarde ce qui tourne, puis on consulte les gabarits. */
-      { id: "studio", enfants: ["atelier", "essais", "studioProfils", "studioService", "gabarits"] },
+         on éprouve, on regarde les profils, puis ce qui est en service. */
+      { id: "studio", enfants: ["atelier", "essais", "studioProfils", "studioService"] },
     ],
   },
   { famille: "supervision", items: ["metriques", "audit", "connexions"] },

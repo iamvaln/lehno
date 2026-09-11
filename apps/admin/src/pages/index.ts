@@ -27,7 +27,6 @@ export { StudioAtelier } from "./StudioAtelier.js";
 export type { StudioAtelierProps } from "./StudioAtelier.js";
 export { StudioService } from "./StudioService.js";
 export type { StudioServiceProps } from "./StudioService.js";
-export { Studio, type StudioProps } from "./Studio.js";
 export { TransactionManuelle, type TransactionManuelleProps, type MouvementManuel } from "./TransactionManuelle.js";
 export { StatsTransactions, type StatsTransactionsProps } from "./StatsTransactions.js";
 export { Metriques, type MetriquesProps } from "./Metriques.js";

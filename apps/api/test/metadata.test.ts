@@ -7,6 +7,8 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { MetadataService } from "../src/me/metadata.service.js";
 import { CatalogueIAService } from "../src/ia/catalogue.service.js";
 import { FlagsService } from "../src/flags/flags.service.js";
+import { StudioConfigurationService } from "../src/studio/configuration.service.js";
+import { AuditService } from "../src/admin/audit.service.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 
@@ -18,7 +20,11 @@ describe("les métadonnées", () => {
   afterAll(async () => { await db.close(); });
   beforeEach(async () => {
     await resetDatabase(db.prisma);
-    metadata = new MetadataService(db.prisma as never, new FlagsService(db.prisma as never));
+    metadata = new MetadataService(
+      db.prisma as never,
+      new FlagsService(db.prisma as never),
+      new StudioConfigurationService(db.prisma as never, new AuditService(db.prisma as never)),
+    );
   });
 
   /* Ce qui dispense le client de connaître le drapeau : il lit la liste, pas

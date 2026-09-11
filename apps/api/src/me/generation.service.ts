@@ -5,6 +5,7 @@ import {
   consigneSystemePortrait, invitePortrait, MOTS_DU_PORTRAIT,
   MOTS_MESSAGE, MOTS_MESSAGE_COURT, ORIENTATIONS_SENSIBLES,
   type ContexteMessage, type ContexteIdees, type ContextePortrait, type Orientation,
+  type ReglagesIdees, type ReglagesBriefPortrait,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
@@ -84,7 +85,11 @@ export class GenerationService {
     options: { langue?: "fr" | "en"; texteLibre?: string | null; cle?: string | null } = {},
   ) {
     const occurrence = await this.depot.occurrences(userId).findOrThrow(occurrenceId);
-    const contexte = await this.rassembler(userId, occurrence.id, orientation, options);
+    /* LE MODÈLE SORT DE LA MÊME LECTURE QUE LA CONSIGNE, et c'est délibéré : le
+       relire ailleurs coûterait une seconde requête et, surtout, laisserait la
+       porte ouverte à ce qu'il vienne d'une AUTRE version que celle dont
+       l'invite est tirée. L'empreinte les lie ; le code doit les lier aussi. */
+    const { contexte, modele } = await this.rassembler(userId, occurrence.id, orientation, options);
 
     /* Le REFUS D'ENTRÉE : une orientation joyeuse sur une occasion sensible.
      *
@@ -116,7 +121,7 @@ export class GenerationService {
     }
 
     try {
-      const sortie = await this.produire(contexte, userId, execution.id);
+      const sortie = await this.produire(contexte, userId, execution.id, modele);
       return await this.conclure(execution.id, userId, occurrence.id, sortie);
     } catch (err: unknown) {
       await this.rendreLeCredit(execution.id, userId, this.codeDe(err));
@@ -228,7 +233,7 @@ export class GenerationService {
     } = {},
   ) {
     const occurrence = await this.depot.occurrences(userId).findOrThrow(occurrenceId);
-    const contexte = await this.rassemblerIdees(userId, occurrence.id, options);
+    const { contexte, modele } = await this.rassemblerIdees(userId, occurrence.id, options);
 
     const { execution, dejaLancee } = await this.debiter(
       userId, occurrence.id, null, options.cle ?? null, ACTION_IDEES,
@@ -247,7 +252,7 @@ export class GenerationService {
     }
 
     try {
-      const idees = await this.produireIdees(contexte, userId, execution.id);
+      const idees = await this.produireIdees(contexte, userId, execution.id, modele);
       return await this.conclureIdees(execution.id, userId, occurrence.id, idees);
     } catch (err: unknown) {
       await this.rendreLeCredit(execution.id, userId, this.codeDe(err));
@@ -261,6 +266,38 @@ export class GenerationService {
    * `gift_ideas` sont ÉCARTÉES du message — « les idées de cadeaux n'ont rien à
    * faire dans un message » — et ce sont ici les plus utiles de toutes. C'est
    * ce que la personne a noté en pensant précisément à quoi offrir. */
+  /* LES RÉGLAGES D'UNE GÉNÉRATION DE TEXTE, ou rien.
+   *
+   * `null` quand rien n'est publié, et le gabarit retombe alors sur ses valeurs
+   * de code — c'est ce qui permet à un serveur neuf de produire avant qu'aucun
+   * administrateur n'ait rien fait. On ne refuse PAS ici, à la différence du
+   * portrait : là-bas un repli composerait une image avec des réglages que
+   * personne n'a vus tourner ; ici il produit le texte que le code produisait
+   * déjà hier.
+   *
+   * Le `.catch` couvre la configuration devenue illisible : la génération
+   * continue sur les valeurs du code plutôt que de tomber. Le semis la répare
+   * au démarrage suivant, et `reglagesIdeesDe` la nomme dans le journal. */
+  private async reglagesIdees(): Promise<ReglagesIdees | null> {
+    const publie = await this.configs.enService("idees").catch(() => null);
+    if (publie === null) return null;
+    try {
+      return this.configs.reglagesIdeesDe(publie);
+    } catch {
+      return null;
+    }
+  }
+
+  private async reglagesBriefPortrait(): Promise<ReglagesBriefPortrait | null> {
+    const publie = await this.configs.enService("portrait_brief").catch(() => null);
+    if (publie === null) return null;
+    try {
+      return this.configs.reglagesBriefPortraitDe(publie);
+    } catch {
+      return null;
+    }
+  }
+
   private async rassemblerIdees(
     userId: string, occurrenceId: string,
     options: {
@@ -268,7 +305,7 @@ export class GenerationService {
       texteLibre?: string | null;
       budget?: { min: number | null; max: number | null } | null;
     },
-  ): Promise<ContexteIdees> {
+  ): Promise<{ contexte: ContexteIdees; modele: string | null }> {
     const occurrence = await this.prisma.eventOccurrence.findUniqueOrThrow({
       where: { id: occurrenceId },
       include: { event: { include: { person: true } } },
@@ -310,12 +347,19 @@ export class GenerationService {
       });
     }
 
-    /* Ce que l'atelier a publié pour le MESSAGE ne s'applique pas ici : ses
-       consignes parlent de ton et de tournure, pas d'objets. On ne lit donc que
-       ce qui vaut pour toutes les productions, et rien tant que le studio n'a
-       pas de configuration propre aux idées. */
-    return {
+    /* CE QUE L'ATELIER A PUBLIÉ POUR LES IDÉES, et pour elles seules.
+     *
+     * Ce commentaire disait « rien tant que le studio n'a pas de configuration
+     * propre aux idées ». Elle existe : les idées sont une nature à part, avec
+     * ses essais et sa publication. Celle du message ne vaut toujours pas ici —
+     * ses consignes parlent de ton et de tournure, pas d'objets. */
+    const reglages = await this.reglagesIdees();
+
+    return { modele: reglages?.modele ?? null, contexte: {
       langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
+      ...(reglages?.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
+      ...(reglages && reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
+      ...(reglages ? { nombreDemande: reglages.nombreDemande } : {}),
       nomDUsage: proche.callingName ?? proche.displayName,
       relation: proche.relationHint ?? proche.relation ?? null,
       genreDuProche: proche.gender ?? "unspecified",
@@ -329,17 +373,18 @@ export class GenerationService {
       texteLibre: options.texteLibre ?? null,
       // La devise se pose ICI et nulle part ailleurs — voir DEVISE.
       budget: options.budget ? { ...options.budget, devise: DEVISE } : null,
-    };
+    } };
   }
 
   private async produireIdees(
-    contexte: ContexteIdees, userId: string, actionRunId: string,
+    contexte: ContexteIdees, userId: string, actionRunId: string, modele: string | null,
   ): Promise<SortieIdee[]> {
     const reponse = await this.routeur.executer(
       "gift_ideas",
       { invite: inviteIdees(contexte), systeme: consigneSystemeIdees(contexte) },
       this.adaptateurs,
       { userId, actionRunId, origine: "user_action" },
+      modele,
     );
     return this.lireLesIdees(reponse.contenu);
   }
@@ -441,7 +486,7 @@ export class GenerationService {
     options: { langue?: "fr" | "en"; texteLibre?: string | null; motDeLExpediteur?: string | null; cle?: string | null } = {},
   ) {
     const proche = await this.depot.persons(userId).findOrThrow(personId);
-    const contexte = await this.rassemblerPortrait(userId, proche.id, selection, options);
+    const { contexte, modele } = await this.rassemblerPortrait(userId, proche.id, selection, options);
 
     const { execution, dejaLancee } = await this.debiter(
       userId, null, selection.orientation, options.cle ?? null, ACTION_PORTRAIT,
@@ -454,7 +499,7 @@ export class GenerationService {
     }
 
     try {
-      const brief = await this.produireLeBrief(contexte, userId, execution.id);
+      const brief = await this.produireLeBrief(contexte, userId, execution.id, modele);
       return await this.conclurePortrait(
         execution.id, userId, proche.id, selection, configId, brief, options.motDeLExpediteur ?? null,
       );
@@ -472,7 +517,7 @@ export class GenerationService {
   private async rassemblerPortrait(
     userId: string, personId: string, selection: SelectionPortrait,
     options: { langue?: "fr" | "en"; texteLibre?: string | null },
-  ): Promise<ContextePortrait> {
+  ): Promise<{ contexte: ContextePortrait; modele: string | null }> {
     const proche = await this.prisma.person.findUniqueOrThrow({ where: { id: personId } });
     const moi = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId }, select: { uiLanguage: true },
@@ -509,10 +554,23 @@ export class GenerationService {
     const gouts = attributs.filter((a) => a.kind !== "avoid");
     for (const a of attributs) if (a.kind === "avoid") aEviter.push(a.value);
 
-    return {
+    /* CE QUE L'ATELIER A PUBLIÉ POUR LE BRIEF — la nature `portrait_brief`, et
+       non `portrait`. L'une règle le texte qui choisit les mots, l'autre
+       l'image qui les dessine ; l'une s'éprouve sur un modèle de texte, l'autre
+       sur un modèle d'image. Les confondre était exactement le défaut que le
+       découpage message/portrait a réparé. */
+    const reglages = await this.reglagesBriefPortrait();
+
+    return { modele: reglages?.modele ?? null, contexte: {
       // La langue du COMPTE : le portrait se lit par celui qui l'offre, comme
       // les idées. Le message, lui, part chez le proche et prend la sienne.
       langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
+      ...(reglages?.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
+      ...(reglages && reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
+      ...(reglages ? {
+        motsDuPortrait: reglages.motsDuPortrait,
+        motsDeLaPhrase: reglages.motsDeLaPhrase,
+      } : {}),
       orientation: selection.orientation,
       nomDUsage: proche.callingName ?? proche.displayName,
       relation: proche.relationHint ?? proche.relation ?? null,
@@ -522,19 +580,23 @@ export class GenerationService {
       aEviter,
       texteLibre: options.texteLibre ?? null,
       consigneAmbiance: selection.ambiance?.consigne[options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr")] ?? null,
-    };
+    } };
   }
 
   private async produireLeBrief(
-    contexte: ContextePortrait, userId: string, actionRunId: string,
+    contexte: ContextePortrait, userId: string, actionRunId: string, modele: string | null,
   ): Promise<SortiePortrait> {
     const reponse = await this.routeur.executer(
       "portrait_brief",
       { invite: invitePortrait(contexte), systeme: consigneSystemePortrait(contexte) },
       this.adaptateurs,
       { userId, actionRunId, origine: "user_action" },
+      modele,
     );
-    return this.lireLeBrief(reponse.contenu);
+    /* LES MÊMES BORNES POUR DEMANDER ET POUR VÉRIFIER. Les séparer ferait
+       qu'un réglage élargi produirait une sortie que la garde d'en face
+       refuse — et l'utilisateur paierait un portrait qu'on jette. */
+    return this.lireLeBrief(reponse.contenu, contexte.motsDuPortrait ?? MOTS_DU_PORTRAIT);
   }
 
   /* Ce que le brief rend, vérifié.
@@ -543,7 +605,9 @@ export class GenerationService {
    * douze mots n'a pas suivi la consigne, mais les premiers valent ce qu'ils
    * valent. On refuse sous le minimum, où il n'y a plus de portrait à
    * composer. */
-  private lireLeBrief(brut: string): SortiePortrait {
+  private lireLeBrief(
+    brut: string, bornes: { readonly min: number; readonly max: number },
+  ): SortiePortrait {
     let objet: unknown;
     try {
       objet = JSON.parse(brut.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "").trim());
@@ -556,9 +620,9 @@ export class GenerationService {
       ? o.mots
         .filter((m): m is string => typeof m === "string" && m.trim().length > 0)
         .map((m) => m.trim())
-        .slice(0, MOTS_DU_PORTRAIT.max)
+        .slice(0, bornes.max)
       : [];
-    if (mots.length < MOTS_DU_PORTRAIT.min) throw new RefusModele("length_out_of_range");
+    if (mots.length < bornes.min) throw new RefusModele("length_out_of_range");
 
     if (typeof o.phrase !== "string" || o.phrase.trim().length === 0)
       throw new RefusModele("empty_message");
@@ -647,13 +711,14 @@ export class GenerationService {
   }
 
   private async produire(
-    contexte: ContexteMessage, userId: string, actionRunId: string,
+    contexte: ContexteMessage, userId: string, actionRunId: string, modele: string | null,
   ): Promise<SortieMessage> {
     const reponse = await this.routeur.executer(
       "message",
       { invite: invite(contexte), systeme: consigneSysteme(contexte) },
       this.adaptateurs,
       { userId, actionRunId, origine: "user_action" },
+      modele,
     );
     return this.lireLaSortie(reponse.contenu);
   }
@@ -837,7 +902,7 @@ export class GenerationService {
   private async rassembler(
     userId: string, occurrenceId: string, orientation: Orientation,
     options: { langue?: "fr" | "en"; texteLibre?: string | null },
-  ): Promise<ContexteMessage> {
+  ): Promise<{ contexte: ContexteMessage; modele: string | null }> {
     const occurrence = await this.prisma.eventOccurrence.findUniqueOrThrow({
       where: { id: occurrenceId },
       include: { event: { include: { person: true } } },
@@ -896,7 +961,7 @@ export class GenerationService {
     const reglages = publie === null ? null : this.configs.reglagesMessageDe(publie);
     const orientationPubliee = reglages?.orientations.find((o) => o.id === orientation);
 
-    return {
+    return { modele: reglages?.modele ?? null, contexte: {
       langue: options.langue ?? (proche.language === "en" ? "en" : "fr"),
       orientation,
       ...(orientationPubliee ? { consigneOrientation: orientationPubliee.consigne } : {}),
@@ -915,6 +980,6 @@ export class GenerationService {
       // L'âge ne part que si l'année de naissance est connue : on ne rappelle
       // pas son âge à quelqu'un sur une déduction.
       age: null,
-    };
+    } };
   }
 }

@@ -24,6 +24,22 @@ const REGLAGES = {
       consigne: bilingue("Un papier grené.", "Grained paper."),
     },
   ],
+  /* LES COMPOSITIONS, que le contrat exige depuis qu'une gamme est choisie par
+     le client. Elles manquaient ici, et le brouillon simulé ne passait plus le
+     schéma : `.strict()` refusait la forme entière, et vingt-six cas tombaient
+     sur « La chaîne » introuvable — c'est-à-dire sur l'écran jamais rendu.
+     
+     L'AMBIANCE ET LA COMPOSITION SONT DEUX CHOSES, et le nom les confond : ici
+     `papier` est une ambiance (ce que le modèle dessine) ET une composition (le
+     cadre et la gamme). Le client choisit les deux. */
+  compositions: [
+    {
+      id: "papier", actif: true,
+      libelle: bilingue("Papier", "Paper"), description: null,
+      palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#5A4B93"],
+      cadre: { fond: "#FFFFFF", bande: "#EDEAF7", texte: "#221F2B", mention: "#5A4B93" },
+    },
+  ],
 };
 
 const CONFIG = {
@@ -56,7 +72,7 @@ const MODELE = {
 const CANDIDATS = {
   modeles: [MODELE], orientations: ["notre_relation"],
   groupesAmbiance: ["illustration_family"], motifs: ["trame_de_hampes", "registres"],
-  champsDuProche: ["prenom"], gabarits: [],
+  champsDuProche: ["prenom"],
 };
 
 const essai = (sur: Record<string, unknown> = {}) => ({

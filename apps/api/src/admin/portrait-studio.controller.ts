@@ -174,14 +174,9 @@ export class PortraitStudioService {
    * état normal à afficher — les prix changent sans nous prévenir, et zéro se
    * prendrait pour un fait. */
   async candidats(): Promise<CandidatsStudio> {
-    const [modeles, gabarits] = await Promise.all([
-      this.prisma.aIModel.findMany({ orderBy: [{ provider: "asc" }, { modelKey: "asc" }] }),
-      this.prisma.promptTemplate.findMany({
-        where: { isActive: true },
-        orderBy: [{ kind: "asc" }, { key: "asc" }],
-        select: { id: true, kind: true, key: true, version: true },
-      }),
-    ]);
+    const modeles = await this.prisma.aIModel.findMany({
+      orderBy: [{ provider: "asc" }, { modelKey: "asc" }],
+    });
 
     return {
       modeles: modeles.map((m) => ({
@@ -201,7 +196,6 @@ export class PortraitStudioService {
       groupesAmbiance: [...GROUPES_AMBIANCE],
       motifs: [...MOTIFS_IDENTITAIRES],
       champsDuProche: [...CHAMPS_DU_PROCHE],
-      gabarits: gabarits.map((g) => ({ id: g.id, genre: g.kind, cle: g.key, version: g.version })),
     };
   }
 }

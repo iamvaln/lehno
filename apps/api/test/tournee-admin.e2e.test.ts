@@ -60,7 +60,11 @@ const SECRET_ADMIN = "Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh";
 const DEPLIANTES: Record<string, string[]> = {
   "Paiements": ["À vérifier", "Toutes les transactions", "Versements manuels", "Canaux et barèmes", "Statistiques"],
   "Crédits": ["Transaction manuelle", "Offres et croissance"],
-  "Studio du portrait": ["L'Atelier", "Les essais", "Réglages en service", "Gabarits de production"],
+  /* « Gabarits de production » a disparu de cette liste avec son écran. Il
+     lisait `prompt_template`, une première tentative de régler les invites sans
+     livraison que rien n'a jamais branché à la génération ; le Studio fait la
+     même chose, en marchant. */
+  "Studio du portrait": ["L'Atelier", "Les essais", "Réglages en service"],
 };
 
 /** Ce qu'on refuse de voir, quel que soit l'écran. */

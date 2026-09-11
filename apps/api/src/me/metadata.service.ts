@@ -2,10 +2,11 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { CategoryCode, Metadata } from "@lehno/contracts";
 import {
   EVENT_KINDS, EVENT_NATURES, SCHEDULE_UNITS,
-  PERSON_RELATIONS, PERSON_REGISTERS, CONTACT_CHANNELS,
+  PERSON_RELATIONS, PERSON_REGISTERS, CONTACT_CHANNELS, IDEES,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { FlagsService } from "../flags/flags.service.js";
+import { StudioConfigurationService } from "../studio/configuration.service.js";
 
 @Injectable()
 export class MetadataService {
@@ -15,6 +16,7 @@ export class MetadataService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(FlagsService) private readonly flags: FlagsService,
+    @Inject(StudioConfigurationService) private readonly configs: StudioConfigurationService,
   ) {}
 
   async get(): Promise<Metadata> {
@@ -51,6 +53,7 @@ export class MetadataService {
     return {
       categories,
       premiumActions: actions.map((a) => ({ code: a.code, credits: a.creditCost })),
+      nombreIdees: await this.nombreIdees(),
       // Le reste est figé, servi avec les catégories pour que le client
       // n'aille pas chercher la même chose à deux endroits.
       //
@@ -65,6 +68,22 @@ export class MetadataService {
       personRegisters: [...PERSON_REGISTERS],
       contactChannels: [...CONTACT_CHANNELS],
     };
+  }
+
+  /* LE NOMBRE D'IDÉES PUBLIÉ, ou celui du code.
+   *
+   * On ne refuse PAS quand rien n'est publié ou que la configuration ne se
+   * relit plus : la valeur du code est celle que la génération emploiera de
+   * toute façon, et faire tomber les métadonnées — qui relèvent du socle —
+   * fermerait l'application entière pour un chiffre d'annonce. */
+  private async nombreIdees(): Promise<number> {
+    const publie = await this.configs.enService("idees").catch(() => null);
+    if (publie === null) return IDEES.demandees;
+    try {
+      return this.configs.reglagesIdeesDe(publie).nombreDemande;
+    } catch {
+      return IDEES.demandees;
+    }
   }
 
   private async typesOuverts(): Promise<Metadata["eventKinds"]> {

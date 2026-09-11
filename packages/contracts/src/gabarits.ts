@@ -361,6 +361,10 @@ export type ContexteIdees = {
   readonly aEviter: readonly string[];
   /** Ce que l'utilisateur ajoute lui-même — « plutôt quelque chose à porter ». */
   readonly texteLibre: string | null;
+  /* COMBIEN ON EN DEMANDE — réglé à l'atelier, `IDEES.demandees` à défaut.
+     Facultatif pour que les essais et les tests n'aient pas à le fournir ; en
+     production, la configuration le donne toujours. */
+  readonly nombreDemande?: number;
   /* LE BUDGET, et il change la nature de la réponse plutôt que son ton.
    *
    * Sans lui, un modèle propose au hasard de l'échelle : un abonnement à
@@ -540,8 +544,8 @@ export function inviteIdees(c: ContexteIdees): string {
   }
 
   l.push("", fr
-    ? `RENDEZ EXACTEMENT ${IDEES.demandees} IDÉES, en JSON strict et rien d'autre :`
-    : `RETURN EXACTLY ${IDEES.demandees} IDEAS, as strict JSON and nothing else:`);
+    ? `RENDEZ EXACTEMENT ${c.nombreDemande ?? IDEES.demandees} IDÉES, en JSON strict et rien d'autre :`
+    : `RETURN EXACTLY ${c.nombreDemande ?? IDEES.demandees} IDEAS, as strict JSON and nothing else:`);
   l.push('{"idees":[{"titre":"…","pourquoi":"…","prixMin":null,"prixMax":null}]}');
   l.push(fr
     ? `- « titre » : l'objet, ${MOTS_IDEE.titreMax} mots au plus, sans phrase.`
@@ -597,11 +601,33 @@ export type ContextePortrait = {
    *  ici à CADRER le brief, pas à le remplacer : « composez un animal » change
    *  ce qu'on cherche dans les notes. */
   readonly consigneAmbiance: string | null;
+  /** Ce que l'administration ajoute, publié depuis l'atelier. */
+  readonly consigneCommune?: string | null;
+  readonly gardeFous?: readonly string[];
+  /* LES BORNES DEMANDÉES, réglées à l'atelier. Elles servent à DEMANDER ; c'est
+     `lireLeBrief` qui vérifie la sortie, et il reçoit les mêmes. Deux jeux de
+     bornes — l'un pour demander, l'autre pour vérifier — feraient qu'un réglage
+     élargi produirait une sortie rejetée par la garde d'en face. */
+  readonly motsDuPortrait?: { readonly min: number; readonly max: number };
+  readonly motsDeLaPhrase?: { readonly min: number; readonly max: number };
 };
 
 export function consigneSystemePortrait(c: ContextePortrait): string {
   const fr = c.langue === "fr";
-  return (fr
+  /* CE QUE L'ATELIER AJOUTE VIENT EN DERNIER, comme pour le message et les
+     idées : les règles absolues d'abord, ce qui se règle ensuite. L'ordre n'est
+     pas cosmétique — une consigne publiée ne doit jamais pouvoir desserrer une
+     interdiction posée plus haut, et les dernières lignes sont les dernières à
+     s'appliquer. */
+  const publie: string[] = [];
+  if (c.consigneCommune && c.consigneCommune.trim().length > 0) {
+    publie.push("", fr ? "CONSIGNE DE LA MAISON" : "HOUSE INSTRUCTION", c.consigneCommune.trim());
+  }
+  if (c.gardeFous && c.gardeFous.length > 0) {
+    publie.push("", fr ? "À ÉCARTER" : "TO AVOID", ...c.gardeFous.map((g) => `- ${g}`));
+  }
+
+  return [...(fr
     ? [
       "Vous préparez un portrait visuel d'une personne, à partir de ce qu'un proche a noté sur elle. Vous ne dessinez pas : vous décidez CE QUI COMPTE, et un modèle d'image travaillera ensuite à partir de vous seul.",
       "",
@@ -631,11 +657,15 @@ export function consigneSystemePortrait(c: ContextePortrait): string {
       "- Concrete and visual: \"the morning garden\" can be drawn, \"kindness\" cannot.",
       "- Drawn from what the person IS or LOVES, not from what happened to them.",
       "- The words are DISTINCT: seven ways of saying one thing are not seven words.",
-    ]).join("\n");
+    ]), ...publie].join("\n");
 }
 
 export function invitePortrait(c: ContextePortrait): string {
   const fr = c.langue === "fr";
+  /* Les bornes du code servent de DÉFAUT, jamais de plafond : la configuration
+     publiée fait foi quand elle est là. */
+  const bMots = c.motsDuPortrait ?? MOTS_DU_PORTRAIT;
+  const bPhrase = c.motsDeLaPhrase ?? MOTS_PHRASE_PORTRAIT;
   const accords = ACCORDS[c.langue];
   const l: string[] = [];
 
@@ -699,11 +729,11 @@ export function invitePortrait(c: ContextePortrait): string {
   l.push("", fr ? "RENDEZ EN JSON STRICT, et rien d'autre :" : "RETURN STRICT JSON, and nothing else:");
   l.push('{"mots":["…"],"phrase":"…","phraseCourte":"…"}');
   l.push(fr
-    ? `- « mots » : ${MOTS_DU_PORTRAIT.min} à ${MOTS_DU_PORTRAIT.max} mots ou courtes expressions, ce que le dessin doit montrer.`
-    : `- "mots": ${MOTS_DU_PORTRAIT.min} to ${MOTS_DU_PORTRAIT.max} words or short phrases, what the drawing should show.`);
+    ? `- « mots » : ${bMots.min} à ${bMots.max} mots ou courtes expressions, ce que le dessin doit montrer.`
+    : `- "mots": ${bMots.min} to ${bMots.max} words or short phrases, what the drawing should show.`);
   l.push(fr
-    ? `- « phrase » : ce que le portrait dit d'elle, ${MOTS_PHRASE_PORTRAIT.min} à ${MOTS_PHRASE_PORTRAIT.max} mots. Elle s'affiche AVEC l'image.`
-    : `- "phrase": what the portrait says about them, ${MOTS_PHRASE_PORTRAIT.min} to ${MOTS_PHRASE_PORTRAIT.max} words. It is shown WITH the image.`);
+    ? `- « phrase » : ce que le portrait dit d'elle, ${bPhrase.min} à ${bPhrase.max} mots. Elle s'affiche AVEC l'image.`
+    : `- "phrase": what the portrait says about them, ${bPhrase.min} to ${bPhrase.max} words. It is shown WITH the image.`);
   l.push(fr
     ? `- « phraseCourte » : la même en ${MOTS_PHRASE_PORTRAIT_COURTE.min} à ${MOTS_PHRASE_PORTRAIT_COURTE.max} mots, pour le format vertical.`
     : `- "phraseCourte": the same in ${MOTS_PHRASE_PORTRAIT_COURTE.min} to ${MOTS_PHRASE_PORTRAIT_COURTE.max} words, for the vertical format.`);

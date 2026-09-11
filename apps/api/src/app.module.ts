@@ -109,8 +109,8 @@ import { DashboardController, DashboardService } from "./admin/dashboard.control
 import { AdminMaintenanceController, AdminMaintenanceService } from "./admin/maintenance.controller.js";
 import { MetriquesController, MetriquesService } from "./admin/metriques.controller.js";
 import { PaymentStatsController, PaymentStatsService } from "./admin/payment-stats.controller.js";
-import { StudioController, StudioService } from "./admin/studio.controller.js";
 import { PortraitStudioController, PortraitStudioService } from "./admin/portrait-studio.controller.js";
+import { TexteStudioController, TexteStudioService } from "./admin/texte-studio.controller.js";
 import { StudioOptionsController, StudioOptionsService } from "./me/studio.controller.js";
 import { StudioConfigurationService } from "./studio/configuration.service.js";
 import { StudioEssaiService } from "./studio/essai.service.js";
@@ -164,7 +164,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     WaitlistController, ContactController,
     WallController, WishLinkController, CollectionLinksController, SubmissionsController, ReceivedWishesController,
     PublicWallController, PublicCollectController, PublicWishesController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, ReasonsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, MethodesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, IdeeController, PortraitController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, PaymentStatsController, AdminMaintenanceController, StudioController, PortraitStudioController, StudioOptionsController, MeController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, ReasonsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, MethodesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, IdeeController, PortraitController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, PaymentStatsController, AdminMaintenanceController, PortraitStudioController, TexteStudioController, StudioOptionsController, MeController,
   ],
   providers: [
     PrismaService,
@@ -417,7 +417,6 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     MetriquesService,
     PaymentStatsService,
     AdminMaintenanceService,
-    StudioService,
     // Le Studio du portrait. `StudioConfigurationService` est partagé entre la
     // surface d'administration et `/me/studio/options` : deux exemplaires
     // calculeraient l'empreinte chacun de leur côté, et la règle de
@@ -426,6 +425,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     StudioEssaiService,
     AmorceStudioService,
     PortraitStudioService,
+    TexteStudioService,
     StudioOptionsService,
   ],
 })

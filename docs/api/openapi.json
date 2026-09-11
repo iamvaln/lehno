@@ -21890,6 +21890,11 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "nombreIdees": {
+                      "type": "integer",
+                      "minimum": 3,
+                      "maximum": 6
                     }
                   },
                   "required": [
@@ -21900,7 +21905,8 @@
                     "personRelations",
                     "personRegisters",
                     "contactChannels",
-                    "premiumActions"
+                    "premiumActions",
+                    "nombreIdees"
                   ],
                   "additionalProperties": false
                 }
