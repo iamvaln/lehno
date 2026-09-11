@@ -97,7 +97,8 @@ describe("ce qu'on envoie pour en créer un", () => {
 });
 
 const contribution = (n: number, p: Partial<Submission> = {}): Submission => ({
-  id: uuid(n), linkType: "nominatif", personId: uuid(50), submitterName: null,
+  id: uuid(n), linkType: "nominatif", personId: uuid(50),
+  personDisplayName: "Bila", submitterName: null,
   relationHint: null, birthDate: null, personalNote: null, status: "pending",
   wishes: [], createdAt: "2026-08-01T00:00:00.000Z", ...p,
 });

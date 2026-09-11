@@ -16,7 +16,8 @@ const souhait = (n: number): SubmittedWish => ({
 });
 
 const contribution = (p: Partial<Submission> = {}): Submission => ({
-  id: uuid(1), linkType: "nominatif", personId: uuid(9), submitterName: "Ana",
+  id: uuid(1), linkType: "nominatif", personId: uuid(9),
+  personDisplayName: "Bila", submitterName: "Ana",
   relationHint: null, birthDate: "1990-03-04", personalNote: "aime le jazz",
   status: "pending", wishes: [souhait(2), souhait(3)],
   createdAt: "2026-08-01T00:00:00.000Z", ...p,
@@ -140,58 +141,52 @@ describe("le corps de la décision", () => {
  * contribution déposée pour Awa.
  */
 describe("de qui parle une contribution", () => {
-  const CARNET = new Map([[uuid(9), "Awa"]]);
   const SANS_NOM = "Sans nom";
 
   it("nomme la fiche visée par un lien nominatif", () => {
     expect(nomDeLaContribution(
-      contribution({ linkType: "nominatif", personId: uuid(9), submitterName: null }),
-      CARNET, SANS_NOM,
+      contribution({ linkType: "nominatif", personDisplayName: "Awa", submitterName: null }),
+      SANS_NOM,
     )).toBe("Awa");
   });
 
   /* La fiche l'emporte sur le nom que le répondant se donne : sur un lien
-     nominatif c'est la MÊME personne, et le carnet porte le nom que le
+     nominatif c'est la MÊME personne, et la fiche porte le nom que le
      propriétaire a choisi — celui sous lequel il la reconnaît. */
   it("préfère la fiche au nom que le répondant se donne", () => {
     expect(nomDeLaContribution(
-      contribution({ personId: uuid(9), submitterName: "Ana" }), CARNET, SANS_NOM,
+      contribution({ personDisplayName: "Awa", submitterName: "Ana" }), SANS_NOM,
     )).toBe("Awa");
   });
 
-  /* Un lien PUBLIC ne vise personne tant qu'on n'a pas tranché : c'est le
-     répondant qui se nomme. */
+  /* Un lien PUBLIC ne vise personne tant qu'on n'a pas tranché : le serveur rend
+     `personDisplayName` nul, et c'est le répondant qui se nomme. */
   it("garde le nom du répondant sur un lien public", () => {
     expect(nomDeLaContribution(
-      contribution({ linkType: "public", personId: null, submitterName: "Ana" }),
-      CARNET, SANS_NOM,
+      contribution({
+        linkType: "public", personId: null, personDisplayName: null, submitterName: "Ana",
+      }),
+      SANS_NOM,
     )).toBe("Ana");
   });
 
   it("dit « sans nom » quand le répondant s'en est abstenu", () => {
     expect(nomDeLaContribution(
-      contribution({ linkType: "public", personId: null, submitterName: null }),
-      CARNET, SANS_NOM,
+      contribution({
+        linkType: "public", personId: null, personDisplayName: null, submitterName: null,
+      }),
+      SANS_NOM,
     )).toBe(SANS_NOM);
   });
 
-  /* LE CARNET PEUT NE PAS PORTER LA FICHE : sa lecture a pu échouer, ou la
-     fiche sortir de la page demandée. On retombe alors sur ce qu'on affichait
-     avant, jamais sur un blanc. */
-  it("retombe sur le répondant quand le carnet ignore la fiche", () => {
+  /* UN NOM VIDE NE VAUT PAS UN NOM. Le serveur ne devrait pas en servir, mais
+     un blanc à l'écran serait pire qu'un repli : on retombe sur le répondant. */
+  it("retombe sur le répondant quand la fiche n'a pas de nom", () => {
     expect(nomDeLaContribution(
-      contribution({ personId: uuid(7), submitterName: "Ana" }), CARNET, SANS_NOM,
+      contribution({ personDisplayName: "  ", submitterName: "Ana" }), SANS_NOM,
     )).toBe("Ana");
     expect(nomDeLaContribution(
-      contribution({ personId: uuid(7), submitterName: null }), CARNET, SANS_NOM,
+      contribution({ personDisplayName: null, submitterName: null }), SANS_NOM,
     )).toBe(SANS_NOM);
-  });
-
-  // Un nom fait de blancs n'est pas un nom : il laisserait une carte muette.
-  it("ne retient pas un nom de fiche fait de blancs", () => {
-    expect(nomDeLaContribution(
-      contribution({ personId: uuid(9), submitterName: "Ana" }),
-      new Map([[uuid(9), "   "]]), SANS_NOM,
-    )).toBe("Ana");
   });
 });

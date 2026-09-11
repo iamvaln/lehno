@@ -52,15 +52,22 @@ export function demandeOuRanger(contribution: Submission): boolean {
  * répondant qui se nomme, et « Sans nom » y est la vérité quand il s'en est
  * abstenu.
  */
-export function nomDeLaContribution(
-  contribution: Submission,
-  carnet: ReadonlyMap<string, string>,
-  sansNom: string,
-): string {
-  if (contribution.personId !== null) {
-    const connu = carnet.get(contribution.personId);
-    if (connu !== undefined && connu.trim() !== "") return connu;
-  }
+/**
+ * Comment intituler la carte d'une contribution.
+ *
+ * LE SERVEUR SERT LE NOM depuis `personDisplayName`. Il ne le servait pas : le
+ * sas chargeait alors le CARNET ENTIER pour un mot — une requête de plus sur un
+ * écran qui en fait déjà deux, et une seconde vérité à tenir d'accord avec la
+ * première.
+ *
+ * Le repli sur `submitterName` reste, et il n'est pas un repli d'erreur : c'est
+ * le cas du lien PUBLIC, dont la fiche n'existe pas encore. Le serveur rend
+ * alors `personDisplayName` nul, et c'est celui qui a contribué qui nomme la
+ * carte.
+ */
+export function nomDeLaContribution(contribution: Submission, sansNom: string): string {
+  const nom = contribution.personDisplayName;
+  if (nom !== null && nom.trim() !== "") return nom;
   return contribution.submitterName ?? sansNom;
 }
 

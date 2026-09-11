@@ -29,6 +29,8 @@ describe("une contribution à valider", () => {
     id: ID,
     linkType: "public" as const,
     personId: null,
+    // Un lien PUBLIC n'a pas encore de fiche : elle naît à la validation.
+    personDisplayName: null,
     submitterName: "Mathias",
     relationHint: "un ami de la fac",
     birthDate: "1990-08-24",

@@ -467,6 +467,28 @@ describe("le Mur et la collecte", () => {
     return { personId: p?.id ?? null, submission: s! };
   };
 
+  /* LE NOM DE LA FICHE, pour que la carte du sas s'intitule.
+   *
+   * Il manquait, et le seul champ que l'écran pouvait lire était
+   * `submitterName` — accepté sur un lien PUBLIC seulement, « sur un nominatif,
+   * le propriétaire sait déjà qui il a invité ». Sur toute contribution
+   * nominative il était donc nul, et la carte s'intitulait « Pour Sans nom »
+   * exactement là où elle avait un nom à dire. */
+  it("nomme la fiche visée sur une contribution nominative", async () => {
+    const { submission } = await contribution();
+    expect(submission.personDisplayName).toBe("Bila");
+    // `submitterName` reste nul : c'est le champ de l'autre cas.
+    expect(submission.submitterName).toBeNull();
+  });
+
+  /* Un lien PUBLIC n'a pas encore de fiche — elle naît à la validation. Le nom
+     est donc nul, et c'est `submitterName` qui porte celui de la carte. */
+  it("ne nomme aucune fiche sur une contribution publique", async () => {
+    const { submission } = await contribution({ nominatif: false });
+    expect(submission.personDisplayName).toBeNull();
+    expect(submission.submitterName).toBe("Fatou");
+  });
+
   /* LE cas central : la répartition tient en une seule transaction, et la
      décision porte sur l'ensemble. Sans elle, une panne au milieu laisserait la
      date écrite, le mot perdu, un souhait sur deux rangé — et la contribution

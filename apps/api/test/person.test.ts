@@ -247,6 +247,47 @@ describe("annuaire des proches", () => {
     expect((await service.list(awa)).persons).toHaveLength(2);
   });
 
+  /* LA FICHE DIT CE QUE LA LISTE DIT.
+   *
+   * Vu à l'appareil : la LISTE affichait « Awa — anniversaire · 3 sept. », et la
+   * FICHE du même proche, un écran plus loin, n'affichait aucun sous-titre.
+   * `get` rendait `nextOccurrence: null` et `notesCount: 0` en toutes
+   * circonstances, parce qu'il empruntait le chemin de la CRÉATION — où ces
+   * deux valeurs sont connues d'avance. Le contrat, lui, les promet sans
+   * condition. */
+  describe("la fiche porte ses détails, comme la liste", () => {
+    it("rend le décompte de notes et la prochaine échéance", async () => {
+      /* L'anniversaire s'ancre sur la NAISSANCE du proche : sans elle,
+         `events.create` refuse — « this person has no birth date ». */
+      const p = await service.create(awa, {
+        gender: "female", displayName: "Awa", birthDate: "1994-03-12",
+      });
+      await notes.createForPerson(awa, p.id, { content: "Elle jardine tous les dimanches." });
+      await notes.createForPerson(awa, p.id, { content: "Elle boit son thé très fort." });
+      await events.create(awa, { personId: p.id, kind: "birthday" });
+
+      const fiche = await service.get(awa, p.id);
+      expect(fiche.notesCount).toBe(2);
+      expect(fiche.nextOccurrence).not.toBeNull();
+
+      /* LA MÊME VÉRITÉ DES DEUX CÔTÉS : sans cette comparaison, la fiche
+         pourrait se remettre à diverger de la liste sans que rien ne tombe. */
+      const { persons } = await service.list(awa);
+      const enListe = persons.find((x) => x.id === p.id);
+      expect(fiche.notesCount).toBe(enListe?.notesCount);
+      expect(fiche.nextOccurrence).toEqual(enListe?.nextOccurrence);
+    });
+
+    /* Une fiche neuve n'a ni note ni date, et c'est l'état que le commentaire
+       d'origine décrivait : zéro et nul y sont JUSTES. */
+    it("rend zéro et nul sur une fiche qui n'a rien", async () => {
+      const p = await service.create(awa, { gender: "male", displayName: "Karim" });
+      const fiche = await service.get(awa, p.id);
+      expect(fiche.notesCount).toBe(0);
+      expect(fiche.nextOccurrence).toBeNull();
+    });
+  });
+
   describe("la fiche complète", () => {
     // Le service ÉNUMÈRE les champs qu'il écrit — c'est ce qui empêche un
     // userId glissé d'atteindre le dépôt. Mais l'énumération a un prix : un

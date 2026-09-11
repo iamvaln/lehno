@@ -35,30 +35,30 @@ const CATALOGUE: StudioConfig = studioConfigSchema.parse({
     {
       id: "voie", label: "L'image", defaultChoiceId: "illustration",
       choices: [
-        { id: "illustration", label: "Une illustration", description: null, warning: null, revealsGroup: "famille" },
-        { id: "photo", label: "Une photo traitée", description: null, warning: null, revealsGroup: "style" },
-        { id: "aucune", label: "Aucune", description: null, warning: null, revealsGroup: null },
+        { id: "illustration", label: "Une illustration", description: null, warning: null, revealsGroup: "famille", previewUrl: null },
+        { id: "photo", label: "Une photo traitée", description: null, warning: null, revealsGroup: "style", previewUrl: null },
+        { id: "aucune", label: "Aucune", description: null, warning: null, revealsGroup: null, previewUrl: null },
       ],
     },
     {
       id: "famille", label: "La famille", defaultChoiceId: "nature",
       choices: [
-        { id: "nature", label: "Nature", description: null, warning: null, revealsGroup: null },
-        { id: "animal", label: "Animal", description: null, warning: null, revealsGroup: null },
+        { id: "nature", label: "Nature", description: null, warning: null, revealsGroup: null, previewUrl: null },
+        { id: "animal", label: "Animal", description: null, warning: null, revealsGroup: null, previewUrl: null },
       ],
     },
     {
       id: "style", label: "Le style", defaultChoiceId: "lumiere",
       choices: [
-        { id: "lumiere", label: "La lumière", description: null, warning: null, revealsGroup: null },
-        { id: "silhouette", label: "La silhouette", description: null, warning: null, revealsGroup: null },
+        { id: "lumiere", label: "La lumière", description: null, warning: null, revealsGroup: null, previewUrl: null },
+        { id: "silhouette", label: "La silhouette", description: null, warning: null, revealsGroup: null, previewUrl: null },
       ],
     },
     {
       id: "ambiance", label: "L'ambiance", defaultChoiceId: "papier",
       choices: [
-        { id: "papier", label: "Papier", description: null, warning: null, revealsGroup: null },
-        { id: "encre", label: "Encre", description: null, warning: null, revealsGroup: null },
+        { id: "papier", label: "Papier", description: null, warning: null, revealsGroup: null, previewUrl: null },
+        { id: "encre", label: "Encre", description: null, warning: null, revealsGroup: null, previewUrl: null },
       ],
     },
   ],
