@@ -28,6 +28,7 @@ import {
 import { errorEnvelopeSchema } from "./errors.js";
 import {
   personSchema, createPersonSchema, updatePersonSchema, personListSchema, listPersonsQuerySchema,
+  selfPersonSchema,
   noteSchema, createNoteSchema, createNotesSchema, personAttributesSchema,
 } from "./me.js";
 import {
@@ -143,7 +144,12 @@ function couvertureDesDrapeaux(): string {
 
 type Chemin = {
   chemin: string;
-  methode: "get" | "post" | "patch" | "delete";
+  /* `put` n'est arrivé qu'avec `/me/self`, et il y est à sa place : cette
+     écriture-là est IDEMPOTENTE — on ne crée pas sa propre fiche puis on la
+     corrige, on dit qui on est, autant de fois qu'on veut. `post` mentirait sur
+     ce point, et `patch` annoncerait un envoi partiel alors que le nom et le
+     genre sont exigés. Partout ailleurs, les quatre premiers suffisent. */
+  methode: "get" | "post" | "patch" | "put" | "delete";
   resume: string;
   // Ce qu'un intégrateur ne peut PAS déduire des schémas : une règle de
   // séquence, une contrainte que le serveur applique sans que la forme la
@@ -649,6 +655,23 @@ const CHEMINS: Chemin[] = [
     // au sens REST — celui-ci l'est, 201 se corrige donc ici plutôt qu'au
     // contrôleur.
     statut: 201,
+  },
+  /* LA FICHE DE SOI, sur son propre chemin : `/me/persons/self` se ferait
+     capter par `/me/persons/{id}`, qui est déclaré juste en dessous. */
+  {
+    chemin: "/me/self",
+    methode: "get",
+    resume: "Lire sa propre fiche",
+    authentifie: true,
+    reponse: personSchema,
+  },
+  {
+    chemin: "/me/self",
+    methode: "put",
+    resume: "Écrire sa propre fiche",
+    authentifie: true,
+    corps: selfPersonSchema,
+    reponse: personSchema,
   },
   {
     chemin: "/me/persons/{id}",

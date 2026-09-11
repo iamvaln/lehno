@@ -42,6 +42,33 @@ function blocagePour(etat: string, essaisReussis: number): BlocagePublication | 
    qu'il ne sait pas faire sur un littéral, et on en serait réduit à forcer. */
 type ConfigurationDe<R> = Omit<ConfigurationMessage, "reglages"> & { reglages: R };
 
+/* UNE LIGNE QUI NE SE RELIT PLUS SE DIT, elle ne tombe pas en 500.
+ *
+ * `schema.parse()` posé nu ici a coûté une semaine au mobile : une ligne semée
+ * AVANT le découpage message/portrait porte l'ancienne forme — `motifs`,
+ * `voiesImage`, `ambiances`, et un `modeles` à trois clés là où le message
+ * n'en veut qu'une. Les deux schémas sont `.strict()`, donc la relecture lève
+ * une `ZodError` nue, que le filtre rend en « erreur interne ». Chaque
+ * génération de message répondait 500, et l'écran ne disait rien de plus qu'un
+ * serveur en panne. Il a fallu un DELETE en base pour repartir.
+ *
+ * `resource_inactive` et non `internal_error` : ce n'est pas une panne, c'est
+ * une configuration qui n'est plus lisible — l'écran doit dire « indisponible »
+ * plutôt que « réessayez », et le détail nomme la nature pour que le journal
+ * dise laquelle des deux. Le semis répare ce cas au démarrage ; ce refus est
+ * ce qui reste quand la réparation ne s'applique pas, et il se lit. */
+function relire<T>(schema: { parse(v: unknown): T }, settings: unknown, nature: string): T {
+  try {
+    return schema.parse(settings);
+  } catch (cause) {
+    throw new AppError(
+      "resource_inactive",
+      `the published ${nature} configuration no longer matches its schema`,
+      { nature, detail: cause instanceof Error ? cause.message : String(cause) },
+    );
+  }
+}
+
 type LigneConfig = {
   id: string; kind: StudioConfigKind; version: number | null; state: string; settings: unknown;
   fingerprint: string; publishedAt: Date | null; publishedByAdminId: string | null;
@@ -74,8 +101,8 @@ export class StudioConfigurationService {
   /** Les réglages relus de la base, revalidés. */
   reglagesDe(ligne: { kind: StudioConfigKind; settings: unknown }): ReglagesMessage | ReglagesPortrait {
     return ligne.kind === "message"
-      ? reglagesMessageSchema.parse(ligne.settings)
-      : reglagesPortraitSchema.parse(ligne.settings);
+      ? this.reglagesMessageDe(ligne)
+      : this.reglagesPortraitDe(ligne);
   }
 
   /* Deux lectures typées, pour que les appelants n'aient pas à faire
@@ -83,11 +110,21 @@ export class StudioConfigurationService {
      studio du portrait QUE le portrait. Une assertion posée chez l'appelant
      laisserait passer l'inversion sans que rien ne le dise. */
   reglagesMessageDe(ligne: { settings: unknown }): ReglagesMessage {
-    return reglagesMessageSchema.parse(ligne.settings);
+    return relire(reglagesMessageSchema, ligne.settings, "message");
   }
 
   reglagesPortraitDe(ligne: { settings: unknown }): ReglagesPortrait {
-    return reglagesPortraitSchema.parse(ligne.settings);
+    return relire(reglagesPortraitSchema, ligne.settings, "portrait");
+  }
+
+  /* La même relecture, mais qui RÉPOND au lieu de refuser.
+   *
+   * Le semis en a besoin pour décider s'il doit réparer : il ne peut pas se
+   * servir de `reglagesDe`, qui lève — et attraper une exception pour en faire
+   * un booléen cacherait la vraie panne le jour où la base est injoignable. */
+  estLisible(ligne: { kind: StudioConfigKind; settings: unknown }): boolean {
+    const schema = ligne.kind === "message" ? reglagesMessageSchema : reglagesPortraitSchema;
+    return schema.safeParse(ligne.settings).success;
   }
 
   async enService(nature: StudioConfigKind): Promise<LigneConfig | null> {

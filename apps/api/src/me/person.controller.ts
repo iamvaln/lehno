@@ -9,13 +9,15 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
 import {
-  createPersonSchema, updatePersonSchema, listPersonsQuerySchema,
+  createPersonSchema, updatePersonSchema, listPersonsQuerySchema, selfPersonSchema,
   type CreatePersonInput, type Person, type PersonAttributes, type PersonList, type UpdatePersonInput,
+  type SelfPersonInput,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
@@ -129,5 +131,43 @@ export class PersonController {
   @HttpCode(204)
   remove(@Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string): Promise<void> {
     return this.persons.remove(req.userId, id);
+  }
+}
+
+/* LA FICHE DE SOI, SUR SON PROPRE CHEMIN.
+ *
+ * Pas `GET /me/persons/self` : `@Get(":id")` du carnet capterait « self » avant
+ * lui — Nest résout dans l'ordre de déclaration, et le mot passerait alors au
+ * `ParseUUIDPipe`, qui rendrait un 400 sur une route qui existe. Un chemin à
+ * part met la question hors de portée plutôt que de la régler par un ordre de
+ * lignes que le premier refactor défera.
+ *
+ * Pas de `@Feature` non plus : sa propre fiche relève du socle, comme le
+ * carnet. */
+@Controller("me/self")
+@UseGuards(AuthGuard)
+export class SelfPersonController {
+  constructor(@Inject(PersonService) private readonly persons: PersonService) {}
+
+  /* 404 QUAND ELLE N'EXISTE PAS, plutôt qu'un corps nul. Un écran qui reçoit
+     `null` doit distinguer « pas encore répondu » de « champ vide » ; un statut
+     le dit sans que personne ait à l'interpréter, et c'est la forme qu'a déjà
+     toute lecture d'une ressource absente dans cette API. */
+  @Get()
+  async lire(@Req() req: AuthedRequest): Promise<Person> {
+    const fiche = await this.persons.lireSoi(req.userId);
+    if (fiche === null) throw new AppError("not_found", "resource not found");
+    return fiche;
+  }
+
+  /* `PUT` et non `POST` : on ne crée pas sa propre fiche, on dit qui on est.
+     Rejouer l'appel doit donner le même état, et c'est ce que le verbe promet
+     — l'application n'a donc pas à lire avant d'écrire. */
+  @Put()
+  ecrire(
+    @Req() req: AuthedRequest,
+    @Body(new ZodValidationPipe(selfPersonSchema)) body: SelfPersonInput,
+  ): Promise<Person> {
+    return this.persons.ecrireSoi(req.userId, body);
   }
 }
