@@ -23,8 +23,8 @@ import { poseLApparence } from "../../lib/apparence.js";
 import { naissanceLue, type SaisieDeNaissance } from "../../lib/carnet.js";
 import { nomsDesMois } from "../../lib/evenement.js";
 import {
-  corpsDeMiseAJour, doitVerifierLaDisponibilite, peutEnregistrer, pseudoRecevable,
-  type SaisieDeProfil,
+  corpsDeMiseAJour, doitVerifierLaDisponibilite, peutEnregistrer, pseudoPosable,
+  pseudoRecevable, type SaisieDeProfil,
 } from "../../lib/profil.js";
 import { choisirUnePhoto, envoyerLaPhoto, retirerLaPhoto } from "../../lib/photo-de-profil.js";
 import { imageLocale, oublierLesAutres } from "../../lib/images-locales.js";
@@ -441,13 +441,18 @@ export default function Profil() {
       <View style={{ marginTop: nativeSpace[28] }}>
         <Button
           full
-          /* DEUX SOURCES, DEUX RAISONS D'ALLUMER. `peutEnregistrer` ne
-              connaît que le compte ; la naissance et le nom d'usage vivent sur
-              la fiche. N'écouter que la première éteignait le bouton sur le
-              seul geste que cet écran existe pour rendre possible — poser sa
-              date de naissance —, et il fallait modifier son nom au passage
-              pour pouvoir enregistrer. */
+          /* LE REFUS D'ABORD, LE REPOS ENSUITE, et l'ordre est la règle.
+              `pseudoPosable` est un refus : un pseudo mal formé ou déjà pris
+              ne s'enregistre pas, quoi qu'on ait saisi par ailleurs — l'envoi
+              part entier et serait refusé entier.
+
+              Le repos, lui, cède dès qu'UN des deux objets de cet écran bouge.
+              `peutEnregistrer` ne connaît que le compte ; la naissance et le
+              nom d'usage vivent sur la fiche, et n'écouter que le premier
+              éteignait le bouton sur le seul geste que cet écran existe pour
+              rendre possible — poser sa date de naissance. */
           disabled={envoi
+            || !pseudoPosable(saisie, profil, libre)
             || (!peutEnregistrer(saisie, profil, libre)
               && !ficheAChange(saisieDeSoi(saisie), fiche))}
           onPress={() => void enregistre()}
