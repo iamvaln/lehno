@@ -12,6 +12,7 @@ import {
 } from "@lehno/tokens";
 import { Avatar, Banner, Button, Icon, SectionLabel, TextField, useCouleurs } from "@lehno/ui-native";
 import { useLangue } from "../lib/langue.js";
+import { soiDabord } from "../lib/soi.js";
 import { Pastille } from "../composants/Pastille.js";
 import { RangeeDeJours } from "../composants/RangeeDeJours.js";
 import { appel, ErreurDApi } from "../lib/api.js";
@@ -87,7 +88,11 @@ export default function Evenement() {
     const page = personListSchema.parse(await appel<unknown>(
       "/me/persons?sort=alpha&direction=asc&offset=0&limit=100",
     ));
-    setCarnet(page.persons);
+    /* SOI RESTE OFFERT ICI — c'est le seul endroit où l'on pose une date à soi,
+       et c'est lui qui débloque la wishlist datée et « Ma date d'anniversaire »
+       sur le Mur. En tête : c'est la fiche qu'on cherche le jour où elle vient
+       d'exister, et la chercher au milieu du carnet serait absurde. */
+    setCarnet(soiDabord(page.persons));
   }, []);
 
   useEffect(() => { void charge(); }, [charge]);
@@ -243,9 +248,9 @@ export default function Evenement() {
           <View style={styles.puces}>
             {proche ? (
               <View style={[styles.puce, { backgroundColor: couleurs.actionQuietBg }]}>
-                <Avatar name={proche.displayName} size={24} />
+                <Avatar name={proche.isSelf ? t.evtPourMoi : proche.displayName} size={24} />
                 <Text style={[styles.puceTexte, { color: couleurs.textAccent }]}>
-                  {proche.displayName}
+                  {proche.isSelf ? t.evtPourMoi : proche.displayName}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
