@@ -5,7 +5,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { notificationsPageSchema, type Notification } from "@lehno/contracts";
 import { nativeBorder, nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
-  Banner, Button, EmptyState, Icon, LoadingState, SectionLabel, useCouleurs,
+  Banner, Button, EmptyState, Icon, LoadingState, ScreenHeader, SectionLabel, useCouleurs
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -96,15 +96,11 @@ export default function Notifications() {
     }
   };
 
+  /* L'en-tête porte le nom de l'écran dans TOUS ses états. Le titre ne vivait
+     que dans la branche nominale : l'écran vide s'ouvrait sur une flèche seule,
+     et c'est justement l'état où l'on se demande si l'on est au bon endroit. */
   const retour = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t.retour}
-      onPress={() => routeur.back()}
-      style={styles.retour}
-    >
-      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-    </Pressable>
+    <ScreenHeader titre={t.notifsTitre} retour={t.retour} onRetour={() => routeur.back()} />
   );
 
   if (echec && items === null) {
@@ -203,20 +199,22 @@ export default function Notifications() {
         paddingBottom: insets.bottom + nativeSpace[24],
       }]}
     >
-      {retour}
-
-      <View style={styles.entete}>
-        <Text style={[styles.titre, { color: couleurs.textBody }]} accessibilityRole="header">
-          {t.notifsTitre}
-        </Text>
-        {/* « TOUT » SE TAPE, il ne s'obtient pas par omission : un corps vide
-            viderait la pastille de quelqu'un qui n'a rien lu. */}
-        {lisibles.some((n) => !n.readAt) ? (
-          <Button variant="text" onPress={() => void marque(corpsDeToutLire())}>
-            {t.notifsToutLu}
-          </Button>
-        ) : null}
-      </View>
+      {/* « TOUT » SE TAPE, il ne s'obtient pas par omission : un corps vide
+          viderait la pastille de quelqu'un qui n'a rien lu. Le geste se pose au
+          bout de l'en-tête, comme la planche le dessine — pas sur une ligne à
+          lui, où il paraîtrait s'adresser à la première notification. */}
+      <ScreenHeader
+        titre={t.notifsTitre}
+        retour={t.retour}
+        onRetour={() => routeur.back()}
+        {...(lisibles.some((n) => !n.readAt) ? {
+          fin: (
+            <Button variant="text" onPress={() => void marque(corpsDeToutLire())}>
+              {t.notifsToutLu}
+            </Button>
+          ),
+        } : {})}
+      />
 
       {echec ? (
         <View style={{ marginBottom: nativeSpace[12] }}>
@@ -256,7 +254,6 @@ const styles = StyleSheet.create({
     width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
     alignItems: "center", justifyContent: "center",
   },
-  entete: { flexDirection: "row", alignItems: "center", gap: nativeSpace[10] },
   titre: { flex: 1, fontFamily: nativeFont.displayMedium, fontSize: 22 },
   bloc: { marginTop: nativeSpace[20] },
   rang: {

@@ -300,3 +300,46 @@ méritent la question, écran par écran :
 Ce n'est pas une règle mécanique : recharger à chaque retour coûte une requête,
 et sur un écran qui ne bouge jamais c'est du bruit. À trancher une fois, pas à
 appliquer partout.
+
+---
+
+## I. La pastille promet ce que l'écran ne peut pas montrer
+
+Vu à l'appareil le 11 septembre 2026 : **la cloche affiche « 2 », le centre de
+notifications dit « Rien à signaler ».**
+
+Les deux ont raison, et c'est bien le problème. Le compte vient de `/me/home`,
+qui compte les non-lues telles que le serveur les tient. L'écran, lui, filtre :
+
+```
+const lisibles = items.filter((n) => libelleDeLaNotification(n, t) !== null);
+```
+
+`libelleDeLaNotification` ne sait dire que deux natures sur sept. Les cinq
+autres — `activation_first_person`, `activation_first_note`,
+`activation_unused_credits`, `enrichment_nudge_global`,
+`enrichment_nudge_person` — n'ont **aucune copie**, ni dans l'application ni
+dans la planche. Le dépôt le sait déjà : `CLES_SERVIES` les liste, un test les
+surveille, et le commentaire dit « c'est un silence, pas une panne — mais il se
+voit d'autant moins qu'il est silencieux ».
+
+Il se voit maintenant : les deux notifications de mon compte sont exactement de
+ces natures-là.
+
+**Ce n'est pas au mobile de trancher.** Écrire ces cinq phrases est un geste de
+copie, pas de code — et les inventer ici les figerait sans que personne ne les
+ait voulues. Trois façons d'en sortir, par ordre de préférence :
+
+1. **Écrire la copie** des cinq natures. C'est le vrai correctif : ces relances
+   partent par courrier ET dans le centre ; celles qui arrivent au centre
+   doivent s'y lire.
+2. **Ne pas les poser dans le centre** si l'on juge qu'elles n'y ont pas leur
+   place — le courrier suffirait. La pastille retomberait d'elle-même.
+3. Faire compter la pastille sur ce qui est affichable — le pire des trois :
+   le mobile décide alors seul de ce que le serveur signale, et la règle vit à
+   deux endroits.
+
+`notifContribution`, `notifCredits` et `notifPortrait` sont par ailleurs
+traduits dans l'application et employés nulle part — de la copie morte, comme
+`parrainValide` au §A1. Aucune des trois ne correspond aux cinq natures
+ci-dessus.
