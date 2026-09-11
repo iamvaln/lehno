@@ -16,6 +16,23 @@ Ordonné par ce qui bloque le produit, pas par difficulté.
 
 ---
 
+## État au 11 septembre
+
+Ce brief a deux jours et le serveur a bougé vite. Ce qui suit est vérifié à
+cette date, sur `develop`, dans le code — pas de mémoire.
+
+| § | Verdict | Ce qui l'a réglé |
+|---|---|---|
+| **1** — deux générations sur trois refusées | **clos** | `GENERATION_KINDS` porte les trois, et le contrôleur les traite |
+| **3** — `hasWishlist` | **clos** | servi (`me-home.ts`) |
+| **9** — l'établi du message | **clos** | `admin/text-studio/:nature/…` (#176) : lecture, historique, enregistrement, essais, publication, retour arrière — pour les trois natures de texte, `message`, `idees`, `portrait_brief` |
+| **10** — la fiche de soi | **pour moitié** | `GET` et `PUT /me/self` existent, et `ecrireSoi` pose `isSelf: true`. Reste la reprise des comptes ouverts avant |
+| **11** — la fiche d'un proche | **ouvert** | `person.service.ts:202` rend toujours sans ses détails |
+| **12** — le nom sur la contribution | **ouvert** | `personDisplayName` absent de `submissionSchema` |
+
+Les paragraphes ci-dessous gardent leur rédaction d'origine : ils disent ce
+qu'on a vu, quand on l'a vu. Ce tableau dit ce qui en reste.
+
 ## 1. Deux générations sur trois sont refusées — bloquant
 
 `apps/api/src/me/generation.controller.ts`
@@ -209,7 +226,16 @@ la langue.
 
 ---
 
-## 9. L'établi du message n'est pas encore branché (et sa configuration semée ne se réparait pas)
+## 9. ~~L'établi du message n'est pas encore branché~~ — CLOS le 11 septembre
+
+> **`admin/text-studio/:nature/…` existe depuis #176**, et il sert les TROIS
+> natures de texte — `message`, `idees`, `portrait_brief` : lecture,
+> historique, enregistrement, essais, publication, retour arrière. Ce que ce
+> paragraphe demandait est fait, et plus largement qu'il ne le demandait.
+>
+> La réparation au démarrage (`45fd6fa`) avait déjà fermé les deux premiers
+> points la veille. Le paragraphe est gardé tel quel : il dit ce qu'on a vu le
+> 10, et pourquoi l'écran répondait 500.
 
 Trouvé à l'appareil le 10 septembre 2026, en lançant une génération de message
 depuis l'écran de préparation. L'application affiche « Quelque chose s'est mal
@@ -290,7 +316,21 @@ jour où l'établi du message arrivera, la question du chemin se posera.
 
 ---
 
-## 10. Le titulaire du compte n'a pas de fiche : `isSelf` se lit partout, ne s'écrit nulle part
+## 10. Le titulaire du compte n'a pas de fiche — RÉGLÉ POUR MOITIÉ le 11 septembre
+
+> **`GET` et `PUT /me/self` existent**, et `ecrireSoi` pose bien `isSelf: true`
+> à la création. Le point 3 du « ce qu'il faut » ci-dessous est donc tranché :
+> c'est la fiche de soi qui porte la date de naissance, `PATCH /me/profile` n'y
+> touche pas.
+>
+> **Reste le point 2** : les comptes ouverts avant n'ont toujours aucune fiche,
+> et rien ne la leur donne. Tant qu'ils ne passent pas par `PUT /me/self`, la
+> wishlist datée et « Ma date d'anniversaire » restent hors d'atteinte pour
+> eux.
+>
+> Côté mobile, c'est devenu du travail à faire : l'écran du profil peut
+> maintenant porter la naissance, et le sélecteur « Pour qui » peut s'ouvrir à
+> soi.
 
 Trouvé à l'appareil le 10 septembre 2026, en cherchant pourquoi « Nouvelle
 wishlist » annonçait « Aucune date à vous pour l'instant » sur un compte qui
@@ -349,6 +389,8 @@ création.
 
 ## 11. `GET /me/persons/{id}` rend toujours `nextOccurrence: null` et `notesCount: 0`
 
+> **Toujours ouvert au 11 septembre**, vérifié dans le code.
+
 Vu à l'appareil le 10 septembre 2026 : la LISTE des proches affiche « Awa —
 Rien de noté encore · 10 sept. », et la FICHE du même proche, un écran plus
 loin, n'affiche aucun sous-titre. La date est là, la fiche ne la dit pas.
@@ -390,6 +432,8 @@ fiche — et une seconde vérité à tenir d'accord avec la première.
 ---
 
 ## 12. `submissionSchema` porte `personId` mais pas le nom de la fiche
+
+> **Toujours ouvert au 11 septembre**, vérifié dans le code.
 
 Petit, et de la même famille que le §11 : la contribution rendue au propriétaire
 porte `personId`, jamais `personDisplayName`. L'écran du sas (§3.8) doit donc
