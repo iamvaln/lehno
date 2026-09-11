@@ -128,10 +128,12 @@ describe("qui est un proche", () => {
     expect(sansSoi([personne("Awa")]).map((p) => p.id)).toEqual(["Awa"]);
   });
 
-  /* Là où l'on choisit une PERSONNE — poser une date, écrire une note — soi
-     reste offert, et en tête : c'est la fiche qu'on cherche le plus souvent
-     quand elle vient d'exister, et la chercher au milieu du carnet serait
-     absurde. */
+  /* Là où l'on choisit une PERSONNE POUR LUI POSER UNE DATE, soi reste offert,
+     et en tête : c'est la fiche qu'on cherche le plus souvent quand elle vient
+     d'exister, et la chercher au milieu du carnet serait absurde.
+
+     Écrire une note n'en est pas : une note est de la matière pour écrire À
+     quelqu'un, et rien ne lit encore une note sur soi. */
   it("met la fiche de soi en tête là où elle a sa place", () => {
     expect(soiDabord([personne("Awa"), personne("moi", true)]).map((p) => p.id))
       .toEqual(["moi", "Awa"]);

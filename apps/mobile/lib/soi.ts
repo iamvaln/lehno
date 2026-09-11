@@ -104,11 +104,15 @@ export function sansSoi(personnes: readonly Person[]): Person[] {
   return personnes.filter((p) => !p.isSelf);
 }
 
-/* LÀ OÙ L'ON CHOISIT UNE PERSONNE, soi reste offert et passe en tête.
+/* LÀ OÙ L'ON CHOISIT UNE PERSONNE POUR LUI POSER UNE DATE, soi reste offert et
+ * passe en tête : c'est même le seul endroit où une date à soi se pose. En tête
+ * parce que c'est la fiche qu'on cherche le plus souvent le jour où elle vient
+ * d'exister.
  *
- * Poser une date, écrire une note : ce sont des gestes qui visent quelqu'un, et
- * ce quelqu'un peut être soi. En tête parce que c'est la fiche qu'on cherche le
- * plus souvent le jour où elle vient d'exister.
+ * ÉCRIRE UNE NOTE N'EN EST PAS. Une note est de la matière pour écrire À
+ * quelqu'un — elle nourrit un message, un portrait, une idée de cadeau. Rien
+ * aujourd'hui ne lit une note sur soi : il n'y a ni portrait de soi ni message
+ * à soi. `note.tsx` fait donc `sansSoi`, et la garde grave ce choix.
  *
  * Le tri est STABLE : l'ordre reçu du serveur — alphabétique — est conservé
  * pour tout le reste.
