@@ -16,6 +16,7 @@ import { RouteurIAService, type Adaptateur, type ReponseIA } from "../src/ia/rou
 import { CatalogueIAService } from "../src/ia/catalogue.service.js";
 import { MetadataService } from "../src/me/metadata.service.js";
 import { FlagsService } from "../src/flags/flags.service.js";
+import { fini } from "./attendre.js";
 
 /**
  * LE STUDIO DES TEXTES — trois générations, trois configurations.
@@ -97,7 +98,7 @@ describe("le studio des textes", () => {
     const config = await db.prisma.studioConfig.findFirstOrThrow({
       where: { kind: "portrait", state: "published" },
     });
-    return fabrique(modele).lancerPortrait(
+    return fini(fabrique(modele).lancerPortrait(
       awa, proche,
       {
         orientation: "notre_relation",
@@ -106,7 +107,7 @@ describe("le studio des textes", () => {
         composition: { id: "papier", palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#5A4B93"] },
       } as never,
       config.id, {},
-    );
+    ));
   };
 
   const crediter = (n: number) =>
@@ -205,7 +206,7 @@ describe("le studio des textes", () => {
       await crediter(5);
 
       const modele = espion(IDEES_RENDUES(5));
-      await fabrique(modele).lancerIdees(awa, occurrence);
+      await fini(fabrique(modele).lancerIdees(awa, occurrence));
 
       expect(modele.vu[0]).toMatch(/CONSIGNE DE LA MAISON/);
       expect(modele.vu[0]).toMatch(/Privilégiez ce qui se partage à plusieurs\./);
@@ -219,7 +220,7 @@ describe("le studio des textes", () => {
       await crediter(5);
 
       const modele = espion(IDEES_RENDUES(4));
-      const jeu = await fabrique(modele).lancerIdees(awa, occurrence);
+      const jeu = await fini(fabrique(modele).lancerIdees(awa, occurrence));
 
       expect(modele.vu[0]).toMatch(/EXACTEMENT 4 IDÉES/);
       expect(modele.vu[0]).not.toMatch(/EXACTEMENT 5 IDÉES/);
@@ -237,7 +238,7 @@ describe("le studio des textes", () => {
       await crediter(5);
 
       const modele = espion(IDEES_RENDUES(5));
-      const jeu = await fabrique(modele).lancerIdees(awa, occurrence);
+      const jeu = await fini(fabrique(modele).lancerIdees(awa, occurrence));
 
       expect(jeu.ideas).toHaveLength(5);
       expect(modele.vu[0]).toMatch(/EXACTEMENT 5 IDÉES/);
@@ -254,7 +255,7 @@ describe("le studio des textes", () => {
       await crediter(5);
 
       const modele = espion(IDEES_RENDUES(5));
-      expect((await fabrique(modele).lancerIdees(awa, occurrence)).ideas).toHaveLength(5);
+      expect((await fini(fabrique(modele).lancerIdees(awa, occurrence))).ideas).toHaveLength(5);
     });
   });
 
@@ -300,12 +301,12 @@ describe("le studio des textes", () => {
 
       const designe = compteur();
       const enTete = compteur();
-      await new GenerationService(
+      await fini(new GenerationService(
         db.prisma as never, new TenantRepository(db.prisma as never),
         new RouteurIAService(db.prisma as never),
         { [autre.provider]: designe, [tete.provider]: enTete } as never,
         configs,
-      ).lancerIdees(awa, occurrence);
+      ).lancerIdees(awa, occurrence));
 
       expect(designe.appels).toBe(1);
       expect(enTete.appels).toBe(0);
@@ -326,12 +327,12 @@ describe("le studio des textes", () => {
         async appeler(): Promise<ReponseIA> { throw new Error("fournisseur injoignable"); },
       } as unknown as Adaptateur;
 
-      const jeu = await new GenerationService(
+      const jeu = await fini(new GenerationService(
         db.prisma as never, new TenantRepository(db.prisma as never),
         new RouteurIAService(db.prisma as never),
         { [autre.provider]: tombe, [tete.provider]: espion(IDEES_RENDUES(5)) } as never,
         configs,
-      ).lancerIdees(awa, occurrence);
+      ).lancerIdees(awa, occurrence));
 
       expect(jeu.ideas).toHaveLength(5);
       /* LES DEUX TENTATIVES SONT CONSIGNÉES. Sans la ratée, la panne serait

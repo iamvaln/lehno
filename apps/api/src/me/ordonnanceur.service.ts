@@ -25,6 +25,24 @@ import { GenerationService } from "./generation.service.js";
 // l'ENVOI, pas ici : ce passage POSE la file, il ne décide pas de l'heure.
 const CHAQUE_JOUR = "0 5 * * *";
 
+/* LE RATTRAPAGE DES GÉNÉRATIONS A SA PROPRE CADENCE, et il la faut.
+ *
+ * Depuis que le lancement rend la main sans attendre la production, une
+ * exécution abandonnée — un arrêt du serveur au mauvais moment — laisse un
+ * crédit débité et un écran qui tourne. Au passage quotidien, quelqu'un dont la
+ * génération échoue à neuf heures du matin attendrait son crédit jusqu'au
+ * lendemain cinq heures. Vingt heures pour un remboursement, sur un geste payé.
+ *
+ * Toutes les dix minutes, donc. Le SEUIL, lui, ne bouge pas : une heure, parce
+ * que trop court rembourserait une production qui allait aboutir — et on
+ * écrirait alors deux fois le même message. Ce quart d'heure-là n'est pas un
+ * réglage de confort, c'est la marge qui sépare « abandonnée » de « lente ».
+ *
+ * PAS DANS LE PASSAGE QUOTIDIEN : il y reste aussi, et c'est voulu. Les deux ne
+ * se gênent pas — la garde de `rendreLeCredit` porte sur `pending`, donc un
+ * remboursement déjà fait ne se refait pas. */
+const CHAQUE_DIX_MINUTES = "*/10 * * * *";
+
 @Injectable()
 export class OrdonnanceurService {
   private readonly logger = new Logger("ordonnanceur");
@@ -40,6 +58,22 @@ export class OrdonnanceurService {
     @Inject(EnvoiService) private readonly envoi: EnvoiService,
     @Inject(GenerationService) private readonly generation: GenerationService,
   ) {}
+
+  /* À PART DU PASSAGE QUOTIDIEN, et sans son verrou. Le verrou `enCours`
+     protège une séquence de sept étapes qui dure ; ce rattrapage-ci lit une
+     table et écrit quelques lignes. Les faire partager un verrou ferait sauter
+     le rattrapage pendant toute la durée du passage de nuit — c'est-à-dire
+     précisément quand un incident aurait pu laisser des exécutions en route. */
+  @Cron(CHAQUE_DIX_MINUTES)
+  async rattraperLesGenerations(): Promise<void> {
+    try {
+      await this.generation.reconcilierLesEnCours();
+    } catch (err: unknown) {
+      /* On journalise et on laisse passer : ce rattrapage repassera dans dix
+         minutes, et relever ici n'aurait personne pour l'entendre. */
+      this.logger.error(`rattrapage des générations : ${String(err)}`);
+    }
+  }
 
   @Cron(CHAQUE_JOUR)
   async passageQuotidien(): Promise<void> {

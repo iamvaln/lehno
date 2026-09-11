@@ -8,6 +8,7 @@ import { AuditService } from "../src/admin/audit.service.js";
 import { StudioConfigurationService } from "../src/studio/configuration.service.js";
 import { RouteurIAService, type Adaptateur, type ReponseIA } from "../src/ia/routeur.service.js";
 import { CatalogueIAService } from "../src/ia/catalogue.service.js";
+import { echoue, fini } from "./attendre.js";
 
 /**
  * Les idées de cadeaux.
@@ -107,7 +108,7 @@ describe("les idées de cadeaux", () => {
   describe("la production", () => {
     it("range les idées dans leur ordre, rattachées à l'exécution", async () => {
       await crediter(5);
-      const jeu = await service.lancerIdees(awa, occurrence);
+      const jeu = await fini(service.lancerIdees(awa, occurrence));
 
       expect(jeu.ideas).toHaveLength(5);
       expect(jeu.ideas.map((i) => i.position)).toEqual([0, 1, 2, 3, 4]);
@@ -121,7 +122,7 @@ describe("les idées de cadeaux", () => {
        l'envers. */
     it("garde les premières quand le modèle en rend trop", async () => {
       await crediter(5);
-      const jeu = await fabrique(repond(cinqIdees(12))).lancerIdees(awa, occurrence);
+      const jeu = await fini(fabrique(repond(cinqIdees(12))).lancerIdees(awa, occurrence));
       expect(jeu.ideas.length).toBeLessThanOrEqual(8);
       expect(await solde()).toBe(4);
     });
@@ -130,13 +131,16 @@ describe("les idées de cadeaux", () => {
        comparer, et le refus d'une seule la vide. Le crédit est RENDU. */
     it("rend le crédit quand il n'y a plus de liste à montrer", async () => {
       await crediter(5);
-      await expect(fabrique(repond(cinqIdees(2))).lancerIdees(awa, occurrence)).rejects.toThrow();
+      /* ELLE NE REJETTE PLUS : le lancement rend la main avant la production,
+         et la requête est déjà partie quand ça échoue. Ce que l'utilisateur
+         voit reste le même, et c'est ce qu'on éprouve — son crédit revenu. */
+      await echoue(fabrique(repond(cinqIdees(2))).lancerIdees(awa, occurrence));
       expect(await solde()).toBe(5);
     });
 
     it("rend le crédit quand la sortie est illisible", async () => {
       await crediter(5);
-      await expect(fabrique(repond("pas du JSON")).lancerIdees(awa, occurrence)).rejects.toThrow();
+      await echoue(fabrique(repond("pas du JSON")).lancerIdees(awa, occurrence));
       expect(await solde()).toBe(5);
     });
 
@@ -151,7 +155,7 @@ describe("les idées de cadeaux", () => {
           titre: `Idée ${i + 1}`, pourquoi: "Une raison qui tient.", prixMin: 5_000, prixMax: null,
         })),
       });
-      const jeu = await fabrique(repond(bancal)).lancerIdees(awa, occurrence);
+      const jeu = await fini(fabrique(repond(bancal)).lancerIdees(awa, occurrence));
       expect(jeu.ideas[0]!.priceMin).toBeNull();
       expect(jeu.ideas[0]!.currency).toBeNull();
     });
@@ -161,14 +165,14 @@ describe("les idées de cadeaux", () => {
     it("passe les rejets en interdiction, jamais en matière", async () => {
       await crediter(5);
       const a = repond();
-      await fabrique(a).lancerIdees(awa, occurrence);
+      await fini(fabrique(a).lancerIdees(awa, occurrence));
       // Sans note de rejet, l'invite ne porte pas la section d'interdiction.
       expect(a.vu[0]).not.toContain("À NE JAMAIS PROPOSER");
 
       await note("le parfum", "dislikes_nogo");
       const b = repond();
       await crediter(5);
-      await fabrique(b).lancerIdees(awa, occurrence);
+      await fini(fabrique(b).lancerIdees(awa, occurrence));
       expect(b.vu[0]).toContain("À NE JAMAIS PROPOSER");
       expect(b.vu[0]).toContain("le parfum");
     });
@@ -180,7 +184,7 @@ describe("les idées de cadeaux", () => {
       await crediter(5);
       await note("elle a parlé d'un vélo", "gift_ideas");
       const a = repond();
-      await fabrique(a).lancerIdees(awa, occurrence);
+      await fini(fabrique(a).lancerIdees(awa, occurrence));
       expect(a.vu[0]).toContain("elle a parlé d'un vélo");
     });
 
@@ -190,7 +194,7 @@ describe("les idées de cadeaux", () => {
       await crediter(5);
       await db.prisma.event.updateMany({ where: { personId: proche }, data: { eventNature: "sensitive" } });
       const a = repond();
-      const jeu = await fabrique(a).lancerIdees(awa, occurrence);
+      const jeu = await fini(fabrique(a).lancerIdees(awa, occurrence));
       expect(jeu.ideas).toHaveLength(5);
       expect(a.vu[0]).toContain("ON SOULAGE");
     });
@@ -200,7 +204,7 @@ describe("les idées de cadeaux", () => {
     it("porte le budget jusqu'au modèle, avec sa devise", async () => {
       await crediter(5);
       const a = repond();
-      await fabrique(a).lancerIdees(awa, occurrence, { budget: { min: null, max: 20_000 } });
+      await fini(fabrique(a).lancerIdees(awa, occurrence, { budget: { min: null, max: 20_000 } }));
       expect(a.vu[0]).toContain("jusqu'à 20000 XAF");
     });
   });
@@ -208,7 +212,7 @@ describe("les idées de cadeaux", () => {
   describe("noter et retenir", () => {
     const unJeu = async () => {
       await crediter(5);
-      return service.lancerIdees(awa, occurrence);
+      return fini(service.lancerIdees(awa, occurrence));
     };
 
     it("pose un avis, le change, puis le reprend", async () => {
@@ -329,7 +333,7 @@ describe("les idées de cadeaux", () => {
    * en base, il faudra le reprendre, et son échec le dira. */
   it("relie un avis à l'exécution et au modèle qui a produit l'idée", async () => {
     await crediter(5);
-    const jeu = await service.lancerIdees(awa, occurrence);
+    const jeu = await fini(service.lancerIdees(awa, occurrence));
     await idees.noter(awa, jeu.ideas[0]!.id, "up");
 
     const remontee = await db.prisma.generatedIdea.findUniqueOrThrow({

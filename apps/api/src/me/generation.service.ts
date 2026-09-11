@@ -70,6 +70,54 @@ export class GenerationService {
     @Inject(StudioConfigurationService) private readonly configs: StudioConfigurationService,
   ) {}
 
+  /* Une demande déjà lancée sous la même clé n'a RIEN à produire : l'unicité
+     en base a refusé le second débit, et la première production tourne, a
+     abouti ou a échoué. Le client suit la même exécution et l'interroge.
+     Un objet partagé plutôt qu'un `Promise.resolve()` par appel — il n'y a rien
+     à attendre, et trois promesses distinctes le laisseraient croire. */
+  private static readonly RIEN = Promise.resolve(null);
+
+  /**
+   * LA PRODUCTION TOURNE DERRIÈRE, et le client ne l'attend plus.
+   *
+   * Le contrat le dit depuis toujours — « le lancement débite et rend aussitôt
+   * un identifiant, sans attendre la production » — et l'implémentation ne le
+   * faisait pas : la requête tenait les quarante secondes de l'appel au modèle.
+   * Sur un réseau mobile, c'est fragile ; et le sondage écrit côté application,
+   * à repli 2 s puis 8 s, tournait à vide puisque la réponse arrivait finie.
+   *
+   * DEUX GARDES, et la seconde est celle qui compte.
+   *
+   * Rien ne remonte à l'appelant : la requête est déjà partie quand ça échoue.
+   * Un rejet non rattrapé ferait tomber le processus Node entier — une
+   * génération ratée emporterait le serveur.
+   *
+   * Et le crédit est RENDU, comme il l'était quand on attendait. C'est la seule
+   * chose que l'utilisateur verra : son solde revient, et l'exécution porte la
+   * raison. `reconcilierLesEnCours` reste le filet du dessous — pour les arrêts
+   * du serveur, où même ce `catch` n'a pas lieu.
+   */
+  private enArrierePlan<T>(
+    executionId: string, userId: string, travail: () => Promise<T>,
+  ): Promise<T | null> {
+    return travail().catch(async (err: unknown) => {
+      try {
+        await this.rendreLeCredit(executionId, userId, this.codeDe(err));
+      } catch (echec: unknown) {
+        /* Le remboursement lui-même a échoué — base injoignable, le plus
+           souvent. On le NOMME au journal plutôt que de le laisser disparaître :
+           `reconcilierLesEnCours` repassera, mais personne ne saurait pourquoi
+           un crédit a mis une heure à revenir. */
+        this.logger.error(`remboursement impossible pour ${executionId}: ${String(echec)}`);
+      }
+      this.logger.warn(`génération ${executionId} en échec : ${this.codeDe(err)}`);
+      /* NUL, jamais une exception. `fini` porte ce qui a été produit ; rien
+         n'ayant abouti, il n'y a rien à porter — et relever ici rejetterait une
+         promesse que personne n'attend en production. */
+      return null;
+    });
+  }
+
   /* Lancer une génération de message.
    *
    * LE DÉBIT ET L'EXÉCUTION SONT DEUX TRANSACTIONS, et c'est délibéré. Tenir
@@ -110,23 +158,15 @@ export class GenerationService {
        s'en est chargée —, et il n'y a rien à produire : soit la production
        tourne, soit elle a abouti, soit elle a échoué et le crédit est rendu.
        Dans les trois cas, le client suit la même exécution. */
-    if (dejaLancee) {
-      const brouillon = await this.prisma.generatedMessage.findUnique({
-        where: { actionRunId: execution.id },
-      });
-      if (brouillon) return brouillon;
-      /* Elle tourne encore, ou elle a raté. On rend l'exécution telle quelle
-         plutôt que d'attendre : le client interroge, c'est son rôle. */
-      throw new AppError("conflict", "this generation is already running");
-    }
+    if (dejaLancee) return { execution, fini: GenerationService.RIEN };
 
-    try {
-      const sortie = await this.produire(contexte, userId, execution.id, modele);
-      return await this.conclure(execution.id, userId, occurrence.id, sortie);
-    } catch (err: unknown) {
-      await this.rendreLeCredit(execution.id, userId, this.codeDe(err));
-      throw err;
-    }
+    return {
+      execution,
+      fini: this.enArrierePlan(execution.id, userId, async () => {
+        const sortie = await this.produire(contexte, userId, execution.id, modele);
+        return this.conclure(execution.id, userId, occurrence.id, sortie);
+      }),
+    };
   }
 
   /* Le débit, en une transaction.
@@ -242,22 +282,15 @@ export class GenerationService {
     /* Déjà lancée sous cette clé : on REJOINT plutôt que de recommencer. Même
        raisonnement que pour le message — rien n'a été débité deux fois,
        l'unicité en base s'en est chargée. */
-    if (dejaLancee) {
-      const jeu = await this.prisma.generatedIdeaSet.findUnique({
-        where: { actionRunId: execution.id },
-        include: { ideas: { orderBy: { position: "asc" } } },
-      });
-      if (jeu) return jeu;
-      throw new AppError("conflict", "this generation is already running");
-    }
+    if (dejaLancee) return { execution, fini: GenerationService.RIEN };
 
-    try {
-      const idees = await this.produireIdees(contexte, userId, execution.id, modele);
-      return await this.conclureIdees(execution.id, userId, occurrence.id, idees);
-    } catch (err: unknown) {
-      await this.rendreLeCredit(execution.id, userId, this.codeDe(err));
-      throw err;
-    }
+    return {
+      execution,
+      fini: this.enArrierePlan(execution.id, userId, async () => {
+        const idees = await this.produireIdees(contexte, userId, execution.id, modele);
+        return this.conclureIdees(execution.id, userId, occurrence.id, idees);
+      }),
+    };
   }
 
   /* La matière des idées.
@@ -492,21 +525,18 @@ export class GenerationService {
       userId, null, selection.orientation, options.cle ?? null, ACTION_PORTRAIT,
     );
 
-    if (dejaLancee) {
-      const deja = await this.prisma.portrait.findUnique({ where: { actionRunId: execution.id } });
-      if (deja) return deja;
-      throw new AppError("conflict", "this generation is already running");
-    }
+    if (dejaLancee) return { execution, fini: GenerationService.RIEN };
 
-    try {
-      const brief = await this.produireLeBrief(contexte, userId, execution.id, modele);
-      return await this.conclurePortrait(
-        execution.id, userId, proche.id, selection, configId, brief, options.motDeLExpediteur ?? null,
-      );
-    } catch (err: unknown) {
-      await this.rendreLeCredit(execution.id, userId, this.codeDe(err));
-      throw err;
-    }
+    return {
+      execution,
+      fini: this.enArrierePlan(execution.id, userId, async () => {
+        const brief = await this.produireLeBrief(contexte, userId, execution.id, modele);
+        return this.conclurePortrait(
+          execution.id, userId, proche.id, selection, configId, brief,
+          options.motDeLExpediteur ?? null,
+        );
+      }),
+    };
   }
 
   /* LA MATIÈRE DU BRIEF, et elle est plus large que celle d'un message.
