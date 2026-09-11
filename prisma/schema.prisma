@@ -1780,6 +1780,13 @@ model Portrait {
   visualPath    String?        @map("visual_path") @db.VarChar(20)
   /// Nulle sur la voie « aucune », qui n'ouvre aucun groupe d'ambiance.
   ambianceId    String?        @map("ambiance_id") @db.VarChar(60)
+  /// LA COMPOSITION CHOISIE — papier, lilas, encre. Le SECOND paramètre que le
+  /// client donne, à côté du type de rendu : celui-ci dit ce qu'on dessine,
+  /// celle-là dans quelle gamme et sur quel fond ça se pose.
+  /// Figée comme la voie et l'ambiance : sans elle, l'approbation reprendrait
+  /// « la première active », et une illustration destinée à un fond d'encre
+  /// emploierait la gamme du papier — où elle disparaîtrait.
+  compositionId String?        @map("composition_id") @db.VarChar(60)
   /// LA CONFIGURATION QUI A PRODUIT LE BRIEF, et dont l'approbation relit la
   /// consigne. Sans elle, on lisait la configuration COURANTE : reformuler une
   /// ambiance entre les deux temps composait l'image avec un texte et le brief

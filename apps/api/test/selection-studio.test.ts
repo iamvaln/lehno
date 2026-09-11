@@ -19,7 +19,7 @@ describe("la sélection du studio", () => {
 
   it("accepte une voie et une ambiance toutes deux actives", () => {
     const s = verifierLaSelection(REGLAGES, {
-      orientation: "notre_relation", visual: "illustration", illustrationFamily: "nature",
+      composition: "papier", orientation: "notre_relation", visual: "illustration", illustrationFamily: "nature",
     });
     expect(s.voie).toBe("illustration");
     expect(s.ambiance?.id).toBe("nature");
@@ -36,7 +36,7 @@ describe("la sélection du studio", () => {
       ambiances: r.ambiances.map((a) => (a.id === "nature" ? { ...a, actif: false } : a)),
     }));
     expect(() => verifierLaSelection(eteinte, {
-      orientation: "notre_relation", visual: "illustration", illustrationFamily: "nature",
+      composition: "papier", orientation: "notre_relation", visual: "illustration", illustrationFamily: "nature",
     })).toThrow(/is not offered/);
   });
 
@@ -56,12 +56,12 @@ describe("la sélection du studio", () => {
     }));
 
     expect(() => verifierLaSelection(avecStyle, {
-      orientation: "notre_relation", visual: "illustration", illustrationFamily: "argentique",
+      composition: "papier", orientation: "notre_relation", visual: "illustration", illustrationFamily: "argentique",
     })).toThrow(/does not belong/);
 
     // Et sur sa propre voie, elle passe.
     expect(verifierLaSelection(avecStyle, {
-      orientation: "notre_relation", visual: "photo", photoStyle: "argentique",
+      composition: "papier", orientation: "notre_relation", visual: "photo", photoStyle: "argentique",
     }).ambiance?.id).toBe("argentique");
   });
 
@@ -70,35 +70,73 @@ describe("la sélection du studio", () => {
      le débit. */
   it("refuse une voie que le catalogue n'offre pas", () => {
     expect(() => verifierLaSelection(REGLAGES, {
-      orientation: "notre_relation", visual: "photo", photoStyle: "argentique",
+      composition: "papier", orientation: "notre_relation", visual: "photo", photoStyle: "argentique",
     })).toThrow(/is not offered/);
   });
 
   /* La voie « aucune » n'ouvre aucun groupe : le motif de marque tient tout le
      fond, et aucun appel de modèle n'a lieu. */
   it("accepte « aucune » sans ambiance, et la refuse avec", () => {
-    const s = verifierLaSelection(REGLAGES, { orientation: "un_hommage", visual: "aucune" });
+    const s = verifierLaSelection(REGLAGES, { composition: "papier", orientation: "un_hommage", visual: "aucune" });
     expect(s.ambiance).toBeNull();
 
     // Une ambiance envoyée avec elle est un client qui n'a pas suivi le
     // catalogue. On le dit plutôt que de l'ignorer : sinon il croira que son
     // choix a porté.
     expect(() => verifierLaSelection(REGLAGES, {
-      orientation: "un_hommage", visual: "aucune", illustrationFamily: "nature",
+      composition: "papier", orientation: "un_hommage", visual: "aucune", illustrationFamily: "nature",
     })).toThrow(/takes no ambiance/);
   });
 
   it("exige une ambiance sur une voie qui en ouvre une", () => {
     expect(() => verifierLaSelection(REGLAGES, {
-      orientation: "notre_relation", visual: "illustration",
+      composition: "papier", orientation: "notre_relation", visual: "illustration",
     })).toThrow(/an ambiance is required/);
   });
 
   // Une orientation hors registre ne se devine pas : c'est le gabarit du texte
   // qui la lit, et une valeur inconnue n'aurait aucune consigne derrière elle.
+  /* LA COMPOSITION EST LE SECOND PARAMÈTRE QUE LE CLIENT DONNE, et elle se
+     vérifie comme le reste — avant le débit. Une gamme retirée du catalogue
+     hier et demandée aujourd'hui ferait dessiner sur un fond qu'on ne sert
+     plus : un lilas clair sur une encre qu'on vient de supprimer, illisible. */
+  it("exige une composition, et la vérifie contre le catalogue", () => {
+    expect(() => verifierLaSelection(REGLAGES, {
+      orientation: "notre_relation", visual: "aucune",
+    })).toThrow(/a composition is required/);
+
+    expect(() => verifierLaSelection(REGLAGES, {
+      composition: "inventee", orientation: "notre_relation", visual: "aucune",
+    })).toThrow(/unknown composition/);
+
+    const eteinte = avec((r) => ({
+      ...r,
+      compositions: r.compositions.map((c) => (c.id === "encre" ? { ...c, actif: false } : c)),
+    }));
+    expect(() => verifierLaSelection(eteinte, {
+      composition: "encre", orientation: "notre_relation", visual: "aucune",
+    })).toThrow(/is not offered/);
+  });
+
+  /* CHAQUE COMPOSITION A SA GAMME, et c'est ce qui traverse jusqu'au modèle.
+     Une illustration destinée à un fond d'encre n'emploie pas celle du papier :
+     elle y disparaîtrait. */
+  it("rend la gamme de la composition choisie, pas une autre", () => {
+    const papier = verifierLaSelection(REGLAGES, {
+      composition: "papier", orientation: "notre_relation", visual: "aucune",
+    });
+    const encre = verifierLaSelection(REGLAGES, {
+      composition: "encre", orientation: "notre_relation", visual: "aucune",
+    });
+
+    expect(papier.composition.id).toBe("papier");
+    expect(encre.composition.id).toBe("encre");
+    expect(papier.composition.palette).not.toEqual(encre.composition.palette);
+  });
+
   it("refuse une orientation que le registre ne connaît pas", () => {
     expect(() => verifierLaSelection(REGLAGES, {
-      orientation: "une_orientation_inventee", visual: "aucune",
+      composition: "papier", orientation: "une_orientation_inventee", visual: "aucune",
     })).toThrow(/unknown orientation/);
   });
 

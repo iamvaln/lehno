@@ -32,6 +32,11 @@ import { AppError } from "../common/errors.js";
 export type SelectionPortrait = {
   readonly orientation: Orientation;
   readonly voie: VoieImage;
+  /* LA COMPOSITION — le SECOND paramètre que le client donne. Le type de rendu
+     dit ce qu'on dessine ; la composition dit dans quelle gamme et sur quel
+     fond ça se pose. Sa palette part au modèle d'image ; son fond et son cadre
+     sont posés par `PortraitComposition`, côté client. */
+  readonly composition: { readonly id: string; readonly palette: readonly [string, string, string, string] };
   /** Nulle sur la voie « aucune » : elle n'ouvre aucun groupe d'ambiance. */
   readonly ambiance: { readonly id: string; readonly groupe: GroupeAmbiance; readonly consigne: { fr: string; en: string } } | null;
 };
@@ -65,6 +70,16 @@ export function verifierLaSelection(
   if (orientation === undefined || !EST_ORIENTATION(orientation))
     return refus("unknown orientation");
 
+  /* LA COMPOSITION SE VÉRIFIE COMME LE RESTE, et avant le débit. Une gamme
+     retirée du catalogue hier et demandée aujourd'hui ferait dessiner sur un
+     fond qu'on ne sert plus — un lilas sur un fond d'encre qu'on vient de
+     supprimer, illisible. */
+  const compositionDemandee = brut["composition"];
+  if (compositionDemandee === undefined) return refus("a composition is required");
+  const composition = reglages.compositions.find((c) => c.id === compositionDemandee);
+  if (!composition) return refus("unknown composition");
+  if (!composition.actif) return refus(`composition "${compositionDemandee}" is not offered`);
+
   const voie = brut["visual"];
   const voieReglee = reglages.voiesImage.find((v) => v.id === voie);
   if (!voieReglee) return refus("unknown visual path");
@@ -77,7 +92,10 @@ export function verifierLaSelection(
        l'ignorer, sinon il croira que son choix a porté. */
     if (brut["photoStyle"] !== undefined || brut["illustrationFamily"] !== undefined)
       return refus("this visual path takes no ambiance");
-    return { orientation, voie: voieReglee.id, ambiance: null };
+    return {
+      orientation, voie: voieReglee.id, ambiance: null,
+      composition: { id: composition.id, palette: composition.palette },
+    };
   }
 
   /* Le client nomme l'ambiance sous la clé de SON groupe. Chercher les deux et
@@ -99,6 +117,7 @@ export function verifierLaSelection(
     orientation,
     voie: voieReglee.id,
     ambiance: { id: ambiance.id, groupe: ambiance.groupe, consigne: ambiance.consigne },
+    composition: { id: composition.id, palette: composition.palette },
   };
 }
 

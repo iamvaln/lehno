@@ -200,6 +200,10 @@ export class StudioEssaiService {
      * Le modèle du brief n'est PAS un réglage du studio : il vient de la chaîne
      * `portrait_brief`, comme en production. Le studio règle ce qui touche à
      * l'image ; le brief est du texte. */
+    const gammeActive = reglages.compositions.find((c) => c.actif);
+    if (!gammeActive) throw new AppError("validation_failed", "no active composition");
+    const gamme = gammeActive.palette;
+
     const brief = await this.briefDuProfil(ambiance, contenu);
     if (brief === null) {
       return {
@@ -214,10 +218,14 @@ export class StudioEssaiService {
     const resultat = await this.routeur.appelerUnSeulModele(
       tache,
       {
+        // La MÊME palette que la production : l'établi doit montrer la gamme
+        // qui sortira, pas celle du modèle laissé libre.
+        /* La gamme de la PREMIÈRE composition active — l'essai éprouve les
+           réglages qu'on vient d'envoyer, et le studio ne demande pas de
+           composition : il montre ce qu'une gamme donne, pas ce qu'un client
+           choisira. */
         invite: inviteImagePortrait(
-          brief,
-          ambiance.consigne[contenu.langue],
-          ambiance.groupe === "photo_style" ? reglages.motifs.bande : reglages.motifs.fondSansImage,
+          brief, ambiance.consigne[contenu.langue], gamme, contenu.langue,
         ),
       },
       adaptateur,

@@ -9,6 +9,7 @@ import { RouteurIAService, type Adaptateur } from "../ia/routeur.service.js";
 import { FOURNISSEURS_IA } from "../ia/adaptateurs/index.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
 import type { StockagePort } from "../stockage/stockage.port.js";
+import { composerLePortrait } from "./composition.js";
 
 /* Dix minutes pour une lecture : le temps de télécharger sur un réseau lent,
    sans qu'un lien recopié survive à la séance. Même durée que l'avatar et le
@@ -87,7 +88,7 @@ export class PortraitService {
      * configuration d'origine, elle y est toujours — un portrait payé
      * s'approuve, quoi qu'on ait publié depuis. */
     const reglages = await this.reglagesDuPortrait(ligne.studioConfigId);
-    const { mots } = this.motsDe(ligne.content);
+    const { mots, phrase } = this.motsDe(ligne.content);
 
     /* LA VOIE ET L'AMBIANCE SONT CELLES QU'ON A CHOISIES, figées au lancement.
      *
@@ -112,6 +113,18 @@ export class PortraitService {
     if (ligne.ambianceId !== null && ambiance === null)
       throw new AppError("internal_error", "the recorded ambiance is absent from its own configuration");
 
+    /* LA GAMME DE LA COMPOSITION CHOISIE, relue dans la configuration d'origine
+       — et non « la première » ni « celle par défaut ». Une illustration
+       destinée à un fond d'encre n'emploie pas la gamme du papier : elle y
+       disparaîtrait. C'est la composition qui pose le fond, donc elle qui
+       décide de ce qui s'y voit. */
+    const composition = ligne.compositionId === null
+      ? null
+      : reglages.compositions.find((c) => c.id === ligne.compositionId) ?? null;
+    if (composition === null)
+      throw new AppError("resource_inactive", "the chosen composition is no longer published");
+    const gamme = composition.palette;
+
     const cle = voie === "photo" ? reglages.modeles.photo_style : reglages.modeles.illustration;
     const modele = await this.modeleDemande(cle);
     const adaptateur = this.adaptateurs[modele.provider];
@@ -121,10 +134,16 @@ export class PortraitService {
        AUCUN CRÉDIT N'EST REPRIS : il a payé le texte, qui est là. */
     if (!adaptateur) throw new AppError("resource_inactive", "no image provider configured");
 
-    const motif = voie === "aucune" ? reglages.motifs.fondSansImage : reglages.motifs.bande;
+    /* LE MOTIF NE PART PLUS AU MODÈLE. Il recevait la chaîne
+       `trame_de_hampes` — un identifiant, du charabia —, pour un motif que
+       `PortraitComposition` dessine de toute façon. Le fond, la bande, le texte
+       et la marque du pied appartiennent à la composition, qui les pose au
+       pixel près et à l'identique. Le modèle rend une ILLUSTRATION SEULE.
+       Ce qui part à sa place : LA PALETTE. C'est elle qui rend une image Lehno
+       reconnaissable au-delà de son cadre. */
     const resultat = await this.routeur.appelerUnSeulModele(
       voie === "photo" ? "photo_style" : "illustration",
-      { invite: inviteImagePortrait({ mots }, ambiance?.consigne.fr ?? null, motif) },
+      { invite: inviteImagePortrait({ mots }, ambiance?.consigne.fr ?? null, gamme) },
       adaptateur,
       modele,
       { origine: "user_action", userId, actionRunId: ligne.actionRunId },
@@ -132,12 +151,26 @@ export class PortraitService {
     if (resultat.etat !== "success")
       throw new AppError("generation_unavailable", `image generation failed: ${resultat.code}`);
 
+    /* LA COMPOSITION, AU SERVEUR. Le modèle a rendu une illustration seule —
+       l'invite lui interdit texte, cadre et signature. C'est ici qu'elle entre
+       dans son cadre, avec la phrase et la mention `lehno.io`.
+       Pourquoi ici et pas seulement au client : le fichier rangé dans le
+       stockage est CELUI QU'ON PARTAGE. S'il sortait nu, il ne porterait rien
+       de Lehno hors de l'application. */
+    const proche = await this.prisma.person.findUniqueOrThrow({
+      where: { id: ligne.personId },
+      select: { callingName: true, displayName: true },
+    });
+    const finie = await composerLePortrait(
+      Buffer.from(resultat.contenu, "base64"),
+      composition.cadre,
+      { phrase, nom: proche.callingName ?? proche.displayName },
+    );
+
     /* CE QU'ON RANGE EST UNE CLÉ, jamais l'image. Un modèle rend un à deux
        mégaoctets de base64 ; la clé pèse soixante caractères, et l'image se lit
        par une URL signée à la demande. */
-    const cleImage = await this.stockage.ecrire(
-      "portraits", Buffer.from(resultat.contenu, "base64"), "image/png",
-    );
+    const cleImage = await this.stockage.ecrire("portraits", finie, "image/png");
 
     const approuve = await this.prisma.portrait.update({
       where: { id },

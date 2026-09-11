@@ -300,18 +300,41 @@ describe("le brief du portrait", () => {
   /* ET CE QUI PART ENSUITE AU MODÈLE D'IMAGE NE CONTIENT AUCUNE MATIÈRE. C'est
      la fonction qui tient la promesse : elle ne reçoit que le brief, donc elle
      ne peut rien laisser filtrer même si son appelant le voulait. */
-  it("ne laisse passer au modèle d'image que le brief et l'ambiance", () => {
+  const PALETTE = ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#5A4B93"] as const;
+
+  it("ne laisse passer au modèle d'image que le brief, l'ambiance et la palette", () => {
     const image = inviteImagePortrait(
       { mots: ["le jardin du matin", "les mains dans la terre"] },
       "Composez un élément naturel.",
-      "trame de hampes",
+      PALETTE,
     );
     expect(image).toContain("le jardin du matin");
     expect(image).toContain("Composez un élément naturel.");
-    expect(image).toContain("trame de hampes");
     // Rien d'autre : ni nom, ni note, ni relation.
     expect(image).not.toContain("Célarine");
     expect(image).not.toContain("marraine");
+  });
+
+  /* LA PATTE PASSE PAR LA PALETTE. Le portrait est « le seul contenu du produit
+     qui sorte de l'application en portant la marque » : pour qu'une image Lehno
+     se reconnaisse, il ne suffit pas que le CADRE soit à nous — l'illustration
+     doit tenir dans la gamme. */
+  it("impose les quatre couleurs de l'ambiance, et rien d'autre", () => {
+    const image = inviteImagePortrait({ mots: ["le héron"] }, null, PALETTE);
+    expect(image).toContain("PALETTE");
+    for (const c of PALETTE) expect(image).toContain(c);
+    expect(image).toContain("n'employez QUE ces couleurs");
+  });
+
+  /* LE MODÈLE N'ÉCRIT RIEN, ET NE SIGNE RIEN. La bande de texte, la dédicace et
+     la marque du pied appartiennent à `PortraitComposition`, qui les pose au
+     pixel près. Un modèle d'image écrit mal : lui laisser la dédicace donnerait
+     un mot mal orthographié sur un cadeau. */
+  it("interdit le texte, le cadre et la signature dans l'image", () => {
+    const image = inviteImagePortrait({ mots: ["le héron"] }, null, PALETTE);
+    expect(image).toContain("AUCUN TEXTE");
+    expect(image).toContain("aucune signature");
+    expect(image).toContain("Le fond reste vide et uni");
   });
 
   /* LES REJETS DEVIENNENT TENABLES ICI, et nulle part ailleurs. Un modèle
