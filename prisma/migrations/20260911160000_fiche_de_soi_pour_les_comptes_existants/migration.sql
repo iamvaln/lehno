@@ -20,13 +20,20 @@
 -- une énumération dont le nom Postgres et le `@@map` pourraient diverger —
 -- c'est déjà arrivé trois fois dans ce dépôt.
 --
+-- `updated_at` EST FOURNI, et il le faut : la colonne est `NOT NULL` SANS
+-- défaut en base. Prisma la remplit au niveau applicatif (`@updatedAt`), ce
+-- qu'un `INSERT` brut ne fait pas — la migration tombait sur une violation de
+-- non-nullité, et elle serait tombée au déploiement. C'est le cas de reprise
+-- qui l'a montré ; la lecture du schéma ne l'aurait pas dit, `@updatedAt` ayant
+-- tout l'air d'un défaut.
+--
 -- IDEMPOTENTE PAR LE `NOT EXISTS` : un compte qui a déjà sa fiche n'en reçoit
 -- pas une seconde. L'index unique partiel refuserait d'ailleurs le doublon —
 -- mais échouer sur une contrainte au lieu de ne rien faire transformerait une
 -- reprise rejouée en migration en panne.
 
-INSERT INTO "person" ("user_id", "display_name", "is_self")
-SELECT u."id", u."username", true
+INSERT INTO "person" ("user_id", "display_name", "is_self", "updated_at")
+SELECT u."id", u."username", true, now()
   FROM "user" u
  WHERE NOT EXISTS (
    SELECT 1 FROM "person" p WHERE p."user_id" = u."id" AND p."is_self"

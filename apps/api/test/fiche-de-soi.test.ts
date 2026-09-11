@@ -149,8 +149,8 @@ describe("la fiche de soi", () => {
     });
 
     await db.prisma.$executeRawUnsafe(`
-      INSERT INTO "person" ("user_id", "display_name", "is_self")
-      SELECT u."id", u."username", true
+      INSERT INTO "person" ("user_id", "display_name", "is_self", "updated_at")
+      SELECT u."id", u."username", true, now()
         FROM "user" u
        WHERE NOT EXISTS (
          SELECT 1 FROM "person" p WHERE p."user_id" = u."id" AND p."is_self"
@@ -171,8 +171,8 @@ describe("la fiche de soi", () => {
 
     for (let i = 0; i < 2; i += 1) {
       await db.prisma.$executeRawUnsafe(`
-        INSERT INTO "person" ("user_id", "display_name", "is_self")
-        SELECT u."id", u."username", true
+        INSERT INTO "person" ("user_id", "display_name", "is_self", "updated_at")
+        SELECT u."id", u."username", true, now()
           FROM "user" u
          WHERE NOT EXISTS (
            SELECT 1 FROM "person" p WHERE p."user_id" = u."id" AND p."is_self"
