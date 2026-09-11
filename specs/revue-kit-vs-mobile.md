@@ -275,3 +275,28 @@ pas `isSelf`.
 revanche un grand titre de page qui dit de quoi il s'agit — `evtTitreAnniv`,
 et le champ de la note. C'est le cas « titre de page plutôt que nom d'écran »
 du §F : à décider une fois pour toutes, pas à corriger à l'aveugle.
+
+### Les écrans qui ne se rechargent pas au retour
+
+La fiche d'un proche se chargeait AU MONTAGE seulement. On valide une
+contribution dans le sas, on revient sur la fiche : rien. Il fallait redémarrer
+l'application pour voir la note arriver — elle était pourtant en base. Corrigé
+par `useFocusEffect`, que la plupart des écrans emploient déjà.
+
+Onze autres écrans chargent encore au montage seul. Tous n'en ont pas besoin —
+un écran qui est la feuille de son propre parcours (`cadrage`, `preparation`,
+`evenement`, `legal`) n'a rien à rafraîchir. Ceux sur lesquels **on revient**
+méritent la question, écran par écran :
+
+| Écran | Ce qui peut changer pendant qu'on est ailleurs |
+|---|---|
+| `mouvements` | une recharge aboutie, un remboursement |
+| `donnees` | l'export que le serveur prépare |
+| `fermeture` | le décompte de suppression |
+| `securite` | une session ouverte depuis un autre appareil |
+| `recharge` | un versement confirmé hors de l'écran |
+| `profil`, `proches/identite` | ce sont les éditeurs eux-mêmes — sans doute rien |
+
+Ce n'est pas une règle mécanique : recharger à chaque retour coûte une requête,
+et sur un écran qui ne bouge jamais c'est du bruit. À trancher une fois, pas à
+appliquer partout.
