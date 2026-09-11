@@ -1,7 +1,7 @@
 // apps/mobile/test/soi.test.ts
 import { describe, expect, it } from "vitest";
 import type { Person } from "@lehno/contracts";
-import { ficheAEnvoyer, sansSoi, soiDabord } from "../lib/soi.js";
+import { ficheAChange, ficheAEnvoyer, sansSoi, soiDabord } from "../lib/soi.js";
 
 const NAISSANCE_VIDE = { jour: null, mois: null, annee: null, anneeConnue: true };
 
@@ -71,6 +71,47 @@ const personne = (n: string, isSelf = false): Person => ({
   birthYearKnown: true, city: null, country: null, register: null,
   language: null, preferredChannel: null, createdAt: "2026-01-01T00:00:00.000Z",
   notesCount: 0, nextOccurrence: null,
+});
+
+/* CE QUI ALLUME LE BOUTON QUAND SEULE LA FICHE A BOUGÉ.
+ *
+ * `peutEnregistrer` ne voit que le compte ; la naissance et le nom d'usage
+ * vivent sur la fiche. Sans `ficheAChange`, poser sa date de naissance —
+ * le seul geste neuf de cet écran — laissait le bouton éteint, et il fallait
+ * modifier son nom au passage pour pouvoir enregistrer. */
+describe("ce qui a changé sur la fiche", () => {
+  const fiche = (p: Partial<Person> = {}): Person => ({
+    ...personne("moi", true), displayName: "Valentine", gender: "female", ...p,
+  });
+
+  it("voit une fiche à créer quand il n'y en a pas", () => {
+    expect(ficheAChange(saisie(), null)).toBe(true);
+  });
+
+  /* Rien à composer, rien à écrire : sans genre la fiche ne part pas, et un
+     bouton allumé promettrait un envoi qui n'aura pas lieu. */
+  it("ne voit rien à faire quand rien ne peut partir", () => {
+    expect(ficheAChange(saisie({ genre: null }), null)).toBe(false);
+  });
+
+  it("ne voit rien à faire sur une fiche identique", () => {
+    expect(ficheAChange(saisie(), fiche())).toBe(false);
+  });
+
+  /* LE CAS QUI BLOQUAIT. Le profil est intact, seule la naissance vient d'être
+     posée : c'est exactement ce qu'on vient faire sur cet écran. */
+  it("voit une naissance qui vient d'être posée", () => {
+    expect(ficheAChange(
+      saisie({ naissance: { jour: 15, mois: 6, annee: 1994, anneeConnue: true } }),
+      fiche(),
+    )).toBe(true);
+  });
+
+  it("voit un nom d'usage qui diffère", () => {
+    expect(ficheAChange(saisie({ nomDUsage: "Vava" }), fiche())).toBe(true);
+    expect(ficheAChange(saisie({ nomDUsage: "Vava" }), fiche({ callingName: "Vava" })))
+      .toBe(false);
+  });
 });
 
 /* `/me/persons` REND LA FICHE DE SOI PARMI LES AUTRES — vérifié au serveur le

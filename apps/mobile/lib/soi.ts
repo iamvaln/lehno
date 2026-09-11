@@ -64,6 +64,36 @@ export function ficheAEnvoyer(saisie: SaisieDeSoi): SelfPersonInput | null {
   };
 }
 
+/* Y A-T-IL QUELQUE CHOSE À ÉCRIRE SUR LA FICHE ?
+ *
+ * `peutEnregistrer` ne regarde que `corpsDeMiseAJour`, et `SaisieDeProfil` ne
+ * porte ni le nom d'usage ni la naissance — ils vivent sur la fiche, pas sur le
+ * compte. Sans cette fonction, le seul geste que toute la fonctionnalité existe
+ * pour rendre possible — poser sa date de naissance — laissait le bouton
+ * éteint : il fallait modifier son nom au passage pour pouvoir enregistrer.
+ *
+ * ON COMPARE CE QUI PART, pas champ à champ : `ficheAEnvoyer` décide seule de
+ * ce qu'elle compose, et une seconde liste écrite à la main divergerait de la
+ * sienne au premier champ ajouté — le bouton resterait éteint sur un champ qui
+ * part pourtant, et personne ne saurait pourquoi.
+ *
+ * Ce qu'elle N'ENVOIE PAS ne compte donc pas comme un changement, et c'est
+ * juste : un nom d'usage effacé ne part pas, le serveur garde l'ancien, rien ne
+ * changerait. Allumer le bouton dessus promettrait un effet qu'il n'aurait pas.
+ */
+export function ficheAChange(saisie: SaisieDeSoi, fiche: Person | null): boolean {
+  const envoi = ficheAEnvoyer(saisie);
+  if (envoi === null) return false;
+  // Pas de fiche et de quoi la composer : l'enregistrement va la CRÉER.
+  if (fiche === null) return true;
+
+  /* `Person` porte toutes les clés de `SelfPersonInput` — la fiche rendue est
+     le miroir de ce qu'on poste. L'indexation passe par un `Record` parce que
+     TypeScript ne dérive pas d'index d'un type d'objet fermé. */
+  const lue = fiche as unknown as Record<string, unknown>;
+  return Object.entries(envoi).some(([champ, valeur]) => lue[champ] !== valeur);
+}
+
 /* `/me/persons` REND LA FICHE DE SOI PARMI LES AUTRES.
  *
  * Vérifié au serveur le 11 septembre : la liste ne filtre pas. Les écrans qui

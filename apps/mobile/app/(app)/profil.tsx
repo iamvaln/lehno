@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
-  PERSON_GENDERS, personSchema, profileSchema, usernameAvailabilitySchema, type Profile,
+  PERSON_GENDERS, personSchema, profileSchema, usernameAvailabilitySchema,
+  type Person, type Profile,
 } from "@lehno/contracts";
 import { nativeFont, nativeSpace } from "@lehno/tokens";
 import {
@@ -27,7 +28,7 @@ import {
 } from "../../lib/profil.js";
 import { choisirUnePhoto, envoyerLaPhoto, retirerLaPhoto } from "../../lib/photo-de-profil.js";
 import { imageLocale, oublierLesAutres } from "../../lib/images-locales.js";
-import { ficheAEnvoyer } from "../../lib/soi.js";
+import { ficheAChange, ficheAEnvoyer, type SaisieDeSoi } from "../../lib/soi.js";
 
 /* Mon profil — §3.23.
  *
@@ -79,6 +80,20 @@ export default function Profil() {
   const [naissance, setNaissance] = useState<SaisieDeNaissance>(
     { jour: null, mois: null, annee: null, anneeConnue: true },
   );
+  /* LA FICHE LUE SE GARDE, elle ne se jette pas après en avoir tiré deux
+     champs : c'est elle qui dit si le bouton doit s'allumer. Sans elle, on ne
+     saurait pas distinguer une naissance qu'on vient de poser d'une naissance
+     qui était déjà là. Nulle tant qu'aucune fiche n'existe — un état, pas une
+     panne. */
+  const [fiche, setFiche] = useState<Person | null>(null);
+
+  /* LA MÊME COMPOSITION POUR LES DEUX LECTURES : ce qui allume le bouton et ce
+     qui part se composent ici, une fois. Deux compositions séparées finiraient
+     par diverger — un bouton allumé sur un envoi que `ficheAEnvoyer` refuserait
+     de composer, ou éteint sur un champ qui partirait pourtant. */
+  const saisieDeSoi = (p: SaisieDeProfil): SaisieDeSoi => ({
+    nom: p.nom, nomDUsage, genre: p.genre, naissance,
+  });
 
   /* Le refus de permission n'est pas une panne : il est durable, et l'écran dit
      où le reprendre plutôt que de laisser un bouton qui n'ouvre rien.
@@ -149,10 +164,11 @@ export default function Profil() {
          `GET /me/self` rend 404 tant que personne ne l'a posée. On lit alors
          une naissance vide, et l'écran se comporte comme avant. */
       try {
-        const fiche = personSchema.parse(await appel<unknown>("/me/self"));
-        setNomDUsage(fiche.callingName ?? "");
-        setNaissance(naissanceLue(fiche.birthDate, fiche.birthYearKnown));
-      } catch { /* Pas de fiche : les champs restent vides. */ }
+        const lue = personSchema.parse(await appel<unknown>("/me/self"));
+        setFiche(lue);
+        setNomDUsage(lue.callingName ?? "");
+        setNaissance(naissanceLue(lue.birthDate, lue.birthYearKnown));
+      } catch { setFiche(null); /* Pas de fiche : les champs restent vides. */ }
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
@@ -195,10 +211,14 @@ export default function Profil() {
     setEnvoi(true);
     setEchec(null);
     try {
-      await appel<unknown>("/me/profile", {
-        method: "PATCH",
-        body: JSON.stringify(corpsDeMiseAJour(saisie, profil)),
-      });
+      /* ON N'ENVOIE PAS UN CORPS VIDE. Venir ici pour poser sa seule date de
+         naissance ne change rien au compte : le `PATCH` ne ferait qu'un
+         aller-retour de plus, qui n'écrit rien et qui peut échouer — et son
+         échec emporterait la fiche, qui elle avait quelque chose à dire. */
+      const corps = corpsDeMiseAJour(saisie, profil);
+      if (Object.keys(corps).length > 0) {
+        await appel<unknown>("/me/profile", { method: "PATCH", body: JSON.stringify(corps) });
+      }
       /* LA FICHE SUIT LE COMPTE, et dans cet ordre : le genre qu'elle exige
          vient d'être enregistré. Elle naît ici, au premier enregistrement du
          profil, sans que personne ait eu à comprendre qu'elle existait.
@@ -207,13 +227,11 @@ export default function Profil() {
          geste que la personne a demandé. La fiche attend le prochain passage —
          elle n'a rien d'urgent, et un profil refusé pour elle serait
          incompréhensible. */
-      const fiche = ficheAEnvoyer({
-        nom: saisie.nom, nomDUsage, genre: saisie.genre, naissance,
-      });
-      if (fiche !== null) {
+      const aEnvoyer = ficheAEnvoyer(saisieDeSoi(saisie));
+      if (aEnvoyer !== null) {
         try {
           await appel<unknown>("/me/self", {
-            method: "PUT", body: JSON.stringify(fiche),
+            method: "PUT", body: JSON.stringify(aEnvoyer),
           });
         } catch { /* Voir ci-dessus : le profil est enregistré, c'est l'essentiel. */ }
       }
@@ -423,7 +441,15 @@ export default function Profil() {
       <View style={{ marginTop: nativeSpace[28] }}>
         <Button
           full
-          disabled={envoi || !peutEnregistrer(saisie, profil, libre)}
+          /* DEUX SOURCES, DEUX RAISONS D'ALLUMER. `peutEnregistrer` ne
+              connaît que le compte ; la naissance et le nom d'usage vivent sur
+              la fiche. N'écouter que la première éteignait le bouton sur le
+              seul geste que cet écran existe pour rendre possible — poser sa
+              date de naissance —, et il fallait modifier son nom au passage
+              pour pouvoir enregistrer. */
+          disabled={envoi
+            || (!peutEnregistrer(saisie, profil, libre)
+              && !ficheAChange(saisieDeSoi(saisie), fiche))}
           onPress={() => void enregistre()}
         >
           {t.enregistrer}
