@@ -197,9 +197,10 @@ export class StudioEssaiService {
      * bouché ailleurs : « publier un changement de style de dessin se
      * débloquait avec un essai qui avait produit un texte ».
      *
-     * Le modèle du brief n'est PAS un réglage du studio : il vient de la chaîne
-     * `portrait_brief`, comme en production. Le studio règle ce qui touche à
-     * l'image ; le brief est du texte. */
+     * Le modèle du brief n'est PAS un réglage de CETTE configuration : il vient
+     * de celle de `portrait_brief`, comme en production. Le studio du portrait
+     * règle ce qui touche à l'image ; le brief est du texte, et il a sa propre
+     * nature, ses propres essais et sa propre publication. */
     const gammeActive = reglages.compositions.find((c) => c.actif);
     if (!gammeActive) throw new AppError("validation_failed", "no active composition");
     const gamme = gammeActive.palette;
@@ -267,6 +268,14 @@ export class StudioEssaiService {
     ambiance: { groupe: string; consigne: { fr: string; en: string } },
     profil: ProfilContenu,
   ): Promise<{ mots: string[] } | null> {
+    /* LA CONFIGURATION PUBLIÉE DU BRIEF, lue AVANT de composer le contexte :
+       elle décide à la fois de ce qu'on demande et du modèle qui répond. La
+       lire plus bas reviendrait à composer l'invite sans elle. */
+    const publie = await this.configs.enService("portrait_brief").catch(() => null);
+    const reglagesDuBrief = publie === null ? null : (() => {
+      try { return this.configs.reglagesBriefPortraitDe(publie); } catch { return null; }
+    })();
+
     const contexte: ContextePortrait = {
       langue: profil.langue,
       orientation: profil.orientation,
@@ -274,6 +283,15 @@ export class StudioEssaiService {
       relation: profil.relation,
       genreDuProche: profil.genreDuProche,
       notes: profil.notes.map((n) => ({ categorie: n.categorie, contenu: n.contenu })),
+      /* LES BORNES PUBLIÉES, comme en production : un essai qui demanderait
+         trois à sept mots là où la configuration en demande huit à dix
+         montrerait un nuage qui n'est pas celui qu'on mettra en service. */
+      ...(reglagesDuBrief ? {
+        ...(reglagesDuBrief.consigneCommune ? { consigneCommune: reglagesDuBrief.consigneCommune } : {}),
+        ...(reglagesDuBrief.gardeFous.length > 0 ? { gardeFous: reglagesDuBrief.gardeFous } : {}),
+        motsDuPortrait: reglagesDuBrief.motsDuPortrait,
+        motsDeLaPhrase: reglagesDuBrief.motsDeLaPhrase,
+      } : {}),
       /* Un profil simulé n'a pas d'attributs : il porte des notes et un texte
          libre, pas de goûts relevés. Le gabarit sait s'en passer — il le dit
          quand il n'a ni l'un ni l'autre. */
@@ -288,11 +306,16 @@ export class StudioEssaiService {
     };
 
     try {
+      /* LE MÊME MODÈLE QU'EN PRODUCTION, tiré de la configuration publiée du
+         brief. Sans lui, l'essai du portrait tournerait sur la tête de chaîne
+         pendant que la production suit la configuration — et l'image éprouvée
+         ne serait pas celle qu'on met en service. */
       const reponse = await this.routeur.executer(
         "portrait_brief",
         { invite: invitePortrait(contexte), systeme: consigneSystemePortrait(contexte) },
         this.adaptateurs,
         { origine: "studio_trial", userId: null, actionRunId: null },
+        reglagesDuBrief?.modele ?? null,
       );
       const objet = JSON.parse(
         reponse.contenu.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "").trim(),

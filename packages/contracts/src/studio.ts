@@ -308,13 +308,20 @@ const fondsCommunDuTexte = {
   /** Ce qui est écarté : symboles, formules, tournures. */
   gardeFous: z.array(z.string().trim().min(1).max(200)).max(40),
   champsDuProche: z.array(z.enum(CHAMPS_DU_PROCHE)),
-  /* Le modèle de L'ESSAI, et lui seul.
+  /* LE MODÈLE APPELÉ — à l'essai comme en production, et c'est la même ligne.
    *
-   * La production ne le lit pas : `generation.service` appelle
-   * `routeur.executer(tache, …)`, qui déroule la chaîne `ai_task_route` —
-   * administrable sous `admin/ai-routes`, avec son repli et son disjoncteur.
-   * Le dire ici évite la méprise que le champ invite : le changer ne change
-   * pas qui écrit, il change sur quoi on éprouve. */
+   * Le brief §11.1 l'exige : « le modèle appelé » est rangé dans la partie lue
+   * par le modèle, donc dans l'empreinte, et l'essai l'appelle exactement, sans
+   * repli. Autrement on consignerait un essai réussi sous une empreinte
+   * désignant un modèle qui n'a rien produit, et la publication autoriserait
+   * une mise en service sur la foi d'un résultat obtenu ailleurs.
+   *
+   * Il a longtemps menti pour les trois générations de TEXTE : la production
+   * déroulait la chaîne `ai_task_route` et ignorait ce champ, pendant que
+   * l'image, elle, lisait bien le sien. On éprouvait donc un modèle et on
+   * servait l'autre. `routeur.executer` le prend maintenant comme TÊTE, et la
+   * chaîne devient son repli — repli tracé par le rang dans `ai_usage`, lisible
+   * après coup, et qui ne vaut que pour la production. */
   modele: cleModeleSchema,
 } as const;
 

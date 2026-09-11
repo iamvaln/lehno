@@ -25,9 +25,7 @@ import { CatalogueIAService } from "../src/ia/catalogue.service.js";
  *
  * CE QUE CES CAS ÉPROUVENT N'EST PAS QUE LE RÉGLAGE S'ENREGISTRE, c'est qu'il
  * ATTEIGNE LE MODÈLE. Un réglage qui ne change pas ce qui part est pire
- * qu'absent : l'administration croit avoir agi. C'est exactement le piège du
- * champ `modele`, qui ne décide de rien en production — la chaîne
- * `ai_task_route` le fait.
+ * qu'absent : l'administration croit avoir agi.
  */
 describe("le studio des textes", () => {
   let db: TestDb;
@@ -254,6 +252,102 @@ describe("le studio des textes", () => {
 
       const modele = espion(IDEES_RENDUES(5));
       expect((await fabrique(modele).lancerIdees(awa, occurrence)).ideas).toHaveLength(5);
+    });
+  });
+
+  /* LA GARANTIE DE LA PUBLICATION : ce qu'on éprouve est ce qui tourne.
+   *
+   * Le brief §11.1 la pose — « le modèle appelé » entre dans l'empreinte, et
+   * l'essai l'appelle exactement. La production du texte l'ignorait : elle
+   * déroulait la chaîne `ai_task_route`, si bien qu'on éprouvait un modèle et
+   * qu'on en servait un autre. Ces cas gardent la réparation. */
+  describe("le modèle publié", () => {
+    /* DEUX ADAPTATEURS DISTINCTS, et c'est le seul moyen de le voir. Avec un
+       seul, on ne saurait pas lequel des deux a répondu. */
+    const compteur = () => {
+      const a = {
+        appels: 0,
+        async appeler(_m: string, _d: unknown): Promise<ReponseIA> {
+          a.appels += 1;
+          return { contenu: IDEES_RENDUES(5) };
+        },
+      };
+      return a as unknown as Adaptateur & { appels: number };
+    };
+
+    /* LE MODÈLE SE CHOISIT D'APRÈS LA CHAÎNE RÉELLE, jamais deviné. Coder en
+       dur un fournisseur ferait passer ce cas au vert le jour où le catalogue
+       le met en tête — il ne prouverait alors plus rien. */
+    const horsDeLaTete = async (): Promise<{ cle: string; provider: string }> => {
+      const chaine = await new RouteurIAService(db.prisma as never).chaine("gift_ideas");
+      const tete = chaine[0];
+      const autre = await db.prisma.aIModel.findFirstOrThrow({
+        where: { capability: "text", provider: { not: tete?.provider ?? "" } },
+      });
+      return { cle: `${autre.provider}:${autre.modelKey}`, provider: autre.provider };
+    };
+
+    it("est celui que la production appelle, et pas la tête de chaîne", async () => {
+      const autre = await horsDeLaTete();
+      const chaine = await new RouteurIAService(db.prisma as never).chaine("gift_ideas");
+      const tete = chaine[0]!;
+
+      await publier("idees", { ...reglagesIdeesDeDepart(), modele: autre.cle });
+      await crediter(5);
+
+      const designe = compteur();
+      const enTete = compteur();
+      await new GenerationService(
+        db.prisma as never, new TenantRepository(db.prisma as never),
+        new RouteurIAService(db.prisma as never),
+        { [autre.provider]: designe, [tete.provider]: enTete } as never,
+        configs,
+      ).lancerIdees(awa, occurrence);
+
+      expect(designe.appels).toBe(1);
+      expect(enTete.appels).toBe(0);
+    });
+
+    /* LE REPLI RESTE SOUS LUI. Le §11.1 interdit le repli à L'ESSAI, pas à la
+       production : une panne du modèle configuré doit être rattrapée, et
+       l'écart se lit après coup par le rang consigné. */
+    it("laisse la chaîne rattraper sa panne, en la consignant", async () => {
+      const autre = await horsDeLaTete();
+      const chaine = await new RouteurIAService(db.prisma as never).chaine("gift_ideas");
+      const tete = chaine[0]!;
+
+      await publier("idees", { ...reglagesIdeesDeDepart(), modele: autre.cle });
+      await crediter(5);
+
+      const tombe = {
+        async appeler(): Promise<ReponseIA> { throw new Error("fournisseur injoignable"); },
+      } as unknown as Adaptateur;
+
+      const jeu = await new GenerationService(
+        db.prisma as never, new TenantRepository(db.prisma as never),
+        new RouteurIAService(db.prisma as never),
+        { [autre.provider]: tombe, [tete.provider]: espion(IDEES_RENDUES(5)) } as never,
+        configs,
+      ).lancerIdees(awa, occurrence);
+
+      expect(jeu.ideas).toHaveLength(5);
+      /* LES DEUX TENTATIVES SONT CONSIGNÉES. Sans la ratée, la panne serait
+         gratuite dans les statistiques et la chaîne aurait l'air parfaite.
+         `attempt` porte le rang : 1 pour le modèle désigné, 2 pour le repli —
+         c'est par là que l'écart entre l'essai et la production se lit après
+         coup, sans enquête. */
+      const usages = await db.prisma.aIUsage.findMany({ where: { purpose: "gift_ideas" } });
+      expect(usages.length).toBeGreaterThanOrEqual(2);
+
+      // Le modèle DÉSIGNÉ a été appelé le premier, au rang 0, et il est tombé.
+      const designe = usages.find((u) => u.provider === autre.provider);
+      expect(designe?.attempt).toBe(0);
+      expect(designe?.status).not.toBe("success");
+
+      // Le repli a servi, et il porte son propre rang de chaîne.
+      const repli = usages.find((u) => u.provider === tete.provider);
+      expect(repli?.status).toBe("success");
+      expect(repli?.attempt).toBe(tete.rank);
     });
   });
 

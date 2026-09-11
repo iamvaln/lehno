@@ -85,7 +85,11 @@ export class GenerationService {
     options: { langue?: "fr" | "en"; texteLibre?: string | null; cle?: string | null } = {},
   ) {
     const occurrence = await this.depot.occurrences(userId).findOrThrow(occurrenceId);
-    const contexte = await this.rassembler(userId, occurrence.id, orientation, options);
+    /* LE MODÈLE SORT DE LA MÊME LECTURE QUE LA CONSIGNE, et c'est délibéré : le
+       relire ailleurs coûterait une seconde requête et, surtout, laisserait la
+       porte ouverte à ce qu'il vienne d'une AUTRE version que celle dont
+       l'invite est tirée. L'empreinte les lie ; le code doit les lier aussi. */
+    const { contexte, modele } = await this.rassembler(userId, occurrence.id, orientation, options);
 
     /* Le REFUS D'ENTRÉE : une orientation joyeuse sur une occasion sensible.
      *
@@ -117,7 +121,7 @@ export class GenerationService {
     }
 
     try {
-      const sortie = await this.produire(contexte, userId, execution.id);
+      const sortie = await this.produire(contexte, userId, execution.id, modele);
       return await this.conclure(execution.id, userId, occurrence.id, sortie);
     } catch (err: unknown) {
       await this.rendreLeCredit(execution.id, userId, this.codeDe(err));
@@ -229,7 +233,7 @@ export class GenerationService {
     } = {},
   ) {
     const occurrence = await this.depot.occurrences(userId).findOrThrow(occurrenceId);
-    const contexte = await this.rassemblerIdees(userId, occurrence.id, options);
+    const { contexte, modele } = await this.rassemblerIdees(userId, occurrence.id, options);
 
     const { execution, dejaLancee } = await this.debiter(
       userId, occurrence.id, null, options.cle ?? null, ACTION_IDEES,
@@ -248,7 +252,7 @@ export class GenerationService {
     }
 
     try {
-      const idees = await this.produireIdees(contexte, userId, execution.id);
+      const idees = await this.produireIdees(contexte, userId, execution.id, modele);
       return await this.conclureIdees(execution.id, userId, occurrence.id, idees);
     } catch (err: unknown) {
       await this.rendreLeCredit(execution.id, userId, this.codeDe(err));
@@ -301,7 +305,7 @@ export class GenerationService {
       texteLibre?: string | null;
       budget?: { min: number | null; max: number | null } | null;
     },
-  ): Promise<ContexteIdees> {
+  ): Promise<{ contexte: ContexteIdees; modele: string | null }> {
     const occurrence = await this.prisma.eventOccurrence.findUniqueOrThrow({
       where: { id: occurrenceId },
       include: { event: { include: { person: true } } },
@@ -351,7 +355,7 @@ export class GenerationService {
      * ses consignes parlent de ton et de tournure, pas d'objets. */
     const reglages = await this.reglagesIdees();
 
-    return {
+    return { modele: reglages?.modele ?? null, contexte: {
       langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
       ...(reglages?.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
       ...(reglages && reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
@@ -369,17 +373,18 @@ export class GenerationService {
       texteLibre: options.texteLibre ?? null,
       // La devise se pose ICI et nulle part ailleurs — voir DEVISE.
       budget: options.budget ? { ...options.budget, devise: DEVISE } : null,
-    };
+    } };
   }
 
   private async produireIdees(
-    contexte: ContexteIdees, userId: string, actionRunId: string,
+    contexte: ContexteIdees, userId: string, actionRunId: string, modele: string | null,
   ): Promise<SortieIdee[]> {
     const reponse = await this.routeur.executer(
       "gift_ideas",
       { invite: inviteIdees(contexte), systeme: consigneSystemeIdees(contexte) },
       this.adaptateurs,
       { userId, actionRunId, origine: "user_action" },
+      modele,
     );
     return this.lireLesIdees(reponse.contenu);
   }
@@ -481,7 +486,7 @@ export class GenerationService {
     options: { langue?: "fr" | "en"; texteLibre?: string | null; motDeLExpediteur?: string | null; cle?: string | null } = {},
   ) {
     const proche = await this.depot.persons(userId).findOrThrow(personId);
-    const contexte = await this.rassemblerPortrait(userId, proche.id, selection, options);
+    const { contexte, modele } = await this.rassemblerPortrait(userId, proche.id, selection, options);
 
     const { execution, dejaLancee } = await this.debiter(
       userId, null, selection.orientation, options.cle ?? null, ACTION_PORTRAIT,
@@ -494,7 +499,7 @@ export class GenerationService {
     }
 
     try {
-      const brief = await this.produireLeBrief(contexte, userId, execution.id);
+      const brief = await this.produireLeBrief(contexte, userId, execution.id, modele);
       return await this.conclurePortrait(
         execution.id, userId, proche.id, selection, configId, brief, options.motDeLExpediteur ?? null,
       );
@@ -512,7 +517,7 @@ export class GenerationService {
   private async rassemblerPortrait(
     userId: string, personId: string, selection: SelectionPortrait,
     options: { langue?: "fr" | "en"; texteLibre?: string | null },
-  ): Promise<ContextePortrait> {
+  ): Promise<{ contexte: ContextePortrait; modele: string | null }> {
     const proche = await this.prisma.person.findUniqueOrThrow({ where: { id: personId } });
     const moi = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId }, select: { uiLanguage: true },
@@ -556,7 +561,7 @@ export class GenerationService {
        découpage message/portrait a réparé. */
     const reglages = await this.reglagesBriefPortrait();
 
-    return {
+    return { modele: reglages?.modele ?? null, contexte: {
       // La langue du COMPTE : le portrait se lit par celui qui l'offre, comme
       // les idées. Le message, lui, part chez le proche et prend la sienne.
       langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
@@ -575,17 +580,18 @@ export class GenerationService {
       aEviter,
       texteLibre: options.texteLibre ?? null,
       consigneAmbiance: selection.ambiance?.consigne[options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr")] ?? null,
-    };
+    } };
   }
 
   private async produireLeBrief(
-    contexte: ContextePortrait, userId: string, actionRunId: string,
+    contexte: ContextePortrait, userId: string, actionRunId: string, modele: string | null,
   ): Promise<SortiePortrait> {
     const reponse = await this.routeur.executer(
       "portrait_brief",
       { invite: invitePortrait(contexte), systeme: consigneSystemePortrait(contexte) },
       this.adaptateurs,
       { userId, actionRunId, origine: "user_action" },
+      modele,
     );
     /* LES MÊMES BORNES POUR DEMANDER ET POUR VÉRIFIER. Les séparer ferait
        qu'un réglage élargi produirait une sortie que la garde d'en face
@@ -705,13 +711,14 @@ export class GenerationService {
   }
 
   private async produire(
-    contexte: ContexteMessage, userId: string, actionRunId: string,
+    contexte: ContexteMessage, userId: string, actionRunId: string, modele: string | null,
   ): Promise<SortieMessage> {
     const reponse = await this.routeur.executer(
       "message",
       { invite: invite(contexte), systeme: consigneSysteme(contexte) },
       this.adaptateurs,
       { userId, actionRunId, origine: "user_action" },
+      modele,
     );
     return this.lireLaSortie(reponse.contenu);
   }
@@ -895,7 +902,7 @@ export class GenerationService {
   private async rassembler(
     userId: string, occurrenceId: string, orientation: Orientation,
     options: { langue?: "fr" | "en"; texteLibre?: string | null },
-  ): Promise<ContexteMessage> {
+  ): Promise<{ contexte: ContexteMessage; modele: string | null }> {
     const occurrence = await this.prisma.eventOccurrence.findUniqueOrThrow({
       where: { id: occurrenceId },
       include: { event: { include: { person: true } } },
@@ -954,7 +961,7 @@ export class GenerationService {
     const reglages = publie === null ? null : this.configs.reglagesMessageDe(publie);
     const orientationPubliee = reglages?.orientations.find((o) => o.id === orientation);
 
-    return {
+    return { modele: reglages?.modele ?? null, contexte: {
       langue: options.langue ?? (proche.language === "en" ? "en" : "fr"),
       orientation,
       ...(orientationPubliee ? { consigneOrientation: orientationPubliee.consigne } : {}),
@@ -973,6 +980,6 @@ export class GenerationService {
       // L'âge ne part que si l'année de naissance est connue : on ne rappelle
       // pas son âge à quelqu'un sur une déduction.
       age: null,
-    };
+    } };
   }
 }
