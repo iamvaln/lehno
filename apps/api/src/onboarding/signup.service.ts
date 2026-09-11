@@ -117,6 +117,43 @@ export class SignupService {
             data: { deviceId: input.deviceId, userId: user.id, ip: input.ip ?? null },
           });
 
+          /* LA FICHE DE SOI, dès l'inscription.
+           *
+           * `Person.isSelf` se lisait à CINQ endroits et ne s'écrivait NULLE
+           * PART. Trois choses en tombaient sans que rien ne le dise : une
+           * wishlist ne pouvait jamais viser une occasion (la garde exige une
+           * occurrence rattachée à une personne `isSelf`), « Ma date
+           * d'anniversaire » s'allumait sur le Mur sans rien exposer, et
+           * « Pour qui » ne listait que les proches — donc aucun moyen
+           * d'inscrire sa propre date.
+           *
+           * ICI ET DANS LA MÊME TRANSACTION que le compte. Un compte sans sa
+           * fiche est un compte à moitié né : le créer après coup, par un appel
+           * séparé, laisserait la fenêtre où les cinq lectures sont mortes — et
+           * c'est exactement l'état qu'on répare.
+           *
+           * ELLE N'EST PAS FILTRÉE DU CARNET, et c'est voulu. Le brief le
+           * demande : « "Pour qui" ne liste que les proches, on ne peut donc
+           * pas inscrire sa propre date », et « il ne lui manque que la fiche à
+           * ouvrir ». L'en retirer rendrait le sélecteur de date et l'édition
+           * de sa propre naissance impossibles — les deux symptômes qu'on vient
+           * de corriger.
+           *
+           * LE GENRE RESTE `unspecified`. On ne le déduit pas d'un pseudo :
+           * c'est le raccourci qui se trompe sur les gens, et le dépôt l'écrit
+           * déjà ailleurs — « un genre ne se devine pas, il se demande ». */
+          await tx.person.create({
+            data: {
+              userId: user.id,
+              isSelf: true,
+              /* Le pseudo, faute de mieux — c'est le seul nom qu'on ait à
+                 l'inscription. Il se corrige ensuite par `PUT /me/self`, et
+                 changer de pseudo ne le recale PAS : le nom de sa fiche lui
+                 appartient une fois posé. */
+              displayName: user.username,
+            },
+          });
+
           const creditsOfferts = await this.param(tx, "signup_free_credits", 5);
           if (creditsOfferts > 0) {
             await tx.creditTransaction.create({
