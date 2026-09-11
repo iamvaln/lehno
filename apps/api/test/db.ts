@@ -67,6 +67,33 @@ const REFERENCE_TABLES = new Set([
   "audit_reason_history", "audit_reason_scope_history",
 ]);
 
+/* L'ÉTREINTE, ET POURQUOI ON RÉESSAIE.
+ *
+ * Le nettoyage suppose être SEUL sur la base, et il ne l'est pas : plusieurs
+ * fichiers d'épreuve démarrent une vraie application Nest, qui ouvre sa propre
+ * réserve de connexions vers la même base. Les deux prennent alors les mêmes
+ * verrous DANS UN ORDRE DIFFÉRENT — le `truncate` veut un verrou exclusif sur
+ * chaque table, une requête en vol tient un verrou partagé sur une autre — et
+ * PostgreSQL tue l'un des deux au hasard : « deadlock detected », code 40P01.
+ *
+ * C'est arrivé une fois sur 1 632 épreuves, sur `person.test.ts`, qui passe
+ * seul. Un rouge aléatoire à cet endroit coûte plus que sa rareté ne le dit :
+ * `pnpm test` garde la porte avant chaque déploiement, et un échec qu'on
+ * relance sans lire est exactement l'habitude qui fait passer un vrai défaut
+ * pour un caprice.
+ *
+ * ON RÉESSAIE PLUTÔT QUE D'ATTENDRE LE SILENCE. Une étreinte se défait d'elle-
+ * même dès que la requête concurrente se termine ; vingt millisecondes plus
+ * tard, le verrou est libre. Le `lock_timeout` borne l'attente pour que le
+ * refus arrive vite au lieu de retenir la suite.
+ *
+ * ET RIEN D'AUTRE N'EST RATTRAPÉ : seuls `40P01` et `55P03` — l'étreinte et le
+ * verrou non obtenu — sont repris. Une table manquante, une migration oubliée,
+ * une base absente remontent telles quelles. Un `catch` large ferait de ce
+ * garde-fou un tapis. */
+const ETREINTES = ["40P01", "55P03"];
+const TENTATIVES = 3;
+
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
     select tablename from pg_tables
@@ -75,7 +102,24 @@ export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const toTruncate = tables.filter((t) => !REFERENCE_TABLES.has(t.tablename));
   if (toTruncate.length === 0) return;
   const list = toTruncate.map((t) => `"public"."${t.tablename}"`).join(", ");
-  await prisma.$executeRawUnsafe(`truncate table ${list} restart identity cascade`);
+
+  for (let essai = 1; essai <= TENTATIVES; essai += 1) {
+    try {
+      /* Posé sur la MÊME connexion que le `truncate`, dans la même transaction :
+         `set local` ne vaut que le temps de celle-ci, et ne laisse donc pas un
+         réglage traîner sur une connexion que la réserve recyclera. */
+      await prisma.$transaction([
+        prisma.$executeRawUnsafe("set local lock_timeout = '2s'"),
+        prisma.$executeRawUnsafe(`truncate table ${list} restart identity cascade`),
+      ]);
+      return;
+    } catch (echec: unknown) {
+      const code = (echec as { meta?: { code?: string }; code?: string })?.meta?.code
+        ?? (echec as { code?: string })?.code;
+      if (essai === TENTATIVES || !ETREINTES.includes(String(code))) throw echec;
+      await new Promise((fini) => setTimeout(fini, 20 * essai));
+    }
+  }
 }
 
 /**

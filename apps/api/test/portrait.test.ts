@@ -37,6 +37,16 @@ describe("le portrait", () => {
     phraseCourte: "Le jardin du matin.",
   });
 
+  /* UNE VRAIE IMAGE, MINUSCULE — et non « aW1hZ2U= », qui n'est que le mot
+     « image » en base64.
+
+     Elle suffisait tant que le serveur se contentait de RANGER ce que le modèle
+     rendait. Depuis qu'il COMPOSE le fichier — cadre, dédicace, mention —, il
+     décode les octets, et cinq octets qui ne sont pas une image le font tomber
+     sur « Input buffer contains unsupported image format ». Un PNG de huit
+     pixels coûte une ligne et éprouve le vrai chemin. */
+  const PNG_MINUSCULE = "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4gwMwDC0JAMg9mQGm7abwAAAAAElFTkSuQmCC";
+
   /* Un double qui RETIENT ce qu'on lui a envoyé. C'est le seul moyen d'éprouver
      ce qui fuit : la promesse du brief est que les notes ne traversent pas. */
   const repond = (contenu: string): Adaptateur & { vu: string[] } => {
@@ -214,7 +224,7 @@ describe("le portrait", () => {
       await publier();
       const portrait = await unPortrait();
 
-      const image = repond("aW1hZ2U=");
+      const image = repond(PNG_MINUSCULE);
       await portraits(image).approuver(awa, portrait.id);
 
       const envoye = image.vu[0]!;
@@ -243,7 +253,7 @@ describe("le portrait", () => {
       const portrait = await generation(repond(BRIEF)).lancerPortrait(awa, proche, abstrait, config);
       expect(portrait.ambianceId).toBe("abstrait");
 
-      const image = repond("aW1hZ2U=");
+      const image = repond(PNG_MINUSCULE);
       await portraits(image).approuver(awa, portrait.id);
 
       // La consigne de l'abstrait, pas celle de la nature.
@@ -279,7 +289,7 @@ describe("le portrait", () => {
         },
       });
 
-      const image = repond("aW1hZ2U=");
+      const image = repond(PNG_MINUSCULE);
       const rendu = await portraits(image).approuver(awa, portrait.id);
       expect(rendu.status).toBe("approved");
       // La consigne d'ORIGINE, celle qui a produit le brief.
@@ -290,7 +300,7 @@ describe("le portrait", () => {
       await publier();
       const portrait = await unPortrait();
 
-      const rendu = await portraits(repond("aW1hZ2U=")).approuver(awa, portrait.id);
+      const rendu = await portraits(repond(PNG_MINUSCULE)).approuver(awa, portrait.id);
       expect(rendu.status).toBe("approved");
       expect(rendu.imageUrl).not.toBeNull();
 
@@ -305,7 +315,7 @@ describe("le portrait", () => {
       await publier();
       const portrait = await unPortrait();
 
-      const image = repond("aW1hZ2U=");
+      const image = repond(PNG_MINUSCULE);
       const un = await portraits(image).approuver(awa, portrait.id);
       const deux = await portraits(image).approuver(awa, portrait.id);
 
@@ -322,7 +332,7 @@ describe("le portrait", () => {
       // La configuration disparaît APRÈS le lancement : plus rien à relire.
       await db.prisma.portrait.update({ where: { id: portrait.id }, data: { studioConfigId: null } });
       await db.prisma.studioConfig.deleteMany({ where: { kind: "portrait" } });
-      await expect(portraits(repond("aW1hZ2U=")).approuver(awa, portrait.id))
+      await expect(portraits(repond(PNG_MINUSCULE)).approuver(awa, portrait.id))
         .rejects.toMatchObject({ code: "resource_inactive" });
     });
 
@@ -339,7 +349,7 @@ describe("le portrait", () => {
         },
         select: { id: true },
       });
-      await expect(portraits(repond("aW1hZ2U=")).approuver(bila.id, portrait.id))
+      await expect(portraits(repond(PNG_MINUSCULE)).approuver(bila.id, portrait.id))
         .rejects.toMatchObject({ code: "not_found" });
     });
   });
