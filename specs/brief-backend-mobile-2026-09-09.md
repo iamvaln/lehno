@@ -26,7 +26,7 @@ cette date, sur `develop`, dans le code — pas de mémoire.
 | **1** — deux générations sur trois refusées | **clos** | `GENERATION_KINDS` porte les trois, et le contrôleur les traite |
 | **3** — `hasWishlist` | **clos** | servi (`me-home.ts`) |
 | **9** — l'établi du message | **clos** | `admin/text-studio/:nature/…` (#176) : lecture, historique, enregistrement, essais, publication, retour arrière — pour les trois natures de texte, `message`, `idees`, `portrait_brief` |
-| **10** — la fiche de soi | **pour moitié** | `GET` et `PUT /me/self` existent, et `ecrireSoi` pose `isSelf: true`. Reste la reprise des comptes ouverts avant |
+| **10** — la fiche de soi | **clos** | `GET`/`PUT /me/self`, puis #183 : la fiche naît à l'inscription **et** une migration la donne aux comptes ouverts avant. Ce que l'implémentation mobile a appris depuis est passé au **§13** |
 | **11** — la fiche d'un proche | **ouvert** | `person.service.ts:202` rend toujours sans ses détails |
 | **12** — le nom sur la contribution | **ouvert** | `personDisplayName` absent de `submissionSchema` |
 
@@ -316,7 +316,22 @@ jour où l'établi du message arrivera, la question du chemin se posera.
 
 ---
 
-## 10. Le titulaire du compte n'a pas de fiche — RÉGLÉ POUR MOITIÉ le 11 septembre
+## 10. Le titulaire du compte n'a pas de fiche — CLOS le 11 septembre au soir
+
+> **Clos par #183**, fusionnée dans la soirée : `signup.service.ts` crée la fiche
+> avec le compte, et `20260911160000_fiche_de_soi_pour_les_comptes_existants`
+> la donne aux comptes ouverts avant. La migration est **idempotente** (un
+> `NOT EXISTS`, plutôt qu'un échec sur l'index unique partiel quand on la
+> rejoue), nomme la fiche depuis le pseudo — le même nom que le chemin de
+> l'inscription, pour qu'un compte repris ne se distingue pas d'un compte
+> neuf — et laisse le genre à son `DEFAULT 'unspecified'`.
+>
+> Les trois points du « ce qu'il faut » ci-dessous sont donc tous tranchés.
+>
+> **Ce que l'implémentation mobile a découvert ensuite a été déplacé au §13**,
+> qui porte la règle qui les couvre : ce qui est à soi doit se reconnaître à
+> chaque frontière.
+
 
 > **`GET` et `PUT /me/self` existent**, et `ecrireSoi` pose bien `isSelf: true`
 > à la création. Le point 3 du « ce qu'il faut » ci-dessous est donc tranché :
