@@ -13,18 +13,42 @@ export interface TextFieldProps {
      serveur refuse, et un pseudo en majuscule ne passe pas le contrat. */
   nature?: NatureDeChamp | undefined;
   invalid?: boolean | undefined;
+  /* Ce qui a été VÉRIFIÉ, pas ce qui est simplement rempli. Un champ qu'on
+     vient de confronter au serveur — un code de parrainage reconnu — doit se
+     distinguer d'un champ qu'on n'a pas touché. */
+  valide?: boolean | undefined;
   multiline?: boolean | undefined;
   autoFocus?: boolean | undefined;
   onChangeText?: ((texte: string) => void) | undefined;
+  /* VALIDER AU CLAVIER, parce que le bouton n'est pas toujours atteignable.
+     Sur un écran court, le clavier ouvert recouvre l'action principale : on
+     tape son adresse et il faut refermer le clavier pour trouver le bouton.
+     La touche de retour fait le geste sans ce détour. */
+  onSubmitEditing?: (() => void) | undefined;
+  /* Ce que dit la touche de retour. « send » sur un formulaire qui part,
+     « next » quand un champ suit — un libellé faux promet le mauvais geste. */
+  returnKeyType?: "done" | "go" | "next" | "send" | undefined;
+  /* LA BORNE DU CONTRAT, quand elle diffère de celle de la nature.
+     La nature règle le CLAVIER — ce qui s'affiche, ce qui se corrige ; le
+     contrat règle la LONGUEUR, et deux champs de même nature n'ont pas
+     forcément la même. Un code de parrainage tient en 16 caractères, une
+     référence d'opérateur en 120 : même clavier, deux bornes. */
+  maxLength?: number | undefined;
 }
 
 export function TextField({
   label, hint, value, placeholder, nature = "texte",
-  invalid = false, multiline = false, autoFocus, onChangeText,
+  invalid = false, valide = false, multiline = false, autoFocus, onChangeText,
+  onSubmitEditing, returnKeyType, maxLength,
 }: TextFieldProps) {
   const couleurs = useCouleurs();
-  const s = styleDeChamp({ couleurs, invalide: invalid, multiligne: multiline });
+  const s = styleDeChamp({ couleurs, invalide: invalid, valide, multiligne: multiline });
   const reglages = reglagesDeSaisie(nature);
+  /* La borne de l'APPELANT l'emporte : c'est celle du contrat, plus proche de
+     la vérité que le défaut de la nature. Deux champs de même clavier n'ont pas
+     forcément la même longueur — un code de parrainage tient en 16, une
+     référence d'opérateur en 120. */
+  const borne = maxLength ?? reglages.maxLength;
 
   return (
     <View style={s.conteneur}>
@@ -36,6 +60,8 @@ export function TextField({
         placeholderTextColor={s.couleurIndice}
         multiline={multiline}
         autoFocus={autoFocus}
+        {...(returnKeyType ? { returnKeyType } : {})}
+        {...(onSubmitEditing ? { onSubmitEditing } : {})}
         // Le nettoyage passe avant l'appelant : ce que les réglages du clavier
         // laissent encore entrer — collage, dictée, clavier tiers — se rattrape
         // à la frappe plutôt qu'à l'envoi.
@@ -52,7 +78,7 @@ export function TextField({
         {...(reglages.keyboardType ? { keyboardType: reglages.keyboardType } : {})}
         {...(reglages.textContentType ? { textContentType: reglages.textContentType } : {})}
         {...(reglages.autoComplete ? { autoComplete: reglages.autoComplete } : {})}
-        {...(reglages.maxLength ? { maxLength: reglages.maxLength } : {})}
+        {...(borne ? { maxLength: borne } : {})}
       />
       {hint ? <Text style={s.aide}>{hint}</Text> : null}
     </View>

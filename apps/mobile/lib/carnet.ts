@@ -227,3 +227,58 @@ export function topoReplie<T>(attributs: readonly T[]): { vus: T[]; reste: numbe
     reste: Math.max(0, attributs.length - TOPO_VISIBLE),
   };
 }
+
+/* LA NAISSANCE D'UN PROCHE, et l'anniversaire qui s'en déduit.
+ *
+ * Elle vit sur la PERSONNE, une seule fois : « l'anniversaire s'en déduit, et
+ * c'est de la naissance qu'on ignore l'année, jamais de l'anniversaire ». Le
+ * formulaire d'identité ne l'offrait pas — on pouvait donc créer un proche,
+ * puis se voir refuser son anniversaire faute de naissance, et n'avoir nulle
+ * part où la poser. La promesse du produit était inatteignable.
+ *
+ * L'ANNÉE DE SUPPORT EST BISSEXTILE, et ce n'est pas un détail : quelqu'un né
+ * un 29 février dont on ignore l'année donnerait une date INEXISTANTE sur une
+ * année ordinaire, refusée par le contrat. Le serveur ne regarde pas ce
+ * millésime — « l'année stockée n'est qu'un support » — mais il regarde la
+ * date, et une date fausse reste fausse.
+ */
+export const ANNEE_DE_SUPPORT = 2000;
+
+export interface SaisieDeNaissance {
+  jour: number | null;
+  mois: number | null;
+  annee: number | null;
+  anneeConnue: boolean;
+}
+
+/* Ce qu'on envoie, ou RIEN. Un jour sans mois — ou l'inverse — ne fait pas une
+   date : on n'envoie alors pas le champ du tout, plutôt qu'une date bancale
+   que le serveur refuserait sans qu'on sache laquelle des deux moitiés
+   manquait. */
+export function naissanceAEnvoyer(
+  saisie: SaisieDeNaissance,
+): { birthDate: string; birthYearKnown: boolean } | null {
+  if (!saisie.jour || !saisie.mois) return null;
+  if (saisie.anneeConnue && !saisie.annee) return null;
+  const annee = saisie.anneeConnue ? saisie.annee! : ANNEE_DE_SUPPORT;
+  const mm = String(saisie.mois).padStart(2, "0");
+  const jj = String(saisie.jour).padStart(2, "0");
+  return { birthDate: `${annee}-${mm}-${jj}`, birthYearKnown: saisie.anneeConnue };
+}
+
+/* Le chemin inverse, pour rouvrir une fiche : on ne montre l'année que si elle
+   est connue. La montrer quand elle ne l'est pas afficherait « 2000 » comme un
+   fait, alors que c'est notre support. */
+export function naissanceLue(
+  birthDate: string | null,
+  birthYearKnown: boolean,
+): SaisieDeNaissance {
+  if (!birthDate) return { jour: null, mois: null, annee: null, anneeConnue: true };
+  const [a, m, j] = birthDate.split("-").map(Number);
+  return {
+    jour: j ?? null,
+    mois: m ?? null,
+    annee: birthYearKnown ? (a ?? null) : null,
+    anneeConnue: birthYearKnown,
+  };
+}

@@ -61,6 +61,26 @@ describe("l'icône d'un appareil", () => {
     expect(natureDeLAppareil("Dalvik/2.1.0 (Linux; U; Android 14)")).toBe("mobile");
   });
 
+  /* NOTRE PROPRE EN-TÊTE, et c'est celui qui manquait.
+     
+     Une application iOS n'annonce jamais « iPhone » — c'est le navigateur qui
+     le dit. `URLSession` compose « <app>/<version> CFNetwork/… Darwin/… », et
+     Expo Go fait de même. La session ouverte depuis le téléphone qu'on tient
+     portait donc l'icône « appareil inconnu », et chaque iPhone en production
+     aurait fait pareil : sur un écran qu'on ouvre pour retrouver SA ligne,
+     c'était la seule qui ne se reconnaissait pas. Vu à l'appareil. */
+  it("reconnaît la sienne", () => {
+    expect(natureDeLAppareil("Expo/57.0.9 CFNetwork/3826.400.120 Darwin/23.6.0")).toBe("mobile");
+    expect(natureDeLAppareil("Lehno/1.0 CFNetwork/1494.0.7 Darwin/23.4.0")).toBe("mobile");
+  });
+
+  /* Une application de bureau annoncerait les deux : `Macintosh` tranche.
+     Le jour où il y en a une, elle ne doit pas passer pour un téléphone. */
+  it("ne prend pas un Mac pour un téléphone", () => {
+    expect(natureDeLAppareil("Lehno/1.0 (Macintosh) CFNetwork/1494.0.7 Darwin/23.4.0"))
+      .toBe("ordinateur");
+  });
+
   it("reconnaît un ordinateur", () => {
     expect(natureDeLAppareil("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")).toBe("ordinateur");
     expect(natureDeLAppareil("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")).toBe("ordinateur");

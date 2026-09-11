@@ -8,8 +8,8 @@ import {
 } from "@lehno/contracts";
 import { nativeBorder, nativeFont, nativeRadius, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
-  Banner, Button, ConfirmSheet, EmptyState, Icon, LoadingState, SectionLabel,
-  TextField, Toast, useCouleurs,
+  Banner, Button, ConfirmSheet, EmptyState, Icon, LoadingState, ScreenHeader, SectionLabel,
+  TextField, Toast, useCouleurs
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
@@ -130,6 +130,13 @@ export default function Paiement() {
      lui-même plutôt que de compter sur celui qui l'ouvre. */
   if (eteint) return <EcranFerme />;
 
+  /* L'EN-TÊTE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement le perdaient, et avec lui le
+     seul moyen visible de revenir. `entetes.test.ts` le vérifie. */
+  const entete = (
+    <ScreenHeader titre={t.entetePaiement} retour={t.retour} onRetour={() => routeur.back()} />
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
       <ScrollView
@@ -138,14 +145,7 @@ export default function Paiement() {
           paddingBottom: insets.bottom + nativeSpace[24],
         }]}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.retour}
-          onPress={() => routeur.back()}
-          style={styles.retour}
-        >
-          <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-        </Pressable>
+        {entete}
 
         {echec ? (
           <View style={{ marginBottom: nativeSpace[12] }}>
@@ -314,10 +314,6 @@ export default function Paiement() {
 
 const styles = StyleSheet.create({
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
-  retour: {
-    width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
-    alignItems: "center", justifyContent: "center",
-  },
   bloc: { marginTop: nativeSpace[24] },
   champ: { marginTop: nativeSpace[12] },
   ligne: {

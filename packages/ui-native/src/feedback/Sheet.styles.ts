@@ -52,9 +52,15 @@ export function chassisDeFeuille({
   return {
     /* La feuille se plaque au bas de l'écran entier, voile compris : montée
        dans l'écran, elle laisserait l'en-tête au-dessus du voile, et le bouton
-       retour resterait touchable pendant la question. */
+       retour resterait touchable pendant la question.
+
+       EN ABSOLU, PAS EN `flex: 1`. La scène n'occupe pas une part de l'écran :
+       elle se pose PAR-DESSUS. En `flex: 1`, elle en devenait une colonne comme
+       une autre — à côté d'un défilement lui aussi en `flex: 1`, chacun prenait
+       la moitié de la hauteur : la page se retrouvait rognée en son milieu et
+       le voile n'éteignait plus rien, puisqu'il n'y avait plus rien sous lui. */
     scene: {
-      flex: 1,
+      ...REMPLISSAGE,
       justifyContent: "flex-end",
     },
     voile: {

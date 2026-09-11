@@ -11,7 +11,9 @@ import type { TextInputProps } from "react-native";
  * d'adresse la reçoit sans que personne y pense.
  */
 
-export const NATURES_DE_CHAMP = ["texte", "email", "pseudo", "code"] as const;
+export const NATURES_DE_CHAMP = [
+  "texte", "email", "pseudo", "reference", "telephone", "annee", "code",
+] as const;
 export type NatureDeChamp = (typeof NATURES_DE_CHAMP)[number];
 
 export interface ReglagesDeSaisie {
@@ -50,6 +52,61 @@ export function reglagesDeSaisie(nature: NatureDeChamp): ReglagesDeSaisie {
         // La borne du contrat : `^[a-z0-9_]{3,30}$`.
         maxLength: 30,
       };
+    /* UNE RÉFÉRENCE QU'ON RECOPIE — un code de parrainage, et rien d'autre.
+     *
+     * Elle ressemble à un pseudo et n'en est pas un : le serveur engendre
+     * `_XXY2YWO`, avec un tiret bas EN TÊTE. La nature « pseudo » retire les
+     * séparateurs initiaux — à raison, un pseudo n'en porte pas — et mangeait
+     * donc le premier caractère d'un code parfaitement valide, en silence.
+     *
+     * On ne nettoie rien ici : le contrat ne dit que `z.string().max(16)`,
+     * aucune forme. Inventer une règle de forme côté client, c'est refuser
+     * demain un code que le serveur aura commencé à produire autrement.
+     *
+     * Ni capitale automatique ni correction : ce n'est pas un mot. */
+    case "reference":
+      return {
+        autoCapitalize: "none",
+        autoCorrect: false,
+        spellCheck: false,
+        // La borne du contrat, et elle seule.
+        maxLength: 16,
+      };
+    /* UNE ANNÉE, ET PAS UN CODE À USAGE UNIQUE.
+     *
+     * Le champ d'année de naissance empruntait la nature « code » : il en
+     * héritait `textContentType: "oneTimeCode"` et `autoComplete: "sms-otp"`,
+     * donc iOS proposait LE DERNIER CODE REÇU PAR SMS au-dessus du clavier —
+     * sur une date de naissance. Et sans borne, on y saisissait cinq chiffres.
+     *
+     * Le pavé numérique reste : c'est la seule chose qui était juste. */
+    /* UN NUMÉRO DE TÉLÉPHONE — celui depuis lequel on a versé.
+     *
+     * Il retombait sur « texte » : clavier alphabétique, majuscule et
+     * correcteur actifs. On tapait donc son numéro sur des lettres, avec le
+     * correcteur qui proposait des mots. Vu à l'écran.
+     *
+     * `phone-pad` plutôt que `number-pad` : un numéro peut porter un « + »,
+     * des espaces, des tirets — le pavé des chiffres seuls les refuserait, et
+     * quelqu'un qui colle un numéro international se retrouverait coincé. */
+    case "telephone":
+      return {
+        autoCapitalize: "none",
+        autoCorrect: false,
+        spellCheck: false,
+        keyboardType: "phone-pad",
+        textContentType: "telephoneNumber",
+        autoComplete: "tel",
+        maxLength: 32,
+      };
+    case "annee":
+      return {
+        autoCapitalize: "none",
+        autoCorrect: false,
+        spellCheck: false,
+        keyboardType: "number-pad",
+        maxLength: 4,
+      };
     case "code":
       return {
         autoCapitalize: "none",
@@ -82,6 +139,12 @@ export function nettoiePourLaNature(nature: NatureDeChamp, saisie: string): stri
       const garde = saisie.replace(/[^a-zA-Z0-9._-]/g, "");
       return garde.replace(/^[^a-zA-Z0-9]+/, "");
     }
+    /* RIEN À NETTOYER : voir la nature ci-dessus. Le `trim` seul, parce qu'un
+       code collé depuis un message arrive souvent avec une espace. */
+    case "reference":
+      return saisie.trim();
+    // Des chiffres seulement, comme un code — la borne, elle, diffère.
+    case "annee":
     case "code":
       return saisie.replace(/\D/g, "");
     default:

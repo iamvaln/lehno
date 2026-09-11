@@ -102,9 +102,27 @@ export function styleDuBouton({
       // 1 pt, pas hairlineWidth × 2 : celui-ci rend 0,67 sur un écran 3x et 1
       // sur un 2x, donc la bordure changerait d'épaisseur selon l'appareil.
       borderWidth: nativeBorder.width,
-      borderColor: r.bord,
-      backgroundColor: enfonce ? r.fondPresse : r.fond,
-      opacity: desactive ? 0.45 : 1,
+      /* DÉSACTIVÉ SE PEINT, IL NE S'ESTOMPE PAS.
+         
+         C'était `opacity: 0.45` sur le conteneur, et cela DÉTRUISAIT la
+         lisibilité du libellé — mesuré à l'écran : 1,81:1 sur « Envoyez-moi un
+         code », quand WCAG demande 4,5:1 pour du texte normal et 3:1 même pour
+         du grand.
+         
+         La raison est mécanique : l'opacité composite fond ET texte contre la
+         page. Le fond violet blanchit ; le blanc du libellé, lui, NE PEUT PAS
+         pâlir — il est déjà blanc. Les deux se rejoignent, et le mot disparaît
+         dans son bouton. Le défaut est pire en thème clair, et il porte sur le
+         PREMIER état que voit qui ouvre l'application : le bouton d'envoi,
+         éteint tant qu'aucune adresse n'est saisie.
+         
+         Des couleurs propres à l'état gardent l'écart : `actionQuietBg` sous
+         `textMention` donne 4,71:1 en clair et 4,72:1 en sombre. Le bouton se
+         voit éteint parce qu'il est PÂLE, pas parce qu'il est transparent. */
+      borderColor: desactive && r.bord !== "transparent" ? couleurs.borderObject : r.bord,
+      backgroundColor: desactive
+        ? (r.fond === "transparent" ? "transparent" : couleurs.actionQuietBg)
+        : (enfonce ? r.fondPresse : r.fond),
       /* CENTRÉ, PAS COLLÉ AU DÉBUT — et `alignSelf` est ici obligatoire.
          Sans lui, un bouton dans une colonne s'étire, parce que `alignItems`
          vaut `stretch` par défaut en React Native.
@@ -128,7 +146,7 @@ export function styleDuBouton({
       fontFamily: nativeFont.bodySemibold,
       fontSize: nativeSize.bodyM,
       lineHeight: nativeLineHeight(nativeSize.bodyM, nativeLeading.title),
-      color: r.texte,
+      color: desactive ? couleurs.textMention : r.texte,
       textAlign: "center",
       // Le libellé s'étend sur deux lignes plutôt que de se tronquer : le
       // châssis iPhone SE existe pour révéler les libellés trop longs, pas pour
@@ -137,7 +155,9 @@ export function styleDuBouton({
     },
     // Le web l'obtenait par currentColor, notion absente de RN. Sans injection,
     // une icône reste noire dans un bouton violet.
-    couleurIcone: r.texte,
+    // L'icône suit le libellé : la laisser blanche la ferait disparaître dans
+    // le fond pâle, exactement comme le mot.
+    couleurIcone: desactive ? couleurs.textMention : r.texte,
     tailleIcone: 18,
   };
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -6,6 +6,7 @@ import { nativeFont, nativeLetterSpacing, nativeSpace, nativeTracking } from "@l
 import { Banner, Button, TextField, useTheme } from "@lehno/ui-native";
 import { registeredSchema, usernameSchema } from "@lehno/contracts";
 import { useLangue } from "../../lib/langue.js";
+import { doitVerifierLeParrain, type EtatDuParrain } from "../../lib/parrainage.js";
 import { appel, appelPublic, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { poseLesJetons } from "../../lib/jetons.js";
@@ -32,8 +33,41 @@ export default function Pseudo() {
 
   const [pseudo, setPseudo] = useState("");
   const [parrain, setParrain] = useState("");
+  /* `null` = on ne sait pas encore. L'écran se tait alors : marquer « invalide »
+     pendant que la requête vole ferait clignoter un reproche à chaque lettre. */
+  const [etatParrain, setEtatParrain] = useState<EtatDuParrain>(null);
   const [pris, setPris] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+
+  /* LE CODE SE VÉRIFIE À LA SAISIE, pas après l'inscription.
+     
+     Sans cela, on découvrait qu'il était mauvais sur l'écran de bienvenue —
+     donc APRÈS la création du compte, quand il est trop tard pour le corriger.
+     Le contrat prévoyait ce geste : la description de la route le dit mot pour
+     mot, « sert aussi à valider un code de parrainage à la saisie, avant de le
+     soumettre à /auth/register : un code inconnu rend 404 ».
+     
+     400 ms, comme la vérification du pseudo ailleurs : assez pour ne pas
+     interroger sur le chemin d'un code qu'on est en train de taper, assez peu
+     pour que la réponse arrive avant qu'on n'appuie.
+     
+     Une panne autre qu'un 404 rend `null` : on se tait plutôt que d'accuser un
+     code peut-être bon parce que le réseau a hoqueté. */
+  useEffect(() => {
+    if (!doitVerifierLeParrain(parrain)) { setEtatParrain(null); return; }
+    let vivant = true;
+    setEtatParrain(null);
+    const minuteur = setTimeout(() => {
+      void appelPublic<unknown>(`/public/invitations/${encodeURIComponent(parrain.trim())}`)
+        .then(() => { if (vivant) setEtatParrain("valide"); })
+        .catch((e: unknown) => {
+          if (!vivant) return;
+          const code = e instanceof ErreurDApi ? e.enveloppe?.code : null;
+          setEtatParrain(code === "not_found" ? "invalide" : null);
+        });
+    }, 400);
+    return () => { vivant = false; clearTimeout(minuteur); };
+  }, [parrain]);
   const [envoi, setEnvoi] = useState(false);
 
   /* Le plafond de comptes est atteint sur cet appareil : la création est
@@ -109,7 +143,22 @@ export default function Pseudo() {
     } catch (e) {
       const enveloppe = e instanceof ErreurDApi ? e.enveloppe : null;
       if (enveloppe?.code === "username_taken") setPris(true);
-      else setErreur(messageDErreur(enveloppe, langue));
+      /* LE JETON D'INSCRIPTION DURE QUINZE MINUTES, et son expiration rend
+         `unauthorized` — que le catalogue commun traduit par « Vous devez être
+         connecté ». Sur CET écran, la phrase est fausse deux fois : on n'a
+         jamais été connecté, on est en train de créer le compte ; et elle ne
+         dit pas quoi faire. On restait devant un bouton qui échoue, sans
+         comprendre.
+
+         On renvoie donc à l'adresse, avec la raison. Le jeton est mort : rien
+         de ce que porte cet écran ne peut plus aboutir, et l'y laisser ferait
+         retaper un pseudo pour un second refus. */
+      else if (enveloppe?.code === "unauthorized") {
+        routeur.replace({
+          pathname: "/(connexion)/connexion",
+          params: { raison: "inscriptionExpiree" },
+        });
+      } else setErreur(messageDErreur(enveloppe, langue));
     } finally {
       setEnvoi(false);
     }
@@ -138,10 +187,17 @@ export default function Pseudo() {
         <View style={{ marginTop: nativeSpace[16] }}>
           <TextField
             label={t.champParrain}
-            nature="pseudo"
+            /* « reference », pas « pseudo » : le serveur engendre `_XXY2YWO`,
+               et la nature du pseudo retirait le tiret bas de tête — un code
+               valide devenait invalide, en silence, avant même de partir. */
+            nature="reference"
             value={parrain}
             onChangeText={setParrain}
-            hint={t.parrainFacultatif}
+            {...(etatParrain === "valide" ? { valide: true } : {})}
+            {...(etatParrain === "invalide" ? { invalid: true } : {})}
+            hint={etatParrain === "valide" ? t.parrainValide
+              : etatParrain === "invalide" ? t.parrainInvalide
+                : t.parrainFacultatif}
           />
         </View>
 

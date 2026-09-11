@@ -241,6 +241,9 @@ export default function Recharge() {
     setReference("");
   };
 
+  /* LA FLÈCHE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement la perdaient, et avec elle le
+     seul moyen visible de revenir. `retours.test.ts` le vérifie. */
   const retour = (
     <Pressable
       accessibilityRole="button"
@@ -255,6 +258,7 @@ export default function Recharge() {
   if (echec && solde === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -268,6 +272,7 @@ export default function Recharge() {
   if (solde === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <LoadingState variant="liste" rows={4} title={t.chargement} />
       </View>
     );
@@ -512,11 +517,21 @@ export default function Recharge() {
               <View style={{ gap: nativeSpace[12], marginTop: nativeSpace[14] }}>
                 <TextField
                   label={t.versementNumeroEmploye}
+                  /* Un NUMÉRO : pavé téléphonique, ni majuscule ni correcteur.
+                     Sans nature, il retombait sur « texte » — on tapait son
+                     numéro sur un clavier de lettres, correcteur actif. */
+                  nature="telephone"
                   value={depuis}
                   onChangeText={setDepuis}
                 />
                 <TextField
                   label={t.versementReference}
+                  /* « MP240829.1432.A47219 » : la majuscule automatique et le
+                     correcteur la déformeraient. Le contrat la veut LIBRE —
+                     « les opérateurs ne s'accordent sur rien » — donc on ne
+                     nettoie rien, et la borne est la sienne : 120. */
+                  nature="reference"
+                  maxLength={120}
                   value={reference}
                   placeholder={t.versementReferenceExemple}
                   hint={t.versementReferenceAide}
@@ -657,7 +672,8 @@ export default function Recharge() {
              Un écran de recharge qui n'affiche plus rien du tout ferait croire
              à une panne là où il n'y a qu'une voie fermée. */
           <Card surface="panel" padding={16} radius="lg">
-            <Text style={[styles.mention, { color: couleurs.textSecondary }]}>{t.moiSolde}</Text>
+            {/* UNE SEULE FOIS — `CreditIndicator` porte déjà son libellé, et le
+                rend à côté du nombre. Même doublon que sur « Moi ». */}
             <CreditIndicator label={t.moiSolde} balance={solde} variant="solde" />
           </Card>
         )}

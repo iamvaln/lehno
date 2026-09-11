@@ -3,8 +3,8 @@ import type {
   GeneratedMessage, Generation, GenerationResult, Occurrence,
 } from "@lehno/contracts";
 import {
-  LONGUEUR_DE_LEXTRAIT, NATURES, composeLesReprises, extraitDe, fenetreDesReprises, ordonne,
-  type Reprise,
+  LONGUEUR_DE_LEXTRAIT, NATURES, composeLesReprises, destinationDeLaReprise, extraitDe,
+  fenetreDesReprises, ordonne, type Reprise,
 } from "../lib/reprises.js";
 
 /* Les profils du handoff, exprimés comme le serveur les rend : la liste
@@ -73,7 +73,7 @@ function execution(
 function reprise(jours: number | null, id = String(jours)): Reprise {
   return {
     id, kind: "wish_message", libelle: "repriseBrouillon", icone: "pencil",
-    qui: "Proche", jours, extrait: null, enCours: jours === null,
+    qui: "Proche", jours, extrait: null, enCours: jours === null, resultId: null,
   };
 }
 
@@ -338,5 +338,74 @@ describe("une production en cours dit pour qui elle travaille", () => {
     );
     expect(reprise?.qui).toBeNull();
     expect(reprise?.jours).toBeNull();
+  });
+});
+
+/* OÙ MÈNE « REPRENDRE ».
+ *
+ * L'écran poussait `/generation` SANS IDENTIFIANT : l'écran d'arrivée n'avait
+ * rien à observer et faisait demi-tour aussitôt. Vu de l'appareil, le seul
+ * geste de §3.16 ne faisait rien — pas d'erreur, pas d'écran, rien. Tout ce
+ * que « rien ne se perd » promet était irrécupérable depuis l'écran qui le
+ * montre. */
+describe("où mène « Reprendre »", () => {
+  const carte = (p: Partial<Reprise>): Reprise => ({
+    id: uuid(7), kind: "wish_message", libelle: "repriseBrouillon", icone: "pencil",
+    qui: "Awa", jours: 3, extrait: null, enCours: false, resultId: null, ...p,
+  });
+
+  /* L'EXÉCUTION, pas le résultat : c'est elle qu'on reprend, et une production
+     en cours n'a pas encore de résultat à ouvrir. */
+  it("ouvre le message par son exécution", () => {
+    expect(destinationDeLaReprise(carte({ kind: "wish_message" })))
+      .toEqual({ chemin: "/generation", params: { id: uuid(7), qui: "Awa" } });
+  });
+
+  it("ouvre les idées par le même écran", () => {
+    expect(destinationDeLaReprise(carte({ kind: "gift_ideas", libelle: "repriseIdees" })))
+      .toEqual({ chemin: "/generation", params: { id: uuid(7), qui: "Awa" } });
+  });
+
+  /* Le portrait se lit par son RÉSULTAT : `/portrait` interroge
+     `/me/portraits/{id}`, et l'identifiant de l'exécution n'y désigne rien. */
+  it("ouvre le portrait par son résultat", () => {
+    expect(destinationDeLaReprise(carte({
+      kind: "portrait", libelle: "reprisePortrait", resultId: uuid(9),
+    }))).toEqual({ chemin: "/portrait", params: { id: uuid(9), qui: "Awa" } });
+  });
+
+  /* Rien à ouvrir tant qu'il se compose. La carte retire alors le geste plutôt
+     que de l'offrir muet — c'est précisément le défaut qu'on corrige. */
+  it("n'a pas de destination pour un portrait qui se compose encore", () => {
+    expect(destinationDeLaReprise(carte({
+      kind: "portrait", libelle: "reprisePortrait", enCours: true, resultId: null,
+    }))).toBeNull();
+  });
+
+  /* Un message en cours, LUI, s'ouvre : l'écran d'arrivée sonde et montre
+     l'attente. C'est la différence entre les deux écrans, et elle se voit. */
+  it("ouvre quand même un message qui se compose encore", () => {
+    expect(destinationDeLaReprise(carte({ enCours: true, resultId: null })))
+      .toEqual({ chemin: "/generation", params: { id: uuid(7), qui: "Awa" } });
+  });
+
+  /* Sans nom connu, on ne passe pas de `qui` vide : l'écran d'arrivée sait
+     dire les choses sans nom, et « pour  » se lirait comme une faute. */
+  it("ne fait pas voyager un nom qu'on ignore", () => {
+    expect(destinationDeLaReprise(carte({ qui: null })))
+      .toEqual({ chemin: "/generation", params: { id: uuid(7) } });
+  });
+
+  /* LA CHAÎNE ENTIÈRE, du serveur à la destination : `composeLesReprises` doit
+     porter le résultat jusqu'ici. Sans lui, le portrait n'aurait jamais de
+     destination et le test unitaire au-dessus resterait vert. */
+  it("porte le résultat depuis la liste servie", () => {
+    const [reprise] = composeLesReprises(
+      [execution(1, { kind: "portrait", status: "succeeded", vise: 1 })],
+      [echeance(1, 3)],
+      TOUT,
+    );
+    expect(reprise?.resultId).not.toBeNull();
+    expect(destinationDeLaReprise(reprise!)?.chemin).toBe("/portrait");
   });
 });

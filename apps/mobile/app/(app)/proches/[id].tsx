@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
   estActive, noteListSchema, personAttributesSchema, personSchema,
   type Note, type Person, type PersonAttribute,
@@ -100,13 +100,35 @@ export default function Proche() {
     }
   }, [demande, langue]);
 
-  useEffect(() => { void charge(); }, [charge]);
+  /* À CHAQUE RETOUR, PAS SEULEMENT AU PREMIER AFFICHAGE.
+   *
+   * La fiche est le carrefour du carnet : on en part vers l'identité, une note,
+   * une date, et ce qui arrive du sas y atterrit aussi. Chargée au montage
+   * seulement, elle gardait l'état d'avant — une note validée n'y paraissait
+   * qu'après redémarrage de l'application. Vu à l'appareil : la contribution
+   * d'Awa était en base, la fiche continuait de s'afficher vide. */
+  useFocusEffect(useCallback(() => { void charge(); }, [charge]));
+
+  /* LA FLÈCHE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement la perdaient, et avec elle le
+     seul moyen visible de revenir. `retours.test.ts` le vérifie. */
+  const retour = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t.retour}
+      onPress={() => routeur.back()}
+      style={[styles.retour]}
+    >
+      <Icon name="chevron-left" size={22} color={couleurs.textBody} />
+    </Pressable>
+  );
 
   if (!proche) {
     return (
       <View style={[styles.attente, {
         backgroundColor: couleurs.surfacePage, paddingTop: insets.top + nativeSpace[24],
       }]}>
+        {retour}
         {echec ? (
           <View style={{ gap: nativeSpace[12] }}>
             <Banner intent="error">{echec}</Banner>
@@ -159,14 +181,7 @@ export default function Proche() {
         paddingHorizontal: nativeSpace[16],
       }}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.retour}
-        onPress={() => routeur.back()}
-        style={[styles.retour]}
-      >
-        <Icon name="chevron-left" size={22} color={couleurs.textBody} />
-      </Pressable>
+      {retour}
 
       <View style={[styles.entete]}>
         <Avatar
@@ -291,10 +306,16 @@ export default function Proche() {
         </View>
       ) : null}
 
+      {/* LES DEUX SE PARTAGENT LA LARGEUR. Sans `flex`, chaque bouton prend la
+          taille de son texte : « Ajouter une note » et « Ajouter une date »
+          côte à côte débordaient de l'écran sur un iPhone SE — le second était
+          coupé net par le bord droit. La rangée est celle du kit ; c'est le
+          partage qui manquait. */}
       <View style={[styles.gestes]}>
         <Button
           variant="outline"
           icon="plus"
+          style={styles.geste}
           onPress={() => routeur.push({ pathname: "/note", params: { personId: proche.id } })}
         >
           {t.ficheAjouterNote}
@@ -302,6 +323,7 @@ export default function Proche() {
         <Button
           variant="outline"
           icon="plus"
+          style={styles.geste}
           onPress={() => routeur.push({ pathname: "/evenement", params: { personId: proche.id } })}
         >
           {t.ficheAjouterDate}
@@ -351,5 +373,8 @@ const styles = StyleSheet.create({
   /* Deux ajouts de même poids : ce qu'on a appris, et une date de plus pour
      cette personne. Côte à côte, ils ne poussent pas la fiche. */
   gestes: { flexDirection: "row", gap: nativeSpace[8], marginTop: nativeSpace[24] },
+  /* `flexShrink` autant que `flex` : sans lui, un libellé plus long que sa part
+     repousse quand même le voisin, et l'on retombe sur le débordement. */
+  geste: { flex: 1, flexShrink: 1 },
   sorties: { gap: nativeSpace[8], marginTop: nativeSpace[8] },
 });

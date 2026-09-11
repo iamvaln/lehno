@@ -39,3 +39,30 @@ describe("le champ de saisie", () => {
     expect(styleDeChamp({ couleurs: CLAIR }).champ.textAlignVertical).toBeUndefined();
   });
 });
+
+/* L'ÉTAT VALIDE — il manquait, et son absence s'est vue deux fois : une prop
+   `valide` passée par l'écran du pseudo était silencieusement ignorée (les
+   objets répandus échappent au contrôle des propriétés en trop), et le code de
+   parrainage vérifié ne se distinguait pas d'un champ jamais touché. */
+describe("un champ qui a été vérifié le montre", () => {
+  it("teinte le contour et l'aide en succès", () => {
+    const s = styleDeChamp({ couleurs: CLAIR, valide: true });
+    expect(s.champ.borderColor).toBe(CLAIR.feedbackSuccess);
+    expect(s.aide.color).toBe(CLAIR.feedbackSuccess);
+  });
+
+  /* L'ERREUR L'EMPORTE. Un champ ne peut pas être juste et faux ; montrer le
+     vert d'abord ferait passer le refus pour une décoration. */
+  it("laisse l'erreur l'emporter sur le succès", () => {
+    const s = styleDeChamp({ couleurs: CLAIR, valide: true, invalide: true });
+    expect(s.champ.borderColor).toBe(CLAIR.feedbackError);
+    expect(s.aide.color).toBe(CLAIR.feedbackError);
+  });
+
+  it("ne teinte rien quand on n'a rien vérifié", () => {
+    const s = styleDeChamp({ couleurs: CLAIR });
+    expect(s.champ.borderColor).toBe(CLAIR.borderObject);
+    expect(s.aide.color).toBe(CLAIR.textMention);
+  });
+});
+

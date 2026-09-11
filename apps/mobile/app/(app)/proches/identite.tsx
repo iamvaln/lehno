@@ -10,18 +10,23 @@ import {
   type PersonRelation,
 } from "@lehno/contracts";
 import {
-  nativeBorder, nativeFont, nativeSpace,
+  nativeBorder, nativeFont, nativeRadius, nativeSpace,
 } from "@lehno/tokens";
 import {
   Avatar, Button, Icon, SectionLabel, TextField, useCouleurs,
 } from "@lehno/ui-native";
 import { Choix } from "../../../composants/Choix.js";
+import { Pastille } from "../../../composants/Pastille.js";
+import { RangeeDeJours } from "../../../composants/RangeeDeJours.js";
 import { useLangue } from "../../../lib/langue.js";
 import { appel, ErreurDApi } from "../../../lib/api.js";
 import { messageDErreur } from "../../../lib/session.js";
 import {
   CLES_DE_CANAL, CLES_DE_GENRE, CLES_DE_REGISTRE, CLES_DE_RELATION,
 } from "../../../lib/libelles.js";
+import { naissanceAEnvoyer, naissanceLue } from "../../../lib/carnet.js";
+import { nomsDesMois } from "../../../lib/evenement.js";
+import { Bascule } from "../../../composants/Bascule.js";
 
 /* L'identité d'un proche — et sa création.
  *
@@ -55,6 +60,14 @@ export default function Identite() {
   const [nom, setNom] = useState("");
   const [appelle, setAppelle] = useState("");
   const [relation, setRelation] = useState<PersonRelation | null>(null);
+  /* LA NAISSANCE — le champ qui manquait. Sans lui, on créait un proche, on se
+     voyait refuser son anniversaire faute de naissance, et l'écran renvoyait
+     vers CETTE fiche, qui ne l'offrait pas. La promesse du produit — être là le
+     jour J — était inatteignable. */
+  const [jourNe, setJourNe] = useState<number | null>(null);
+  const [moisNe, setMoisNe] = useState<number | null>(null);
+  const [anneeNee, setAnneeNee] = useState("");
+  const [anneeConnue, setAnneeConnue] = useState(true);
   const [genre, setGenre] = useState<PersonGender | null>(null);
   const [souvenir, setSouvenir] = useState("");
   const [registre, setRegistre] = useState<PersonRegister | null>(null);
@@ -75,6 +88,13 @@ export default function Identite() {
     setRegistre(fiche.register);
     setCanal(fiche.preferredChannel);
     setVille(fiche.city ?? "");
+    /* On ne montre PAS l'année de support quand elle est inconnue : l'afficher
+       la ferait passer pour un fait, alors qu'elle est notre invention. */
+    const nee = naissanceLue(fiche.birthDate, fiche.birthYearKnown);
+    setJourNe(nee.jour);
+    setMoisNe(nee.mois);
+    setAnneeNee(nee.annee ? String(nee.annee) : "");
+    setAnneeConnue(nee.anneeConnue);
     setPret(true);
   }, [id]);
 
@@ -102,12 +122,32 @@ export default function Identite() {
         ...(registre ? { register: registre } : {}),
         ...(canal ? { preferredChannel: canal } : {}),
         ...(ville.trim() ? { city: ville.trim() } : {}),
+        /* Rien tant que la date est incomplète : un jour sans mois ferait une
+           date bancale que le serveur refuserait sans dire laquelle des deux
+           moitiés manquait. */
+        ...(naissanceAEnvoyer({
+          jour: jourNe, mois: moisNe,
+          annee: anneeNee.trim() ? Number(anneeNee.trim()) : null,
+          anneeConnue,
+        }) ?? {}),
       };
       if (creation) {
         await appel<unknown>("/me/persons", { method: "POST", body: JSON.stringify(corps) });
-      } else {
-        await appel<unknown>(`/me/persons/${id}`, { method: "PATCH", body: JSON.stringify(corps) });
+        /* ON REMPLACE, ON NE REVIENT PAS. Cet écran vit dans la pile de
+           l'onglet des proches, et `back()` ramène à l'écran PRÉCÉDENT — qui
+           peut appartenir à un autre onglet, l'accueil quand on crée son
+           premier proche depuis l'état vide. Le formulaire restait alors sur la
+           pile : revenir à « Proches » rouvrait la saisie qu'on venait
+           d'enregistrer, encore remplie, au lieu du carnet.
+
+           Remplacer le pose sur le carnet — où le proche qu'on vient de créer
+           se voit, ce qui est aussi la meilleure réponse à ce qu'on a fait. */
+        routeur.replace("/(app)/proches");
+        return;
       }
+      await appel<unknown>(`/me/persons/${id}`, { method: "PATCH", body: JSON.stringify(corps) });
+      // Une correction revient d'où elle vient : la fiche qu'on était en train
+      // de lire, et qu'on veut retrouver telle qu'on l'a laissée.
       routeur.back();
     } catch (e) {
       setErreur(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
@@ -193,6 +233,49 @@ export default function Identite() {
         </View>
 
         <View style={[styles.bloc]}>
+          <SectionLabel>{t.identNaissance}</SectionLabel>
+          {/* JOUR PUIS MOIS, comme l'écran d'événement les pose : une rangée
+              qui défile pour les trente et un, une grille pour les douze. Un
+              sélecteur natif demanderait une année — et c'est justement elle
+              qu'on ignore le plus souvent. */}
+          <Text style={[styles.sousTitre, { color: couleurs.textSecondary }]}>{t.evtJour}</Text>
+          <RangeeDeJours actif={jourNe} choisit={setJourNe} />
+
+          <Text style={[styles.sousTitre, { color: couleurs.textSecondary }]}>{t.evtMois}</Text>
+          <View style={styles.pastilles}>
+            {nomsDesMois(langue).map((nom, i) => (
+              <Pastille
+                key={nom}
+                actif={moisNe === i + 1}
+                libelle={nom}
+                appuie={() => setMoisNe(i + 1)}
+              />
+            ))}
+          </View>
+
+          {/* L'ANNÉE EST À PART, et elle se déclare inconnue. On sait le jour et
+              le mois d'un anniversaire bien plus souvent que l'âge — et le
+              contrat porte `birthYearKnown` exactement pour ça : « on suit
+              alors l'anniversaire sans pouvoir annoncer d'âge ». */}
+          <View style={styles.bascule}>
+            <Bascule
+              actif={!anneeConnue}
+              libelle={t.identAnneeInconnue}
+              onBascule={() => setAnneeConnue((v) => !v)}
+            />
+          </View>
+          {anneeConnue ? (
+            <TextField
+              label={t.identAnnee}
+              nature="annee"
+              value={anneeNee}
+              onChangeText={setAnneeNee}
+            />
+          ) : null}
+          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.identNaissanceAide}</Text>
+        </View>
+
+        <View style={[styles.bloc]}>
           {/* DEUX valeurs, parce que c'est un accord et non une identité :
               un accord français n'a que deux formes. Aucune phrase de
               l'interface ne s'en sert — seule la génération le reçoit. */}
@@ -270,6 +353,20 @@ export default function Identite() {
 }
 
 const styles = StyleSheet.create({
+  /* Reprises telles quelles de l'écran d'événement : le jour et le mois s'y
+     choisissent de la même façon, et deux dessins pour un même geste se
+     mettraient à diverger. */
+  sousTitre: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[12] },
+  pastilles: { flexDirection: "row", flexWrap: "wrap", gap: nativeSpace[6], marginTop: nativeSpace[8] },
+  rangee: { flexDirection: "row", gap: nativeSpace[6], paddingTop: nativeSpace[8] },
+  pastille: {
+    minHeight: 38, minWidth: 38, paddingHorizontal: nativeSpace[14],
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: nativeSpace[6],
+    borderRadius: nativeRadius.pill, borderWidth: nativeBorder.width,
+  },
+  pastilleTexte: { fontFamily: nativeFont.bodySemibold, fontSize: 13 },
+  bascule: { marginTop: nativeSpace[12] },
+
   retour: { width: 44, height: 44, marginLeft: -nativeSpace[12], alignItems: "center", justifyContent: "center" },
   entete: { flexDirection: "row", alignItems: "center", gap: nativeSpace[12], marginBottom: nativeSpace[16] },
   titres: { flex: 1, minWidth: 0 },
@@ -282,3 +379,5 @@ const styles = StyleSheet.create({
   erreur: { fontFamily: nativeFont.bodyRegular, fontSize: 13.5, marginTop: nativeSpace[12] },
   danger: { marginTop: nativeSpace[28], paddingTop: nativeSpace[24], borderTopWidth: nativeBorder.width },
 });
+
+

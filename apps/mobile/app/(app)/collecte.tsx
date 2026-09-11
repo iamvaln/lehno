@@ -11,8 +11,8 @@ import {
   nativeTracking,
 } from "@lehno/tokens";
 import {
-  Banner, Button, Card, EmptyState, Icon, Illustration, LoadingState,
-  SectionLabel, Tag, TextField, Toast, useCouleurs,
+  Banner, Button, Card, EmptyState, Icon, Illustration, LoadingState, ScreenHeader,
+  SectionLabel, Tag, TextField, Toast, useCouleurs
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, appelPublic, ErreurDApi } from "../../lib/api.js";
@@ -174,14 +174,7 @@ export default function Collecte() {
   };
 
   const retour = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t.retour}
-      onPress={() => routeur.back()}
-      style={styles.retour}
-    >
-      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-    </Pressable>
+    <ScreenHeader titre={t.enteteCollecte} retour={t.retour} onRetour={() => routeur.back()} />
   );
 
   if (echec && liens === null) {

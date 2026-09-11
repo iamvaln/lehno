@@ -8,6 +8,7 @@ import {
   parametresDeRecherche, parametresDuCarnet,
   categoriesDeLaNote, estUnGardeFou, offreLeType, presseAssezPourSAfficher,
   resteACharger, sousTitreDuProche, TOPO_VISIBLE, topoReplie,
+  naissanceAEnvoyer, naissanceLue,
 } from "../lib/carnet.js";
 
 describe("le tri porte sa direction", () => {
@@ -339,5 +340,58 @@ describe("quand on cherche vraiment", () => {
   it("ne compte pas les espaces", () => {
     expect(chercheVraiment("  a  ")).toBe(false);
     expect(chercheVraiment("")).toBe(false);
+  });
+});
+
+/* LA NAISSANCE D'UN PROCHE — le champ qui manquait, et sans lequel un
+   anniversaire ne pouvait JAMAIS être créé : le formulaire d'identité ne
+   l'offrait pas, et l'écran d'événement renvoyait vers cette fiche. */
+describe("la naissance d'un proche", () => {
+  const base = { jour: 4, mois: 3, annee: 1990, anneeConnue: true };
+
+  it("compose une date civile", () => {
+    expect(naissanceAEnvoyer(base)).toEqual({ birthDate: "1990-03-04", birthYearKnown: true });
+  });
+
+  it("complète les chiffres seuls", () => {
+    expect(naissanceAEnvoyer({ ...base, jour: 4, mois: 3 })?.birthDate).toBe("1990-03-04");
+  });
+
+  /* L'ANNÉE DE SUPPORT EST BISSEXTILE. Quelqu'un né un 29 février dont on
+     ignore l'année donnerait une date INEXISTANTE sur une année ordinaire —
+     « 1999-02-29 » — que le contrat refuse. Le serveur ne lit pas ce millésime,
+     mais il lit la date. */
+  it("pose un 29 février sur une année qui l'accepte", () => {
+    const sans = naissanceAEnvoyer({ jour: 29, mois: 2, annee: null, anneeConnue: false });
+    expect(sans).toEqual({ birthDate: "2000-02-29", birthYearKnown: false });
+    expect(new Date(sans!.birthDate).getUTCDate()).toBe(29);
+  });
+
+  /* Un jour sans mois ne fait pas une date. On n'envoie alors RIEN plutôt
+     qu'une date bancale, que le serveur refuserait sans dire laquelle des deux
+     moitiés manquait. */
+  it("n'envoie rien tant que la date est incomplète", () => {
+    expect(naissanceAEnvoyer({ ...base, jour: null })).toBeNull();
+    expect(naissanceAEnvoyer({ ...base, mois: null })).toBeNull();
+    expect(naissanceAEnvoyer({ ...base, annee: null })).toBeNull();
+  });
+
+  // Année déclarée inconnue : on n'attend plus de millésime pour envoyer.
+  it("se passe de l'année quand on la dit inconnue", () => {
+    expect(naissanceAEnvoyer({ jour: 4, mois: 3, annee: null, anneeConnue: false }))
+      .toEqual({ birthDate: "2000-03-04", birthYearKnown: false });
+  });
+
+  /* À la relecture, on ne montre PAS l'année de support : l'afficher la ferait
+     passer pour un fait, alors qu'elle est notre invention. */
+  it("relit sans inventer l'année qu'on ignore", () => {
+    expect(naissanceLue("2000-03-04", false))
+      .toEqual({ jour: 4, mois: 3, annee: null, anneeConnue: false });
+    expect(naissanceLue("1990-03-04", true))
+      .toEqual({ jour: 4, mois: 3, annee: 1990, anneeConnue: true });
+  });
+
+  it("relit une fiche sans naissance", () => {
+    expect(naissanceLue(null, true)).toEqual({ jour: null, mois: null, annee: null, anneeConnue: true });
   });
 });

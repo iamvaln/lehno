@@ -206,3 +206,205 @@ pas.
 
 **Ce qu'il faut** : soit un défaut neutre, soit `POST /auth/register` qui accepte
 la langue.
+
+---
+
+## 9. L'établi du message n'est pas encore branché (et sa configuration semée ne se réparait pas)
+
+Trouvé à l'appareil le 10 septembre 2026, en lançant une génération de message
+depuis l'écran de préparation. L'application affiche « Quelque chose s'est mal
+passé de notre côté. » ; le serveur porte une `ZodError` :
+
+```
+ZodError: [
+  { "code": "invalid_type", "expected": "string", "received": "undefined",
+    "path": ["modele"], "message": "Required" },
+  { "code": "unrecognized_keys",
+    "keys": ["motifs", "modeles", "ambiances", "voiesImage"],
+    "message": "Unrecognized key(s) in object: …" }
+]
+    at StudioConfigurationService.reglagesMessageDe (studio/configuration.service.ts:86)
+    at GenerationService.rassembler (me/generation.service.ts:440)
+    at GenerationService.lancerMessage (me/generation.service.ts:65)
+```
+
+La ligne `studio_config` de nature `message` en base porte l'ANCIENNE forme —
+celle d'avant que le message et le portrait ne se règlent séparément. Elle avait
+été semée par `AmorceStudioService` sous une version antérieure du code, et
+`reglagesMessageSchema` ne la lit plus.
+
+> **Mise à jour du 11 septembre.** Les points 1 et 2 ci-dessous sont RÉGLÉS par
+> `45fd6fa` — « une configuration devenue illisible se répare au démarrage, et
+> se dit ». Le semis relit la tête de chaîne et la remplace si elle est
+> illisible **et** portée par lui (`publishedByAdminId` nul) ; celle qu'un
+> administrateur a publiée n'est jamais touchée, et le refus nommé dit alors ce
+> qui se passe. La panne 500 rencontrée le 10 n'est plus atteignable par une
+> ligne semée.
+>
+> **Le point 3 tient toujours**, et c'est le manque de fond — vérifié le 11 sur
+> la table de routage réelle du serveur : les dix-sept routes de studio sont
+> sous `admin/portrait-studio`, `etat()` lit `enService("portrait")`,
+> `historique()` filtre `kind: "portrait"`, `trials` appelle `essayerPortrait`.
+> `StudioEssaiService.essayer` — la seule fonction qui dépose un brouillon de
+> message — n'est appelée de nulle part dans `src/` : son unique appelant est
+> `apps/api/test/studio-essai.test.ts`.
+
+**Trois choses manquaient, et c'est leur conjonction qui rendait la panne
+définitive :**
+
+1. **Aucune migration** n'a converti les lignes existantes lors du découpage.
+2. **Le semis ne rejoue jamais.** `semerUne` sort sur
+   `count({ where: { kind } }) > 0`, et c'est délibéré — « la seule chose à ne
+   pas faire ici est de remettre en service les réglages du code par-dessus ce
+   que l'administration a publié ». La garde est juste ; elle rend simplement la
+   ligne périmée éternelle.
+3. **Aucune route ne touche la configuration du message.** Le portrait a tout —
+   `GET/PATCH admin/portrait-studio/config`, `config/publish`,
+   `config/rollback`, `config/history`, profils, essais, candidats. Le message
+   n'a **rien** : ni lecture, ni enregistrement, ni publication. Il n'existe
+   donc aucun geste, ni d'administrateur ni d'exploitant, qui répare la ligne.
+
+Conséquence, telle qu'elle se présentait le 10 : sur toute installation dont la
+table a été semée avant le découpage, **chaque `POST /me/generations` de nature
+`wish_message` répondait 500**, et le seul recours était un `DELETE` en base
+suivi d'un redémarrage — ce qu'il a fallu faire en local pour poursuivre la
+recette. La réparation au démarrage a depuis fermé ce chemin.
+
+**Ce qui reste** n'est pas un défaut mais un CHANTIER EN COURS, et il faut le
+lire comme tel : le découpage message/portrait date du 31 août (#86), et
+l'établi du portrait est arrivé le premier. Celui du message attend son
+contrôleur.
+
+Je le note ici parce que la recette l'a rencontré, pas pour le reprocher —
+`StudioEssaiService.essayer` est écrite ET testée ; il lui manque une route.
+
+En attendant, les orientations, les garde-fous et le modèle du message restent
+ce que le code a semé : on ne peut pas les régler sans livrer.
+
+**Un mot sur le nom, qui m'a fait douter de ma propre lecture** : la seule
+section de studio s'appelle `admin/portrait-studio`, et elle porte aussi les
+gabarits, les profils de simulation et les essais — qui ne sont pas propres au
+portrait. Dire « le studio du message n'a pas d'administration » s'entend donc
+facilement comme « le studio n'a pas d'administration », ce qui est faux. Le
+jour où l'établi du message arrivera, la question du chemin se posera.
+
+---
+
+## 10. Le titulaire du compte n'a pas de fiche : `isSelf` se lit partout, ne s'écrit nulle part
+
+Trouvé à l'appareil le 10 septembre 2026, en cherchant pourquoi « Nouvelle
+wishlist » annonçait « Aucune date à vous pour l'instant » sur un compte qui
+tourne depuis deux semaines.
+
+`Person.isSelf` est `@default(false)` au schéma. **Aucun chemin de code ne le
+met jamais à `true`** — ni l'inscription, ni `POST /me/persons`, dont le schéma
+de création ne porte pas le champ. Au contrat, `isSelf` n'apparaît qu'une fois :
+en LECTURE, sur la fiche rendue.
+
+En base, sur le compte de recette : une seule personne, `is_self = f`.
+
+**Cinq lectures reposent dessus, et les cinq sont mortes :**
+
+```
+me/wishlist.service.ts:127   where: { id: occurrenceId, userId,
+                                      event: { person: { isSelf: true } } }
+mur/mur.service.ts:85        where: { userId, isSelf: true }
+mur/mur.service.ts:133       event: { kind: "birthday", person: { userId, isSelf: true } }
+mur/mur.service.ts:224       person: { userId, isSelf: true }
+me/data-export.service.ts:125  (export seulement)
+```
+
+**Ce que ça donne à l'écran**, et les trois symptômes se tiennent :
+
+- **Une wishlist ne peut jamais viser une occasion.** La garde exige une
+  occurrence dont la personne est `isSelf` ; il n'en existe aucune. C'est ce qui
+  faisait de « Nouvelle wishlist » un cul-de-sac — le mobile le contourne
+  désormais par la liste sans occasion (#G de la revue kit/mobile), mais la
+  liste *datée*, elle, reste inatteignable.
+- **« Ma date d'anniversaire » sur Mon Mur n'expose jamais rien.**
+  L'interrupteur est là, il s'allume, et `mur.service` cherche un anniversaire
+  rattaché à une personne `isSelf` qu'il ne trouve pas. L'aperçu répond
+  honnêtement « Rien n'est public pour l'instant » — mais l'interrupteur, lui,
+  promet.
+- **On ne peut inscrire sa propre date nulle part.** Le sélecteur « Pour qui »
+  de `POST /me/events` ne liste que les proches ; l'écran du profil n'a pas de
+  champ de naissance — il n'existe que sur la fiche d'un proche.
+
+**Ce qu'il faut**, et l'ordre compte :
+
+1. **Créer la fiche de soi à l'inscription**, `isSelf = true`, nommée depuis le
+   pseudo. C'est le correctif de fond : les cinq lectures se réveillent seules.
+2. **Une reprise pour les comptes existants** — ils n'en ont aucun, et rien ne
+   la leur donnera après coup.
+3. Décider ensuite **qui écrit la date de naissance du titulaire** :
+   `PATCH /me/profile` (qui ne porte pas `birthDate` aujourd'hui), ou la fiche
+   de soi par `PATCH /me/persons/{id}` — auquel cas le mobile a déjà le champ,
+   il ne lui manque que la fiche à ouvrir.
+
+Tant que 1 et 2 ne sont pas faits, le mobile ne peut rien y faire : il n'a aucun
+moyen de créer une fiche `isSelf`, le champ n'existant pas au contrat de
+création.
+
+---
+
+## 11. `GET /me/persons/{id}` rend toujours `nextOccurrence: null` et `notesCount: 0`
+
+Vu à l'appareil le 10 septembre 2026 : la LISTE des proches affiche « Awa —
+Rien de noté encore · 10 sept. », et la FICHE du même proche, un écran plus
+loin, n'affiche aucun sous-titre. La date est là, la fiche ne la dit pas.
+
+```
+// me/person.service.ts:200
+async get(userId: string, id: string): Promise<Person> {
+  return rendre(await this.depot.persons(userId).findOrThrow(id));
+}
+```
+
+`rendre` prend un second paramètre `details` facultatif, et retombe sinon sur
+des valeurs par défaut :
+
+```
+notesCount: details?.notesCount ?? 0,
+nextOccurrence: details?.nextOccurrence ?? null,
+```
+
+Le commentaire qui le justifie dit vrai — « une fiche qui vient d'être créée n'a
+ni note ni échéance, et le dire coûterait deux requêtes pour deux valeurs
+connues d'avance » —, mais il parle de la CRÉATION. `get` emprunte le même
+chemin, sur une fiche qui, elle, a des notes et des dates. Le contrat promet les
+deux champs sans condition ; la lecture unitaire rend deux valeurs fausses.
+
+**Ce que ça donne à l'écran** : la fiche d'un proche (§3.18) compose son
+sous-titre depuis `nextOccurrence` — « anniversaire · 3 sept. ». Il ne paraît
+jamais. `notesCount` y est aussi toujours nul, même si l'écran ne s'en sert pas
+encore.
+
+**Ce qu'il faut** : que `get` charge les mêmes détails que la liste — la
+fonction existe déjà (`person.service.ts:59`), elle prend un tableau d'`ids` et
+sert la liste. Un appel à un élément suffit.
+
+Le mobile pourrait interroger `/me/occurrences?personId=` pour compenser, mais
+ce serait une requête de plus pour une donnée que le contrat annonce déjà sur la
+fiche — et une seconde vérité à tenir d'accord avec la première.
+
+---
+
+## 12. `submissionSchema` porte `personId` mais pas le nom de la fiche
+
+Petit, et de la même famille que le §11 : la contribution rendue au propriétaire
+porte `personId`, jamais `personDisplayName`. L'écran du sas (§3.8) doit donc
+charger le carnet entier pour intituler une carte — ce qu'il fait désormais,
+mais c'est une requête pour un mot.
+
+La page PUBLIQUE, elle, rend déjà `personDisplayName` sur le même objet
+(`GET /public/collect/{token}`). La donnée est sous la main du serveur des deux
+côtés ; seul le côté propriétaire ne la sert pas.
+
+**Ce qu'il faut** : `personDisplayName` sur `submissionSchema`, nul quand le
+lien est public et n'a pas encore produit sa fiche.
+
+Sans lui, le mobile s'en sort — mais la carte s'intitulait « Pour Sans nom » sur
+TOUTE contribution nominative, faute de quoi la nommer : `submitterName` n'est
+accepté que sur un lien public, « sur un nominatif, le propriétaire sait déjà
+qui il a invité ». Le seul champ que l'écran lisait était donc toujours nul là
+où il servait.

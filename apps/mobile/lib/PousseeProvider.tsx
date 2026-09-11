@@ -53,7 +53,14 @@ import {
  */
 interface ModuleOneSignal {
   initialize: (appId: string) => void;
-  Notifications: { requestPermission: (versLesReglages: boolean) => Promise<boolean> };
+  Notifications: {
+    requestPermission: (versLesReglages: boolean) => Promise<boolean>;
+    /* OPTIONNEL À DESSEIN. La méthode existe dans le SDK v5, mais la déclarer
+       obligatoire ferait planter le chargement sur une version qui ne l'a pas —
+       et ce chargement garde TOUTES les notifications poussées. Une capacité
+       absente doit dégrader, pas casser. */
+    getPermissionAsync?: () => Promise<boolean>;
+  };
   User: {
     pushSubscription: {
       getPushSubscriptionId: () => string | null;
@@ -90,10 +97,38 @@ const APP_ID = typeof Constants.expoConfig?.extra?.["oneSignalAppId"] === "strin
  * Rend `true` si la permission est acquise — l'écran appelant peut alors dire
  * ce qui va se passer, ou ce qui ne se passera pas.
  */
-export async function demandeLaPermission(): Promise<boolean> {
+export async function demandeLaPermission(versLesReglages = false): Promise<boolean> {
   const sdk = chargeOneSignal();
   if (!APP_ID || sdk === null) return false;
-  return sdk.Notifications.requestPermission(false);
+  /* `versLesReglages` n'est vrai QUE sur un refus déjà constaté. Y renvoyer
+     quelqu'un qui vient de dire non se lit comme de l'insistance ; mais quand
+     il a refusé une fois pour toutes, c'est le seul chemin qui aboutit — sur
+     iOS, une permission refusée ne se redemande plus. */
+  return sdk.Notifications.requestPermission(versLesReglages);
+}
+
+/* LA PERMISSION SE LIT SANS LA DEMANDER.
+ *
+ * `demandeLaPermission` en ouvre une : l'appeler pour SAVOIR poserait la
+ * question système à chaque ouverture de l'écran des rappels, ce qui la ferait
+ * refuser par lassitude — et une permission refusée deux fois ne se redemande
+ * plus sur iOS.
+ *
+ * Rend `null` quand on ne sait pas : ni SDK (Expo Go), ni identifiant
+ * d'application, ni méthode de lecture. `null` n'est pas « refusé » — l'écran
+ * doit alors se TAIRE plutôt qu'alarmer quelqu'un dont les notifications
+ * marchent très bien. Une fausse alerte coûte plus cher qu'un silence.
+ */
+export async function permissionAccordee(): Promise<boolean | null> {
+  const sdk = chargeOneSignal();
+  if (!APP_ID || sdk === null) return null;
+  const lit = sdk.Notifications.getPermissionAsync;
+  if (typeof lit !== "function") return null;
+  try {
+    return await lit.call(sdk.Notifications);
+  } catch {
+    return null;
+  }
 }
 
 export function PousseeProvider({ children }: { children: ReactNode }) {

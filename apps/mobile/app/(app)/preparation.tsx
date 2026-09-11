@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  creditBalanceSchema, occurrenceSchema, type GenerationKind, type Occurrence,
+  creditBalanceSchema, generationsSchema, occurrenceSchema,
+  type GenerationKind, type GenerationResult, type Occurrence,
 } from "@lehno/contracts";
 import {
   nativeBorder, nativeFont, nativeLetterSpacing, nativeRadius, nativeSpace,
@@ -18,6 +19,7 @@ import { messageDErreur } from "../../lib/session.js";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
 import { useActionsPayantes, useNombreIdees } from "../../lib/MetadonneesProvider.js";
 import { composeLaDemande, coutDe, pistesOffertes } from "../../lib/preparation.js";
+import { dejaProduit } from "../../lib/occasion.js";
 
 /* Préparer une occasion — §3.7.
  *
@@ -46,17 +48,31 @@ export default function Preparation() {
   const [aConfirmer, setAConfirmer] = useState<GenerationKind | null>(null);
   const [solde, setSolde] = useState<number | null>(null);
 
+  /* CE QUI A DÉJÀ ÉTÉ PRODUIT pour cette occasion. Sans cela, l'écran propose
+     « Préparer » à quelqu'un qui a déjà son message — et le geste COÛTE UN
+     CRÉDIT. On lui ferait payer deux fois la même chose sans le prévenir, et
+     sans lui offrir de relire ce qu'il a déjà. */
+  const [produits, setProduits] = useState<readonly GenerationResult[]>([]);
+
   const charge = useCallback(async () => {
     try {
       /* Le solde vient avec l'occasion : la feuille l'annonce à côté du coût,
          et l'aller chercher au moment du geste ferait attendre devant une
          question qu'on vient de poser. */
-      const [occ, credits] = await Promise.all([
+      const [occ, credits, faits] = await Promise.all([
         appel<unknown>(`/me/occurrences/${occurrenceId}`),
         appel<unknown>("/me/credits"),
+        /* En PARALLÈLE, et son échec ne condamne pas l'écran : sans cette
+           lecture on retombe sur « Préparer » partout, c'est-à-dire sur le
+           comportement d'avant. Une piste inutilement reproposée coûte un
+           crédit ; un écran qui ne s'ouvre pas coûte le parcours entier. */
+        appel<unknown>("/me/generations", { gouvernee: true })
+          .then((b) => generationsSchema.parse(b).generations)
+          .catch(() => []),
       ]);
       setOccasion(occurrenceSchema.parse(occ));
       setSolde(creditBalanceSchema.parse(credits).balance);
+      setProduits(faits);
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
@@ -86,9 +102,28 @@ export default function Preparation() {
     }
   };
 
+  /* LA FLÈCHE VIT DANS LES TROIS ÉTATS, pas seulement dans le nominal.
+   *
+   * L'écran d'erreur n'en portait pas : on y arrivait par un bouton — « Chercher
+   * des idées » sur une liste sans occasion — et il n'affichait plus que
+   * « Cette demande n'est pas valide » et « Réessayer », qui réessaie la même
+   * demande invalide. La seule issue visible était la barre d'onglets, qui fait
+   * perdre sa place. Vu à l'appareil. */
+  const retour = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t.retour}
+      onPress={() => routeur.back()}
+      style={styles.retour}
+    >
+      <Icon name="chevron-left" size={22} color={couleurs.textBody} />
+    </Pressable>
+  );
+
   if (echec && !occasion) {
     return (
-      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[12] }]}>
+        {retour}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -101,7 +136,8 @@ export default function Preparation() {
 
   if (!occasion) {
     return (
-      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[12] }]}>
+        {retour}
         <LoadingState variant="liste" rows={2} title={t.chargement} />
       </View>
     );
@@ -124,21 +160,20 @@ export default function Preparation() {
   };
 
   return (
+    /* LA FEUILLE EST SŒUR DU DÉFILEMENT, jamais son enfant. Rendue dedans, elle
+       se range à la suite des cartes : sur un petit écran elle s'ouvrait sous
+       la ligne de flottaison, coût et boutons hors champ, et son voile ne
+       couvrait que sa propre boîte. `surcouches.test.ts` le
+       vérifie. */
+    <View style={[styles.ecran, { backgroundColor: couleurs.surfacePage }]}>
     <ScrollView
-      style={{ backgroundColor: couleurs.surfacePage }}
+      style={styles.ecran}
       contentContainerStyle={[styles.page, {
         paddingTop: insets.top + nativeSpace[12],
         paddingBottom: insets.bottom + nativeSpace[24],
       }]}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.retour}
-        onPress={() => routeur.back()}
-        style={styles.retour}
-      >
-        <Icon name="chevron-left" size={22} color={couleurs.textBody} />
-      </Pressable>
+      {retour}
 
       <Text style={[styles.titre, { color: couleurs.textBody }]}>
         {t.prepPour(occasion.personDisplayName)}
@@ -164,9 +199,20 @@ export default function Preparation() {
 
       {pistes.map(({ kind }) => (
         <View key={kind} style={[styles.piste, { borderColor: couleurs.borderObject }]}>
-          <Text style={[styles.pisteTitre, { color: couleurs.textBody }]}>
-            {detail[kind].titre}
-          </Text>
+          <View style={styles.pisteEntete}>
+            <Text style={[styles.pisteTitre, { color: couleurs.textBody }]}>
+              {detail[kind].titre}
+            </Text>
+            {/* LE BADGE DIT L'ÉTAT AVANT QUE LE BOUTON NE LE DISE. On le lit en
+                parcourant la page, sans avoir à comparer deux libellés de
+                boutons — c'est ce qui évite de relancer par inadvertance une
+                piste qu'on avait déjà lancée. */}
+            {dejaProduit(produits, occurrenceId, kind) ? (
+              <Text style={[styles.dejaFait, { color: couleurs.feedbackSuccess }]}>
+                {t.prepDeja}
+              </Text>
+            ) : null}
+          </View>
           <Text style={[styles.pisteTexte, { color: couleurs.textSecondary }]}>
             {detail[kind].texte}
           </Text>
@@ -176,24 +222,54 @@ export default function Preparation() {
                 qu'APRÈS coûterait un second crédit, puisque refaire est une
                 nouvelle demande. Le message, lui, n'a rien à cadrer — le
                 détour serait un écran vide de plus avant de payer. */}
-            <Button
-              variant="primary"
-              full
-              icon="sparkles"
-              disabled={envoi !== null || coutDe(prix, kind) === null}
-              onPress={() => {
-                if (kind === "gift_ideas") {
-                  routeur.push({ pathname: "/(app)/cadrage", params: { occurrenceId } });
-                  return;
-                }
-                setAConfirmer(kind);
-              }}
-            >
-              {t.preparer}
-            </Button>
+            {/* DÉJÀ FAIT : deux gestes au lieu d'un, et le verbe change.
+                « Relancer » dit qu'on repaie ; « Voir » ouvre ce qui existe et
+                ne coûte rien. Un « Préparer » identique au premier passage
+                ferait payer deux fois la même chose à quelqu'un qui cherchait
+                seulement à relire. */}
+            {dejaProduit(produits, occurrenceId, kind) ? (
+              <View style={styles.refaire}>
+                <Button
+                  variant="text"
+                  disabled={envoi !== null || coutDe(prix, kind) === null}
+                  onPress={() => {
+                    if (kind === "gift_ideas") {
+                      routeur.push({ pathname: "/(app)/cadrage", params: { occurrenceId } });
+                      return;
+                    }
+                    setAConfirmer(kind);
+                  }}
+                >{t.prepRelancer}</Button>
+                <Button
+                  variant="outline"
+                  onPress={() => routeur.push({
+                    pathname: "/generation",
+                    params: { id: dejaProduit(produits, occurrenceId, kind)! },
+                  })}
+                >{t.prepVoir}</Button>
+              </View>
+            ) : (
+              <Button
+                variant="primary"
+                full
+                icon="sparkles"
+                disabled={envoi !== null || coutDe(prix, kind) === null}
+                onPress={() => {
+                  if (kind === "gift_ideas") {
+                    routeur.push({ pathname: "/(app)/cadrage", params: { occurrenceId } });
+                    return;
+                  }
+                  setAConfirmer(kind);
+                }}
+              >
+                {t.preparer}
+              </Button>
+            )}
           </View>
         </View>
       ))}
+    </ScrollView>
+
       {/* Le coût est LU EN BASE, jamais écrit ici : il se règle en
           administration sans livraison, et un écran qui annonce un prix avant
           de débiter ne peut pas se tromper. Une action dont le prix n'est pas
@@ -215,19 +291,39 @@ export default function Preparation() {
           pasMaintenant={t.feuillePasMaintenant}
           cout={coutARegler}
           solde={solde}
+          insetBas={insets.bottom}
           onConfirmer={() => {
             const kind = aConfirmer;
             setAConfirmer(null);
             void lance(kind);
           }}
+          /* Solde insuffisant, « Recharger » DEVIENT l'action principale de la
+             feuille. Sans destination, le seul geste offert était muet : on
+             lisait « il ne vous en reste pas assez » et rien n'y menait. */
+          onRecharger={() => { setAConfirmer(null); routeur.push("/(app)/recharge"); }}
           onAnnuler={() => setAConfirmer(null)}
         />
       ) : null}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  /* Les deux gestes côte à côte : « Relancer » discret, « Voir » en contour.
+     La planche les met sur une rangée — les empiler ferait ressembler la piste
+     déjà faite à un formulaire, alors qu'elle est un rappel. */
+  refaire: { flexDirection: "row", gap: nativeSpace[8], justifyContent: "flex-end" },
+  pisteEntete: {
+    flexDirection: "row", alignItems: "baseline",
+    justifyContent: "space-between", gap: nativeSpace[8],
+  },
+  /* Capitales et interlettrage : c'est une étiquette d'état, pas une phrase.
+     Elle doit se distinguer du titre sans lui disputer la place. */
+  dejaFait: {
+    fontFamily: nativeFont.bodySemibold, fontSize: 11,
+    letterSpacing: 0.9, textTransform: "uppercase",
+  },
+  ecran: { flex: 1 },
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
   retour: {
     width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],

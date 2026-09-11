@@ -3,8 +3,8 @@ import {
   submissionDecisionSchema, type Submission, type SubmittedWish,
 } from "@lehno/contracts";
 import {
-  aTrancher, corpsDeDecision, corpsDeRejet, demandeOuRanger, pretAEnvoyer,
-  toutEstTranche, type SaisieDuSas,
+  aTrancher, corpsDeDecision, corpsDeRejet, demandeOuRanger, nomDeLaContribution,
+  pretAEnvoyer, toutEstTranche, type SaisieDuSas,
 } from "../lib/sas.js";
 
 const uuid = (n: number): string =>
@@ -127,5 +127,71 @@ describe("le corps de la décision", () => {
   it("refuserait un rejet accompagné d'une répartition", () => {
     expect(submissionDecisionSchema.safeParse({ reject: true, keepBirthDate: true }).success)
       .toBe(false);
+  });
+});
+
+/* DE QUI PARLE CETTE CONTRIBUTION.
+ *
+ * La carte s'intitulait « Pour Sans nom » sur TOUTE contribution nominative —
+ * c'est-à-dire précisément celles dont on connaît la cible. Elle lisait
+ * `submitterName`, que le contrat n'accepte que sur un lien PUBLIC : « sur un
+ * nominatif, le propriétaire sait déjà qui il a invité ». Le champ est donc
+ * toujours nul là où l'écran s'en servait. Vu à l'appareil, sur une
+ * contribution déposée pour Awa.
+ */
+describe("de qui parle une contribution", () => {
+  const CARNET = new Map([[uuid(9), "Awa"]]);
+  const SANS_NOM = "Sans nom";
+
+  it("nomme la fiche visée par un lien nominatif", () => {
+    expect(nomDeLaContribution(
+      contribution({ linkType: "nominatif", personId: uuid(9), submitterName: null }),
+      CARNET, SANS_NOM,
+    )).toBe("Awa");
+  });
+
+  /* La fiche l'emporte sur le nom que le répondant se donne : sur un lien
+     nominatif c'est la MÊME personne, et le carnet porte le nom que le
+     propriétaire a choisi — celui sous lequel il la reconnaît. */
+  it("préfère la fiche au nom que le répondant se donne", () => {
+    expect(nomDeLaContribution(
+      contribution({ personId: uuid(9), submitterName: "Ana" }), CARNET, SANS_NOM,
+    )).toBe("Awa");
+  });
+
+  /* Un lien PUBLIC ne vise personne tant qu'on n'a pas tranché : c'est le
+     répondant qui se nomme. */
+  it("garde le nom du répondant sur un lien public", () => {
+    expect(nomDeLaContribution(
+      contribution({ linkType: "public", personId: null, submitterName: "Ana" }),
+      CARNET, SANS_NOM,
+    )).toBe("Ana");
+  });
+
+  it("dit « sans nom » quand le répondant s'en est abstenu", () => {
+    expect(nomDeLaContribution(
+      contribution({ linkType: "public", personId: null, submitterName: null }),
+      CARNET, SANS_NOM,
+    )).toBe(SANS_NOM);
+  });
+
+  /* LE CARNET PEUT NE PAS PORTER LA FICHE : sa lecture a pu échouer, ou la
+     fiche sortir de la page demandée. On retombe alors sur ce qu'on affichait
+     avant, jamais sur un blanc. */
+  it("retombe sur le répondant quand le carnet ignore la fiche", () => {
+    expect(nomDeLaContribution(
+      contribution({ personId: uuid(7), submitterName: "Ana" }), CARNET, SANS_NOM,
+    )).toBe("Ana");
+    expect(nomDeLaContribution(
+      contribution({ personId: uuid(7), submitterName: null }), CARNET, SANS_NOM,
+    )).toBe(SANS_NOM);
+  });
+
+  // Un nom fait de blancs n'est pas un nom : il laisserait une carte muette.
+  it("ne retient pas un nom de fiche fait de blancs", () => {
+    expect(nomDeLaContribution(
+      contribution({ personId: uuid(9), submitterName: "Ana" }),
+      new Map([[uuid(9), "   "]]), SANS_NOM,
+    )).toBe("Ana");
   });
 });

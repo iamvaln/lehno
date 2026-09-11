@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { NATURES_DE_CHAMP, reglagesDeSaisie } from "./TextField.nature.js";
+import {
+  NATURES_DE_CHAMP, nettoiePourLaNature, reglagesDeSaisie,
+} from "./TextField.nature.js";
 
 describe("la nature d'un champ", () => {
   /* React Native capitalise la première lettre par défaut — `autoCapitalize`
@@ -48,5 +50,86 @@ describe("la nature d'un champ", () => {
     for (const nature of NATURES_DE_CHAMP) {
       expect(reglagesDeSaisie(nature), nature).toBeDefined();
     }
+  });
+});
+
+/* UN CODE DE PARRAINAGE N'EST PAS UN PSEUDO, et la confusion coûtait le
+   premier caractère. Le serveur engendre `_XXY2YWO` ; la nature « pseudo »
+   retire les séparateurs de tête — à raison pour un pseudo, à tort ici. Le
+   champ affichait alors `XXY2YWO`, que le serveur refuse : un code valide
+   devenait invalide en silence, sans que personne puisse comprendre pourquoi. */
+describe("une référence qu'on recopie", () => {
+  it("garde le tiret bas de tête, que le pseudo retirait", () => {
+    expect(nettoiePourLaNature("reference", "_XXY2YWO")).toBe("_XXY2YWO");
+    expect(nettoiePourLaNature("pseudo", "_XXY2YWO")).toBe("XXY2YWO");
+  });
+
+  // Un code collé depuis un message arrive souvent avec une espace.
+  it("retire les espaces du collage, et rien d'autre", () => {
+    expect(nettoiePourLaNature("reference", "  _XXY2YWO ")).toBe("_XXY2YWO");
+  });
+
+  /* AUCUNE RÈGLE DE FORME : le contrat ne dit que `max(16)`. En inventer une
+     ici, c'est refuser demain un code que le serveur produira autrement. */
+  it("ne juge pas la forme du code", () => {
+    expect(nettoiePourLaNature("reference", "ab-12.XY")).toBe("ab-12.XY");
+    expect(nettoiePourLaNature("reference", "é@#")).toBe("é@#");
+  });
+
+  it("s'arrête à la borne du contrat", () => {
+    expect(reglagesDeSaisie("reference").maxLength).toBe(16);
+  });
+});
+
+/* UNE ANNÉE N'EST PAS UN CODE À USAGE UNIQUE.
+ *
+ * Le champ d'année de naissance empruntait la nature « code ». Il en héritait
+ * `textContentType: "oneTimeCode"` et `autoComplete: "sms-otp"` : iOS proposait
+ * LE DERNIER CODE REÇU PAR SMS au-dessus du clavier, sur une date de naissance.
+ * Et faute de borne, on y saisissait cinq chiffres — vu à l'écran, « 19905 ».
+ */
+describe("une année de naissance", () => {
+  it("ne propose pas le dernier code reçu par SMS", () => {
+    const r = reglagesDeSaisie("annee");
+    expect(r.textContentType).toBeUndefined();
+    expect(r.autoComplete).toBeUndefined();
+    // Ce que « code » fait, et qu'il ne faut pas ici.
+    expect(reglagesDeSaisie("code").textContentType).toBe("oneTimeCode");
+  });
+
+  it("s'arrête à quatre chiffres", () => {
+    expect(reglagesDeSaisie("annee").maxLength).toBe(4);
+  });
+
+  it("garde le pavé numérique, et n'accepte que des chiffres", () => {
+    expect(reglagesDeSaisie("annee").keyboardType).toBe("number-pad");
+    expect(nettoiePourLaNature("annee", "19a90")).toBe("1990");
+  });
+});
+
+
+/* UN NUMÉRO DE TÉLÉPHONE — celui depuis lequel on a versé.
+ *
+ * Il retombait sur « texte » : clavier alphabétique, majuscule et correcteur
+ * actifs. On tapait donc son numéro sur des lettres, avec le correcteur qui
+ * proposait des mots. Vu à l'écran, sur l'écran de déclaration d'un versement.
+ */
+describe("un numéro de téléphone", () => {
+  it("ouvre un pavé téléphonique, pas un clavier de lettres", () => {
+    const r = reglagesDeSaisie("telephone");
+    expect(r.keyboardType).toBe("phone-pad");
+    expect(r.autoCorrect).toBe(false);
+    expect(r.autoCapitalize).toBe("none");
+  });
+
+  /* `phone-pad` et non `number-pad` : un numéro porte parfois un « + », des
+     espaces, des tirets. Le pavé des chiffres seuls les refuserait, et
+     quelqu'un qui colle un numéro international resterait coincé. */
+  it("laisse passer la ponctuation d'un numéro", () => {
+    expect(nettoiePourLaNature("telephone", "+237 691 23 45 67")).toBe("+237 691 23 45 67");
+  });
+
+  it("s'arrête à la borne du contrat", () => {
+    expect(reglagesDeSaisie("telephone").maxLength).toBe(32);
   });
 });

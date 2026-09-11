@@ -5,9 +5,10 @@ import { useRouter } from "expo-router";
 import {
   PERSON_GENDERS, profileSchema, usernameAvailabilitySchema, type Profile,
 } from "@lehno/contracts";
-import { nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
+import { nativeFont, nativeSpace } from "@lehno/tokens";
 import {
-  Avatar, Banner, Button, Icon, LoadingState, SectionLabel, TextField, useTheme,
+  Avatar, Banner, Button, LoadingState, ScreenHeader, SectionLabel, TextField,
+  useTheme
 } from "@lehno/ui-native";
 import { Choix } from "../../composants/Choix.js";
 import { useLangue } from "../../lib/langue.js";
@@ -192,9 +193,17 @@ export default function Profil() {
     }
   };
 
+  /* L'EN-TÊTE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement le perdaient, et avec lui le
+     seul moyen visible de revenir. `entetes.test.ts` le vérifie. */
+  const entete = (
+    <ScreenHeader titre={t.enteteProfil} retour={t.retour} onRetour={() => routeur.back()} />
+  );
+
   if (echec && !profil) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {entete}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -208,6 +217,7 @@ export default function Profil() {
   if (!profil || !saisie) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {entete}
         <LoadingState variant="liste" rows={3} title={t.chargement} />
       </View>
     );
@@ -224,14 +234,7 @@ export default function Profil() {
         paddingBottom: insets.bottom + nativeSpace[24],
       }]}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.retour}
-        onPress={() => routeur.back()}
-        style={styles.retour}
-      >
-        <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-      </Pressable>
+      {entete}
 
       {/* La photo se dépose EN DIRECT sur le stockage, sans traverser l'API :
           le serveur signe une URL, le téléphone monte dessus, puis confirme.
@@ -313,19 +316,6 @@ export default function Profil() {
         </View>
 
         <View>
-          <SectionLabel>{t.champLangue}</SectionLabel>
-          {/* Un choix, pas un champ libre : deux valeurs se lisent d'un coup, et
-              le kit n'offrait qu'un champ parce qu'il ne pouvait rien ouvrir. */}
-          <Choix
-            options={["fr", "en"] as const}
-            libelle={(v) => (v === "fr" ? "Français" : "English")}
-            valeur={saisie.langue}
-            pose={(v) => setSaisie({ ...saisie, langue: v ?? saisie.langue })}
-          />
-          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilLangueAide}</Text>
-        </View>
-
-        <View>
           <SectionLabel>{t.champTheme}</SectionLabel>
           {/* TROIS choix, pas deux. « Système » est la valeur par défaut au
               contrat, et la seule qui laisse l'appareil décider : un sélecteur
@@ -357,10 +347,6 @@ export default function Profil() {
 
 const styles = StyleSheet.create({
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
-  retour: {
-    width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
-    alignItems: "center", justifyContent: "center",
-  },
   portrait: { alignItems: "center", marginTop: nativeSpace[8], marginBottom: nativeSpace[24] },
   photoActions: { flexDirection: "row", gap: nativeSpace[16], marginTop: nativeSpace[10] },
   photoLien: { fontFamily: nativeFont.bodySemibold, fontSize: 14.5 },

@@ -1,5 +1,7 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
@@ -15,8 +17,8 @@ import {
   nativeBorder, nativeFont, nativeRadius, nativeSpace, nativeTouchMin,
 } from "@lehno/tokens";
 import {
-  Banner, Button, Card, EmptyState, Icon, LoadingState, SectionLabel, Tag, Toast,
-  useCouleurs,
+  Banner, Button, Card, EmptyState, Icon, LoadingState, ScreenHeader, SectionLabel, Tag,
+  TextField, Toast, useCouleurs
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -27,7 +29,7 @@ import { ecranEteint } from "../../lib/navigation.js";
 import { EcranFerme } from "../../composants/EcranFerme.js";
 import {
   listesRangees, occasionsOuvrables, peutChercherDesIdees, peutPartager,
-  quandDeLaListe, resteAOffrir,
+  nomDeLaListe, ouvertureDeListe, quandDeLaListe, resteAOffrir, type OuvertureDeListe,
 } from "../../lib/listes.js";
 
 /* Mes wishlists — §3.29.
@@ -66,7 +68,13 @@ export default function Listes() {
   const [listes, setListes] = useState<Wishlist[] | null>(null);
   const [miennes, setMiennes] = useState<Occurrence[]>([]);
   const [creation, setCreation] = useState(false);
+  /* `null` n'est plus « rien de choisi » mais « SANS OCCASION » — un choix, pas
+     une absence. C'est `choisi` qui dit si l'on a tranché : sans lui, on ne
+     saurait pas distinguer le formulaire qu'on vient d'ouvrir de celui où l'on
+     a délibérément coché « sans occasion ». */
   const [ouvre, setOuvre] = useState<string | null>(null);
+  const [choisi, setChoisi] = useState(false);
+  const [nom, setNom] = useState("");
   const [envoi, setEnvoi] = useState(false);
   const [accuse, setAccuse] = useState<string | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
@@ -94,15 +102,17 @@ export default function Listes() {
 
   useFocusEffect(useCallback(() => { if (!eteint) void charge(); }, [charge, eteint]));
 
-  const ouvreUneListe = async (occurrenceId: string): Promise<void> => {
+  const ouvreUneListe = async (corps: OuvertureDeListe): Promise<void> => {
     setEnvoi(true);
     setEchec(null);
     try {
       await appel<unknown>("/me/wishlists", {
         method: "POST",
-        body: JSON.stringify({ occurrenceId }),
+        body: JSON.stringify(corps),
       });
       setOuvre(null);
+      setChoisi(false);
+      setNom("");
       setCreation(false);
       setAccuse(t.listeNouvFait);
       await charge();
@@ -118,9 +128,17 @@ export default function Listes() {
      voile de chargement, qui ne se levait jamais. */
   if (eteint) return <EcranFerme />;
 
+  /* LA FLÈCHE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement la perdaient, et avec elle le
+     seul moyen visible de revenir. `retours.test.ts` le vérifie. */
+  const retour = (
+    <ScreenHeader titre={t.enteteListes} retour={t.retour} onRetour={() => routeur.back()} />
+  );
+
   if (echec && listes === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -134,6 +152,7 @@ export default function Listes() {
   if (listes === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <LoadingState variant="liste" rows={3} title={t.chargement} />
       </View>
     );
@@ -151,37 +170,95 @@ export default function Listes() {
    * · 3 sept. ». La date seule ne dit pas de quoi il s'agit, et deux dates
    * voisines devenaient indiscernables.
    */
+  /* Ce qui partirait au serveur, calculé une fois : le bouton s'en sert pour
+     savoir s'il s'allume, et l'envoi pour savoir quoi poster. Deux lectures
+     séparées finiraient par diverger — le bouton allumé sur une demande que
+     l'envoi refuserait de composer. */
+  const demande = ouvertureDeListe(ouvre, nom);
+
   if (creation) {
     return (
-      <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
+      /* LE CLAVIER CACHAIT LE PIED, et le pied porte les deux seuls gestes de
+         l'écran. Le champ du nom l'appelle dès qu'on le touche ; « Enregistrer »
+         et « Pas maintenant » passaient dessous, hors d'atteinte.
+
+         `keyboardShouldPersistTaps` va avec, et ce n'est pas un détail
+         cosmétique : sans lui, le premier appui hors du champ est MANGÉ par le
+         renvoi du clavier. On tapait sur « Sans occasion », rien ne se cochait,
+         et il fallait taper deux fois sans comprendre pourquoi. */
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: couleurs.surfacePage }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView
           contentContainerStyle={[styles.page, {
             paddingTop: insets.top + nativeSpace[20],
             paddingBottom: nativeSpace[16],
           }]}
+          keyboardShouldPersistTaps="handled"
         >
           <Text style={[styles.grandTitre, { color: couleurs.textBody }]}>
             {t.listeCreer}
           </Text>
 
+          {/* LE NOM EN PREMIER, comme la planche : c'est le seul champ qu'on
+              saisit, et sans occasion c'est le seul qui distingue une liste de
+              la suivante. */}
+          <View style={{ marginTop: nativeSpace[16] }}>
+            <TextField
+              label={t.listeNouvNom}
+              placeholder={t.listeNouvNomExemple}
+              value={nom}
+              onChangeText={setNom}
+            />
+          </View>
+
           <View style={{ marginTop: nativeSpace[20] }}>
             <SectionLabel>{t.listeNouvOccasion}</SectionLabel>
           </View>
 
+          {/* « SANS OCCASION » EST UN CHOIX, en tête et toujours offert.
+              C'est lui qui débloque le cas où l'on n'a aucune date à soi — un
+              compte neuf n'en a pas : les premières dates qu'on saisit sont
+              celles de ses proches. Sans cette ligne, l'écran s'ouvrait sur
+              « aucune date », le bouton éteint, et rien à faire. */}
+          <Pressable
+            accessibilityRole="radio"
+            accessibilityState={{ selected: choisi && ouvre === null, checked: choisi && ouvre === null }}
+            onPress={() => { setOuvre(null); setChoisi(true); }}
+            style={[styles.occasion, { marginTop: nativeSpace[8] }]}
+          >
+            <View style={[styles.pastille, {
+              borderColor: choisi && ouvre === null ? couleurs.action : couleurs.borderObject,
+            }]}>
+              {choisi && ouvre === null ? (
+                <View style={[styles.noyau, { backgroundColor: couleurs.action }]} />
+              ) : null}
+            </View>
+            <View style={styles.pleine}>
+              <Text style={[styles.occasionNom, { color: couleurs.textBody }]}>
+                {t.listeNouvSansOccasion}
+              </Text>
+              <Text style={[styles.mention, { color: couleurs.textMention }]}>
+                {t.listeNouvSansOccasionAide}
+              </Text>
+            </View>
+          </Pressable>
+
           {ouvrables.length ? (
             <View style={{ marginTop: nativeSpace[8] }}>
-              {ouvrables.map((o, i) => {
-                const actif = ouvre === o.id;
+              {ouvrables.map((o) => {
+                const actif = choisi && ouvre === o.id;
                 return (
                   <Pressable
                     key={o.id}
                     accessibilityRole="radio"
                     accessibilityState={{ selected: actif, checked: actif }}
-                    onPress={() => setOuvre(o.id)}
-                    style={[styles.occasion, i ? {
+                    onPress={() => { setOuvre(o.id); setChoisi(true); }}
+                    style={[styles.occasion, {
                       borderTopWidth: nativeBorder.width,
                       borderTopColor: couleurs.borderHairline,
-                    } : null]}
+                    }]}
                   >
                     <View style={[styles.pastille, {
                       borderColor: actif ? couleurs.action : couleurs.borderObject,
@@ -225,22 +302,26 @@ export default function Listes() {
             paddingBottom: insets.bottom + nativeSpace[12],
             borderTopColor: couleurs.borderHairline,
           }]}>
+          {/* Le bouton s'éteint tant que la demande ne tient pas — sans
+              occasion, il faut un nom, et c'est le serveur qui le dit :
+              « une liste sans occasion a besoin d'un nom ». L'éteindre vaut
+              mieux que de faire découvrir la règle par un refus. */}
           <Button
             full
-            disabled={envoi || ouvre === null}
-            onPress={() => { if (ouvre) void ouvreUneListe(ouvre); }}
+            disabled={envoi || !choisi || demande === null}
+            onPress={() => { if (demande) void ouvreUneListe(demande); }}
           >
             {t.enregistrer}
           </Button>
           <Button
             full
             variant="text"
-            onPress={() => { setCreation(false); setOuvre(null); }}
+            onPress={() => { setCreation(false); setOuvre(null); setChoisi(false); setNom(""); }}
           >
             {t.feuillePasMaintenant}
           </Button>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -252,14 +333,7 @@ export default function Listes() {
           paddingBottom: insets.bottom + nativeSpace[24],
         }]}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.retour}
-          onPress={() => routeur.back()}
-          style={styles.retour}
-        >
-          <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-        </Pressable>
+        {retour}
 
         {echec ? (
           <View style={{ marginBottom: nativeSpace[12] }}>
@@ -287,16 +361,16 @@ export default function Listes() {
               <Card key={l.id} surface="panel" padding={15} radius="lg" style={styles.carte}>
                 <Pressable
                   accessibilityRole="button"
+                  /* Le nom voyage avec : l'écran d'arrivée le met en en-tête,
+                     et aller le rechercher ferait un appel pour un titre. */
                   onPress={() => routeur.push({
-                    pathname: "/(app)/souhaits", params: { id: l.id },
+                    pathname: "/(app)/souhaits", params: { id: l.id, nom: nomDeLaListe(l, t) },
                   })}
                   style={styles.entete}
                 >
                   <View style={styles.pleine}>
                     <Text style={[styles.titre, { color: couleurs.textBody }]} numberOfLines={1}>
-                      {libelleDeLEcheance(
-                        l.eventKind === "birthday" ? "birthday" : "other", l.eventLabel, t,
-                      )}
+                      {nomDeLaListe(l, t)}
                     </Text>
                     {/* « Sans date » plutôt qu'une date fausse : le contrat
                         vérifie la forme de `occurrenceDate`, pas le calendrier. */}

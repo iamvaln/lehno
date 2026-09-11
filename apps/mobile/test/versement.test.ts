@@ -33,8 +33,24 @@ describe("quel parcours l'écran propose", () => {
     expect(parcoursDeRecharge(LANCEMENT)).toBe("manuel");
   });
 
-  it("l'automatique prime quand il est ouvert", () => {
-    expect(parcoursDeRecharge(["topup.provider", "topup.manual"])).toBe("operateur");
+  /* L'AUTOMATIQUE PRIMAIT, ET N'ABOUTISSAIT PAS. `startPaymentSchema` est
+     déclaré au contrat et branché à AUCUNE route : `preview`, la déclaration,
+     la liste et la lecture sont toutes sous `topup.manual`. Le drapeau, lui,
+     s'allume.
+
+     Les deux allumés — la configuration de développement — l'écran choisissait
+     « opérateur » et n'offrait PLUS RIEN : ni palier, ni moyen de payer, ni
+     explication. Une page de solde et d'historique, sans le geste qui lui donne
+     son nom. Vu à l'écran.
+
+     CE TEST S'INVERSE le jour où la route existe, et c'est volontaire : il est
+     l'endroit où l'on s'en apercevra. */
+  it("préfère la voie qui aboutit quand les deux sont ouverts", () => {
+    expect(parcoursDeRecharge(["topup.provider", "topup.manual"])).toBe("manuel");
+  });
+
+  it("prend l'automatique quand c'est la seule ouverte", () => {
+    expect(parcoursDeRecharge(["topup.provider"])).toBe("operateur");
   });
 
   it("aucun des deux ferme la recharge", () => {

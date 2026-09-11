@@ -276,11 +276,27 @@ export function corpsDeCreation(saisie: SaisieDEvenement): CreateEventInput {
  * nôtre se tromperait sur une fiche corrigée ailleurs entre-temps.
  */
 export function pretAEnregistrer(
-  saisie: { personId: string | null; kind: EventKind | null; libelle: string; date: string },
+  saisie: {
+    personId: string | null;
+    kind: EventKind | null;
+    libelle: string;
+    date: string;
+    naissanceConnue: boolean;
+  },
 ): boolean {
   if (!saisie.personId || !saisie.kind) return false;
   if (saisie.kind === "other") return Boolean(saisie.libelle.trim()) && Boolean(saisie.date);
-  return true;
+  /* UN ANNIVERSAIRE SE COMPTE DEPUIS UNE NAISSANCE. Sans elle, il n'y a rien à
+     enregistrer — et l'écran vient de le dire, en toutes lettres, juste
+     au-dessus du bouton : « nous ne connaissons pas la date de naissance de
+     X ». Laisser le bouton actif faisait promettre à l'écran le contraire de
+     ce qu'il venait d'expliquer, pour un aller-retour dont on connaissait déjà
+     la réponse.
+
+     Je l'avais laissé au serveur — « c'est lui qui a le dernier mot ». Il l'a
+     toujours ; mais le dernier mot n'est pas le seul, et on ne fait pas
+     appuyer sur un bouton pour apprendre ce qu'on affiche. */
+  return saisie.naissanceConnue;
 }
 
 // ── Ce qu'on fait d'un refus ────────────────────────────────────────────────

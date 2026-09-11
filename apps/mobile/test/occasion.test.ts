@@ -6,7 +6,8 @@ import {
 } from "@lehno/contracts";
 import {
   corpsDeRetenu, corpsDuSouhait, estPassee, etatDuSouhait, identifiantDOccasion,
-  ideesDeLOccasion, messageDeLOccasion, montreLeBlocDesSouhaits, montreLesSouhaits,
+  dejaProduit, ideesDeLOccasion, messageDeLOccasion, montreLeBlocDesSouhaits,
+  montreLesSouhaits,
   montreLesVoeux, notesDeLOccasion, offreToutLaWishlist, socleEnPied, souhaitsMontres,
   voeuxDeLOccasion,
 } from "../lib/occasion.js";
@@ -466,5 +467,40 @@ describe("l'identifiant qui vient de la route", () => {
   it("ne prend que la première valeur d'un paramètre répété", () => {
     expect(identifiantDOccasion([OCCASION, "../../admin"])).toBe(OCCASION);
     expect(identifiantDOccasion(["../../admin", OCCASION])).toBeNull();
+  });
+});
+
+/* CE QUI A DÉJÀ ÉTÉ PRODUIT, par nature. L'écran de préparation s'en sert pour
+   ne pas reproposer « Préparer » — un geste qui COÛTE UN CRÉDIT — à quelqu'un
+   qui a déjà son message et cherchait seulement à le relire. */
+describe("ce qui a déjà été produit", () => {
+  it("rend l'exécution à rouvrir pour un message", () => {
+    const m = message(1, OCCASION, "generated", "2026-01-01");
+    expect(dejaProduit([produit(m)], OCCASION, "wish_message")).toBe(`9${m.id.slice(1)}`);
+  });
+
+  it("rend l'exécution à rouvrir pour des idées", () => {
+    const g = execution(1, "gift_ideas", OCCASION, "succeeded", "2026-01-01");
+    expect(dejaProduit([{ generation: g, message: null, ideas: null }], OCCASION, "gift_ideas"))
+      .toBe(g.id);
+  });
+
+  /* CHAQUE NATURE SON COMPTE. Un message produit ne dispense pas des idées :
+     les confondre ferait disparaître « Préparer » sur une piste jamais lancée,
+     et l'écran offrirait de relire quelque chose qui n'existe pas. */
+  it("ne confond pas les natures", () => {
+    const m = message(1, OCCASION, "generated", "2026-01-01");
+    expect(dejaProduit([produit(m)], OCCASION, "gift_ideas")).toBeNull();
+  });
+
+  // Une occasion voisine n'est pas la sienne.
+  it("ne prend pas celui d'une autre occasion", () => {
+    const m = message(1, AUTRE, "generated", "2026-01-01");
+    expect(dejaProduit([produit(m)], OCCASION, "wish_message")).toBeNull();
+  });
+
+  it("rend null quand rien n'a été produit", () => {
+    expect(dejaProduit([], OCCASION, "wish_message")).toBeNull();
+    expect(dejaProduit([], OCCASION, "gift_ideas")).toBeNull();
   });
 });

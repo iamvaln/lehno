@@ -40,7 +40,14 @@ export default function Porte() {
   }, []));
 
   if (session === null) return <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }} />;
-  if (!session) return <Redirect href="/(connexion)" />;
+  /* VERS L'OUVERTURE NOMMÉE, et c'est ce qui rend cette porte fiable.
+     L'écran d'ouverture s'appelait `(connexion)/index.tsx` — un groupe ne
+     change pas l'URL, donc DEUX fichiers revendiquaient « / ». Le routeur
+     choisissait l'ouverture, qui repart SANS CONDITION vers la connexion :
+     tout `replace("/")` fait après avoir rangé les jetons — la fin d'une
+     inscription, la connexion d'un compte connu — ramenait au formulaire.
+     La racine n'appartient plus qu'à cette porte. */
+  if (!session) return <Redirect href="/(connexion)/ouverture" />;
 
   // La coquille, et l'accueil qui l'ouvre. La porte ne connaît qu'elle : quels
   // onglets s'y montrent est une affaire de drapeaux, décidée là-bas.
