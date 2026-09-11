@@ -318,8 +318,17 @@ export class StudioConfigurationService {
         details: { version: cible.version },
       }, tx);
 
+      /* SEULEMENT SA NATURE, pour la raison exacte que la publication écrit dix
+         lignes plus haut — et que le retour arrière avait oubliée : sans ce
+         filtre, revenir sur une version du message rangeait AUSSI la
+         configuration du portrait et celle des idées. Le studio se retrouvait à
+         moitié servi, et personne ne l'apprenait par une erreur : le geste
+         demandé réussissait, et les trois autres natures tombaient en silence.
+
+         L'index unique ne le rattrape pas : il n'admet qu'une publiée par
+         nature, et zéro en satisfait la lettre. */
       await tx.studioConfig.updateMany({
-        where: { state: "published" }, data: { state: "superseded" },
+        where: { kind: cible.kind, state: "published" }, data: { state: "superseded" },
       });
 
       return tx.studioConfig.update({ where: { id: cible.id }, data: { state: "published" } });
