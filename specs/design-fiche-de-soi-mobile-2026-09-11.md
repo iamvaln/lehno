@@ -17,10 +17,13 @@ serveur ne tranche pas : **il y a maintenant deux fiches de la même personne.**
 
 | | `/me/profile` — le compte | `/me/self` — la personne |
 |---|---|---|
-| propre à l'un | `username`, `email`, `emailVerified`, `uiLanguage`, `theme`, `timezone`, `sendHour` | `callingName`, `register`, `gender`, `birthDate`, `birthYearKnown`, `city`, `country`, `preferredChannel` |
-| **en commun** | `displayName`, `avatarUrl`, `uiLanguage` | `displayName`, `avatarUrl`, `language` |
+| propre à l'un | `username`, `email`, `emailVerified`, `theme`, `timezone`, `sendHour` | `callingName`, `register`, `birthDate`, `birthYearKnown`, `city`, `country`, `preferredChannel` |
+| **en commun** | `displayName`, `avatarUrl`, `uiLanguage`, **`gender`** | `displayName`, `avatarUrl`, `language`, **`gender`** |
 
-Trois champs se recouvrent. Laissés tels quels, on obtient deux vérités sur la
+Quatre champs se recouvrent — `gender` compris, ce que j'avais manqué en
+écrivant la première version de ce document : `profileSchema` le porte déjà,
+`updateProfileSchema` le prend, et l'écran du profil le demande depuis
+longtemps. Laissés tels quels, on obtient deux vérités sur la
 même personne : on change son nom d'un côté, et l'autre continue de signer les
 messages avec l'ancien. C'est ce que le dépôt refuse ailleurs — « deux vérités,
 et celle de l'écran flatterait ».
@@ -67,7 +70,28 @@ porte bien un `avatarUrl`, mais rien pour le remplir.
 **On ne duplique pas un tuyau pour respecter une symétrie.** L'écran lit et
 écrit celui du compte ; celui de la fiche reste nul.
 
-### 2.3 La langue n'est pas un recouvrement
+### 2.3 Le genre appartient au compte, et la fiche le recopie
+
+**Correction du 11 septembre au soir.** J'avais écrit que le genre était propre
+à la fiche et qu'il faudrait le demander. C'est faux : le compte le porte déjà,
+l'écran le demande déjà, et le serveur s'en sert déjà.
+
+Les deux ne sont pas la même chose, et pourtant si :
+
+- `profile.gender` → **`genreDeLAuteur`** (`generation.service.ts:975`) — pour
+  que **ce que vous signez** soit écrit correctement. C'est l'aide affichée.
+- `person.gender` → **`genreDuProche`** — pour que ce qu'on écrit **à votre
+  sujet** le soit.
+
+Même notion, deux rôles. Pour le titulaire du compte, c'est la même personne
+dans les deux rôles : la fiche prend donc le genre du compte, sans nouvelle
+question.
+
+**Ce que ça change, et c'est tout le dessin** : créer la fiche ne demande plus
+rien de neuf. Le nom, l'avatar, la langue et le genre sont déjà à l'écran et
+déjà saisis. **Le seul champ vraiment nouveau est la date de naissance.**
+
+### 2.4 La langue n'est pas un recouvrement
 
 C'est la seule bonne nouvelle du tableau : ce sont deux choses.
 
@@ -86,17 +110,15 @@ français, le contrat le permettra sans qu'on ait rien à défaire.
 
 L'avatar, le nom, le nom d'usage, le genre, la date de naissance.
 
-**Le genre demande du soin.** Il est obligatoire au contrat
-(`PERSON_GENDERS = ["female", "male"]`, pas d'optionnel), et il ne se justifie
-pas par l'identité mais par la **grammaire** : « Pour que les messages soient
-écrits correctement. » C'est l'aide que le kit prescrit déjà sur la fiche d'un
-proche, et elle vaut mot pour mot ici.
+**Trois de ces cinq sont déjà là** : l'avatar, le nom, le genre — avec son aide,
+« Pour que ce que vous signez soit écrit correctement », qui fait tout le
+travail. Rien à y toucher.
 
-Posé sans cette phrase, au milieu de réglages, il paraît intrusif. Avec elle, il
-se comprend — et c'est la phrase qui fait tout le travail, pas la position du
-champ.
+**Le nom d'usage** (`callingName`) s'ajoute : « comment on vous appelle ». La
+génération s'en sert, et il a autant de sens pour soi que pour un proche.
 
-**La date de naissance** emploie le champ déjà construit pour les proches —
+**La date de naissance** est le seul champ vraiment neuf. Elle emploie le champ
+déjà construit pour les proches —
 `naissanceAEnvoyer` / `naissanceLue`, avec l'année facultative
 (`birthYearKnown`). Rien à réécrire.
 
@@ -118,27 +140,57 @@ du §10 du brief, jamais fait. `ecrireSoi` retombe déjà sur `"unspecified"` qu
 le genre n'est pas fourni — créer la fiche à l'inscription, nommée depuis le
 pseudo, tient en quelques lignes côté serveur. **Re-signalé au brief.**
 
-**Le client ne peut pas le faire en silence** : `selfPersonSchema` exige
-`gender`, et l'énumération ne vaut que `female | male`. Aucun `PUT /me/self` ne
-part sans une réponse humaine.
+`selfPersonSchema` exige `gender`, et l'énumération ne vaut que `female | male`.
+Mais **le compte le porte déjà** (§2.3) : la fiche le recopie, et aucune
+nouvelle question ne se pose. Il ne manque qu'un nom, que le compte a aussi.
 
-La fiche se crée donc au premier des deux moments où la question se comprend.
+### 4.1 En enregistrant son profil
 
-### 4.1 En complétant ses informations
+**C'est le cas ordinaire, et il ne demande rien.** Enregistrer Mon profil écrit
+les deux : `PATCH /me/profile` comme aujourd'hui, puis `PUT /me/self` avec le
+nom, le genre et la langue qu'on vient de poser, plus la naissance si elle est
+saisie.
 
-On est dans Mon profil. Le genre se range entre le nom et la date de naissance,
-avec sa justification. Rien à inventer : c'est le formulaire.
+La fiche naît donc du premier enregistrement du profil, sans que personne ait
+rien eu à comprendre.
+
+**Si le genre du compte est nul** — un compte qui n'a jamais ouvert cet écran —
+`PUT /me/self` ne peut pas partir. On n'insiste pas et on ne bloque rien : le
+profil s'enregistre, la fiche attend le prochain passage. Le champ est à
+l'écran, juste au-dessus.
 
 ### 4.2 En voulant une wishlist datée
 
-**On n'inline pas un second formulaire au milieu d'un autre geste.** L'écran dit
-pourquoi et renvoie :
+**Avoir une fiche ne suffit pas : il faut une DATE**, et une date de naissance
+n'en est pas une. Vérifié à l'appareil le 11 septembre : `PUT /me/self` avec
+`birthDate` crée la fiche et **aucune occurrence** — `/me/occurrences` rend `[]`,
+deux enregistrements de suite.
+
+Ce n'est pas un défaut du serveur. `recalerAnniversaire` porte
+`if (!anniversaire) return;` : il **recale** un anniversaire existant, il n'en
+crée pas. Et c'est déjà ainsi pour un proche — `identite.tsx` pose la naissance,
+l'anniversaire se crée par « Ajouter une date ». **Naissance et anniversaire
+sont deux gestes**, délibérément : on peut connaître la naissance de quelqu'un
+sans vouloir être rappelé de son anniversaire.
+
+**Le vrai levier est donc le sélecteur « Pour qui »**, pas la naissance. La
+chaîne complète :
+
+```
+fiche de soi          →  « Pour qui » s'ouvre à soi
+  (Mon profil)             (Ajouter une date)
+                        →  on pose sa date
+                        →  la wishlist peut la viser
+```
+
+**On n'inline pas un second formulaire au milieu d'un autre geste.** L'écran de
+création d'une liste dit pourquoi et renvoie — vers Mon profil s'il n'y a pas
+de fiche, vers l'ajout d'une date s'il y en a une :
 
 > « Pour ouvrir une liste sur une de vos dates, il faut d'abord une date à
-> vous. » → Mon profil → retour là où on était.
+> vous. »
 
-Un seul formulaire dans l'application, pas deux à tenir d'accord. Et le retour
-ramène là où l'on avait laissé son geste, jamais à l'accueil.
+Et le retour ramène là où l'on avait laissé son geste, jamais à l'accueil.
 
 ### 4.3 Ce dessin survit au correctif serveur
 
@@ -152,14 +204,17 @@ chemins de complétion au lieu de création, et se comportent pareil.
 
 Quatre écrans mentent aujourd'hui, et la même fiche les règle :
 
-| Écran | Ce qu'il dit | Ce qu'il pourra dire |
-|---|---|---|
-| Nouvelle wishlist | « Aucune date à vous pour l'instant » | vos dates, et la liste s'y ouvre |
-| Mon Mur | « Ma date d'anniversaire » s'allume et n'expose rien | elle expose |
-| Ajouter une date, « Pour qui » | ne liste que les proches | s'ouvre à soi |
-| Moi | le nom du compte, ou le pseudo | votre nom |
+| Écran | Ce qu'il dit | Ce qu'il pourra dire | Ce qu'il faut pour ça |
+|---|---|---|---|
+| Ajouter une date, « Pour qui » | ne liste que les proches | s'ouvre à soi | la fiche |
+| Nouvelle wishlist | « Aucune date à vous pour l'instant » | vos dates | la fiche **et** une date posée |
+| Mon Mur | « Ma date d'anniversaire » s'allume et n'expose rien | elle expose | la fiche, sa naissance, **et l'anniversaire posé** |
+| Moi | le nom du compte, ou le pseudo | votre nom | la fiche |
 
-Aucun ne demande de travail propre : ils lisent ce qui existera.
+**Deux d'entre eux demandent plus que la fiche**, et c'est ce que j'avais écrit
+trop vite : la naissance ne fabrique pas d'échéance. Le sélecteur « Pour qui »
+est le seul qui débloque vraiment, et c'est par lui que passent les deux
+autres.
 
 ---
 
