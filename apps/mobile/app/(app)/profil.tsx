@@ -216,24 +216,34 @@ export default function Profil() {
          aller-retour de plus, qui n'écrit rien et qui peut échouer — et son
          échec emporterait la fiche, qui elle avait quelque chose à dire. */
       const corps = corpsDeMiseAJour(saisie, profil);
-      if (Object.keys(corps).length > 0) {
+      const compteEcrit = Object.keys(corps).length > 0;
+      if (compteEcrit) {
         await appel<unknown>("/me/profile", { method: "PATCH", body: JSON.stringify(corps) });
       }
       /* LA FICHE SUIT LE COMPTE, et dans cet ordre : le genre qu'elle exige
          vient d'être enregistré. Elle naît ici, au premier enregistrement du
          profil, sans que personne ait eu à comprendre qu'elle existait.
 
-         Son échec ne défait pas le profil : le compte est écrit, c'est le
-         geste que la personne a demandé. La fiche attend le prochain passage —
-         elle n'a rien d'urgent, et un profil refusé pour elle serait
-         incompréhensible. */
+         SON ÉCHEC NE SE TAIT QUE S'IL RESTE QUELQUE CHOSE D'ÉCRIT. Tant que le
+         compte vient de partir, se taire est juste : il est enregistré, c'est
+         ce que la personne a demandé, et lui refuser son profil pour une fiche
+         qui n'a rien d'urgent serait incompréhensible — elle attendra le
+         prochain passage.
+
+         Mais depuis que le bouton s'allume sur la seule fiche, il existe un
+         enregistrement où AUCUN `PATCH` ne part : venir ici pour sa seule date
+         de naissance ne change rien au compte. La fiche est alors le geste
+         entier, et le taire fermait l'écran sans bandeau, sans rien d'écrit
+         nulle part, en emportant la saisie. On relance donc vers le `catch`
+         extérieur : il pose le bandeau, `routeur.back()` n'est pas atteint, et
+         ce qui a été tapé reste à l'écran pour être repris. */
       const aEnvoyer = ficheAEnvoyer(saisieDeSoi(saisie));
       if (aEnvoyer !== null) {
         try {
           await appel<unknown>("/me/self", {
             method: "PUT", body: JSON.stringify(aEnvoyer),
           });
-        } catch { /* Voir ci-dessus : le profil est enregistré, c'est l'essentiel. */ }
+        } catch (souci) { if (!compteEcrit) throw souci; }
       }
       /* L'INTERFACE SUIT LE RÉGLAGE, sinon il ne règle rien de ce qu'on voit.
          Sans cet appel, changer « Langue » ne changeait QUE la langue des
