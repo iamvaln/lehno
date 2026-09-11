@@ -70,21 +70,21 @@ export function StudioTextes({
   const t = messages(langue);
   const a = t.studioTextes;
 
-  /* La clé de remontage : changer d'onglet doit repartir des réglages de la
-     NOUVELLE nature, pas garder ceux de l'ancienne. Sans elle, on publierait
-     un jour les garde-fous du message sur les idées. */
-  const [cle, setCle] = useState(nature);
+  /* CHANGER D'ONGLET REPART DES RÉGLAGES DE LA NOUVELLE NATURE, et c'est le
+     DÉMONTAGE qui s'en charge : `useRessource` repasse par « chargement » à
+     chaque changement de clé — `garderAncien` vaut faux ici —, `Ressource`
+     rend alors son attente, et cet écran est remonté neuf sur le nouveau
+     départ.
+     On ne double donc pas la remise à la main : deux mécanismes pour le même
+     effet, et l'on ne saurait plus lequel tient le jour où l'un cède. L'épreuve
+     « change de nature » garde le RÉSULTAT, quel que soit le mécanisme : le
+     jour où quelqu'un passe `garderAncien` à vrai sur cette ressource, elle
+     tombe — et c'est exactement ce qu'on veut apprendre. */
   const [reglages, setReglages] = useState<Brouillon>(depart.reglages as Brouillon);
   const [profileId, setProfileId] = useState(profils[0]?.id ?? "");
   const [note, setNote] = useState("");
   const [publication, setPublication] = useState(false);
   const [nouveauGardeFou, setNouveauGardeFou] = useState("");
-
-  if (cle !== nature) {
-    setCle(nature);
-    setReglages(depart.reglages as Brouillon);
-    setNouveauGardeFou("");
-  }
 
   const poser = (champ: string, valeur: unknown): void =>
     setReglages((avant) => ({ ...avant, [champ]: valeur }));
