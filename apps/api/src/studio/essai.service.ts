@@ -561,15 +561,74 @@ export class StudioEssaiService {
    *
    * Il se REPOSE : on se ravise en regardant la vignette du lendemain, et
    * refuser le second geste obligerait à refaire l'essai pour changer d'avis. */
-  async juger(id: string, verdict: VerdictEssai): Promise<EssaiStudio> {
-    const ligne = await this.prisma.studioTrial.findUnique({ where: { id }, select: { id: true } });
+  async juger(id: string, verdict: VerdictEssai, reference = false): Promise<EssaiStudio> {
+    const ligne = await this.prisma.studioTrial.findUnique({ where: { id } });
     if (!ligne) throw new AppError("not_found", "resource not found");
+
+    /* LA RÉFÉRENCE S'ÉCRIT AVANT LE VERDICT, et l'ordre compte : si le dépôt du
+       brouillon refuse — parce que l'essai n'a pas d'image, ou parce qu'aucune
+       configuration n'est en service —, le verdict n'a pas bougé. L'inverse
+       laisserait un essai « retenu » sans la vignette qu'on venait de demander,
+       et personne ne saurait que la moitié du geste a échoué. */
+    if (reference) await this.poserLaReference(ligne, verdict);
+
     const misAJour = await this.prisma.studioTrial.update({
       where: { id },
       data: { verdict },
       include: { admin: { select: { email: true } } },
     });
     return this.rendre(misAJour, misAJour.admin?.email ?? null);
+  }
+
+  /**
+   * Faire de l'image d'un essai la VIGNETTE de son ambiance.
+   *
+   * « Ce n'est pas une chaîne de production nouvelle : c'est un chemin de
+   * publication. » L'image existe déjà dans le stockage — l'essai l'y a rangée.
+   * Il ne manquait que de dire laquelle représente quoi.
+   *
+   * PAR L'ENREGISTREMENT DIRECT, et c'est ce qui rend le geste gratuit : une
+   * vignette n'entre pas dans l'empreinte, donc la modification ne réclame pas
+   * de nouvel essai. Si elle y entrait, choisir une miniature ferait retomber
+   * toute la couverture et il faudrait repayer une génération pour la publier.
+   */
+  private async poserLaReference(
+    essai: { id: string; status: string; output: Prisma.JsonValue | null; ambianceId: string | null },
+    verdict: VerdictEssai,
+  ): Promise<void> {
+    if (verdict !== "kept")
+      throw new AppError("validation_failed", "only a kept trial can represent its ambiance");
+    if (essai.status !== "success")
+      throw new AppError("validation_failed", "this trial produced nothing to show");
+    if (essai.ambianceId === null)
+      throw new AppError("validation_failed", "this trial has no ambiance to represent");
+
+    /* La clé de l'IMAGE, pas la sortie entière. Un essai de texte porte
+       `{ message }` et n'a rien à montrer — le distinguer par la présence d'une
+       clé vaut mieux qu'un champ « type » que personne ne remplirait. */
+    const sortie = essai.output;
+    const cle = sortie !== null && typeof sortie === "object" && !Array.isArray(sortie)
+      ? (sortie as Record<string, unknown>)["cle"]
+      : null;
+    if (typeof cle !== "string")
+      throw new AppError("validation_failed", "this trial produced no image");
+
+    /* LA TÊTE, et non la configuration sur laquelle l'essai a tourné. C'est
+       celle que l'administration a sous les yeux ; repartir d'une ligne
+       antérieure défferait en silence ce qui a été composé depuis. */
+    const tete = (await this.configs.brouillon("portrait"))
+      ?? (await this.configs.enService("portrait"));
+    if (!tete) throw new AppError("resource_inactive", "no portrait configuration to adjust");
+
+    const reglages = this.configs.reglagesPortraitDe(tete);
+    if (!reglages.ambiances.some((a) => a.id === essai.ambianceId))
+      throw new AppError("validation_failed", "this ambiance is no longer in the configuration");
+
+    await this.configs.enregistrerDirect("portrait", {
+      ...reglages,
+      ambiances: reglages.ambiances.map((a) =>
+        (a.id === essai.ambianceId ? { ...a, apercuCle: cle } : a)),
+    });
   }
   /* Une sortie d'image porte `{ cle }` ; une sortie de texte porte `{ message }`.
      On ne signe que la première, et on laisse la seconde telle quelle : deviner

@@ -101,6 +101,30 @@ function bornesDeMotsSchema(plancher: number, plafond: number) {
   });
 }
 
+/* LA VIGNETTE DE RÉFÉRENCE d'un choix : la clé de l'image dans le stockage.
+ *
+ * Une CLÉ et non une URL : les nôtres sont signées et expirent, en ranger une
+ * donnerait un lien mort le lendemain. Le service la signe à chaque lecture.
+ *
+ * `.default(null)` ET NON UN CHAMP REQUIS. Le schéma est `.strict()`, et toutes
+ * les configurations déjà en base l'ignorent : exigé, ce champ les rendrait
+ * illisibles d'un coup — la panne exacte qu'une ligne semée avant le découpage
+ * message/portrait a causée, et qui a coûté une semaine au mobile.
+ *
+ * ELLE N'ENTRE PAS DANS L'EMPREINTE, et c'est essentiel : `partieLueParLeModele`
+ * ne retient que ce que le modèle lit. Une vignette est ce que l'HUMAIN regarde.
+ * L'y mettre ferait retomber tous les essais dès qu'on choisit une image, et il
+ * faudrait payer une génération pour publier une miniature. Conséquence utile :
+ * la poser passe par l'enregistrement direct, sans essai. */
+/* `.nullish()` ET NON `.default(null)`. Le second fait diverger le type
+   d'ENTRÉE du schéma de son type de SORTIE — la clé est facultative à l'entrée,
+   garantie à la sortie —, et TypeScript rend alors deux types structurellement
+   proches qu'il refuse de rapprocher : « Two different types with this name
+   exist, but they are unrelated », sur quatre lignes de l'administration.
+   Nullable et facultatif, les deux types coïncident, et une configuration
+   écrite avant ce champ se relit toujours. */
+const apercuSchema = z.string().trim().min(1).max(200).nullish();
+
 export const orientationReglageSchema = z.object({
   id: z.enum(ORIENTATIONS),
   /** Lu par l'application seule : désactiver fait disparaître sans livraison. */
@@ -117,6 +141,7 @@ export const ambianceReglageSchema = z.object({
   id: z.string().regex(/^[a-z0-9_]{1,60}$/),
   groupe: z.enum(GROUPES_AMBIANCE),
   actif: z.boolean(),
+  apercuCle: apercuSchema,
   libelle: bilingueSchema,
   description: bilingueFacultatifSchema,
   /** Lu par le modèle : entre dans l'empreinte. */
@@ -132,6 +157,10 @@ export const voieImageReglageSchema = z.object({
   actif: z.boolean(),
   libelle: bilingueSchema,
   description: bilingueFacultatifSchema,
+  /* La voie SE MONTRE aussi : « Illustration », « Photo traitée » et « Aucune
+     image » sont trois rendus, et le troisième n'est pas rien — le motif de
+     marque tient le fond. Les départager en mots demanderait de l'imagination. */
+  apercuCle: apercuSchema,
 }).strict();
 
 /* DEUX CONFIGURATIONS, ET NON UNE.
@@ -208,6 +237,11 @@ export const compositionReglageSchema = z.object({
   actif: z.boolean(),
   libelle: bilingueSchema,
   description: bilingueFacultatifSchema,
+  /* UNE GAMME SE MONTRE OU N'EXISTE PAS. « Encre » ne se départage pas de
+     « Lilas » par une phrase, et la gamme elle-même ne descend pas au client —
+     l'écran montre la composition, pas ses quatre codes hexadécimaux. Sans
+     vignette, il ne reste que le nom. */
+  apercuCle: apercuSchema,
   /* LA GAMME DE CETTE COMPOSITION — quatre couleurs, et le modèle d'image n'en
      emploie aucune autre.
      UNE PAR COMPOSITION, et non une pour toutes : une illustration destinée à
@@ -523,19 +557,44 @@ const GROUPE_OUVERT: Record<VoieImage, GroupeAmbiance | null> = {
    orientations viennent du message, les voies et les ambiances du portrait.
    C'est le seul endroit où elles se rejoignent, et il est en lecture — chacune
    se règle, s'éprouve et se publie de son côté. */
+/**
+ * Les clés de vignette d'une configuration, sans les nulles ni les doublons.
+ *
+ * Elle sort d'ici pour que le SERVICE sache quoi signer AVANT de composer le
+ * catalogue : `catalogueServi` est pure et synchrone, et signer une URL ne l'est
+ * pas. Lui passer le port de stockage la rendrait impossible à éprouver sans
+ * base, ce qui est précisément sa qualité.
+ */
+export function clesDApercu(p: ReglagesPortrait): string[] {
+  const vues = new Set<string>();
+  for (const c of [...p.voiesImage, ...p.ambiances, ...p.compositions]) {
+    if (c.apercuCle !== null && c.apercuCle !== undefined) vues.add(c.apercuCle);
+  }
+  return [...vues];
+}
+
+/**
+ * @param apercus les URL signées, par clé. Une clé absente de la table rend une
+ *   vignette nulle — c'est ce qui arrive quand le stockage refuse de signer, et
+ *   la grille retombe alors sur la description. Un catalogue à moitié servi vaut
+ *   mieux qu'un écran qui ne s'ouvre pas.
+ */
 export function catalogueServi(
   m: ReglagesMessage, p: ReglagesPortrait, langue: "fr" | "en",
+  apercus: ReadonlyMap<string, string> = new Map(),
 ): StudioConfig {
   const r = { ...m, ...p };
   const dit = (b: Bilingue): string => b[langue];
   const ditOuNul = (b: Bilingue | null): string | null => (b === null ? null : b[langue]);
+  const vignette = (cle: string | null | undefined): string | null =>
+    (cle === null || cle === undefined ? null : apercus.get(cle) ?? null);
 
   const ambiancesActives = (groupe: GroupeAmbiance): StudioChoice[] =>
     r.ambiances
       .filter((a) => a.groupe === groupe && a.actif)
       .map((a) => ({
         id: a.id, label: dit(a.libelle), description: ditOuNul(a.description),
-        warning: null, revealsGroup: null,
+        warning: null, revealsGroup: null, previewUrl: vignette(a.apercuCle),
       }));
 
   const orientations: StudioChoice[] = r.orientations
@@ -543,6 +602,9 @@ export function catalogueServi(
     .map((o) => ({
       id: o.id, label: dit(o.libelle), description: ditOuNul(o.description),
       warning: ditOuNul(o.avertissement), revealsGroup: null,
+      /* L'ORIENTATION N'A PAS DE VIGNETTE, et ce n'est pas un oubli : c'est le
+         PROPOS, pas le rendu. « Ma gratitude » ne se montre pas. */
+      previewUrl: null,
     }));
 
   /* Le schéma des réglages refuse déjà zéro orientation active. On le
@@ -580,6 +642,7 @@ export function catalogueServi(
     .map((v) => ({
       id: v.id, label: dit(v.libelle), description: ditOuNul(v.description),
       warning: null, revealsGroup: GROUPE_OUVERT[v.id],
+      previewUrl: vignette(v.apercuCle),
     }));
 
   const racines = [GROUPE_ORIENTATION];
@@ -590,8 +653,8 @@ export function catalogueServi(
       id: c.id, label: dit(c.libelle), description: ditOuNul(c.description),
       /* La gamme ne descend PAS au client : elle sert au modèle d'image, et
          l'écran montre la composition, pas ses quatre codes hexadécimaux. Le
-         client la verra à l'image. */
-      warning: null, revealsGroup: null,
+         client la verra à l'image — ou à la vignette. */
+      warning: null, revealsGroup: null, previewUrl: vignette(c.apercuCle),
     }));
 
   if (compositions.length > 0) {
@@ -700,9 +763,12 @@ const AVERTISSEMENT_HOMMAGE: Bilingue = {
   en: "A sober register, no celebration: the illustration and colours change.",
 };
 
+/* AUCUNE VIGNETTE AU DÉPART, et c'est l'état juste : personne n'a encore retenu
+   d'essai. La grille retombe sur la description, et les images arrivent au
+   rythme où l'administration les choisit — sans livraison. */
 const AMBIANCES_DE_DEPART: AmbianceReglage[] = [
   {
-    id: "nature", groupe: "illustration_family", actif: true,
+    id: "nature", groupe: "illustration_family", actif: true, apercuCle: null,
     libelle: { fr: "Nature", en: "Nature" },
     description: {
       fr: "Un paysage, une fleur, un élément. Pour qui est calme, enraciné, tourné vers le dehors.",
@@ -714,7 +780,7 @@ const AMBIANCES_DE_DEPART: AmbianceReglage[] = [
     },
   },
   {
-    id: "animal", groupe: "illustration_family", actif: true,
+    id: "animal", groupe: "illustration_family", actif: true, apercuCle: null,
     libelle: { fr: "Animal", en: "Animal" },
     description: {
       fr: "Un animal qu'il aime s'il figure dans les notes, sinon un qui correspond à son caractère.",
@@ -726,7 +792,7 @@ const AMBIANCES_DE_DEPART: AmbianceReglage[] = [
     },
   },
   {
-    id: "abstrait", groupe: "illustration_family", actif: true,
+    id: "abstrait", groupe: "illustration_family", actif: true, apercuCle: null,
     libelle: { fr: "Abstrait", en: "Abstract" },
     description: {
       fr: "Des formes, un mouvement, une lumière. Pour qui échappe aux deux autres.",

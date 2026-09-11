@@ -284,6 +284,23 @@ export type VerdictEssai = (typeof VERDICTS_ESSAI)[number];
    serait vide dès la troisième. */
 export const verdictEssaiSchema = z.object({
   verdict: z.enum(VERDICTS_ESSAI),
+  /**
+   * « C'EST CELLE-CI QUI REPRÉSENTE L'AMBIANCE. »
+   *
+   * Le geste qui manquait : retenir un essai est déjà un verdict, mais rien ne
+   * disait lequel des essais retenus sert de vignette au catalogue. Posé ici et
+   * non sur une route à part, parce que c'est le MÊME moment — on regarde une
+   * image, on la garde, et on décide si c'est elle qu'on montre.
+   *
+   * Il ne vaut qu'avec `kept` : faire d'un essai écarté la vignette d'une
+   * ambiance montrerait au client ce qu'on vient de refuser.
+   *
+   * Ce qu'il écrit est un BROUILLON, jamais la version en service. La vignette
+   * suit la version publiée comme le reste du catalogue — sans quoi une image
+   * retenue changerait ce que voient les utilisateurs avant que quiconque ait
+   * publié quoi que ce soit.
+   */
+  reference: z.boolean().optional(),
 }).strict();
 
 export const essaiStudioSchema = z.object({
