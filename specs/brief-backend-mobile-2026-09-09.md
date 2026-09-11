@@ -27,8 +27,9 @@ cette date, sur `develop`, dans le code — pas de mémoire.
 | **3** — `hasWishlist` | **clos** | servi (`me-home.ts`) |
 | **9** — l'établi du message | **clos** | `admin/text-studio/:nature/…` (#176) : lecture, historique, enregistrement, essais, publication, retour arrière — pour les trois natures de texte, `message`, `idees`, `portrait_brief` |
 | **10** — la fiche de soi | **clos** | `GET`/`PUT /me/self`, puis #183 : la fiche naît à l'inscription **et** une migration la donne aux comptes ouverts avant. Ce que l'implémentation mobile a appris depuis est passé au **§13** |
-| **11** — la fiche d'un proche | **ouvert** | `person.service.ts:202` rend toujours sans ses détails |
-| **12** — le nom sur la contribution | **ouvert** | `personDisplayName` absent de `submissionSchema` |
+| **11** — la fiche d'un proche | **clos** | `person.service.ts:219` passe par `enrichir` : la fiche rend enfin son décompte de notes et sa prochaine échéance, comme la liste |
+| **12** — le nom sur la contribution | **clos** | `personDisplayName` est au contrat (`me-contributions.ts:104`) — et le sas n'a plus à charger le carnet pour intituler une carte |
+| **13** — ce qui est à soi ne se reconnaît pas | **ouvert** | le planificateur vous souhaite votre propre anniversaire, et `occurrenceSchema` n'a pas d'`isSelf` |
 
 Les paragraphes ci-dessous gardent leur rédaction d'origine : ils disent ce
 qu'on a vu, quand on l'a vu. Ce tableau dit ce qui en reste.
@@ -481,7 +482,11 @@ création.
 
 ---
 
-## 11. `GET /me/persons/{id}` rend toujours `nextOccurrence: null` et `notesCount: 0`
+## 11. `GET /me/persons/{id}` rend toujours `nextOccurrence: null` et `notesCount: 0` — CLOS le 11 septembre au soir
+
+> **Clos.** `get` passe désormais par `enrichir`, le même chemin que la liste,
+> borné à un identifiant. La fiche d'un proche porte enfin le sous-titre que
+> la liste affichait un écran plus tôt.
 
 > **Toujours ouvert au 11 septembre**, vérifié dans le code.
 
@@ -525,7 +530,10 @@ fiche — et une seconde vérité à tenir d'accord avec la première.
 
 ---
 
-## 12. `submissionSchema` porte `personId` mais pas le nom de la fiche
+## 12. `submissionSchema` porte `personId` mais pas le nom de la fiche — CLOS le 11 septembre au soir
+
+> **Clos.** `personDisplayName` est au contrat, nullable, et le sas mobile a
+> perdu du même coup la lecture du carnet entier qu'il faisait pour un mot.
 
 > **Toujours ouvert au 11 septembre**, vérifié dans le code.
 
