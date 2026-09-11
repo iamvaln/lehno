@@ -99,6 +99,25 @@ model User {
    */
   depotEnCoursKey          String?         @map("depot_en_cours_key")
   depotEnCoursCible        String?         @map("depot_en_cours_cible")
+  /**
+   * La photo source ACCEPTÉE, en attente d'une génération.
+   *
+   * Distincte du dépôt en cours : celui-ci dit « un téléversement est ouvert »,
+   * celle-là dit « une photo a été jugée et attend qu'on s'en serve ». Les
+   * confondre ferait qu'un dépôt d'avatar ouvert entre-temps effacerait une
+   * photo déjà validée.
+   *
+   * ELLE NE SORT JAMAIS D'ICI. Le client ne reçoit pas la clé — il ne reçoit
+   * qu'une URL de dépôt, et la doctrine est écrite sur `depotAvatarSchema` : la
+   * lui donner permettrait de la remplacer par celle d'un autre, un reçu de
+   * paiement ou un export de données, et de nous faire signer une lecture
+   * dessus.
+   *
+   * Elle est effacée dès que la génération s'achève — c'est ce que l'écran
+   * promet au dépôt, et une promesse d'effacement qui ne s'exécute pas est pire
+   * que pas de promesse.
+   */
+  photoSourceKey           String?         @map("photo_source_key")
   referralCode             String          @unique @map("referral_code") @db.VarChar(16)
   referredBy               String?         @map("referred_by") @db.Uuid
   status                   UserStatus      @default(active)

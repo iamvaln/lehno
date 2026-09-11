@@ -48,7 +48,9 @@ describe("la sélection du studio", () => {
       ...r,
       voiesImage: r.voiesImage.map((v) => (v.id === "photo" ? { ...v, actif: true } : v)),
       ambiances: [...r.ambiances, {
-        id: "argentique", groupe: "photo_style" as const, actif: true, apercuCle: null,
+        /* Les deux voies partagent le même groupe : une ambiance sert aussi bien
+           l'illustration que la photo. */
+        id: "argentique", groupe: "illustration_family" as const, actif: true, apercuCle: null,
         libelle: { fr: "Argentique", en: "Film" },
         description: null,
         consigne: { fr: "Un grain argentique.", en: "Film grain." },

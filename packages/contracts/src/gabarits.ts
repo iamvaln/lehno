@@ -770,15 +770,29 @@ export function invitePortrait(c: ContextePortrait): string {
  * Les quatre couleurs viennent de l'ambiance de composition, pas d'ici — c'est
  * la charte qui les tient, et les recopier les ferait diverger le jour où elle
  * change. */
+/**
+ * @param consignePhoto ce qu'on demande au modèle de faire de la photo fournie,
+ *   ou `null` quand il n'y en a pas.
+ *
+ *   ELLE VIENT EN TÊTE, avant l'ambiance et avant les mots. Un modèle d'image
+ *   lit une invite dans l'ordre, et ce qui arrive en dernier pèse moins :
+ *   « inspirez-vous sans reproduire » posé après la palette se dilue, et on
+ *   obtient une photo retouchée — exactement ce qu'on interdit.
+ *
+ *   ELLE NE REMPLACE PAS L'AMBIANCE. La photo donne la matière, l'ambiance
+ *   donne la forme. L'inverse rendrait décoratif le choix de l'utilisateur.
+ */
 export function inviteImagePortrait(
   brief: { readonly mots: readonly string[] },
   consigneAmbiance: string | null,
   palette: readonly [string, string, string, string],
   langue: LangueGeneration = "fr",
+  consignePhoto: string | null = null,
 ): string {
   const fr = langue === "fr";
   const parties: string[] = [];
 
+  if (consignePhoto) parties.push(consignePhoto);
   if (consigneAmbiance) parties.push(consigneAmbiance);
   parties.push(brief.mots.join(", "));
 

@@ -48,11 +48,24 @@ export type Bilingue = z.infer<typeof bilingueSchema>;
 export const VOIES_IMAGE = ["illustration", "photo", "aucune"] as const;
 export type VoieImage = (typeof VOIES_IMAGE)[number];
 
-/* Les ambiances, elles, sont ouvertes : familles d'illustration et styles de
-   photo se nomment, se décrivent et s'activent depuis l'administration. Les
-   trois noms de style de photo ne sont d'ailleurs PAS tranchés (spec portrait
-   §7) — un enum les aurait gelés avant qu'on sache lesquels. */
-export const GROUPES_AMBIANCE = ["illustration_family", "photo_style"] as const;
+/* UN SEUL GROUPE D'AMBIANCES, partagé par les deux voies d'image.
+ *
+ * Il y en avait deux — `illustration_family` et `photo_style` —, et le second
+ * n'a JAMAIS eu d'ambiance : c'est ce qui rendait la voie photo invisible, et
+ * ce qui obligeait à inventer « trois noms de style de photo » que personne
+ * n'avait tranchés.
+ *
+ * Or ce sont les MÊMES. Nature, animal, abstrait décrivent ce qu'on veut voir ;
+ * ce que la photo change n'est pas le sujet, c'est d'où l'on part — sans elle
+ * on part des mots, avec elle on s'en inspire. Deux catalogues auraient fait
+ * tenir deux fois le même réglage d'accord, et le jour où l'on reformule la
+ * consigne de « nature », il aurait fallu le faire aux deux endroits — ou
+ * l'oublier à l'un des deux, ce qui est ce qui arrive.
+ *
+ * Le groupe reste une LISTE plutôt qu'une valeur unique : le contrat client le
+ * porte déjà ainsi (`revealsGroup`), et rien n'interdit qu'une troisième voie
+ * ouvre un jour un groupe à elle. */
+export const GROUPES_AMBIANCE = ["illustration_family"] as const;
 export type GroupeAmbiance = (typeof GROUPES_AMBIANCE)[number];
 
 /* Les deux motifs de la §3.4, et leurs deux emplois. Jamais les deux sur un
@@ -274,6 +287,43 @@ export const compositionReglageSchema = z.object({
 
 export type CompositionReglage = z.infer<typeof compositionReglageSchema>;
 
+/* CE QUE LA VOIE PHOTO A EN PROPRE — trois réglages, pas un second catalogue.
+ *
+ * Les AMBIANCES sont partagées : nature, animal, abstrait disent ce qu'on veut
+ * voir, et la photo ne change pas le sujet, seulement d'où l'on part. Ce qui
+ * lui appartient vraiment tient en trois choses.
+ *
+ * LA CONSIGNE est une, pas une par ambiance. Elle dit au modèle quoi faire de
+ * la photo — s'en inspirer sans en reproduire les traits, rester dans
+ * l'ambiance choisie. La décliner par ambiance ferait écrire trois fois la
+ * même phrase, et la quatrième ambiance naîtrait sans la sienne.
+ *
+ * LES SEUILS DE REFUS sont ici et non en dur parce qu'ils se règlent au vu des
+ * photos qui arrivent : « refusée avec une raison claire, plutôt que traitée
+ * mal ». Ce qu'on refuse mal se voit sur la sortie, et on ne livre pas pour
+ * remonter un seuil de vingt pixels.
+ *
+ * LE BLOC EST FACULTATIF, et le code retombe sur ses valeurs quand il manque.
+ * Le schéma est `.strict()` : l'exiger rendrait illisibles d'un coup toutes les
+ * configurations déjà en base — la panne qui a coûté une semaine au mobile. */
+export const photoReglageSchema = z.object({
+  consigne: bilingueSchema,
+  /* Le plus petit côté, en pixels. Sous ce seuil, agrandir invente des détails
+     — et le modèle rend alors un visage qui n'est celui de personne. */
+  coteMin: z.number().int().min(256).max(4096),
+  /* La luminosité moyenne, de 0 à 255. Une photo trop sombre ne porte pas
+     l'information qu'on lui demande d'inspirer ; l'éclaircir révélerait du
+     bruit, pas un visage. */
+  luminositeMin: z.number().int().min(0).max(255),
+  /* L'écart-type des niveaux, comme MESURE APPROCHÉE de la netteté. Ce n'est
+     pas une mesure de flou au sens propre — celle-là demanderait un laplacien —
+     mais une image floue a peu de contraste local, et l'écart-type s'effondre
+     avec. On le dit plutôt que de laisser croire à une mesure exacte. */
+  nettetteMin: z.number().int().min(0).max(128),
+}).strict();
+
+export type PhotoReglage = z.infer<typeof photoReglageSchema>;
+
 export const reglagesPortraitSchema = z.object({
   motifs: z.object({
     /** Le seul qui accepte du texte par-dessus (§3.4). */
@@ -286,6 +336,9 @@ export const reglagesPortraitSchema = z.object({
   }).strict(),
   voiesImage: z.array(voieImageReglageSchema).min(1),
   ambiances: z.array(ambianceReglageSchema),
+  /** Voir `photoReglageSchema` : facultatif, pour que les lignes déjà écrites
+   *  se relisent. */
+  photo: photoReglageSchema.optional(),
   /* LES COMPOSITIONS — papier, lilas, encre. Réglées au panneau bien avant,
    * puis CHOISIES par le client au moment de générer.
    *
@@ -537,9 +590,11 @@ const GROUPE_IMAGE = "image";
 const GROUPE_COMPOSITION = "composition";
 
 /** Le groupe qu'une voie d'image ouvre. `aucune` n'ouvre rien : c'est la fin. */
+/* LES DEUX VOIES OUVRENT LE MÊME GROUPE. « Aucune image » n'ouvre rien : c'est
+   la fin du choix, et le motif de marque tient alors le fond. */
 const GROUPE_OUVERT: Record<VoieImage, GroupeAmbiance | null> = {
   illustration: "illustration_family",
-  photo: "photo_style",
+  photo: "illustration_family",
   aucune: null,
 };
 
@@ -923,6 +978,28 @@ export function reglagesPortraitDeDepart(): ReglagesPortrait {
     modeles: {
       illustration: "openai:gpt-image-2",
       photo_style: "xai:grok-imagine-image",
+    },
+    /* LA VOIE PHOTO, à son départ.
+     *
+     * La consigne dit les deux interdits qui font tout le produit. S'INSPIRER
+     * SANS RESSEMBLER : le portrait n'est pas un filtre, et rendre un visage
+     * reconnaissable transformerait une œuvre en photo retouchée — ce n'est pas
+     * ce qu'on offre, et ce n'est pas ce qu'on a le droit de faire d'un visage
+     * qu'un tiers a déposé. Et RESTER DANS L'AMBIANCE : la photo donne la
+     * matière, l'ambiance choisie donne la forme ; l'inverse rendrait le choix
+     * de l'utilisateur décoratif.
+     *
+     * Les seuils partent larges. Un refus de trop est une porte fermée sur un
+     * geste qu'on ne voit pas recommencer ; un passage de trop se répare en
+     * refaisant. On les resserrera sur pièce, sans livraison. */
+    photo: {
+      consigne: {
+        fr: "Une ou plusieurs photos vous sont fournies. INSPIREZ-VOUS-EN sans les reproduire : ni les traits du visage, ni la ressemblance, ni le cadrage. Retenez-en l'allure, les couleurs, l'attitude, l'objet ou le lieu qui compte. Le rendu doit rester entièrement dans l'ambiance demandée ci-dessus — c'est elle qui décide de la forme, la photo ne décide que de la matière. Ne rendez jamais une photographie retouchée.",
+        en: "One or more photos are provided. DRAW INSPIRATION from them without reproducing them: not the facial features, not the likeness, not the framing. Keep the bearing, the colours, the attitude, the object or place that matters. The result must stay entirely within the ambiance requested above — it decides the form, the photo only supplies the material. Never return a retouched photograph.",
+      },
+      coteMin: 512,
+      luminositeMin: 30,
+      nettetteMin: 12,
     },
     voiesImage: [
       {

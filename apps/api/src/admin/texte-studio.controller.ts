@@ -1,11 +1,12 @@
 import {
   Body, Controller, Get, HttpCode, Inject, Injectable,
-  Param, Patch, Post, Req, UseGuards,
+  Param, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards,
 } from "@nestjs/common";
 import { z } from "zod";
 import {
   NATURES_TEXTE, reglagesTexteSchemas,
   lancementEssaiTexteSchema, publicationStudioSchema, retourArriereStudioSchema,
+  verdictEssaiTexteSchema, type VerdictEssai,
   type ConfigurationTexte, type EssaiStudio, type EtatTexte,
   type HistoriqueTexte, type NatureTexte, type ReglagesTexte,
 } from "@lehno/contracts";
@@ -68,7 +69,7 @@ export class TexteStudioService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(StudioConfigurationService) private readonly configs: StudioConfigurationService,
-    @Inject(StudioEssaiService) private readonly essais: StudioEssaiService,
+    @Inject(StudioEssaiService) private readonly essais_: StudioEssaiService,
   ) {}
 
   /* Les deux écrans du brief de design en un seul appel : ce qui tourne, et ce
@@ -82,6 +83,41 @@ export class TexteStudioService {
       enService: enService === null ? null : await this.configs.rendre(enService),
       brouillon: brouillon === null ? null : await this.configs.rendre(brouillon),
     } as EtatTexte;
+  }
+
+  /* LES ESSAIS D'UNE NATURE, et la nature se déduit de la CONFIGURATION.
+   *
+   * `StudioTrial` ne porte pas de nature : il porte `studio_config_id`, et
+   * c'est la configuration qui dit laquelle. Filtrer sur elle plutôt que
+   * d'ajouter une colonne évite une seconde vérité à tenir d'accord — et un
+   * essai dont la nature contredirait celle de sa configuration serait
+   * indéchiffrable.
+   *
+   * Sans cette route, les essais du message se lisaient par
+   * `admin/portrait-studio/trials` — `lister` ne filtre pas par nature, donc
+   * ça MARCHAIT. C'est bien le problème : un chemin qui s'appelle
+   * « portrait-studio » et qui sert les essais du message est exactement le
+   * nom qui trompe, et j'en ai retiré un aujourd'hui pour cette raison. */
+  async essais(nature: NatureTexte, configId?: string): Promise<{ items: EssaiStudio[] }> {
+    if (configId !== undefined) {
+      const cible = await this.prisma.studioConfig.findUnique({ where: { id: configId } });
+      /* 404 plutôt qu'une liste vide : demander les essais d'une configuration
+         de portrait par le chemin du texte est une erreur d'appel, pas un
+         résultat vide. Une liste vide la laisserait passer pour un fait. */
+      if (!cible || cible.kind !== nature)
+        throw new AppError("not_found", "resource not found");
+      return { items: await this.essais_.lister(configId) };
+    }
+
+    /* Sans configuration désignée : tous ceux de cette nature. Deux requêtes
+       plutôt qu'une jointure — `lister` est partagé avec l'atelier du portrait,
+       et lui apprendre les natures ferait porter à un service commun une
+       distinction qui n'appartient qu'à celui-ci. */
+    const siennes = await this.prisma.studioConfig.findMany({
+      where: { kind: nature }, select: { id: true }, orderBy: { createdAt: "desc" }, take: 50,
+    });
+    const tous = await Promise.all(siennes.map((c) => this.essais_.lister(c.id)));
+    return { items: tous.flat().slice(0, 100) };
   }
 
   async historique(nature: NatureTexte): Promise<HistoriqueTexte> {
@@ -114,7 +150,18 @@ export class TexteStudioService {
        séparément : le premier par un schéma commun aux trois natures, les
        seconds par celui de la nature demandée. */
     const { profileId } = lancementEssaiTexteSchema.parse({ profileId: corps.profileId });
-    return this.essais.essayerTexte(nature, adminId, this.valider(nature, corps), profileId);
+    return this.essais_.essayerTexte(nature, adminId, this.valider(nature, corps), profileId);
+  }
+
+  /* LE SORT D'UN ESSAI. Il se pose sur un identifiant, et l'essai dit à quelle
+     configuration il appartient — donc à quelle nature. Le chemin n'a pas à la
+     répéter, pour la même raison que la publication : une nature au chemin qui
+     contredirait la ligne obligerait à décider laquelle ment. */
+  async juger(id: string, verdict: VerdictEssai): Promise<EssaiStudio> {
+    /* `reference` n'est jamais posée ici : un essai de texte n'a pas d'image à
+       faire représenter une ambiance. Le schéma du corps la refuse déjà ; ce
+       `false` explicite dit que ce n'est pas un oubli. */
+    return this.essais_.juger(id, verdict, false);
   }
 
   async publier(adminId: string, entree: z.infer<typeof publicationStudioSchema>) {
@@ -167,6 +214,16 @@ export class TexteStudioController {
     return this.service.historique(this.nature(nature));
   }
 
+  /* `configId` FACULTATIF : sans lui, les essais de toute la nature — c'est ce
+     qu'on regarde pour comparer deux versions. Avec lui, ceux d'une version
+     précise, comme le fait l'atelier du portrait. */
+  @Get(":nature/trials")
+  essais(
+    @Param("nature") nature: string, @Query("configId") configId?: string,
+  ): Promise<{ items: EssaiStudio[] }> {
+    return this.service.essais(this.nature(nature), configId);
+  }
+
   @Patch(":nature/config")
   enregistrer(
     @Param("nature") nature: string, @Body() corps: unknown,
@@ -184,6 +241,19 @@ export class TexteStudioController {
     @Req() req: { admin?: { id: string } },
   ) {
     return this.service.essayer(this.nature(nature), req.admin?.id ?? "", corps);
+  }
+
+  /* `trials/:id` NE SE FAIT PAS CAPTER PAR `:nature/config`, et ce n'est pas un
+     hasard d'ordre : le second exige littéralement « config » en deuxième
+     segment, et un identifiant n'en est pas un. Le noter ici parce que c'est
+     exactement le genre de voisinage qu'un déplacement de ligne casse — et que
+     la panne serait alors « nature inconnue : trials », incompréhensible. */
+  @Patch("trials/:id")
+  juger(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(verdictEssaiTexteSchema)) corps: z.infer<typeof verdictEssaiTexteSchema>,
+  ): Promise<EssaiStudio> {
+    return this.service.juger(id, corps.verdict);
   }
 
   /* PUBLICATION ET RETOUR ARRIÈRE NE PORTENT PAS LA NATURE, et c'est correct :

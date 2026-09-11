@@ -9,6 +9,7 @@ import { RouteurIAService, type Adaptateur } from "../ia/routeur.service.js";
 import { FOURNISSEURS_IA } from "../ia/adaptateurs/index.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
 import type { StockagePort } from "../stockage/stockage.port.js";
+import { PhotoSourceService } from "./photo-source.service.js";
 import { composerLePortrait } from "./composition.js";
 
 /* Dix minutes pour une lecture : le temps de télécharger sur un réseau lent,
@@ -37,6 +38,7 @@ export class PortraitService {
     @Inject(FOURNISSEURS_IA) private readonly adaptateurs: Record<string, Adaptateur>,
     @Inject(StudioConfigurationService) private readonly configs: StudioConfigurationService,
     @Inject("STOCKAGE_PORT") private readonly stockage: StockagePort,
+    @Inject(PhotoSourceService) private readonly photos: PhotoSourceService,
   ) {}
 
   /* 404 et non 403 : dire « il existe mais n'est pas à vous » apprendrait qu'il
@@ -141,13 +143,39 @@ export class PortraitService {
        pixel près et à l'identique. Le modèle rend une ILLUSTRATION SEULE.
        Ce qui part à sa place : LA PALETTE. C'est elle qui rend une image Lehno
        reconnaissable au-delà de son cadre. */
+    /* LA PHOTO, LUE ICI ET CONSOMMÉE, quand c'est la voie choisie.
+     *
+     * Elle a été déposée et jugée AVANT le paiement — trop petite, trop sombre,
+     * trop plate se disent alors, pendant que le geste peut encore se refaire.
+     * Ici elle ne peut plus qu'être absente, et c'est un refus honnête : la
+     * voie photo sans photo ne produirait qu'une illustration, et l'utilisateur
+     * aurait payé autre chose que ce qu'il a demandé. */
+    const photoCle = voie === "photo" ? await this.photos.consommer(userId) : null;
+    const photo = photoCle === null ? undefined : await this.stockage.contenu(photoCle);
+
     const resultat = await this.routeur.appelerUnSeulModele(
       voie === "photo" ? "photo_style" : "illustration",
-      { invite: inviteImagePortrait({ mots }, ambiance?.consigne.fr ?? null, gamme) },
+      {
+        invite: inviteImagePortrait(
+          { mots }, ambiance?.consigne.fr ?? null, gamme, "fr",
+          /* LA CONSIGNE DE LA PHOTO n'accompagne que la photo. Sans image, elle
+             demanderait au modèle de s'inspirer d'une photo qu'il n'a pas. */
+          voie === "photo" ? reglages.photo?.consigne.fr ?? null : null,
+        ),
+        ...(photo === undefined ? {} : { image: photo }),
+      },
       adaptateur,
       modele,
       { origine: "user_action", userId, actionRunId: ligne.actionRunId },
     );
+
+    /* LA SOURCE S'EFFACE, ABOUTIE OU NON. C'est ce que l'écran promet au
+       dépôt : « l'image n'est pas conservée ; après traitement la source est
+       effacée ». Un échec du modèle ne suspend pas cette promesse — c'est même
+       le cas où la garder serait le plus injustifiable, puisqu'elle n'aurait
+       servi à rien. Avant le refus, donc, et pas après. */
+    if (photoCle !== null) await this.photos.effacer(photoCle);
+
     if (resultat.etat !== "success")
       throw new AppError("generation_unavailable", `image generation failed: ${resultat.code}`);
 
