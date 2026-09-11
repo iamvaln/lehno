@@ -209,7 +209,7 @@ la langue.
 
 ---
 
-## 9. Le studio du message n'a aucune surface d'administration, et sa configuration semée ne se répare pas
+## 9. L'établi du message n'est pas encore branché (et sa configuration semée ne se réparait pas)
 
 Trouvé à l'appareil le 10 septembre 2026, en lançant une génération de message
 depuis l'écran de préparation. L'application affiche « Quelque chose s'est mal
@@ -270,19 +270,23 @@ table a été semée avant le découpage, **chaque `POST /me/generations` de nat
 suivi d'un redémarrage — ce qu'il a fallu faire en local pour poursuivre la
 recette. La réparation au démarrage a depuis fermé ce chemin.
 
-**Ce qui reste à faire** : une **surface d'administration pour le studio du
-message**, symétrique de celle du portrait. C'est le manque de fond ; les deux
-autres n'en étaient que les symptômes, et ils sont soignés.
+**Ce qui reste** n'est pas un défaut mais un CHANTIER EN COURS, et il faut le
+lire comme tel : le découpage message/portrait date du 31 août (#86), et
+l'établi du portrait est arrivé le premier. Celui du message attend son
+contrôleur.
 
-Aujourd'hui, les orientations, les garde-fous et le modèle du message sont ce
-que le code a semé, et rien d'autre ne peut les changer — alors que le portrait,
-lui, se compose, s'éprouve sur des profils de simulation, se publie avec un
-motif et se remet en arrière. Le découpage du 31 août a séparé les deux
-natures ; il n'a donné d'établi qu'à une seule.
+Je le note ici parce que la recette l'a rencontré, pas pour le reprocher —
+`StudioEssaiService.essayer` est écrite ET testée ; il lui manque une route.
 
-`essayerPortrait` et `essayer` cohabitent d'ailleurs dans `StudioEssaiService` :
-la seconde est écrite, testée, et n'a jamais été branchée. L'essentiel du
-travail est peut-être déjà là.
+En attendant, les orientations, les garde-fous et le modèle du message restent
+ce que le code a semé : on ne peut pas les régler sans livrer.
+
+**Un mot sur le nom, qui m'a fait douter de ma propre lecture** : la seule
+section de studio s'appelle `admin/portrait-studio`, et elle porte aussi les
+gabarits, les profils de simulation et les essais — qui ne sont pas propres au
+portrait. Dire « le studio du message n'a pas d'administration » s'entend donc
+facilement comme « le studio n'a pas d'administration », ce qui est faux. Le
+jour où l'établi du message arrivera, la question du chemin se posera.
 
 ---
 
