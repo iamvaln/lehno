@@ -42,7 +42,7 @@ import { ResendAdapter } from "./mail/resend.adapter.js";
 import { ProfileController, MediaController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
 import { AvatarService } from "./me/avatar.service.js";
-import { PersonController } from "./me/person.controller.js";
+import { PersonController, SelfPersonController } from "./me/person.controller.js";
 import { PersonService } from "./me/person.service.js";
 import { EventController } from "./me/event.controller.js";
 import { EventService } from "./me/event.service.js";
@@ -153,7 +153,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
      concurrents inoffensifs. */
   imports: [ScheduleModule.forRoot()],
   controllers: [
-    AuthController, ProfileController, MediaController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, NotificationController, ConfigController, LegalController,
+    AuthController, ProfileController, MediaController, PersonController, SelfPersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, NotificationController, ConfigController, LegalController,
     SecurityController,
     AccountController, DeviceController, DataExportController, SupportController,
     OccurrenceWishesController, WishController,

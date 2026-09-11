@@ -255,6 +255,39 @@ export const updatePersonSchema = champsDeProche
 
 export type UpdatePersonInput = z.infer<typeof updatePersonSchema>;
 
+/* ── LA FICHE DE SOI ─────────────────────────────────────────────────────────
+ *
+ * `isSelf` se lisait à CINQ endroits et ne s'écrivait NULLE PART.
+ *
+ * Le mur y cherche la date d'anniversaire du propriétaire et ses goûts
+ * exposables ; la liste de souhaits n'accepte de viser une occasion que si
+ * celle-ci pend à la fiche de soi. Faute de pouvoir la créer, « Ma date
+ * d'anniversaire » s'allumait sans rien exposer, aucune liste ne pouvait viser
+ * d'occasion, et il n'existait aucun endroit où inscrire sa propre date.
+ *
+ * PAR UN CHEMIN À PART, et non par `isSelf` ajouté à la création d'un proche.
+ * Deux raisons, et la seconde décide :
+ *
+ * 1. il n'y en a qu'UNE — un index unique partiel le tient en base. Un booléen
+ *    dans la création d'un proche inviterait à en poser une seconde, et le
+ *    refus arriverait sous la forme d'une violation de contrainte, c'est-à-dire
+ *    d'une erreur interne ;
+ * 2. elle s'écrit en IDEMPOTENT. On ne « crée » pas sa propre fiche puis on la
+ *    corrige : on dit qui on est, autant de fois qu'on veut. Un `PUT` le dit
+ *    exactement, là où un `POST` obligerait l'application à savoir si elle en a
+ *    déjà une — donc à la lire avant chaque écriture.
+ *
+ * `relation` et `relationHint` en sont RETIRÉS : on n'est pas sa propre
+ * relation, et laisser les champs ouvrirait la porte à « ma sœur » sur sa
+ * propre fiche. Le reste de la fiche vaut pour soi comme pour un proche — le
+ * genre y compris, puisque le mur écrit à son sujet. */
+export const selfPersonSchema = champsDeProche
+  .omit({ relation: true, relationHint: true })
+  .strict()
+  .superRefine(bornerLaNaissanceDe);
+
+export type SelfPersonInput = z.infer<typeof selfPersonSchema>;
+
 // ── Les notes ───────────────────────────────────────────────────────────────
 
 // L'ensemble FIXE du système : aucune catégorie personnalisée. Cinq
