@@ -268,6 +268,8 @@ export const fr = {
   photoTropLourde: "Cette photo dépasse la taille acceptée. Choisissez-en une plus légère.",
   photoEchec: "La photo n'est pas partie. Réessayez dans un instant.",
   champPrenom: "Prénom",
+  profilNaissance: "Ma date d'anniversaire",
+  profilNaissanceAide: "Elle apparaît sur mon Mur si je l'y expose.",
   profilGouts: "Mes goûts et intérêts",
   profilGoutsAide: "Un mot, une virgule, un autre mot.",
   profilGoutsExemple: "jazz, céramique, randonnée",
@@ -1009,11 +1011,11 @@ export const fr = {
   profilGenreAide: "Pour que ce que vous signez soit écrit correctement.",
   profilNomDUsage: "Comment on vous appelle",
   profilNomDUsageAide: "Si c'est autrement que par votre nom.",
-  profilNaissance: "Votre date de naissance",
+  profilVotreNaissance: "Votre date de naissance",
   /* Elle ne crée pas d'anniversaire : naissance et échéance sont deux gestes,
      ici comme sur la fiche d'un proche. La phrase le dit plutôt que de laisser
      quelqu'un attendre un rappel qui ne viendra pas. */
-  profilNaissanceAide: "Pour poser votre anniversaire, ajoutez-la ensuite dans Dates.",
+  profilVotreNaissanceAide: "Pour poser votre anniversaire, ajoutez-la ensuite dans Dates.",
   evtPourMoi: "Moi",
   listeVotreDateAbsente: "Pour ouvrir une liste sur une de vos dates, il faut d'abord une date à vous.",
   identNaissance: "Date de naissance",
