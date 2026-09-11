@@ -2009,6 +2009,14 @@ model PromptTemplate {
 /// l'image du portrait. Voir `StudioConfig.kind`.
 enum StudioConfigKind {
   message
+  /// Les idées de cadeau. Réglées à part du message : une empreinte commune
+  /// ferait retomber leurs essais dès qu'on reformule un garde-fou du message.
+  idees
+  /// Le texte qui PRÉCÈDE l'image — celui qui lit les notes et rend les mots
+  /// qui comptent. Distinct de `portrait`, qui règle l'image elle-même : l'un
+  /// s'éprouve sur un modèle de texte, l'autre sur un modèle d'image, et
+  /// confondre les deux est exactement ce que le découpage a réparé.
+  portrait_brief
   portrait
 
   @@map("studio_config_kind")

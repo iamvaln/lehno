@@ -3,8 +3,11 @@ import { createHash } from "node:crypto";
 import type { Prisma, StudioConfigKind } from "@prisma/client";
 import {
   matierePourEmpreinteMessage, matierePourEmpreintePortrait,
+  matierePourEmpreinteIdees, matierePourEmpreinteBriefPortrait,
   reglagesMessageSchema, reglagesPortraitSchema,
+  reglagesIdeesSchema, reglagesBriefPortraitSchema,
   type BlocagePublication, type ReglagesMessage, type ReglagesPortrait,
+  type ReglagesIdees, type ReglagesBriefPortrait,
   type ConfigurationMessage, type ConfigurationPortrait,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -69,6 +72,32 @@ function relire<T>(schema: { parse(v: unknown): T }, settings: unknown, nature: 
   }
 }
 
+/** Ce qu'une configuration porte, quelle que soit sa nature. */
+export type Reglages = ReglagesMessage | ReglagesPortrait | ReglagesIdees | ReglagesBriefPortrait;
+
+/* UNE TABLE, ET NON UN TERNAIRE. C'est ce qui rend l'oubli IMPOSSIBLE.
+ *
+ * Ces deux lectures s'écrivaient `nature === "message" ? … : …`, ce qui était
+ * juste tant qu'il n'y avait que deux natures. À quatre, la branche « sinon »
+ * traiterait des idées comme un portrait : l'empreinte serait calculée sur la
+ * mauvaise projection, et la publication réclamerait un essai — ou n'en
+ * réclamerait pas — sans rapport avec ce qui a changé. Rien ne l'aurait dit.
+ *
+ * Un `Record` indexé par l'énumération oblige le compilateur : ajouter une
+ * cinquième nature sans l'inscrire ici ne compile pas. */
+const PAR_NATURE: Record<StudioConfigKind, {
+  schema: { parse(v: unknown): Reglages; safeParse(v: unknown): { success: boolean } };
+  matiere: (r: never) => string;
+}> = {
+  message: { schema: reglagesMessageSchema, matiere: matierePourEmpreinteMessage as (r: never) => string },
+  idees: { schema: reglagesIdeesSchema, matiere: matierePourEmpreinteIdees as (r: never) => string },
+  portrait_brief: {
+    schema: reglagesBriefPortraitSchema,
+    matiere: matierePourEmpreinteBriefPortrait as (r: never) => string,
+  },
+  portrait: { schema: reglagesPortraitSchema, matiere: matierePourEmpreintePortrait as (r: never) => string },
+};
+
 type LigneConfig = {
   id: string; kind: StudioConfigKind; version: number | null; state: string; settings: unknown;
   fingerprint: string; publishedAt: Date | null; publishedByAdminId: string | null;
@@ -91,18 +120,22 @@ export class StudioConfigurationService {
      garde-fou du message ne doit plus faire retomber les essais du portrait, ni
      l'inverse. Une seule empreinte rendait chaque réglage à éprouver dès que
      l'AUTRE bougeait. */
-  empreinte(nature: StudioConfigKind, reglages: ReglagesMessage | ReglagesPortrait): string {
-    const matiere = nature === "message"
-      ? matierePourEmpreinteMessage(reglages as ReglagesMessage)
-      : matierePourEmpreintePortrait(reglages as ReglagesPortrait);
+  empreinte(nature: StudioConfigKind, reglages: Reglages): string {
+    const matiere = PAR_NATURE[nature].matiere(reglages as never);
     return createHash("sha256").update(matiere).digest("hex");
   }
 
   /** Les réglages relus de la base, revalidés. */
-  reglagesDe(ligne: { kind: StudioConfigKind; settings: unknown }): ReglagesMessage | ReglagesPortrait {
-    return ligne.kind === "message"
-      ? this.reglagesMessageDe(ligne)
-      : this.reglagesPortraitDe(ligne);
+  reglagesDe(ligne: { kind: StudioConfigKind; settings: unknown }): Reglages {
+    return relire(PAR_NATURE[ligne.kind].schema, ligne.settings, ligne.kind);
+  }
+
+  reglagesIdeesDe(ligne: { settings: unknown }): ReglagesIdees {
+    return relire(reglagesIdeesSchema, ligne.settings, "idees");
+  }
+
+  reglagesBriefPortraitDe(ligne: { settings: unknown }): ReglagesBriefPortrait {
+    return relire(reglagesBriefPortraitSchema, ligne.settings, "portrait_brief");
   }
 
   /* Deux lectures typées, pour que les appelants n'aient pas à faire
@@ -123,8 +156,7 @@ export class StudioConfigurationService {
    * servir de `reglagesDe`, qui lève — et attraper une exception pour en faire
    * un booléen cacherait la vraie panne le jour où la base est injoignable. */
   estLisible(ligne: { kind: StudioConfigKind; settings: unknown }): boolean {
-    const schema = ligne.kind === "message" ? reglagesMessageSchema : reglagesPortraitSchema;
-    return schema.safeParse(ligne.settings).success;
+    return PAR_NATURE[ligne.kind].schema.safeParse(ligne.settings).success;
   }
 
   async enService(nature: StudioConfigKind): Promise<LigneConfig | null> {
@@ -331,7 +363,7 @@ export class StudioConfigurationService {
     return (await this.rendre(ligne)) as ConfigurationMessage;
   }
 
-  async rendre(ligne: LigneConfig): Promise<ConfigurationDe<ReglagesMessage | ReglagesPortrait>> {
+  async rendre(ligne: LigneConfig): Promise<ConfigurationDe<Reglages>> {
     const [essais, auteur] = await Promise.all([
       this.essaisReussis(ligne.fingerprint),
       ligne.publishedByAdminId === null
@@ -345,7 +377,7 @@ export class StudioConfigurationService {
 
   private assembler(
     ligne: LigneConfig, essaisReussis: number, parQui: string | null,
-  ): ConfigurationDe<ReglagesMessage | ReglagesPortrait> {
+  ): ConfigurationDe<Reglages> {
     /* Le blocage se DÉDUIT du compte déjà lu, il ne se relit pas : une seconde
        interrogation rendrait la ligne vue en liste incohérente avec la même
        ligne vue en détail dès qu'un essai tombe entre les deux. */
@@ -381,7 +413,7 @@ export class StudioConfigurationService {
    * ligne et pour cent. Deux formes de rendu pour une seule chose finissent
    * toujours par diverger — c'est ce qui fait qu'un champ ajouté n'apparaît
    * que sur l'un des deux écrans. */
-  async rendreTous(lignes: LigneConfig[]): Promise<ConfigurationDe<ReglagesMessage | ReglagesPortrait>[]> {
+  async rendreTous(lignes: LigneConfig[]): Promise<ConfigurationDe<Reglages>[]> {
     if (lignes.length === 0) return [];
 
     const empreintes = [...new Set(lignes.map((l) => l.fingerprint))];

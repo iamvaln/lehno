@@ -2,10 +2,11 @@ import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Prisma, StudioConfigKind } from "@prisma/client";
 import {
   reglagesMessageDeDepart, reglagesPortraitDeDepart,
-  type ProfilContenu, type ReglagesMessage, type ReglagesPortrait,
+  reglagesIdeesDeDepart, reglagesBriefPortraitDeDepart,
+  type ProfilContenu,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
-import { StudioConfigurationService } from "./configuration.service.js";
+import { StudioConfigurationService, type Reglages } from "./configuration.service.js";
 
 /* Le Studio au démarrage : une configuration en service, et de quoi l'essayer.
  *
@@ -50,18 +51,25 @@ export class AmorceStudioService implements OnModuleInit {
    * par-dessus ce que l'administration a publié. On chercherait longtemps
    * pourquoi « le réglage ne tient pas », comme on l'a cherché pour les tarifs
    * des modèles. */
-  /* DEUX configurations, une par nature — le message et le portrait se règlent,
-     s'éprouvent et se publient séparément. Le compte se fait PAR NATURE : semer
-     l'une n'excuse pas de ne pas semer l'autre, et un serveur qui aurait perdu
-     la seconde s'ouvrirait à moitié sans que rien ne le dise. */
+  /* UNE CONFIGURATION PAR NATURE, et le compte se fait PAR NATURE : semer l'une
+     n'excuse pas de ne pas semer l'autre, et un serveur qui en aurait perdu une
+     s'ouvrirait à moitié sans que rien ne le dise.
+     
+     TROIS TEXTES ET UNE IMAGE. On ne produit pas qu'un message : les idées de
+     cadeau et le brief du portrait passent par un modèle de texte eux aussi, et
+     tournaient jusqu'ici sur des valeurs figées dans le code. La table
+     `PAR_NATURE` du service de configuration oblige déjà à traiter chaque
+     nature ; ici, c'est cette liste-ci qu'il faut tenir à jour. */
   private async semerLaConfiguration(): Promise<void> {
     await this.semerUne("message", reglagesMessageDeDepart());
+    await this.semerUne("idees", reglagesIdeesDeDepart());
+    await this.semerUne("portrait_brief", reglagesBriefPortraitDeDepart());
     await this.semerUne("portrait", reglagesPortraitDeDepart());
   }
 
   private async semerUne(
     nature: StudioConfigKind,
-    reglages: ReglagesMessage | ReglagesPortrait,
+    reglages: Reglages,
   ): Promise<void> {
     if ((await this.prisma.studioConfig.count({ where: { kind: nature } })) === 0) {
       await this.poser(nature, reglages, NOTE_SEMIS);
@@ -110,7 +118,7 @@ export class AmorceStudioService implements OnModuleInit {
 
   private async poser(
     nature: StudioConfigKind,
-    reglages: ReglagesMessage | ReglagesPortrait,
+    reglages: Reglages,
     note: string,
     tx?: Prisma.TransactionClient,
   ): Promise<void> {

@@ -5,6 +5,7 @@ import {
   consigneSystemePortrait, invitePortrait, MOTS_DU_PORTRAIT,
   MOTS_MESSAGE, MOTS_MESSAGE_COURT, ORIENTATIONS_SENSIBLES,
   type ContexteMessage, type ContexteIdees, type ContextePortrait, type Orientation,
+  type ReglagesIdees, type ReglagesBriefPortrait,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
@@ -261,6 +262,38 @@ export class GenerationService {
    * `gift_ideas` sont ÉCARTÉES du message — « les idées de cadeaux n'ont rien à
    * faire dans un message » — et ce sont ici les plus utiles de toutes. C'est
    * ce que la personne a noté en pensant précisément à quoi offrir. */
+  /* LES RÉGLAGES D'UNE GÉNÉRATION DE TEXTE, ou rien.
+   *
+   * `null` quand rien n'est publié, et le gabarit retombe alors sur ses valeurs
+   * de code — c'est ce qui permet à un serveur neuf de produire avant qu'aucun
+   * administrateur n'ait rien fait. On ne refuse PAS ici, à la différence du
+   * portrait : là-bas un repli composerait une image avec des réglages que
+   * personne n'a vus tourner ; ici il produit le texte que le code produisait
+   * déjà hier.
+   *
+   * Le `.catch` couvre la configuration devenue illisible : la génération
+   * continue sur les valeurs du code plutôt que de tomber. Le semis la répare
+   * au démarrage suivant, et `reglagesIdeesDe` la nomme dans le journal. */
+  private async reglagesIdees(): Promise<ReglagesIdees | null> {
+    const publie = await this.configs.enService("idees").catch(() => null);
+    if (publie === null) return null;
+    try {
+      return this.configs.reglagesIdeesDe(publie);
+    } catch {
+      return null;
+    }
+  }
+
+  private async reglagesBriefPortrait(): Promise<ReglagesBriefPortrait | null> {
+    const publie = await this.configs.enService("portrait_brief").catch(() => null);
+    if (publie === null) return null;
+    try {
+      return this.configs.reglagesBriefPortraitDe(publie);
+    } catch {
+      return null;
+    }
+  }
+
   private async rassemblerIdees(
     userId: string, occurrenceId: string,
     options: {
@@ -310,12 +343,19 @@ export class GenerationService {
       });
     }
 
-    /* Ce que l'atelier a publié pour le MESSAGE ne s'applique pas ici : ses
-       consignes parlent de ton et de tournure, pas d'objets. On ne lit donc que
-       ce qui vaut pour toutes les productions, et rien tant que le studio n'a
-       pas de configuration propre aux idées. */
+    /* CE QUE L'ATELIER A PUBLIÉ POUR LES IDÉES, et pour elles seules.
+     *
+     * Ce commentaire disait « rien tant que le studio n'a pas de configuration
+     * propre aux idées ». Elle existe : les idées sont une nature à part, avec
+     * ses essais et sa publication. Celle du message ne vaut toujours pas ici —
+     * ses consignes parlent de ton et de tournure, pas d'objets. */
+    const reglages = await this.reglagesIdees();
+
     return {
       langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
+      ...(reglages?.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
+      ...(reglages && reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
+      ...(reglages ? { nombreDemande: reglages.nombreDemande } : {}),
       nomDUsage: proche.callingName ?? proche.displayName,
       relation: proche.relationHint ?? proche.relation ?? null,
       genreDuProche: proche.gender ?? "unspecified",
@@ -509,10 +549,23 @@ export class GenerationService {
     const gouts = attributs.filter((a) => a.kind !== "avoid");
     for (const a of attributs) if (a.kind === "avoid") aEviter.push(a.value);
 
+    /* CE QUE L'ATELIER A PUBLIÉ POUR LE BRIEF — la nature `portrait_brief`, et
+       non `portrait`. L'une règle le texte qui choisit les mots, l'autre
+       l'image qui les dessine ; l'une s'éprouve sur un modèle de texte, l'autre
+       sur un modèle d'image. Les confondre était exactement le défaut que le
+       découpage message/portrait a réparé. */
+    const reglages = await this.reglagesBriefPortrait();
+
     return {
       // La langue du COMPTE : le portrait se lit par celui qui l'offre, comme
       // les idées. Le message, lui, part chez le proche et prend la sienne.
       langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
+      ...(reglages?.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
+      ...(reglages && reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
+      ...(reglages ? {
+        motsDuPortrait: reglages.motsDuPortrait,
+        motsDeLaPhrase: reglages.motsDeLaPhrase,
+      } : {}),
       orientation: selection.orientation,
       nomDUsage: proche.callingName ?? proche.displayName,
       relation: proche.relationHint ?? proche.relation ?? null,
@@ -534,7 +587,10 @@ export class GenerationService {
       this.adaptateurs,
       { userId, actionRunId, origine: "user_action" },
     );
-    return this.lireLeBrief(reponse.contenu);
+    /* LES MÊMES BORNES POUR DEMANDER ET POUR VÉRIFIER. Les séparer ferait
+       qu'un réglage élargi produirait une sortie que la garde d'en face
+       refuse — et l'utilisateur paierait un portrait qu'on jette. */
+    return this.lireLeBrief(reponse.contenu, contexte.motsDuPortrait ?? MOTS_DU_PORTRAIT);
   }
 
   /* Ce que le brief rend, vérifié.
@@ -543,7 +599,9 @@ export class GenerationService {
    * douze mots n'a pas suivi la consigne, mais les premiers valent ce qu'ils
    * valent. On refuse sous le minimum, où il n'y a plus de portrait à
    * composer. */
-  private lireLeBrief(brut: string): SortiePortrait {
+  private lireLeBrief(
+    brut: string, bornes: { readonly min: number; readonly max: number },
+  ): SortiePortrait {
     let objet: unknown;
     try {
       objet = JSON.parse(brut.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "").trim());
@@ -556,9 +614,9 @@ export class GenerationService {
       ? o.mots
         .filter((m): m is string => typeof m === "string" && m.trim().length > 0)
         .map((m) => m.trim())
-        .slice(0, MOTS_DU_PORTRAIT.max)
+        .slice(0, bornes.max)
       : [];
-    if (mots.length < MOTS_DU_PORTRAIT.min) throw new RefusModele("length_out_of_range");
+    if (mots.length < bornes.min) throw new RefusModele("length_out_of_range");
 
     if (typeof o.phrase !== "string" || o.phrase.trim().length === 0)
       throw new RefusModele("empty_message");

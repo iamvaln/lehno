@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { ORIENTATIONS, ORIENTATION_CONSIGNE, type Orientation } from "./gabarits.js";
+import {
+  ORIENTATIONS, ORIENTATION_CONSIGNE, IDEES, MOTS_DU_PORTRAIT, MOTS_PHRASE_PORTRAIT,
+  type Orientation,
+} from "./gabarits.js";
 import { studioConfigSchema, type StudioConfig, type StudioChoice } from "./me-studio.js";
 
 /* Les RÉGLAGES du studio — ce que l'administration compose, publie, et que
@@ -82,6 +85,21 @@ export type ChampDuProche = (typeof CHAMPS_DU_PROCHE)[number];
  * obligerait à recomposer la clé à chaque comparaison, et une recomposition
  * fautive ne se verrait qu'au premier essai. */
 const cleModeleSchema = z.string().regex(/^[a-z0-9_-]+:[A-Za-z0-9._-]+$/, "forme attendue : fournisseur:modèle");
+
+/* UN COUPLE min/max, avec la seule règle qui compte : min <= max.
+ *
+ * Posée ICI plutôt que répétée à chaque usage. Deux bornes croisées — un
+ * minimum de sept mots pour un maximum de trois — ne rendent pas un texte
+ * bizarre : elles rendent une consigne que le modèle ne peut pas satisfaire, et
+ * l'essai échoue sans qu'on comprenne pourquoi. */
+function bornesDeMotsSchema(plancher: number, plafond: number) {
+  return z.object({
+    min: z.number().int().min(plancher).max(plafond),
+    max: z.number().int().min(plancher).max(plafond),
+  }).strict().refine((b) => b.min <= b.max, {
+    message: "le minimum ne peut pas dépasser le maximum",
+  });
+}
 
 export const orientationReglageSchema = z.object({
   id: z.enum(ORIENTATIONS),
@@ -261,6 +279,84 @@ export const reglagesPortraitSchema = z.object({
 export type OrientationReglage = z.infer<typeof orientationReglageSchema>;
 export type AmbianceReglage = z.infer<typeof ambianceReglageSchema>;
 export type VoieImageReglage = z.infer<typeof voieImageReglageSchema>;
+/* ── LES DEUX AUTRES GÉNÉRATIONS DE TEXTE ────────────────────────────────────
+ *
+ * On ne produit pas qu'un message. Cinq tâches passent par un modèle de texte —
+ * `message`, `gift_ideas`, `portrait_brief`, `note_classification`,
+ * `sensitive_detection` — et les trois premières sont celles que l'utilisateur
+ * demande et paie.
+ *
+ * ELLES SE RÈGLENT SÉPARÉMENT, comme le message et le portrait se sont séparés,
+ * et pour la même raison : une empreinte commune ferait retomber les essais des
+ * idées dès qu'on reformule un garde-fou du brief. Chacune a ses essais, sa
+ * publication et son historique.
+ *
+ * CE QUI SE RÈGLE ET CE QUI RESTE AU CODE. L'invite se COMPOSE depuis un
+ * contexte typé — la langue, le registre, le genre, les notes, le budget. Cette
+ * structure reste en TypeScript : la ranger en base sous forme de corps à trous
+ * demanderait un langage de gabarit, et c'est ainsi qu'une configuration
+ * d'invites devient intenable. Ce qui se règle est ce qui s'AJOUTE ou se BORNE
+ * — la consigne commune, les garde-fous, les champs du proche qui partent, et
+ * les quelques nombres qui décident de la forme de la sortie. */
+
+/* Ce que les trois générations de texte ont en commun. Écrit une fois : trois
+   copies divergeraient au premier durcissement, et on ne saurait plus laquelle
+   fait foi. */
+const fondsCommunDuTexte = {
+  /** Ce qui s'ajoute à la consigne système, en plus des règles absolues. */
+  consigneCommune: z.string().trim().max(4000),
+  /** Ce qui est écarté : symboles, formules, tournures. */
+  gardeFous: z.array(z.string().trim().min(1).max(200)).max(40),
+  champsDuProche: z.array(z.enum(CHAMPS_DU_PROCHE)),
+  /* Le modèle de L'ESSAI, et lui seul.
+   *
+   * La production ne le lit pas : `generation.service` appelle
+   * `routeur.executer(tache, …)`, qui déroule la chaîne `ai_task_route` —
+   * administrable sous `admin/ai-routes`, avec son repli et son disjoncteur.
+   * Le dire ici évite la méprise que le champ invite : le changer ne change
+   * pas qui écrit, il change sur quoi on éprouve. */
+  modele: cleModeleSchema,
+} as const;
+
+/* LES IDÉES DE CADEAU.
+ *
+ * `ContexteIdees` porte `consigneCommune` et `gardeFous` depuis le début —
+ * « ce que l'administration ajoute, publié depuis l'atelier ». Personne ne les
+ * alimentait : le gabarit les attendait, aucune configuration ne les servait. */
+export const reglagesIdeesSchema = z.object({
+  ...fondsCommunDuTexte,
+  /* COMBIEN ON EN DEMANDE — et la borne haute n'est pas de la prudence.
+   *
+   * Le registre le dit : en dessous de trois, il n'y a rien à comparer et le
+   * refus d'une seule vide la liste ; au-delà de six, on lit moins bien et le
+   * modèle commence à remplir — les dernières deviennent des variantes de la
+   * première. `IDEES.max` vaut huit, mais c'est la borne qui VÉRIFIE la sortie,
+   * pas celle qui négocie avec elle. */
+  nombreDemande: z.number().int().min(3).max(6),
+}).strict();
+
+/* LE BRIEF DU PORTRAIT — le texte qui précède l'image.
+ *
+ * Il lit les notes et rend les mots qui comptent. C'est lui qui empêche les
+ * confidences de partir mot pour mot chez un fournisseur d'image : ce qui
+ * traverse est ce qu'on en a retenu. Ses bornes décident donc de deux choses à
+ * la fois — ce que le nuage porte, et ce qui ne sort pas. */
+export const reglagesBriefPortraitSchema = z.object({
+  ...fondsCommunDuTexte,
+  /** Les mots du nuage. Trop peu ne dit rien ; trop noie le dessin. */
+  motsDuPortrait: bornesDeMotsSchema(1, 12),
+  /* La dédicace posée sur la bande.
+   *
+   * SON PLAFOND EST UNE CONTRAINTE DE COMPOSITION, pas de goût : `composition.ts`
+   * coupe la phrase à trois lignes au plus, et au-delà de vingt-quatre mots la
+   * troisième déborde. Le desserrer ici sortirait des portraits dont la
+   * dédicace est tronquée — et c'est le mot qu'on offre à quelqu'un. */
+  motsDeLaPhrase: bornesDeMotsSchema(2, 24),
+}).strict();
+
+export type ReglagesIdees = z.infer<typeof reglagesIdeesSchema>;
+export type ReglagesBriefPortrait = z.infer<typeof reglagesBriefPortraitSchema>;
+
 export type ReglagesMessage = z.infer<typeof reglagesMessageSchema>;
 export type ReglagesPortrait = z.infer<typeof reglagesPortraitSchema>;
 
@@ -343,9 +439,46 @@ function canonique(valeur: unknown): string {
   return `{${entrees.map(([c, v]) => `${JSON.stringify(c)}:${canonique(v)}`).join(",")}}`;
 }
 
+/* Les deux autres générations de texte : TOUT ce qu'elles portent est lu par le
+   modèle. Il n'y a chez elles aucun équivalent du libellé d'une orientation ou
+   du nom d'une gamme — rien qui ne serve qu'à l'écran. La projection est donc
+   l'identité, et l'écrire ainsi le DIT, là où renvoyer `r` tel quel laisserait
+   croire à un oubli. Le jour où l'une gagne un champ d'affichage, c'est ici
+   qu'il faudra l'écarter. */
+export function partieLueParLeModeleIdees(r: ReglagesIdees): unknown {
+  return {
+    consigneCommune: r.consigneCommune,
+    /* NI `gardeFous` NI `champsDuProche` ne se trient — même raison que pour le
+       message : leur ordre est celui dans lequel ils partent dans l'invite. */
+    gardeFous: r.gardeFous,
+    champsDuProche: r.champsDuProche,
+    modele: r.modele,
+    nombreDemande: r.nombreDemande,
+  };
+}
+
+export function partieLueParLeModeleBriefPortrait(r: ReglagesBriefPortrait): unknown {
+  return {
+    consigneCommune: r.consigneCommune,
+    gardeFous: r.gardeFous,
+    champsDuProche: r.champsDuProche,
+    modele: r.modele,
+    motsDuPortrait: r.motsDuPortrait,
+    motsDeLaPhrase: r.motsDeLaPhrase,
+  };
+}
+
 /** La matière dont l'empreinte se calcule. Le hachage lui-même vit au serveur. */
 export function matierePourEmpreinteMessage(r: ReglagesMessage): string {
   return canonique(partieLueParLeModeleMessage(r));
+}
+
+export function matierePourEmpreinteIdees(r: ReglagesIdees): string {
+  return canonique(partieLueParLeModeleIdees(r));
+}
+
+export function matierePourEmpreinteBriefPortrait(r: ReglagesBriefPortrait): string {
+  return canonique(partieLueParLeModeleBriefPortrait(r));
 }
 
 export function matierePourEmpreintePortrait(r: ReglagesPortrait): string {
@@ -616,6 +749,36 @@ const AMBIANCES_DE_DEPART: AmbianceReglage[] = [
  * exemplaires du même texte divergeraient au premier ajustement, et on
  * chercherait longtemps pourquoi l'essai ne rend pas ce que la production
  * rend. */
+/* LES DEUX DÉPARTS REPRENNENT CE QUE LE CODE FAIT DÉJÀ, au nombre près.
+ *
+ * Ils ne sont pas des valeurs « raisonnables » choisies ici : ce sont celles
+ * que `gabarits.ts` applique aujourd'hui en dur. Un semis qui poserait autre
+ * chose changerait le produit au premier démarrage, sans que personne n'ait
+ * publié quoi que ce soit. */
+export function reglagesIdeesDeDepart(): ReglagesIdees {
+  return reglagesIdeesSchema.parse({
+    consigneCommune: "",
+    gardeFous: [],
+    /* L'âge est absent, comme pour le message : « seulement si l'utilisateur
+       l'a demandé ». Le gabarit des idées interdit d'ailleurs de le mentionner
+       sans qu'on le lui fournisse. */
+    champsDuProche: ["relation", "notes", "texte_libre"],
+    modele: "anthropic:claude-opus-5",
+    nombreDemande: IDEES.demandees,
+  });
+}
+
+export function reglagesBriefPortraitDeDepart(): ReglagesBriefPortrait {
+  return reglagesBriefPortraitSchema.parse({
+    consigneCommune: "",
+    gardeFous: [],
+    champsDuProche: ["relation", "notes", "texte_libre"],
+    modele: "anthropic:claude-opus-5",
+    motsDuPortrait: MOTS_DU_PORTRAIT,
+    motsDeLaPhrase: MOTS_PHRASE_PORTRAIT,
+  });
+}
+
 export function reglagesMessageDeDepart(): ReglagesMessage {
   return reglagesMessageSchema.parse({
     consigneCommune: "",
