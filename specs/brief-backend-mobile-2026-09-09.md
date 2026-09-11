@@ -343,6 +343,43 @@ jour où l'établi du message arrivera, la question du chemin se posera.
 > maintenant porter la naissance, et le sélecteur « Pour qui » peut s'ouvrir à
 > soi.
 
+> **Ajout du 11 septembre au soir, après l'implémentation mobile.** Le mobile
+> pose et lit désormais la fiche. Quatre constats en sont sortis, dont deux
+> appellent une décision du serveur.
+>
+> **`/me/persons` rend la fiche de soi parmi les autres, et `total` la compte.**
+> Le mobile l'écarte maintenant des trois écrans qui disent « mes proches », et
+> la garde `apps/mobile/test/proches-sans-soi.test.ts` empêche l'oubli au
+> prochain écran. Mais le filtre est côté client : `total` continue d'annoncer
+> un proche de plus que la liste n'en porte, et la pagination a dû compter les
+> fiches **reçues** plutôt que celles **retenues**, faute de quoi un
+> enregistrement se dédouble à chaque page et le dernier ne vient jamais — la
+> faute a été écrite puis trouvée en relecture, elle se reproduira ailleurs.
+> Un `?includeSelf=false`, ou l'exclusion par défaut avec un `total` d'accord
+> avec elle, dispenserait chaque client de refaire ce calcul et de rater ce
+> piège.
+>
+> **`profile.displayName` est devenu vestigial.** L'en-tête de « Moi » prend
+> celui de la fiche et retombe sur le pseudo ; plus personne ne lit celui du
+> compte. Un champ qu'on écrit sans jamais le lire est un piège pour le
+> suivant — à retirer, ou à dériver de la fiche.
+>
+> **`PUT /me/self` avec une `birthDate` ne crée aucune occurrence** — vérifié à
+> l'appareil deux fois, `/me/occurrences` rend `[]`. **Ce n'est pas une
+> demande** : `recalerAnniversaire` porte `if (!anniversaire) return;`, il
+> recale un anniversaire existant sans en créer, et c'est déjà ainsi pour un
+> proche. Naissance et anniversaire sont deux gestes délibérément distincts —
+> on peut connaître la naissance de quelqu'un sans vouloir en être rappelé.
+> Consigné ici pour que personne ne le reprenne pour un défaut.
+>
+> **`GET /me/self` rend 404 tant que la fiche n'existe pas.** Le mobile le
+> traite comme un état et non comme une panne : la lecture est isolée dans son
+> propre `try/catch` sur chacun des écrans qui la font, sans quoi un compte sans
+> fiche verrait son écran entier retomber en erreur. C'est vivable, mais c'est
+> un piège que chaque client devra éviter séparément, et qui ne se voit qu'à
+> l'exécution. Le point 1 ci-dessous — créer la fiche à l'inscription — le fait
+> disparaître pour tout le monde ; c'est un argument de plus pour lui.
+
 Trouvé à l'appareil le 10 septembre 2026, en cherchant pourquoi « Nouvelle
 wishlist » annonçait « Aucune date à vous pour l'instant » sur un compte qui
 tourne depuis deux semaines.
