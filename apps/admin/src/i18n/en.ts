@@ -1225,6 +1225,8 @@ export const en: typeof fr = {
     sous: "What was produced, and what we thought of it.",
     pourquoi: "The Workshop only shows today. Here are the last hundred trials — enough to look again without paying for the call.",
     filtre: {
+      nature: "Kind",
+      toutesNatures: "All",
       ambiance: "Mood",
       toutesAmbiances: "All",
       sansAmbiance: "No mood",
@@ -1240,6 +1242,12 @@ export const en: typeof fr = {
       discarded: "Set aside",
       publie: "Published",
       nonJuge: "Unjudged",
+    },
+    natures: {
+      portrait: "Portrait",
+      message: "Message",
+      idees: "Gift ideas",
+      portrait_brief: "Portrait brief",
     },
     carte: {
       alt: "Trial result",

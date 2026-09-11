@@ -111,6 +111,14 @@ export const historiquePortraitSchema = z.object({
 export const NATURES_TEXTE = ["message", "idees", "portrait_brief"] as const;
 export type NatureTexte = (typeof NATURES_TEXTE)[number];
 
+/* LES QUATRE NATURES DU STUDIO — l'image, et les trois textes.
+ *
+ * `NATURES_TEXTE` n'en dit que trois parce que les routes des textes n'en
+ * servent que trois. Mais un ESSAI peut porter n'importe laquelle des quatre :
+ * ils vivent tous dans la même table, et la galerie les rend tous. */
+export const NATURES_STUDIO = ["portrait", ...NATURES_TEXTE] as const;
+export type NatureStudio = (typeof NATURES_STUDIO)[number];
+
 /** Les réglages d'une des trois générations de texte, quelle qu'elle soit. */
 export type ReglagesTexte =
   z.infer<typeof reglagesMessageSchema>
@@ -306,6 +314,12 @@ export const verdictEssaiSchema = z.object({
 export const essaiStudioSchema = z.object({
   id: z.string().uuid(),
   configId: z.string().uuid(),
+  /* CE QUE CET ESSAI A ÉPROUVÉ. La galerie rend les quatre natures — elles
+     partagent la table —, et sans ce champ elle ne peut ni les nommer ni les
+     séparer : deux essais du même modèle, l'un pour le portrait, l'autre pour
+     les idées, s'y ressemblent. La déduire de la forme de `sortie` ne suffit
+     pas — les trois natures de texte rendent toutes un message. */
+  nature: z.enum(NATURES_STUDIO),
   profilId: z.string().uuid().nullable(),
   etat: z.enum(ETATS_ESSAI),
   /** Le modèle DEMANDÉ, qui est aussi le seul appelé : l'essai ne replie pas. */

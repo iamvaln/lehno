@@ -45,7 +45,7 @@ const BROUILLON = config("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "draft");
 
 const essai = (sur: Record<string, unknown> = {}) => ({
   id: "44444444-4444-4444-8444-444444444444",
-  configId: BROUILLON.id, profilId: null, etat: "success",
+  configId: BROUILLON.id, nature: "portrait", profilId: null, etat: "success",
   modele: { fournisseur: "anthropic", cle: "anthropic:claude-opus-5" },
   sortie: { cle: "k", url: "https://example.test/p.png" },
   cout: 12, erreur: null, parQui: "sam@lehno.app", quand: "2026-08-30T09:00:00.000Z",
@@ -182,5 +182,67 @@ describe("les essais, sur les données du serveur", () => {
     await ouvrir();
     await waitFor(() => expect(screen.getAllByRole("img", { name: d.carte.alt })).toHaveLength(1));
     expect(screen.queryByLabelText(d.filtre.ambiance)).toBeNull();
+  });
+  /* ─── Les quatre natures ────────────────────────────────────────────────── */
+
+  /* LA GALERIE RENDAIT DÉJÀ LES QUATRE NATURES — elles partagent la table des
+     essais, et `GET trials` n'a pas de filtre. Ce qui manquait était de pouvoir
+     les DIRE : deux essais du même modèle, l'un pour le portrait et l'autre
+     pour les idées, se ressemblaient. La forme de la sortie ne les sépare pas
+     non plus, les trois natures de texte rendant toutes un message. */
+  it("nomme la nature de chaque essai", async () => {
+    serveur([essai({ nature: "idees", sortie: { message: "Trois idées." } })]);
+    await ouvrir();
+
+    expect(await screen.findByText(new RegExp(d.natures.idees))).toBeInTheDocument();
+  });
+
+  it("filtre par nature dès qu'il y en a deux", async () => {
+    serveur([
+      essai({ id: "11111111-1111-4111-8111-111111111111", nature: "portrait" }),
+      essai({
+        id: "22222222-2222-4222-8222-222222222222",
+        nature: "message", ambianceId: null, sortie: { message: "Bon anniversaire." },
+      }),
+    ]);
+    const utilisateur = await ouvrir();
+    await waitFor(() => expect(screen.getByText("Bon anniversaire.")).toBeInTheDocument());
+
+    await utilisateur.selectOptions(screen.getByLabelText(d.filtre.nature), "message");
+
+    await waitFor(() => expect(screen.queryByRole("img", { name: d.carte.alt })).toBeNull());
+    expect(screen.getByText("Bon anniversaire.")).toBeInTheDocument();
+  });
+
+  /* Même raison que pour l'ambiance : un filtre à une seule valeur ne réduit
+     rien, et sa présence fait douter des données. */
+  it("ne propose pas le filtre quand tout est de la même nature", async () => {
+    serveur([essai({ nature: "portrait" })]);
+    await ouvrir();
+    await waitFor(() => expect(screen.getAllByRole("img", { name: d.carte.alt })).toHaveLength(1));
+
+    expect(screen.queryByLabelText(d.filtre.nature)).toBeNull();
+  });
+
+  /* CHANGER DE NATURE REMET L'AMBIANCE. Sans cela, on garderait celle d'une
+     nature qu'on vient de quitter — et comme les textes n'en portent aucune, la
+     galerie s'ouvrirait vide sans dire pourquoi. */
+  it("remet l'ambiance en changeant de nature", async () => {
+    serveur([
+      essai({ id: "11111111-1111-4111-8111-111111111111", nature: "portrait", ambianceId: "papier" }),
+      essai({
+        id: "22222222-2222-4222-8222-222222222222",
+        nature: "message", ambianceId: null, sortie: { message: "Bon anniversaire." },
+      }),
+    ]);
+    const utilisateur = await ouvrir();
+    await waitFor(() => expect(screen.getByText("Bon anniversaire.")).toBeInTheDocument());
+
+    await utilisateur.selectOptions(screen.getByLabelText(d.filtre.ambiance), "papier");
+    await waitFor(() => expect(screen.queryByText("Bon anniversaire.")).toBeNull());
+
+    await utilisateur.selectOptions(screen.getByLabelText(d.filtre.nature), "message");
+
+    expect(await screen.findByText("Bon anniversaire.")).toBeInTheDocument();
   });
 });

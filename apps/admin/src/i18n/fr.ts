@@ -1331,6 +1331,8 @@ export const fr = {
     // déjà vu.
     pourquoi: "L'Atelier ne montre que la journée. Ici, les cent derniers essais — de quoi revoir sans repayer l'appel.",
     filtre: {
+      nature: "Nature",
+      toutesNatures: "Toutes",
       ambiance: "Ambiance",
       toutesAmbiances: "Toutes",
       sansAmbiance: "Sans ambiance",
@@ -1348,6 +1350,17 @@ export const fr = {
       discarded: "Écarté",
       publie: "Publié",
       nonJuge: "Non jugé",
+    },
+    /* LES QUATRE NATURES PARAISSENT ICI, et la galerie les rendait déjà sans
+       les nommer : elles partagent la table des essais. Deux essais du même
+       modèle, l'un pour le portrait et l'autre pour les idées, se
+       ressemblaient — et la forme de la sortie ne les sépare pas, les trois
+       natures de texte rendant toutes un message. */
+    natures: {
+      portrait: "Portrait",
+      message: "Message",
+      idees: "Idées de cadeau",
+      portrait_brief: "Brief du portrait",
     },
     carte: {
       alt: "Résultat de l'essai",

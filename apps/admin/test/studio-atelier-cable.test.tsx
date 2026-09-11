@@ -77,7 +77,7 @@ const CANDIDATS = {
 
 const essai = (sur: Record<string, unknown> = {}) => ({
   id: "44444444-4444-4444-8444-444444444444",
-  configId: CONFIG.id, profilId: PROFIL.id, etat: "success",
+  configId: CONFIG.id, nature: "portrait", profilId: PROFIL.id, etat: "success",
   modele: { fournisseur: "anthropic", cle: "anthropic:claude-opus-5" },
   sortie: { cle: "k", url: "https://example.test/p.png" },
   cout: 12, erreur: null, parQui: "sam@lehno.app", quand: "2026-08-30T09:00:00.000Z",

@@ -312,6 +312,32 @@ describe("administration — la configuration du studio", () => {
     expect(await codeDe(res)).toBe("conflict");
   });
 
+  // ── La nature d'un essai ──────────────────────────────────────────────────
+
+  /* `GET trials` N'A PAS DE FILTRE PAR NATURE, et c'est délibéré : les quatre
+     natures partagent la table, et la galerie vient revoir ce qui a été produit,
+     pas ce qui a été réglé. Ce qui manquait était de pouvoir les DIRE — sans la
+     nature, deux essais du même modèle, l'un pour le portrait et l'autre pour
+     les idées, se ressemblent, et la forme de la sortie ne les sépare pas
+     davantage : les trois natures de texte rendent toutes un message. */
+  it("rend la nature de chaque essai, les quatre mêlées", async () => {
+    const { entete } = await session("admin");
+    const naturelles = ["portrait", "message", "idees", "portrait_brief"] as const;
+    for (const nature of naturelles) {
+      const config = await db.prisma.studioConfig.findFirstOrThrow({
+        where: { kind: nature, state: "published" },
+      });
+      await essaiSur(config.id, "success");
+    }
+
+    const res = await appeler("GET", "/trials", entete);
+    expect(res.status).toBe(200);
+    const corps = (await res.json()) as { items: { nature: string }[] };
+
+    expect([...new Set(corps.items.map((e) => e.nature))].sort())
+      .toEqual(["idees", "message", "portrait", "portrait_brief"]);
+  });
+
   // ── L'enregistrement direct ───────────────────────────────────────────────
 
   /* LA porte de service. Sans ce refus, on modifierait une consigne par le
