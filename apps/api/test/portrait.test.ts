@@ -11,6 +11,7 @@ import { RouteurIAService, type Adaptateur, type ReponseIA } from "../src/ia/rou
 import { CatalogueIAService } from "../src/ia/catalogue.service.js";
 import { StockageMemoire } from "../src/stockage/memoire.adapter.js";
 import { verifierLaSelection } from "../src/studio/selection.js";
+import { echoue, fini } from "./attendre.js";
 
 /**
  * Le portrait, en deux temps.
@@ -131,7 +132,7 @@ describe("le portrait", () => {
   describe("le texte", () => {
     it("produit un portrait en attente d'approbation, sans image", async () => {
       await crediter(5);
-      const portrait = await generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config);
+      const portrait = await fini(generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config));
 
       expect(portrait.status).toBe("generated");
       expect(portrait.imageKey).toBeNull();
@@ -156,7 +157,7 @@ describe("le portrait", () => {
       });
 
       const a = repond(BRIEF);
-      await generation(a).lancerPortrait(awa, proche, selection(), config);
+      await fini(generation(a).lancerPortrait(awa, proche, selection(), config));
 
       expect(a.vu[0]).toContain("aime jardiner");
       expect(a.vu[0]).toContain("À NE JAMAIS ÉVOQUER");
@@ -177,7 +178,7 @@ describe("le portrait", () => {
       });
 
       const a = repond(BRIEF);
-      await generation(a).lancerPortrait(awa, proche, selection(), config);
+      await fini(generation(a).lancerPortrait(awa, proche, selection(), config));
 
       expect(a.vu[0]).toContain("animal : le héron");
       expect(a.vu[0]).toContain("À NE JAMAIS ÉVOQUER");
@@ -188,9 +189,11 @@ describe("le portrait", () => {
 
     it("rend le crédit quand le brief est illisible", async () => {
       await crediter(5);
-      await expect(
+      /* Voir `attendre.ts` : une production ratée ne rejette plus, elle rend
+         le crédit et l'exécution porte sa raison. */
+      await echoue(
         generation(repond("pas du JSON")).lancerPortrait(awa, proche, selection(), config),
-      ).rejects.toThrow();
+      );
       expect(await solde()).toBe(5);
     });
 
@@ -199,9 +202,9 @@ describe("le portrait", () => {
     it("rend le crédit quand le brief n'a pas assez de mots", async () => {
       await crediter(5);
       const maigre = JSON.stringify({ mots: ["le jardin"], phrase: "Une phrase." });
-      await expect(
+      await echoue(
         generation(repond(maigre)).lancerPortrait(awa, proche, selection(), config),
-      ).rejects.toThrow();
+      );
       expect(await solde()).toBe(5);
     });
   });
@@ -209,7 +212,7 @@ describe("le portrait", () => {
   describe("l'approbation", () => {
     const unPortrait = async () => {
       await crediter(5);
-      return generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config);
+      return fini(generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config));
     };
 
     /* LE CAS QUI JUSTIFIE TOUTE LA TÂCHE DE BRIEF.
@@ -250,7 +253,7 @@ describe("le portrait", () => {
         orientation: "notre_relation", visual: "illustration", illustrationFamily: "abstrait",
         composition: "papier",
       });
-      const portrait = await generation(repond(BRIEF)).lancerPortrait(awa, proche, abstrait, config);
+      const portrait = await fini(generation(repond(BRIEF)).lancerPortrait(awa, proche, abstrait, config));
       expect(portrait.ambianceId).toBe("abstrait");
 
       const image = repond(PNG_MINUSCULE);

@@ -135,20 +135,20 @@ export class GenerationController {
         corps.studioSelection,
       );
 
-      const portrait = await this.generation.lancerPortrait(req.userId, corps.personId, selection, publie.id, {
+      const { execution } = await this.generation.lancerPortrait(req.userId, corps.personId, selection, publie.id, {
         ...(corps.language === undefined ? {} : { langue: corps.language }),
         ...(corps.briefText === undefined ? {} : { texteLibre: corps.briefText }),
         ...(corps.senderNote === undefined ? {} : { motDeLExpediteur: corps.senderNote }),
         ...(corps.idempotencyKey === undefined ? {} : { cle: corps.idempotencyKey }),
       });
-      return this.rendre(await this.generation.lire(req.userId, portrait.actionRunId) as LigneExecution);
+      return this.rendre(await this.generation.lire(req.userId, execution.id) as LigneExecution);
     }
 
     if (!corps.occurrenceId)
       throw new AppError("validation_failed", "an occurrence is required");
 
     if (corps.kind === "gift_ideas") {
-      const jeu = await this.generation.lancerIdees(req.userId, corps.occurrenceId, {
+      const { execution } = await this.generation.lancerIdees(req.userId, corps.occurrenceId, {
         ...(corps.language === undefined ? {} : { langue: corps.language }),
         ...(corps.briefText === undefined ? {} : { texteLibre: corps.briefText }),
         /* Les bornes seulement. LA DEVISE EST POSÉE PAR LE SERVICE, et le
@@ -161,7 +161,7 @@ export class GenerationController {
         }),
         ...(corps.idempotencyKey === undefined ? {} : { cle: corps.idempotencyKey }),
       });
-      return this.rendre(await this.generation.lire(req.userId, jeu.actionRunId) as LigneExecution);
+      return this.rendre(await this.generation.lire(req.userId, execution.id) as LigneExecution);
     }
 
     /* LA GARDE EXHAUSTIVE. `corps.kind` ne peut plus valoir que `wish_message`
@@ -179,7 +179,11 @@ export class GenerationController {
        contrat commun devra porter l'orientation autrement. */
     const orientation = (corps.tone ?? "notre_relation") as Orientation;
 
-    const ligne = await this.generation.lancerMessage(
+    /* ON NE LIT QUE `execution`, jamais `fini` : c'est tout l'objet du
+       changement. La production tourne derrière, et la réponse part avec
+       l'identifiant et l'état « en cours » — ce que le contrat annonce depuis
+       le premier jour, et ce que le sondage du mobile attend. */
+    const { execution } = await this.generation.lancerMessage(
       req.userId, corps.occurrenceId, orientation,
       {
         ...(corps.language === undefined ? {} : { langue: corps.language }),
@@ -189,7 +193,7 @@ export class GenerationController {
         ...(corps.idempotencyKey === undefined ? {} : { cle: corps.idempotencyKey }),
       },
     );
-    return this.rendre(await this.generation.lire(req.userId, ligne.actionRunId) as LigneExecution);
+    return this.rendre(await this.generation.lire(req.userId, execution.id) as LigneExecution);
   }
 
   @Get()

@@ -8,6 +8,7 @@ import { StudioConfigurationService } from "../src/studio/configuration.service.
 import { RouteurIAService, PanneFournisseur, RefusModele, type Adaptateur, type ReponseIA } from "../src/ia/routeur.service.js";
 import { CatalogueIAService } from "../src/ia/catalogue.service.js";
 import { AmorceStudioService } from "../src/studio/amorce.service.js";
+import { fini } from "./attendre.js";
 
 /* La génération d'un message.
  *
@@ -51,12 +52,15 @@ describe("la génération d'un message", () => {
       new StudioConfigurationService(db.prisma as never, new AuditService(db.prisma as never)),
     );
 
+  /* `fini` ATTEND CE QUE LA PRODUCTION N'ATTEND PLUS. Le lancement rend
+     l'exécution aussitôt ; ces cas éprouvent ce qui en sort, donc ils attendent
+     la fin. Voir `attendre.ts`. */
   const lancer = (
     adaptateurs: Record<string, Adaptateur>, orientation = "ma_fierte", cle?: string,
   ) =>
-    fabrique(adaptateurs).lancerMessage(
+    fini(fabrique(adaptateurs).lancerMessage(
       awa, occurrence, orientation as never, cle === undefined ? {} : { cle },
-    );
+    ));
 
   beforeAll(async () => { db = await withDatabase(); }, 180_000);
   afterAll(async () => { await db.close(); });
@@ -221,6 +225,116 @@ describe("la génération d'un message", () => {
     });
   });
 
+  /* LE LANCEMENT REND LA MAIN AVANT LA PRODUCTION — design du portrait mobile,
+   * §B.
+   *
+   * Le contrat le dit depuis toujours : « le lancement débite et rend aussitôt
+   * un identifiant, sans attendre la production ». L'implémentation tenait les
+   * quarante secondes de l'appel au modèle — fragile sur un réseau mobile, et
+   * le sondage écrit côté application, à repli 2 s puis 8 s, tournait à vide.
+   *
+   * Ces cas gardent les trois choses qui rendent ça tenable : l'exécution part
+   * tout de suite, elle aboutit derrière, et un échec rend le crédit SANS
+   * rejeter — relever ferait tomber le processus Node entier, puisque personne
+   * n'attend plus cette promesse. */
+  describe("le lancement n'attend plus la production", () => {
+    it("rend l'exécution avant que le modèle ait répondu", async () => {
+      await crediter(5);
+
+      /* Un adaptateur qu'on TIENT : il ne répond que lorsqu'on le décide. Sans
+         lui, une production trop rapide rendrait ce cas vert même si le
+         lancement attendait encore.
+
+         LA PORTE SE CONSTRUIT ICI, PAS DANS L'ADAPTATEUR. Elle y était, et
+         `liberer` n'existait donc qu'une fois `appeler` atteint — c'est-à-dire
+         APRÈS le retour du lancement, en arrière-plan. Sous charge, on
+         l'appelait avant qu'il soit affecté, et le cas tombait sur « liberer
+         n'est pas une fonction ». Vert seul, rouge dans la suite entière : la
+         pire forme d'échec, celle qu'on met sur le compte de la machine. */
+      let liberer!: () => void;
+      const porte = new Promise<void>((resolve) => { liberer = resolve; });
+      const tenu: Adaptateur = {
+        async appeler(): Promise<ReponseIA> {
+          await porte;
+          return { contenu: SORTIE };
+        },
+      };
+
+      const { execution, fini } = await fabrique({ anthropic: tenu }).lancerMessage(
+        awa, occurrence, "ma_fierte" as never, {},
+      );
+
+      // On a la main, et le modèle n'a pas répondu.
+      expect(execution.id).toMatch(/^[0-9a-f-]{36}$/);
+      const pendant = await db.prisma.actionRun.findUniqueOrThrow({ where: { id: execution.id } });
+      expect(pendant.status).toBe("pending");
+      expect(await db.prisma.generatedMessage.count({ where: { actionRunId: execution.id } }))
+        .toBe(0);
+
+      // Puis la production aboutit, derrière.
+      liberer();
+      await fini;
+      const apres = await db.prisma.actionRun.findUniqueOrThrow({ where: { id: execution.id } });
+      expect(apres.status).toBe("success");
+      expect(await db.prisma.generatedMessage.count({ where: { actionRunId: execution.id } }))
+        .toBe(1);
+    });
+
+    /* CE QUI CHANGE VRAIMENT. Une production ratée ne rejette plus : la requête
+       est déjà partie. Ce que l'utilisateur voit est inchangé — son crédit
+       revient, et l'exécution porte la raison. */
+    it("rend le crédit sans rejeter quand le fournisseur tombe", async () => {
+      await crediter(5);
+
+      const { execution, fini } = await fabrique({ anthropic: tombe() }).lancerMessage(
+        awa, occurrence, "ma_fierte" as never, {},
+      );
+      await expect(fini).resolves.toBeNull();
+
+      expect(await solde()).toBe(5);
+      const apres = await db.prisma.actionRun.findUniqueOrThrow({ where: { id: execution.id } });
+      expect(apres.status).toBe("failure");
+      expect(apres.failureCode).not.toBeNull();
+    });
+
+    /* LE RATTRAPAGE, pour ce que même le `catch` ne voit pas : un arrêt du
+       serveur entre le débit et la fin. L'exécution reste `pending` pour
+       toujours, et le crédit avec. Le balayeur passe toutes les dix minutes. */
+    it("rattrape une exécution restée en route, et rend le crédit", async () => {
+      await crediter(5);
+
+      const { execution } = await fabrique({ anthropic: repond() }).lancerMessage(
+        awa, occurrence, "ma_fierte" as never, {},
+      );
+      /* On la VIEILLIT au-delà du seuil plutôt que d'attendre une heure. C'est
+         la date de création que le balayeur regarde. */
+      await db.prisma.actionRun.update({
+        where: { id: execution.id },
+        data: { status: "pending", createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+      });
+
+      expect(await service.reconcilierLesEnCours()).toBeGreaterThanOrEqual(1);
+      expect(await solde()).toBe(5);
+    });
+
+    /* IL NE REMBOURSE PAS DEUX FOIS. La garde porte sur `pending` : une
+       exécution déjà aboutie n'est pas touchée, et un balayage rejoué non plus.
+       Sans elle, un passage toutes les dix minutes créditerait sans fin. */
+    it("ne rembourse pas une exécution qui a abouti", async () => {
+      await crediter(5);
+      await lancer({ anthropic: repond() });
+      expect(await solde()).toBe(4);
+
+      await db.prisma.actionRun.updateMany({
+        data: { createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+      });
+      await service.reconcilierLesEnCours();
+      await service.reconcilierLesEnCours();
+
+      expect(await solde()).toBe(4);
+    });
+  });
+
   describe("ce qui est produit", () => {
     it("range le message et sa version courte", async () => {
       await crediter(5);
@@ -333,12 +447,25 @@ describe("la génération d'un message", () => {
     // Et la seconde demande REJOINT : elle rend le message déjà produit plutôt
     // que d'en fabriquer un autre. C'est ce qui distingue « rejoindre » de
     // « refuser ».
-    it("rend le message déjà produit plutôt que d'en refaire un", async () => {
+    /* LA SECONDE DEMANDE REJOINT LA PREMIÈRE, elle ne produit RIEN.
+     *
+     * Elle rendait le brouillon déjà écrit, du temps où le lancement attendait
+     * la production. Il rend la main avant, maintenant : une relance sous la
+     * même clé retrouve la même EXÉCUTION, et le client lit le résultat en
+     * l'interrogeant — ce que son sondage fait déjà.
+     *
+     * Ce qui compte n'a pas changé : un seul brouillon, un seul débit. */
+    it("rejoint l'exécution en cours plutôt que d'en refaire une", async () => {
       await crediter(5);
-      const premier = await lancer({ anthropic: repond() }, "ma_fierte", "clic-2");
-      const second = await lancer({ anthropic: repond() }, "ma_fierte", "clic-2");
-      expect(second.id).toBe(premier.id);
+      const premier = await service.lancerMessage(awa, occurrence, "ma_fierte" as never, { cle: "clic-2" });
+      await premier.fini;
+
+      const second = await service.lancerMessage(awa, occurrence, "ma_fierte" as never, { cle: "clic-2" });
+      expect(second.execution.id).toBe(premier.execution.id);
+      // Rien à produire : la première s'en est chargée.
+      await expect(second.fini).resolves.toBeNull();
       expect(await db.prisma.generatedMessage.count()).toBe(1);
+      expect(await solde()).toBe(4);
     });
 
     /* La seconde demande n'appelle AUCUN modèle. C'est là qu'est l'économie
@@ -347,9 +474,15 @@ describe("la génération d'un message", () => {
     it("n'appelle aucun modèle une seconde fois", async () => {
       await crediter(5);
       const modele = repond();
-      await lancer({ anthropic: modele }, "ma_fierte", "clic-3");
+      await fini(fabrique({ anthropic: modele }).lancerMessage(
+        awa, occurrence, "ma_fierte" as never, { cle: "clic-3" },
+      ));
       const appelsApresLePremier = modele.appels;
-      await lancer({ anthropic: modele }, "ma_fierte", "clic-3");
+
+      const second = await fabrique({ anthropic: modele }).lancerMessage(
+        awa, occurrence, "ma_fierte" as never, { cle: "clic-3" },
+      );
+      await second.fini;
       expect(modele.appels).toBe(appelsApresLePremier);
     });
 
