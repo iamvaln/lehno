@@ -70,6 +70,7 @@ export const en: typeof fr = {
     essais: "The trials",
     studioService: "Live settings",
     gabarits: "Production templates",
+    studioProfils: "Simulation profiles",
     offres: "Offers and growth",
     metriques: "Metrics",
     audit: "Audit log",
@@ -141,6 +142,43 @@ export const en: typeof fr = {
       titreModification: "Edit this reason",
       consequence: "It will be offered to the listed actions, on save. The audit log keeps this action and its reason.",
       motifs: ["New case met", "Label to fix", "Reason no longer useful"],
+    },
+  },
+  studioProfils: {
+    titre: "Simulation profiles",
+    sous: "The studio's test tubes: made-up records a configuration is tried on before going into service.",
+    renommer: "Rename",
+    supprimer: "Delete",
+    sensible: "Sensitive case",
+    ordinaire: "Ordinary",
+    col: { libelle: "Profile", nature: "Nature", notes: "Notes", creeLe: "Created" },
+    couverture: {
+      complete: "The set covers every axis.",
+      manque: "No profile covers:",
+    },
+    axes: {
+      fiche_riche: "rich record", fiche_pauvre: "sparse record",
+      nom_court: "short name", nom_long: "long name",
+      langue_fr: "French", langue_en: "English",
+      relation_familiale: "family tie", relation_professionnelle: "work tie",
+      cas_sensible: "sensitive case",
+    },
+    champs: {
+      libelle: "Label",
+      sensible: "Sensitive case",
+      sensibleAide: "A death, a separation. The studio refuses cheerful angles on these profiles — that is what the trial must test.",
+    },
+    vide: {
+      titre: "No profile",
+      texte: "Without a test tube no trial is possible: the Workshop has nothing to apply a configuration to.",
+    },
+    dialogueRenommer: {
+      titre: "Rename this profile",
+      consequence: "The test tube's content does not change — only its name and its nature.",
+    },
+    dialogueSupprimer: {
+      titre: "Delete this profile",
+      consequence: "Trials that used it remain, with their cost and their verdict; they only lose the link to the record.",
     },
   },
   confirmation: {
