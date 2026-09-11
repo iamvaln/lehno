@@ -3,25 +3,31 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
-  PERSON_GENDERS, profileSchema, usernameAvailabilitySchema, type Profile,
+  PERSON_GENDERS, personSchema, profileSchema, usernameAvailabilitySchema, type Profile,
 } from "@lehno/contracts";
 import { nativeFont, nativeSpace } from "@lehno/tokens";
 import {
   Avatar, Banner, Button, LoadingState, ScreenHeader, SectionLabel, TextField,
   useTheme
 } from "@lehno/ui-native";
+import { Bascule } from "../../composants/Bascule.js";
 import { Choix } from "../../composants/Choix.js";
+import { Pastille } from "../../composants/Pastille.js";
+import { RangeeDeJours } from "../../composants/RangeeDeJours.js";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { CLES_DE_GENRE, CLES_DE_THEME, THEMES_ORDONNES } from "../../lib/libelles.js";
 import { poseLApparence } from "../../lib/apparence.js";
+import { naissanceLue, type SaisieDeNaissance } from "../../lib/carnet.js";
+import { nomsDesMois } from "../../lib/evenement.js";
 import {
   corpsDeMiseAJour, doitVerifierLaDisponibilite, peutEnregistrer, pseudoRecevable,
   type SaisieDeProfil,
 } from "../../lib/profil.js";
 import { choisirUnePhoto, envoyerLaPhoto, retirerLaPhoto } from "../../lib/photo-de-profil.js";
 import { imageLocale, oublierLesAutres } from "../../lib/images-locales.js";
+import { ficheAEnvoyer } from "../../lib/soi.js";
 
 /* Mon profil — §3.23.
  *
@@ -65,6 +71,14 @@ export default function Profil() {
      pour rien. Nul tant qu'on ne l'a pas — l'avatar montre alors ses initiales,
      ce qui est un état, pas une erreur. */
   const [photoLocale, setPhotoLocale] = useState<string | null>(null);
+  /* LA FICHE DE SOI, à part du profil : elle vit sur `/me/self`, pas sur
+     `/me/profile`, et peut ne pas exister encore. Deux états neufs plutôt que
+     de les glisser dans `SaisieDeProfil` — ce type sert aussi `corpsDeMiseAJour`,
+     qui ne doit rien savoir de la fiche. */
+  const [nomDUsage, setNomDUsage] = useState("");
+  const [naissance, setNaissance] = useState<SaisieDeNaissance>(
+    { jour: null, mois: null, annee: null, anneeConnue: true },
+  );
 
   /* Le refus de permission n'est pas une panne : il est durable, et l'écran dit
      où le reprendre plutôt que de laisser un bouton qui n'ouvre rien.
@@ -131,6 +145,14 @@ export default function Profil() {
         langue: lu.uiLanguage,
         theme: lu.theme,
       });
+      /* LA FICHE N'EXISTE PEUT-ÊTRE PAS, et c'est un état, pas une panne :
+         `GET /me/self` rend 404 tant que personne ne l'a posée. On lit alors
+         une naissance vide, et l'écran se comporte comme avant. */
+      try {
+        const fiche = personSchema.parse(await appel<unknown>("/me/self"));
+        setNomDUsage(fiche.callingName ?? "");
+        setNaissance(naissanceLue(fiche.birthDate, fiche.birthYearKnown));
+      } catch { /* Pas de fiche : les champs restent vides. */ }
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
@@ -177,6 +199,25 @@ export default function Profil() {
         method: "PATCH",
         body: JSON.stringify(corpsDeMiseAJour(saisie, profil)),
       });
+      /* LA FICHE SUIT LE COMPTE, et dans cet ordre : le genre qu'elle exige
+         vient d'être enregistré. Elle naît ici, au premier enregistrement du
+         profil, sans que personne ait eu à comprendre qu'elle existait.
+
+         Son échec ne défait pas le profil : le compte est écrit, c'est le
+         geste que la personne a demandé. La fiche attend le prochain passage —
+         elle n'a rien d'urgent, et un profil refusé pour elle serait
+         incompréhensible. */
+      const fiche = ficheAEnvoyer({
+        nom: saisie.nom, nomDUsage, genre: saisie.genre,
+        langue: saisie.langue, naissance,
+      });
+      if (fiche !== null) {
+        try {
+          await appel<unknown>("/me/self", {
+            method: "PUT", body: JSON.stringify(fiche),
+          });
+        } catch { /* Voir ci-dessus : le profil est enregistré, c'est l'essentiel. */ }
+      }
       /* L'INTERFACE SUIT LE RÉGLAGE, sinon il ne règle rien de ce qu'on voit.
          Sans cet appel, changer « Langue » ne changeait QUE la langue des
          courriels — en silence, sur un écran qui restait dans l'autre langue.
@@ -315,6 +356,54 @@ export default function Profil() {
           <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilGenreAide}</Text>
         </View>
 
+        <TextField
+          label={t.profilNomDUsage}
+          value={nomDUsage}
+          hint={t.profilNomDUsageAide}
+          onChangeText={setNomDUsage}
+        />
+
+        <View>
+          {/* JOUR PUIS MOIS, comme la fiche d'un proche et l'écran d'événement
+              les posent. Un sélecteur natif exigerait une année — et c'est
+              justement elle qu'on ignore le plus souvent. */}
+          <SectionLabel>{t.profilVotreNaissance}</SectionLabel>
+          <Text style={[styles.aide, { color: couleurs.textSecondary }]}>{t.evtJour}</Text>
+          <RangeeDeJours
+            actif={naissance.jour}
+            choisit={(j) => setNaissance({ ...naissance, jour: j })}
+          />
+          <Text style={[styles.aide, { color: couleurs.textSecondary }]}>{t.evtMois}</Text>
+          <View style={styles.pastilles}>
+            {nomsDesMois(langue).map((nom, i) => (
+              <Pastille
+                key={nom}
+                actif={naissance.mois === i + 1}
+                libelle={nom}
+                appuie={() => setNaissance({ ...naissance, mois: i + 1 })}
+              />
+            ))}
+          </View>
+          <View style={{ marginTop: nativeSpace[12] }}>
+            <Bascule
+              actif={!naissance.anneeConnue}
+              libelle={t.identAnneeInconnue}
+              onBascule={() => setNaissance({ ...naissance, anneeConnue: !naissance.anneeConnue })}
+            />
+          </View>
+          {naissance.anneeConnue ? (
+            <TextField
+              label={t.identAnnee}
+              nature="annee"
+              value={naissance.annee === null ? "" : String(naissance.annee)}
+              onChangeText={(v) => setNaissance({
+                ...naissance, annee: v === "" ? null : Number(v),
+              })}
+            />
+          ) : null}
+          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilVotreNaissanceAide}</Text>
+        </View>
+
         <View>
           <SectionLabel>{t.champTheme}</SectionLabel>
           {/* TROIS choix, pas deux. « Système » est la valeur par défaut au
@@ -353,4 +442,5 @@ const styles = StyleSheet.create({
   champs: { gap: nativeSpace[14] },
   lecture: { fontFamily: nativeFont.bodyRegular, fontSize: 14.5, marginTop: nativeSpace[6] },
   aide: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[6] },
+  pastilles: { flexDirection: "row", flexWrap: "wrap", gap: nativeSpace[8] },
 });
