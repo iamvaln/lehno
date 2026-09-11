@@ -243,11 +243,19 @@ describe("la génération d'un message", () => {
 
       /* Un adaptateur qu'on TIENT : il ne répond que lorsqu'on le décide. Sans
          lui, une production trop rapide rendrait ce cas vert même si le
-         lancement attendait encore. */
-      let liberer: (() => void) | null = null;
+         lancement attendait encore.
+
+         LA PORTE SE CONSTRUIT ICI, PAS DANS L'ADAPTATEUR. Elle y était, et
+         `liberer` n'existait donc qu'une fois `appeler` atteint — c'est-à-dire
+         APRÈS le retour du lancement, en arrière-plan. Sous charge, on
+         l'appelait avant qu'il soit affecté, et le cas tombait sur « liberer
+         n'est pas une fonction ». Vert seul, rouge dans la suite entière : la
+         pire forme d'échec, celle qu'on met sur le compte de la machine. */
+      let liberer!: () => void;
+      const porte = new Promise<void>((resolve) => { liberer = resolve; });
       const tenu: Adaptateur = {
         async appeler(): Promise<ReponseIA> {
-          await new Promise<void>((resolve) => { liberer = resolve; });
+          await porte;
           return { contenu: SORTIE };
         },
       };
@@ -264,7 +272,7 @@ describe("la génération d'un message", () => {
         .toBe(0);
 
       // Puis la production aboutit, derrière.
-      liberer!();
+      liberer();
       await fini;
       const apres = await db.prisma.actionRun.findUniqueOrThrow({ where: { id: execution.id } });
       expect(apres.status).toBe("success");
