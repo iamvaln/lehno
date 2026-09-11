@@ -178,20 +178,28 @@ export default function Note() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.plein}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <View style={c.scene}>
-        {/* Le voile ferme : une feuille qui monte doit pouvoir se refuser sans
-            viser un bouton, et fermer vaut annuler. */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.retour}
-          onPress={() => routeur.back()}
-          style={c.voile}
-        />
+    /* LE CLAVIER POUSSE LA FEUILLE, PAS LA SCÈNE.
+     *
+     * La scène recouvre l'écran en ABSOLU — c'est ce qui permet aux feuilles
+     * posées sur une page de ne pas lui voler sa hauteur. Un enfant absolu
+     * ignore le retrait que `KeyboardAvoidingView` ajoute : enveloppant la
+     * scène, il ne poussait plus rien, et la feuille restait sous le clavier
+     * avec « Pour qui », « À quelle occasion » et « Enregistrer ». Vu à
+     * l'appareil. Il vit donc DEDANS, entre le voile et la feuille. */
+    <View style={c.scene}>
+      {/* Le voile ferme : une feuille qui monte doit pouvoir se refuser sans
+          viser un bouton, et fermer vaut annuler. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t.retour}
+        onPress={() => routeur.back()}
+        style={c.voile}
+      />
 
+      <KeyboardAvoidingView
+        style={styles.pousse}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <View
           style={[c.feuille, { maxHeight: height - insets.top - RESPIRATION_DU_HAUT }]}
           accessibilityViewIsModal
@@ -424,8 +432,8 @@ export default function Note() {
             )}
           </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -435,7 +443,9 @@ export default function Note() {
    vider la note. */
 
 const styles = StyleSheet.create({
-  plein: { flex: 1 },
+  // La colonne qui porte la feuille et que le clavier pousse : elle grandit
+  // pour remplir la scène, et sa feuille se plaque en bas.
+  pousse: { flex: 1, justifyContent: "flex-end" },
   // Le corps CÈDE, le pied non : sans quoi une longue liste de proches
   // pousserait le bouton plein hors de la feuille.
   corpsDefilant: { flexShrink: 1 },
