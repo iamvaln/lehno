@@ -344,7 +344,7 @@ jour où l'établi du message arrivera, la question du chemin se posera.
 > soi.
 
 > **Ajout du 11 septembre au soir, après l'implémentation mobile.** Le mobile
-> pose et lit désormais la fiche. Quatre constats en sont sortis, dont deux
+> pose et lit désormais la fiche. Cinq constats en sont sortis, dont deux
 > appellent une décision du serveur.
 >
 > **`/me/persons` rend la fiche de soi parmi les autres, et `total` la compte.**
