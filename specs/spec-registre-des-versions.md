@@ -287,12 +287,30 @@ chiffre à côté comme contexte, jamais comme question.
 donc ses utilisateurs passent du « mettez à jour » à… « mettez à jour » — mais on
 perd la trace de ce qui a existé. `isRetired` dit la même chose et se relit.
 
+### 7.4 Où c'est
+
+`apps/admin/src/pages/Versions.tsx`, branché sur les trois routes de
+`admin/app-versions`. Ce que les épreuves de `apps/admin/test/app-versions.test.tsx`
+tiennent, et qui répond point par point au §7.2 :
+
+- la conséquence du geste est **dite**, et le compteur la **suit** — jamais à sa
+  place ;
+- une version déclassée n'offre **plus aucun geste** : elle n'est déjà plus
+  servie, et forcer depuis elle serait un geste sans effet ;
+- le filtre de plateforme part au **serveur**, pas au tableau déjà chargé ;
+- le **code** du motif part avec la phrase. Le registre range les siens sous
+  `app_version_register` et `app_version_update`, et le serveur refuse un geste
+  dont il connaît les motifs et ne reçoit pas le code.
+
 ---
 
 ## 8. Ce qui reste à trancher
 
-1. **Le compteur d'appareils avant de forcer** (§7.2). C'est le point qui décide
-   si ce lot embarque un agrégat.
+1. ~~**Le compteur d'appareils avant de forcer** (§7.2).~~ **Tranché le 13
+   septembre.** Le compteur existe et il est rendu avec chaque ligne, mais il
+   **n'informe pas la décision de forcer** : on force pour une rupture de
+   compatibilité ou un correctif de sécurité obligatoire, et alors tout le monde
+   doit passer. Il dit l'ampleur de ce qui suit. Le §7.2 porte le raisonnement.
 2. **Le web est-il concerné ?** Un site se recharge tout seul : le 426 n'y a de
    sens que pour une application installée. **Proposé** : le registre couvre le
    web pour la traçabilité, mais `forcesUpdate` n'y déclenche qu'un rechargement
