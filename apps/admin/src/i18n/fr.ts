@@ -439,7 +439,7 @@ export const fr = {
   modeles: {
     titre: "Modèles d'IA",
     sous: "Ce qu'on appelle pour chaque tâche, dans quel ordre, et ce que ça coûte au fournisseur.",
-    col: { fournisseur: "Fournisseur", modele: "Modèle", capacite: "Sait faire", etat: "État", emplois: "Où il sert", entree: "Coût entrée", sortie: "Coût sortie" },
+    col: { fournisseur: "Fournisseur", modele: "Modèle", capacite: "Sait faire", etat: "État", emplois: "Où il sert", rejets: "Rejetés", entree: "Coût entrée", sortie: "Coût sortie" },
     capacites: { texte: "Texte", image: "Image" },
     /* Trois états, et surtout pas deux. « Éteint » est la décision d'un humain,
        « momentanément injoignable » le constat du disjoncteur. Ils se réparent
@@ -449,6 +449,15 @@ export const fr = {
     // Un coût absent n'est pas un coût nul : c'est un modèle qu'on n'a pas
     // encore tarifé. « 0 » le ferait passer pour gratuit dans un calcul de marge.
     sansCout: "Non tarifé",
+    /* CE QUE SES PRODUCTIONS ONT VALU. Le dénominateur est le nombre d'AVIS,
+       jamais celui des productions : les non-jugés ne sont pas des satisfaits.
+       Les deux chiffres se lisent ensemble — le taux dit ce qu'en pensent ceux
+       qui ont parlé, le second dit combien peu ont parlé. */
+    tauxRejet: "{taux} % — {rejets} rejets sur {avis} avis, {productions} productions",
+    // « Trop tôt » et non zéro : le premier rejet d'un modèle neuf l'afficherait
+    // à cent pour cent, et quelqu'un l'éteindrait sur un accident.
+    tropTot: "Trop tôt — {avis} avis sur {seuil} attendus",
+    rienProduit: "Rien produit",
     sansEmploi: "Dans aucune chaîne",
     unite: "$ / M jetons",
     taches: {

@@ -50,7 +50,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  canauxSchema, catalogueIaSchema, chainesIaSchema, comptesAdminSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  canauxSchema, catalogueIaSchema, mesuresDesModelesSchema, chainesIaSchema, comptesAdminSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
   urlMediaRenduSchema, motifsAdminSchema,
   pageAssistanceSchema, pageContactSchema, pageAttenteSchema, pageRetoursSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
@@ -578,6 +578,11 @@ export function App(): ReactNode {
       ? {
         catalogue: await api.appeler("/admin/ai-models", { schema: catalogueIaSchema }),
         chaines: await api.appeler("/admin/ai-routes", { schema: chainesIaSchema }),
+        /* CE QUE LES PRODUCTIONS DE CHAQUE MODÈLE ONT VALU. Route à part du
+           catalogue : ces comptes traversent trois tables, et les fondre
+           ferait payer l'agrégat à qui vient seulement basculer un
+           interrupteur. */
+        mesures: await api.appeler("/admin/ai-models/metrics", { schema: mesuresDesModelesSchema }),
       }
       : null),
     [section, tourModeles],
@@ -1588,6 +1593,8 @@ export function App(): ReactNode {
             langue={langue}
             modeles={charge.catalogue.items}
             chaines={charge.chaines.items}
+            mesures={charge.mesures.modeles}
+            seuil={charge.mesures.seuil}
             onReordonner={(tache, modeleIds, motif) => {
               void (async () => {
                 try {
