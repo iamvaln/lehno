@@ -1,7 +1,9 @@
 import {
-  Controller, Get, HttpCode, Inject, Param, ParseUUIDPipe, Post, Req, UseGuards,
+  Body, Controller, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards,
 } from "@nestjs/common";
-import type { DepotPhotoSource, Portrait } from "@lehno/contracts";
+import { avisSchema } from "@lehno/contracts";
+import type { AvisInput, DepotPhotoSource, Portrait } from "@lehno/contracts";
+import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { Feature } from "../flags/feature.decorator.js";
 import { FeatureGuard } from "../flags/feature.guard.js";
@@ -70,6 +72,18 @@ export class PortraitController {
      IDEMPOTENT — un portrait déjà approuvé rend le sien plutôt qu'une seconde
      image, parce que deux frappes sur le même bouton sont la chose la plus
      banale du monde sur un téléphone. */
+  /* PATCH et non POST : on pose un avis sur une production qui existe, on ne
+     crée rien. Même chemin et même corps que sur une idée — une seule forme
+     d'avis dans toute l'API. */
+  @Patch(":id/feedback")
+  noter(
+    @Req() req: AuthedRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(avisSchema)) corps: AvisInput,
+  ) {
+    return this.portraits.noter(req.userId, id, corps.feedback);
+  }
+
   @Post(":id/approve")
   approuver(
     @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,

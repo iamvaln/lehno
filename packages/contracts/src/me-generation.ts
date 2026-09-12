@@ -288,11 +288,25 @@ export type GeneratedIdeaSet = z.infer<typeof generatedIdeaSetSchema>;
 
 /** Ce qu'on porte sur une idée. `null` retire l'avis — un avis se change et se
  *  reprend, sans quoi un doigt qui glisse serait définitif. */
-export const ideaFeedbackSchema = z.object({
+/* L'AVIS SUR UNE PRODUCTION — une seule forme, partout.
+ *
+ * Les idées le portaient les premières, d'où l'ancien nom. Le portrait et le
+ * message le portent désormais aussi, et la forme est la même : un pouce, ou
+ * son retrait. En écrire une seconde pour les deux autres ferait deux vérités
+ * à tenir d'accord, et l'une prendrait un jour un troisième cran que l'autre
+ * n'aurait pas.
+ *
+ * `null` RETIRE l'avis : un doigt qui glisse serait sinon définitif, et une
+ * note qu'on ne peut pas corriger est une note qu'on cesse de donner. */
+export const avisSchema = z.object({
   feedback: z.enum(["up", "down"]).nullable(),
 }).strict();
 
-export type IdeaFeedbackInput = z.infer<typeof ideaFeedbackSchema>;
+export type AvisInput = z.infer<typeof avisSchema>;
+
+/** L'ancien nom, gardé : il est câblé au contrat publié et à la route des idées. */
+export const ideaFeedbackSchema = avisSchema;
+export type IdeaFeedbackInput = AvisInput;
 
 /**
  * Ce que rend le lancement, puis chaque interrogation.

@@ -8,6 +8,7 @@ import { AuditService } from "../src/admin/audit.service.js";
 import { StudioConfigurationService } from "../src/studio/configuration.service.js";
 import { RouteurIAService, type Adaptateur, type ReponseIA } from "../src/ia/routeur.service.js";
 import { CatalogueIAService } from "../src/ia/catalogue.service.js";
+import { reglagesIdeesDeDepart } from "@lehno/contracts";
 import { echoue, fini } from "./attendre.js";
 
 /**
@@ -114,6 +115,39 @@ describe("les idées de cadeaux", () => {
       expect(jeu.ideas.map((i) => i.position)).toEqual([0, 1, 2, 3, 4]);
       expect(jeu.ideas[0]!.label).toBe("Idée 1");
       expect(await solde()).toBe(4);
+    });
+
+    /* LA VERSION QUI A PRODUIT LE JEU — sur le JEU, jamais sur chaque idée.
+     *
+     * Une génération emploie une seule configuration ; la poser sur les cinq
+     * propositions ferait cinq fois la même donnée, avec cinq occasions de
+     * diverger. Sans ce lien, un avis ne mesure rien : on apprend qu'une
+     * proposition a déplu, pas laquelle des consignes en est cause. */
+    it("retient la configuration qui l'a produit", async () => {
+      await crediter(5);
+      const publiee = await db.prisma.studioConfig.create({
+        data: {
+          kind: "idees", state: "published", version: 1,
+          settings: reglagesIdeesDeDepart() as never,
+          fingerprint: randomBytes(8).toString("hex"),
+          publishedAt: new Date(),
+        },
+      });
+
+      const jeu = await fini(service.lancerIdees(awa, occurrence));
+
+      const ligne = await db.prisma.generatedIdeaSet.findUniqueOrThrow({ where: { id: jeu.id } });
+      expect(ligne.studioConfigId).toBe(publiee.id);
+    });
+
+    /* AUCUNE CONFIGURATION EN SERVICE : la production reprend les valeurs du
+       code, et prétendre qu'une version l'a faite serait faux. */
+    it("laisse le lien nul quand rien n'est publié", async () => {
+      await crediter(5);
+      const jeu = await fini(service.lancerIdees(awa, occurrence));
+
+      const ligne = await db.prisma.generatedIdeaSet.findUniqueOrThrow({ where: { id: jeu.id } });
+      expect(ligne.studioConfigId).toBeNull();
     });
 
     /* ON GARDE CE QUI EST UTILISABLE. Un modèle qui rend huit idées n'a pas
