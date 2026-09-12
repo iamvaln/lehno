@@ -31,3 +31,4 @@ export type { StudioServiceProps } from "./StudioService.js";
 export { TransactionManuelle, type TransactionManuelleProps, type MouvementManuel } from "./TransactionManuelle.js";
 export { StatsTransactions, type StatsTransactionsProps } from "./StatsTransactions.js";
 export { Metriques, type MetriquesProps } from "./Metriques.js";
+export { ClientsApi, type ClientsApiProps } from "./ClientsApi.js";

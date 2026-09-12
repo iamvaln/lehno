@@ -3,7 +3,7 @@ import type { ZodType } from "zod";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Metriques, StatsTransactions, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, StudioProfils, StudioTextes, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { ClientsApi, Acces, Assistance, Liens, Metriques, StatsTransactions, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, StudioProfils, StudioTextes, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -50,7 +50,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  canauxSchema, catalogueIaSchema, mesuresDesModelesSchema, chainesIaSchema, comptesAdminSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  canauxSchema, catalogueIaSchema, mesuresDesModelesSchema, chainesIaSchema, comptesAdminSchema, clientsApiSchema, clientApiAvecCleSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
   urlMediaRenduSchema, motifsAdminSchema,
   pageAssistanceSchema, pageContactSchema, pageAttenteSchema, pageRetoursSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
@@ -733,6 +733,19 @@ export function App(): ReactNode {
       ? api.appeler("/admin/admins", { schema: comptesAdminSchema })
       : Promise.resolve(null)),
     [section, tourAcces],
+  );
+
+  const [tourClients, setTourClients] = useState(0);
+  /* LA CLÉ EN CLAIR NE VIT QUE DANS CET ÉTAT, jamais dans la ressource : une
+     relecture de la liste ne la rendra pas — la base n'en garde que le haché —,
+     et la ranger ailleurs la ferait survivre à la fenêtre qui l'annonce. */
+  const [cleVisible, setCleVisible] = useState<string | null>(null);
+
+  const etatClients = useRessource(
+    () => (section === "clientsApi"
+      ? api.appeler("/admin/api-clients", { schema: clientsApiSchema })
+      : Promise.resolve(null)),
+    [section, tourClients],
   );
 
   /* Deux appels, un seul état d'écran : ce qui tourne et ce qui l'a précédé se
@@ -1519,6 +1532,57 @@ export function App(): ReactNode {
     // Aucun appel : la page rend un registre du code. Pas d'état de chargement
     // à tenir, donc pas de `Ressource` — l'envelopper en inventerait un.
     vue = <Liens langue={langue} onRetour={aller} />;
+  } else if (section === "clientsApi") {
+    /* Écrire puis relire, comme partout. La CLÉ, elle, ne vient QUE de la
+       réponse : c'est le seul instant où elle existe en clair. */
+    const ecrireClient = async (
+      chemin: string, methode: "POST" | "PATCH", corps: unknown, avecCle: boolean,
+    ): Promise<void> => {
+      try {
+        if (avecCle) {
+          const rendu = await api.appeler(chemin, { methode, corps, schema: clientApiAvecCleSchema });
+          setCleVisible(rendu.cle);
+        } else {
+          /* PAS DE SCHÉMA ICI : couper ou rouvrir ne rend pas de clé, et en
+             attendre une ferait échouer la lecture sur un geste qui a pourtant
+             abouti — l'écran afficherait une erreur sur une coupure réussie. */
+          await api.appeler(chemin, { methode, corps });
+        }
+      } catch (echec) {
+        if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+      } finally {
+        setTourClients((n) => n + 1);
+      }
+    };
+    vue = (
+      <Ressource
+        etat={etatClients}
+        t={t}
+        enfant={(page) => (page ? (
+          <ClientsApi
+            role={role}
+            langue={langue}
+            clients={page.items}
+            cleVisible={cleVisible}
+            onFermerLaCle={() => setCleVisible(null)}
+            motifsDuGeste={motifsDe}
+            onOuvrir={(entree, motif) => {
+              void ecrireClient("/admin/api-clients", "POST", { ...entree, motif }, true);
+            }}
+            onTourner={(client, motif) => {
+              void ecrireClient(`/admin/api-clients/${client.id}/rotate`, "POST", { motif }, true);
+            }}
+            onBasculer={(client, motif) => {
+              void ecrireClient(
+                `/admin/api-clients/${client.id}`, "PATCH",
+                { isActive: !client.isActive, motif }, false,
+              );
+            }}
+            onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
   } else if (section === "acces") {
     vue = (
       <Ressource

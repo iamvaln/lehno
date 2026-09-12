@@ -1227,6 +1227,15 @@ export type ClientApi = z.infer<typeof clientApiSchema>;
  *
  * L'écran doit le dire au moment où il l'affiche : c'est le seul instant où
  * quelqu'un peut la copier. */
+/* L'enveloppe de la liste. Elle manquait : le contrôleur rend
+   `{ items }` et rien ne le décrivait — l'écran l'aurait lu à la main, et une
+   forme lue à la main se détache de celle qu'on sert. */
+export const clientsApiSchema = z.object({
+  items: z.array(clientApiSchema),
+}).strict();
+
+export type ClientsApi = z.infer<typeof clientsApiSchema>;
+
 export const clientApiAvecCleSchema = clientApiSchema.extend({
   cle: z.string(),
 }).strict();

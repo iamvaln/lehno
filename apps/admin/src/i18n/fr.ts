@@ -73,6 +73,8 @@ export const fr = {
     creditsSection: "Crédits",
     transactionManuelle: "Transaction manuelle",
     acces: "Accès administrateurs",
+    clientsApi: "Clients de l'API",
+    versions: "Versions de l'application",
     parametres: "Paramètres",
     fonctionnalites: "Fonctionnalités",
     motifs: "Motifs d'audit",
@@ -337,6 +339,59 @@ export const fr = {
           "Retour arrière après un essai non concluant",
         ],
       },
+    },
+  },
+  clientsApi: {
+    titre: "Clients de l'API",
+    sous: "Qui a le droit d'appeler, et sous quel nom.",
+    /* CE QUE LA CLÉ ACHÈTE, ET CE QU'ELLE N'ACHÈTE PAS — dit une fois, en
+       tête : quelqu'un s'y fierait un jour comme à une frontière de sécurité
+       si ce n'était écrit nulle part. */
+    portee: "Une application distribuée porte sa clé dans son paquet : qui la démonte l'obtient. Ce n'est donc pas une frontière de sécurité, c'est un identifiant RÉVOCABLE — et couper un client coupe une application entière, sans toucher aux autres.",
+    col: { libelle: "Client", identifiant: "Identifiant", type: "Plateforme", env: "Environnement", etat: "État", tournee: "Clé tournée le" },
+    types: { mobile_ios: "iOS", mobile_android: "Android", web: "Web" },
+    envs: { dev: "Développement", staging: "Recette", prod: "Production" },
+    etats: { ouvert: "Ouvert", coupe: "Coupé" },
+    // Une clé qui n'a jamais bougé depuis l'ouverture est une information,
+    // pas une case vide.
+    jamaisTournee: "Jamais",
+    ouvrir: "Ouvrir un client",
+    tourner: "Tourner la clé",
+    couper: "Couper",
+    rouvrir: "Rouvrir",
+    champs: { libelle: "Nom du client", type: "Plateforme", env: "Environnement" },
+    /* LA CLÉ NE PARAÎT QU'UNE FOIS, et l'écran le dit AVANT de la montrer :
+       lu après, l'avertissement arrive quand la fenêtre est déjà fermée dans
+       la tête de celui qui l'a copiée — ou pas copiée. */
+    cle: {
+      titre: "La clé de ce client",
+      unique: "Elle ne s'affichera plus jamais. Copiez-la maintenant.",
+      perdue: "Une clé perdue ne se récupère pas : elle se remplace en tournant celle du client, ce qui coupe l'ancienne.",
+      copiee: "Je l'ai copiée",
+    },
+    dialogueOuvrir: {
+      titre: "Ouvrir un client de l'API",
+      consequence: "Une clé sera engendrée et affichée UNE SEULE FOIS. L'identifiant, lui, se relit toujours.",
+      motifs: ["Nouveau contrat", "Environnement de recette", "Test de charge"],
+    },
+    dialogueTourner: {
+      titre: "Tourner la clé de {client}",
+      consequence: "L'ancienne clé cesse d'être acceptée immédiatement, et les appareils qui l'emploient encore seront refusés. L'identifiant ne bouge pas : les chiffres restent comparables dans le temps.",
+      motifs: ["Accès compromis", "Vérification de routine"],
+    },
+    dialogueCouper: {
+      titre: "Couper {client}",
+      consequence: "L'application entière cesse d'être servie, sur tous les appareils à la fois. Rien n'est supprimé : les lignes déjà notées gardent leur référence, et le client se rouvre.",
+      motifs: ["Accès compromis", "Correction d'une erreur"],
+    },
+    dialogueRouvrir: {
+      titre: "Rouvrir {client}",
+      consequence: "L'application est à nouveau servie, avec la même clé qu'avant la coupure.",
+      motifs: ["Correction d'une erreur", "Vérification de routine"],
+    },
+    vide: {
+      titre: "Aucun client",
+      texte: "Les paires ouvertes apparaissent ici, avec leur état et la date de leur dernière rotation.",
     },
   },
   confirmation: {

@@ -130,7 +130,11 @@ export const NAVIGATION: { famille: Famille | null; items: readonly Entree[] }[]
   // « acces » passe des outils de SUIVI aux OUTILS : on n'y observe rien, on y
   // administre les comptes de l'équipe. Il voisinait le journal d'audit faute
   // d'une place dite ; le lot de conception lui en donne une.
-  { famille: "outils", items: ["acces", "liens"] },
+  /* LES CLIENTS ET LES VERSIONS vivent aux OUTILS, avec les accès — on n'y
+     observe rien, on y administre ce qui a le droit d'appeler. Les ranger sous
+     « supervision » les ferait chercher du côté des mesures, alors que ce sont
+     des leviers : couper un client coupe une application entière. */
+  { famille: "outils", items: ["acces", "clientsApi", "versions", "liens"] },
 ];
 
 /** Les sections qu'un rôle peut atteindre, dans l'ordre du menu. */
