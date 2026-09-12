@@ -64,7 +64,12 @@ export class DeletionsService {
            file de paiements d'un compte pour répondre à une question binaire. */
         payments: {
           where: { direction: "refund", status: "pending" },
-          select: { id: true },
+          /* ON RAPPORTE DE QUOI AGIR, et non seulement de quoi savoir. Les deux
+             routes qui règlent un remboursement le désignent par son
+             identifiant : sans lui, l'écran affiche « attend un versement » et
+             n'a aucun geste à offrir — l'impasse qui a laissé ces deux routes
+             inatteignables depuis leur écriture. */
+          select: { id: true, amount: true, currency: true, payerMsisdn: true },
           take: 1,
         },
       },
@@ -74,6 +79,7 @@ export class DeletionsService {
     return {
       items: page.map((u) => {
         const demandee = u.deletionRequestedAt as Date;
+        const du = u.payments[0];
         const echeance = new Date(demandee.getTime() + delai * JOUR_MS);
         const restants = Math.ceil((echeance.getTime() - maintenant) / JOUR_MS);
         return {
@@ -90,6 +96,14 @@ export class DeletionsService {
           etat: u.payments.length > 0
             ? "attend_remboursement"
             : restants <= 0 ? "echue" : "en_cours",
+          /* Decimal → nombre : sérialisé tel quel, il sortirait en chaîne, et
+             un écran qui formate un montant formaterait du texte. */
+          remboursement: du === undefined ? null : {
+            id: du.id,
+            montant: Number(du.amount),
+            devise: du.currency,
+            numeroDuPayeur: du.payerMsisdn,
+          },
         };
       }),
       nextCursor: lignes.length > limite ? (page.at(-1)?.id ?? null) : null,

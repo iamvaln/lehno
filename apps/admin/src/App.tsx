@@ -1903,6 +1903,20 @@ export function App(): ReactNode {
       />
     );
   } else if (section === "suppressions") {
+    /* Régler un remboursement, puis RELIRE la file : le geste change l'état du
+       compte — il n'attend plus de versement —, et une liste qui ne se rafraîchit
+       pas laisserait la ligne réclamer ce qu'on vient de faire. */
+    const reglerLeRemboursement = async (
+      paiementId: string, chemin: "refund" | "refund-abandon", corps: unknown,
+    ): Promise<void> => {
+      try {
+        await api.appeler(`/admin/payments/${paiementId}/${chemin}`, { methode: "POST", corps });
+      } catch (echec) {
+        if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+      } finally {
+        setTourSuppressions((n) => n + 1);
+      }
+    };
     vue = (
       <Ressource
         etat={etatSuppressions}
@@ -1914,6 +1928,19 @@ export function App(): ReactNode {
             demandes={file.items}
             onRestaurer={(demande, motif) => changerEtat(demande.id, "active", motif)}
             onEffacer={(demande, motif) => changerEtat(demande.id, "deleted", motif)}
+            /* LES DEUX GESTES VISENT LE PAIEMENT, pas le compte : c'est le
+               versement qu'on règle, et c'est lui qui retenait l'effacement.
+               D'où l'identifiant du remboursement et non celui de la demande —
+               les confondre enverrait le geste sur un compte, et le serveur
+               répondrait « paiement inconnu » sans qu'on voie pourquoi. */
+            onVerser={(demande, reference, motif) => {
+              if (!demande.remboursement) return;
+              void reglerLeRemboursement(demande.remboursement.id, "refund", { reference, reason: motif });
+            }}
+            onAbandonner={(demande, motif) => {
+              if (!demande.remboursement) return;
+              void reglerLeRemboursement(demande.remboursement.id, "refund-abandon", { reason: motif });
+            }}
           />
         ) : null)}
       />
