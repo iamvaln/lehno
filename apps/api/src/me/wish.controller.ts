@@ -4,13 +4,14 @@ import {
 } from "@nestjs/common";
 import {
   createWishSchema, updateWishSchema,
-  type CreateWishInput, type UpdateWishInput, type Wish,
+  type CreateWishInput, type UpdateWishInput, type Wish, type DepotAvatar,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { Feature } from "../flags/feature.decorator.js";
 import { FeatureGuard } from "../flags/feature.guard.js";
 import { WishService } from "./wish.service.js";
+import { AvatarService } from "./avatar.service.js";
 import { TrackingService } from "../tracking/tracking.service.js";
 
 type AuthedRequest = { userId: string };
@@ -72,7 +73,36 @@ export class OccurrenceWishesController {
 @UseGuards(FeatureGuard, AuthGuard)
 @Feature("wishlist")
 export class WishController {
-  constructor(@Inject(WishService) private readonly souhaits: WishService) {}
+  constructor(
+    @Inject(WishService) private readonly souhaits: WishService,
+    @Inject(AvatarService) private readonly medias: AvatarService,
+  ) {}
+
+  /* LA PHOTO D'UN SOUHAIT DU CARNET, sur le chemin déjà emprunté par la photo
+     de profil et par celle d'un souhait de ma liste : le serveur signe une URL,
+     le téléphone dépose dessus, puis confirme. Les octets ne traversent jamais
+     l'API — deux mégaoctets occuperaient une connexion pour rien, et un
+     téléphone en zone lente la tiendrait longtemps.
+     `image_key` existait déjà en base et la lecture la servait déjà ; seule
+     l'écriture manquait, si bien que la colonne ne pouvait pas se remplir.
+     200 et non 201 : rien n'est créé, on délivre une permission. */
+  @Post(":id/photo/depot")
+  @HttpCode(200)
+  depotPhoto(
+    @Req() req: AuthedRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<DepotAvatar> {
+    return this.medias.depotPhotoDuCarnet(req.userId, id);
+  }
+
+  /* Aucun corps, et l'identifiant du chemin ne sert PAS à choisir la cible :
+     elle a été fixée au dépôt, où l'appartenance a été vérifiée. L'accepter ici
+     depuis le client permettrait de rattacher sa photo au souhait d'un autre. */
+  @Post(":id/photo")
+  @HttpCode(204)
+  async confirmerPhoto(@Req() req: AuthedRequest): Promise<void> {
+    await this.medias.confirmerPhotoDuCarnet(req.userId);
+  }
 
   @Patch(":id")
   update(

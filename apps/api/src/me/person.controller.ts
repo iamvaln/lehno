@@ -9,13 +9,16 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
 import {
-  createPersonSchema, updatePersonSchema, listPersonsQuerySchema,
+  createPersonSchema, updatePersonSchema, listPersonsQuerySchema, selfPersonSchema,
+  selfPersonPatchSchema,
   type CreatePersonInput, type Person, type PersonAttributes, type PersonList, type UpdatePersonInput,
+  type SelfPersonInput, type SelfPersonPatchInput,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
@@ -54,6 +57,7 @@ export class PersonController {
     @Query("offset") offset?: string,
     @Query("limit") limit?: string,
     @Query("q") q?: string,
+    @Query("includeSelf") includeSelf?: string,
   ): Promise<PersonList> {
     const analyse = listPersonsQuerySchema.safeParse({
       ...(sort !== undefined ? { sort } : {}),
@@ -61,6 +65,13 @@ export class PersonController {
       ...(offset !== undefined ? { offset: Number(offset) } : {}),
       ...(limit !== undefined ? { limit: Number(limit) } : {}),
       ...(q !== undefined ? { q } : {}),
+      /* SEUL « false » EXCLUT. `Boolean("false")` vaut vrai, et s'y fier aurait
+         rendu le paramètre décoratif — il aurait inclus la fiche quoi qu'on
+         écrive. Tout autre texte est refusé par le schéma plutôt qu'interprété :
+         un `?includeSelf=0` silencieusement ignoré est pire qu'un 400. */
+      ...(includeSelf !== undefined
+        ? { includeSelf: includeSelf === "false" ? false : includeSelf === "true" ? true : includeSelf }
+        : {}),
     });
     if (!analyse.success) {
       throw new AppError("validation_failed", "invalid persons query", {
@@ -129,5 +140,58 @@ export class PersonController {
   @HttpCode(204)
   remove(@Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string): Promise<void> {
     return this.persons.remove(req.userId, id);
+  }
+}
+
+/* LA FICHE DE SOI, SUR SON PROPRE CHEMIN.
+ *
+ * Pas `GET /me/persons/self` : `@Get(":id")` du carnet capterait « self » avant
+ * lui — Nest résout dans l'ordre de déclaration, et le mot passerait alors au
+ * `ParseUUIDPipe`, qui rendrait un 400 sur une route qui existe. Un chemin à
+ * part met la question hors de portée plutôt que de la régler par un ordre de
+ * lignes que le premier refactor défera.
+ *
+ * Pas de `@Feature` non plus : sa propre fiche relève du socle, comme le
+ * carnet. */
+@Controller("me/self")
+@UseGuards(AuthGuard)
+export class SelfPersonController {
+  constructor(@Inject(PersonService) private readonly persons: PersonService) {}
+
+  /* 404 QUAND ELLE N'EXISTE PAS, plutôt qu'un corps nul. Un écran qui reçoit
+     `null` doit distinguer « pas encore répondu » de « champ vide » ; un statut
+     le dit sans que personne ait à l'interpréter, et c'est la forme qu'a déjà
+     toute lecture d'une ressource absente dans cette API. */
+  @Get()
+  async lire(@Req() req: AuthedRequest): Promise<Person> {
+    const fiche = await this.persons.lireSoi(req.userId);
+    if (fiche === null) throw new AppError("not_found", "resource not found");
+    return fiche;
+  }
+
+  /* `PUT` et non `POST` : on ne crée pas sa propre fiche, on dit qui on est.
+     Rejouer l'appel doit donner le même état, et c'est ce que le verbe promet
+     — l'application n'a donc pas à lire avant d'écrire. */
+  @Put()
+  ecrire(
+    @Req() req: AuthedRequest,
+    @Body(new ZodValidationPipe(selfPersonSchema)) body: SelfPersonInput,
+  ): Promise<Person> {
+    return this.persons.ecrireSoi(req.userId, body);
+  }
+
+  /* ET SA CORRECTION PARTIELLE — §13.4. Le `PUT` exige `displayName` : un écran
+     qui ne veut changer que la langue devait lire la fiche entière pour pouvoir
+     la renvoyer, et c'est ce qui a fait retirer l'écriture de `language` depuis
+     le mobile plutôt que de risquer d'écraser le reste.
+
+     Elle NE CRÉE PAS : 404 quand la fiche n'existe pas, et l'écran passe alors
+     par le `PUT`. Créer ici obligerait à inventer un nom. */
+  @Patch()
+  corriger(
+    @Req() req: AuthedRequest,
+    @Body(new ZodValidationPipe(selfPersonPatchSchema)) body: SelfPersonPatchInput,
+  ): Promise<Person> {
+    return this.persons.corrigerSaFiche(req.userId, body);
   }
 }

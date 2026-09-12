@@ -5,8 +5,8 @@ import {
 } from "@lehno/contracts";
 import {
   canalPourLeCompte, comptePourVerser, corpsDeDeclaration, declarationComplete,
-  moisDesMouvements, montreLeMouvement, mouvementsRecents, offreTout,
-  parcoursDeRecharge,
+  moisDesMouvements, montreLeMouvement, mouvementsRecents, moyensDeVersement,
+  offreTout, parcoursDeRecharge,
 } from "../lib/versement.js";
 
 const uuid = (n: number): string =>
@@ -20,7 +20,7 @@ const compte = (n: number, operator: string): CollectionAccount => ({
 
 const canal = (n: number, operator: string): PaymentChannel => ({
   id: uuid(100 + n), kind: "mobile_money", operator, country: "CM",
-  label: operator + " Cameroun", feeBorneBy: "payer", currency: "XAF",
+  label: operator + " Cameroun", feeBorneBy: "payer", currency: "XAF", ussd: null,
 });
 
 const mouvement = (n: number, montant: number, quand: string): CreditTransaction => ({
@@ -33,8 +33,24 @@ describe("quel parcours l'écran propose", () => {
     expect(parcoursDeRecharge(LANCEMENT)).toBe("manuel");
   });
 
-  it("l'automatique prime quand il est ouvert", () => {
-    expect(parcoursDeRecharge(["topup.provider", "topup.manual"])).toBe("operateur");
+  /* L'AUTOMATIQUE PRIMAIT, ET N'ABOUTISSAIT PAS. `startPaymentSchema` est
+     déclaré au contrat et branché à AUCUNE route : `preview`, la déclaration,
+     la liste et la lecture sont toutes sous `topup.manual`. Le drapeau, lui,
+     s'allume.
+
+     Les deux allumés — la configuration de développement — l'écran choisissait
+     « opérateur » et n'offrait PLUS RIEN : ni palier, ni moyen de payer, ni
+     explication. Une page de solde et d'historique, sans le geste qui lui donne
+     son nom. Vu à l'écran.
+
+     CE TEST S'INVERSE le jour où la route existe, et c'est volontaire : il est
+     l'endroit où l'on s'en apercevra. */
+  it("préfère la voie qui aboutit quand les deux sont ouverts", () => {
+    expect(parcoursDeRecharge(["topup.provider", "topup.manual"])).toBe("manuel");
+  });
+
+  it("prend l'automatique quand c'est la seule ouverte", () => {
+    expect(parcoursDeRecharge(["topup.provider"])).toBe("operateur");
   });
 
   it("aucun des deux ferme la recharge", () => {
@@ -79,16 +95,39 @@ describe("le canal qui porte le barème", () => {
     expect(canalPourLeCompte([canal(1, " mtn ")], compte(1, "MTN"))).not.toBeNull();
   });
 
-  /* DEUX CANAUX DU MÊME OPÉRATEUR rendent la déduction ambiguë — et c'est
-     exactement ce qui arrive quand ils se dédoublent en automatique et manuel.
-     Mieux vaut ne pas offrir la déclaration que l'envoyer sur un barème pris
-     au hasard : c'est lui qui décide de ce que la personne verse en plus. */
-  it("se tait plutôt que de choisir entre deux barèmes", () => {
+  /* DEUX CANAUX DU MÊME OPÉRATEUR ne se départagent pas tout seuls : ils ne
+     portent pas le même barème, et c'est lui qui décide de ce que la personne
+     verse en plus. On n'en pose aucun d'avance — l'écran montre la liste, et
+     c'est « Comment payer » de la maquette qui trouve là son objet. */
+  it("ne pose rien d'avance entre deux barèmes", () => {
     expect(canalPourLeCompte([canal(1, "MTN"), canal(2, "MTN")], compte(1, "MTN"))).toBeNull();
   });
 
   it("se tait quand aucun canal ne correspond", () => {
     expect(canalPourLeCompte([canal(1, "Orange")], compte(1, "MTN"))).toBeNull();
+  });
+});
+
+describe("les moyens qu'on peut proposer", () => {
+  /* L'argent part vers CE compte-là, donc par cet opérateur-là. Proposer le
+     canal d'un autre ferait chiffrer des frais qui ne s'appliqueront jamais. */
+  it("s'en tiennent à l'opérateur du compte servi", () => {
+    const offerts = moyensDeVersement([canal(1, "MTN"), canal(2, "Orange")], compte(1, "MTN"));
+    expect(offerts.map((c) => c.id)).toEqual([uuid(101)]);
+  });
+
+  it("gardent les deux barèmes d'un même opérateur", () => {
+    expect(moyensDeVersement([canal(1, "MTN"), canal(2, "MTN")], compte(1, "MTN"))).toHaveLength(2);
+  });
+
+  it("ignorent la casse et les espaces, comme le rattachement", () => {
+    expect(moyensDeVersement([canal(1, " mtn ")], compte(1, "MTN"))).toHaveLength(1);
+  });
+
+  /* Aucun moyen n'est pas une panne : c'est l'impossibilité de verser, et
+     l'écran se tait sur l'achat plutôt que d'ouvrir un formulaire sans issue. */
+  it("rendent une liste vide quand rien ne correspond", () => {
+    expect(moyensDeVersement([canal(1, "Orange")], compte(1, "MTN"))).toEqual([]);
   });
 });
 

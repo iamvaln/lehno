@@ -53,6 +53,28 @@ const nombre = (p: Record<string, unknown>, cle: string): number | null =>
  */
 const estSensible = (p: Record<string, unknown>): boolean => p["nature"] !== "happy";
 
+const drapeau = (p: Record<string, unknown>, cle: string): boolean => p[cle] === true;
+
+/* L'ÉTAT DE LA LISTE SUR MA PROPRE DATE — trois cas, et ils commandent la
+ * phrase dans les deux langues.
+ *
+ * Ce qu'on a à rappeler sur sa propre date n'est pas d'écrire un mot à
+ * quelqu'un, c'est de préparer sa liste puis de LA PARTAGER : une liste que
+ * personne n'a reçue ne sert à rien. Une fois partagée, il n'y a plus rien à
+ * faire, et le dire vaut mieux que de se taire — c'est ce qui distingue un
+ * rappel d'une relance.
+ *
+ * `vide` couvre AUSSI la liste absente : le serveur envoie alors `wishCount: 0`,
+ * et du point de vue de la phrase « pas de liste » et « liste sans souhait »
+ * appellent le même geste.
+ */
+type EtatListe = "vide" | "a_partager" | "partagee";
+
+const etatDeLaListe = (p: Record<string, unknown>): EtatListe => {
+  if (drapeau(p, "isShared")) return "partagee";
+  return (nombre(p, "wishCount") ?? 0) > 0 ? "a_partager" : "vide";
+};
+
 const MOIS: Record<Locale, readonly string[]> = {
   fr: ["janvier", "février", "mars", "avril", "mai", "juin",
        "juillet", "août", "septembre", "octobre", "novembre", "décembre"],
@@ -116,6 +138,45 @@ const FR: Record<string, Composeur> = {
     return { titre: `C'est aujourd'hui pour ${qui}`, corps: "Le bon moment pour lui envoyer un mot." };
   },
 
+  /* MA PROPRE DATE. Jumelles des deux précédentes, et séparées d'elles parce
+     que le geste n'est pas le même : on n'écrit pas un mot à soi-même.
+
+     LE CAS SENSIBLE NE PARLE PAS DE LISTE, et c'est le point qui compte le
+     plus : proposer de préparer une liste de cadeaux sur une date qu'on a
+     notée pour une raison grave serait la version à soi de l'impardonnable. */
+  "notification.own_date_reminder": (p) => {
+    const jours = nombre(p, "days");
+    const quand = dateEnClair(texte(p, "date"), "fr");
+    if (jours === null || quand === null) return null;
+    if (estSensible(p)) {
+      return { titre: `Le ${quand} approche`, corps: "Une date que vous avez notée." };
+    }
+    const suite = {
+      vide: "Le bon moment pour préparer votre liste.",
+      a_partager: "Votre liste attend d'être partagée.",
+      partagee: "Votre liste est partagée, il n'y a plus rien à faire.",
+    }[etatDeLaListe(p)];
+    return {
+      titre: "Votre date approche",
+      corps: `Le ${quand}, ${delaiEnClair(jours, "fr")}. ${suite}`,
+    };
+  },
+
+  "notification.own_date_day_of": (p) => {
+    if (estSensible(p)) {
+      return { titre: "C'est aujourd'hui", corps: "Une date que vous avez notée." };
+    }
+    /* Le jour même, une liste vide ne se reproche pas : il est trop tard pour
+       la remplir, et le dire n'apprendrait rien à personne. On se contente
+       d'être chaleureux — §4.6, « dire le bénéfice, pas l'ordre ». */
+    const corps = {
+      vide: "Belle journée à vous.",
+      a_partager: "Votre liste n'a encore été partagée avec personne, et le lien tient toujours.",
+      partagee: "Votre liste est partagée. Belle journée à vous.",
+    }[etatDeLaListe(p)];
+    return { titre: "C'est votre jour", corps };
+  },
+
   // §4.6 : dire le bénéfice, pas l'ordre. Et surtout pas « vous n'avez rien
   // noté depuis un mois », qui reproche.
   "notification.enrichment_nudge_global": () => ({
@@ -177,6 +238,25 @@ const FR: Record<string, Composeur> = {
       corps: par === null ? `${souhait}.` : `${souhait}, par ${par}.`,
     };
   },
+
+  /* SA JUMELLE, ET ELLE N'AVAIT AUCUN TEXTE. Elle existe parce que
+     `wish_reserved` existe : quelqu'un a été prévenu qu'un cadeau était
+     couvert, et il a planifié autour. Ne rien dire quand il se libère
+     laisserait attendre un cadeau que personne n'apporte.
+
+     LE TON NE REPROCHE RIEN. Ce n'est pas un désistement, c'est une place qui
+     se rouvre — et celui qui la lit n'y est pour rien. Comme sa jumelle, elle
+     ne nomme le réservant que s'il l'avait autorisé : une annulation ne défait
+     pas l'anonymat consenti. */
+  "notification.wish_reservation_cancelled": (p) => {
+    const souhait = texte(p, "wishLabel");
+    if (souhait === null) return null;
+    const par = texte(p, "by");
+    return {
+      titre: "Un souhait est de nouveau libre",
+      corps: par === null ? `${souhait}.` : `${souhait}, réservé par ${par}.`,
+    };
+  },
 };
 
 // ─── Anglais ─────────────────────────────────────────────────────────────────
@@ -206,6 +286,36 @@ const EN: Record<string, Composeur> = {
       return { titre: "It's today", corps: `A date noted for ${qui}.` };
     }
     return { titre: `It's today for ${qui}`, corps: "A good moment to send a few words." };
+  },
+
+  "notification.own_date_reminder": (p) => {
+    const jours = nombre(p, "days");
+    const quand = dateEnClair(texte(p, "date"), "en");
+    if (jours === null || quand === null) return null;
+    if (estSensible(p)) {
+      return { titre: `${quand} is coming up`, corps: "A date you noted." };
+    }
+    const suite = {
+      vide: "A good moment to get your list ready.",
+      a_partager: "Your list is waiting to be shared.",
+      partagee: "Your list is shared — nothing left to do.",
+    }[etatDeLaListe(p)];
+    return {
+      titre: "Your date is coming up",
+      corps: `${quand}, ${delaiEnClair(jours, "en")}. ${suite}`,
+    };
+  },
+
+  "notification.own_date_day_of": (p) => {
+    if (estSensible(p)) {
+      return { titre: "It's today", corps: "A date you noted." };
+    }
+    const corps = {
+      vide: "Have a lovely day.",
+      a_partager: "Your list hasn't been shared with anyone yet, and the link still works.",
+      partagee: "Your list is shared. Have a lovely day.",
+    }[etatDeLaListe(p)];
+    return { titre: "It's your day", corps };
   },
 
   "notification.enrichment_nudge_global": () => ({
@@ -250,6 +360,16 @@ const EN: Record<string, Composeur> = {
     return {
       titre: "A wish has just been reserved",
       corps: par === null ? `${souhait}.` : `${souhait}, by ${par}.`,
+    };
+  },
+
+  "notification.wish_reservation_cancelled": (p) => {
+    const souhait = texte(p, "wishLabel");
+    if (souhait === null) return null;
+    const par = texte(p, "by");
+    return {
+      titre: "A wish is available again",
+      corps: par === null ? `${souhait}.` : `${souhait}, reserved by ${par}.`,
     };
   },
 };

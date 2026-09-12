@@ -1,8 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
   CreatePersonInput, Person, PersonList, UpdatePersonInput, ListPersonsQuery,
+  SelfPersonInput, SelfPersonPatchInput,
 } from "@lehno/contracts";
 import { PAGE_PROCHES } from "@lehno/contracts";
+import { AppError } from "../common/errors.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
 import { EventService } from "./event.service.js";
@@ -136,7 +138,15 @@ export class PersonService {
        La recherche porte sur les DEUX noms : quelqu'un cherche « maman » sans
        savoir si sa fiche dit « Maman » ou « Maman Chantal », et le nom d'usage
        est justement celui par lequel on l'appelle. */
-    const tous = query.q === undefined ? bruts : bruts.filter((p) => {
+    /* LA FICHE DE SOI SORT SUR DEMANDE, et avant la découpe comme le reste :
+       filtrer une page déjà coupée laisserait un trou sur une page et pas sur
+       l'autre. Incluse par défaut — « Pour qui » ne pourrait plus viser sa
+       propre date sans elle, et c'est le blocage que la fiche a levé. */
+    const avecSoi = query.includeSelf === false
+      ? bruts.filter((p) => !p.isSelf)
+      : bruts;
+
+    const tous = query.q === undefined ? avecSoi : avecSoi.filter((p) => {
       const aiguille = sansAccents(query.q!);
       return sansAccents(p.displayName).includes(aiguille)
         || (p.callingName !== null && sansAccents(p.callingName).includes(aiguille));
@@ -197,8 +207,111 @@ export class PersonService {
     return rendre(ligne);
   }
 
+  /**
+   * La fiche d'un proche, AVEC son décompte de notes et sa prochaine échéance.
+   *
+   * Elle les rendait nuls. Le commentaire de `rendre` le justifiait — « une
+   * fiche qui vient d'être créée n'a ni note ni échéance, et le dire coûterait
+   * deux requêtes pour deux valeurs connues d'avance » —, mais il parle de la
+   * CRÉATION. `get` empruntait le même chemin, sur une fiche qui, elle, a des
+   * notes et des dates.
+   *
+   * Ce que ça donnait à l'écran : la LISTE affichait « Awa — anniversaire ·
+   * 3 sept. », et la FICHE du même proche, un écran plus loin, n'affichait aucun
+   * sous-titre. Le contrat promet les deux champs sans condition ; la lecture
+   * unitaire en rendait deux faux.
+   *
+   * `enrichir` prend un tableau d'identifiants et sert déjà la liste — un appel
+   * à un élément suffit. Le coût est celui d'une lecture de fiche, pas d'un
+   * carnet : c'est la même requête, bornée à un.
+   */
   async get(userId: string, id: string): Promise<Person> {
-    return rendre(await this.depot.persons(userId).findOrThrow(id));
+    const ligne = await this.depot.persons(userId).findOrThrow(id);
+    /* L'APPARTENANCE EST DÉJÀ VÉRIFIÉE par `findOrThrow`, qui refuse la fiche
+       d'un autre. `enrichir` peut donc lire sans périmètre : il ne reçoit qu'un
+       identifiant dont on vient d'établir qu'il est au demandeur. */
+    const details = await this.enrichir([ligne.id]);
+    return rendre(ligne, details.get(ligne.id));
+  }
+
+  /** La fiche de soi, ou rien. Un compte peut ne pas en avoir. */
+  async lireSoi(userId: string): Promise<Person | null> {
+    const ligne = await this.soi(userId);
+    return ligne === null ? null : rendre(ligne);
+  }
+
+  /**
+   * Écrire qui on est — autant de fois qu'on veut.
+   *
+   * IDEMPOTENT PAR CONSTRUCTION, et c'est ce que le `PUT` promet : la première
+   * écriture crée, les suivantes corrigent. L'application n'a pas à savoir si
+   * elle en a déjà une, donc pas à la lire avant chaque enregistrement.
+   *
+   * IL N'Y EN A QU'UNE, et c'est la base qui le tient — un index unique partiel
+   * sur `(user_id) WHERE is_self`. On le prend comme un ARBITRE plutôt que
+   * comme un accident : deux enregistrements partis du même écran se croisent
+   * (une double frappe suffit), et le perdant repasse alors par la correction
+   * au lieu de rendre une violation de contrainte, c'est-à-dire une erreur
+   * interne sur un geste banal.
+   */
+  async ecrireSoi(userId: string, input: SelfPersonInput): Promise<Person> {
+    const existante = await this.soi(userId);
+    if (existante !== null) return this.corrigerSoi(userId, existante.id, input);
+
+    /* Les champs s'ÉNUMÈRENT, comme à la création d'un proche et pour la même
+       raison — voir `create`. `relation` et `relationHint` n'y sont pas : le
+       contrat les retire, on n'est pas sa propre relation. */
+    try {
+      return rendre(await this.depot.persons(userId).create({
+        displayName: input.displayName,
+        callingName: input.callingName ?? null,
+        avatarUrl: input.avatarUrl ?? null,
+        isSelf: true,
+        register: input.register ?? null,
+        gender: input.gender ?? "unspecified",
+        language: input.language ?? null,
+        birthDate: input.birthDate ? new Date(`${input.birthDate}T00:00:00Z`) : null,
+        birthYearKnown: input.birthYearKnown ?? true,
+        city: input.city ?? null,
+        country: input.country ?? null,
+        preferredChannel: input.preferredChannel ?? null,
+      }));
+    } catch (cause) {
+      /* P2002 : l'index a tranché entre deux écritures simultanées. La nôtre a
+         perdu, donc l'autre a créé la fiche — on la corrige. Relire d'abord
+         puis écrire ne supprimerait pas la course, il la déplacerait. */
+      if ((cause as { code?: string }).code !== "P2002") throw cause;
+      const gagnante = await this.soi(userId);
+      if (gagnante === null) throw cause;
+      return this.corrigerSoi(userId, gagnante.id, input);
+    }
+  }
+
+  /* LA CORRECTION D'UN SEUL CHAMP — §13.4.
+   *
+   * Elle ne CRÉE PAS, et c'est la différence avec `ecrireSoi` : on ne devine pas
+   * un `displayName` pour quelqu'un qui n'a envoyé qu'une langue. Une fiche
+   * absente rend 404, comme sa lecture — l'écran sait alors qu'il doit passer
+   * par l'écriture complète, au lieu de recevoir une fiche à demi inventée. */
+  async corrigerSaFiche(userId: string, input: SelfPersonPatchInput): Promise<Person> {
+    const existante = await this.soi(userId);
+    if (existante === null) throw new AppError("not_found", "resource not found");
+    return this.update(userId, existante.id, input as UpdatePersonInput);
+  }
+
+  private async corrigerSoi(
+    userId: string, id: string, input: SelfPersonInput,
+  ): Promise<Person> {
+    /* On passe par `update`, qui porte déjà le RECALAGE DE L'ANNIVERSAIRE.
+       Corriger sa naissance ici sans lui laisserait l'échéance sur l'ancienne
+       date jusqu'au jour dit — et c'est sa propre date, celle qu'on remarque
+       le moins vite parce qu'on ne se la souhaite pas. */
+    return this.update(userId, id, input as UpdatePersonInput);
+  }
+
+  private async soi(userId: string) {
+    const [ligne] = await this.depot.persons(userId).findMany({ isSelf: true });
+    return ligne ?? null;
   }
 
   async update(userId: string, id: string, input: UpdatePersonInput): Promise<Person> {

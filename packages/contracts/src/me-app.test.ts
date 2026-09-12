@@ -11,6 +11,7 @@ describe("le Mur", () => {
     slug: "valentine",
     isEnabled: false,
     showBirthdayDate: true,
+    showWishlist: false,
     welcomeMessage: null,
     publicUrl: "https://lehno.app/valentine",
     wishLinkUrl: null,

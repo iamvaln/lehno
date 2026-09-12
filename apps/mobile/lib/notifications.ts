@@ -57,6 +57,11 @@ export function cibleDeLaNotification(n: Notification): Cible {
 type Traductions = {
   notifRappel: (qui: string, j: number) => string;
   notifAujourdhui: (qui: string) => string;
+  /* MA PROPRE DATE ne nomme personne : « Dans 7 jours : Valentine » lu par
+     Valentine est exactement le défaut qu'on répare au serveur, et le répéter
+     dans la liste du centre n'aurait rien valu de mieux. */
+  notifMaDateRappel: (j: number) => string;
+  notifMaDateAujourdhui: () => string;
 };
 
 export function libelleDeLaNotification(n: Notification, t: Traductions): string | null {
@@ -68,6 +73,10 @@ export function libelleDeLaNotification(n: Notification, t: Traductions): string
       return qui !== null && jours !== null ? t.notifRappel(qui, jours) : null;
     case "notification.event_day_of":
       return qui !== null ? t.notifAujourdhui(qui) : null;
+    case "notification.own_date_reminder":
+      return jours !== null ? t.notifMaDateRappel(jours) : null;
+    case "notification.own_date_day_of":
+      return t.notifMaDateAujourdhui();
     default:
       return null;
   }
@@ -92,6 +101,8 @@ export const CLES_SERVIES: readonly string[] = [
   // n'existe pas et manquait celle qui part — un audit faux est pire qu'un
   // audit absent, parce qu'on le croit.
   "notification.wish_reserved",
+  "notification.own_date_reminder",
+  "notification.own_date_day_of",
 ];
 
 export function clesSansLibelle(t: Traductions): string[] {

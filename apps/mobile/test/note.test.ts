@@ -24,6 +24,7 @@ function occasion(champs: Partial<Occurrence> = {}): Occurrence {
     eventId: uuid(20),
     personId: AWA,
     personDisplayName: "Awa Sow",
+    isSelf: false,
     kind: "birthday",
     nature: "happy",
     label: null,

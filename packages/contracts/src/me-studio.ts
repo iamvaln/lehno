@@ -28,6 +28,28 @@ export const studioChoiceSchema = z.object({
   // Le groupe que ce choix fait apparaître. C'est ici, et nulle part dans le
   // code du client, que vit « une illustration porte sa famille ».
   revealsGroup: z.string().min(1).nullable(),
+  /**
+   * LA VIGNETTE DE RÉFÉRENCE — ce qu'on aura, montré plutôt que décrit.
+   *
+   * « Un choix de rendu ne se fait pas avec des mots : personne ne sait
+   * départager "chaleureux" et "sobre" dans l'abstrait. » L'écran montre donc
+   * une image, et c'est TOUJOURS LA MÊME pour tout le monde — publiée avec la
+   * configuration, jamais engendrée à la volée. La produire en ouvrant l'écran
+   * coûterait un appel de modèle par pastille regardée, avant même d'avoir payé.
+   *
+   * NULLE quand aucune référence n'a encore été retenue, et la grille retombe
+   * alors sur la description seule. L'écran ne suppose jamais l'image présente :
+   * un catalogue neuf n'en a aucune, et c'est un état normal, pas une panne.
+   *
+   * URL SIGNÉE, refaite à chaque lecture. La ranger donnerait des liens morts —
+   * les nôtres expirent, c'est le propos. Même traitement que l'image d'un
+   * portrait.
+   *
+   * L'orientation n'en porte pas : « c'est le PROPOS, pas le rendu. Rien à
+   * montrer. » Le champ existe quand même sur tous les choix — un schéma par
+   * groupe ferait porter au client la connaissance de quels groupes en ont.
+   */
+  previewUrl: z.string().nullable(),
 }).strict();
 
 export const studioGroupSchema = z.object({

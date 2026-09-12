@@ -312,6 +312,118 @@ describe("administration — la configuration du studio", () => {
     expect(await codeDe(res)).toBe("conflict");
   });
 
+  // ── L'intégrité de l'historique ───────────────────────────────────────────
+
+  /* UNE VERSION PUBLIÉE NE SE RÉÉCRIT JAMAIS, et tout l'atelier en dépend.
+   *
+   * L'historique dit « voilà ce qui tournait le 3 septembre » ; un avis porté
+   * sur une version dit « celle-ci valait mieux que la précédente ». Les deux
+   * mentent le jour où les réglages d'une version publiée peuvent changer sous
+   * elle — le numéro cesse alors de désigner un contenu, et l'on compare deux
+   * choses qui ont bougé.
+   *
+   * C'est tenu PAR CONSTRUCTION aujourd'hui : `settings` ne s'écrit qu'en
+   * `create`, jamais en `update`. Mais rien ne l'éprouvait, et un
+   * `update({ data: { settings } })` ajouté demain passerait toutes les suites.
+   * Ces cas fixent la propriété plutôt que le moyen : peu importe par quel
+   * chemin on édite, la ligne publiée doit ressortir identique. */
+  describe("une version publiée ne se réécrit pas", () => {
+    /** Publie une version, et rend sa ligne telle qu'elle est en base. */
+    const publier = async (entete: Record<string, string>, r: ReglagesPortrait) => {
+      const brouillon = await brouillonner(r);
+      await essaiSur(brouillon.id, "success");
+      await appeler("POST", "/config/publish", entete, { configId: brouillon.id, note: MOTIF });
+      return db.prisma.studioConfig.findUniqueOrThrow({ where: { id: brouillon.id } });
+    };
+
+    it("l'édition qui suit crée une ligne NEUVE, et laisse la publiée intacte", async () => {
+      const { entete } = await session("admin");
+      const publiee = await publier(entete, reglages((r) => {
+        r.ambiances[0]!.consigne.fr = "la version en service";
+      }));
+
+      /* On édite alors qu'AUCUN brouillon n'existe : c'est le cas qui compte,
+         puisque la tête est alors la version publiée elle-même. */
+      expect(await configs.brouillon("portrait")).toBeNull();
+      await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "autre chose"; }));
+
+      const apres = await db.prisma.studioConfig.findUniqueOrThrow({ where: { id: publiee.id } });
+      expect(apres.settings).toEqual(publiee.settings);
+      expect(apres.fingerprint).toBe(publiee.fingerprint);
+      expect(apres.state).toBe("published");
+      expect(apres.version).toBe(publiee.version);
+
+      // Et la nouvelle vit à côté, en brouillon.
+      const brouillon = await configs.brouillon("portrait");
+      expect(brouillon?.id).not.toBe(publiee.id);
+      expect(configs.reglagesPortraitDe(brouillon!).ambiances[0]!.consigne.fr).toBe("autre chose");
+    });
+
+    /* L'ENREGISTREMENT DIRECT EST L'AUTRE PORTE, et la plus discrète : il
+       n'appelle aucun modèle, et c'est par là que passe la pose d'une vignette.
+       S'il modifiait la ligne en service, une vignette changerait ce que
+       l'historique dit d'une version déjà publiée. */
+    it("l'enregistrement direct aussi", async () => {
+      const { entete } = await session("admin");
+      const publiee = await publier(entete, reglages());
+
+      const memes = configs.reglagesPortraitDe(publiee) as ReglagesPortrait;
+      await configs.enregistrerDirect("portrait", {
+        ...memes,
+        ambiances: memes.ambiances.map((a) => ({ ...a, apercuCle: "essais/une-vignette" })),
+      });
+
+      const apres = await db.prisma.studioConfig.findUniqueOrThrow({ where: { id: publiee.id } });
+      expect(apres.settings).toEqual(publiee.settings);
+      expect(apres.state).toBe("published");
+
+      const brouillon = await configs.brouillon("portrait");
+      expect(brouillon?.id).not.toBe(publiee.id);
+      expect(configs.reglagesPortraitDe(brouillon!).ambiances[0]!.apercuCle).toBe("essais/une-vignette");
+    });
+
+    /* Le retour arrière remet une ligne en service SANS la reconstruire : son
+       contenu doit être exactement celui qu'elle portait. */
+    it("le retour arrière ne reconstruit rien", async () => {
+      const { entete } = await session("admin");
+      const une = await publier(entete, reglages((r) => { r.ambiances[0]!.consigne.fr = "la première"; }));
+      await publier(entete, reglages((r) => { r.ambiances[0]!.consigne.fr = "la seconde"; }));
+
+      await appeler("POST", "/config/rollback", entete, { configId: une.id, reason: "la seconde déçoit" });
+
+      const apres = await db.prisma.studioConfig.findUniqueOrThrow({ where: { id: une.id } });
+      expect(apres.settings).toEqual(une.settings);
+      expect(apres.version).toBe(une.version);
+      expect(apres.state).toBe("published");
+    });
+  });
+
+  // ── La nature d'un essai ──────────────────────────────────────────────────
+
+  /* `GET trials` N'A PAS DE FILTRE PAR NATURE, et c'est délibéré : les quatre
+     natures partagent la table, et la galerie vient revoir ce qui a été produit,
+     pas ce qui a été réglé. Ce qui manquait était de pouvoir les DIRE — sans la
+     nature, deux essais du même modèle, l'un pour le portrait et l'autre pour
+     les idées, se ressemblent, et la forme de la sortie ne les sépare pas
+     davantage : les trois natures de texte rendent toutes un message. */
+  it("rend la nature de chaque essai, les quatre mêlées", async () => {
+    const { entete } = await session("admin");
+    const naturelles = ["portrait", "message", "idees", "portrait_brief"] as const;
+    for (const nature of naturelles) {
+      const config = await db.prisma.studioConfig.findFirstOrThrow({
+        where: { kind: nature, state: "published" },
+      });
+      await essaiSur(config.id, "success");
+    }
+
+    const res = await appeler("GET", "/trials", entete);
+    expect(res.status).toBe(200);
+    const corps = (await res.json()) as { items: { nature: string }[] };
+
+    expect([...new Set(corps.items.map((e) => e.nature))].sort())
+      .toEqual(["idees", "message", "portrait", "portrait_brief"]);
+  });
+
   // ── L'enregistrement direct ───────────────────────────────────────────────
 
   /* LA porte de service. Sans ce refus, on modifierait une consigne par le
@@ -379,5 +491,74 @@ describe("administration — la configuration du studio", () => {
     expect((await db.prisma.studioTrial.findFirstOrThrow()).studioProfileId).toBeNull();
     const res = await appeler("POST", "/config/publish", entete, { configId: brouillon.id, note: MOTIF });
     expect(res.status).toBe(200);
+  });
+  /* ─── La photo d'exemple d'une éprouvette ─────────────────────────────────── */
+
+  /* SANS ELLE, LA VOIE PHOTO NE S'ÉPROUVE PAS — et `photo.consigne` étant dans
+   * l'empreinte, la changer exige un essai que seule cette photo rend possible.
+   *
+   * DEUX TEMPS, comme côté utilisateur : une URL signée pour déposer, puis une
+   * confirmation qui relit l'objet et le JUGE avec les seuils de la production.
+   * Le fichier ne traverse jamais l'API. */
+  describe("la photo d'exemple", () => {
+    /* ON RELIT CELLE QU'ON A VISÉE, par son identifiant. `findFirstOrThrow`
+       sans ordre rend n'importe laquelle des éprouvettes semées — et le cas
+       vérifiait alors une ligne sur laquelle il n'avait rien fait. */
+    const uneEprouvette = () => db.prisma.studioProfile.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
+    const relire = (id: string) => db.prisma.studioProfile.findUniqueOrThrow({ where: { id } });
+
+    it("garde une place, sans donner la clé", async () => {
+      const { entete } = await session("admin");
+      const profil = await uneEprouvette();
+
+      const res = await appeler("POST", `/profiles/${profil.id}/photo/depot`, entete);
+      expect(res.status).toBe(200);
+      const corps = (await res.json()) as Record<string, unknown>;
+
+      expect(corps["url"]).toBeTruthy();
+      /* LA CLÉ NE SORT PAS. La donner permettrait de la remplacer par celle
+         d'un autre objet — un portrait payé, un reçu — et de nous faire signer
+         une lecture dessus. Doctrine de `depotAvatarSchema`. */
+      expect(corps["cle"]).toBeUndefined();
+      // Elle est gardée côté serveur, le temps que le téléversement aboutisse.
+      expect((await relire(profil.id)).photoDepotKey).not.toBeNull();
+    });
+
+    /* CONFIRMER SANS AVOIR DÉPOSÉ est un conflit, pas un succès vide : sinon un
+       second appel promeut une photo qu'on n'a pas déposée. */
+    it("refuse de confirmer sans dépôt en cours", async () => {
+      const { entete } = await session("admin");
+      const profil = await uneEprouvette();
+
+      const res = await appeler("POST", `/profiles/${profil.id}/photo`, entete);
+      expect(res.status).toBe(409);
+    });
+
+    /* UNE SEULE BARRE POUR TOUS : une photo d'exemple que la production
+       refuserait ferait un essai qui ne représente pas ce qui se passera. Ici
+       l'objet annoncé n'existe pas — le téléversement n'a pas eu lieu —, et la
+       place gardée se libère pour qu'un second essai reparte proprement. */
+    it("libère la place quand l'objet ne se lit pas", async () => {
+      const { entete } = await session("admin");
+      const profil = await uneEprouvette();
+      await appeler("POST", `/profiles/${profil.id}/photo/depot`, entete);
+
+      const res = await appeler("POST", `/profiles/${profil.id}/photo`, entete);
+
+      // `validation_failed` répond 400 : c'est une erreur d'appel, pas un état
+      // du monde qui empêcherait le geste.
+      expect(res.status).toBe(400);
+      expect((await relire(profil.id)).photoDepotKey).toBeNull();
+      expect((await relire(profil.id)).photoKey).toBeNull();
+    });
+
+    /* Le support ne règle pas le studio, photo comprise : la dépense et la
+       consigne en préparation lui sont fermées. */
+    it("reste hors de portée du support", async () => {
+      const { entete } = await session("support");
+      const profil = await uneEprouvette();
+
+      expect((await appeler("POST", `/profiles/${profil.id}/photo/depot`, entete)).status).toBe(403);
+    });
   });
 });

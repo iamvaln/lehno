@@ -36,7 +36,10 @@ export function ListePartagee(
   { t, langue, jeton, liste, joursRestants }: {
     t: Messages; langue: Langue; jeton: string;
     liste: Ouverte;
-    joursRestants: number;
+    /* NULLE quand la liste ne vise aucune occasion — « ce qui me ferait
+       plaisir », sans date. Il n'y a alors rien à décompter : un zéro
+       afficherait « c'est aujourd'hui » sur une liste qui n'attend aucun jour. */
+    joursRestants: number | null;
   },
 ): ReactNode {
   const [etat, setEtat] = useState<Ouverte>(liste);
@@ -125,15 +128,21 @@ export function ListePartagee(
                     (me-events.ts), et la forme publique ne porte pas le genre
                     de l'occasion. La date seule vaut mieux qu'une virgule
                     orpheline devant elle. */}
-                {etat.occasionLabel === null
-                  ? dateEnToutesLettres(etat.occasionDate, langue)
-                  : interpoler(t.listeOccasion, {
-                      occasion: etat.occasionLabel,
-                      date: dateEnToutesLettres(etat.occasionDate, langue),
-                    })}
+                {/* SANS DATE, le nom que le propriétaire a donné suffit :
+                    c'est le cas d'une liste qui ne vise aucune occasion. Sans
+                    nom non plus, on n'écrit rien — mieux vaut une ligne absente
+                    qu'une ligne qui annonce le vide. */}
+                {etat.occasionDate === null
+                  ? etat.occasionLabel
+                  : etat.occasionLabel === null
+                    ? dateEnToutesLettres(etat.occasionDate, langue)
+                    : interpoler(t.listeOccasion, {
+                        occasion: etat.occasionLabel,
+                        date: dateEnToutesLettres(etat.occasionDate, langue),
+                      })}
               </div>
             </div>
-            {joursRestants >= 0 ? (
+            {joursRestants !== null && joursRestants >= 0 ? (
               <div style={{ marginLeft: "auto" }}>
                 <Countdown days={joursRestants} locale={langue} size="s" />
               </div>

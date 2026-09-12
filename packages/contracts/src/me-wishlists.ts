@@ -35,6 +35,13 @@ export const ownerWishSchema = z.object({
   label: z.string(),
   link: z.string().url().nullable(),
   imageUrl: z.string().url().nullable(),
+  /* LA CLÉ d'une photo déposée, à côté du lien d'une boutique. Les deux
+     coexistent : l'URL pointe une image qu'on ne possède pas, la clé désigne
+     celle qu'on a prise. C'est sur la clé qu'un client range son fichier —
+     l'URL de lecture, elle, se demande à `/me/media/url` — et seulement pour ce
+     qu'on n'a pas déjà. Une liste de vingt souhaits ne doit pas coûter vingt
+     signatures dont la plupart ne serviront pas. */
+  imageKey: z.string().nullable(),
   details: z.string().nullable(),
   price: z.number().nonnegative().nullable(),
   currency: currencySchema.nullable(),
@@ -106,11 +113,23 @@ export type UpdateOwnerWishInput = z.infer<typeof updateOwnerWishSchema>;
 
 export const wishlistSchema = z.object({
   id: z.string().uuid(),
-  // L'occasion à laquelle la liste appartient : « un cadeau de Noël n'est pas
-  // un cadeau de mariage ».
-  occurrenceId: z.string().uuid(),
-  occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  eventKind: z.string(),
+  /* L'occasion à laquelle la liste appartient : « un cadeau de Noël n'est pas
+     un cadeau de mariage ».
+     NULLE quand la liste n'en vise aucune — « ce qui me ferait plaisir », sans
+     date. Les trois champs qui la décrivent le sont alors ensemble, et `name`
+     devient le seul repère : c'est pourquoi il s'accepte à l'ouverture. */
+  occurrenceId: z.string().uuid().nullable(),
+  /* LE NOM QUE LE PROPRIÉTAIRE DONNE, ou nul.
+   *
+   * Nul veut dire « composez-le depuis l'occasion » — « Liste de Célarine,
+   * anniversaire 2026 ». Le serveur ne le compose PAS à sa place : il rendrait
+   * une chaîne figée le jour où l'occasion change de nom, et personne ne
+   * saurait pourquoi les deux ne s'accordent plus. Le client a déjà
+   * `eventLabel` et `occurrenceDate` pour l'écrire, et il sait dans quelle
+   * langue. */
+  name: z.string().nullable(),
+  occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  eventKind: z.string().nullable(),
   eventLabel: z.string().nullable(),
   wishCount: z.number().int().nonnegative(),
   /* COMBIEN, jamais LESQUELS ni PAR QUI : l'écran a besoin de dire « 3 sur 7
@@ -120,8 +139,17 @@ export const wishlistSchema = z.object({
   // Un lien de partage actif existe-t-il ? La révocation le remet à faux, et
   // l'écran repropose alors de partager.
   isShared: z.boolean(),
-  /* L'occasion est passée : la liste s'affiche encore — on veut revoir ce
-     qu'on avait demandé — mais n'accepte plus de réservation. */
+  /* QUAND LA LISTE SE FERME, si le propriétaire l'a devancée.
+   *
+   * Nul veut dire « jusqu'à l'occasion », qui est le cas ordinaire. On la
+   * devance pour avoir le temps d'acheter : une liste d'anniversaire close
+   * trois jours avant laisse ces trois jours pour aller chercher ce qui a été
+   * réservé. */
+  closesAt: z.string().nullable(),
+  /* L'occasion est passée, OU la clôture est franchie : la liste s'affiche
+     encore — on veut revoir ce qu'on avait demandé — mais n'accepte plus de
+     réservation. Le serveur résout les deux ; un client qui comparerait les
+     dates lui-même se tromperait de fuseau. */
   isArchived: z.boolean(),
 }).strict();
 
@@ -132,8 +160,42 @@ export type Wishlist = z.infer<typeof wishlistSchema>;
    la self-Person du demandeur : ouvrir une liste sur l'occasion d'un proche
    publierait ce que ce proche n'a jamais accepté de publier. */
 export const createWishlistSchema = z.object({
-  occurrenceId: z.string().uuid(),
-}).strict();
+  /* FACULTATIVE. Une liste peut ne viser aucune occasion — « ce qui me ferait
+     plaisir », qu'on tient toute l'année. Elle a alors besoin d'un nom pour se
+     désigner : `superRefine` l'exige plus bas, sinon l'écran afficherait une
+     ligne vide dans la liste des listes. */
+  occurrenceId: z.string().uuid().optional(),
+  /* Facultatif à l'ouverture : on ouvre une liste pour y mettre des souhaits,
+     pas pour la baptiser. Le nom se pose ensuite, quand on a une raison de le
+     changer. */
+  name: z.string().trim().min(1).max(120).optional(),
+  closesAt: z.string().datetime().optional(),
+}).strict().superRefine((v, ctx) => {
+  /* SANS OCCASION, LE NOM DEVIENT OBLIGATOIRE. Avec une occasion, il se compose
+     depuis elle — « Liste de Célarine, anniversaire 2026 ». Sans elle, il n'y a
+     rien d'autre à afficher, et une liste sans nom ni date serait une ligne
+     vide que rien ne distingue de la suivante. */
+  if (!v.occurrenceId && v.name === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom, path: ["name"],
+      message: "une liste sans occasion a besoin d'un nom",
+    });
+  }
+});
+
+/* Renommer une liste, ou déplacer sa clôture.
+ *
+ * `null` remet au défaut — « composez le nom depuis l'occasion », « fermez à
+ * l'occasion ». Sans lui, un nom posé une fois ne pourrait plus être retiré,
+ * seulement remplacé par un autre. */
+export const updateWishlistSchema = z.object({
+  name: z.string().trim().min(1).max(120).nullable().optional(),
+  closesAt: z.string().datetime().nullable().optional(),
+}).strict().refine((v) => Object.keys(v).length > 0, {
+  message: "au moins un champ doit être fourni",
+});
+
+export type UpdateWishlistInput = z.infer<typeof updateWishlistSchema>;
 
 export type CreateWishlistInput = z.infer<typeof createWishlistSchema>;
 
@@ -162,7 +224,9 @@ export const myReservationSchema = z.object({
   // Chez qui : de quoi afficher la ligne et rejoindre son Mur.
   ownerDisplayName: z.string(),
   ownerUsername: z.string(),
-  occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /* Nulle quand la liste réservée ne vise aucune occasion. L'écran affiche
+     alors le nom de la liste — le seul repère qu'elle ait. */
+  occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   // « la mention de savoir si l'on s'est fait connaître d'elle » (UX 3.27).
   showIdentity: z.boolean(),
   confirmedAt: z.string(),

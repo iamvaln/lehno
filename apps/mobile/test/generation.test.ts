@@ -6,7 +6,7 @@ import {
 import {
   DELAI_MAX, LIMITE_DU_MESSAGE, PREMIER_DELAI, correctionDuMessage, creditRendu,
   delaiAvantLaProchaine, doitInterroger, marquageEnvoye, offreDeRefaire,
-  ouverture, peutEnregistrerLAjustement, phaseDuResultat,
+  ouverture, peutEnregistrerLAjustement, phaseDuResultat, phraseDeLAttente,
   relanceDuMessage, texteUtile,
 } from "../lib/generation.js";
 
@@ -45,6 +45,9 @@ const resultat = (
     createdAt: "2026-08-26T10:00:00Z",
   },
   message,
+  /* Nul pour un message : le jeu d'idées et le brouillon ne voyagent jamais
+     ensemble — une exécution produit l'un OU l'autre, selon sa nature. */
+  ideas: null,
 });
 
 describe("l'écran s'ouvre en observateur", () => {
@@ -274,4 +277,25 @@ describe("les drapeaux", () => {
      La règle tient maintenant sans fonction : ce qui se paie s'annonce, et
      `test/drapeaux.test.ts` refuse toute décision qui interrogerait à nouveau
      une clé qui n'existe pas. */
+});
+
+describe("ce que l'attente dit", () => {
+  const T = {
+    portraitAttenteNotes: (n: number, qui: string) => `On relit vos ${n} notes sur ${qui}.`,
+    portraitAttenteSansNote: (qui: string) => `On rassemble ce qu'on sait de ${qui}.`,
+    portraitAttenteSansNom: "On rassemble ce qu'on sait.",
+  };
+
+  it("nomme la matière quand il y en a", () => {
+    expect(phraseDeLAttente(9, "Awa", T)).toBe("On relit vos 9 notes sur Awa.");
+  });
+
+  it("ne dit pas « 0 notes » — sans matière, on dit autre chose", () => {
+    expect(phraseDeLAttente(0, "Awa", T)).toBe("On rassemble ce qu'on sait de Awa.");
+  });
+
+  it("n'écrit pas de phrase à trou quand le nom manque", () => {
+    expect(phraseDeLAttente(9, null, T)).toBe("On rassemble ce qu'on sait.");
+    expect(phraseDeLAttente(9, "", T)).toBe("On rassemble ce qu'on sait.");
+  });
 });

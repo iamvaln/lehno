@@ -3,6 +3,7 @@ import type { INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import jwt from "jsonwebtoken";
 import { createHash, randomBytes } from "node:crypto";
+import { StockageMemoire } from "../src/stockage/memoire.adapter.js";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { ownerWishSchema, sharedWishlistSchema, wishlistSchema } from "@lehno/contracts";
 import { WishlistService } from "../src/me/wishlist.service.js";
@@ -123,12 +124,113 @@ describe("mes listes de souhaits, leur partage et leur réservation", () => {
       new RateLimitService(db.prisma as never),
       new OtpService(db.prisma as never, PEPPER),
       boite,
+      new StockageMemoire(),
     );
     awa = await compte("awa");
     bila = await compte("bila");
   });
 
   // ── Tenir sa liste ────────────────────────────────────────────────────────
+
+  /* UNE LISTE SANS OCCASION — « ce qui me ferait plaisir », qu'on tient toute
+     l'année. Elle était impossible : le propriétaire se lisait par
+     `wishlist → occurrence → user`, donc une liste sans occasion n'avait
+     personne à qui appartenir, et ses souhaits nulle part où s'accrocher. */
+  it("ouvre une liste qui ne vise aucune occasion", async () => {
+    const liste = await listes.create(awa, null, { name: "Ce qui me ferait plaisir" });
+
+    expect(wishlistSchema.safeParse(liste).success).toBe(true);
+    expect(liste.occurrenceId).toBeNull();
+    expect(liste.occurrenceDate).toBeNull();
+    expect(liste.eventKind).toBeNull();
+    expect(liste.name).toBe("Ce qui me ferait plaisir");
+    // Sans occasion, rien ne l'archive tant qu'aucune clôture n'est posée.
+    expect(liste.isArchived).toBe(false);
+  });
+
+  // Les souhaits appartiennent à LA LISTE : c'est ce qui rend la liste sans
+  // occasion tenable, et le seul moyen de les retrouver.
+  it("accroche les souhaits à la liste, pas à une occasion", async () => {
+    const liste = await listes.create(awa, null, { name: "Toute l'année" });
+    await listes.createWish(awa, liste.id, { label: "Un moulin à café" });
+
+    const rendus = await listes.listWishes(awa, liste.id);
+    expect(rendus.map((s) => s.label)).toEqual(["Un moulin à café"]);
+  });
+
+  /* LE CLOISONNEMENT TIENT SANS OCCASION. C'était le vrai risque du
+     changement : la garde passait par l'occurrence, et la retirer aurait pu
+     ouvrir la liste d'un autre à qui devine son identifiant. */
+  it("ne rend pas la liste sans occasion d'un autre compte", async () => {
+    const sienne = await listes.create(bila, null, { name: "La sienne" });
+
+    await expect(listes.listWishes(awa, sienne.id)).rejects.toMatchObject({ code: "not_found" });
+    expect((await listes.list(awa)).map((l) => l.id)).not.toContain(sienne.id);
+  });
+
+  /* DEUX LISTES SANS OCCASION COEXISTENT. « Une seule liste par occasion »
+     reste vrai, mais l'unicité est PARTIELLE : sans elle, la règle dépendrait
+     du fait que Postgres tient les nuls pour distincts, au lieu de le dire. */
+  it("laisse coexister plusieurs listes sans occasion", async () => {
+    await listes.create(awa, null, { name: "Ce qui me ferait plaisir" });
+    await listes.create(awa, null, { name: "Pour la maison" });
+
+    const rendues = await listes.list(awa);
+    expect(rendues.filter((l) => l.occurrenceId === null)).toHaveLength(2);
+  });
+
+  /* L'OCCASION EFFACÉE, LA LISTE SUBSISTE. `SetNull` et non `Cascade` : elle a
+     désormais sa propre existence, et ses souhaits survivent avec elle. Avant,
+     l'effacement de l'occurrence emportait tout. */
+  it("garde la liste et ses souhaits quand l'occasion disparaît", async () => {
+    const o = await monOccasion(awa);
+    const liste = await listes.create(awa, o);
+    await listes.createWish(awa, liste.id, { label: "Un vélo" });
+
+    await db.prisma.eventOccurrence.delete({ where: { id: o } });
+
+    const rendues = await listes.list(awa);
+    const survivante = rendues.find((l) => l.id === liste.id);
+    expect(survivante).toBeDefined();
+    expect(survivante!.occurrenceId).toBeNull();
+    expect((await listes.listWishes(awa, liste.id)).map((s) => s.label)).toEqual(["Un vélo"]);
+  });
+
+
+
+  /* LE NOM ET LA CLÔTURE, deux réglages qui reviennent au défaut.
+   *
+   * `null` ne vide pas un champ obligatoire : il remet « composez le nom depuis
+   * l'occasion » et « fermez à l'occasion ». C'est la seule façon de revenir en
+   * arrière quand l'occasion a été renommée depuis. */
+  it("laisse nommer une liste, puis revenir au nom de l'occasion", async () => {
+    const liste = await listes.create(awa, await monOccasion(awa));
+
+    const nommee = await listes.update(awa, liste.id, { name: "Pour mes 30 ans" });
+    expect(nommee.name).toBe("Pour mes 30 ans");
+
+    const rendue = await listes.update(awa, liste.id, { name: null });
+    expect(rendue.name).toBeNull();
+  });
+
+  /* UNE CLÔTURE FRANCHIE ARCHIVE LA LISTE, sans attendre l'occasion. On la
+     devance pour avoir le temps d'acheter : une liste close trois jours avant
+     laisse ces trois jours pour aller chercher ce qui a été réservé.
+     Le serveur résout les deux causes — occasion passée OU clôture franchie —
+     parce qu'un client qui comparerait les dates lui-même se tromperait de
+     fuseau, et divergerait du serveur qui refuse les réservations. */
+  it("archive une liste dont la clôture est franchie, avant l'occasion", async () => {
+    const liste = await listes.create(awa, await monOccasion(awa));
+    expect(liste.isArchived).toBe(false);
+
+    const hier = new Date(Date.now() - 24 * 3600_000).toISOString();
+    const close = await listes.update(awa, liste.id, { closesAt: hier });
+    expect(close.isArchived).toBe(true);
+
+    // Et on revient en arrière : la clôture retirée, la liste rouvre.
+    const rouverte = await listes.update(awa, liste.id, { closesAt: null });
+    expect(rouverte.isArchived).toBe(false);
+  });
 
   it("ouvre une liste sur une occasion à soi et y note un souhait", async () => {
     const o = await monOccasion(awa);

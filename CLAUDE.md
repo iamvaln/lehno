@@ -126,7 +126,48 @@ Un test échoue si le fichier versionné est périmé.
 
 Le code dit déjà ce qu'il fait. Un commentaire explique **le piège évité** —
 pourquoi cette forme plutôt qu'une autre, et ce qui casserait si on la
-« simplifiait ». En français.
+« simplifiait ».
 
 Voir `apps/api/src/tenancy/tenant.repository.ts`, `apps/api/src/me/calendrier.ts`
 et `packages/contracts/src/flags.ts` pour le ton.
+
+---
+
+## Le code s'écrit en anglais — à partir de maintenant, fichier par fichier
+
+Le dépôt nomme en français jusqu'à la plomberie (`basculeDeTri`,
+`cheminDeLecture`). Ce n'est pas du vocabulaire métier, c'est de la technique
+traduite, et l'écosystème autour est anglais : chaque appel mélange déjà les
+deux langues. Ça change, mais pas d'un coup.
+
+**La règle, en attendant la passe de normalisation :**
+
+- **Tout fichier NEUF s'écrit entièrement en anglais** — identifiants, nom du
+  fichier, clés de libellés, commentaires.
+- **Un fichier existant ne se traduit pas.** Ni ses noms, ni ses commentaires.
+  On y écrit dans la langue qu'il porte déjà.
+- **Un fichier est donc tout en français ou tout en anglais, jamais un mélange.**
+  C'est ce qui rend la règle relisible d'un coup d'œil.
+
+**Deux choses ne changent pas, et ce ne sont pas des exceptions :**
+
+- **Les textes affichés ne sont concernés ni de près ni de loin.** Le produit est
+  bilingue : `messages/fr.ts` et `messages/en.ts` portent les deux, et le client
+  reçoit la sienne. Cette règle ne parle que des **clés**, qui sont des
+  identifiants comme les autres — `portraitAttenteQuitter` deviendrait
+  `portraitWaitLeave`, et les deux phrases qu'elle porte ne bougent pas d'un
+  caractère, chacune dans sa langue.
+- **Les specs restent en français.** C'est la langue de la conception, et elles
+  ne sont lues que par l'équipe.
+
+**Pourquoi on ne traduit pas l'existant au fil de l'eau**, et le piège n'est pas
+où on le croit : renommer paraît risqué et ne l'est pas — le compilateur vérifie
+tout. **Traduire les commentaires d'un fichier existant paraît gratuit et ne
+l'est pas** : rien ne casse chez vous, mais ça réécrit toutes les lignes du
+fichier, donc ça entre en conflit avec chaque *hunk* de chaque branche ouverte.
+C'est du travail qui se paie chez les autres.
+
+Le reste — l'ordre, le gel, le glossaire, ce qu'on demande au designer — est
+dans `specs/plan-normalisation-anglais-2026-09-12.md`. **Ce chantier attend
+qu'il n'y ait plus de travail en cours ; il ne se commence pas de sa propre
+initiative.**

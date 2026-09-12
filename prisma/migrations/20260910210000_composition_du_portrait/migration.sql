@@ -1,0 +1,15 @@
+-- LA COMPOSITION CHOISIE, figée avec le reste de la sélection.
+--
+-- Le client donne DEUX paramètres au moment de générer : le type de rendu —
+-- nature, animal, abstrait — qui dit ce qu'on dessine, et la composition —
+-- papier, lilas, encre — qui dit dans quelle gamme et sur quel fond ça se pose.
+--
+-- Elle se fige pour la même raison que la voie et l'ambiance : l'approbation
+-- vient plus tard, et elle doit composer avec ce qui a été choisi. Sans cette
+-- colonne, elle reprendrait « la première active » — et une illustration
+-- destinée à un fond d'encre emploierait la gamme du papier, où elle
+-- disparaîtrait.
+--
+-- Nullable pour les lignes écrites avant ; l'approbation refuse alors, plutôt
+-- que d'inventer une gamme.
+ALTER TABLE "portrait" ADD COLUMN "composition_id" VARCHAR(60);

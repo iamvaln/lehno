@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import type { StockageMemoire } from "../src/stockage/memoire.adapter.js";
 import { withDatabase, resetDatabase, avecMotif, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
@@ -275,16 +276,42 @@ describe("administration — la décision sur un paiement", () => {
     expect(trace.reason).toBe("Réception constatée sur le compte");
   });
 
-  // Le reçu s'efface une fois la demande traitée : une photo de justificatif
-  // n'a aucune raison de rester une fois qu'elle a servi.
-  it("le reçu s'efface une fois la demande traitée", async () => {
+  /* Le reçu s'efface une fois la demande traitée : il a servi à trancher, et
+     une pièce déposée par quelqu'un n'a pas à rester après ça.
+   *
+   * LA COLONNE NE SUFFIT PAS, et ce cas ne le vérifiait pas. Elle passait à nul
+   * pendant que le FICHIER restait dans le compartiment — plus rien ne le
+   * désignait, donc aucun ménage ne pouvait le retrouver : chaque paiement
+   * tranché y abandonnait son reçu, facturé indéfiniment. Le test était vert. */
+  it("le reçu s'efface une fois la demande traitée, fichier compris", async () => {
     const { entete } = await session("admin");
     const { paiementId } = await enAttente(entete);
-    await db.prisma.payment.update({ where: { id: paiementId }, data: { proofKey: "recus/abc.jpg" } });
+
+    const stockage = app.get<StockageMemoire>("STOCKAGE_PORT");
+    const cle = await stockage.ecrire("recus", Buffer.from("un reçu"), "image/jpeg");
+    await db.prisma.payment.update({ where: { id: paiementId }, data: { proofKey: cle } });
+    expect(stockage.contenuDe(cle)).toBeDefined();
 
     await decider(entete, paiementId, CONFIRMER);
 
     expect((await db.prisma.payment.findUniqueOrThrow({ where: { id: paiementId } })).proofKey).toBeNull();
+    expect(stockage.contenuDe(cle)).toBeUndefined();
+  });
+
+  /* UN ÉCHEC DU STOCKAGE NE DÉFAIT PAS LA DÉCISION. Elle est prise, les crédits
+     sont octroyés : rendre une erreur ici ferait croire que rien n'a eu lieu, et
+     l'administrateur retrancherait un paiement déjà tranché. Le pire cas assumé
+     est un fichier oublié, qui ne casse rien. */
+  it("tranche quand même si l'effacement du fichier échoue", async () => {
+    const { entete } = await session("admin");
+    const { paiementId } = await enAttente(entete);
+    await db.prisma.payment.update({
+      where: { id: paiementId }, data: { proofKey: "recus/jamais-deposee.jpg" },
+    });
+
+    const r = await decider(entete, paiementId, CONFIRMER);
+    expect(r.status).toBe(200);
+    expect((await db.prisma.payment.findUniqueOrThrow({ where: { id: paiementId } })).status).toBe("succeeded");
   });
 
   // ─── Les droits ────────────────────────────────────────────────────────────

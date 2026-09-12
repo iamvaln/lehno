@@ -13,6 +13,7 @@ import {
   chercheVraiment, dateCourte, parametresDeRecherche, presseAssezPourSAfficher,
 } from "../../../lib/carnet.js";
 import { libelleDeLEcheance } from "../../../lib/libelles.js";
+import { sansSoi } from "../../../lib/soi.js";
 
 /* La recherche.
  *
@@ -59,7 +60,7 @@ export default function Recherche() {
           const lu = personListSchema.parse(await appel<unknown>(
             `/me/persons${parametresDeRecherche(tri, 0, chercheVraiment(q) ? q : "")}`,
           ));
-          if (vivant) setResultats(lu.persons);
+          if (vivant) setResultats(sansSoi(lu.persons));
         } catch {
           /* On garde ce qu'on montrait : effacer la liste sur un échec de
              réseau ferait croire à un carnet vide, et c'est la pire chose à

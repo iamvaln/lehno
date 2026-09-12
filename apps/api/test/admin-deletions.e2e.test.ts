@@ -125,6 +125,52 @@ describe("administration — les demandes de suppression", () => {
       },
     });
 
+  /* LA FILE RAPPORTE DE QUOI AGIR, et non seulement de quoi savoir.
+   *
+   * Elle disait « attend un remboursement » sans donner l'identifiant du
+   * paiement ni le montant : l'écran affichait l'état et n'avait AUCUN geste à
+   * offrir, puisque les deux routes qui règlent un versement le désignent par
+   * son identifiant. C'est ce trou — un état qu'on montre sans pouvoir agir
+   * dessus — qui a laissé `POST payments/:id/refund` et son abandon
+   * inatteignables depuis leur écriture.
+   *
+   * Le numéro du payeur y est parce que c'est LÀ qu'on envoie l'argent : le
+   * chercher dans un autre écran, entre deux moitiés du même geste, est la
+   * meilleure façon de se tromper de destinataire. */
+  it("rapporte le versement dû, avec de quoi le régler", async () => {
+    const u = await enAttente(1, 40);
+    const paiement = await db.prisma.payment.create({
+      data: {
+        userId: u.id, direction: "refund", status: "pending", mode: "provider",
+        amount: 5000, currency: "XAF", credits: 0, payerMsisdn: "+237699001122",
+      },
+    });
+    const { entete } = await session("support");
+
+    const corps = (await (await lister(entete)).json()) as {
+      items: { remboursement: { id: string; montant: number; devise: string; numeroDuPayeur: string | null } | null }[];
+    };
+
+    expect(corps.items[0]?.remboursement).toEqual({
+      id: paiement.id,
+      /* NOMBRE ET NON CHAÎNE : un `Decimal` sérialisé tel quel sortirait en
+         texte, et un écran qui formate un montant formaterait du texte. */
+      montant: 5000,
+      devise: "XAF",
+      numeroDuPayeur: "+237699001122",
+    });
+  });
+
+  /* Nul quand rien n'est dû : l'écran n'a alors aucun geste à offrir, et c'est
+     juste. Un objet vide ferait chercher un versement qui n'existe pas. */
+  it("ne rapporte rien quand aucun versement n'est dû", async () => {
+    await enAttente(1, 10);
+    const { entete } = await session("support");
+
+    const corps = (await (await lister(entete)).json()) as { items: { remboursement: unknown }[] };
+    expect(corps.items[0]?.remboursement).toBeNull();
+  });
+
   it("distingue un compte qui attend un remboursement d'un délai échu", async () => {
     const u = await enAttente(1, 40);
     await remboursementDu(u.id);

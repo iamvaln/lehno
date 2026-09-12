@@ -84,6 +84,49 @@ describe("la recharge", () => {
        décide de ce que le client voit, le second de ce qui reste employable.
        Un compte peut être actif pour l'administration et absent de
        l'application — c'est ainsi qu'on le retire en douceur. */
+    /* LA REMISE SE DÉDUIT, ELLE NE SE RANGE PLUS.
+       `bonus_percent` était saisi à la main et rien ne le rattachait aux
+       montants : un palier pouvait annoncer 20 % quand son rapport en valait
+       cinq. Ici, 10 crédits à 1700 avec l'unité à 189 font −10 % et rien
+       d'autre — 1890 de plein tarif, 190 de moins, 10,05 % arrondis vers le
+       bas. */
+    it("déduit la remise des montants du palier", async () => {
+      await db.prisma.systemParameter.upsert({
+        where: { key: "credit_unit_price" },
+        create: { key: "credit_unit_price", value: "189", valueType: "money" },
+        update: { value: "189" },
+      });
+      const p = await palier(1_700, 10, true, 90);
+
+      const rendu = (await recharge.paliers()).find((x) => x.id === p.id);
+      expect(rendu?.discountPercent).toBe(10);
+    });
+
+    /* LA GARDE QUI JUSTIFIE TOUT LE MONTAGE. Changer le prix unitaire change ce
+       que les paliers annoncent, SANS toucher aux paliers. Avec une colonne
+       stockée il aurait fallu la recalculer partout — et le jour où on l'aurait
+       oublié, chaque palier aurait continué d'afficher l'ancienne remise sans
+       que rien ne le signale. */
+    it("suit le prix unitaire sans qu'on touche aux paliers", async () => {
+      const p = await palier(1_700, 10, true, 90);
+      const remiseAvec = async (prix: string): Promise<number | null> => {
+        await db.prisma.systemParameter.upsert({
+          where: { key: "credit_unit_price" },
+          create: { key: "credit_unit_price", value: prix, valueType: "money" },
+          update: { value: prix },
+        });
+        return (await recharge.paliers()).find((x) => x.id === p.id)?.discountPercent ?? null;
+      };
+
+      expect(await remiseAvec("189")).toBe(10);
+      expect(await remiseAvec("250")).toBe(32);
+      // Sous le prix du palier, il n'y a plus de remise à annoncer du tout.
+      expect(await remiseAvec("100")).toBeNull();
+
+      const enBase = await db.prisma.creditBundle.findUniqueOrThrow({ where: { id: p.id } });
+      expect(Number(enBase.amount)).toBe(1_700);
+    });
+
     it("ne rend qu'un compte à la fois visible et actif", async () => {
       await compteDeCollecte(true, true);
       await compteDeCollecte(false, true);
@@ -176,6 +219,40 @@ describe("la recharge", () => {
       const relu = await recharge.lire(awa, r.id);
       expect(relu.fee).toBe(20);
       expect(relu.expectedOnAccount).toBe(1_000);
+    });
+
+    /* MÊME DOCTRINE QUE LES FRAIS, appliquée au prix. Sans le prix unitaire du
+       jour, « quelle réduction cette personne a-t-elle obtenue ? » n'est plus
+       reconstructible après un changement de prix : on lit 1000 F pour 10
+       crédits sans savoir si le plein tarif valait 100 ou 250.
+
+       Le cas éprouve les DEUX effacements possibles : le prix qui change, et le
+       palier qui disparaît. `credit_bundle_id` est en SetNull — supprimer un
+       palier fait perdre aux paiements historiques jusqu'à sa référence, et
+       sans valeurs figées l'information aurait purement disparu. */
+    it("fige le prix unitaire et celui du palier, qu'un changement ne rattrape pas", async () => {
+      await db.prisma.systemParameter.upsert({
+        where: { key: "credit_unit_price" },
+        create: { key: "credit_unit_price", value: "250", valueType: "money" },
+        update: { value: "250" },
+      });
+      const p = await palier(1_000, 10);
+      const c = await canal();
+      const k = await compteDeCollecte();
+
+      const r = await recharge.declarer(awa, {
+        bundleId: p.id, channelId: c.id, collectionAccountId: k.id, payerMsisdn: "670111222", providerRef: reference(),
+      });
+
+      await db.prisma.systemParameter.update({
+        where: { key: "credit_unit_price" }, data: { value: "100" },
+      });
+      await db.prisma.creditBundle.delete({ where: { id: p.id } });
+
+      const ligne = await db.prisma.payment.findUniqueOrThrow({ where: { id: r.id } });
+      expect(ligne.creditBundleId).toBeNull();
+      expect(Number(ligne.creditUnitPrice)).toBe(250);
+      expect(Number(ligne.bundleAmount)).toBe(1_000);
     });
 
     /* Rien de ce que le client envoie ne compose le paiement : il donne deux

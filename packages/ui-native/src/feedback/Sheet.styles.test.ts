@@ -7,6 +7,21 @@ const SOMBRE = resolve("dark");
 const THEMES = [["clair", CLAIR], ["sombre", SOMBRE]] as const;
 
 describe("le châssis des feuilles", () => {
+  /* LA SCÈNE SE POSE PAR-DESSUS, elle ne prend pas une part de l'écran.
+     En `flex: 1`, elle devenait une colonne comme une autre : à côté d'un
+     défilement lui aussi en `flex: 1`, chacun prenait la moitié de la hauteur.
+     La page se voyait rognée en son milieu, et le voile n'éteignait plus rien
+     puisqu'il n'y avait plus rien sous lui — vu à l'appareil. */
+  it("recouvre son parent au lieu de lui disputer la hauteur", () => {
+    const c = chassisDeFeuille({ couleurs: CLAIR });
+    expect(c.scene.position).toBe("absolute");
+    expect([c.scene.top, c.scene.left, c.scene.right, c.scene.bottom]).toEqual([0, 0, 0, 0]);
+    expect(c.scene.flex).toBeUndefined();
+    // Et elle reste plaquée au bas : la feuille monte du bord, pas du milieu.
+    expect(c.scene.justifyContent).toBe("flex-end");
+  });
+
+
   /* Elle monte du bord bas de l'écran. Arrondir les quatre coins en ferait une
      carte posée, et le liseré de page qu'on verrait dessous démentirait le
      mouvement — la feuille n'aurait plus l'air de venir de nulle part. */

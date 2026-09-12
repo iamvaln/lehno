@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { submissionSchema, type Submission } from "@lehno/contracts";
 import { nativeBorder, nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
-  Banner, Button, Card, EmptyState, Icon, LoadingState, SectionLabel, Toast,
-  useCouleurs,
+  Banner, Button, Card, EmptyState, LoadingState, ScreenHeader, SectionLabel, Toast,
+  useCouleurs
 } from "@lehno/ui-native";
 import { Bascule } from "../../composants/Bascule.js";
 import { useLangue } from "../../lib/langue.js";
@@ -17,7 +17,7 @@ import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
 import { ecranEteint } from "../../lib/navigation.js";
 import { EcranFerme } from "../../composants/EcranFerme.js";
 import {
-  aTrancher, corpsDeDecision, corpsDeRejet, pretAEnvoyer,
+  aTrancher, corpsDeDecision, corpsDeRejet, nomDeLaContribution, pretAEnvoyer,
   type SaisieDuSas, type Sort,
 } from "../../lib/sas.js";
 
@@ -101,9 +101,17 @@ export default function Valider() {
     }
   };
 
+  /* LA FLÈCHE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement la perdaient, et avec elle le
+     seul moyen visible de revenir. `retours.test.ts` le vérifie. */
+  const retour = (
+    <ScreenHeader titre={t.enteteValider} retour={t.retour} onRetour={() => routeur.back()} />
+  );
+
   if (echec && contributions === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -117,6 +125,7 @@ export default function Valider() {
   if (contributions === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {retour}
         <LoadingState variant="liste" rows={3} title={t.chargement} />
       </View>
     );
@@ -124,26 +133,20 @@ export default function Valider() {
 
   const attente = aTrancher(contributions);
 
-  const retour = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t.retour}
-      onPress={() => routeur.back()}
-      style={styles.retour}
-    >
-      <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-    </Pressable>
-  );
-
   if (!attente.length) {
     return (
-      <View style={[styles.page, styles.aumilieu, { paddingTop: insets.top + nativeSpace[8] }]}>
+      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
         {retour}
-        <EmptyState
-          illustration="contributions-aucune"
-          title={t.validerVideTitre}
-          text={t.validerVideTexte}
-        />
+        {/* L'EN-TÊTE RESTE EN HAUT ; seul le vide se centre. Centrés
+            ensemble, les deux descendaient au milieu de l'écran et la
+            flèche flottait loin du bord. */}
+        <View style={styles.aumilieu}>
+          <EmptyState
+            illustration="contributions-aucune"
+            title={t.validerVideTitre}
+            text={t.validerVideTexte}
+          />
+        </View>
       </View>
     );
   }
@@ -173,7 +176,7 @@ export default function Valider() {
           return (
             <Card key={c.id} surface="panel" padding={15} radius="lg" style={styles.carte}>
               <Text style={[styles.qui, { color: couleurs.textBody }]} numberOfLines={1}>
-                {t.validerPour(c.submitterName ?? t.murPrivSansNom)}
+                {t.validerPour(nomDeLaContribution(c, t.murPrivSansNom))}
               </Text>
               {/* « On se connaît d'où » — une aide au rangement, pas une
                   taxonomie : on la montre telle quelle. */}
@@ -278,7 +281,9 @@ export default function Valider() {
 
 const styles = StyleSheet.create({
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
-  aumilieu: { justifyContent: "center" },
+  // Enfant de la page depuis que l'en-tête le précède : sans `flex`, il
+  // n'occupe que sa hauteur propre et n'a plus rien à centrer.
+  aumilieu: { flex: 1, justifyContent: "center" },
   retour: {
     width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
     alignItems: "center", justifyContent: "center",

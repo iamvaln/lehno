@@ -34,17 +34,24 @@ interface Metadonnees {
      Une action ABSENTE n'est pas disponible : même convention que les
      drapeaux, ce qui n'est pas là est éteint. */
   premiumActions: Metadata["premiumActions"];
+  /* Combien d'idées le jeu portera, tel que l'atelier l'a publié.
+   *
+   * NUL tant que la réponse n'est pas là, et non une valeur par défaut : la
+   * copie annonce ce nombre à l'écran, et en supposer un ferait promettre cinq
+   * pistes là où l'atelier en a réglé quatre. Même doctrine que les prix — on
+   * n'annonce pas ce qu'on ne sait pas encore. */
+  nombreIdees: number | null;
 }
 
 // Vide plutôt que nul : un écran monté avant la réponse ne devine rien, il
 // n'affiche simplement pas ce qu'il ne sait pas encore.
 const Contexte = createContext<Metadonnees>({
-  categories: [], eventKinds: [], premiumActions: [],
+  categories: [], eventKinds: [], premiumActions: [], nombreIdees: null,
 });
 
 export function MetadonneesProvider({ children }: { children: ReactNode }) {
   const [tout, setTout] = useState<Metadonnees>({
-    categories: [], eventKinds: [], premiumActions: [],
+    categories: [], eventKinds: [], premiumActions: [], nombreIdees: null,
   });
 
   const demande = useCallback(async () => {
@@ -54,6 +61,7 @@ export function MetadonneesProvider({ children }: { children: ReactNode }) {
         categories: lu.categories,
         eventKinds: lu.eventKinds,
         premiumActions: lu.premiumActions,
+        nombreIdees: lu.nombreIdees,
       });
     } catch {
       /* Un échec n'efface pas ce qu'on savait. Sans table, la fiche montre ses
@@ -81,4 +89,10 @@ export function useTypesOuverts(): Metadata["eventKinds"] {
    aucun coût, plutôt qu'un coût supposé. */
 export function useActionsPayantes(): Metadata["premiumActions"] {
   return useContext(Contexte).premiumActions;
+}
+
+/* Le nombre d'idées annoncé. Nul tant que la réponse n'est pas là — la copie
+   sait alors se passer du chiffre plutôt que d'en inventer un. */
+export function useNombreIdees(): number | null {
+  return useContext(Contexte).nombreIdees;
 }

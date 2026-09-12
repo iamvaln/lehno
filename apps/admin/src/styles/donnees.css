@@ -358,3 +358,14 @@
   border-radius: var(--radius-pill);
   background: currentColor;
 }
+
+/* LA PHOTO D'EXEMPLE D'UNE ÉPROUVETTE, dans la table des profils. Petite et
+   carrée : on vient vérifier qu'il y en a une et laquelle, pas la regarder. Le
+   `cover` évite qu'un portrait en hauteur écrase la ligne. */
+.admin-vignette-photo {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: var(--rayon-8, 8px);
+  display: block;
+}

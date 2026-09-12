@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { ORIENTATIONS, ORIENTATION_CONSIGNE, type Orientation } from "./gabarits.js";
+import {
+  ORIENTATIONS, ORIENTATION_CONSIGNE, IDEES, MOTS_DU_PORTRAIT, MOTS_PHRASE_PORTRAIT,
+  type Orientation,
+} from "./gabarits.js";
 import { studioConfigSchema, type StudioConfig, type StudioChoice } from "./me-studio.js";
 
 /* Les RÉGLAGES du studio — ce que l'administration compose, publie, et que
@@ -29,7 +32,17 @@ const bilingueSchema = z.object({
   en: z.string().trim().min(1).max(2000),
 }).strict();
 
-const bilingueFacultatifSchema = bilingueSchema.nullable();
+/* BILINGUE OU NUL — et surtout PAS « facultatif », comme il s'est appelé.
+ *
+ * C'est `.nullable()`, jamais `.optional()` : la clé est OBLIGATOIRE, seule sa
+ * valeur peut être nulle. Omettre `description` fait refuser l'orientation
+ * entière, et le refus parle d'un mauvais TYPE — il n'aide donc pas celui qui a
+ * simplement oublié la clé.
+ *
+ * Le nom disait le contraire de ce que le schéma fait, et un client écrit sur la
+ * foi de ce nom aurait sauté la clé. Il n'y a pas de demi-mesure non plus : un
+ * côté rempli et l'autre vide est refusé — c'est null, ou les deux. */
+const bilingueOuNulSchema = bilingueSchema.nullable();
 
 export type Bilingue = z.infer<typeof bilingueSchema>;
 
@@ -45,11 +58,24 @@ export type Bilingue = z.infer<typeof bilingueSchema>;
 export const VOIES_IMAGE = ["illustration", "photo", "aucune"] as const;
 export type VoieImage = (typeof VOIES_IMAGE)[number];
 
-/* Les ambiances, elles, sont ouvertes : familles d'illustration et styles de
-   photo se nomment, se décrivent et s'activent depuis l'administration. Les
-   trois noms de style de photo ne sont d'ailleurs PAS tranchés (spec portrait
-   §7) — un enum les aurait gelés avant qu'on sache lesquels. */
-export const GROUPES_AMBIANCE = ["illustration_family", "photo_style"] as const;
+/* UN SEUL GROUPE D'AMBIANCES, partagé par les deux voies d'image.
+ *
+ * Il y en avait deux — `illustration_family` et `photo_style` —, et le second
+ * n'a JAMAIS eu d'ambiance : c'est ce qui rendait la voie photo invisible, et
+ * ce qui obligeait à inventer « trois noms de style de photo » que personne
+ * n'avait tranchés.
+ *
+ * Or ce sont les MÊMES. Nature, animal, abstrait décrivent ce qu'on veut voir ;
+ * ce que la photo change n'est pas le sujet, c'est d'où l'on part — sans elle
+ * on part des mots, avec elle on s'en inspire. Deux catalogues auraient fait
+ * tenir deux fois le même réglage d'accord, et le jour où l'on reformule la
+ * consigne de « nature », il aurait fallu le faire aux deux endroits — ou
+ * l'oublier à l'un des deux, ce qui est ce qui arrive.
+ *
+ * Le groupe reste une LISTE plutôt qu'une valeur unique : le contrat client le
+ * porte déjà ainsi (`revealsGroup`), et rien n'interdit qu'une troisième voie
+ * ouvre un jour un groupe à elle. */
+export const GROUPES_AMBIANCE = ["illustration_family"] as const;
 export type GroupeAmbiance = (typeof GROUPES_AMBIANCE)[number];
 
 /* Les deux motifs de la §3.4, et leurs deux emplois. Jamais les deux sur un
@@ -83,14 +109,53 @@ export type ChampDuProche = (typeof CHAMPS_DU_PROCHE)[number];
  * fautive ne se verrait qu'au premier essai. */
 const cleModeleSchema = z.string().regex(/^[a-z0-9_-]+:[A-Za-z0-9._-]+$/, "forme attendue : fournisseur:modèle");
 
+/* UN COUPLE min/max, avec la seule règle qui compte : min <= max.
+ *
+ * Posée ICI plutôt que répétée à chaque usage. Deux bornes croisées — un
+ * minimum de sept mots pour un maximum de trois — ne rendent pas un texte
+ * bizarre : elles rendent une consigne que le modèle ne peut pas satisfaire, et
+ * l'essai échoue sans qu'on comprenne pourquoi. */
+function bornesDeMotsSchema(plancher: number, plafond: number) {
+  return z.object({
+    min: z.number().int().min(plancher).max(plafond),
+    max: z.number().int().min(plancher).max(plafond),
+  }).strict().refine((b) => b.min <= b.max, {
+    message: "le minimum ne peut pas dépasser le maximum",
+  });
+}
+
+/* LA VIGNETTE DE RÉFÉRENCE d'un choix : la clé de l'image dans le stockage.
+ *
+ * Une CLÉ et non une URL : les nôtres sont signées et expirent, en ranger une
+ * donnerait un lien mort le lendemain. Le service la signe à chaque lecture.
+ *
+ * `.default(null)` ET NON UN CHAMP REQUIS. Le schéma est `.strict()`, et toutes
+ * les configurations déjà en base l'ignorent : exigé, ce champ les rendrait
+ * illisibles d'un coup — la panne exacte qu'une ligne semée avant le découpage
+ * message/portrait a causée, et qui a coûté une semaine au mobile.
+ *
+ * ELLE N'ENTRE PAS DANS L'EMPREINTE, et c'est essentiel : `partieLueParLeModele`
+ * ne retient que ce que le modèle lit. Une vignette est ce que l'HUMAIN regarde.
+ * L'y mettre ferait retomber tous les essais dès qu'on choisit une image, et il
+ * faudrait payer une génération pour publier une miniature. Conséquence utile :
+ * la poser passe par l'enregistrement direct, sans essai. */
+/* `.nullish()` ET NON `.default(null)`. Le second fait diverger le type
+   d'ENTRÉE du schéma de son type de SORTIE — la clé est facultative à l'entrée,
+   garantie à la sortie —, et TypeScript rend alors deux types structurellement
+   proches qu'il refuse de rapprocher : « Two different types with this name
+   exist, but they are unrelated », sur quatre lignes de l'administration.
+   Nullable et facultatif, les deux types coïncident, et une configuration
+   écrite avant ce champ se relit toujours. */
+const apercuSchema = z.string().trim().min(1).max(200).nullish();
+
 export const orientationReglageSchema = z.object({
   id: z.enum(ORIENTATIONS),
   /** Lu par l'application seule : désactiver fait disparaître sans livraison. */
   actif: z.boolean(),
   libelle: bilingueSchema,
-  description: bilingueFacultatifSchema,
+  description: bilingueOuNulSchema,
   /** L'avertissement affiché AU MOMENT du choix — l'hommage change le gabarit. */
-  avertissement: bilingueFacultatifSchema,
+  avertissement: bilingueOuNulSchema,
   /** Lu par le modèle : entre dans l'empreinte. */
   consigne: bilingueSchema,
 }).strict();
@@ -99,8 +164,9 @@ export const ambianceReglageSchema = z.object({
   id: z.string().regex(/^[a-z0-9_]{1,60}$/),
   groupe: z.enum(GROUPES_AMBIANCE),
   actif: z.boolean(),
+  apercuCle: apercuSchema,
   libelle: bilingueSchema,
-  description: bilingueFacultatifSchema,
+  description: bilingueOuNulSchema,
   /** Lu par le modèle : entre dans l'empreinte. */
   consigne: bilingueSchema,
 }).strict();
@@ -113,7 +179,11 @@ export const voieImageReglageSchema = z.object({
   id: z.enum(VOIES_IMAGE),
   actif: z.boolean(),
   libelle: bilingueSchema,
-  description: bilingueFacultatifSchema,
+  description: bilingueOuNulSchema,
+  /* La voie SE MONTRE aussi : « Illustration », « Photo traitée » et « Aucune
+     image » sont trois rendus, et le troisième n'est pas rien — le motif de
+     marque tient le fond. Les départager en mots demanderait de l'imagination. */
+  apercuCle: apercuSchema,
 }).strict();
 
 /* DEUX CONFIGURATIONS, ET NON UNE.
@@ -165,6 +235,105 @@ export const reglagesMessageSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["orientations"], message: "au moins une orientation doit rester active" });
 });
 
+/* LA PALETTE D'UNE AMBIANCE — quatre couleurs, et le modèle d'image n'en
+ * emploie aucune autre.
+ *
+ * ELLE EST ICI ET NON DANS LES JETONS, alors que ce sont les mêmes valeurs.
+ * Trois raisons, et la première décide :
+ *
+ * 1. LE PORTRAIT FIGE SA CONFIGURATION. Une image approuvée trois mois après
+ *    son brief est composée avec les réglages d'alors. Si la palette vivait
+ *    dans le code, changer un jeton changerait rétroactivement ce qu'un ancien
+ *    portrait produirait — et l'image ne correspondrait plus au texte qu'on
+ *    avait relu.
+ * 2. Elle se règle SANS LIVRAISON. Une patte visuelle se cherche : on essaie,
+ *    on regarde, on ajuste. Passer par un déploiement à chaque essai la
+ *    figerait avant qu'elle ne soit trouvée.
+ * 3. L'API n'a alors aucune raison de dépendre du système de design.
+ *
+ * Les valeurs de départ viennent de la charte — voir `PortraitComposition` —,
+ * mais ce sont des VALEURS DE DÉPART, pas un miroir qu'il faudrait tenir à
+ * jour.
+ */
+export const compositionReglageSchema = z.object({
+  id: z.string().regex(/^[a-z0-9_]{1,60}$/),
+  actif: z.boolean(),
+  libelle: bilingueSchema,
+  description: bilingueOuNulSchema,
+  /* UNE GAMME SE MONTRE OU N'EXISTE PAS. « Encre » ne se départage pas de
+     « Lilas » par une phrase, et la gamme elle-même ne descend pas au client —
+     l'écran montre la composition, pas ses quatre codes hexadécimaux. Sans
+     vignette, il ne reste que le nom. */
+  apercuCle: apercuSchema,
+  /* LA GAMME DE CETTE COMPOSITION — quatre couleurs, et le modèle d'image n'en
+     emploie aucune autre.
+     UNE PAR COMPOSITION, et non une pour toutes : une illustration destinée à
+     un fond d'encre ne peut pas employer la gamme d'une sur papier blanc, elle
+     y disparaîtrait. C'est la composition qui pose le fond ; c'est donc elle
+     qui décide de ce qui s'y voit. */
+  palette: z.tuple([
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  ]),
+  /* LE CADRE — ce que le serveur pose AUTOUR de l'illustration.
+   *
+   * Elles sont ici et non dans le système de design, pour la même raison que la
+   * gamme : le portrait fige sa configuration, et une image approuvée trois
+   * mois après son brief doit se composer avec les couleurs d'alors.
+   *
+   * ET LE SERVEUR COMPOSE, pas seulement le client. L'image rangée dans le
+   * stockage est celle qu'on partage : si elle sortait nue, elle ne porterait
+   * rien de Lehno hors de l'application. Le client peut recomposer à l'écran ;
+   * le fichier, lui, doit déjà être fini. */
+  cadre: z.object({
+    fond: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    bande: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    texte: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    mention: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  }).strict(),
+}).strict();
+
+export type CompositionReglage = z.infer<typeof compositionReglageSchema>;
+
+/* CE QUE LA VOIE PHOTO A EN PROPRE — trois réglages, pas un second catalogue.
+ *
+ * Les AMBIANCES sont partagées : nature, animal, abstrait disent ce qu'on veut
+ * voir, et la photo ne change pas le sujet, seulement d'où l'on part. Ce qui
+ * lui appartient vraiment tient en trois choses.
+ *
+ * LA CONSIGNE est une, pas une par ambiance. Elle dit au modèle quoi faire de
+ * la photo — s'en inspirer sans en reproduire les traits, rester dans
+ * l'ambiance choisie. La décliner par ambiance ferait écrire trois fois la
+ * même phrase, et la quatrième ambiance naîtrait sans la sienne.
+ *
+ * LES SEUILS DE REFUS sont ici et non en dur parce qu'ils se règlent au vu des
+ * photos qui arrivent : « refusée avec une raison claire, plutôt que traitée
+ * mal ». Ce qu'on refuse mal se voit sur la sortie, et on ne livre pas pour
+ * remonter un seuil de vingt pixels.
+ *
+ * LE BLOC EST FACULTATIF, et le code retombe sur ses valeurs quand il manque.
+ * Le schéma est `.strict()` : l'exiger rendrait illisibles d'un coup toutes les
+ * configurations déjà en base — la panne qui a coûté une semaine au mobile. */
+export const photoReglageSchema = z.object({
+  consigne: bilingueSchema,
+  /* Le plus petit côté, en pixels. Sous ce seuil, agrandir invente des détails
+     — et le modèle rend alors un visage qui n'est celui de personne. */
+  coteMin: z.number().int().min(256).max(4096),
+  /* La luminosité moyenne, de 0 à 255. Une photo trop sombre ne porte pas
+     l'information qu'on lui demande d'inspirer ; l'éclaircir révélerait du
+     bruit, pas un visage. */
+  luminositeMin: z.number().int().min(0).max(255),
+  /* L'écart-type des niveaux, comme MESURE APPROCHÉE de la netteté. Ce n'est
+     pas une mesure de flou au sens propre — celle-là demanderait un laplacien —
+     mais une image floue a peu de contraste local, et l'écart-type s'effondre
+     avec. On le dit plutôt que de laisser croire à une mesure exacte. */
+  nettetteMin: z.number().int().min(0).max(128),
+}).strict();
+
+export type PhotoReglage = z.infer<typeof photoReglageSchema>;
+
 export const reglagesPortraitSchema = z.object({
   motifs: z.object({
     /** Le seul qui accepte du texte par-dessus (§3.4). */
@@ -177,6 +346,18 @@ export const reglagesPortraitSchema = z.object({
   }).strict(),
   voiesImage: z.array(voieImageReglageSchema).min(1),
   ambiances: z.array(ambianceReglageSchema),
+  /** Voir `photoReglageSchema` : facultatif, pour que les lignes déjà écrites
+   *  se relisent. */
+  photo: photoReglageSchema.optional(),
+  /* LES COMPOSITIONS — papier, lilas, encre. Réglées au panneau bien avant,
+   * puis CHOISIES par le client au moment de générer.
+   *
+   * Ce sont DEUX PARAMÈTRES distincts que le client donne : le type de rendu
+   * (nature, animal, abstrait) dit ce qu'on dessine ; la composition dit dans
+   * quelle gamme et sur quel fond ça se pose. Les confondre — comme le faisait
+   * une palette unique — reviendrait à peindre pareil pour un fond blanc et
+   * pour un fond d'encre. */
+  compositions: z.array(compositionReglageSchema).min(1),
 }).strict().superRefine((r, ctx) => {
   const doublon = (ids: string[]): string | null => {
     const vus = new Set<string>();
@@ -195,6 +376,91 @@ export const reglagesPortraitSchema = z.object({
 export type OrientationReglage = z.infer<typeof orientationReglageSchema>;
 export type AmbianceReglage = z.infer<typeof ambianceReglageSchema>;
 export type VoieImageReglage = z.infer<typeof voieImageReglageSchema>;
+/* ── LES DEUX AUTRES GÉNÉRATIONS DE TEXTE ────────────────────────────────────
+ *
+ * On ne produit pas qu'un message. Cinq tâches passent par un modèle de texte —
+ * `message`, `gift_ideas`, `portrait_brief`, `note_classification`,
+ * `sensitive_detection` — et les trois premières sont celles que l'utilisateur
+ * demande et paie.
+ *
+ * ELLES SE RÈGLENT SÉPARÉMENT, comme le message et le portrait se sont séparés,
+ * et pour la même raison : une empreinte commune ferait retomber les essais des
+ * idées dès qu'on reformule un garde-fou du brief. Chacune a ses essais, sa
+ * publication et son historique.
+ *
+ * CE QUI SE RÈGLE ET CE QUI RESTE AU CODE. L'invite se COMPOSE depuis un
+ * contexte typé — la langue, le registre, le genre, les notes, le budget. Cette
+ * structure reste en TypeScript : la ranger en base sous forme de corps à trous
+ * demanderait un langage de gabarit, et c'est ainsi qu'une configuration
+ * d'invites devient intenable. Ce qui se règle est ce qui s'AJOUTE ou se BORNE
+ * — la consigne commune, les garde-fous, les champs du proche qui partent, et
+ * les quelques nombres qui décident de la forme de la sortie. */
+
+/* Ce que les trois générations de texte ont en commun. Écrit une fois : trois
+   copies divergeraient au premier durcissement, et on ne saurait plus laquelle
+   fait foi. */
+const fondsCommunDuTexte = {
+  /** Ce qui s'ajoute à la consigne système, en plus des règles absolues. */
+  consigneCommune: z.string().trim().max(4000),
+  /** Ce qui est écarté : symboles, formules, tournures. */
+  gardeFous: z.array(z.string().trim().min(1).max(200)).max(40),
+  champsDuProche: z.array(z.enum(CHAMPS_DU_PROCHE)),
+  /* LE MODÈLE APPELÉ — à l'essai comme en production, et c'est la même ligne.
+   *
+   * Le brief §11.1 l'exige : « le modèle appelé » est rangé dans la partie lue
+   * par le modèle, donc dans l'empreinte, et l'essai l'appelle exactement, sans
+   * repli. Autrement on consignerait un essai réussi sous une empreinte
+   * désignant un modèle qui n'a rien produit, et la publication autoriserait
+   * une mise en service sur la foi d'un résultat obtenu ailleurs.
+   *
+   * Il a longtemps menti pour les trois générations de TEXTE : la production
+   * déroulait la chaîne `ai_task_route` et ignorait ce champ, pendant que
+   * l'image, elle, lisait bien le sien. On éprouvait donc un modèle et on
+   * servait l'autre. `routeur.executer` le prend maintenant comme TÊTE, et la
+   * chaîne devient son repli — repli tracé par le rang dans `ai_usage`, lisible
+   * après coup, et qui ne vaut que pour la production. */
+  modele: cleModeleSchema,
+} as const;
+
+/* LES IDÉES DE CADEAU.
+ *
+ * `ContexteIdees` porte `consigneCommune` et `gardeFous` depuis le début —
+ * « ce que l'administration ajoute, publié depuis l'atelier ». Personne ne les
+ * alimentait : le gabarit les attendait, aucune configuration ne les servait. */
+export const reglagesIdeesSchema = z.object({
+  ...fondsCommunDuTexte,
+  /* COMBIEN ON EN DEMANDE — et la borne haute n'est pas de la prudence.
+   *
+   * Le registre le dit : en dessous de trois, il n'y a rien à comparer et le
+   * refus d'une seule vide la liste ; au-delà de six, on lit moins bien et le
+   * modèle commence à remplir — les dernières deviennent des variantes de la
+   * première. `IDEES.max` vaut huit, mais c'est la borne qui VÉRIFIE la sortie,
+   * pas celle qui négocie avec elle. */
+  nombreDemande: z.number().int().min(3).max(6),
+}).strict();
+
+/* LE BRIEF DU PORTRAIT — le texte qui précède l'image.
+ *
+ * Il lit les notes et rend les mots qui comptent. C'est lui qui empêche les
+ * confidences de partir mot pour mot chez un fournisseur d'image : ce qui
+ * traverse est ce qu'on en a retenu. Ses bornes décident donc de deux choses à
+ * la fois — ce que le nuage porte, et ce qui ne sort pas. */
+export const reglagesBriefPortraitSchema = z.object({
+  ...fondsCommunDuTexte,
+  /** Les mots du nuage. Trop peu ne dit rien ; trop noie le dessin. */
+  motsDuPortrait: bornesDeMotsSchema(1, 12),
+  /* La dédicace posée sur la bande.
+   *
+   * SON PLAFOND EST UNE CONTRAINTE DE COMPOSITION, pas de goût : `composition.ts`
+   * coupe la phrase à trois lignes au plus, et au-delà de vingt-quatre mots la
+   * troisième déborde. Le desserrer ici sortirait des portraits dont la
+   * dédicace est tronquée — et c'est le mot qu'on offre à quelqu'un. */
+  motsDeLaPhrase: bornesDeMotsSchema(2, 24),
+}).strict();
+
+export type ReglagesIdees = z.infer<typeof reglagesIdeesSchema>;
+export type ReglagesBriefPortrait = z.infer<typeof reglagesBriefPortraitSchema>;
+
 export type ReglagesMessage = z.infer<typeof reglagesMessageSchema>;
 export type ReglagesPortrait = z.infer<typeof reglagesPortraitSchema>;
 
@@ -247,9 +513,33 @@ export function partieLueParLeModelePortrait(r: ReglagesPortrait): unknown {
   return {
     motifs: r.motifs,
     modeles: r.modeles,
+    /* LES GAMMES ENTRENT DANS L'EMPREINTE. Elles sont lues par le modèle —
+       c'est même la contrainte la plus forte qu'on lui pose. En changer une
+       sans réclamer un nouvel essai laisserait publier une gamme que personne
+       n'a vue.
+       Les libellés n'y sont PAS : renommer « encre » en « nuit » ne change rien
+       de ce que le modèle rend. */
+    compositions: [...r.compositions]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((c) => ({ id: c.id, palette: c.palette })),
     ambiances: [...r.ambiances]
       .sort((a, b) => a.id.localeCompare(b.id))
       .map((a) => ({ id: a.id, groupe: a.groupe, consigne: a.consigne })),
+    /* LA CONSIGNE DE LA PHOTO Y ENTRE, ET SES SEUILS N'Y ENTRENT PAS.
+     *
+     * Elle est littéralement dans l'invite : `portrait.service` la passe à
+     * `inviteImagePortrait` dès que la voie est la photo. Hors de l'empreinte,
+     * on la reformulait, l'empreinte ne bougeait pas, la couverture d'essai de
+     * l'ancienne restait valable — et l'on publiait une consigne que personne
+     * n'avait vue. C'est exactement la faute que « rien ne se publie sans
+     * essai » existe pour empêcher, et elle passait par le trou.
+     *
+     * Les trois SEUILS restent dehors, et c'est le pendant du même
+     * raisonnement : ils décident qu'une photo est refusée AVANT tout appel, le
+     * modèle ne les voit jamais, et les y mettre ferait retomber toute la
+     * couverture pour vingt pixels de plus — alors qu'on les règle précisément
+     * au vu de ce qui arrive. */
+    photo: r.photo === undefined ? null : { consigne: r.photo.consigne },
   };
 }
 
@@ -268,9 +558,46 @@ function canonique(valeur: unknown): string {
   return `{${entrees.map(([c, v]) => `${JSON.stringify(c)}:${canonique(v)}`).join(",")}}`;
 }
 
+/* Les deux autres générations de texte : TOUT ce qu'elles portent est lu par le
+   modèle. Il n'y a chez elles aucun équivalent du libellé d'une orientation ou
+   du nom d'une gamme — rien qui ne serve qu'à l'écran. La projection est donc
+   l'identité, et l'écrire ainsi le DIT, là où renvoyer `r` tel quel laisserait
+   croire à un oubli. Le jour où l'une gagne un champ d'affichage, c'est ici
+   qu'il faudra l'écarter. */
+export function partieLueParLeModeleIdees(r: ReglagesIdees): unknown {
+  return {
+    consigneCommune: r.consigneCommune,
+    /* NI `gardeFous` NI `champsDuProche` ne se trient — même raison que pour le
+       message : leur ordre est celui dans lequel ils partent dans l'invite. */
+    gardeFous: r.gardeFous,
+    champsDuProche: r.champsDuProche,
+    modele: r.modele,
+    nombreDemande: r.nombreDemande,
+  };
+}
+
+export function partieLueParLeModeleBriefPortrait(r: ReglagesBriefPortrait): unknown {
+  return {
+    consigneCommune: r.consigneCommune,
+    gardeFous: r.gardeFous,
+    champsDuProche: r.champsDuProche,
+    modele: r.modele,
+    motsDuPortrait: r.motsDuPortrait,
+    motsDeLaPhrase: r.motsDeLaPhrase,
+  };
+}
+
 /** La matière dont l'empreinte se calcule. Le hachage lui-même vit au serveur. */
 export function matierePourEmpreinteMessage(r: ReglagesMessage): string {
   return canonique(partieLueParLeModeleMessage(r));
+}
+
+export function matierePourEmpreinteIdees(r: ReglagesIdees): string {
+  return canonique(partieLueParLeModeleIdees(r));
+}
+
+export function matierePourEmpreinteBriefPortrait(r: ReglagesBriefPortrait): string {
+  return canonique(partieLueParLeModeleBriefPortrait(r));
 }
 
 export function matierePourEmpreintePortrait(r: ReglagesPortrait): string {
@@ -279,13 +606,36 @@ export function matierePourEmpreintePortrait(r: ReglagesPortrait): string {
 
 // ── Ce que l'application reçoit ─────────────────────────────────────────────
 
-const GROUPE_ORIENTATION = "orientation";
-const GROUPE_IMAGE = "image";
+/* LES IDENTIFIANTS DE GROUPE SONT LES CLÉS DE LA SÉLECTION, et ils s'exportent
+ * depuis le 12 septembre.
+ *
+ * `StudioSelection` est indexée par identifiant de groupe — répondre à un groupe,
+ * c'est poser `selection[groupe.id]`. Le validateur du serveur, lui, lisait ses
+ * propres noms : `visual` là où le catalogue sert `image`, `illustrationFamily`
+ * là où il sert `illustration_family`.
+ *
+ * DEUX LISTES QUI DEVAIENT ÊTRE LA MÊME, et rien ne les tenait d'accord. Un
+ * client qui répondait à TOUS les groupes annoncés se faisait refuser :
+ * « unknown visual path ». Aucun portrait ne pouvait être produit, par aucun
+ * client — et aucun test ne le disait, les cas du validateur lui passant des
+ * sélections écrites à la main avec les bonnes clés.
+ *
+ * Les exporter, c'est supprimer la seconde liste plutôt que la corriger : le
+ * jour où un groupe change de nom, le serveur suit sans qu'on y pense. */
+export const GROUPE_ORIENTATION = "orientation";
+export const GROUPE_IMAGE = "image";
+/* LA COMPOSITION est le SECOND paramètre que le client donne, à côté du type de
+   rendu. Elle est à la RACINE et non derrière la voie d'image : on choisit sa
+   gamme même quand aucune image n'est produite — la voie « aucune » pose le
+   motif sur le fond de la composition, et ce fond se choisit. */
+export const GROUPE_COMPOSITION = "composition";
 
 /** Le groupe qu'une voie d'image ouvre. `aucune` n'ouvre rien : c'est la fin. */
+/* LES DEUX VOIES OUVRENT LE MÊME GROUPE. « Aucune image » n'ouvre rien : c'est
+   la fin du choix, et le motif de marque tient alors le fond. */
 const GROUPE_OUVERT: Record<VoieImage, GroupeAmbiance | null> = {
   illustration: "illustration_family",
-  photo: "photo_style",
+  photo: "illustration_family",
   aucune: null,
 };
 
@@ -303,19 +653,44 @@ const GROUPE_OUVERT: Record<VoieImage, GroupeAmbiance | null> = {
    orientations viennent du message, les voies et les ambiances du portrait.
    C'est le seul endroit où elles se rejoignent, et il est en lecture — chacune
    se règle, s'éprouve et se publie de son côté. */
+/**
+ * Les clés de vignette d'une configuration, sans les nulles ni les doublons.
+ *
+ * Elle sort d'ici pour que le SERVICE sache quoi signer AVANT de composer le
+ * catalogue : `catalogueServi` est pure et synchrone, et signer une URL ne l'est
+ * pas. Lui passer le port de stockage la rendrait impossible à éprouver sans
+ * base, ce qui est précisément sa qualité.
+ */
+export function clesDApercu(p: ReglagesPortrait): string[] {
+  const vues = new Set<string>();
+  for (const c of [...p.voiesImage, ...p.ambiances, ...p.compositions]) {
+    if (c.apercuCle !== null && c.apercuCle !== undefined) vues.add(c.apercuCle);
+  }
+  return [...vues];
+}
+
+/**
+ * @param apercus les URL signées, par clé. Une clé absente de la table rend une
+ *   vignette nulle — c'est ce qui arrive quand le stockage refuse de signer, et
+ *   la grille retombe alors sur la description. Un catalogue à moitié servi vaut
+ *   mieux qu'un écran qui ne s'ouvre pas.
+ */
 export function catalogueServi(
   m: ReglagesMessage, p: ReglagesPortrait, langue: "fr" | "en",
+  apercus: ReadonlyMap<string, string> = new Map(),
 ): StudioConfig {
   const r = { ...m, ...p };
   const dit = (b: Bilingue): string => b[langue];
   const ditOuNul = (b: Bilingue | null): string | null => (b === null ? null : b[langue]);
+  const vignette = (cle: string | null | undefined): string | null =>
+    (cle === null || cle === undefined ? null : apercus.get(cle) ?? null);
 
   const ambiancesActives = (groupe: GroupeAmbiance): StudioChoice[] =>
     r.ambiances
       .filter((a) => a.groupe === groupe && a.actif)
       .map((a) => ({
         id: a.id, label: dit(a.libelle), description: ditOuNul(a.description),
-        warning: null, revealsGroup: null,
+        warning: null, revealsGroup: null, previewUrl: vignette(a.apercuCle),
       }));
 
   const orientations: StudioChoice[] = r.orientations
@@ -323,6 +698,9 @@ export function catalogueServi(
     .map((o) => ({
       id: o.id, label: dit(o.libelle), description: ditOuNul(o.description),
       warning: ditOuNul(o.avertissement), revealsGroup: null,
+      /* L'ORIENTATION N'A PAS DE VIGNETTE, et ce n'est pas un oubli : c'est le
+         PROPOS, pas le rendu. « Ma gratitude » ne se montre pas. */
+      previewUrl: null,
     }));
 
   /* Le schéma des réglages refuse déjà zéro orientation active. On le
@@ -360,9 +738,30 @@ export function catalogueServi(
     .map((v) => ({
       id: v.id, label: dit(v.libelle), description: ditOuNul(v.description),
       warning: null, revealsGroup: GROUPE_OUVERT[v.id],
+      previewUrl: vignette(v.apercuCle),
     }));
 
   const racines = [GROUPE_ORIENTATION];
+
+  const compositions = p.compositions
+    .filter((c) => c.actif)
+    .map((c) => ({
+      id: c.id, label: dit(c.libelle), description: ditOuNul(c.description),
+      /* La gamme ne descend PAS au client : elle sert au modèle d'image, et
+         l'écran montre la composition, pas ses quatre codes hexadécimaux. Le
+         client la verra à l'image — ou à la vignette. */
+      warning: null, revealsGroup: null, previewUrl: vignette(c.apercuCle),
+    }));
+
+  if (compositions.length > 0) {
+    groupes.push({
+      id: GROUPE_COMPOSITION,
+      label: langue === "fr" ? "La composition" : "The composition",
+      defaultChoiceId: compositions[0]!.id,
+      choices: compositions,
+    });
+    racines.push(GROUPE_COMPOSITION);
+  }
 
   if (voies.length > 0) {
     groupes.push({
@@ -460,9 +859,12 @@ const AVERTISSEMENT_HOMMAGE: Bilingue = {
   en: "A sober register, no celebration: the illustration and colours change.",
 };
 
+/* AUCUNE VIGNETTE AU DÉPART, et c'est l'état juste : personne n'a encore retenu
+   d'essai. La grille retombe sur la description, et les images arrivent au
+   rythme où l'administration les choisit — sans livraison. */
 const AMBIANCES_DE_DEPART: AmbianceReglage[] = [
   {
-    id: "nature", groupe: "illustration_family", actif: true,
+    id: "nature", groupe: "illustration_family", actif: true, apercuCle: null,
     libelle: { fr: "Nature", en: "Nature" },
     description: {
       fr: "Un paysage, une fleur, un élément. Pour qui est calme, enraciné, tourné vers le dehors.",
@@ -474,7 +876,7 @@ const AMBIANCES_DE_DEPART: AmbianceReglage[] = [
     },
   },
   {
-    id: "animal", groupe: "illustration_family", actif: true,
+    id: "animal", groupe: "illustration_family", actif: true, apercuCle: null,
     libelle: { fr: "Animal", en: "Animal" },
     description: {
       fr: "Un animal qu'il aime s'il figure dans les notes, sinon un qui correspond à son caractère.",
@@ -486,7 +888,7 @@ const AMBIANCES_DE_DEPART: AmbianceReglage[] = [
     },
   },
   {
-    id: "abstrait", groupe: "illustration_family", actif: true,
+    id: "abstrait", groupe: "illustration_family", actif: true, apercuCle: null,
     libelle: { fr: "Abstrait", en: "Abstract" },
     description: {
       fr: "Des formes, un mouvement, une lumière. Pour qui échappe aux deux autres.",
@@ -516,6 +918,36 @@ const AMBIANCES_DE_DEPART: AmbianceReglage[] = [
  * exemplaires du même texte divergeraient au premier ajustement, et on
  * chercherait longtemps pourquoi l'essai ne rend pas ce que la production
  * rend. */
+/* LES DEUX DÉPARTS REPRENNENT CE QUE LE CODE FAIT DÉJÀ, au nombre près.
+ *
+ * Ils ne sont pas des valeurs « raisonnables » choisies ici : ce sont celles
+ * que `gabarits.ts` applique aujourd'hui en dur. Un semis qui poserait autre
+ * chose changerait le produit au premier démarrage, sans que personne n'ait
+ * publié quoi que ce soit. */
+export function reglagesIdeesDeDepart(): ReglagesIdees {
+  return reglagesIdeesSchema.parse({
+    consigneCommune: "",
+    gardeFous: [],
+    /* L'âge est absent, comme pour le message : « seulement si l'utilisateur
+       l'a demandé ». Le gabarit des idées interdit d'ailleurs de le mentionner
+       sans qu'on le lui fournisse. */
+    champsDuProche: ["relation", "notes", "texte_libre"],
+    modele: "anthropic:claude-opus-5",
+    nombreDemande: IDEES.demandees,
+  });
+}
+
+export function reglagesBriefPortraitDeDepart(): ReglagesBriefPortrait {
+  return reglagesBriefPortraitSchema.parse({
+    consigneCommune: "",
+    gardeFous: [],
+    champsDuProche: ["relation", "notes", "texte_libre"],
+    modele: "anthropic:claude-opus-5",
+    motsDuPortrait: MOTS_DU_PORTRAIT,
+    motsDeLaPhrase: MOTS_PHRASE_PORTRAIT,
+  });
+}
+
 export function reglagesMessageDeDepart(): ReglagesMessage {
   return reglagesMessageSchema.parse({
     consigneCommune: "",
@@ -542,9 +974,73 @@ export function reglagesMessageDeDepart(): ReglagesMessage {
 export function reglagesPortraitDeDepart(): ReglagesPortrait {
   return reglagesPortraitSchema.parse({
     motifs: { bande: "trame_de_hampes", fondSansImage: "registres" },
+    /* LES TROIS COMPOSITIONS DE LA CHARTE, avec leurs gammes.
+       Chacune tient sur SON fond : la gamme du papier joue sur un blanc cassé,
+       celle de l'encre doit rester visible sur un fond sombre — d'où le clair
+       en tête là où le papier met un lilas. Ce sont des valeurs de départ ; le
+       panneau les ajuste sans livraison. */
+    compositions: [
+      {
+        id: "papier", actif: true,
+        libelle: { fr: "Papier", en: "Paper" },
+        description: { fr: "Un blanc cassé, sobre. Le plus discret des trois.", en: "An off-white, understated. The quietest of the three." },
+        palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#5A4B93"],
+        cadre: { fond: "#FFFFFF", bande: "#EDEAF7", texte: "#221F2B", mention: "#5A4B93" },
+      },
+      {
+        id: "lilas", actif: true,
+        libelle: { fr: "Lilas", en: "Lilac" },
+        description: { fr: "Le violet de la marque, en fond.", en: "The brand violet, as a ground." },
+        palette: ["#FFFFFF", "#5A4B93", "#F0CFB4", "#221F2B"],
+        cadre: { fond: "#EDEAF7", bande: "#FFFFFF", texte: "#221F2B", mention: "#5A4B93" },
+      },
+      {
+        id: "encre", actif: true,
+        libelle: { fr: "Encre", en: "Ink" },
+        description: { fr: "Un fond sombre. Les couleurs y sonnent plus fort.", en: "A dark ground. Colours ring louder on it." },
+        palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#FFFFFF"],
+        cadre: { fond: "#221F2B", bande: "#17161F", texte: "#F2F0F7", mention: "#EDEAF7" },
+      },
+    ],
+    /* LES DEUX CLIENTS D'IMAGE, RÉPARTIS — et c'est délibéré.
+     *
+     * Il n'y en a que deux qui produisent des images, et on veut pouvoir les
+     * comparer sur pièce. Les poser tous les deux sur le même modèle laisserait
+     * l'autre inéprouvé : la chaîne ne descend au rang suivant qu'en cas
+     * d'échec, donc un repli qui ne se déclenche jamais n'est jamais regardé.
+     *
+     * `gpt-image-2` sur l'illustration parce que c'est la voie active
+     * aujourd'hui et que son rendu de texte décide de la bande du portrait.
+     * `grok-imagine-image` sur le style de photo, qui attend la phase 2.
+     *
+     * Ça se change au panneau sans livraison — `PATCH admin/portrait-studio/
+     * config` puis `POST config/publish`. Ces valeurs ne sont qu'un point de
+     * départ ; c'est l'essai qui tranche. */
     modeles: {
-      illustration: "xai:grok-imagine-image",
+      illustration: "openai:gpt-image-2",
       photo_style: "xai:grok-imagine-image",
+    },
+    /* LA VOIE PHOTO, à son départ.
+     *
+     * La consigne dit les deux interdits qui font tout le produit. S'INSPIRER
+     * SANS RESSEMBLER : le portrait n'est pas un filtre, et rendre un visage
+     * reconnaissable transformerait une œuvre en photo retouchée — ce n'est pas
+     * ce qu'on offre, et ce n'est pas ce qu'on a le droit de faire d'un visage
+     * qu'un tiers a déposé. Et RESTER DANS L'AMBIANCE : la photo donne la
+     * matière, l'ambiance choisie donne la forme ; l'inverse rendrait le choix
+     * de l'utilisateur décoratif.
+     *
+     * Les seuils partent larges. Un refus de trop est une porte fermée sur un
+     * geste qu'on ne voit pas recommencer ; un passage de trop se répare en
+     * refaisant. On les resserrera sur pièce, sans livraison. */
+    photo: {
+      consigne: {
+        fr: "Une ou plusieurs photos vous sont fournies. INSPIREZ-VOUS-EN sans les reproduire : ni les traits du visage, ni la ressemblance, ni le cadrage. Retenez-en l'allure, les couleurs, l'attitude, l'objet ou le lieu qui compte. Le rendu doit rester entièrement dans l'ambiance demandée ci-dessus — c'est elle qui décide de la forme, la photo ne décide que de la matière. Ne rendez jamais une photographie retouchée.",
+        en: "One or more photos are provided. DRAW INSPIRATION from them without reproducing them: not the facial features, not the likeness, not the framing. Keep the bearing, the colours, the attitude, the object or place that matters. The result must stay entirely within the ambiance requested above — it decides the form, the photo only supplies the material. Never return a retouched photograph.",
+      },
+      coteMin: 512,
+      luminositeMin: 30,
+      nettetteMin: 12,
     },
     voiesImage: [
       {

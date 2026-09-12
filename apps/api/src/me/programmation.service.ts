@@ -72,8 +72,24 @@ export class ProgrammationService {
           select: {
             personId: true,
             eventNature: true,
-            person: { select: { displayName: true } },
+            /* `isSelf` SÉPARE LES DEUX FAMILLES de notification, et rien d'autre
+               ne le dit : une date à soi est un `Event` pendu à une `Person`
+               comme celle d'un proche. Sans ce champ, le balayage souhaitait au
+               titulaire son propre anniversaire — par courriel, ce qui ne se
+               rattrape pas. */
+            person: { select: { displayName: true, isSelf: true } },
             schedules: { select: { leadTimeDays: true } },
+          },
+        },
+        /* L'ÉTAT DE LA LISTE, lu ici et non au moment de composer : c'est ce
+           qui choisit la phrase d'une date à soi — préparer, ou partager. Une
+           requête par échéance aurait multiplié les allers-retours pour un fait
+           que cette lecture ramène déjà. */
+        wishlist: {
+          select: {
+            id: true,
+            _count: { select: { wishes: true } },
+            shareLinks: { where: { isActive: true }, select: { id: true } },
           },
         },
       },
@@ -91,12 +107,31 @@ export class ProgrammationService {
         .filter((d): d is number => d !== null);
       const anticipations = delais.length > 0 ? delais : [defaut];
 
+      /* CE QUI EST À SOI N'APPELLE PAS LES MÊMES GESTES. Sur la date d'un
+         proche, ce qu'on a à faire est d'écrire un mot ; sur la sienne, c'est
+         de préparer sa liste puis de LA PARTAGER — une liste que personne n'a
+         reçue ne sert à rien.
+
+         Les faits voyagent bruts, la phrase se compose chez le client : c'est
+         la règle du contrat commun, et elle vaut ici plus qu'ailleurs, la
+         langue d'interface pouvant changer après l'envoi. */
+      const soi = e.event.person.isSelf;
+      const souhaits = e.wishlist?._count.wishes ?? 0;
+      const partagee = (e.wishlist?.shareLinks.length ?? 0) > 0;
+      const etatDeLaListe = soi ? { wishCount: souhaits, isShared: partagee } : {};
+
+      /* La route vise LA LISTE quand elle existe : c'est là que le geste se
+         fait. Sans liste, l'échéance — d'où l'on en ouvre une. */
+      const route = soi && e.wishlist !== null
+        ? `/wishlists/${e.wishlist.id}`
+        : `/occurrences/${e.id}`;
+
       for (const jours of anticipations) {
-        posees += await this.poser(e.userId, "event_reminder", {
+        posees += await this.poser(e.userId, soi ? "own_date_reminder" : "event_reminder", {
           occurrenceId: e.id,
           personId: e.event.personId,
           quand: this.reculer(date, jours),
-          titleKey: "notification.event_reminder",
+          titleKey: soi ? "notification.own_date_reminder" : "notification.event_reminder",
           /* Le nom voyage AVEC la notification, il ne se résout pas côté
              client depuis personId : une notification est ce qu'on lit en
              premier, souvent hors connexion, et une ligne qui dirait « une
@@ -104,9 +139,16 @@ export class ProgrammationService {
              
              La nature suit pour la même raison : un « bonne fête » sur un
              anniversaire de décès est impardonnable, et le client ne doit pas
-             avoir à aller la chercher pour choisir son ton. */
-          params: { days: jours, date, person: e.event.person.displayName, nature: e.event.eventNature },
-          route: `/occurrences/${e.id}`,
+             avoir à aller la chercher pour choisir son ton.
+
+             `person` part MÊME sur une date à soi, et ce n'est pas du gaspillage :
+             la fiche de soi porte un nom choisi, la phrase peut vouloir le dire,
+             et l'omettre obligerait le client à aller le chercher. */
+          params: {
+            days: jours, date, person: e.event.person.displayName,
+            nature: e.event.eventNature, ...etatDeLaListe,
+          },
+          route,
           // Le délai entre dans la clé : deux rappels à J-7 et J-1 sont deux
           // faits distincts, pas un doublon.
           cle: `rappel:${e.id}:${jours}`,
@@ -114,13 +156,16 @@ export class ProgrammationService {
       }
 
       // Le jour même, toujours — c'est le fait que l'application promet.
-      posees += await this.poser(e.userId, "event_day_of", {
+      posees += await this.poser(e.userId, soi ? "own_date_day_of" : "event_day_of", {
         occurrenceId: e.id,
         personId: e.event.personId,
         quand: date,
-        titleKey: "notification.event_day_of",
-        params: { date, person: e.event.person.displayName, nature: e.event.eventNature },
-        route: `/occurrences/${e.id}`,
+        titleKey: soi ? "notification.own_date_day_of" : "notification.event_day_of",
+        params: {
+          date, person: e.event.person.displayName,
+          nature: e.event.eventNature, ...etatDeLaListe,
+        },
+        route,
         cle: `jour:${e.id}`,
       });
     }

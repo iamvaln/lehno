@@ -5,8 +5,10 @@ import {
 import type { Couleurs } from "../theme.js";
 
 export function styleDeChamp({
-  couleurs, invalide = false, multiligne = false,
-}: { couleurs: Couleurs; invalide?: boolean; multiligne?: boolean }): {
+  couleurs, invalide = false, valide = false, multiligne = false,
+}: {
+  couleurs: Couleurs; invalide?: boolean; valide?: boolean; multiligne?: boolean;
+}): {
   conteneur: ViewStyle;
   etiquette: TextStyle;
   champ: TextStyle;
@@ -28,9 +30,21 @@ export function styleDeChamp({
       color: couleurs.textBody,
       backgroundColor: couleurs.surfaceCard,
       borderWidth: nativeBorder.width,
-      // L'erreur se voit sur le contour ET sur l'aide : le contour seul ne dit
-      // pas ce qui ne va pas, l'aide seule se lit trop tard.
-      borderColor: invalide ? couleurs.feedbackError : couleurs.borderObject,
+      /* L'erreur se voit sur le contour ET sur l'aide : le contour seul ne dit
+         pas ce qui ne va pas, l'aide seule se lit trop tard.
+
+         L'ÉTAT VALIDE EXISTE AUSSI, et il manquait. La planche le pose —
+         `invalid ? error : valide ? success` — et sans lui un champ qu'on vient
+         de vérifier ne se distingue pas d'un champ qu'on n'a pas touché : c'est
+         le cas du code de parrainage, où l'on a besoin de savoir que le code a
+         été reconnu AVANT de poursuivre.
+
+         L'ERREUR L'EMPORTE quand les deux sont posés. Un champ ne peut pas être
+         juste et faux ; en cas de contradiction, c'est le refus qui compte —
+         montrer le vert d'abord ferait passer l'erreur pour une décoration. */
+      borderColor: invalide ? couleurs.feedbackError
+        : valide ? couleurs.feedbackSuccess
+          : couleurs.borderObject,
       borderRadius: nativeRadius.sm,
       paddingVertical: nativeSpace[14],
       paddingHorizontal: 15,
@@ -44,7 +58,9 @@ export function styleDeChamp({
     aide: {
       fontFamily: nativeFont.bodyRegular,
       fontSize: nativeSize.mentionS,
-      color: invalide ? couleurs.feedbackError : couleurs.textMention,
+      color: invalide ? couleurs.feedbackError
+        : valide ? couleurs.feedbackSuccess
+          : couleurs.textMention,
     },
     couleurIndice: couleurs.textMention,
   };

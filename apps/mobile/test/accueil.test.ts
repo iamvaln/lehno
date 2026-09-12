@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Home, Occurrence } from "@lehno/contracts";
 import {
+  inviteAFaireUneListe,
   MAX_CARTES, MAX_RANGS, MIN_CARTES, REMPLISSAGE_PLEIN, SEUIL_DE_REDIMENSIONNEMENT,
-  composeLAccueil, doitRepartirDuMaximum, etatDeLAccueil, retrecit,
+  composeLAccueil, doitRepartirDuMaximum, etatDeLAccueil, retrecit, gesteDeLaCarte, nomDeLEcheance,
 } from "../lib/accueil.js";
 
 function echeance(jours: number, n = jours): Occurrence {
@@ -10,7 +11,7 @@ function echeance(jours: number, n = jours): Occurrence {
     id: `1111111${n}-1111-4111-8111-111111111111`,
     eventId: "22222222-2222-4222-8222-222222222222",
     personId: "33333333-3333-4333-8333-333333333333",
-    personDisplayName: `Proche ${n}`, kind: "birthday", nature: "happy",
+    personDisplayName: `Proche ${n}`, isSelf: false, kind: "birthday", nature: "happy",
     label: null, occurrenceDate: "2026-09-01", occurrenceYear: 2026,
     status: "upcoming", daysUntil: jours, age: null,
   };
@@ -129,7 +130,7 @@ describe("le retour au maximum n'appartient qu'au redimensionnement", () => {
 describe("les deux états vides ne se ressemblent pas", () => {
   const home = (occurrences: Occurrence[], hasPersons: boolean): Home => ({
     firstName: "Valentine", occurrences, counts: { today: 0, thisWeek: 0 },
-    unreadNotifications: 0, hasPersons, remainingOccurrences: 0,
+    unreadNotifications: 0, hasPersons, hasWishlist: false, remainingOccurrences: 0,
   });
 
   /* Carnet neuf : l'écran ne poursuit qu'un but, conduire au premier ajout.
@@ -173,5 +174,58 @@ describe("ce que le serveur garde par-devers lui", () => {
 
   it("ne compte rien quand tout est là et tout tient", () => {
     expect(composeLAccueil([echeance(1)], REMPLISSAGE_PLEIN, 0).reste).toBe(0);
+  });
+});
+
+/* L'INVITATION À FAIRE UNE LISTE — « l'autre moitié du produit », proposée sans
+   insister. Trois conditions, et chacune protège d'un défaut précis. */
+describe("l'invitation à faire une liste", () => {
+  const TOUT = ["wishlist.own"];
+
+  it("paraît quand rien n'existe encore et que le drapeau est ouvert", () => {
+    expect(inviteAFaireUneListe("nominal", false, TOUT)).toBe(true);
+    // L'état vide aussi : c'est là que l'écran n'a rien d'autre à proposer.
+    expect(inviteAFaireUneListe("vide", false, TOUT)).toBe(true);
+  });
+
+  /* « Une invitation qui reste après avoir été acceptée devient un reproche. »
+     Sans cette condition, la ligne resterait à vie sur l'écran le plus vu. */
+  it("disparaît dès qu'une liste existe", () => {
+    expect(inviteAFaireUneListe("nominal", true, TOUT)).toBe(false);
+    expect(inviteAFaireUneListe("vide", true, TOUT)).toBe(false);
+  });
+
+  /* Le premier lancement ne poursuit qu'UN but : poser un premier proche. Deux
+     invitations concurrentes n'en font aucune. */
+  it("se tait au premier lancement", () => {
+    expect(inviteAFaireUneListe("premier", false, TOUT)).toBe(false);
+  });
+
+  // Proposer une liste que le service ne sert pas ouvrirait sur un écran fermé.
+  it("se tait quand `wishlist.own` est éteint", () => {
+    expect(inviteAFaireUneListe("nominal", false, [])).toBe(false);
+  });
+});
+
+describe("ce qui est à soi", () => {
+  const proche = { personDisplayName: "Awa", isSelf: false };
+  const soi = { personDisplayName: "Valentine", isSelf: true };
+
+  it("dit « Moi » plutôt que votre propre nom", () => {
+    expect(nomDeLEcheance(soi, "Moi")).toBe("Moi");
+  });
+
+  it("nomme le proche par son nom", () => {
+    expect(nomDeLEcheance(proche, "Moi")).toBe("Awa");
+  });
+
+  it("sur sa propre date, le geste est la liste — jamais un message", () => {
+    expect(gesteDeLaCarte(soi, true)).toBe("liste");
+    expect(gesteDeLaCarte(soi, false)).toBe("liste");
+  });
+
+  it("sur la date d'un proche, le geste suit la génération", () => {
+    expect(gesteDeLaCarte(proche, true)).toBe("message");
+    expect(gesteDeLaCarte(proche, false)).toBe("note");
   });
 });

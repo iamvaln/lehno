@@ -225,6 +225,18 @@ export const occurrenceSchema = z.object({
   eventId: z.string().uuid(),
   personId: z.string().uuid(),
   personDisplayName: z.string(),
+  /* DE QUI EST CETTE DATE — §13.2, 12 septembre.
+   *
+   * Il manquait, et le client devait le redéduire : relire le carnet pour
+   * retrouver quelle `personId` est la sienne, SUR CHAQUE ÉCRAN qui montre une
+   * échéance. Un appel de plus par écran pour un booléen que le serveur connaît
+   * déjà — et la définition d'un filtre qu'une surface sur trois oubliera.
+   *
+   * Ce qu'il coûtait : l'accueil affichait « Valentine · Anniversaire · J−57 »
+   * avec « Préparer » et « Marquer envoyé », et l'accusé disait « Envoyé à
+   * Valentine » — à Valentine. Une fois là, les surfaces peuvent donner à sa
+   * propre date les gestes qui lui vont : préparer sa liste, la partager. */
+  isSelf: z.boolean(),
   kind: z.enum(EVENT_KINDS),
   nature: z.enum(EVENT_NATURES),
   label: z.string().max(120).nullable(),

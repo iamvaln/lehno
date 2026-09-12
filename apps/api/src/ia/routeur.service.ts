@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { SEUIL_PANNE, DUREE_PANNE_MS, type TacheIA } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
+import { origine } from "../clients/origine.js";
 
 /* Ce qu'un adaptateur de fournisseur doit savoir faire, et rien de plus.
  *
@@ -30,6 +31,20 @@ export type ContexteAppel = {
 export type DemandeIA = {
   readonly invite: string;
   readonly systeme?: string;
+  /**
+   * L'IMAGE DONT ON S'INSPIRE, en octets bruts — jamais en base64.
+   *
+   * Présente, l'adaptateur d'image appelle `images/edits` au lieu de
+   * `images/generations` : ce sont deux points d'entrée, deux dialectes, et le
+   * second n'accepte pas d'image. Un seul champ facultatif plutôt que deux
+   * méthodes — la tâche, le modèle et l'invite sont les mêmes, et deux méthodes
+   * auraient fait recopier le repli, le disjoncteur et la mesure d'usage.
+   *
+   * EN OCTETS parce que `images/edits` attend du multipart : le base64 le
+   * ferait décoder pour rien, et une photo de trois mégaoctets pèserait quatre
+   * en mémoire le temps du transit.
+   */
+  readonly image?: Buffer;
 };
 
 export type ReponseIA = {
@@ -121,6 +136,49 @@ export class RouteurIAService {
     }));
   }
 
+  /* Le modèle désigné passe DEVANT, et ne figure qu'une fois.
+   *
+   * Trois cas, et le troisième est celui qui compte. S'il est déjà dans la
+   * chaîne, on le remonte — le laisser à sa place le ferait appeler après un
+   * autre. S'il n'y est pas, on l'ajoute : le disjoncteur et l'interrupteur
+   * d'administration gouvernent le ROUTAGE, pas ce qu'une configuration publiée
+   * désigne, et refuser ici obligerait à rallumer un modèle en production pour
+   * pouvoir servir une configuration qu'on vient d'éprouver.
+   *
+   * Et s'il est introuvable au catalogue, on ne rend pas une chaîne vide : on
+   * garde celle de la tâche. Une configuration qui nomme un modèle disparu ne
+   * doit pas arrêter une génération déjà payée — elle doit se voir dans le
+   * journal, par le rang. */
+  private async enTete(chaine: Candidat[], tete: string | null): Promise<Candidat[]> {
+    if (tete === null) return chaine;
+    const [provider, ...reste] = tete.split(":");
+    const modelKey = reste.join(":");
+    if (!provider || !modelKey) return chaine;
+
+    /* RANG 0 DANS LES DEUX CAS, y compris quand le modèle figure déjà dans la
+       chaîne. Lui laisser son rang d'origine ferait dire au journal « servi par
+       le rang 2 » là où il a été servi PAR LA CONFIGURATION — et l'écart entre
+       ce qu'on a éprouvé et ce qui tourne redeviendrait invisible, qui est
+       exactement ce qu'on répare. */
+    const deja = chaine.find((c) => c.provider === provider && c.modelKey === modelKey);
+    if (deja) return [{ ...deja, rank: 0 }, ...chaine.filter((c) => c !== deja)];
+
+    const modele = await this.prisma.aIModel.findUnique({
+      where: { provider_modelKey: { provider, modelKey } },
+    });
+    if (!modele) return chaine;
+    return [
+      {
+        id: modele.id, provider: modele.provider, modelKey: modele.modelKey,
+        /* Rang 0 : la chaîne commence à 1. Le journal distingue ainsi « servi
+           par la configuration » de « servi par le rang 1 de la chaîne », et
+           l'écart entre l'essai et la production se lit sans enquête. */
+        rank: 0, costInput: modele.costInput, costOutput: modele.costOutput,
+      },
+      ...chaine,
+    ];
+  }
+
   /* Essaie les modèles de la tâche dans l'ordre, et rend la première réponse.
    *
    * Chaque tentative laisse sa ligne, y compris les échouées : sans elles, les
@@ -133,13 +191,32 @@ export class RouteurIAService {
    * est `user_action`, la valeur la plus coûteuse à confondre : mieux vaut
    * qu'un appel de fond mal étiqueté gonfle la facture « utilisateur » et se
    * remarque, plutôt que l'inverse. */
+  /**
+   * @param tete le modèle que la CONFIGURATION PUBLIÉE désigne, s'il y en a
+   *   une. Il passe en tête, et la chaîne devient son repli.
+   *
+   *   C'EST CE QUI REND « RIEN NE SE PUBLIE SANS ESSAI » VRAI. Le brief §11.1 le
+   *   pose : « le modèle appelé » est rangé dans la partie lue par le modèle,
+   *   donc dans l'empreinte, et l'essai appelle exactement lui. Si la production
+   *   déroulait la chaîne en l'ignorant, l'essai aurait tourné sur un modèle et
+   *   la production sur un autre — la garantie serait vraie au dossier et fausse
+   *   en fait. C'est ce qui se passait pour les trois générations de texte,
+   *   pendant que le portrait, lui, lisait bien sa configuration.
+   *
+   *   LE REPLI RESTE SOUS LUI, et ce n'est pas une entorse. Le §11.1 interdit le
+   *   repli à L'ESSAI — pour qu'aucun `StudioTrial` ne soit consigné en
+   *   `success` sous une empreinte désignant un modèle qui n'a rien produit. En
+   *   production, une panne du modèle configuré doit être rattrapée : l'écart
+   *   est alors tracé, `AIUsage` porte le rang, et il se lit après coup.
+   */
   async executer(
     tache: TacheIA,
     demande: DemandeIA,
     adaptateurs: Record<string, Adaptateur>,
     contexte: ContexteAppel = {},
+    tete: string | null = null,
   ): Promise<{ contenu: string; modele: string; fournisseur: string; rang: number }> {
-    const candidats = await this.chaine(tache);
+    const candidats = await this.enTete(await this.chaine(tache), tete);
 
     /* Une chaîne vide échoue EXPLICITEMENT. Rendre une réponse vide la ferait
        passer pour « rien à générer », et le contenu manquant se découvrirait à
@@ -243,6 +320,7 @@ export class RouteurIAService {
     try {
       await this.prisma.aIUsage.create({
         data: {
+          ...origine(),
           purpose,
           origin: contexte.origine ?? "user_action",
           userId: contexte.userId ?? null,

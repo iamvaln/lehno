@@ -1,0 +1,624 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { App } from "../src/App.js";
+import { magasinLocal } from "../src/api/session.js";
+import { messages } from "../src/i18n/index.js";
+
+const t = messages("fr");
+const a = t.studioTextes;
+
+const orientation = (id: string, actif: boolean) => ({
+  id, actif,
+  libelle: { fr: `Orientation ${id}`, en: `Angle ${id}` },
+  /* Les deux bilingues FACULTATIFS ne le sont ni par un nul ni par une chaîne
+     vide : le contrat exige au moins un caractère quand la clé est là. Un décor
+     approximatif faisait échouer l'union entière, et l'écran n'affichait rien —
+     sept épreuves rouges qui ne parlaient pas de l'écran. */
+  description: { fr: "ce qui la distingue", en: "what sets it apart" },
+  avertissement: { fr: "à manier avec soin", en: "handle with care" },
+  consigne: { fr: "consigne", en: "instruction" },
+});
+
+const REGLAGES_MESSAGE = {
+  consigneCommune: "Écris court.",
+  gardeFous: ["pas d'emoji"],
+  champsDuProche: ["relation", "notes"],
+  modele: "anthropic:claude-sonnet-5",
+  orientations: [orientation("notre_relation", true), orientation("ma_fierte", false)],
+};
+
+const REGLAGES_IDEES = {
+  consigneCommune: "Reste concret.",
+  gardeFous: [],
+  champsDuProche: ["relation"],
+  modele: "anthropic:claude-sonnet-5",
+  nombreDemande: 4,
+};
+
+const config = (reglages: unknown, over: Record<string, unknown> = {}) => ({
+  id: "11111111-1111-4111-8111-111111111111",
+  etat: "draft", version: null, empreinte: "abc",
+  reglages, note: null, publieeLe: null, parQui: null,
+  creeeLe: "2026-09-11T08:00:00.000Z",
+  essaisReussis: 0, publiable: false, blocage: "aucun_essai_reussi",
+  ...over,
+});
+
+/* Une version rangée, publiée jadis : c'est la seule sur laquelle on revient.
+   L'écran ferme le geste sur une version en service et sur un brouillon jamais
+   publié — le serveur refuse les deux. */
+const HISTORIQUE = config(REGLAGES_MESSAGE, {
+  id: "55555555-5555-4555-8555-555555555555",
+  etat: "superseded", version: 3, empreinte: "def",
+  note: "Consigne resserrée après un signalement.",
+  publieeLe: "2026-09-02T11:00:00.000Z", parQui: "sam@lehno.app",
+});
+
+const essai = (sur: Record<string, unknown> = {}) => ({
+  id: "44444444-4444-4444-8444-444444444444",
+  configId: "11111111-1111-4111-8111-111111111111",
+  nature: "message", profilId: "22222222-2222-4222-8222-222222222222",
+  etat: "success",
+  modele: { fournisseur: "anthropic", cle: "claude-sonnet-5" },
+  sortie: { message: "Bon anniversaire, grande sœur." },
+  cout: 0.004, erreur: null, parQui: "sam@lehno.app",
+  quand: "2026-09-11T09:00:00.000Z", verdict: null, ambianceId: null,
+  ...sur,
+});
+
+const ESSAIS = [essai()];
+
+const ESSAI_LANCE = () => reponse(201, {
+  configId: "11111111-1111-4111-8111-111111111111",
+  essai: essai(),
+});
+
+const axe = (pour: number, contre: number, sans: number) => ({ pour, contre, sans });
+
+const PERFORMANCE = {
+  unite: "message",
+  versions: [{
+    configId: "55555555-5555-4555-8555-555555555555",
+    version: 3,
+    publieeLe: "2026-09-02T11:00:00.000Z",
+    produites: 12,
+    gestes: axe(7, 2, 3),
+    avis: axe(1, 4, 7),
+  }],
+  /* Produites par le gabarit du code, avant qu'une configuration ne soit
+     publiée : comptées à part et jamais attribuées. */
+  horsVersion: { produites: 20, gestes: axe(10, 5, 5), avis: axe(0, 0, 20) },
+};
+
+const PERFORMANCE_VIDE = {
+  unite: "idee",
+  versions: [],
+  horsVersion: { produites: 0, gestes: axe(0, 0, 0), avis: axe(0, 0, 0) },
+};
+
+const PROFILS = {
+  items: [{
+    id: "22222222-2222-4222-8222-222222222222",
+    libelle: "Sœur, fiche riche", sensible: false, photoUrl: null,
+    contenu: {
+      langue: "fr", orientation: "notre_relation", nomDUsage: "Awa", registre: "familier",
+      lien: "famille_proche", relation: "ma grande sœur",
+      genreDuProche: "female", genreDeLAuteur: "male", occasionSensible: false,
+      notes: [], aEviter: [], texteLibre: null, age: 34,
+    },
+    creeLe: "2026-09-01T10:00:00.000Z",
+  }],
+  manquant: [],
+};
+
+const CANDIDATS = {
+  modeles: [{
+    id: "33333333-3333-4333-8333-333333333333",
+    cle: "anthropic:claude-sonnet-5", fournisseur: "anthropic", modele: "claude-sonnet-5",
+    capacite: "text", actif: true, enPanneJusqua: null,
+    /* `tarifs` est un OBJET, jamais nul : « zéro se prendrait pour un fait »,
+       donc ce sont ses deux montants qui le sont quand personne ne les a
+       saisis. Un `null` ici faisait refuser la réponse entière. */
+    tarifs: { entree: null, sortie: null },
+  }],
+  orientations: ["notre_relation", "ma_fierte"],
+  groupesAmbiance: [],
+  motifs: [],
+  champsDuProche: ["relation", "age", "notes", "texte_libre"],
+};
+
+const reponse = (statut: number, corps?: unknown): Response =>
+  new Response(corps === undefined ? null : JSON.stringify(corps), {
+    status: statut,
+    headers: corps === undefined ? {} : { "content-type": "application/json" },
+  });
+
+function serveur(routes: Record<string, (url: string, init?: RequestInit) => Response> = {}) {
+  const table: Record<string, (url: string, init?: RequestInit) => Response> = {
+    /* L'HISTORIQUE SE DÉCLARE AVANT LA CONFIGURATION. La table se parcourt dans
+       l'ordre et compare par `includes` : « …/message/config » est un préfixe de
+       « …/message/config/history », et le déclarer après lui ferait rendre la
+       configuration à la place de l'historique — huit épreuves rouges qui ne
+       parleraient pas de l'écran. */
+    "/admin/text-studio/message/config/history": () => reponse(200, { items: [HISTORIQUE] }),
+    "/admin/text-studio/idees/config/history": () => reponse(200, { items: [] }),
+    /* LE MÊME CHEMIN SERT DEUX GESTES — `GET` liste, `POST` lance —, et la
+       table ne distingue que l'URL. Sans ce branchement sur la méthode, la
+       réponse d'un lancement arriverait au listage, l'analyse échouerait, et
+       l'écran resterait en « chargement » : seize épreuves rouges qui ne
+       parleraient pas de ce qu'elles éprouvent. */
+    "/admin/text-studio/message/trials": (_u, init) =>
+      (init?.method === "POST" ? ESSAI_LANCE() : reponse(200, { items: ESSAIS })),
+    "/admin/text-studio/idees/trials": () => reponse(200, { items: [] }),
+    "/admin/text-studio/message/config": () => reponse(200, {
+      enService: null, brouillon: config(REGLAGES_MESSAGE),
+    }),
+    "/admin/text-studio/idees/config": () => reponse(200, {
+      enService: null, brouillon: config(REGLAGES_IDEES),
+    }),
+    /* LA MESURE EST SERVIE PAR DÉFAUT : l'écran la lit à chaque ouverture, et
+       un cas qui déclare ses propres routes pour éprouver tout autre chose n'a
+       pas à y penser. Sans elle, l'analyse échoue et l'écran ne rend plus —
+       les cas tombent alors sur « introuvable », un message qui ne dit rien de
+       ce qu'ils éprouvent. */
+    "/admin/studio/message/performance": () => reponse(200, PERFORMANCE),
+    "/admin/studio/idees/performance": () => reponse(200, PERFORMANCE_VIDE),
+    "/admin/portrait-studio/profiles": () => reponse(200, PROFILS),
+    "/admin/portrait-studio/candidates": () => reponse(200, CANDIDATS),
+    ...routes,
+  };
+  const appels = vi.fn((url: string, init?: RequestInit) => {
+    for (const [chemin, rendre] of Object.entries(table)) {
+      if (url.includes(chemin)) return Promise.resolve(rendre(url, init));
+    }
+    return Promise.resolve(reponse(200, { alertes: [], indicateurs: [], aTraiter: [] }));
+  });
+  vi.stubGlobal("fetch", appels);
+  return appels;
+}
+
+const ecriture = (appels: ReturnType<typeof vi.fn>, methode: string) =>
+  appels.mock.calls.find(([, init]) => (init as RequestInit)?.method === methode);
+
+const corpsDe = (appel: unknown[] | undefined): Record<string, unknown> =>
+  JSON.parse(((appel?.[1] as RequestInit)?.body as string) ?? "{}") as Record<string, unknown>;
+
+async function ouvrir(utilisateur: ReturnType<typeof userEvent.setup>, role: "admin" | "support" = "admin") {
+  localStorage.clear();
+  magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role });
+  render(<App />);
+  const nav = within(screen.getByRole("navigation"));
+  await utilisateur.click(nav.getByText(t.sections.studio));
+  await utilisateur.click(nav.getByText(t.sections.textes));
+}
+
+describe("l'atelier des textes", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.unstubAllGlobals();
+  });
+
+  it("ouvre sur le message, et lit ce que le serveur en dit", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    expect(await screen.findByLabelText(a.champs.consigne)).toHaveValue("Écris court.");
+    expect(appels.mock.calls.some(([u]) => String(u).includes("/text-studio/message/config"))).toBe(true);
+  });
+
+  /* CHANGER D'ONGLET CHANGE DE ROUTE, et repart des réglages de la nouvelle
+     nature. Sans cette remise, on publierait les garde-fous du message sur les
+     idées — et rien à l'écran ne le dirait. */
+  it("change de nature, et repart de ses réglages à elle", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+    await screen.findByLabelText(a.champs.consigne);
+
+    await utilisateur.click(screen.getByRole("tab", { name: a.natures.idees }));
+
+    expect(await screen.findByLabelText(a.champs.nombreDemande)).toHaveValue(4);
+    expect(screen.getByLabelText(a.champs.consigne)).toHaveValue("Reste concret.");
+    expect(appels.mock.calls.some(([u]) => String(u).includes("/text-studio/idees/config"))).toBe(true);
+    // Le champ propre au message a disparu avec lui.
+    expect(screen.queryByText(a.orientations.titre)).not.toBeInTheDocument();
+  });
+
+  it("enregistre un brouillon avec les réglages entiers", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    await utilisateur.type(await screen.findByLabelText(a.champs.consigne), " Et vrai.");
+    await utilisateur.click(screen.getByRole("button", { name: a.gestes.enregistrer }));
+
+    const corps = corpsDe(ecriture(appels, "PATCH"));
+    const reglages = corps["reglages"] as Record<string, unknown>;
+    expect(reglages["consigneCommune"]).toBe("Écris court. Et vrai.");
+    /* L'OBJET ENTIER part, pas le seul champ touché : c'est lui que le contrat
+       valide, et n'envoyer que la différence ferait refuser la requête. */
+    expect(reglages["orientations"]).toHaveLength(2);
+  });
+
+  /* AU MOINS UNE ORIENTATION ACTIVE. Le contrat le refuse à l'enregistrement ;
+     l'écran le dit AVANT d'envoyer, sinon le refus tombe après l'aller-retour. */
+  it("ferme l'enregistrement quand plus aucune orientation n'est active", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+
+    const cases = await screen.findAllByLabelText(a.orientations.active);
+    await utilisateur.click(cases[0]!);
+
+    expect(screen.getByText(a.orientations.aucuneActive)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: a.gestes.enregistrer })).toBeDisabled();
+  });
+
+  /* LE SERVEUR DÉCIDE DE LA PUBLICATION. L'écran lit `publiable` et `blocage`
+     et dit lequel des trois empêche, plutôt que d'offrir un geste refusé. */
+  it("n'offre pas de publier, et dit pourquoi", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+
+    expect(await screen.findByText(a.blocages.aucun_essai_reussi)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: a.gestes.publier })).not.toBeInTheDocument();
+  });
+
+  it("offre de publier dès que le serveur le permet", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({
+      "/admin/text-studio/message/config": () => reponse(200, {
+        enService: null,
+        brouillon: config(REGLAGES_MESSAGE, { publiable: true, blocage: null, essaisReussis: 1 }),
+      }),
+    });
+    await ouvrir(utilisateur);
+
+    expect(await screen.findByRole("button", { name: a.gestes.publier })).toBeInTheDocument();
+  });
+
+  it("essaie sur une éprouvette et retient le résultat", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    /* Le décor par défaut sert déjà les deux gestes de ce chemin, chacun selon
+       sa méthode : le redéclarer ici pour le seul `POST` ferait manquer la
+       liste. */
+    const appels = serveur();
+    await ouvrir(utilisateur);
+    await screen.findByLabelText(a.champs.consigne);
+
+    await utilisateur.click(screen.getByRole("button", { name: a.gestes.essayer }));
+
+    const corps = corpsDe(ecriture(appels, "POST"));
+    expect(corps["profileId"]).toBe("22222222-2222-4222-8222-222222222222");
+    /* SCOPÉ À LA SECTION du dernier essai, et ce n'est pas du zèle : ce cas
+       passait au VERT sans rien éprouver. Il cherchait « réussi » dans tout
+       l'écran, et tombait sur « Aucun essai réussi ne porte ces réglages » — la
+       phrase qui dit exactement le contraire. Pendant ce temps la section du
+       dernier essai ne paraissait jamais, faute que le corps de la réponse soit
+       lu. */
+    const section = (await screen.findByText(a.essai.titre)).closest("section") as HTMLElement;
+    expect(within(section).getByText(new RegExp(a.etats.success))).toBeInTheDocument();
+    // Et ce que le modèle a écrit y est.
+    expect(within(section).getByText("Bon anniversaire, grande sœur.")).toBeInTheDocument();
+  });
+
+  /* Le studio dépense de l'argent réel à chaque essai : il est fermé au support
+     « y compris en lecture ». L'écran n'a donc même pas d'entrée. */
+  it("reste hors de portée du support", async () => {
+    localStorage.clear();
+    magasinLocal.ecrire({ acces: "acces", rafraichissement: "refresh", role: "support" });
+    serveur();
+    render(<App />);
+
+    expect(within(screen.getByRole("navigation")).queryByText(t.sections.studio)).not.toBeInTheDocument();
+  });
+  /* ─── L'historique, et le retour arrière ───────────────────────────────── */
+
+  it("liste les publications de la nature affichée", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    expect(await screen.findByText("Consigne resserrée après un signalement.")).toBeInTheDocument();
+    expect(appels.mock.calls.some(([u]) => String(u).includes("/text-studio/message/config/history"))).toBe(true);
+  });
+
+  /* L'HISTORIQUE SUIT LA NATURE. Le laisser hors de la clé ferait lire les
+     publications du message sous l'onglet des idées, et rien ne le dirait. */
+  it("relit l'historique en changeant de nature", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+    await screen.findByText("Consigne resserrée après un signalement.");
+
+    await utilisateur.click(screen.getByRole("tab", { name: a.natures.idees }));
+
+    expect(await screen.findByText(a.historique.aucune.titre)).toBeInTheDocument();
+    expect(screen.queryByText("Consigne resserrée après un signalement.")).not.toBeInTheDocument();
+    expect(appels.mock.calls.some(([u]) => String(u).includes("/text-studio/idees/config/history"))).toBe(true);
+  });
+
+  it("revient sur une version rangée, avec son motif", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText("Consigne resserrée après un signalement."))
+      .closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: a.historique.revenir }));
+    await utilisateur.selectOptions(
+      await screen.findByLabelText(t.confirmation.motif),
+      a.historique.dialogue.motifs[0] as string,
+    );
+    await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
+
+    await waitFor(() => {
+      const envoi = appels.mock.calls.find(([u, i]) =>
+        (i as RequestInit)?.method === "POST" && String(u).includes("/config/rollback"));
+      expect(envoi).toBeDefined();
+      /* `reason`, et non `note` : le retour arrière ne dit pas ce que la version
+         apporte — elle l'a dit à sa publication —, il dit pourquoi on y revient.
+         Et LA NATURE N'Y EST PAS : la configuration visée la porte. */
+      expect(corpsDe(envoi)).toEqual({
+        configId: "55555555-5555-4555-8555-555555555555",
+        reason: a.historique.dialogue.motifs[0],
+      });
+    });
+  });
+
+  /* DEUX LIGNES N'OFFRENT PAS LE GESTE, et le serveur refuserait les deux :
+     celle qui est DÉJÀ en service n'a rien à défaire, et un brouillon jamais
+     publié n'a été validé par personne — y « revenir » le mettrait en service
+     par la porte que la publication ferme. */
+  it("ferme le retour sur ce qui sert déjà et sur un brouillon", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({
+      "/admin/text-studio/message/config/history": () => reponse(200, {
+        items: [
+          config(REGLAGES_MESSAGE, {
+            id: "66666666-6666-4666-8666-666666666666",
+            etat: "published", version: 4, note: "Celle qui tourne.",
+            publieeLe: "2026-09-05T11:00:00.000Z", parQui: "sam@lehno.app",
+          }),
+          config(REGLAGES_MESSAGE, {
+            id: "77777777-7777-4777-8777-777777777777",
+            etat: "draft", version: null, note: "Jamais publiée.",
+          }),
+        ],
+      }),
+    });
+    await ouvrir(utilisateur);
+
+    for (const texte of ["Celle qui tourne.", "Jamais publiée."]) {
+      const ligne = (await screen.findByText(texte)).closest("tr") as HTMLElement;
+      expect(within(ligne).queryByRole("button", { name: t.table.actions })).not.toBeInTheDocument();
+    }
+  });
+  /* ─── Les textes d'une orientation ──────────────────────────────────────── */
+
+  /* CE SONT CES TEXTES QUI ORIENTENT LE MODÈLE. `consigne` part en
+     `consigneOrientation` ; tant que l'écran ne montrait que le libellé et
+     l'interrupteur, la changer demandait une livraison — ce que le studio
+     existe pour éviter. */
+  const deplier = async (
+    utilisateur: ReturnType<typeof userEvent.setup>, quelle = 0,
+  ): Promise<HTMLElement> => {
+    const boutons = await screen.findAllByRole("button", { name: a.orientations.textes });
+    await utilisateur.click(boutons[quelle]!);
+    return (await screen.findByLabelText(a.orientations.consigne))
+      .closest(".admin-rang") as HTMLElement;
+  };
+
+  it("déplie une orientation et montre sa consigne", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+
+    const rang = await deplier(utilisateur);
+
+    expect(within(rang).getByLabelText(a.langues.fr)).toHaveValue("consigne");
+    expect(within(rang).getByLabelText(a.langues.en)).toHaveValue("instruction");
+  });
+
+  it("envoie la consigne modifiée, dans sa langue", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    const rang = await deplier(utilisateur);
+    await utilisateur.type(within(rang).getByLabelText(a.langues.fr), " plus courte");
+    await utilisateur.click(screen.getByRole("button", { name: a.gestes.enregistrer }));
+
+    const reglages = corpsDe(ecriture(appels, "PATCH"))["reglages"] as Record<string, unknown>;
+    const orientations = reglages["orientations"] as { consigne: { fr: string; en: string } }[];
+    expect(orientations[0]!.consigne.fr).toBe("consigne plus courte");
+    // L'autre langue n'a pas bougé : on écrit un côté, pas le couple.
+    expect(orientations[0]!.consigne.en).toBe("instruction");
+  });
+
+  /* UN BILINGUE À MOITIÉ REMPLI EST REFUSÉ PAR LE CONTRAT. L'écran le dit avant
+     d'envoyer, et NOMME l'orientation fautive : sans le nom, il faudrait
+     déplier les douze pour trouver laquelle. */
+  it("ferme l'enregistrement quand un texte n'est rempli que d'un côté", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+
+    const rang = await deplier(utilisateur);
+    await utilisateur.clear(within(rang).getByLabelText(a.langues.en));
+
+    expect(screen.getByRole("button", { name: a.gestes.enregistrer })).toBeDisabled();
+    /* On vise la NOTE, pas le nom : celui-ci paraît aussi dans la liste, et
+       chercher le nom seul rendrait deux éléments. Ce qu'on éprouve est que la
+       note le porte — sans lui, il faudrait déplier les douze. */
+    const note = screen.getByText(new RegExp(a.orientations.texteIncomplet.split("{")[0]!));
+    expect(note).toHaveTextContent("Orientation notre_relation");
+  });
+
+  /* UN FACULTATIF VIDÉ DES DEUX CÔTÉS PART NUL, et non `{ fr: "", en: "" }` :
+     le contrat exige au moins un caractère quand la clé est là, et laisser la
+     coquille ferait refuser l'enregistrement pour un champ que l'administrateur
+     croyait avoir effacé. */
+  it("retire un facultatif vidé des deux côtés", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    await deplier(utilisateur);
+    const rang = screen.getByLabelText(a.orientations.description).closest(".admin-rang") as HTMLElement;
+    await utilisateur.clear(within(rang).getByLabelText(a.langues.fr));
+    await utilisateur.clear(within(rang).getByLabelText(a.langues.en));
+
+    expect(screen.getByRole("button", { name: a.gestes.enregistrer })).toBeEnabled();
+    await utilisateur.click(screen.getByRole("button", { name: a.gestes.enregistrer }));
+
+    const reglages = corpsDe(ecriture(appels, "PATCH"))["reglages"] as Record<string, unknown>;
+    const orientations = reglages["orientations"] as { description: unknown }[];
+    expect(orientations[0]!.description).toBeNull();
+  });
+  /* ─── Le journal des essais ─────────────────────────────────────────────── */
+
+  /* LA SORTIE SE REND TELLE QUELLE, sans être relue. Les trois natures rangent
+     `{ message }` — le rendu brut du modèle —, et pour les idées c'est du JSON.
+     L'interpréter masquerait ce qu'on vient éprouver : ce que le modèle a
+     VRAIMENT rendu, y compris quand il rend mal.
+     Le journal, lui, TRONQUE à cent vingt caractères : tout rendre ferait un
+     tableau illisible, n'en rendre rien ferait une table de dates et de modèles
+     qui ne dit pas si l'essai était bon. */
+  it("rend la sortie telle quelle, et la tronque au journal", async () => {
+    const brut = JSON.stringify({
+      idees: Array.from({ length: 4 }, (_, i) => ({
+        titre: `Idée ${i + 1}`, pourquoi: "Parce que ses notes disent qu'elle jardine.",
+      })),
+    });
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({
+      "/admin/text-studio/message/trials": (_u, init) =>
+        (init?.method === "POST" ? ESSAI_LANCE() : reponse(200, {
+          items: [essai({ sortie: { message: brut } })],
+        })),
+    });
+    await ouvrir(utilisateur);
+
+    const debut = brut.slice(0, 120);
+    const ligne = (await screen.findByText(`${debut}…`)).closest("tr") as HTMLElement;
+    expect(ligne).not.toBeNull();
+    // Rien n'a été relu : c'est le JSON du modèle, coupé, pas une liste rendue.
+    expect(ligne.textContent).toContain('{"idees"');
+  });
+
+  it("liste les essais de la nature, avec ce qui en est sorti", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    expect(await screen.findByText(/Bon anniversaire, grande sœur\./)).toBeInTheDocument();
+    expect(appels.mock.calls.some(([u]) =>
+      String(u).includes("/text-studio/message/trials"))).toBe(true);
+  });
+
+  /* LE VERDICT D'UN TEXTE NE PORTE PAS DE RÉFÉRENCE : il n'a pas d'image, et le
+     contrat REFUSE le champ plutôt que de l'ignorer. */
+  it("tranche sur un essai, sans référence", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText(/Bon anniversaire, grande sœur\./))
+      .closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: a.journal.garder }));
+
+    const envoi = appels.mock.calls.find(([u, i]) =>
+      (i as RequestInit)?.method === "PATCH" && String(u).includes("/text-studio/trials/"));
+    expect(envoi).toBeDefined();
+    expect(corpsDe(envoi)).toEqual({ verdict: "kept" });
+  });
+
+  /* Un essai qui n'a rien produit ne se juge pas : il n'y a pas de texte à
+     trouver bon ou mauvais, seulement une panne. */
+  it("ne propose pas de trancher sur un essai en panne", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({
+      "/admin/text-studio/message/trials": (_u, init) =>
+        (init?.method === "POST" ? ESSAI_LANCE() : reponse(200, {
+          items: [essai({ etat: "error", sortie: null, erreur: "upstream_5xx", cout: null })],
+        })),
+    });
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText("upstream_5xx")).closest("tr") as HTMLElement;
+    expect(within(ligne).queryByRole("button", { name: t.table.actions })).not.toBeInTheDocument();
+  });
+
+  /* Le verdict déjà posé ne se repose pas : le geste n'aurait rien à changer. */
+  it("n'offre que l'autre verdict quand l'essai est déjà jugé", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({
+      "/admin/text-studio/message/trials": (_u, init) =>
+        (init?.method === "POST" ? ESSAI_LANCE() : reponse(200, {
+          items: [essai({ verdict: "kept" })],
+        })),
+    });
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText(/Bon anniversaire, grande sœur\./))
+      .closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+
+    expect(await screen.findByRole("menuitem", { name: a.journal.ecarter })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: a.journal.garder })).not.toBeInTheDocument();
+  });
+  /* ─── Ce que chaque version a produit ─────────────────────────────────────── */
+
+  /* LA LECTURE QUI DONNE SON SENS À L'ATELIER : on publiait sans jamais savoir
+     si l'on avait amélioré quoi que ce soit. La route était servie et éprouvée,
+     et aucun écran ne l'atteignait. */
+  it("montre les deux axes d'une version publiée", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText("Consigne resserrée après un signalement."))
+      .closest("tr") as HTMLElement;
+
+    /* DEUX AXES, ET JAMAIS UN SEUL CHIFFRE POUR LES DEUX : on peut garder sans
+       aimer. Sept envoyés d'un côté, quatre jugés mauvais de l'autre. */
+    expect(ligne).toHaveTextContent("7 envoyés");
+    expect(ligne).toHaveTextContent("4 mauvais");
+    /* « SANS » FIGURE TOUJOURS : le taire ferait lire deux chiffres comme un
+       total, et la version paraîtrait unanime alors que sept personnes sur
+       douze n'ont rien dit. */
+    expect(ligne).toHaveTextContent("7 sans avis");
+    expect(appels.mock.calls.some(([u]) => String(u).includes("/studio/message/performance"))).toBe(true);
+  });
+
+  /* CE QUI N'A PAS DE VERSION SE DIT, jamais ne se tait : un total qui ne tombe
+     pas juste fait douter du compte, pas des données. */
+  it("compte à part ce qui n'appartient à aucune version", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+
+    expect(await screen.findByText(/Avant le lien : 20 productions, dont 5 écartées/))
+      .toBeInTheDocument();
+  });
+
+  /* Rien à dire ne s'invente pas : une nature sans production n'affiche ni
+     zéro ni pourcentage, mais qu'elle n'a rien produit. */
+  it("ne montre pas la ligne hors version quand il n'y a rien", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+    await screen.findByLabelText(a.champs.consigne);
+
+    await utilisateur.click(screen.getByRole("tab", { name: a.natures.idees }));
+
+    await screen.findByText(a.historique.aucune.titre);
+    expect(screen.queryByText(/Avant le lien/)).toBeNull();
+  });
+});

@@ -3,11 +3,12 @@ import {
   Patch, Post, Req, UseGuards,
 } from "@nestjs/common";
 import {
-  createWishlistSchema, createOwnerWishSchema, updateOwnerWishSchema,
-  type CreateWishlistInput, type CreateOwnerWishInput, type UpdateOwnerWishInput,
-  type MyReservation, type OwnerWish, type Wishlist, type WishlistShare,
+  createWishlistSchema, updateWishlistSchema, createOwnerWishSchema, updateOwnerWishSchema,
+  type CreateWishlistInput, type UpdateWishlistInput, type CreateOwnerWishInput, type UpdateOwnerWishInput,
+  type DepotAvatar, type MyReservation, type OwnerWish, type Wishlist, type WishlistShare,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
+import { AvatarService } from "./avatar.service.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { Feature } from "../flags/feature.decorator.js";
 import { FeatureGuard } from "../flags/feature.guard.js";
@@ -39,11 +40,29 @@ export class WishlistsController {
     @Req() req: AuthedRequest,
     @Body(new ZodValidationPipe(createWishlistSchema)) body: CreateWishlistInput,
   ): Promise<Wishlist> {
-    const liste = await this.listes.create(req.userId, body.occurrenceId);
+    const liste = await this.listes.create(req.userId, body.occurrenceId ?? null, {
+      ...(body.name === undefined ? {} : { name: body.name }),
+      ...(body.closesAt === undefined ? {} : { closesAt: body.closesAt }),
+    });
     // Ni l'occasion, ni sa date : §16.4 interdit de transporter du contenu, et
     // la date d'un anniversaire en est. Le fait suffit à mesurer la boucle.
     this.mesure.emettre(req.userId, "wishlist.created", {});
     return liste;
+  }
+
+  /* RENOMMER, OU DÉPLACER LA CLÔTURE.
+   *
+   * `null` remet au défaut — « composez le nom depuis l'occasion », « fermez à
+   * l'occasion ». Sans lui, un nom posé une fois ne pourrait plus être retiré,
+   * seulement remplacé par un autre : on ne reviendrait jamais au libellé qui
+   * suit l'occasion quand celle-ci est renommée. */
+  @Patch(":id")
+  renommer(
+    @Req() req: AuthedRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(updateWishlistSchema)) body: UpdateWishlistInput,
+  ): Promise<Wishlist> {
+    return this.listes.update(req.userId, id, body);
   }
 
   @Get(":id/wishes")
@@ -107,7 +126,10 @@ export class WishlistsController {
 @UseGuards(FeatureGuard, AuthGuard)
 @Feature("wishlist.own")
 export class OwnerWishController {
-  constructor(@Inject(WishlistService) private readonly listes: WishlistService) {}
+  constructor(
+    @Inject(WishlistService) private readonly listes: WishlistService,
+    @Inject(AvatarService) private readonly medias: AvatarService,
+  ) {}
 
   @Patch(":id")
   update(
@@ -116,6 +138,25 @@ export class OwnerWishController {
     @Body(new ZodValidationPipe(updateOwnerWishSchema)) body: UpdateOwnerWishInput,
   ): Promise<OwnerWish> {
     return this.listes.updateWish(req.userId, id, body);
+  }
+
+  /* LA PHOTO D'UN SOUHAIT suit exactement le chemin de la photo de profil :
+     le serveur signe une URL, le téléphone dépose dessus, puis confirme. Elle
+     vient du même inconnu — un appareil photo — et mérite le même examen :
+     type lu dans le contenu, taille bornée, image recomposée, métadonnées
+     retirées.
+     La cible est retenue au moment de signer : la confirmation ne dit pas ce
+     qu'elle vise, sans quoi on rattacherait sa photo au souhait d'un autre. */
+  @Post(":id/photo/depot")
+  @HttpCode(200)
+  depotPhoto(@Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string): Promise<DepotAvatar> {
+    return this.medias.depotSouhait(req.userId, id);
+  }
+
+  @Post(":id/photo")
+  @HttpCode(204)
+  async confirmerPhoto(@Req() req: AuthedRequest): Promise<void> {
+    await this.medias.confirmerSouhait(req.userId);
   }
 
   @Delete(":id")

@@ -68,5 +68,14 @@ export function etatDuLien(lien: WishLink, aujourdhui: string): EtatDuLien {
 export function reservationsQuiTiennent(
   reservations: readonly MyReservation[],
 ): MyReservation[] {
-  return [...reservations].sort((a, b) => a.occurrenceDate.localeCompare(b.occurrenceDate));
+  /* Même règle que pour les listes : sans date, en dernier. Une réservation
+     sur une liste sans occasion n'a pas d'échéance à annoncer, et la glisser
+     entre deux dates ferait croire qu'elle en a une. */
+  return [...reservations].sort((a, b) => {
+    if (a.occurrenceDate === null || b.occurrenceDate === null) {
+      if (a.occurrenceDate === b.occurrenceDate) return 0;
+      return a.occurrenceDate === null ? 1 : -1;
+    }
+    return a.occurrenceDate.localeCompare(b.occurrenceDate);
+  });
 }

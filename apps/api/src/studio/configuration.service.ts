@@ -3,8 +3,11 @@ import { createHash } from "node:crypto";
 import type { Prisma, StudioConfigKind } from "@prisma/client";
 import {
   matierePourEmpreinteMessage, matierePourEmpreintePortrait,
+  matierePourEmpreinteIdees, matierePourEmpreinteBriefPortrait,
   reglagesMessageSchema, reglagesPortraitSchema,
+  reglagesIdeesSchema, reglagesBriefPortraitSchema,
   type BlocagePublication, type ReglagesMessage, type ReglagesPortrait,
+  type ReglagesIdees, type ReglagesBriefPortrait,
   type ConfigurationMessage, type ConfigurationPortrait,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -42,6 +45,59 @@ function blocagePour(etat: string, essaisReussis: number): BlocagePublication | 
    qu'il ne sait pas faire sur un littéral, et on en serait réduit à forcer. */
 type ConfigurationDe<R> = Omit<ConfigurationMessage, "reglages"> & { reglages: R };
 
+/* UNE LIGNE QUI NE SE RELIT PLUS SE DIT, elle ne tombe pas en 500.
+ *
+ * `schema.parse()` posé nu ici a coûté une semaine au mobile : une ligne semée
+ * AVANT le découpage message/portrait porte l'ancienne forme — `motifs`,
+ * `voiesImage`, `ambiances`, et un `modeles` à trois clés là où le message
+ * n'en veut qu'une. Les deux schémas sont `.strict()`, donc la relecture lève
+ * une `ZodError` nue, que le filtre rend en « erreur interne ». Chaque
+ * génération de message répondait 500, et l'écran ne disait rien de plus qu'un
+ * serveur en panne. Il a fallu un DELETE en base pour repartir.
+ *
+ * `resource_inactive` et non `internal_error` : ce n'est pas une panne, c'est
+ * une configuration qui n'est plus lisible — l'écran doit dire « indisponible »
+ * plutôt que « réessayez », et le détail nomme la nature pour que le journal
+ * dise laquelle des deux. Le semis répare ce cas au démarrage ; ce refus est
+ * ce qui reste quand la réparation ne s'applique pas, et il se lit. */
+function relire<T>(schema: { parse(v: unknown): T }, settings: unknown, nature: string): T {
+  try {
+    return schema.parse(settings);
+  } catch (cause) {
+    throw new AppError(
+      "resource_inactive",
+      `the published ${nature} configuration no longer matches its schema`,
+      { nature, detail: cause instanceof Error ? cause.message : String(cause) },
+    );
+  }
+}
+
+/** Ce qu'une configuration porte, quelle que soit sa nature. */
+export type Reglages = ReglagesMessage | ReglagesPortrait | ReglagesIdees | ReglagesBriefPortrait;
+
+/* UNE TABLE, ET NON UN TERNAIRE. C'est ce qui rend l'oubli IMPOSSIBLE.
+ *
+ * Ces deux lectures s'écrivaient `nature === "message" ? … : …`, ce qui était
+ * juste tant qu'il n'y avait que deux natures. À quatre, la branche « sinon »
+ * traiterait des idées comme un portrait : l'empreinte serait calculée sur la
+ * mauvaise projection, et la publication réclamerait un essai — ou n'en
+ * réclamerait pas — sans rapport avec ce qui a changé. Rien ne l'aurait dit.
+ *
+ * Un `Record` indexé par l'énumération oblige le compilateur : ajouter une
+ * cinquième nature sans l'inscrire ici ne compile pas. */
+const PAR_NATURE: Record<StudioConfigKind, {
+  schema: { parse(v: unknown): Reglages; safeParse(v: unknown): { success: boolean } };
+  matiere: (r: never) => string;
+}> = {
+  message: { schema: reglagesMessageSchema, matiere: matierePourEmpreinteMessage as (r: never) => string },
+  idees: { schema: reglagesIdeesSchema, matiere: matierePourEmpreinteIdees as (r: never) => string },
+  portrait_brief: {
+    schema: reglagesBriefPortraitSchema,
+    matiere: matierePourEmpreinteBriefPortrait as (r: never) => string,
+  },
+  portrait: { schema: reglagesPortraitSchema, matiere: matierePourEmpreintePortrait as (r: never) => string },
+};
+
 type LigneConfig = {
   id: string; kind: StudioConfigKind; version: number | null; state: string; settings: unknown;
   fingerprint: string; publishedAt: Date | null; publishedByAdminId: string | null;
@@ -64,18 +120,22 @@ export class StudioConfigurationService {
      garde-fou du message ne doit plus faire retomber les essais du portrait, ni
      l'inverse. Une seule empreinte rendait chaque réglage à éprouver dès que
      l'AUTRE bougeait. */
-  empreinte(nature: StudioConfigKind, reglages: ReglagesMessage | ReglagesPortrait): string {
-    const matiere = nature === "message"
-      ? matierePourEmpreinteMessage(reglages as ReglagesMessage)
-      : matierePourEmpreintePortrait(reglages as ReglagesPortrait);
+  empreinte(nature: StudioConfigKind, reglages: Reglages): string {
+    const matiere = PAR_NATURE[nature].matiere(reglages as never);
     return createHash("sha256").update(matiere).digest("hex");
   }
 
   /** Les réglages relus de la base, revalidés. */
-  reglagesDe(ligne: { kind: StudioConfigKind; settings: unknown }): ReglagesMessage | ReglagesPortrait {
-    return ligne.kind === "message"
-      ? reglagesMessageSchema.parse(ligne.settings)
-      : reglagesPortraitSchema.parse(ligne.settings);
+  reglagesDe(ligne: { kind: StudioConfigKind; settings: unknown }): Reglages {
+    return relire(PAR_NATURE[ligne.kind].schema, ligne.settings, ligne.kind);
+  }
+
+  reglagesIdeesDe(ligne: { settings: unknown }): ReglagesIdees {
+    return relire(reglagesIdeesSchema, ligne.settings, "idees");
+  }
+
+  reglagesBriefPortraitDe(ligne: { settings: unknown }): ReglagesBriefPortrait {
+    return relire(reglagesBriefPortraitSchema, ligne.settings, "portrait_brief");
   }
 
   /* Deux lectures typées, pour que les appelants n'aient pas à faire
@@ -83,11 +143,20 @@ export class StudioConfigurationService {
      studio du portrait QUE le portrait. Une assertion posée chez l'appelant
      laisserait passer l'inversion sans que rien ne le dise. */
   reglagesMessageDe(ligne: { settings: unknown }): ReglagesMessage {
-    return reglagesMessageSchema.parse(ligne.settings);
+    return relire(reglagesMessageSchema, ligne.settings, "message");
   }
 
   reglagesPortraitDe(ligne: { settings: unknown }): ReglagesPortrait {
-    return reglagesPortraitSchema.parse(ligne.settings);
+    return relire(reglagesPortraitSchema, ligne.settings, "portrait");
+  }
+
+  /* La même relecture, mais qui RÉPOND au lieu de refuser.
+   *
+   * Le semis en a besoin pour décider s'il doit réparer : il ne peut pas se
+   * servir de `reglagesDe`, qui lève — et attraper une exception pour en faire
+   * un booléen cacherait la vraie panne le jour où la base est injoignable. */
+  estLisible(ligne: { kind: StudioConfigKind; settings: unknown }): boolean {
+    return PAR_NATURE[ligne.kind].schema.safeParse(ligne.settings).success;
   }
 
   async enService(nature: StudioConfigKind): Promise<LigneConfig | null> {
@@ -107,7 +176,7 @@ export class StudioConfigurationService {
    * violation de contrainte que rien n'explique à l'écran. */
   async deposerBrouillon(
     nature: StudioConfigKind,
-    reglages: ReglagesMessage | ReglagesPortrait,
+    reglages: Reglages,
     tx?: Prisma.TransactionClient,
   ): Promise<LigneConfig> {
     const ecrire = async (client: Prisma.TransactionClient): Promise<LigneConfig> => {
@@ -142,7 +211,7 @@ export class StudioConfigurationService {
    * service par laquelle on publie une consigne que personne n'a vue tourner.
    */
   async enregistrerDirect(
-    nature: StudioConfigKind, reglages: ReglagesMessage | ReglagesPortrait,
+    nature: StudioConfigKind, reglages: Reglages,
   ): Promise<LigneConfig> {
     const tete = (await this.brouillon(nature)) ?? (await this.enService(nature));
     if (!tete)
@@ -249,8 +318,17 @@ export class StudioConfigurationService {
         details: { version: cible.version },
       }, tx);
 
+      /* SEULEMENT SA NATURE, pour la raison exacte que la publication écrit dix
+         lignes plus haut — et que le retour arrière avait oubliée : sans ce
+         filtre, revenir sur une version du message rangeait AUSSI la
+         configuration du portrait et celle des idées. Le studio se retrouvait à
+         moitié servi, et personne ne l'apprenait par une erreur : le geste
+         demandé réussissait, et les trois autres natures tombaient en silence.
+
+         L'index unique ne le rattrape pas : il n'admet qu'une publiée par
+         nature, et zéro en satisfait la lettre. */
       await tx.studioConfig.updateMany({
-        where: { state: "published" }, data: { state: "superseded" },
+        where: { kind: cible.kind, state: "published" }, data: { state: "superseded" },
       });
 
       return tx.studioConfig.update({ where: { id: cible.id }, data: { state: "published" } });
@@ -294,7 +372,7 @@ export class StudioConfigurationService {
     return (await this.rendre(ligne)) as ConfigurationMessage;
   }
 
-  async rendre(ligne: LigneConfig): Promise<ConfigurationDe<ReglagesMessage | ReglagesPortrait>> {
+  async rendre(ligne: LigneConfig): Promise<ConfigurationDe<Reglages>> {
     const [essais, auteur] = await Promise.all([
       this.essaisReussis(ligne.fingerprint),
       ligne.publishedByAdminId === null
@@ -308,7 +386,7 @@ export class StudioConfigurationService {
 
   private assembler(
     ligne: LigneConfig, essaisReussis: number, parQui: string | null,
-  ): ConfigurationDe<ReglagesMessage | ReglagesPortrait> {
+  ): ConfigurationDe<Reglages> {
     /* Le blocage se DÉDUIT du compte déjà lu, il ne se relit pas : une seconde
        interrogation rendrait la ligne vue en liste incohérente avec la même
        ligne vue en détail dès qu'un essai tombe entre les deux. */
@@ -344,7 +422,7 @@ export class StudioConfigurationService {
    * ligne et pour cent. Deux formes de rendu pour une seule chose finissent
    * toujours par diverger — c'est ce qui fait qu'un champ ajouté n'apparaît
    * que sur l'un des deux écrans. */
-  async rendreTous(lignes: LigneConfig[]): Promise<ConfigurationDe<ReglagesMessage | ReglagesPortrait>[]> {
+  async rendreTous(lignes: LigneConfig[]): Promise<ConfigurationDe<Reglages>[]> {
     if (lignes.length === 0) return [];
 
     const empreintes = [...new Set(lignes.map((l) => l.fingerprint))];

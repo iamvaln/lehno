@@ -68,12 +68,20 @@ export function doitVerifierLaDisponibilite(pseudo: string, original: Profile): 
   return propre !== original.username && pseudoRecevable(propre);
 }
 
-/* Ce qui autorise l'enregistrement.
+/* LE PSEUDO EST UN REFUS, PAS UNE CONDITION DE REPOS, et les deux ne se mêlent
+ * pas. « Rien n'a changé » cède dès qu'un objet de l'écran bouge — Mon profil
+ * en porte deux, le compte et la fiche de soi. « Le pseudo est irrecevable »
+ * ne cède devant rien : l'envoi part entier et serait refusé entier, emportant
+ * le genre ou la langue qu'on venait de corriger.
  *
- * Rien à envoyer, rien à faire : un bouton actif sur un formulaire intact
- * promet un effet qu'il n'aura pas. Et un pseudo mal formé bloque, même si
- * autre chose a changé — l'envoi partirait entier et serait refusé entier. */
-export function peutEnregistrer(
+ * Les avoir mêlés dans une seule fonction a produit exactement cette faute :
+ * le bouton du profil, une fois ouvert à ce que la FICHE avait à dire, se
+ * rallumait sur un pseudo mal formé dès qu'une date de naissance était saisie.
+ * Le refus se lit donc à part, et l'écran le pose avant le repos.
+ *
+ * UNE SEULE DÉFINITION de la recevabilité : `peutEnregistrer` l'appelle plutôt
+ * que de la recopier, sinon les deux divergeraient au premier réglage. */
+export function pseudoPosable(
   saisie: SaisieDeProfil,
   original: Profile,
   pseudoLibre: boolean | null,
@@ -81,5 +89,20 @@ export function peutEnregistrer(
   if (!pseudoRecevable(saisie.pseudo)) return false;
   // `null` = pas encore de réponse. On attend plutôt que d'envoyer vers un refus.
   if (doitVerifierLaDisponibilite(saisie.pseudo, original) && pseudoLibre !== true) return false;
+  return true;
+}
+
+/* Ce qui autorise l'enregistrement DU COMPTE.
+ *
+ * Rien à envoyer, rien à faire : un bouton actif sur un formulaire intact
+ * promet un effet qu'il n'aura pas. Le pseudo bloque toujours — la garde est
+ * juste nommée ailleurs, pour que l'écran puisse la poser sans passer par le
+ * repos. */
+export function peutEnregistrer(
+  saisie: SaisieDeProfil,
+  original: Profile,
+  pseudoLibre: boolean | null,
+): boolean {
+  if (!pseudoPosable(saisie, original, pseudoLibre)) return false;
   return Object.keys(corpsDeMiseAJour(saisie, original)).length > 0;
 }

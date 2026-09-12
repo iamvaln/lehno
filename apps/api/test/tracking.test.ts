@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
-import { NOMS_EVENEMENTS, ENTETES_MESURE } from "@lehno/contracts";
+import { NOMS_EVENEMENTS, ENTETES_MESURE, ENTETES_CLIENT } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { TrackingService } from "../src/tracking/tracking.service.js";
 import { FlagsService } from "../src/flags/flags.service.js";
@@ -104,7 +104,7 @@ describe("le plan de mesure", () => {
     it("lit les en-têtes et les rend disponibles sans les faire voyager", () => {
       const contexte = lireEntetes({
         [ENTETES_MESURE.surface]: "app",
-        [ENTETES_MESURE.appVersion]: "1.4.2",
+        [ENTETES_CLIENT.appVersion]: "1.4.2",
         [ENTETES_MESURE.language]: "fr",
         [ENTETES_MESURE.theme]: "dark",
         [ENTETES_MESURE.sessionId]: "abc123",
@@ -122,7 +122,7 @@ describe("le plan de mesure", () => {
     // pour casser une ligne de journal, ou mille caractères pour la noyer.
     it("nettoie et borne ce que le client écrit", () => {
       const contexte = lireEntetes({
-        [ENTETES_MESURE.appVersion]: "1.0\nFAUX: injecté",
+        [ENTETES_CLIENT.appVersion]: "1.0\nFAUX: injecté",
         [ENTETES_MESURE.sessionId]: "x".repeat(500),
       }, null);
       // Ce qui compte n'est pas la chaîne exacte mais ce qui n'y est plus :

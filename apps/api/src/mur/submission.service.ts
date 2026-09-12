@@ -12,8 +12,16 @@ const ABSENT = (): AppError => new AppError("not_found", "resource not found");
 // validation écrit DANS une transaction — voir le commentaire de `decide`.
 const TOUS_LES_ANS = { unite: "year" as const, pas: 1 };
 
+/* LE NOM DE LA FICHE VIENT DU LIEN, par une jointure de plus sur `person`.
+ *
+ * C'est une colonne, pas une requête : le lien porte déjà `personId`, et le
+ * chercher ici évite au client de charger tout son carnet pour intituler une
+ * carte — ce que le sas faisait, et qui coûtait une requête pour un mot. */
 type LigneSoumission = Prisma.SubmissionGetPayload<{
-  include: { wishes: true; link: { select: { type: true; personId: true } } };
+  include: {
+    wishes: true;
+    link: { select: { type: true; personId: true; person: { select: { displayName: true } } } };
+  };
 }>;
 
 function rendre(s: LigneSoumission): Submission {
@@ -21,6 +29,10 @@ function rendre(s: LigneSoumission): Submission {
     id: s.id,
     linkType: s.link.type as Submission["linkType"],
     personId: s.link.personId,
+    /* Nul quand le lien est public et n'a pas encore produit sa fiche — c'est
+       exactement le cas où `submitterName` est renseigné, et où l'écran a donc
+       de quoi nommer la carte autrement. */
+    personDisplayName: s.link.person?.displayName ?? null,
     submitterName: s.submitterName,
     relationHint: s.relationHint,
     birthDate: s.birthDate?.toISOString().slice(0, 10) ?? null,
@@ -50,7 +62,7 @@ export class SubmissionService {
   async list(userId: string): Promise<Submission[]> {
     const lignes = await this.prisma.submission.findMany({
       where: { userId },
-      include: { wishes: { orderBy: { createdAt: "asc" } }, link: { select: { type: true, personId: true } } },
+      include: { wishes: { orderBy: { createdAt: "asc" } }, link: { select: { type: true, personId: true, person: { select: { displayName: true } } } } },
       orderBy: { createdAt: "desc" },
     });
     return lignes.map(rendre);
@@ -59,7 +71,7 @@ export class SubmissionService {
   async get(userId: string, id: string): Promise<Submission> {
     const ligne = await this.prisma.submission.findFirst({
       where: { id, userId },
-      include: { wishes: { orderBy: { createdAt: "asc" } }, link: { select: { type: true, personId: true } } },
+      include: { wishes: { orderBy: { createdAt: "asc" } }, link: { select: { type: true, personId: true, person: { select: { displayName: true } } } } },
     });
     if (!ligne) throw ABSENT();
     return rendre(ligne);
@@ -86,7 +98,7 @@ export class SubmissionService {
     await this.prisma.$transaction(async (tx) => {
       const soumission = await tx.submission.findFirst({
         where: { id, userId },
-        include: { wishes: true, link: { select: { type: true, personId: true } } },
+        include: { wishes: true, link: { select: { type: true, personId: true, person: { select: { displayName: true } } } } },
       });
       if (!soumission) throw ABSENT();
 

@@ -12,6 +12,9 @@ import {
 } from "@lehno/tokens";
 import { Avatar, Banner, Button, Icon, SectionLabel, TextField, useCouleurs } from "@lehno/ui-native";
 import { useLangue } from "../lib/langue.js";
+import { nomAAfficher, soiDabord } from "../lib/soi.js";
+import { Pastille } from "../composants/Pastille.js";
+import { RangeeDeJours } from "../composants/RangeeDeJours.js";
 import { appel, ErreurDApi } from "../lib/api.js";
 import { messageDErreur } from "../lib/session.js";
 import { useTypesOuverts } from "../lib/MetadonneesProvider.js";
@@ -85,7 +88,11 @@ export default function Evenement() {
     const page = personListSchema.parse(await appel<unknown>(
       "/me/persons?sort=alpha&direction=asc&offset=0&limit=100",
     ));
-    setCarnet(page.persons);
+    /* SOI RESTE OFFERT ICI — c'est le seul endroit où l'on pose une date à soi,
+       et c'est lui qui débloque la wishlist datée et « Ma date d'anniversaire »
+       sur le Mur. En tête : c'est la fiche qu'on cherche le jour où elle vient
+       d'exister, et la chercher au milieu du carnet serait absurde. */
+    setCarnet(soiDabord(page.persons));
   }, []);
 
   useEffect(() => { void charge(); }, [charge]);
@@ -117,6 +124,7 @@ export default function Evenement() {
     kind: type,
     libelle,
     date: type && demandeLaDate(type) ? date : "",
+    naissanceConnue: Boolean(proche?.birthDate),
   });
 
   const enregistre = async () => {
@@ -240,9 +248,9 @@ export default function Evenement() {
           <View style={styles.puces}>
             {proche ? (
               <View style={[styles.puce, { backgroundColor: couleurs.actionQuietBg }]}>
-                <Avatar name={proche.displayName} size={24} />
+                <Avatar name={nomAAfficher(proche, t.evtPourMoi)} size={24} />
                 <Text style={[styles.puceTexte, { color: couleurs.textAccent }]}>
-                  {proche.displayName}
+                  {nomAAfficher(proche, t.evtPourMoi)}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -274,7 +282,7 @@ export default function Evenement() {
                 ) : (
                   <>
                     <Text style={[styles.champVideTexte, { color: couleurs.textMention }]}>
-                      {t.rechercher}
+                      {t.evtChercherQui}
                     </Text>
                     <Icon name="chevron-down" size={15} color={couleurs.textMention} />
                   </>
@@ -293,9 +301,9 @@ export default function Evenement() {
                 <TextInput
                   value={filtre}
                   onChangeText={setFiltre}
-                  placeholder={t.rechercher}
+                  placeholder={t.evtChercherQui}
                   placeholderTextColor={couleurs.textMention}
-                  accessibilityLabel={t.rechercher}
+                  accessibilityLabel={t.evtChercherQui}
                   autoFocus
                   autoCorrect={false}
                   style={[styles.rechercheSaisie, { color: couleurs.textBody }]}
@@ -316,9 +324,9 @@ export default function Evenement() {
                   onPress={() => { setProche(p); setOuvreLeChoix(false); }}
                   style={styles.ligne}
                 >
-                  <Avatar name={p.displayName} size={26} />
+                  <Avatar name={nomAAfficher(p, t.evtPourMoi)} size={26} />
                   <Text style={[styles.ligneTexte, { color: couleurs.textBody }]}>
-                    {p.displayName}
+                    {nomAAfficher(p, t.evtPourMoi)}
                   </Text>
                 </Pressable>
               )) : (
@@ -389,21 +397,11 @@ export default function Evenement() {
           {type && demandeLaDate(type) ? (
             <>
               <Text style={[styles.sousTitre, { color: couleurs.textSecondary }]}>{t.evtJour}</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={styles.rangee}
-              >
-                {jours.map((j) => (
-                  <Pastille
-                    key={j}
-                    actif={borneLeJour(jour, mois, annee) === j}
-                    libelle={String(j)}
-                    appuie={() => setJour(j)}
-                  />
-                ))}
-              </ScrollView>
+              <RangeeDeJours
+                jours={jours}
+                actif={borneLeJour(jour, mois, annee)}
+                choisit={setJour}
+              />
 
               <Text style={[styles.sousTitre, { color: couleurs.textSecondary }]}>{t.evtMois}</Text>
               <View style={styles.pastilles}>
@@ -504,32 +502,6 @@ export default function Evenement() {
 /* Une pastille de choix, comme sur l'identité : trois à douze valeurs se lisent
    d'un coup, et un sélecteur natif cacherait le choix derrière un geste de
    plus. La cible tactile ne descend pas sous le minimum du système. */
-function Pastille({ actif, libelle, icone, appuie }: {
-  actif: boolean;
-  libelle: string;
-  icone?: string | undefined;
-  appuie: () => void;
-}) {
-  const couleurs = useCouleurs();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: actif }}
-      onPress={appuie}
-      style={[styles.pastille, {
-        borderColor: actif ? "transparent" : couleurs.borderObject,
-        backgroundColor: actif ? couleurs.action : "transparent",
-      }]}
-    >
-      {icone ? (
-        <Icon name={icone} size={16} color={actif ? couleurs.textOnAccent : couleurs.textSecondary} />
-      ) : null}
-      <Text style={[styles.pastilleTexte, {
-        color: actif ? couleurs.textOnAccent : couleurs.textSecondary,
-      }]}>{libelle}</Text>
-    </Pressable>
-  );
-}
 
 const styles = StyleSheet.create({
   manque: { fontFamily: nativeFont.bodyRegular, fontSize: 14.5, lineHeight: 21, marginTop: nativeSpace[8] },

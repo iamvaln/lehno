@@ -12,6 +12,16 @@ export const collectionLinkSchema = z.object({
   id: z.string().uuid(),
   type: z.enum(COLLECTION_LINK_TYPES),
   token: z.string(),
+  /* L'ADRESSE COMPLÈTE, parce qu'elle appartient au serveur. Le client qui
+     recompose `${site}/c/${token}` doit connaître le site — donc le porter en
+     dur, donc se tromper de domaine le jour où il change, sans que rien ne le
+     signale. Le jeton reste servi : c'est lui qu'on révoque, qu'on compare et
+     qu'on retrouve dans un journal. */
+  url: z.string().url(),
+  /* Le mot tel qu'il a été écrit, pour que l'écran le relise et le corrige.
+     Servi en lecture comme le reste du lien : sans lui, rouvrir l'écran
+     présenterait un champ vide au-dessus d'un lien qui, lui, porte le mot. */
+  message: z.string().nullable(),
   personId: z.string().uuid().nullable(),
   // Le lien est durable : pas d'expiration, seulement une révocation.
   isActive: z.boolean(),
@@ -26,6 +36,21 @@ export type CollectionLink = z.infer<typeof collectionLinkSchema>;
 export const createCollectionLinkSchema = z.object({
   type: z.enum(COLLECTION_LINK_TYPES),
   personId: z.string().uuid().optional(),
+  /* LE MOT D'ACCOMPAGNEMENT, écrit par celui qui envoie le lien.
+   *
+   * « Il s'affiche en haut de la page qu'on ouvrira » — la copie de la
+   * maquette le promet à celui qui l'écrit, et c'est cette promesse qui oblige
+   * le contrat à le porter. Un champ saisi ici et perdu à l'envoi serait pire
+   * qu'un champ absent : on croirait l'avoir écrit.
+   *
+   * Facultatif, et c'est le propos : le lien vaut sans un mot. Nul plutôt que
+   * chaîne vide, pour que la page publique n'ait pas à distinguer « rien
+   * écrit » de « écrit puis effacé » — les deux ne montrent rien.
+   *
+   * Court à dessein. Ce n'est pas une lettre : c'est la phrase qui explique
+   * pourquoi on ouvre cette page. Au-delà, elle pousse le formulaire sous la
+   * ligne de flottaison — et le formulaire est ce qu'on est venu remplir. */
+  message: z.string().trim().max(280).nullable().optional(),
 }).strict().superRefine((v, ctx) => {
   if (v.type === "nominatif" && !v.personId) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["personId"], message: "un lien nominatif désigne une fiche" });
@@ -60,6 +85,23 @@ export const submissionSchema = z.object({
   linkType: z.enum(COLLECTION_LINK_TYPES),
   // Nulle tant qu'un lien public n'a pas produit sa fiche à la validation.
   personId: z.string().uuid().nullable(),
+  /**
+   * LE NOM DE LA FICHE VISÉE, pour que l'écran intitule sa carte.
+   *
+   * Il manquait, et le sas chargeait donc le CARNET ENTIER pour un mot. Le seul
+   * champ qu'il pouvait lire était `submitterName`, qui n'est accepté que sur un
+   * lien public — « sur un nominatif, le propriétaire sait déjà qui il a
+   * invité ». Sur toute contribution nominative il était donc nul, et la carte
+   * s'intitulait « Pour Sans nom » exactement là où elle avait un nom à dire.
+   *
+   * La page PUBLIQUE le sert déjà sur le même objet. La donnée était sous la
+   * main du serveur des deux côtés ; seul le côté propriétaire ne la servait
+   * pas.
+   *
+   * NUL avec `personId`, et pour la même raison : un lien public n'a pas encore
+   * de fiche tant que la contribution n'est pas validée.
+   */
+  personDisplayName: z.string().nullable(),
   submitterName: z.string().nullable(),
   // « on se connaît d'où » — une aide au rangement, pas une taxonomie.
   relationHint: z.string().nullable(),
@@ -140,8 +182,39 @@ export const receivedWishSchema = z.object({
   authorName: z.string().nullable(),
   content: z.string(),
   status: z.enum(RECEIVED_WISH_STATUSES),
+  /* DEUX INTERRUPTEURS QUI NE DISENT PAS LA MÊME CHOSE.
+   *
+   * `isPublic` décide si le vœu paraît sur le Mur ; `showAuthor`, si le nom de
+   * qui l'a écrit paraît avec. Les fondre obligerait à choisir entre « je le
+   * montre avec son nom » et « je ne le montre pas » — or « je le montre sans
+   * dire de qui » est précisément ce qu'on veut d'un mot maladroit qu'on garde
+   * quand même.
+   *
+   * Faux tous les deux à l'arrivée : un vœu reçu n'est pas public parce qu'il
+   * est arrivé, il le devient parce que son destinataire l'a décidé. */
+  isPublic: z.boolean(),
+  showAuthor: z.boolean(),
   createdAt: z.string(),
 }).strict();
+
+/* Ce qu'on bascule sur un vœu reçu.
+ *
+ * Montrer l'auteur d'un vœu qu'on n'expose pas ne veut rien dire — la base le
+ * refuse, et le contrat le refuse ici pour que l'écran l'apprenne avant
+ * d'envoyer. Retirer la publication retire donc l'auteur avec elle. */
+export const receivedWishVisibilitySchema = z.object({
+  isPublic: z.boolean().optional(),
+  showAuthor: z.boolean().optional(),
+}).strict()
+  .refine((v) => v.isPublic !== undefined || v.showAuthor !== undefined, {
+    message: "au moins un champ doit être fourni",
+  })
+  .refine((v) => !(v.showAuthor === true && v.isPublic === false), {
+    path: ["showAuthor"],
+    message: "montrer l'auteur suppose que le vœu soit exposé",
+  });
+
+export type ReceivedWishVisibilityInput = z.infer<typeof receivedWishVisibilitySchema>;
 
 export type ReceivedWish = z.infer<typeof receivedWishSchema>;
 

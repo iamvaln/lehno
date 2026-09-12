@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   nativeFont, nativeLetterSpacing, nativeSpace, nativeTracking,
 } from "@lehno/tokens";
@@ -18,6 +18,14 @@ export default function Connexion() {
   const { theme, couleurs } = useTheme();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
+
+  /* POURQUOI ON EST REVENU ICI, quand on y est renvoyé. Le paramètre est une
+     CLÉ, jamais une phrase : un lien profond peut le poser, et afficher un
+     texte reçu de l'extérieur laisserait écrire n'importe quoi sur notre écran
+     de connexion — « votre compte est bloqué, appelez ce numéro ». On ne
+     reconnaît donc qu'une valeur, et tout le reste ne dit rien. */
+  const { raison } = useLocalSearchParams<{ raison?: string }>();
+  const renvoi = raison === "inscriptionExpiree" ? t.inscriptionExpiree : null;
 
   const [email, setEmail] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
@@ -63,6 +71,12 @@ export default function Connexion() {
 
         {erreur ? (
           <View style={styles.bandeau}><Banner intent="error">{erreur}</Banner></View>
+        ) : renvoi ? (
+          /* EN AVERTISSEMENT, PAS EN ERREUR : rien n'a échoué, un délai est
+             passé. Le rouge ferait croire à une panne et à un compte perdu,
+             alors qu'il suffit de redemander un code. Il s'efface dès qu'une
+             vraie erreur arrive — deux bandeaux empilés ne se lisent pas. */
+          <View style={styles.bandeau}><Banner intent="warning">{renvoi}</Banner></View>
         ) : null}
 
         <View style={{ gap: nativeSpace[10] }}>
@@ -82,6 +96,15 @@ export default function Connexion() {
           nature="email"
           value={email}
           onChangeText={setEmail}
+          /* LA TOUCHE DE RETOUR ENVOIE, et ce n'est pas un raccourci de confort.
+             Sur un écran court, le clavier ouvert RECOUVRE le bouton : on tape
+             son adresse et il faut refermer le clavier pour trouver l'action.
+             La même garde que le bouton — une adresse qui ne ressemble à rien
+             ne part pas —, sinon la touche promettrait ce que le bouton refuse. */
+          returnKeyType="send"
+          onSubmitEditing={() => {
+            if (!envoi && ressembleAUneAdresse(email)) void demandeLeCode();
+          }}
         />
         <Button
           variant="primary"

@@ -52,6 +52,10 @@ export const wallSchema = z.object({
   slug: z.string(),
   isEnabled: z.boolean(),
   showBirthdayDate: z.boolean(),
+  /* Exposer la liste de souhaits, ou la taire. Sans lui, le Mur publiait
+     `wishLinkUrl` sans qu'on puisse s'y opposer autrement qu'en fermant le Mur
+     entier — donc en cachant aussi tout le reste. */
+  showWishlist: z.boolean(),
   // S'affiche sous le message d'accueil que le produit compose à partir du
   // prénom : il l'accompagne, il ne le remplace pas.
   welcomeMessage: z.string().nullable(),
@@ -73,6 +77,7 @@ export type Wall = z.infer<typeof wallSchema>;
 export const updateWallSchema = z.object({
   isEnabled: z.boolean().optional(),
   showBirthdayDate: z.boolean().optional(),
+  showWishlist: z.boolean().optional(),
   welcomeMessage: z.string().trim().max(500).nullable().optional(),
   /* L'ENSEMBLE de ce qui est exposé, pas un ajout ni un retrait.
      Un patch élément par élément laisserait une case décochée à l'écran rester
@@ -196,6 +201,24 @@ export const metadataSchema = z.object({
     code: z.string(),
     credits: z.number().int().min(0),
   }).strict()),
+  /**
+   * COMBIEN D'IDÉES LE JEU PORTERA, tel que l'atelier l'a publié.
+   *
+   * Il est servi parce que l'application l'ANNONCE : « Cinq pistes qui lui
+   * ressemblent ». Ce nombre était écrit dans la copie du mobile, et le régler
+   * à quatre à l'atelier aurait laissé l'écran promettre cinq et en montrer
+   * quatre — un réglage qui ne change pas ce que l'utilisateur voit annoncé est
+   * pire qu'absent.
+   *
+   * ICI et non dans `/me/studio/options`, pour la raison qui vaut déjà pour le
+   * prix : les idées n'ouvrent aucun studio, et l'écran qui les annonce ne
+   * charge pas cet appel-là.
+   *
+   * Ce qui reste au serveur : la consigne de la maison, les garde-fous, les
+   * champs du proche qui partent au modèle. Rien de tout cela n'a de sens à
+   * l'écran, et l'exposer dirait au client des choses qui ne le regardent pas.
+   */
+  nombreIdees: z.number().int().min(3).max(6),
 }).strict();
 
 export type Metadata = z.infer<typeof metadataSchema>;

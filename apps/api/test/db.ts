@@ -1,31 +1,71 @@
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import { PrismaClient } from "@prisma/client";
-import { execFileSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { MODELE, VARIABLE, urlDe } from "./socle.js";
 
 export type TestDb = { prisma: PrismaClient; url: string; close: () => Promise<void> };
 
+/* UNE BASE NEUVE PAR FICHIER — CLONÉE, PLUS RECONSTRUITE.
+ *
+ * Le conteneur et les migrations appartiennent maintenant au `globalSetup`
+ * (`socle.ts`), qui dit pourquoi. Il ne reste ici que le clonage.
+ *
+ * CE QUI NE CHANGE PAS : chaque fichier reçoit toujours une base VIERGE, données
+ * de référence comprises. L'isolation entre fichiers n'est pas assouplie — c'est
+ * elle qui empêche qu'un fichier basculant un drapeau empoisonne le suivant, et
+ * `resetDatabase` ne la donnerait pas, puisqu'il PRÉSERVE délibérément les
+ * tables de référence.
+ *
+ * CE QUI CHANGE : `CREATE DATABASE … TEMPLATE` copie les fichiers du modèle.
+ * Postgres ne rejoue aucune migration — des millisecondes au lieu d'une
+ * vingtaine de secondes.
+ */
 export async function withDatabase(): Promise<TestDb> {
-  const container: StartedPostgreSqlContainer = await new PostgreSqlContainer("postgres:16-alpine").start();
-  try {
-    const url = container.getConnectionUri();
-    // migrate deploy plutôt que db push : on veut tester les migrations réelles,
-    // y compris le SQL écrit à la main que Prisma n'exprime pas.
-    execFileSync("pnpm", ["prisma", "migrate", "deploy"], {
-      env: { ...process.env, DATABASE_URL: url },
-      stdio: "inherit",
-    });
-    const prisma = new PrismaClient({ datasources: { db: { url } } });
-    return {
-      prisma,
-      url,
-      close: async () => { await prisma.$disconnect(); await container.stop(); },
-    };
-  } catch (error) {
-    // Le conteneur ne doit pas survivre à un échec de migration : sans ça,
-    // chaque erreur de SQL écrit à la main en laisse un derrière elle.
-    await container.stop();
-    throw error;
+  const uri = process.env[VARIABLE];
+  /* Sans socle, on ne se débrouille pas en silence : un fichier lancé hors de
+     la configuration lèverait son propre conteneur, et la course redeviendrait
+     lente sans que personne ne s'en aperçoive. Mieux vaut dire ce qui manque. */
+  if (uri === undefined) {
+    throw new Error(
+      `${VARIABLE} absente : le socle des épreuves n'a pas de conteneur. `
+      + "Soit Docker n'est pas démarré, soit la course n'est pas passée par "
+      + "`pnpm test` — `globalSetup` y lève le conteneur une fois pour toutes.",
+    );
   }
+
+  /* UN NOM TIRÉ AU SORT, ET NON UN COMPTEUR. Vitest isole les modules par
+     fichier : un compteur de module repartirait de zéro à chaque fichier, et
+     deux fichiers se disputeraient le même nom de base. */
+  const base = `t_${randomBytes(8).toString("hex")}`;
+
+  /* On passe par la base par défaut pour créer le clone : `CREATE DATABASE …
+     TEMPLATE` exige qu'AUCUNE session ne soit connectée au modèle, et s'y
+     connecter pour lancer la copie serait précisément la session qui l'empêche. */
+  const administration = new PrismaClient({ datasources: { db: { url: urlDe(uri, "postgres") } } });
+  try {
+    await administration.$executeRawUnsafe(`create database "${base}" template "${MODELE}"`);
+  } finally {
+    await administration.$disconnect();
+  }
+
+  const url = urlDe(uri, base);
+  const prisma = new PrismaClient({ datasources: { db: { url } } });
+  return {
+    prisma,
+    url,
+    /* La base clonée s'efface : le conteneur vit toute la course, et cent bases
+       s'y accumuleraient. `with (force)` coupe les connexions qu'une application
+       Nest mal refermée laisserait derrière elle — sans lui, un seul fichier
+       distrait ferait échouer tous les ménages suivants. */
+    close: async () => {
+      await prisma.$disconnect();
+      const menage = new PrismaClient({ datasources: { db: { url: urlDe(uri, "postgres") } } });
+      try {
+        await menage.$executeRawUnsafe(`drop database if exists "${base}" with (force)`);
+      } finally {
+        await menage.$disconnect();
+      }
+    },
+  };
 }
 
 // Décision d'architecture (tâche 7, ratifiée) : `resetDatabase` vide
@@ -67,6 +107,33 @@ const REFERENCE_TABLES = new Set([
   "audit_reason_history", "audit_reason_scope_history",
 ]);
 
+/* L'ÉTREINTE, ET POURQUOI ON RÉESSAIE.
+ *
+ * Le nettoyage suppose être SEUL sur la base, et il ne l'est pas : plusieurs
+ * fichiers d'épreuve démarrent une vraie application Nest, qui ouvre sa propre
+ * réserve de connexions vers la même base. Les deux prennent alors les mêmes
+ * verrous DANS UN ORDRE DIFFÉRENT — le `truncate` veut un verrou exclusif sur
+ * chaque table, une requête en vol tient un verrou partagé sur une autre — et
+ * PostgreSQL tue l'un des deux au hasard : « deadlock detected », code 40P01.
+ *
+ * C'est arrivé une fois sur 1 632 épreuves, sur `person.test.ts`, qui passe
+ * seul. Un rouge aléatoire à cet endroit coûte plus que sa rareté ne le dit :
+ * `pnpm test` garde la porte avant chaque déploiement, et un échec qu'on
+ * relance sans lire est exactement l'habitude qui fait passer un vrai défaut
+ * pour un caprice.
+ *
+ * ON RÉESSAIE PLUTÔT QUE D'ATTENDRE LE SILENCE. Une étreinte se défait d'elle-
+ * même dès que la requête concurrente se termine ; vingt millisecondes plus
+ * tard, le verrou est libre. Le `lock_timeout` borne l'attente pour que le
+ * refus arrive vite au lieu de retenir la suite.
+ *
+ * ET RIEN D'AUTRE N'EST RATTRAPÉ : seuls `40P01` et `55P03` — l'étreinte et le
+ * verrou non obtenu — sont repris. Une table manquante, une migration oubliée,
+ * une base absente remontent telles quelles. Un `catch` large ferait de ce
+ * garde-fou un tapis. */
+const ETREINTES = ["40P01", "55P03"];
+const TENTATIVES = 3;
+
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
     select tablename from pg_tables
@@ -75,7 +142,24 @@ export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const toTruncate = tables.filter((t) => !REFERENCE_TABLES.has(t.tablename));
   if (toTruncate.length === 0) return;
   const list = toTruncate.map((t) => `"public"."${t.tablename}"`).join(", ");
-  await prisma.$executeRawUnsafe(`truncate table ${list} restart identity cascade`);
+
+  for (let essai = 1; essai <= TENTATIVES; essai += 1) {
+    try {
+      /* Posé sur la MÊME connexion que le `truncate`, dans la même transaction :
+         `set local` ne vaut que le temps de celle-ci, et ne laisse donc pas un
+         réglage traîner sur une connexion que la réserve recyclera. */
+      await prisma.$transaction([
+        prisma.$executeRawUnsafe("set local lock_timeout = '2s'"),
+        prisma.$executeRawUnsafe(`truncate table ${list} restart identity cascade`),
+      ]);
+      return;
+    } catch (echec: unknown) {
+      const code = (echec as { meta?: { code?: string }; code?: string })?.meta?.code
+        ?? (echec as { code?: string })?.code;
+      if (essai === TENTATIVES || !ETREINTES.includes(String(code))) throw echec;
+      await new Promise((fini) => setTimeout(fini, 20 * essai));
+    }
+  }
 }
 
 /**

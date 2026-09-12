@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TYPES_CLIENT, ENVS_CLIENT } from "./tracking.js";
 
 // Les types de `/v1/admin` (spec technique §7). Le back-office n'a pas encore de
 // serveur : ces formes servent d'abord à valider des fixtures. Le jour où l'API
@@ -38,7 +39,14 @@ export const requeteListeSchema = z.object({
 // jusqu'à l'écran, où elle casserait la ligne.
 export const alerteSchema = z.object({
   id: z.string(),
-  cause: z.enum(["echec_modele", "paiement_bloque", "suppression_echeance", "moderation_ancienne"]),
+  /* `connexions_echouees` manquait, et l'alerte existait pourtant : le service
+     la produisait depuis le premier jour, sous un nom que le contrat ne
+     connaissait pas. C'est l'une des raisons pour lesquelles la réponse était
+     refusée en bloc — voir le commentaire de `dashboardSchema`. */
+  cause: z.enum([
+    "echec_modele", "paiement_bloque", "suppression_echeance",
+    "moderation_ancienne", "connexions_echouees",
+  ]),
   libelle: z.string(),
   ton: z.enum(["danger", "attention"]),
   section: z.string(),
@@ -63,6 +71,21 @@ export const aTraiterSchema = z.object({
   depuis: z.string(),
 }).strict();
 
+/* CE QUE LE SERVEUR REND, ET IL DOIT LE RENDRE VRAIMENT.
+ *
+ * Ce schéma et le service ont vécu six semaines dans deux formes différentes.
+ * Le serveur répondait `200` avec `{ comptes, suppressions, connexions,
+ * derniersGestes }` ; le contrat attendait `{ alertes, indicateurs, aTraiter }`
+ * et refusait la réponse. L'écran affichait donc « le chargement n'a pas
+ * abouti » sur un appel qui avait parfaitement réussi.
+ *
+ * Rien ne pouvait le voir : l'épreuve de l'API vérifiait la forme DU SERVICE,
+ * écrite à la main dans le test ; celle de l'outil simulait une réponse
+ * conforme AU CONTRAT. Les deux passaient au vert sans jamais se regarder.
+ *
+ * `DashboardService.etat()` est désormais typé `Promise<Dashboard>` : la
+ * divergence ne peut plus s'écrire, et l'épreuve de bout en bout passe la
+ * réponse réelle dans ce schéma. */
 export const dashboardSchema = z.object({
   alertes: z.array(alerteSchema).max(3),
   indicateurs: z.array(indicateurSchema),
@@ -167,6 +190,24 @@ export const demandeSuppressionSchema = z.object({
    * qui attend notre virement se lirait comme un compte qui attend le calendrier.
    */
   etat: z.enum(["en_cours", "echue", "attend_remboursement"]),
+  /* LE VERSEMENT DÛ, quand il y en a un. Nul autrement.
+   *
+   * Sans lui, l'écran savait qu'un remboursement retient l'effacement, et ne
+   * pouvait rien en faire : ni dire COMBIEN est dû, ni régler LEQUEL — les deux
+   * routes le désignent par son identifiant. Un état qu'on affiche sans pouvoir
+   * agir dessus est une impasse à l'écran, et c'est ce qui a laissé ces deux
+   * gestes inatteignables depuis leur écriture.
+   *
+   * Le numéro du payeur y est parce que c'est LÀ qu'on envoie l'argent : le
+   * chercher dans un autre écran, entre deux moitiés du même geste, est la
+   * meilleure façon de se tromper de destinataire. */
+  remboursement: z.object({
+    id: z.string(),
+    montant: z.number(),
+    devise: z.string(),
+    /** Nul quand le paiement d'origine n'en portait pas. */
+    numeroDuPayeur: z.string().nullable(),
+  }).strict().nullable(),
 }).strict();
 
 export type DemandeSuppression = z.infer<typeof demandeSuppressionSchema>;
@@ -216,58 +257,6 @@ export type Parametre = z.infer<typeof parametreSchema>;
 
 // ——— Studio du portrait ————————————————————————————————————————
 
-/**
- * Les gabarits de production — ux-admin §5.9, entrée « réglages en service ».
- *
- * **Un gabarit ne se modifie pas, il se reversionne.** Ajuster crée une version
- * de plus ; l'ancienne demeure. Sans cela, comprendre pourquoi les productions
- * d'une semaine valaient mieux que celles de la suivante devient impossible, et
- * c'est tout l'objet du versionnage.
- *
- * Une seule version est en service par couple (genre, clé) — la base le tient
- * par un index unique partiel, et non le service : une seconde version active
- * ne se verrait pas, la génération en prendrait une au hasard, et l'écart de
- * qualité resterait inexplicable.
- */
-export const GENRES_GABARIT = [
-  "message", "illustration", "photo_style", "note_classification", "sensitive_detection",
-] as const;
-
-export const gabaritStudioSchema = z.object({
-  id: z.string(),
-  genre: z.enum(GENRES_GABARIT),
-  /** Ce que le gabarit produit : une orientation, une famille, un style. */
-  cle: z.string(),
-  version: z.number().int().positive(),
-  corps: z.string(),
-  /** Les garde-fous, tels que le gabarit les porte. Forme libre, et souvent nuls. */
-  gardeFous: z.unknown().nullable(),
-  /**
-   * Le modèle appelé, résolu à la lecture. Un identifiant seul ne se reconnaît
-   * pas ; le fournisseur et la clé se lisent. Nul quand le gabarit s'en remet
-   * au routage par priorité plutôt que d'en nommer un.
-   */
-  modele: z.object({
-    id: z.string(),
-    fournisseur: z.string(),
-    cle: z.string(),
-  }).strict().nullable(),
-  actif: z.boolean(),
-  /**
-   * Qui a publié cette version. Nul pour un gabarit posé par une migration,
-   * avant qu'il y ait quelqu'un pour publier — et non « inconnu », qui
-   * laisserait croire qu'on a perdu le nom.
-   */
-  parQui: z.string().nullable(),
-  quand: z.string(),
-}).strict();
-
-export const catalogueGabaritsSchema = z.object({
-  items: z.array(gabaritStudioSchema),
-}).strict();
-
-export type GabaritStudio = z.infer<typeof gabaritStudioSchema>;
-export type CatalogueGabarits = z.infer<typeof catalogueGabaritsSchema>;
 
 // ——— Le compte connecté ————————————————————————————————————————
 
@@ -564,6 +553,9 @@ export const canalSchema = z.object({
   fraisMax: z.number().nullable(),
   /** `payer` : le client verse en plus. `payee` : c'est prélevé sur le versement. */
   fraisPortesPar: z.enum(["payer", "payee"]),
+  /** Le code à composer quand l'application de l'opérateur ne s'ouvre pas. Nul
+   *  quand il n'y en a pas : l'écran d'attente n'affiche alors pas la ligne. */
+  ussd: z.string().nullable(),
   devise: z.string(),
   actif: z.boolean(),
   position: z.number().int().nullable(),
@@ -722,6 +714,13 @@ export const etatTraverseSchema = z.object({
 
 export const paiementDetailSchema = paiementLigneSchema.extend({
   reference: z.string().nullable(),
+  /* LA PRÉSENCE D'UN REÇU, jamais sa clé.
+     L'administration doit voir qu'il y en a un — et surtout qu'il n'y en a pas,
+     pour le réclamer avant de trancher. La clé, elle, ne sort pas : c'est
+     `GET admin/payments/{id}/proof` qui signe une lecture, à chaque fois, pour
+     qui a le droit. Une clé rendue ici resterait valable dans un onglet ouvert,
+     un journal, un copier-coller. */
+  recu: z.boolean(),
   motifEchec: z.string().nullable(),
   frais: z.number().nullable(),
   compteCollecte: z.string().nullable(),
@@ -1190,3 +1189,136 @@ export const remboursementRegleSchema = z.object({
 }).strict();
 
 export type RemboursementRegle = z.infer<typeof remboursementRegleSchema>;
+
+// ── Les clients API ─────────────────────────────────────────────────────────
+
+/* SIX PAIRES, ET PAS UNE PAR BUILD : trois plateformes × deux environnements.
+ * La version n'entre pas dans l'identité — elle voyage dans `x-app-version`.
+ *
+ * CE QUE LA CLÉ VAUT. Une clé livrée dans un binaire mobile ou un paquet web
+ * N'EST PAS UN SECRET : elle s'extrait d'un `.ipa` ou d'un `Ctrl-U`. Ce panneau
+ * ne prétend donc pas distribuer des secrets — il distribue des IDENTIFIANTS
+ * RÉVOCABLES, et c'est déjà beaucoup : une clé se tourne sans changer
+ * l'identifiant, donc sans casser la comparaison des chiffres dans le temps.
+ *
+ * Voir `specs/plan-tracabilite-des-clients-2026-09-12.md` §3, qui le dit plus
+ * longuement — parce que quelqu'un s'y fiera un jour comme à une frontière de
+ * sécurité si ce n'est écrit nulle part.
+ */
+export const clientApiSchema = z.object({
+  id: z.string().uuid(),
+  clientId: z.string(),
+  label: z.string(),
+  clientType: z.enum(TYPES_CLIENT),
+  environment: z.enum(ENVS_CLIENT),
+  isActive: z.boolean(),
+  /** Nulle tant que la clé n'a jamais été tournée. */
+  rotatedAt: z.string().nullable(),
+  createdAt: z.string(),
+}).strict();
+
+export type ClientApi = z.infer<typeof clientApiSchema>;
+
+/* LA CLÉ NE PARAÎT QU'ICI, ET UNE SEULE FOIS.
+ *
+ * Elle est rendue en clair à la création et à la rotation, puis jamais plus :
+ * la base n'en garde que le haché. Une clé perdue se REMPLACE, elle ne se
+ * récupère pas — et une clé qu'on ne peut pas relire ne fuite pas par la base.
+ *
+ * L'écran doit le dire au moment où il l'affiche : c'est le seul instant où
+ * quelqu'un peut la copier. */
+export const clientApiAvecCleSchema = clientApiSchema.extend({
+  cle: z.string(),
+}).strict();
+
+export type ClientApiAvecCle = z.infer<typeof clientApiAvecCleSchema>;
+
+export const creerClientApiSchema = z.object({
+  label: z.string().trim().min(2).max(100),
+  clientType: z.enum(TYPES_CLIENT),
+  environment: z.enum(ENVS_CLIENT),
+  motif: motifSchema,
+  reasonCode: z.string().trim().max(48).optional(),
+}).strict();
+
+export type CreerClientApiInput = z.infer<typeof creerClientApiSchema>;
+
+/* Couper un client coupe UNE APPLICATION ENTIÈRE. Le motif n'est donc pas une
+   formalité : personne ne doit pouvoir le faire sans laisser son nom et sa
+   raison. */
+export const majClientApiSchema = z.object({
+  isActive: z.boolean(),
+  motif: motifSchema,
+  reasonCode: z.string().trim().max(48).optional(),
+}).strict();
+
+export type MajClientApiInput = z.infer<typeof majClientApiSchema>;
+
+export const rotationClientApiSchema = z.object({
+  motif: motifSchema,
+  reasonCode: z.string().trim().max(48).optional(),
+}).strict();
+
+export type RotationClientApiInput = z.infer<typeof rotationClientApiSchema>;
+
+// ── Le registre des versions ────────────────────────────────────────────────
+
+/* CE QU'ON ACCEPTE DE SERVIR. Une version publiée est une version enregistrée.
+ *
+ * `buildNumber` EST L'IDENTITÉ, pas `version` : deux builds peuvent porter la
+ * même version — c'est le cas ordinaire d'un correctif recompilé —, et comparer
+ * des `semver` en chaînes rendrait « 1.10.0 » plus ancien que « 1.9.0 ».
+ */
+export const versionAppSchema = z.object({
+  id: z.string().uuid(),
+  platform: z.enum(TYPES_CLIENT),
+  version: z.string(),
+  buildNumber: z.number().int(),
+  forcesUpdate: z.boolean(),
+  isRetired: z.boolean(),
+  storeUrl: z.string().nullable(),
+  notes: z.string().nullable(),
+  publishedAt: z.string(),
+  /* COMBIEN D'APPAREILS ONT ÉTÉ VUS SOUS CE BUILD, sur les trente derniers
+     jours. Ce n'est pas un ornement : poser `forcesUpdate` met hors service tous
+     les appareils en dessous, et c'est le geste le plus lourd du panneau — plus
+     lourd que couper un client, parce qu'il ne se voit pas venir. Le poser sans
+     savoir combien de gens il déloge serait le poser à l'aveugle.
+     Compté sur les CONNEXIONS, donc approché : quelqu'un qui ne s'est pas
+     reconnecté depuis un mois n'y figure pas. Mieux vaut un chiffre approché
+     qu'aucun. */
+  comptesVusRecemment: z.number().int().min(0),
+}).strict();
+
+export type VersionApp = z.infer<typeof versionAppSchema>;
+
+export const enregistrerVersionSchema = z.object({
+  platform: z.enum(TYPES_CLIENT),
+  version: z.string().trim().min(1).max(20),
+  buildNumber: z.number().int().positive(),
+  /* Il ne se DEVINE pas : c'est une décision humaine, prise en écrivant la
+     release. Une rupture mal détectée bloque tout le monde dans un sens, et
+     laisse casser en silence dans l'autre. */
+  forcesUpdate: z.boolean().optional(),
+  storeUrl: z.string().url().max(500).optional(),
+  notes: z.string().trim().max(500).optional(),
+  motif: motifSchema,
+  reasonCode: z.string().trim().max(48).optional(),
+}).strict();
+
+export type EnregistrerVersionInput = z.infer<typeof enregistrerVersionSchema>;
+
+export const majVersionSchema = z.object({
+  forcesUpdate: z.boolean().optional(),
+  isRetired: z.boolean().optional(),
+  storeUrl: z.string().url().max(500).nullable().optional(),
+  notes: z.string().trim().max(500).nullable().optional(),
+  motif: motifSchema,
+  reasonCode: z.string().trim().max(48).optional(),
+}).strict().refine(
+  (v) => v.forcesUpdate !== undefined || v.isRetired !== undefined
+    || v.storeUrl !== undefined || v.notes !== undefined,
+  { message: "au moins un champ doit être fourni" },
+);
+
+export type MajVersionInput = z.infer<typeof majVersionSchema>;

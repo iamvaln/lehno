@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CLES_DRAPEAUX } from "@lehno/contracts";
 
@@ -18,12 +18,21 @@ import { CLES_DRAPEAUX } from "@lehno/contracts";
  * laisserait passer en silence — précisément le cas qu'on veut rendre
  * impossible.
  */
-const GOUVERNÉS: Readonly<Record<string, string>> = {
+/* La valeur peut être UNE clé ou PLUSIEURS, et la seconde forme n'est pas une
+   commodité : le détail d'un souhait sert les deux natures — le mien, gouverné
+   par `wishlist.own`, et l'idée notée pour un proche, gouvernée par `wishlist`.
+   Il porte donc deux gardes. N'en exiger qu'une laisserait l'autre disparaître
+   sans qu'un test tombe, et un lien profond ouvrirait l'écran sur une route que
+   le serveur a fermée. */
+const GOUVERNÉS: Readonly<Record<string, string | readonly string[]>> = {
   // Les souhaits d'une liste passent par `/me/wishlists/:id/wishes` et
   // `/me/owner-wishes` : c'est `wishlist.own` qui les gouverne, pas `wishlist`
   // — celui-là ouvre la liste REÇUE d'un autre.
   souhaits: "listes",
   listes: "listes",
+  /* L'aperçu d'une wishlist lit `/me/wishlists/:id/share` : même surface,
+     donc même drapeau que la liste elle-même. */
+  "apercu-liste": "listes",
   monmur: "monmur",
   apercu: "monmur",
   valider: "valider",
@@ -32,20 +41,31 @@ const GOUVERNÉS: Readonly<Record<string, string>> = {
   reservations: "reservations",
   paiement: "paiement",
   reprises: "reprises",
+  souhait: ["listes", "souhait"],
+  /* Le cadrage précède la recherche d'idées : c'est `generation.ideas` qui le
+     gouverne, pas `generation.message`. La préparation, elle, n'est pas ici —
+     elle tient dès qu'UNE des deux natures tient, et se garde par
+     `preparationOuverte`. */
+  cadrage: "cadrage",
 };
+
+const identifiants = (valeur: string | readonly string[]): readonly string[] =>
+  typeof valeur === "string" ? [valeur] : valeur;
 
 const source = (nom: string): string =>
   readFileSync(new URL(`../app/(app)/${nom}.tsx`, import.meta.url), "utf8");
 
 describe("les écrans gouvernés se gardent eux-mêmes", () => {
-  for (const [ecran, id] of Object.entries(GOUVERNÉS)) {
-    it(`${ecran} refuse de s'ouvrir quand ${id} est éteint`, () => {
-      const s = source(ecran);
-      expect(s).toContain("ecranEteint(");
-      // L'identifiant employé doit être celui que `navigation.ts` connaît :
-      // un nom approchant passerait par le `default` et ne garderait rien.
-      expect(s).toContain(`ecranEteint("${id}"`);
-    });
+  for (const [ecran, valeur] of Object.entries(GOUVERNÉS)) {
+    for (const id of identifiants(valeur)) {
+      it(`${ecran} refuse de s'ouvrir quand ${id} est éteint`, () => {
+        const s = source(ecran);
+        expect(s).toContain("ecranEteint(");
+        // L'identifiant employé doit être celui que `navigation.ts` connaît :
+        // un nom approchant passerait par le `default` et ne garderait rien.
+        expect(s).toContain(`ecranEteint("${id}"`);
+      });
+    }
   }
 
   /* DEUX GARDES, ET IL EN FAUT DEUX.
@@ -101,7 +121,8 @@ describe("la table nomme des écrans que la navigation connaît", () => {
     const connus = new Set(
       [...nav.matchAll(/case "([a-z.]+)":/g)].map((m) => m[1]!),
     );
-    const inconnus = [...new Set(Object.values(GOUVERNÉS))].filter((id) => !connus.has(id));
+    const nommes = Object.values(GOUVERNÉS).flatMap(identifiants);
+    const inconnus = [...new Set(nommes)].filter((id) => !connus.has(id));
     expect(inconnus).toEqual([]);
   });
 
@@ -111,5 +132,37 @@ describe("la table nomme des écrans que la navigation connaît", () => {
     const nav = readFileSync(new URL("../lib/navigation.ts", import.meta.url), "utf8");
     const lus = [...nav.matchAll(/ouvert\("([a-z.]+)"\)/g)].map((m) => m[1]!);
     expect(lus.filter((c) => !CLES_DRAPEAUX.includes(c as never))).toEqual([]);
+  });
+});
+
+/* LA RACINE N'APPARTIENT QU'À LA PORTE.
+ *
+ * L'écran d'ouverture s'appelait `(connexion)/index.tsx`. Un groupe ne change
+ * pas l'URL : DEUX fichiers revendiquaient « / », et le routeur choisissait
+ * l'ouverture — qui repart SANS CONDITION vers le formulaire de connexion.
+ *
+ * Conséquence, sur les deux chemins qui comptent : la fin d'une inscription et
+ * la connexion d'un compte connu font toutes deux `replace("/")` APRÈS avoir
+ * rangé les jetons. On avait donc une session valide et l'on retombait devant
+ * le formulaire — le défaut signalé « quand on clique sur Commencer, ça nous
+ * ramène à la page de login ».
+ *
+ * Le test interdit qu'un second fichier reprenne la racine. Rien d'autre ne le
+ * signalerait : les deux écrans compilent, et celui qui gagne dépend de
+ * l'ordre de résolution du routeur.
+ */
+describe("un seul fichier tient la racine", () => {
+  const racines = readdirSync(new URL("../app/", import.meta.url), { withFileTypes: true })
+    .flatMap((e) => {
+      if (e.name === "index.tsx") return ["app/index.tsx"];
+      // Un dossier ENTRE PARENTHÈSES est un groupe : il ne pose pas de segment
+      // d'URL, donc son `index` tombe sur la même adresse que celui du dessus.
+      if (!e.isDirectory() || !e.name.startsWith("(")) return [];
+      const dedans = readdirSync(new URL(`../app/${e.name}/`, import.meta.url));
+      return dedans.includes("index.tsx") ? [`app/${e.name}/index.tsx`] : [];
+    });
+
+  it("n'a qu'un seul prétendant à « / »", () => {
+    expect(racines).toEqual(["app/index.tsx"]);
   });
 });

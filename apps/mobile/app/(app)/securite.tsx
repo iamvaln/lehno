@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
@@ -8,8 +8,8 @@ import {
 } from "@lehno/contracts";
 import { nativeBorder, nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
-  Banner, Button, ConfirmSheet, Icon, LoadingState, SectionLabel, Toast,
-  useCouleurs,
+  Banner, Button, ConfirmSheet, Icon, LoadingState, ScreenHeader, SectionLabel, Toast,
+  useCouleurs
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -99,9 +99,17 @@ export default function Securite() {
     }
   };
 
+  /* L'EN-TÊTE VIT DANS TOUS LES ÉTATS, pas seulement dans le nominal :
+     l'écran de panne et celui de chargement le perdaient, et avec lui le
+     seul moyen visible de revenir. `entetes.test.ts` le vérifie. */
+  const entete = (
+    <ScreenHeader titre={t.enteteSecurite} retour={t.retour} onRetour={() => routeur.back()} />
+  );
+
   if (echec && sessions === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {entete}
         <Banner intent="error">{echec}</Banner>
         <View style={{ marginTop: nativeSpace[12] }}>
           <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
@@ -115,6 +123,7 @@ export default function Securite() {
   if (sessions === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+        {entete}
         <LoadingState variant="liste" rows={3} title={t.chargement} />
       </View>
     );
@@ -128,21 +137,20 @@ export default function Securite() {
   };
 
   return (
+    /* LA FEUILLE ET L'ACCUSÉ SONT SŒURS DU DÉFILEMENT, jamais ses enfants.
+       Rendus dedans, ils se rangent à la suite de la liste : la feuille
+       s'ouvrait sous la ligne de flottaison sur un petit écran, et l'accusé se
+       posait au bas du CONTENU au lieu du bas de l'écran — donc hors champ dès
+       que la liste dépassait. `surcouches.test.ts` le vérifie. */
+    <View style={[styles.ecran, { backgroundColor: couleurs.surfacePage }]}>
     <ScrollView
-      style={{ backgroundColor: couleurs.surfacePage }}
+      style={styles.ecran}
       contentContainerStyle={[styles.page, {
         paddingTop: insets.top + nativeSpace[8],
         paddingBottom: insets.bottom + nativeSpace[24],
       }]}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.retour}
-        onPress={() => routeur.back()}
-        style={styles.retour}
-      >
-        <Icon name="chevron-left" size={20} color={couleurs.textBody} />
-      </Pressable>
+      {entete}
 
       {echec ? (
         <View style={{ marginBottom: nativeSpace[12] }}>
@@ -226,6 +234,7 @@ export default function Securite() {
           </View>
         ) : null}
       </View>
+    </ScrollView>
 
       {demande ? (
         <ConfirmSheet
@@ -245,16 +254,13 @@ export default function Securite() {
           {accuse}
         </Toast>
       ) : null}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  ecran: { flex: 1 },
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
-  retour: {
-    width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
-    alignItems: "center", justifyContent: "center",
-  },
   liste: { marginTop: nativeSpace[4] },
   rang: {
     flexDirection: "row", alignItems: "center", gap: nativeSpace[10],

@@ -1,4 +1,4 @@
-import { StyleSheet, Switch, Text, View } from "react-native";
+import { Pressable, StyleSheet, Switch, Text } from "react-native";
 import { nativeBorder, nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import { useCouleurs } from "@lehno/ui-native";
 
@@ -21,8 +21,23 @@ export function Bascule({ libelle, actif, premier = false, onBascule }: {
   onBascule: (valeur: boolean) => void;
 }) {
   const couleurs = useCouleurs();
+  /* TOUT LE RANG BASCULE, pas seulement l'interrupteur.
+   *
+   * Le libellé était inerte : il fallait viser un interrupteur d'une
+   * cinquantaine de points sur un rang large de trois cent cinquante. Le geste
+   * naturel — toucher le texte — ne faisait rien, et le kit demande « 44 px
+   * partout » précisément pour éviter ça.
+   *
+   * UN SEUL ÉLÉMENT POUR LE LECTEUR D'ÉCRAN, et l'interrupteur s'en retire :
+   * sinon le libellé s'annonce deux fois, une fois par le rang et une fois par
+   * l'interrupteur qui le reprend en étiquette. C'est le même doublon que
+   * l'avatar du carnet, à l'autre bout de l'application. */
   return (
-    <View
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityState={{ checked: actif }}
+      accessibilityLabel={libelle}
+      onPress={() => onBascule(!actif)}
       style={[styles.rang, premier ? null : {
         borderTopWidth: nativeBorder.width, borderTopColor: couleurs.borderHairline,
       }]}
@@ -31,10 +46,11 @@ export function Bascule({ libelle, actif, premier = false, onBascule }: {
       <Switch
         value={actif}
         onValueChange={onBascule}
-        accessibilityLabel={libelle}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
         trackColor={{ false: couleurs.borderObject, true: couleurs.action }}
       />
-    </View>
+    </Pressable>
   );
 }
 

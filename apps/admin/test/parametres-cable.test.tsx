@@ -24,8 +24,19 @@ const reponse = (statut: number, corps?: unknown): Response =>
     headers: corps === undefined ? {} : { "content-type": "application/json" },
   });
 
+/* LE REGISTRE DES MOTIFS, servi comme en production. L'outil le lit au
+   démarrage et en tire les motifs de chaque geste ; sans lui, la liste serait
+   vide et l'épreuve ne montrerait pas ce qu'un administrateur voit. */
+const MOTIFS = {
+  motifs: [
+    { id: "11111111-1111-4111-8111-111111111111", code: "pricing_adjustment", fr: "Ajustement tarifaire", en: "Pricing adjustment", actif: true, gestes: ["parameter_update"] },
+    { id: "22222222-2222-4222-8222-222222222222", code: "retired_one", fr: "Motif retiré", en: "Retired reason", actif: false, gestes: ["parameter_update"] },
+  ],
+};
+
 function serveur(routes: Record<string, (url: string, init?: RequestInit) => Response>) {
   const appels = vi.fn((url: string, init?: RequestInit) => {
+    if (url.includes("/admin/reasons/all")) return Promise.resolve(reponse(200, MOTIFS));
     for (const [chemin, rendre] of Object.entries(routes)) {
       if (url.includes(chemin)) return Promise.resolve(rendre(url, init));
     }
@@ -98,7 +109,7 @@ describe("les paramètres, sur le serveur", () => {
 
     await utilisateur.selectOptions(
       await screen.findByLabelText(t.parametres.motif.question),
-      t.parametres.motif.motifs[0] as string,
+      "pricing_adjustment",
     );
     await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
 
@@ -106,7 +117,13 @@ describe("les paramètres, sur le serveur", () => {
       const ecritures = appels.mock.calls.filter(([, init]) => (init as RequestInit)?.method === "PATCH");
       expect(ecritures).toHaveLength(1);
       const corps = JSON.parse((ecritures[0]?.[1] as RequestInit).body as string);
-      expect(corps).toEqual({ key: "signup_free_credits", value: "9", reason: t.parametres.motif.motifs[0] });
+      /* LE CODE PART AVEC LE MOTIF. Le serveur l'exige sur ce geste — la table
+         des motifs dit qu'il en propose — et refuse en 422 sans lui : c'est
+         exactement ce qui rendait les paramètres immodifiables. */
+      expect(corps).toEqual({
+        key: "signup_free_credits", value: "9",
+        reason: "Ajustement tarifaire", reasonCode: "pricing_adjustment",
+      });
     });
   });
 

@@ -6,6 +6,8 @@ import { AppError } from "../common/errors.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AdminGuard } from "./admin.guard.js";
 import { RoleGuard } from "./role.guard.js";
+import { RecuService } from "../payments/recu.service.js";
+import type { UrlMedia } from "@lehno/contracts";
 
 /**
  * Les deux vues du §5.4 : les paiements, et les mouvements de crédits.
@@ -140,6 +142,13 @@ export class PaymentListsService {
     return {
       ...this.ligne(p),
       reference: p.providerRef,
+      /* LA PRÉSENCE, jamais la clé. L'administration doit voir qu'il y a un
+         reçu — et surtout qu'il n'y en a pas, pour le réclamer avant de
+         trancher. La clé, elle, ne sort pas : c'est `GET
+         admin/payments/{id}/proof` qui signe une lecture, à chaque fois, pour
+         qui a le droit. Une clé rendue ici resterait valable dans un onglet
+         ouvert, un journal, un copier-coller. */
+      recu: p.proofKey !== null,
       motifEchec: p.failureReason,
       frais: p.feeAmount === null ? null : Number(p.feeAmount),
       compteCollecte: p.collectionAccount?.label ?? null,
@@ -196,7 +205,10 @@ export class PaymentListsService {
 @Controller("admin")
 @UseGuards(AdminGuard, RoleGuard)
 export class PaymentListsController {
-  constructor(@Inject(PaymentListsService) private readonly service: PaymentListsService) {}
+  constructor(
+    @Inject(PaymentListsService) private readonly service: PaymentListsService,
+    @Inject(RecuService) private readonly recus: RecuService,
+  ) {}
 
   @Get("payments")
   paiements(@Query(new ZodValidationPipe(requetePaiements)) requete: z.infer<typeof requetePaiements>) {
@@ -206,6 +218,21 @@ export class PaymentListsController {
   @Get("payments/:id")
   detail(@Param("id") id: string) {
     return this.service.detail(id);
+  }
+
+  /* LE REÇU SE LIT PAR UNE URL SIGNÉE, à la demande.
+   *
+   * Ici et non sur `AdminPaymentsController`, qui est `@Role("admin")` parce
+   * que saisir un paiement fait entrer de l'argent dans le registre. Lire une
+   * pièce n'en fait pas entrer : ça relève du même public que le détail du
+   * paiement qu'elle explique — sans quoi le support voit « reçu présent » et
+   * ne peut pas l'ouvrir.
+   *
+   * Sans cette route, le fichier était mort-né : `proof_key` s'écrivait déjà,
+   * et personne n'a jamais pu regarder ce qu'elle désigne. */
+  @Get("payments/:id/proof")
+  recu(@Param("id") id: string): Promise<UrlMedia> {
+    return this.recus.urlDe(id, { pourAdmin: true });
   }
 
   @Get("credit-transactions")

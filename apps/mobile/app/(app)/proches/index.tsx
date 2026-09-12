@@ -54,6 +54,11 @@ export default function Proches() {
     try {
       const brut = await appel<unknown>(`/me/persons${parametresDuCarnet(tri, offset)}`);
       const page = personListSchema.parse(brut);
+      /* LE TOTAL SE PREND TEL QUEL, et la page aussi. `includeSelf=false` écarte
+         la fiche de soi côté serveur ET fait suivre le total : il n'y a plus à
+         retrancher un, ni à filtrer, ni à paginer sur les fiches reçues plutôt
+         que sur celles retenues. Trois calculs de moins, et c'étaient les trois
+         où l'on s'était trompé. */
       setTotal(page.total);
       setProches((v) => (offset === 0 || v === null ? page.persons : [...v, ...page.persons]));
       setEchec(null);
@@ -78,7 +83,7 @@ export default function Proches() {
   const suite = async () => {
     if (encore || proches === null) return;
     setEncore(true);
-    try { await charge(tri, proches.length); } finally { setEncore(false); }
+    try { await charge(tri, proches?.length ?? 0); } finally { setEncore(false); }
   };
 
   const criteres = [

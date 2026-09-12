@@ -12,7 +12,7 @@ import type { Depot, Prefixe, StockagePort } from "./stockage.port.js";
  * prouverait rien.
  */
 export class StockageMemoire implements StockagePort {
-  private readonly contenu = new Map<string, Buffer>();
+  private readonly objets = new Map<string, Buffer>();
 
   deposer(prefixe: Prefixe, typeMime: string): Promise<Depot> {
     const c = fabriquerCle(prefixe, extensionDe(typeMime));
@@ -23,19 +23,30 @@ export class StockageMemoire implements StockagePort {
     return Promise.resolve(`memoire://lecture/${cle}`);
   }
 
+  contenu(cle: string): Promise<Buffer> {
+    const octets = this.objets.get(cle);
+    if (octets === undefined) throw new Error(`objet absent : ${cle}`);
+    return Promise.resolve(octets);
+  }
+
   ecrire(prefixe: Prefixe, contenu: Buffer, typeMime: string): Promise<string> {
     const c = fabriquerCle(prefixe, extensionDe(typeMime));
-    this.contenu.set(c, contenu);
+    this.objets.set(c, contenu);
     return Promise.resolve(c);
   }
 
   effacer(cle: string): Promise<void> {
-    this.contenu.delete(cle);
+    this.objets.delete(cle);
     return Promise.resolve();
+  }
+
+  /** Pour les tests seulement : simuler un dépôt du client sur l'URL signée. */
+  poser(cle: string, octets: Buffer): void {
+    this.objets.set(cle, octets);
   }
 
   /** Pour les tests seulement : ce qui a été rangé. */
   contenuDe(cle: string): Buffer | undefined {
-    return this.contenu.get(cle);
+    return this.objets.get(cle);
   }
 }

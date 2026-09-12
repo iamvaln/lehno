@@ -379,4 +379,38 @@ describe("les échéances", () => {
       expect(r.status).toBe(404);
     });
   });
+  /* §13.2 — L'ÉCHÉANCE DIT DE QUI ELLE EST.
+   *
+   * `isSelf` manquait, et chaque écran devait le redéduire en relisant le
+   * carnet pour retrouver quelle `personId` est la sienne. Un appel de plus par
+   * écran pour un booléen que le serveur connaît déjà — et la définition d'un
+   * filtre qu'une surface sur trois oubliera.
+   *
+   * Ce qu'il coûtait, vu à l'écran : l'accueil affichait « Valentine ·
+   * Anniversaire · J−57 » avec « Préparer » et « Marquer envoyé », et l'accusé
+   * disait « Envoyé à Valentine » — à Valentine. */
+  it("dit si la date est celle du titulaire", async () => {
+    /* Par le SERVICE et non par Prisma : `persons.create` ne sait pas poser
+       `isSelf`, et c'est délibéré — la fiche de soi passe par son chemin à
+       elle. Ici on éprouve ce que l'échéance RESTITUE, pas comment elle naît. */
+    const moi = await db.prisma.person.create({
+      data: { userId: awa, displayName: "Valentine", isSelf: true, birthDate: new Date("1990-03-14") },
+      select: { id: true },
+    });
+    await events.create(awa, { personId: moi.id, kind: "birthday" });
+
+    const proche = await persons.create(awa, {
+      gender: "male", displayName: "Karim", birthDate: "1988-05-02",
+    });
+    await events.create(awa, { personId: proche.id, kind: "birthday" });
+
+    const rendues = await occurrences.list(awa, {});
+    const mienne = rendues.find((o) => o.personId === moi.id);
+    expect(mienne?.isSelf).toBe(true);
+
+    /* ET LA MOITIÉ QUI PROUVE que le champ SÉPARE, au lieu d'être vrai partout :
+       sans elle, le cas resterait vert le jour où on le câblerait en dur. */
+    const autres = rendues.filter((o) => o.personId !== moi.id);
+    expect(autres.every((o) => o.isSelf === false)).toBe(true);
+  });
 });

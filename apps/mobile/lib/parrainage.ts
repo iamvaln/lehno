@@ -46,3 +46,25 @@ export function codePartageable(resume: ReferralSummary): string | null {
 export function filleulsAboutis(resume: ReferralSummary): number {
   return resume.invited.filter((p) => p.status !== "invited").length;
 }
+
+/* QUAND INTERROGER LE SERVEUR SUR UN CODE DE PARRAINAGE.
+ *
+ * Pas à chaque frappe : « AWA » serait interrogé sur le chemin de « AWA-2K4 »,
+ * et chaque lettre rendrait un 404 qui marquerait le champ en rouge pendant
+ * qu'on le remplit. Pas sur un champ vide non plus — le code est FACULTATIF,
+ * et un champ qu'on n'a pas rempli n'est pas un champ faux.
+ *
+ * Le seuil est bas à dessein : on ne connaît pas la forme des codes, seulement
+ * qu'un code utile en fait plus de deux caractères. Mieux vaut une requête de
+ * trop qu'une règle inventée ici, qui se désaccorderait du serveur le jour où
+ * la forme change.
+ */
+export function doitVerifierLeParrain(code: string): boolean {
+  return code.trim().length >= 3;
+}
+
+/* CE QU'ON AFFICHE SOUS LE CHAMP. `null` = on ne sait pas encore, et l'écran
+   doit alors se taire : marquer « invalide » pendant que la requête vole ferait
+   clignoter un reproche à chaque lettre. */
+export type EtatDuParrain = "valide" | "invalide" | null;
+

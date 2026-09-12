@@ -47,6 +47,17 @@ export const publicWallSchema = z.object({
    * n'a aucune règle à connaître, et ne peut donc pas proposer un bouton qui
    * mènerait à un 404. */
   wishLinkToken: z.string().nullable(),
+  /* Le jeton de la LISTE DE SOUHAITS de l'occasion en cours, ou nul.
+   *
+   * À ne pas confondre avec `wishLinkToken` juste au-dessus, qui ouvre le
+   * dépôt d'un VŒU — un mot qu'on écrit. Celui-ci ouvre la liste : ce qu'on
+   * peut offrir, et ce qui est déjà pris.
+   *
+   * Nul quand le propriétaire ne l'expose pas (`showWishlist`), quand il n'y a
+   * pas de liste sur l'occasion en cours, ou quand le drapeau est éteint. Le
+   * serveur résout les trois : un client n'a aucune règle à connaître, et ne
+   * peut donc pas proposer un bouton qui mènerait à un 404. */
+  wishlistToken: z.string().nullable(),
 }).strict();
 
 export type PublicWall = z.infer<typeof publicWallSchema>;
@@ -58,6 +69,13 @@ export const publicCollectFormSchema = z.object({
   /* Qui invite. Un lien de collecte vient de quelqu'un — le formulaire le dit,
      sans quoi le répondant ne sait pas à qui il écrit. */
   ownerDisplayName: z.string(),
+  /* Le mot de celui qui invite, ou nul.
+   *
+   * « Il s'affiche en haut de la page qu'on ouvrira. » C'est la seule chose de
+   * cette page qui ne vienne pas du produit : le reste est un formulaire, lui
+   * est une voix. Nul quand rien n'a été écrit — la page n'affiche alors pas
+   * un cadre vide. */
+  message: z.string().nullable(),
   /* La fiche visée, et sa date déjà connue : « pré-remplie si le propriétaire
      l'a déjà renseignée, à confirmer ou corriger » (§3.2). Nulles sur un lien
      PUBLIC, qui ne vise personne — les servir y révélerait une fiche à

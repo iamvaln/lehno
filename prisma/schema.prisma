@@ -75,7 +75,49 @@ model User {
   emailVerified            Boolean         @default(false) @map("email_verified")
   username                 String          @unique @db.Citext
   displayName              String?         @map("display_name")
-  avatarUrl                String?         @map("avatar_url")
+  /**
+   * LA CLÉ de la photo, jamais son URL.
+   * Une URL présignée expire : la ranger donnerait des liens morts, et lierait
+   * la donnée au fournisseur (voir `stockage.port.ts`). Le serveur signe une
+   * URL de lecture à chaque affichage, et décide à ce moment-là si celui qui
+   * demande a le droit.
+   */
+  avatarKey                String?         @map("avatar_key")
+  /**
+   * Le dépôt EN COURS : sa clé, et ce qu'il vise.
+   * Une seule place par personne, et c'est assez : on choisit une photo, on la
+   * dépose, on confirme — les trois se suivent. Une place par image obligerait
+   * chaque table à porter sa colonne d'attente, pour un état qui ne dure que
+   * quelques secondes.
+   * La clé vit ici parce que le client ne choisit RIEN : c'est le serveur qui
+   * l'engendre en signant l'URL, et qui la retient. Accepter une clé venue du
+   * client laisserait pointer son image vers celle d'un autre — un reçu, un
+   * export — et nous ferions ensuite signer une lecture dessus.
+   * `depotEnCoursCible` dit à QUOI la rattacher : `avatar`, ou `souhait:<id>`.
+   * Sans elle, la confirmation devrait recevoir la cible du client — qui
+   * pourrait alors rattacher sa photo au souhait de quelqu'un d'autre.
+   */
+  depotEnCoursKey          String?         @map("depot_en_cours_key")
+  depotEnCoursCible        String?         @map("depot_en_cours_cible")
+  /**
+   * La photo source ACCEPTÉE, en attente d'une génération.
+   *
+   * Distincte du dépôt en cours : celui-ci dit « un téléversement est ouvert »,
+   * celle-là dit « une photo a été jugée et attend qu'on s'en serve ». Les
+   * confondre ferait qu'un dépôt d'avatar ouvert entre-temps effacerait une
+   * photo déjà validée.
+   *
+   * ELLE NE SORT JAMAIS D'ICI. Le client ne reçoit pas la clé — il ne reçoit
+   * qu'une URL de dépôt, et la doctrine est écrite sur `depotAvatarSchema` : la
+   * lui donner permettrait de la remplacer par celle d'un autre, un reçu de
+   * paiement ou un export de données, et de nous faire signer une lecture
+   * dessus.
+   *
+   * Elle est effacée dès que la génération s'achève — c'est ce que l'écran
+   * promet au dépôt, et une promesse d'effacement qui ne s'exécute pas est pire
+   * que pas de promesse.
+   */
+  photoSourceKey           String?         @map("photo_source_key")
   referralCode             String          @unique @map("referral_code") @db.VarChar(16)
   referredBy               String?         @map("referred_by") @db.Uuid
   status                   UserStatus      @default(active)
@@ -170,6 +212,9 @@ model User {
   authoredReceivedWishes  ReceivedWish[]           @relation("voeux_ecrits")
 
   @@map("user")
+  generatedIdeaSets       GeneratedIdeaSet[]
+  wishlists               Wishlist[]
+  portraits               Portrait[]
 }
 
 enum ReferralStatus {
@@ -256,6 +301,48 @@ model CreditTransaction {
   paymentId  String?       @map("payment_id") @db.Uuid
   reason     String?
   createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * La règle, et elle vaut pour les six tables qui la portent : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   *
+   * NULLABLES POUR DE BON, et pas le temps d'une migration : les lignes d'avant
+   * ce lot n'ont pas cette information, et rien ne peut l'inventer. Leur poser
+   * une valeur courante serait pire qu'un trou — ce serait une donnée fausse,
+   * et une lecture la compterait.
+   *
+   * `osName` et `osVersion` SÉPARÉS, jamais la chaîne composée : `x-app-os`
+   * arrive en `ios:17.4` et se découpe une fois, au bord. Une lecture qui
+   * oublierait de découper compterait `ios:17.4` et `ios:17.5` comme deux
+   * systèmes différents.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+  /* L'ORIGINE DE LA DÉCLARATION, et c'est un ÉCART ASSUMÉ à la doctrine du
+     dépôt : `auth.controller.ts` écrit que l'IP « ne sert qu'à composer la clé
+     du limiteur […] : elle n'est ni journalisée ni renvoyée ».
+
+     UNE TRANSACTION N'EST PAS UNE REQUÊTE ORDINAIRE : ELLE SE CONTESTE. En mode
+     semi-manuel, quelqu'un déclare avoir payé, un administrateur décide, et des
+     crédits changent de main. Le jour où deux récits s'opposent, l'origine de
+     la déclaration est souvent la seule chose qui tranche — et elle ne se
+     reconstitue pas après coup. `login_activity` fait déjà ça pour les
+     connexions, avec le même raisonnement.
+
+     `Inet` comme elle, jamais `VarChar` : le type dit ce que c'est, et Postgres
+     refuse alors ce qui n'est pas une adresse.
+
+     Ce qu'il faut assumer : une transaction se garde pour la comptabilité, donc
+     plus longtemps qu'un journal. L'IP la suit. */
+  ip         String? @db.Inet
+
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   referral Referral? @relation(fields: [referralId], references: [id], onDelete: SetNull)
@@ -340,6 +427,126 @@ model DeviceSignup {
   @@map("device_signup")
 }
 
+/**
+ * UN CLIENT ENREGISTRÉ — un build d'application autorisé à nous appeler.
+ *
+ * Il y en a SIX : trois plateformes (iOS, Android, web) × deux environnements
+ * (staging, production). La VERSION n'entre pas dans l'identité — elle voyage
+ * dans `x-app-version`. Une paire par build permettrait de couper une version
+ * précise, mais demanderait d'en créer une à chaque publication, et de la
+ * porter dans la chaîne de compilation.
+ *
+ * CE QUE LA CLÉ VAUT, ET CE QU'ELLE NE VAUT PAS. Une clé livrée dans un binaire
+ * mobile ou un paquet web N'EST PAS UN SECRET : elle s'extrait d'un `.ipa` ou
+ * d'un `Ctrl-U`. Ce qu'elle apporte quand même : elle SE RÉVOQUE sans changer
+ * l'identifiant, donc les chiffres restent comparables dans le temps ; elle
+ * relève la barre ; et elle permet de couper un client sans couper les autres.
+ * Ce qu'elle n'apporte pas : ce n'est pas une frontière de sécurité, et la
+ * frontière reste le jeton de l'utilisateur.
+ *
+ * Voir `specs/plan-tracabilite-des-clients-2026-09-12.md` §3, qui le dit plus
+ * longuement — parce que quelqu'un s'y fiera un jour comme à une
+ * authentification si ce n'est écrit nulle part.
+ */
+model ApiClient {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Voyage en clair dans `x-client-id`. Il ne change JAMAIS pour un même
+  /// client : c'est lui qui rend les chiffres comparables d'un trimestre à
+  /// l'autre. La clé, elle, tourne.
+  clientId    String        @unique @map("client_id") @db.VarChar(64)
+  label       String        @db.VarChar(100)
+  clientType  ApiClientType @map("client_type")
+  /// L'environnement que ce client DIT servir. Un build de staging qui pointe
+  /// la production se voit en comparant avec `x-app-env`.
+  environment ApiClientEnv
+  /// SHA-256 de la clé, jamais la clé. Elle s'affiche UNE FOIS à la création et
+  /// ne se relit pas : une clé perdue se remplace, elle ne se récupère pas — et
+  /// une clé qu'on ne peut pas relire ne fuite pas par la base.
+  ///
+  /// SHA-256 nu et non bcrypt, contrairement à un mot de passe : une clé
+  /// engendrée fait trente-deux octets aléatoires, il n'y a rien à deviner par
+  /// force brute, et un hachage lent ajouterait des millisecondes à CHAQUE
+  /// requête sans rien acheter.
+  keyHash     String        @map("key_hash") @db.VarChar(64)
+  /// Coupe ce client sans le supprimer : les lignes déjà notées gardent leur
+  /// référence, et l'historique reste lisible.
+  isActive    Boolean       @default(true) @map("is_active")
+  rotatedAt   DateTime?     @map("rotated_at") @db.Timestamptz
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([isActive])
+  @@map("api_client")
+}
+
+enum ApiClientType {
+  mobile_ios
+  mobile_android
+  web
+
+  @@map("api_client_type")
+}
+
+enum ApiClientEnv {
+  dev
+  staging
+  prod
+
+  @@map("api_client_env")
+}
+
+/**
+ * LE REGISTRE DES VERSIONS — ce qu'on accepte de servir.
+ *
+ * Une version publiée est une version ENREGISTRÉE : le serveur ne sert pas ce
+ * qu'il ne connaît pas. C'est une liste blanche, et elle tend un piège qu'il
+ * faut connaître — un build parti au magasin sans être enregistré bloquerait
+ * tous ses utilisateurs.
+ *
+ * CE QUI LE DÉSAMORCE : un build inconnu ne reçoit pas un refus sec, il reçoit
+ * « mettez à jour » — le même 426 qu'une version déclassée. C'est le seul geste
+ * sensé pour un client qu'on ne reconnaît pas, et le pire cas d'un oubli devient
+ * « on invite à réinstaller » au lieu de « l'application ne marche plus ».
+ *
+ * Voir `specs/spec-registre-des-versions.md`.
+ */
+model AppVersion {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platform     ApiClientType
+  /// Ce qu'un humain lit — « 1.4.2 ». PAS une clé : deux builds peuvent porter
+  /// la même version, et c'est le cas ordinaire d'un correctif recompilé.
+  version      String        @db.VarChar(20)
+  /// L'ENTIER MONOTONE, ET C'EST LUI QUI DÉCIDE de « plus ancien que ».
+  /// `CFBundleVersion` sur iOS, `versionCode` sur Android, le nombre de commits
+  /// sur le web. Comparer les `semver` en chaînes rendrait « 1.10.0 » plus
+  /// ancien que « 1.9.0 » — un défaut qui ne se voit qu'au dixième correctif
+  /// mineur, au moment où l'on en a le plus besoin.
+  buildNumber  Int           @map("build_number")
+  /**
+   * « À partir d'ici, ce qui précède ne marche plus. »
+   *
+   * Posé sur la release qui INTRODUIT la rupture, et non sur un plancher qu'il
+   * faudrait penser à relever — on y pense toujours après. Il se pose au seul
+   * moment où l'on sait qu'on a cassé quelque chose.
+   *
+   * Il se lit à l'envers d'un plancher : on cherche le plus récent qui force, et
+   * tout ce qui est en dessous est périmé. Le poser sur 2.0.0 périme 1.x d'un
+   * coup, sans avoir à écrire un numéro.
+   */
+  forcesUpdate Boolean       @default(false) @map("forces_update")
+  /// Déclassée : on ne la sert plus, même si elle est plus récente que le
+  /// dernier `forcesUpdate`. Sert à retirer une version fautive déjà publiée.
+  isRetired    Boolean       @default(false) @map("is_retired")
+  /// Ce que l'écran de mise à jour ouvre. Nul pour le web, qui se recharge.
+  storeUrl     String?       @map("store_url")
+  notes        String?
+  publishedAt  DateTime      @default(now()) @map("published_at") @db.Timestamptz
+
+  /// L'IDENTITÉ D'UN BUILD. La version, elle, peut se répéter.
+  @@unique([platform, buildNumber])
+  @@index([platform, buildNumber])
+  @@map("app_version")
+}
+
 model LoginActivity {
   id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId         String?      @map("user_id") @db.Uuid
@@ -354,10 +561,38 @@ model LoginActivity {
   userAgent      String?      @map("user_agent")
   geoApprox      String?      @map("geo_approx")
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * La règle, et elle vaut pour les six tables qui la portent : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   *
+   * NULLABLES POUR DE BON, et pas le temps d'une migration : les lignes d'avant
+   * ce lot n'ont pas cette information, et rien ne peut l'inventer. Leur poser
+   * une valeur courante serait pire qu'un trou — ce serait une donnée fausse,
+   * et une lecture la compterait.
+   *
+   * `osName` et `osVersion` SÉPARÉS, jamais la chaîne composée : `x-app-os`
+   * arrive en `ios:17.4` et se découpe une fois, au bord. Une lecture qui
+   * oublierait de découper compterait `ios:17.4` et `ios:17.5` comme deux
+   * systèmes différents.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
+  /// « Qui est passé, sous quel build, depuis quand » — la lecture qui dit
+  /// combien d'appareils une mise à jour forcée délogerait.
+  @@index([appBuild, createdAt])
   @@map("login_activity")
 }
 
@@ -563,6 +798,7 @@ model Person {
 
   @@index([userId])
   @@map("person")
+  portraits        Portrait[]
 }
 
 model Event {
@@ -619,7 +855,6 @@ model EventOccurrence {
   user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   notes             Note[]
   wishes            WishlistItem[]
-  ownerWishes       OwnerWish[]
   wishlist          Wishlist?
   notifications     Notification[]
   actionRuns        ActionRun[]
@@ -630,6 +865,7 @@ model EventOccurrence {
   @@unique([eventId, occurrenceDate])
   @@index([userId, occurrenceDate])
   @@map("event_occurrence")
+  generatedIdeaSets GeneratedIdeaSet[]
 }
 
 model Note {
@@ -759,6 +995,17 @@ model WishlistItem {
   authorUserId      String?        @map("author_user_id") @db.Uuid
   label             String
   imageUrl          String?        @map("image_url")
+  /**
+   * LA CLÉ de la photo déposée, distincte de `imageUrl`.
+   * Les deux coexistent, et ce n'est pas une redondance : `imageUrl` est le
+   * lien d'une boutique — une image qu'on ne possède pas et qu'on ne peut que
+   * pointer —, `imageKey` désigne une photo prise par l'utilisateur et rangée
+   * dans notre stockage. « Le bleu indigo, pas le turquoise » se règle mieux en
+   * une image qu'en une phrase, et cette image-là est à nous.
+   * Une clé, jamais une URL : une URL présignée expire, et la ranger donnerait
+   * des liens morts.
+   */
+  imageKey          String?        @map("image_key")
   details           String?
   link              String?
   price             Decimal?       @db.Decimal(12, 2)
@@ -786,6 +1033,7 @@ model WishlistItem {
 
   @@index([eventOccurrenceId])
   @@map("wishlist_item")
+  fromIdea          GeneratedIdea?
 }
 
 /**
@@ -804,13 +1052,35 @@ model Wishlist {
   /// Une seule liste par occasion : « un cadeau de Noël n'est pas un cadeau de
   /// mariage », et deux listes sur la même occasion rendraient le partage
   /// ambigu — laquelle le lien ouvrirait-il ?
-  eventOccurrenceId String   @unique @map("event_occurrence_id") @db.Uuid
+  /// LE PROPRIÉTAIRE, en clair. Il se lisait par `wishlist → event_occurrence
+  /// → user` : la chaîne traversait une table qui ne répond pas à la question —
+  /// l'occurrence dit QUAND, pas À QUI. Et une liste sans occasion n'aurait eu
+  /// aucun propriétaire du tout.
+  userId            String    @map("user_id") @db.Uuid
+  /// FACULTATIVE. « Une seule liste par occasion » reste vrai, mais une liste
+  /// peut n'en viser aucune — « ce qui me ferait plaisir », sans date. L'index
+  /// unique est donc PARTIEL : il dit la règle telle qu'elle est, au lieu de la
+  /// laisser dépendre du fait que Postgres tient les nuls pour distincts.
+  /// `SetNull` et non `Cascade` : l'occasion effacée, la liste subsiste et
+  /// redevient sans occasion, ce qui est un état légitime.
+  eventOccurrenceId String?   @map("event_occurrence_id") @db.Uuid
+  /// Nul veut dire « le nom se compose depuis l'occasion ». Le remplir par
+  /// défaut avec ce libellé le figerait le jour où l'occasion change de nom, et
+  /// personne ne saurait pourquoi les deux ne s'accordent plus.
+  name              String?   @db.VarChar(120)
+  /// Après quoi la liste ne reçoit plus de réservation. Nul veut dire
+  /// « jusqu'à l'occasion », qui est le cas ordinaire.
+  closesAt          DateTime? @map("closes_at") @db.Timestamptz
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  occurrence EventOccurrence     @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  occurrence EventOccurrence?    @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
   shareLinks WishlistShareLink[]
+  wishes     OwnerWish[]
 
+  @@unique([eventOccurrenceId])
+  @@index([userId])
   @@map("wishlist")
 }
 
@@ -846,14 +1116,28 @@ model WishlistShareLink {
  */
 model OwnerWish {
   id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  /// Une occasion de l'utilisateur LUI-MÊME (son anniversaire, son mariage).
-  /// Le service le vérifie par `person.is_self` avant d'écrire : rien dans la
-  /// colonne ne l'impose, et une liste ouverte sur l'occasion d'un proche
-  /// publierait ce que ce proche n'a jamais accepté de publier.
-  eventOccurrenceId String         @map("event_occurrence_id") @db.Uuid
+  /// LA LISTE À LAQUELLE IL APPARTIENT. Il pointait l'occurrence, ce qui rendait
+  /// impossible une liste sans occasion et obligeait chaque lecture à passer par
+  /// une table qui ne répond pas à la question.
+  /// L'occurrence n'est PAS doublée ici : deux chemins vers la même occasion —
+  /// par la liste, et en direct — finiraient par diverger, et on découvrirait un
+  /// souhait rattaché à une occasion qui n'est plus celle de sa liste sans
+  /// savoir lequel des deux croire. Elle se lit par `wishlist.occurrence`.
+  wishlistId        String         @map("wishlist_id") @db.Uuid
   label             String
   link              String?
   imageUrl          String?        @map("image_url")
+  /**
+   * LA CLÉ de la photo déposée, distincte de `imageUrl`.
+   * Les deux coexistent, et ce n'est pas une redondance : `imageUrl` est le
+   * lien d'une boutique — une image qu'on ne possède pas et qu'on ne peut que
+   * pointer —, `imageKey` désigne une photo prise par l'utilisateur et rangée
+   * dans notre stockage. « Le bleu indigo, pas le turquoise » se règle mieux en
+   * une image qu'en une phrase, et cette image-là est à nous.
+   * Une clé, jamais une URL : une URL présignée expire, et la ranger donnerait
+   * des liens morts.
+   */
+  imageKey          String?        @map("image_key")
   details           String?
   price             Decimal?       @db.Decimal(12, 2)
   currency          String?        @db.VarChar(3)
@@ -872,10 +1156,10 @@ model OwnerWish {
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
 
-  occurrence   EventOccurrence   @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  wishlist     Wishlist          @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
   reservations WishReservation[]
 
-  @@index([eventOccurrenceId])
+  @@index([wishlistId])
   @@map("owner_wish")
 }
 
@@ -937,8 +1221,25 @@ model WishReservation {
 }
 
 enum NotificationType {
+  /**
+   * LA DATE D'UN PROCHE. Ces deux-là ne partent JAMAIS sur une date à soi :
+   * « Une date pour Valentine approche », par courriel, à Valentine, pour
+   * l'anniversaire de Valentine. Le séparateur est `person.is_self`, et le
+   * filtre vit dans ProgrammationService.
+   */
   event_reminder
   event_day_of
+  /**
+   * MA PROPRE DATE, et elle n'appelle pas les mêmes gestes.
+   * Ce qu'on a à rappeler sur sa propre date n'est pas d'écrire un mot à
+   * quelqu'un — c'est de préparer sa liste, puis de la PARTAGER : une liste que
+   * personne n'a reçue ne sert à rien. Deux types plutôt qu'un drapeau sur les
+   * précédents, parce que les préférences se règlent PAR TYPE : quelqu'un qui
+   * ne veut pas qu'on lui rappelle son propre anniversaire veut toujours qu'on
+   * lui rappelle celui de sa mère.
+   */
+  own_date_reminder
+  own_date_day_of
   digest
   contribution_received
   wish_received
@@ -1266,6 +1567,31 @@ model AuditLog {
   targetId   String?    @map("target_id") @db.Uuid
   metadata   Json?
   createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * La règle, et elle vaut pour les six tables qui la portent : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   *
+   * NULLABLES POUR DE BON, et pas le temps d'une migration : les lignes d'avant
+   * ce lot n'ont pas cette information, et rien ne peut l'inventer. Leur poser
+   * une valeur courante serait pire qu'un trou — ce serait une donnée fausse,
+   * et une lecture la compterait.
+   *
+   * `osName` et `osVersion` SÉPARÉS, jamais la chaîne composée : `x-app-os`
+   * arrive en `ios:17.4` et se découpe une fois, au bord. Une lecture qui
+   * oublierait de découper compterait `ios:17.4` et `ios:17.5` comme deux
+   * systèmes différents.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+
 
   @@index([actorType, actorId])
   // La traçabilité d'un objet se lit depuis son détail (ux-admin §7) : sans cet
@@ -1392,6 +1718,17 @@ enum AITask {
   sensitive_detection
   message
   gift_ideas
+  /**
+   * LE TEXTE QUI PRÉCÈDE L'IMAGE. Il lit les notes, les attributs et le mot de
+   * l'utilisateur, et rend les mots qui comptent — jamais les notes elles-mêmes.
+   *
+   * C'est ce qui empêche les confidences de partir mot pour mot chez un
+   * fournisseur d'image : ce qui traverse est ce qu'on en a retenu. Et c'est ce
+   * qui rend les interdictions tenables — un modèle de texte sait qu'on lui
+   * interdit un sujet, là où un modèle d'image reçoit une consigne qu'il
+   * illustre.
+   */
+  portrait_brief
   // Les deux tâches d'image. Elles n'acceptent qu'un modèle de capacité
   // `image` — voir AICapability.
   illustration
@@ -1517,6 +1854,13 @@ enum GeneratedMessageStatus {
   generated
   edited
   sent
+  /**
+   * « Celui-là ne va pas. » Distinct d'`edited`, qui dit « je l'ai arrangé » —
+   * un message corrigé reste un message qu'on garde, et le confondre avec un
+   * rejet mesurerait la retouche au lieu du ratage.
+   * Terminal comme `sent` : on ne rejette pas un message déjà parti.
+   */
+  rejected
 
   @@map("generated_message_status")
 }
@@ -1540,17 +1884,276 @@ model GeneratedMessage {
    * coûteraient deux fois pour un crédit débité une fois.
    */
   shortContent      String?                @map("short_content")
+  /// LA VERSION QUI A PRODUIT CE MESSAGE. Le portrait la portait déjà ; le
+  /// message non, et sans elle un avis ne mesure rien : on apprend qu'une
+  /// production a déplu, pas laquelle des consignes en est cause.
+  ///
+  /// NULLABLE POUR DE BON, et pas seulement le temps d'une migration : les
+  /// messages déjà en base n'ont pas ce lien, et rien ne peut l'inventer — on
+  /// ne sait pas ce qui tournait quand ils ont été écrits. Leur poser la
+  /// version courante serait pire qu'un trou : ce serait une donnée fausse, et
+  /// le panneau la compterait.
+  ///
+  /// `Restrict`, comme pour le portrait : une configuration citée par un
+  /// message ne se supprime pas, sinon la consigne qui l'a produit est perdue.
+  studioConfigId    String?                @map("studio_config_id") @db.Uuid
+  /// Même raison et même forme que sur le portrait : `sent` dit qu'on l'a
+  /// envoyé, pas qu'on l'a trouvé bon. On envoie un message qu'on juge moyen,
+  /// faute de temps pour en refaire un.
+  feedback          IdeaFeedback?
+  feedbackAt        DateTime?              @map("feedback_at") @db.Timestamptz
   status            GeneratedMessageStatus @default(generated)
   createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz
 
-  actionRun  ActionRun       @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
-  occurrence EventOccurrence @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
-  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actionRun    ActionRun       @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  occurrence   EventOccurrence @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studioConfig StudioConfig?   @relation(fields: [studioConfigId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
   @@index([eventOccurrenceId])
+  /// « Combien de rejets par version » — la lecture qui justifie tout ça.
+  @@index([studioConfigId, status])
   @@map("generated_message")
+}
+
+/// L'avis qu'on porte sur une idée proposée. FACULTATIF, et il le reste :
+/// aucune idée n'exige d'être notée, et l'absence d'avis n'est pas un « ni
+/// l'un ni l'autre » — c'est « personne n'a répondu », ce qui ne se compte pas
+/// de la même façon dans une moyenne.
+enum IdeaFeedback {
+  up
+  down
+}
+
+/**
+ * UN JEU D'IDÉES produit par une génération.
+ *
+ * C'est lui que `resultId` désigne au contrat, comme `generated_message` pour
+ * un message. Un jeu par exécution — d'où l'unicité : relancer produit un autre
+ * jeu, il ne complète pas le précédent.
+ *
+ * IL SURVIT À L'EFFACEMENT DU COMPTE, délié. Décidé le 9 septembre : une idée
+ * de cadeau n'appartient à personne, et les avis portés dessus servent à
+ * mesurer la pertinence des invites bien après que le compte qui les a demandées
+ * a disparu. C'est le traitement de `feedback` et d'`action_run`, pas celui de
+ * `generated_message` — d'où `SetNull` ici là où le message est en `Cascade`.
+ */
+model GeneratedIdeaSet {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actionRunId       String   @unique @map("action_run_id") @db.Uuid
+  /// Nuls après l'effacement du compte : le jeu reste, ce qu'il désignait
+  /// n'existe plus. Nullables POUR ÇA, jamais pour un jeu neuf.
+  userId            String?  @map("user_id") @db.Uuid
+  eventOccurrenceId String?  @map("event_occurrence_id") @db.Uuid
+  /// LA VERSION QUI A PRODUIT CE JEU. Portée par le JEU et non par chaque idée :
+  /// une génération emploie une seule configuration, et la poser sur les quatre
+  /// propositions ferait quatre fois la même donnée — avec quatre occasions de
+  /// diverger. Nullable pour de bon : les jeux déjà produits n'ont pas ce lien,
+  /// et rien ne peut l'inventer.
+  studioConfigId    String?  @map("studio_config_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  actionRun  ActionRun        @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  user       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  occurrence EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
+  studioConfig StudioConfig?  @relation(fields: [studioConfigId], references: [id], onDelete: Restrict)
+  ideas      GeneratedIdea[]
+
+  @@index([userId, createdAt])
+  @@index([studioConfigId])
+  @@map("generated_idea_set")
+}
+
+/**
+ * UNE IDÉE du jeu.
+ *
+ * NOTER ET RETENIR SONT DEUX GESTES DISTINCTS, et les confondre détruirait le
+ * signal qu'on vient chercher. Quelqu'un peut trouver une idée excellente et ne
+ * pas la retenir — budget, déjà offerte l'an dernier, pas pour cette
+ * personne-là. « Bonne idée, mauvais moment » est précisément ce qui distingue
+ * une invite qui produit du juste d'une invite qui produit du plausible.
+ * Déduire l'avis de l'acceptation mesurerait l'occasion, plus la pertinence.
+ */
+model GeneratedIdea {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  setId    String  @map("set_id") @db.Uuid
+  label    String
+  details  String?
+  /// L'ordre dans lequel le modèle les a rendues. Conservé : une idée mieux
+  /// notée en cinquième position qu'en première dit quelque chose sur le
+  /// gabarit, et le tri par avis l'effacerait.
+  position Int     @db.SmallInt
+  /// Une fourchette indicative, dans la devise du jeu. Nulle quand le modèle
+  /// n'en propose pas — l'inventer vaudrait moins que se taire.
+  priceMin Decimal? @map("price_min") @db.Decimal(12, 2)
+  priceMax Decimal? @map("price_max") @db.Decimal(12, 2)
+  currency String?  @db.VarChar(3)
+
+  /// Nul tant que personne n'a répondu. Voir `IdeaFeedback`.
+  /// L'avis et sa date vont ENSEMBLE — une contrainte en base le tient : un avis
+  /// sans date ne se compare pas dans le temps, une date sans avis ne désigne
+  /// rien. Retirer son avis remet les deux à nul.
+  feedback   IdeaFeedback?
+  feedbackAt DateTime?     @map("feedback_at") @db.Timestamptz
+
+  /// Le souhait né de cette idée, s'il y en a un. `SetNull` et non `Cascade` :
+  /// retirer le souhait de la liste ne doit pas effacer l'idée ni son avis —
+  /// c'est même le cas intéressant, « on l'a retenue puis abandonnée ».
+  wishlistItemId String?       @unique @map("wishlist_item_id") @db.Uuid
+  acceptedAt     DateTime?     @map("accepted_at") @db.Timestamptz
+
+  set          GeneratedIdeaSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  wishlistItem WishlistItem?    @relation(fields: [wishlistItemId], references: [id], onDelete: SetNull)
+
+  @@index([setId, position])
+  /// Pour la question qui justifie tout ça : « quelle version d'invite plaît
+  /// le plus ». Elle se pose sur l'avis, jointe à l'exécution puis au gabarit.
+  @@index([feedback])
+  @@map("generated_idea")
+}
+
+/// Un portrait est produit en DEUX TEMPS : le texte au lancement, l'image à
+/// l'approbation. Le contrat le dit — « l'image composée, produite à
+/// l'approbation ». C'est aussi la modération : on relit avant de fabriquer.
+enum PortraitStatus {
+  /** Le brief seul : des mots et une phrase, aucune image. */
+  generated
+  /**
+   * L'IMAGE EXISTE, ET PERSONNE N'A ENCORE DIT CE QU'IL EN PENSE.
+   *
+   * Il manquait, et son absence faussait tout : `approuver` fabriquait l'image
+   * ET valait acceptation dans le même geste, si bien qu'aucun état ne portait
+   * « composée, pas encore jugée ». On ne pouvait donc rejeter qu'un TEXTE,
+   * jamais un portrait — alors que ce qu'on juge est ce qu'on a vu.
+   *
+   * C'EST UN ÉTAT TERMINAL LÉGITIME. La plupart des portraits y resteront :
+   * refaire n'est pas rejeter — quelqu'un peut en produire cinq en changeant
+   * les réglages et les garder tous —, et rien n'oblige à donner un avis.
+   * Comme pour les idées, l'absence d'avis n'est pas un « ni l'un ni l'autre » :
+   * c'est « personne n'a répondu », et ça ne se compte pas pareil.
+   */
+  composed
+  /** « Je garde celle-ci. » */
+  approved
+  /**
+   * « Celle-ci ne va pas. »
+   *
+   * L'IMAGE RESTE. Un rejet est un AVIS, pas une suppression : l'utilisateur a
+   * payé cette image, et la détruire parce qu'elle lui plaît moins reviendrait
+   * à lui reprendre ce qu'il a acheté. Comme rien ne se détruit, l'avis se
+   * reprend — on peut changer d'idée dans les deux sens.
+   *
+   * ET IL NE SERT PAS AU MÉNAGE DU STOCKAGE, contrairement à ce que le §6 du
+   * brief laissait entendre. Une image composée pèse un à deux mégaoctets ;
+   * mille comptes avec cinq portraits chacun font moins de dix gigaoctets, soit
+   * quelques centimes par mois. Effacer ce que les gens ont payé pour économiser
+   * ça serait un très mauvais échange. Ce qui a besoin d'une règle de cycle de
+   * vie est ce que PERSONNE n'a payé : les essais d'administration et les
+   * sources, qui ont chacun leur préfixe.
+   */
+  rejected
+}
+
+/**
+ * Le portrait produit pour un proche.
+ *
+ * IL NE S'EXPOSE À AUCUNE ADRESSE PUBLIQUE, et aucune colonne ne le permet :
+ * « l'utilisateur l'enregistre et l'envoie lui-même ». Un portrait dit quelque
+ * chose d'une personne précise, et le publier engagerait quelqu'un qui n'a rien
+ * demandé.
+ *
+ * `person` en CASCADE, à la différence d'un jeu d'idées qui survit délié : une
+ * idée de cadeau ne dit rien de personne, un portrait ne parle que de lui.
+ */
+model Portrait {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actionRunId   String         @unique @map("action_run_id") @db.Uuid
+  userId        String         @map("user_id") @db.Uuid
+  personId      String         @map("person_id") @db.Uuid
+  content       String
+  /// La version courte, pour le format vertical. Elle sort du MÊME appel que le
+  /// texte : deux appels donneraient deux textes qui peuvent se contredire, et
+  /// coûteraient deux fois pour un crédit débité une fois.
+  shortContent  String?        @map("short_content")
+  /// Le mot que l'expéditeur ajoute de sa main, à côté de ce qui a été produit.
+  senderNote    String?        @map("sender_note")
+  /// UNE CLÉ, JAMAIS UNE URL : les adresses que rendent les fournisseurs
+  /// d'image expirent, souvent en une heure. Un portrait dont on garderait le
+  /// lien s'afficherait le jour même et montrerait un trou la semaine suivante.
+  /// Nulle tant que le portrait n'est pas approuvé — une contrainte en base lie
+  /// les deux dans les deux sens.
+  imageKey      String?        @map("image_key")
+  /// CE QUI A ÉTÉ CHOISI, figé au lancement.
+  ///
+  /// Sans elles, l'approbation ne savait pas ce que l'utilisateur avait demandé
+  /// et reprenait la première voie active du catalogue : « abstrait » rendait
+  /// un paysage, sans qu'aucune erreur ne s'affiche.
+  ///
+  /// Et le brief a été composé avec la consigne de l'ambiance CHOISIE :
+  /// produire l'image avec une autre rendrait un dessin qui ne correspond pas
+  /// au texte qu'on vient de relire.
+  ///
+  /// Même doctrine que `payment.feeAmount` — le catalogue peut changer entre le
+  /// lancement et l'approbation, et désactiver une ambiance ne doit pas
+  /// transformer un portrait en attente.
+  visualPath    String?        @map("visual_path") @db.VarChar(20)
+  /// Nulle sur la voie « aucune », qui n'ouvre aucun groupe d'ambiance.
+  ambianceId    String?        @map("ambiance_id") @db.VarChar(60)
+  /// LA COMPOSITION CHOISIE — papier, lilas, encre. Le SECOND paramètre que le
+  /// client donne, à côté du type de rendu : celui-ci dit ce qu'on dessine,
+  /// celle-là dans quelle gamme et sur quel fond ça se pose.
+  /// Figée comme la voie et l'ambiance : sans elle, l'approbation reprendrait
+  /// « la première active », et une illustration destinée à un fond d'encre
+  /// emploierait la gamme du papier — où elle disparaîtrait.
+  compositionId String?        @map("composition_id") @db.VarChar(60)
+  /// LA CONFIGURATION QUI A PRODUIT LE BRIEF, et dont l'approbation relit la
+  /// consigne. Sans elle, on lisait la configuration COURANTE : reformuler une
+  /// ambiance entre les deux temps composait l'image avec un texte et le brief
+  /// avec un autre.
+  /// L'historique existait déjà — chaque publication est une ligne, celle qu'on
+  /// remplace passe en `superseded`. Il ne manquait que le lien.
+  /// `Restrict` : une configuration citée par un portrait ne se supprime pas,
+  /// sinon la consigne qui a produit le texte est perdue.
+  studioConfigId String?       @map("studio_config_id") @db.Uuid
+  /**
+   * LA CONFIGURATION QUI A ÉCRIT LE TEXTE — nature `portrait_brief`, distincte
+   * de `studioConfigId` juste au-dessus, qui est le CATALOGUE (nature
+   * `portrait` : ambiances, compositions, modèle d'image).
+   * Les deux sont deux versions réelles et séparées : l'une choisit les mots,
+   * l'autre les dessine, l'une s'éprouve sur un modèle de texte, l'autre sur un
+   * modèle d'image. Les confondre est le défaut que le découpage en quatre
+   * natures a réparé — et le commentaire d'à côté disait « brief » pour une
+   * ligne qui n'en était pas une.
+   * Sans elle, rejeter un portrait ne disait pas quelle consigne avait choisi
+   * ses mots : l'avis se perdait à mi-chemin.
+   */
+  briefStudioConfigId String?   @map("brief_studio_config_id") @db.Uuid
+  /// CE QU'ON EN A PENSÉ, et non ce qu'on en a fait. `approved` est un GESTE —
+  /// je garde ce portrait ; l'avis est un JUGEMENT. Les deux se séparent dans
+  /// la vraie vie : on approuve un portrait passable parce qu'on a payé. Les
+  /// confondre ferait perdre les deux.
+  /// Même forme que `generated_idea`, contrainte comprise : l'avis et sa date
+  /// vont ensemble, et retirer son avis remet les deux à nul.
+  feedback      IdeaFeedback?
+  feedbackAt    DateTime?      @map("feedback_at") @db.Timestamptz
+  status        PortraitStatus @default(generated)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  actionRun    ActionRun     @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person       Person        @relation(fields: [personId], references: [id], onDelete: Cascade)
+  studioConfig      StudioConfig? @relation("portraitCatalogue", fields: [studioConfigId], references: [id], onDelete: Restrict)
+  briefStudioConfig StudioConfig? @relation("portraitBrief", fields: [briefStudioConfigId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([personId])
+  @@index([briefStudioConfigId, status])
+  /// « Combien de rejets par version » — la lecture qui justifie tout ça.
+  @@index([studioConfigId, status])
+  @@map("portrait")
 }
 
 /**
@@ -1584,13 +2187,6 @@ model ActionRun {
   userId            String          @map("user_id") @db.Uuid
   premiumActionId   String          @map("premium_action_id") @db.Uuid
   eventOccurrenceId String?         @map("event_occurrence_id") @db.Uuid
-  /**
-   * La version EXACTE du gabarit qui a produit ce contenu. Sans elle,
-   * comprendre pourquoi les productions d'une semaine valaient mieux que celles
-   * de la suivante devient impossible — et c'est précisément la question qu'on
-   * pose après une publication ratée.
-   */
-  promptTemplateId  String?         @map("prompt_template_id") @db.Uuid
   // Recopié à l'exécution : le prix change, l'historique ne bouge pas.
   creditsSpent      Int             @map("credits_spent")
   /**
@@ -1619,11 +2215,27 @@ model ActionRun {
    */
   idempotencyKey    String?         @map("idempotency_key") @db.VarChar(128)
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * Même bloc que sur `login_activity`, et pour la même règle : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   * Nullables pour de bon — les lignes d'avant ce lot n'ont pas cette
+   * information, et rien ne peut l'inventer.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+
 
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   premiumAction    PremiumAction     @relation(fields: [premiumActionId], references: [id], onDelete: Restrict)
   occurrence       EventOccurrence?  @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
-  promptTemplate   PromptTemplate?   @relation(fields: [promptTemplateId], references: [id], onDelete: SetNull)
   usages           AIUsage[]
   generatedMessage GeneratedMessage?
 
@@ -1638,6 +2250,8 @@ model ActionRun {
   @@index([createdAt])
   @@index([status, createdAt])
   @@map("action_run")
+  ideaSet          GeneratedIdeaSet?
+  portrait         Portrait?
 }
 
 /**
@@ -1698,6 +2312,23 @@ model AIUsage {
   errorCode String?  @map("error_code") @db.VarChar(80)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * Même bloc que sur `login_activity`, et pour la même règle : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   * Nullables pour de bon — les lignes d'avant ce lot n'ont pas cette
+   * information, et rien ne peut l'inventer.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+
 
   actionRun ActionRun? @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
   model     AIModel?   @relation(fields: [modelId], references: [id], onDelete: SetNull)
@@ -1712,37 +2343,11 @@ model AIUsage {
   @@map("ai_usage")
 }
 
-enum PromptKind {
-  message
-  illustration
-  photo_style
-  note_classification
-  sensitive_detection
-
-  @@map("prompt_kind")
-}
 
 // Les gabarits de production du studio. **Ils vivent en base, jamais dans le
 // code** : on les ajuste au vu des résultats, sans livraison. Les versions ne se
 // modifient pas — ajuster crée une version nouvelle, l'ancienne demeure, ce qui
 // permet d'y revenir et de comprendre un écart de qualité.
-model PromptTemplate {
-  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  kind             PromptKind
-  key              String      @db.VarChar(60)
-  version          Int         @default(1)
-  body             String
-  guardrails       Json?
-  aiModelId        String?     @map("ai_model_id") @db.Uuid
-  isActive         Boolean     @default(false) @map("is_active")
-  createdByAdminId String?     @map("created_by_admin_id") @db.Uuid
-  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz
-  actionRuns       ActionRun[]
-
-  @@unique([kind, key, version])
-  @@index([kind, key])
-  @@map("prompt_template")
-}
 
 // ─── Le Studio du portrait ───────────────────────────────────────────────────
 
@@ -1750,6 +2355,14 @@ model PromptTemplate {
 /// l'image du portrait. Voir `StudioConfig.kind`.
 enum StudioConfigKind {
   message
+  /// Les idées de cadeau. Réglées à part du message : une empreinte commune
+  /// ferait retomber leurs essais dès qu'on reformule un garde-fou du message.
+  idees
+  /// Le texte qui PRÉCÈDE l'image — celui qui lit les notes et rend les mots
+  /// qui comptent. Distinct de `portrait`, qui règle l'image elle-même : l'un
+  /// s'éprouve sur un modèle de texte, l'autre sur un modèle d'image, et
+  /// confondre les deux est exactement ce que le découpage a réparé.
+  portrait_brief
   portrait
 
   @@map("studio_config_kind")
@@ -1830,6 +2443,16 @@ model StudioConfig {
   @@index([state, createdAt])
   @@index([fingerprint])
   @@map("studio_config")
+  portraits        Portrait[] @relation("portraitCatalogue")
+  /// Les portraits dont elle a écrit le TEXTE — nature `portrait_brief`. Deux
+  /// liens distincts vers la même table parce que ce sont deux natures : l'une
+  /// choisit les mots, l'autre les dessine.
+  briefsDePortrait Portrait[] @relation("portraitBrief")
+  /// Les productions de texte qui la citent. Elles répondent à la question qui
+  /// donne son sens à l'atelier : « cette version fait-elle mieux que la
+  /// précédente ? » — combien de rejets, sur combien de productions.
+  messages    GeneratedMessage[]
+  jeuxDIdees  GeneratedIdeaSet[]
 }
 
 /**
@@ -1843,6 +2466,29 @@ model StudioProfile {
   /// Ce que ce profil met à l'épreuve : « fiche pauvre, nom long, anglais ».
   label       String   @db.VarChar(80)
   payload     Json
+  /// LA PHOTO D'EXEMPLE, pour éprouver la voie photo.
+  ///
+  /// SUR LE PROFIL ET NON SUR L'ESSAI, et ce n'est pas un détail de rangement :
+  /// pour comparer deux versions il faut tenir la photo CONSTANTE. Fournie à
+  /// chaque essai, elle varierait d'un essai à l'autre, et l'on comparerait
+  /// deux réglages sur deux images — c'est-à-dire rien. Portée par
+  /// l'éprouvette, elle est fixe par construction.
+  ///
+  /// Rangée sous le préfixe `essais` comme les images qu'elles produisent :
+  /// personne ne l'a payée, et une règle de cycle de vie doit pouvoir la
+  /// balayer sans toucher à ce que les gens ont acheté.
+  ///
+  /// Nulle pour les profils qui n'en ont pas — la plupart : seule la voie photo
+  /// en a besoin, et l'illustration s'éprouve très bien sans.
+  photoKey    String?  @map("photo_key")
+  /// LA PLACE GARDÉE d'un téléversement en cours, le temps qu'il aboutisse.
+  ///
+  /// LA CLÉ NE SORT PAS vers le client, même administrateur : c'est la doctrine
+  /// de `depotAvatarSchema` et du dépôt de la photo source. La lui donner
+  /// permettrait de la remplacer par celle d'un autre objet — un portrait payé,
+  /// un reçu — et de nous faire signer une lecture dessus. L'écran dit « c'est
+  /// déposé » ; le serveur sait de quoi il parle.
+  photoDepotKey String? @map("photo_depot_key")
   isSensitive Boolean  @default(false) @map("is_sensitive")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
@@ -2013,14 +2659,19 @@ enum StatusChangeOrigin {
 /// fixe le minimum. La remise s'affiche — c'est un argument de vente, pas un
 /// calcul caché.
 model CreditBundle {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  amount       Decimal  @db.Decimal(12, 2)
-  currency     String   @default("XAF") @db.VarChar(3)
-  credits      Int
-  bonusPercent Int?     @map("bonus_percent") @db.SmallInt
-  position     Int      @db.SmallInt
-  isActive     Boolean  @default(true) @map("is_active")
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  amount    Decimal  @db.Decimal(12, 2)
+  currency  String   @default("XAF") @db.VarChar(3)
+  credits   Int
+  /// PAS de colonne de remise, et c'est une décision. `bonus_percent` était un
+  /// smallint saisi à la main que rien ne rattachait à `amount` et `credits` :
+  /// un palier pouvait annoncer 20 % quand son rapport en valait cinq. La
+  /// remise se déduit maintenant au moment de servir (voir
+  /// `apps/api/src/payments/remise.ts`), donc aucune valeur rangée ne peut plus
+  /// mentir sur ce qu'un palier vaut.
+  position  Int      @db.SmallInt
+  isActive  Boolean  @default(true) @map("is_active")
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   payments Payment[]
 
@@ -2044,6 +2695,10 @@ model PaymentChannel {
   feeMin     Decimal?          @map("fee_min") @db.Decimal(12, 2)
   feeMax     Decimal?          @map("fee_max") @db.Decimal(12, 2)
   feeBorneBy FeeBearer         @default(payer) @map("fee_borne_by")
+  /// Le code à composer quand l'application de l'opérateur ne s'ouvre pas — et
+  /// elle ne s'ouvre pas souvent. Sur le CANAL et non sur le compte de
+  /// collecte : le code appartient à l'opérateur, pas au numéro.
+  ussd       String?           @db.VarChar(32)
   currency   String            @default("XAF") @db.VarChar(3)
   isActive   Boolean           @default(true) @map("is_active")
   position   Int?              @db.SmallInt
@@ -2077,6 +2732,10 @@ model PaymentChannelHistory {
   feeMin           Decimal?          @map("fee_min") @db.Decimal(12, 2)
   feeMax           Decimal?          @map("fee_max") @db.Decimal(12, 2)
   feeBorneBy       FeeBearer         @map("fee_borne_by")
+  /// Recopié du canal, comme le reste : une colonne ajoutée d'un seul côté
+  /// ferait mentir la reprise — « quelle configuration était en vigueur »
+  /// rendrait un canal sans son code.
+  ussd             String?           @db.VarChar(32)
   currency         String            @db.VarChar(3)
   isActive         Boolean           @map("is_active")
   position         Int?              @db.SmallInt
@@ -2177,6 +2836,15 @@ model Payment {
   // aujourd'hui : changer un taux ne doit pas fausser rétroactivement la
   // comptabilité.
   feeAmount           Decimal?         @map("fee_amount") @db.Decimal(12, 2)
+  // Le prix unitaire du jour et le prix du palier, FIGÉS ici — même doctrine
+  // que `feeAmount` juste au-dessus. Sans le premier, « quelle réduction cette
+  // personne a-t-elle obtenue ? » n'est plus reconstructible après un
+  // changement de prix. Le second double `amount` à dessein : c'est ce qui rend
+  // un écart entre le facturé et l'affiché détectable au lieu d'invisible.
+  // Nuls sur les lignes antérieures, et ils doivent le rester — les remplir
+  // avec le prix d'aujourd'hui écrirait le mensonge qu'ils empêchent.
+  creditUnitPrice     Decimal?         @map("credit_unit_price") @db.Decimal(12, 2)
+  bundleAmount        Decimal?         @map("bundle_amount") @db.Decimal(12, 2)
   // Ce qu'on ATTEND sur le compte, frais appliqués selon feeBorneBy.
   expectedAmount      Decimal?         @map("expected_amount") @db.Decimal(12, 2)
   // Ce que l'administrateur a CONSTATÉ. Trois montants, et ils ne disent pas la
@@ -2190,6 +2858,27 @@ model Payment {
   status              PaymentStatus    @default(pending)
   failureReason       String?          @map("failure_reason")
   createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * Même bloc que sur `login_activity`, et pour la même règle : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   * Nullables pour de bon — les lignes d'avant ce lot n'ont pas cette
+   * information, et rien ne peut l'inventer.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+  /* L'ORIGINE DE LA DÉCLARATION — écart assumé à la doctrine du dépôt, et le
+     même que sur `credit_transaction` : une transaction SE CONTESTE, et
+     l'origine ne se reconstitue pas après coup. `Inet`, jamais `VarChar`. */
+  ip         String? @db.Inet
+
 
   user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   paymentMethod     PaymentMethod?         @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
@@ -2283,6 +2972,10 @@ model Wall {
   userId           String   @unique @map("user_id") @db.Uuid
   isEnabled        Boolean  @default(false) @map("is_enabled")
   showBirthdayDate Boolean  @default(true) @map("show_birthday_date")
+  /// Le Mur exposait le lien de la liste sans qu'on puisse le TAIRE : il fallait
+  /// fermer le Mur entier pour la cacher. Faux par défaut, comme `is_enabled` —
+  /// ce qui se publie se décide, ça ne s'hérite pas.
+  showWishlist     Boolean  @default(false) @map("show_wishlist")
   welcomeMessage   String?  @map("welcome_message")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
@@ -2306,6 +2999,14 @@ model CollectionLink {
   // sans session. Unique, donc, et tiré au hasard — jamais dérivé de l'id.
   token     String             @unique @db.VarChar(32)
   personId  String?            @map("person_id") @db.Uuid
+  /// Le mot que le propriétaire écrit AVEC le lien, affiché en haut de la page
+  /// que le proche ouvrira. Nul quand il n'en a pas écrit — pas de chaîne vide,
+  /// pour que la page n'ait pas à distinguer « rien écrit » de « effacé ».
+  ///
+  /// Il vit sur le LIEN et non sur la fiche : c'est un mot d'invitation, pas
+  /// une note sur la personne. Deux liens vers le même proche — un rouvert
+  /// après révocation — peuvent d'ailleurs porter deux mots différents.
+  message   String?            @db.VarChar(280)
   isActive  Boolean            @default(true) @map("is_active")
   createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz
 
@@ -2422,6 +3123,15 @@ model ReceivedWish {
   authorName           String?            @map("author_name")
   content              String
   status               ReceivedWishStatus @default(pending)
+  /// DEUX INTERRUPTEURS QUI NE DISENT PAS LA MÊME CHOSE : le premier décide si
+  /// le vœu paraît sur le Mur, le second si le nom de qui l'a écrit paraît avec.
+  /// Les fondre supprimerait « je le montre sans dire de qui » — exactement ce
+  /// qu'on veut d'un mot maladroit qu'on garde quand même.
+  /// Faux tous les deux : un vœu n'est pas public parce qu'il est arrivé, il le
+  /// devient parce que son destinataire l'a décidé. Une contrainte en base
+  /// interdit l'auteur sans le vœu.
+  isPublic             Boolean            @default(false) @map("is_public")
+  showAuthor           Boolean            @default(false) @map("show_author")
   createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz
 
   occurrence EventOccurrence     @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)

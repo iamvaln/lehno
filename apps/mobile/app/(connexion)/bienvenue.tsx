@@ -104,9 +104,16 @@ export default function Bienvenue() {
       </View>
 
       <View style={styles.sorties}>
-        <Button variant="primary" full onPress={() => routeur.replace("/")}>{t.commencer}</Button>
+        {/* VERS L'ACCUEIL, PAS VERS « / ». Deux fichiers revendiquent la
+            racine : `app/index.tsx`, la porte qui lit les jetons, et
+            `app/(connexion)/index.tsx`, l'écran d'ouverture — un groupe ne
+            change pas l'URL. Le routeur choisissait le second, qui repart SANS
+            CONDITION vers la connexion : compte créé, jetons en poche, et l'on
+            se retrouvait devant le formulaire. La session vient d'être ouverte
+            ici ; rien à redemander à la porte. */}
+        <Button variant="primary" full onPress={() => routeur.replace("/(app)/accueil")}>{t.commencer}</Button>
         {parrainageOuvert ? (
-          <Button variant="text" full onPress={() => routeur.replace("/")}>{t.inviterAmi}</Button>
+          <Button variant="text" full onPress={() => routeur.replace("/(app)/accueil")}>{t.inviterAmi}</Button>
         ) : null}
       </View>
     </View>

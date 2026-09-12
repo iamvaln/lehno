@@ -271,7 +271,35 @@ describe("ConfirmWithReason", () => {
     await userEvent.selectOptions(screen.getByLabelText("Motif"), "Fraude suspectée");
     expect(bouton()).toBeEnabled();
     await userEvent.click(bouton());
-    expect(onConfirmer).toHaveBeenCalledWith("Fraude suspectée");
+    /* Le second argument est le CODE du registre : `undefined` ici, parce que
+       cette liste est faite de simples libellés — la forme que gardent les
+       gestes que le registre ne couvre pas encore. */
+    expect(onConfirmer).toHaveBeenCalledWith("Fraude suspectée", undefined);
+  });
+
+  /* LA FORME QUI COMPTE : un code stable, un libellé qui se lit. Le serveur
+     exige le code sur tout geste que le registre couvre, et un libellé seul ne
+     se compte pas — les libellés sont bilingues, et le même geste s'inscrivait
+     « Fraude suspectée » ou « Suspected fraud » selon la langue au clic. */
+  it("remonte le code du registre, et écrit le libellé au journal", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const onConfirmer = vi.fn();
+    render(
+      <ConfirmWithReason
+        titre="Suspendre ce compte"
+        motifs={[{ code: "abuse_found", libelle: "Abus constaté" }]}
+        libelles={{ motif: "Motif", choisir: "Choisir", autre: "Autre", confirmer: "Confirmer", annuler: "Annuler" }}
+        onConfirmer={onConfirmer}
+        onAnnuler={() => {}}
+      />,
+    );
+
+    await utilisateur.selectOptions(screen.getByLabelText("Motif"), "abuse_found");
+    await utilisateur.click(screen.getByRole("button", { name: "Confirmer" }));
+
+    /* Le LIBELLÉ part au journal, le CODE l'accompagne : un code seul rendrait
+       la ligne illisible à qui la relit six mois plus tard. */
+    expect(onConfirmer).toHaveBeenCalledWith("Abus constaté", "abuse_found");
   });
 
   it("ajoute « Autre — préciser » d'office et accepte un motif écrit", async () => {
@@ -289,7 +317,7 @@ describe("ConfirmWithReason", () => {
     expect(bouton()).toBeEnabled();
     await userEvent.click(bouton());
     // Le motif part élagué, comme le serveur le recevra.
-    expect(onConfirmer).toHaveBeenCalledWith("Demande du titulaire");
+    expect(onConfirmer).toHaveBeenCalledWith("Demande du titulaire", undefined);
   });
 
   it("laisse toujours une sortie", async () => {

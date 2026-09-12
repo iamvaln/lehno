@@ -3,8 +3,8 @@ import {
   submissionDecisionSchema, type Submission, type SubmittedWish,
 } from "@lehno/contracts";
 import {
-  aTrancher, corpsDeDecision, corpsDeRejet, demandeOuRanger, pretAEnvoyer,
-  toutEstTranche, type SaisieDuSas,
+  aTrancher, corpsDeDecision, corpsDeRejet, demandeOuRanger, nomDeLaContribution,
+  pretAEnvoyer, toutEstTranche, type SaisieDuSas,
 } from "../lib/sas.js";
 
 const uuid = (n: number): string =>
@@ -16,7 +16,8 @@ const souhait = (n: number): SubmittedWish => ({
 });
 
 const contribution = (p: Partial<Submission> = {}): Submission => ({
-  id: uuid(1), linkType: "nominatif", personId: uuid(9), submitterName: "Ana",
+  id: uuid(1), linkType: "nominatif", personId: uuid(9),
+  personDisplayName: "Bila", submitterName: "Ana",
   relationHint: null, birthDate: "1990-03-04", personalNote: "aime le jazz",
   status: "pending", wishes: [souhait(2), souhait(3)],
   createdAt: "2026-08-01T00:00:00.000Z", ...p,
@@ -127,5 +128,65 @@ describe("le corps de la décision", () => {
   it("refuserait un rejet accompagné d'une répartition", () => {
     expect(submissionDecisionSchema.safeParse({ reject: true, keepBirthDate: true }).success)
       .toBe(false);
+  });
+});
+
+/* DE QUI PARLE CETTE CONTRIBUTION.
+ *
+ * La carte s'intitulait « Pour Sans nom » sur TOUTE contribution nominative —
+ * c'est-à-dire précisément celles dont on connaît la cible. Elle lisait
+ * `submitterName`, que le contrat n'accepte que sur un lien PUBLIC : « sur un
+ * nominatif, le propriétaire sait déjà qui il a invité ». Le champ est donc
+ * toujours nul là où l'écran s'en servait. Vu à l'appareil, sur une
+ * contribution déposée pour Awa.
+ */
+describe("de qui parle une contribution", () => {
+  const SANS_NOM = "Sans nom";
+
+  it("nomme la fiche visée par un lien nominatif", () => {
+    expect(nomDeLaContribution(
+      contribution({ linkType: "nominatif", personDisplayName: "Awa", submitterName: null }),
+      SANS_NOM,
+    )).toBe("Awa");
+  });
+
+  /* La fiche l'emporte sur le nom que le répondant se donne : sur un lien
+     nominatif c'est la MÊME personne, et la fiche porte le nom que le
+     propriétaire a choisi — celui sous lequel il la reconnaît. */
+  it("préfère la fiche au nom que le répondant se donne", () => {
+    expect(nomDeLaContribution(
+      contribution({ personDisplayName: "Awa", submitterName: "Ana" }), SANS_NOM,
+    )).toBe("Awa");
+  });
+
+  /* Un lien PUBLIC ne vise personne tant qu'on n'a pas tranché : le serveur rend
+     `personDisplayName` nul, et c'est le répondant qui se nomme. */
+  it("garde le nom du répondant sur un lien public", () => {
+    expect(nomDeLaContribution(
+      contribution({
+        linkType: "public", personId: null, personDisplayName: null, submitterName: "Ana",
+      }),
+      SANS_NOM,
+    )).toBe("Ana");
+  });
+
+  it("dit « sans nom » quand le répondant s'en est abstenu", () => {
+    expect(nomDeLaContribution(
+      contribution({
+        linkType: "public", personId: null, personDisplayName: null, submitterName: null,
+      }),
+      SANS_NOM,
+    )).toBe(SANS_NOM);
+  });
+
+  /* UN NOM VIDE NE VAUT PAS UN NOM. Le serveur ne devrait pas en servir, mais
+     un blanc à l'écran serait pire qu'un repli : on retombe sur le répondant. */
+  it("retombe sur le répondant quand la fiche n'a pas de nom", () => {
+    expect(nomDeLaContribution(
+      contribution({ personDisplayName: "  ", submitterName: "Ana" }), SANS_NOM,
+    )).toBe("Ana");
+    expect(nomDeLaContribution(
+      contribution({ personDisplayName: null, submitterName: null }), SANS_NOM,
+    )).toBe(SANS_NOM);
   });
 });

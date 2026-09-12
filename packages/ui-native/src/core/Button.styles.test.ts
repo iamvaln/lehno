@@ -52,12 +52,42 @@ describe("le style du bouton", () => {
     expect(presse.conteneur.backgroundColor).toBe(rangs.primary.fondPresse);
   });
 
-  // Un bouton désactivé ne réagit pas au doigt : lui laisser son état pressé
-  // promettrait une action qui n'arrivera pas.
+  /* Un bouton désactivé ne réagit pas au doigt : lui laisser son état pressé
+     promettrait une action qui n'arrivera pas. On compare les DEUX états
+     désactivés entre eux plutôt qu'à une couleur écrite ici — sans quoi le test
+     décrit une implantation et tombe à la première retouche de la charte. */
   it("ignore la pression quand il est désactivé", () => {
-    const style = styleDuBouton({ couleurs: CLAIR, desactive: true, presse: true });
-    expect(style.conteneur.backgroundColor).toBe(rangsDuBouton(CLAIR).primary.fond);
-    expect(style.conteneur.opacity).toBe(0.45);
+    const repos = styleDuBouton({ couleurs: CLAIR, desactive: true });
+    const presse = styleDuBouton({ couleurs: CLAIR, desactive: true, presse: true });
+    expect(presse.conteneur.backgroundColor).toBe(repos.conteneur.backgroundColor);
+    expect(presse.conteneur.backgroundColor).not.toBe(rangsDuBouton(CLAIR).primary.fondPresse);
+  });
+
+  /* DÉSACTIVÉ SE PEINT, IL NE S'ESTOMPE PAS.
+
+     `opacity: 0.45` sur le conteneur détruisait la lisibilité : l'opacité
+     composite fond ET texte contre la page, le fond blanchit, et le blanc du
+     libellé NE PEUT PAS pâlir. Mesuré à l'écran sur « Envoyez-moi un code » :
+     1,81:1, quand WCAG demande 4,5:1 pour du texte normal et 3:1 même pour du
+     grand. C'est le PREMIER état que voit qui ouvre l'application.
+
+     Le test interdit le retour de l'opacité et vérifie que les deux couleurs
+     changent ensemble : peindre le fond sans repeindre le texte laisserait du
+     blanc sur du pâle, c'est-à-dire le même défaut. */
+  it("se peint au lieu de s'estomper quand il est désactivé", () => {
+    const eteint = styleDuBouton({ couleurs: CLAIR, desactive: true });
+    const vif = styleDuBouton({ couleurs: CLAIR });
+    expect(eteint.conteneur.opacity).toBeUndefined();
+    expect(eteint.conteneur.backgroundColor).toBe(CLAIR.actionQuietBg);
+    expect(eteint.libelle.color).toBe(CLAIR.textMention);
+    expect(eteint.libelle.color).not.toBe(vif.libelle.color);
+  });
+
+  // L'icône suit le libellé : blanche sur un fond pâle, elle disparaîtrait
+  // exactement comme le mot.
+  it("éteint l'icône avec le libellé", () => {
+    const eteint = styleDuBouton({ couleurs: CLAIR, desactive: true });
+    expect(eteint.couleurIcone).toBe(eteint.libelle.color);
   });
 
   /* Le filet vient de la charte, pas d'un chiffre écrit ici. Le pilote posait
@@ -94,3 +124,54 @@ describe("le style du bouton", () => {
     expect(styleDuBouton({ couleurs: CLAIR }).libelle.flexShrink).toBe(1);
   });
 });
+
+/* LA GARDE QUI MANQUAIT — et son absence a laissé passer 1,81:1.
+ *
+ * `boutons-lisibles.test.ts` côté mobile vérifie qu'un bouton d'icône porte un
+ * libellé d'accessibilité. Personne ne vérifiait qu'on VOIT ce libellé. Le
+ * défaut était donc invisible aux tests par construction : la couleur était
+ * juste, le rendu correct, et le mot illisible.
+ *
+ * On mesure le rapport WCAG entre le libellé et son fond, dans les DEUX
+ * thèmes. Une charte se retouche ; ce test dit alors tout de suite si la
+ * retouche a coûté la lisibilité, au lieu de le laisser découvrir sur un
+ * téléphone.
+ */
+function luminance(hex: string): number {
+  const h = hex.replace("#", "");
+  const canal = (i: number): number => {
+    const v = parseInt(h.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * canal(0) + 0.7152 * canal(2) + 0.0722 * canal(4);
+}
+
+function contraste(a: string, b: string): number {
+  const [x, y] = [luminance(a), luminance(b)];
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+describe("on voit ce qui est écrit sur un bouton", () => {
+  // 4,5:1 — le seuil WCAG AA pour du texte normal. Le libellé d'un bouton est
+  // à 15 pt : il ne bénéficie pas de l'indulgence accordée au grand texte.
+  const SEUIL = 4.5;
+
+  for (const [nom, couleurs] of [["clair", CLAIR], ["sombre", SOMBRE]] as const) {
+    it(`garde le libellé lisible en thème ${nom}, bouton vif`, () => {
+      const style = styleDuBouton({ couleurs });
+      expect(contraste(style.libelle.color as string, style.conteneur.backgroundColor as string))
+        .toBeGreaterThanOrEqual(SEUIL);
+    });
+
+    /* CELUI-CI EST LE CAS RÉEL. Mesuré à l'écran avant correction : 1,81:1 sur
+       « Envoyez-moi un code », le premier état que voit qui ouvre
+       l'application. `opacity` compositait fond et texte contre la page ; le
+       fond blanchissait, et le blanc du libellé ne pouvait pas pâlir. */
+    it(`garde le libellé lisible en thème ${nom}, bouton éteint`, () => {
+      const style = styleDuBouton({ couleurs, desactive: true });
+      expect(contraste(style.libelle.color as string, style.conteneur.backgroundColor as string))
+        .toBeGreaterThanOrEqual(SEUIL);
+    });
+  }
+});
+

@@ -29,6 +29,17 @@ const reponse = (statut: number, corps?: unknown): Response =>
     headers: corps === undefined ? {} : { "content-type": "application/json" },
   });
 
+/* LE REGISTRE DES MOTIFS, comme en production : l'outil le lit au démarrage et
+   en tire ceux de chaque geste. Sans lui, les listes seraient vides — et c'est
+   exactement l'état qui rendait ces gestes impossibles. */
+const MOTIFS = {
+  motifs: [
+    { id: "11111111-1111-4111-8111-111111111111", code: "joining_the_team", fr: "Arrivée dans l'équipe", en: "Joining the team", actif: true, gestes: ["admin_invite"] },
+    { id: "22222222-2222-4222-8222-222222222222", code: "change_of_post", fr: "Changement de responsabilité", en: "Change of post", actif: true, gestes: ["admin_promote", "admin_demote"] },
+    { id: "33333333-3333-4333-8333-333333333333", code: "contract_ended", fr: "Fin de contrat", en: "Contract ended", actif: true, gestes: ["admin_deactivate"] },
+  ],
+};
+
 function serveur(routes: Record<string, (url: string, init?: RequestInit) => Response> = {}) {
   const parDefaut: Record<string, (url: string, init?: RequestInit) => Response> = {
     "/admin/admins": (_u, init) => (init && init.method !== "GET"
@@ -38,6 +49,7 @@ function serveur(routes: Record<string, (url: string, init?: RequestInit) => Res
   };
   const table = { ...parDefaut, ...routes };
   const appels = vi.fn((url: string, init?: RequestInit) => {
+    if (url.includes("/admin/reasons")) return Promise.resolve(reponse(200, MOTIFS));
     for (const [chemin, rendre] of Object.entries(table)) {
       if (url.includes(chemin)) return Promise.resolve(rendre(url, init));
     }
@@ -102,14 +114,17 @@ describe("les accès d'administration", () => {
     await utilisateur.click(screen.getByRole("button", { name: t.acces.inviter.confirmer }));
     await utilisateur.selectOptions(
       await screen.findByLabelText(t.confirmation.motif),
-      t.acces.inviter.motifs[0] as string,
+      "joining_the_team",
     );
     await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
 
     await waitFor(() => {
       const corps = JSON.parse((ecritures(appels)[0]?.[1] as RequestInit).body as string);
+      /* LE CODE PART AVEC LE MOTIF : `admin_invite` propose des motifs, donc
+         le serveur en exige un et refusait en 422 sans lui. */
       expect(corps).toEqual({
-        email: "karim@lehno.app", role: "support", reason: t.acces.inviter.motifs[0],
+        email: "karim@lehno.app", role: "support",
+        reason: "Arrivée dans l'équipe", reasonCode: "joining_the_team",
       });
     });
   });
@@ -150,7 +165,7 @@ describe("les accès d'administration", () => {
     await utilisateur.click(await screen.findByRole("menuitem", { name: t.acces.gestes.promouvoir }));
     await utilisateur.selectOptions(
       await screen.findByLabelText(t.confirmation.motif),
-      t.acces.dialogueRole.motifs[0] as string,
+      "change_of_post",
     );
     await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
 
@@ -159,7 +174,7 @@ describe("les accès d'administration", () => {
       expect(url).toContain("/admin/admins/ad-2");
       expect(init.method).toBe("PATCH");
       expect(JSON.parse(init.body as string)).toEqual({
-        role: "admin", reason: t.acces.dialogueRole.motifs[0],
+        role: "admin", reason: "Changement de responsabilité", reasonCode: "change_of_post",
       });
     });
   });
@@ -216,7 +231,7 @@ describe("les accès d'administration", () => {
     await utilisateur.click(screen.getByRole("button", { name: t.acces.inviter.confirmer }));
     await utilisateur.selectOptions(
       await screen.findByLabelText(t.confirmation.motif),
-      t.acces.inviter.motifs[0] as string,
+      "joining_the_team",
     );
     await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
 

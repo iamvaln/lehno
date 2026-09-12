@@ -20,6 +20,8 @@ const PAIEMENTS = { items: [PAIEMENT], nextCursor: null };
 const DETAIL = {
   ...PAIEMENT, etat: "succeeded", recuSurLeCompte: 900, ecart: -100,
   reference: "MP260826.1200.A11111", motifEchec: null, frais: 20,
+  // La PRÉSENCE d'un reçu, jamais sa clé — voir paiementDetailSchema.
+  recu: false,
   compteCollecte: "Orange Money principal",
   histoire: [
     {
@@ -42,7 +44,7 @@ const MOUVEMENTS = {
 };
 
 const PALIERS = { items: [{ id: "b-1", montant: 1000, devise: "XAF", credits: 10, remisePourcent: null, position: 2, actif: true }] };
-const CANAUX = { items: [{ id: "c-1", nature: "mobile_money", operateur: "mtn_momo", pays: "CM", libelle: "MTN Mobile Money", fraisPourcent: 2, fraisFixe: 0, fraisMin: null, fraisMax: null, fraisPortesPar: "payer", devise: "XAF", actif: true, position: 1 }] };
+const CANAUX = { items: [{ id: "c-1", nature: "mobile_money", operateur: "mtn_momo", pays: "CM", libelle: "MTN Mobile Money", fraisPourcent: 2, fraisFixe: 0, fraisMin: null, fraisMax: null, fraisPortesPar: "payer", devise: "XAF", ussd: null, actif: true, position: 1 }] };
 const COMPTES = { items: [{ id: "a-1", libelle: "Orange Money principal", operateur: "orange_money", numero: "690000000", visibleDansApp: true, actif: true, position: 1 }] };
 
 const reponse = (statut: number, corps?: unknown): Response =>
@@ -186,6 +188,91 @@ describe("les crédits et paiements", () => {
     await utilisateur.click(await screen.findByText("awa"));
 
     expect(await screen.findByText(t.credits.decision.avertissement)).toBeInTheDocument();
+  });
+
+  /* LA PIÈCE S'OUVRE, et c'est tout l'objet de la reprise : l'écran demandait
+     de vérifier un reçu qu'il ne montrait pas. La route existait pourtant, et
+     son propre commentaire l'annonçait — « sans cette route, le fichier était
+     mort-né ». Elle l'est restée : rien ne l'appelait. */
+  it("ouvre le reçu déposé, par une adresse demandée au moment du clic", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    /* UNE SEULE ENTRÉE POUR LES DEUX. Le double de serveur retient la première
+       clé dont l'adresse contient le motif, et « /admin/payments/p-1 » contient
+       aussi bien le détail que son reçu : deux entrées distinctes feraient
+       répondre le détail à la demande de pièce. */
+    serveur({
+      "/admin/payments/p-1": (url) => (url.includes("/proof")
+        ? reponse(200, { url: "https://exemple.test/recu.pdf", expireDans: 600 })
+        : reponse(200, { ...DETAIL, recu: true })),
+    });
+    const ouvrirFenetre = vi.fn();
+    vi.stubGlobal("open", ouvrirFenetre);
+
+    await ouvrir(utilisateur);
+    await utilisateur.click(await screen.findByText("awa"));
+    await utilisateur.click(await screen.findByText(t.credits.detail.ouvrirRecu));
+
+    /* L'adresse n'est ni composée ni gardée : elle est signée pour quelques
+       minutes, et la ranger ferait un lien mort au deuxième clic. */
+    expect(ouvrirFenetre).toHaveBeenCalledWith(
+      "https://exemple.test/recu.pdf", "_blank", "noopener,noreferrer",
+    );
+  });
+
+  /* L'ABSENCE SE DIT AUSSI. Un silence laisserait croire qu'on a regardé ; le
+     dire est ce qui fait réclamer la pièce avant de trancher. */
+  it("dit qu'aucun reçu n'a été déposé, plutôt que de se taire", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({ "/admin/payments/p-1": () => reponse(200, { ...DETAIL, recu: false }) });
+    await ouvrir(utilisateur);
+    await utilisateur.click(await screen.findByText("awa"));
+
+    expect(await screen.findByText(t.credits.detail.sansRecu)).toBeInTheDocument();
+    expect(screen.queryByText(t.credits.detail.ouvrirRecu)).not.toBeInTheDocument();
+  });
+
+  /* LES RÉGLAGES S'ÉCRIVENT ENFIN. Paliers, canaux et comptes de collecte
+     étaient servis en lecture seule : l'API savait les modifier depuis le
+     premier jour, l'écran n'offrait rien. Changer un prix se faisait en SQL. */
+  it("modifie un palier, et n'envoie que ce qui a changé", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+    await utilisateur.click(await screen.findByText(t.credits.onglets.reglages));
+
+    await utilisateur.click((await screen.findAllByLabelText(t.table.actions))[0]!);
+    await utilisateur.click(await screen.findByText(t.credits.reglages.formulaire.modifier));
+
+    const montant = screen.getByLabelText(t.credits.reglages.paliers.col.montant);
+    await utilisateur.clear(montant);
+    await utilisateur.type(montant, "1500");
+    await utilisateur.selectOptions(screen.getByLabelText(t.confirmation.motif), t.credits.decision.dialogueConfirmer.motifs[0]!);
+    await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
+
+    const envoi = appels.mock.calls.find(([u, i]) => String(u).includes("/admin/credit-bundles/") && i?.method === "PATCH");
+    expect(envoi).toBeDefined();
+    const corps = JSON.parse(String(envoi?.[1]?.body)) as Record<string, unknown>;
+    /* SEUL LE MONTANT PART. Un PATCH complet réécrirait des champs qu'on n'a
+       pas touchés — et sur un canal, ouvrirait une version d'historique qui ne
+       change rien, datée d'aujourd'hui. */
+    expect(corps["montant"]).toBe(1500);
+    expect(corps["credits"]).toBeUndefined();
+    expect(corps["reason"]).toBe(t.credits.decision.dialogueConfirmer.motifs[0]);
+  });
+
+  /* Le support n'atteint pas les réglages DU TOUT — l'onglet ne lui est pas
+     rendu. « On retire, on ne grise pas » : un onglet visible mais sans geste
+     inviterait à demander la permission, et ferait de l'écran une négociation. */
+  it("ne rend pas l'onglet des réglages au support", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur, "support");
+
+    /* « Paiements » figure aussi dans la navigation : on interroge la barre
+       d'onglets, pas la page entière. */
+    const onglets = await screen.findByRole("tablist");
+    expect(within(onglets).getByText(t.credits.onglets.mouvements)).toBeInTheDocument();
+    expect(within(onglets).queryByText(t.credits.onglets.reglages)).not.toBeInTheDocument();
   });
 
   it("confirmer envoie le montant constaté, la référence et le motif", async () => {

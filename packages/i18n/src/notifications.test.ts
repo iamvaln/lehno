@@ -15,6 +15,9 @@ describe("les phrases de notification", () => {
       "notification.activation_first_note": { envoi: 1 },
       "notification.activation_unused_credits": { envoi: 1 },
       "notification.wish_reserved": { wishLabel: "Un carnet" },
+      "notification.wish_reservation_cancelled": { wishLabel: "Un carnet" },
+      "notification.own_date_reminder": { days: 7, date: "2026-03-14", nature: "happy" },
+      "notification.own_date_day_of": { date: "2026-03-14", nature: "happy" },
     };
     const muettes = CLES_COMPOSEES.filter(
       (cle) => phraseDeNotification(cle, params[cle] ?? {}, locale) === null,
@@ -127,5 +130,105 @@ describe("les phrases de notification", () => {
       }),
     );
     expect(toutes.filter((t) => t.includes("!"))).toEqual([]);
+  });
+
+  /* ─── MA PROPRE DATE ────────────────────────────────────────────────────────
+   *
+   * Ce qu'on a à rappeler sur sa propre date n'est pas d'écrire un mot — on
+   * n'écrit pas un mot à soi-même — c'est de préparer sa liste, puis de LA
+   * PARTAGER : une liste que personne n'a reçue ne sert à rien. */
+  describe("ma propre date", () => {
+    const rappel = (etat: Record<string, unknown>) =>
+      phraseDeNotification(
+        "notification.own_date_reminder",
+        { days: 7, date: "2026-03-14", nature: "happy", ...etat },
+        "fr",
+      );
+
+    it("ne nomme personne", () => {
+      // « Une date pour Valentine approche », lu par Valentine, est le défaut
+      // que tout ce chantier répare. Le nom voyage encore dans les paramètres,
+      // mais aucune phrase à soi ne le pose.
+      const p = rappel({ wishCount: 0, isShared: false, person: "Valentine" });
+      expect(p?.titre).not.toContain("Valentine");
+      expect(p?.corps).not.toContain("Valentine");
+    });
+
+    it("propose de préparer la liste quand il n'y en a pas", () => {
+      expect(rappel({ wishCount: 0, isShared: false })?.corps).toContain("préparer votre liste");
+    });
+
+    it("propose de la partager quand elle est prête", () => {
+      expect(rappel({ wishCount: 3, isShared: false })?.corps).toContain("partagée");
+    });
+
+    /* UNE LISTE PARTAGÉE NE SE RELANCE PAS. Dire « il n'y a plus rien à faire »
+       vaut mieux que de se taire : c'est ce qui distingue un rappel d'une
+       relance, et §4.6 l'écrit — « dire le bénéfice, pas l'ordre ». */
+    it("ne réclame rien quand elle est déjà partagée", () => {
+      const p = rappel({ wishCount: 3, isShared: true });
+      expect(p?.corps).toContain("plus rien à faire");
+      expect(p?.corps).not.toContain("préparer");
+    });
+
+    /* LE CAS QUI COMPTE LE PLUS. Proposer de préparer une liste de cadeaux sur
+       une date qu'on a notée pour une raison grave est la version à soi de
+       l'impardonnable. Aucune des trois phrases ne doit survivre au repli. */
+    it("ne parle jamais de liste sur une date sensible", () => {
+      for (const etat of [
+        { wishCount: 0, isShared: false },
+        { wishCount: 3, isShared: false },
+        { wishCount: 3, isShared: true },
+      ]) {
+        for (const cle of ["notification.own_date_reminder", "notification.own_date_day_of"]) {
+          const p = phraseDeNotification(
+            cle, { days: 7, date: "2026-03-14", nature: "sensitive", ...etat }, "fr",
+          );
+          expect(p?.corps).not.toContain("liste");
+        }
+      }
+    });
+
+    /* Et une nature ABSENTE fade elle aussi, comme partout ailleurs : un
+       paramètre manquant ne doit pas ouvrir la porte au ton chaleureux. */
+    it("fade quand la nature manque", () => {
+      const sans = phraseDeNotification(
+        "notification.own_date_day_of", { date: "2026-03-14", wishCount: 0 }, "fr",
+      );
+      expect(sans?.corps).not.toContain("liste");
+      expect(sans?.titre).toBe("C'est aujourd'hui");
+    });
+  });
+  /* L'ANNULATION D'UNE RÉSERVATION — trois défauts d'un coup, 12 septembre.
+   *
+   * Elle n'était NULLE PART : absente de `NOTIFICATION_TYPES`, donc refusée à
+   * la lecture par le centre ; écrite avec une clé sans son préfixe
+   * `notification.`, donc reconnue par aucun composeur ; et sans texte dans
+   * aucune des deux langues. Elle partait, arrivait, et ne s'affichait jamais.
+   *
+   * Le cas « chaque clé se rend » ci-dessus la couvre désormais. Ceux-ci
+   * gardent ce qu'elle DIT. */
+  describe("une réservation annulée", () => {
+    const phrase = (params: Record<string, unknown>) =>
+      phraseDeNotification("notification.wish_reservation_cancelled", params, "fr");
+
+    /* ELLE NE REPROCHE RIEN. Ce n'est pas un désistement, c'est une place qui
+       se rouvre — et celui qui la lit n'y est pour rien. */
+    it("annonce une place qui se rouvre, pas un désistement", () => {
+      const p = phrase({ wishLabel: "Un carnet" });
+      expect(p?.titre).toBe("Un souhait est de nouveau libre");
+      expect(p?.corps).toBe("Un carnet.");
+    });
+
+    /* LE NOM SEULEMENT S'IL AVAIT ÉTÉ AUTORISÉ : une annulation ne défait pas
+       l'anonymat consenti à la réservation. */
+    it("ne nomme le réservant que s'il l'avait autorisé", () => {
+      expect(phrase({ wishLabel: "Un carnet" })?.corps).not.toContain("Karim");
+      expect(phrase({ wishLabel: "Un carnet", by: "Karim" })?.corps).toContain("Karim");
+    });
+
+    it("se tait plutôt que d'écrire un souhait sans nom", () => {
+      expect(phrase({ by: "Karim" })).toBeNull();
+    });
   });
 });

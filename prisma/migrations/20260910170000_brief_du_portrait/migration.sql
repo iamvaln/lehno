@@ -1,0 +1,31 @@
+-- Une tâche de TEXTE avant l'image : `portrait_brief`.
+--
+-- ─── POURQUOI UN APPEL DE PLUS ──────────────────────────────────────────────
+--
+-- Jusqu'ici, l'appel d'image recevait la consigne d'ambiance PLUS LES NOTES
+-- BRUTES, concaténées. Trois défauts, dont un qui ne se répare pas.
+--
+-- 1. LES NOTES PRIVÉES PARTAIENT TELLES QUELLES chez xAI ou OpenAI. « A perdu
+--    son père en mars », « en instance de divorce » — mot pour mot, à un tiers,
+--    pour fabriquer un dessin. Le brief remplace la note par CE QU'ON EN A
+--    RETENU : ce qui part n'est plus la confidence, c'est le mot qu'elle
+--    inspire.
+--
+-- 2. UN MODÈLE D'IMAGE NE SYNTHÉTISE PAS. Vingt notes lui donnent un dessin
+--    encombré et littéral. Un modèle de texte choisit, pèse, et rend court.
+--
+-- 3. LES INTERDICTIONS N'ÉTAIENT PAS TENABLES. `dislikes_nogo` n'entrait nulle
+--    part dans la composition de l'image : rien n'empêchait de dessiner ce que
+--    la personne déteste. Un modèle de texte, lui, sait qu'on lui interdit un
+--    sujet.
+--
+-- ─── ET C'EST AUSSI CE QUE LE PORTRAIT DIT ──────────────────────────────────
+--
+-- Le brief rend les mots qui comptent. Ce sont eux que `portrait.content`
+-- garde, et eux que le nuage affiche. `ACTIONS_PAYANTES` l'annonçait déjà :
+-- « un portrait est UNE action payante et PLUSIEURS appels — le texte, puis
+-- l'image ». Un crédit, deux appels, et c'est leur écart qui donne la marge.
+-- Le type porte un @@map : il s'appelle `ai_task` en base, `AITask` chez
+-- Prisma. Écrire le nom Prisma ici rend « type does not exist » — et seule la
+-- migration le dit, aucun typage ne le voit.
+ALTER TYPE "ai_task" ADD VALUE 'portrait_brief';

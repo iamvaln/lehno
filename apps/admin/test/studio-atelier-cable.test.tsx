@@ -24,6 +24,22 @@ const REGLAGES = {
       consigne: bilingue("Un papier grené.", "Grained paper."),
     },
   ],
+  /* LES COMPOSITIONS, que le contrat exige depuis qu'une gamme est choisie par
+     le client. Elles manquaient ici, et le brouillon simulé ne passait plus le
+     schéma : `.strict()` refusait la forme entière, et vingt-six cas tombaient
+     sur « La chaîne » introuvable — c'est-à-dire sur l'écran jamais rendu.
+     
+     L'AMBIANCE ET LA COMPOSITION SONT DEUX CHOSES, et le nom les confond : ici
+     `papier` est une ambiance (ce que le modèle dessine) ET une composition (le
+     cadre et la gamme). Le client choisit les deux. */
+  compositions: [
+    {
+      id: "papier", actif: true,
+      libelle: bilingue("Papier", "Paper"), description: null,
+      palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#5A4B93"],
+      cadre: { fond: "#FFFFFF", bande: "#EDEAF7", texte: "#221F2B", mention: "#5A4B93" },
+    },
+  ],
 };
 
 const CONFIG = {
@@ -35,7 +51,7 @@ const CONFIG = {
 
 const PROFIL = {
   id: "22222222-2222-4222-8222-222222222222",
-  libelle: "Une amie proche", sensible: false, creeLe: "2026-08-20T08:00:00.000Z",
+  libelle: "Une amie proche", sensible: false, photoUrl: null, creeLe: "2026-08-20T08:00:00.000Z",
   // Champ pour champ ce que `ContexteMessage` attend : un profil n'est pas une
   // fiche allégée, c'est exactement la matière qu'un gabarit reçoit.
   contenu: {
@@ -56,12 +72,12 @@ const MODELE = {
 const CANDIDATS = {
   modeles: [MODELE], orientations: ["notre_relation"],
   groupesAmbiance: ["illustration_family"], motifs: ["trame_de_hampes", "registres"],
-  champsDuProche: ["prenom"], gabarits: [],
+  champsDuProche: ["prenom"],
 };
 
 const essai = (sur: Record<string, unknown> = {}) => ({
   id: "44444444-4444-4444-8444-444444444444",
-  configId: CONFIG.id, profilId: PROFIL.id, etat: "success",
+  configId: CONFIG.id, nature: "portrait", profilId: PROFIL.id, etat: "success",
   modele: { fournisseur: "anthropic", cle: "anthropic:claude-opus-5" },
   sortie: { cle: "k", url: "https://example.test/p.png" },
   cout: 12, erreur: null, parQui: "sam@lehno.app", quand: "2026-08-30T09:00:00.000Z",
@@ -294,5 +310,120 @@ describe("l'Atelier, sur les données du serveur", () => {
     // Aucun essai ne s'efface : ce qui a coûté un appel se garde.
     const effacements = appels.mock.calls.filter(([, i]) => (i as RequestInit)?.method === "DELETE");
     expect(effacements).toHaveLength(0);
+  });
+  /* ─── La voie photo ─────────────────────────────────────────────────────── */
+
+  /* LE BLOC EST FACULTATIF EN BASE — `REGLAGES` ci-dessus ne le porte pas, comme
+     toute configuration écrite avant lui. L'absence n'est pas symétrique, et
+     c'est ce que l'écran doit dire : les seuils du code s'appliquent DÉJÀ,
+     tandis que la consigne n'existe pas du tout. */
+  it("dit que rien n'est publié, et montre les seuils qui s'appliquent", async () => {
+    serveur();
+    await ouvrir();
+
+    expect(await screen.findByText(d.photo.absent)).toBeInTheDocument();
+    expect(screen.getByLabelText(d.photo.coteMin)).toHaveValue(512);
+    expect(screen.getByLabelText(d.photo.luminositeMin)).toHaveValue(30);
+    expect(screen.getByLabelText(d.photo.nettetteMin)).toHaveValue(12);
+  });
+
+  /* TOUCHER UN SEUIL FAIT NAÎTRE LE BLOC ENTIER, et le schéma exige alors la
+     consigne dans ses deux langues. Sans ce contrôle, on remonte un seuil de
+     vingt pixels, on garde, et le refus tombe sur un champ qu'on n'a pas
+     touché — les trois gestes qui emportent les réglages se ferment donc. */
+  it("ferme les gestes tant que la consigne de la photo manque", async () => {
+    serveur();
+    const utilisateur = await ouvrir();
+    await screen.findByText(d.photo.absent);
+
+    await utilisateur.clear(screen.getByLabelText(d.photo.coteMin));
+    await utilisateur.type(screen.getByLabelText(d.photo.coteMin), "800");
+
+    expect(await screen.findByText(d.photo.consigneExigee)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: d.gestes.essayer })).toBeDisabled();
+    expect(screen.getByRole("button", { name: d.gestes.publier })).toBeDisabled();
+  });
+
+  /* LA CONSIGNE NE S'INVENTE PAS. Le bloc naît des valeurs du CODE pour les
+     seuils — ce sont celles qui s'appliquent déjà —, mais la consigne naît
+     VIDE : lui donner un texte de départ publierait une instruction que
+     personne n'a écrite. */
+  it("part des seuils du code, jamais d'une consigne inventée", async () => {
+    serveur();
+    const utilisateur = await ouvrir();
+    await screen.findByText(d.photo.absent);
+
+    await utilisateur.type(screen.getByLabelText(t.studioTextes.langues.fr), "Inspire-toi du cadrage.");
+
+    // Le bloc existe désormais : les seuils du code l'ont rempli.
+    expect(screen.getByLabelText(d.photo.coteMin)).toHaveValue(512);
+    // Et l'autre langue est restée vide, donc les gestes restent fermés.
+    expect(screen.getByText(d.photo.consigneExigee)).toBeInTheDocument();
+  });
+
+  it("envoie le bloc entier une fois les deux langues écrites", async () => {
+    const appels = serveur();
+    const utilisateur = await ouvrir();
+    await screen.findByText(d.photo.absent);
+
+    await utilisateur.type(screen.getByLabelText(t.studioTextes.langues.fr), "Inspire-toi du cadrage.");
+    await utilisateur.type(screen.getByLabelText(t.studioTextes.langues.en), "Draw on the framing.");
+    await utilisateur.clear(screen.getByLabelText(d.photo.nettetteMin));
+    await utilisateur.type(screen.getByLabelText(d.photo.nettetteMin), "20");
+
+    expect(screen.queryByText(d.photo.consigneExigee)).not.toBeInTheDocument();
+    await utilisateur.click(screen.getByRole("button", { name: d.gestes.essayer }));
+
+    const envoi = appels.mock.calls.find(([u, i]) =>
+      (i as RequestInit)?.method === "POST" && String(u).includes("/portrait-studio/trials"));
+    const corps = JSON.parse((envoi?.[1] as RequestInit).body as string) as
+      { reglages: { photo: { consigne: { fr: string; en: string }; nettetteMin: number; coteMin: number } } };
+    expect(corps.reglages.photo.consigne).toEqual({
+      fr: "Inspire-toi du cadrage.", en: "Draw on the framing.",
+    });
+    expect(corps.reglages.photo.nettetteMin).toBe(20);
+    // Les deux seuils qu'on n'a pas touchés partent tels que le code les pose.
+    expect(corps.reglages.photo.coteMin).toBe(512);
+  });
+  /* ─── La voie éprouvée ────────────────────────────────────────────────────── */
+
+  /* C'EST LA VOIE QUI DIT LE MODÈLE, jamais l'ambiance : les deux voies
+     partagent la même famille depuis #191. Éprouver l'illustration pour publier
+     la photo débloquerait la publication sur un rendu qu'on n'a pas vu — et
+     `photo.consigne` étant dans l'empreinte, c'est précisément ce qui arrivait. */
+  it("envoie la voie choisie avec l'essai", async () => {
+    const appels = serveur();
+    const utilisateur = await ouvrir();
+    await screen.findByText(d.chaine.titre);
+
+    await utilisateur.selectOptions(screen.getByLabelText(d.chaine.voie), "photo");
+    await utilisateur.click(screen.getByRole("button", { name: d.gestes.essayer }));
+
+    const envoi = appels.mock.calls.find(([u, i]) =>
+      (i as RequestInit)?.method === "POST" && String(u).includes("/portrait-studio/trials"));
+    expect(JSON.parse((envoi?.[1] as RequestInit).body as string)).toMatchObject({ voie: "photo" });
+  });
+
+  /* ON LE DIT AVANT DE CLIQUER. Le serveur refuse déjà avant tout appel, mais
+     l'administrateur l'apprendrait après coup — une garde qui arrive au bon
+     moment vaut mieux qu'une garde juste. */
+  it("prévient quand l'éprouvette n'a pas de photo d'exemple", async () => {
+    serveur();
+    const utilisateur = await ouvrir();
+    await screen.findByText(d.chaine.titre);
+
+    await utilisateur.selectOptions(screen.getByLabelText(d.chaine.voie), "photo");
+
+    expect(screen.getByText(d.chaine.sansPhoto)).toBeInTheDocument();
+  });
+
+  /* Et rien ne s'affiche sur l'illustration : l'avertissement ne vaut que pour
+     la voie qui exige une photo. */
+  it("ne prévient pas sur la voie illustration", async () => {
+    serveur();
+    await ouvrir();
+
+    expect(await screen.findByText(d.chaine.titre)).toBeInTheDocument();
+    expect(screen.queryByText(d.chaine.sansPhoto)).toBeNull();
   });
 });

@@ -3,9 +3,9 @@ import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
-  creditBalanceSchema, profileSchema, receivedWishListSchema, wallSchema,
+  creditBalanceSchema, personSchema, profileSchema, receivedWishListSchema, wallSchema,
   wishlistListSchema, wishLinkSchema,
-  type Profile, type Wall, type WishLink,
+  type Person, type Profile, type Wall, type WishLink,
 } from "@lehno/contracts";
 import {
   nativeBorder, nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin,
@@ -46,6 +46,7 @@ export default function Moi() {
   const { actives } = useDrapeaux();
 
   const [profil, setProfil] = useState<Profile | null>(null);
+  const [fiche, setFiche] = useState<Person | null>(null);
   const [solde, setSolde] = useState<number | null>(null);
   const [mur, setMur] = useState<Wall | null>(null);
   const [lien, setLien] = useState<WishLink | null>(null);
@@ -61,6 +62,14 @@ export default function Moi() {
       ]);
       setProfil(profileSchema.parse(brutProfil));
       setSolde(creditBalanceSchema.parse(brutCredits).balance);
+
+      /* LE NOM QUI SIGNE. `profile.displayName` n'est plus lu nulle part
+         ailleurs — voir §2.1 de la conception. `GET /me/self` rend 404 tant
+         que la fiche n'existe pas : un état, pas une panne, isolé dans son
+         propre bloc pour que l'écran s'ouvre quand même sur le pseudo. */
+      try {
+        setFiche(personSchema.parse(await appel<unknown>("/me/self")));
+      } catch { /* Pas de fiche : on garde le pseudo. */ }
 
       /* CHAQUE SURFACE NE SE DEMANDE QUE SI SON DRAPEAU TIENT. Appeler une
          route que le serveur a fermée rendrait un 404 qu'on afficherait comme
@@ -143,10 +152,10 @@ export default function Moi() {
         onPress={() => routeur.push("/(app)/profil")}
         style={styles.identite}
       >
-        <Avatar name={profil.displayName ?? profil.username} size={54} />
+        <Avatar name={fiche?.displayName ?? profil.username} size={54} />
         <View style={styles.qui}>
           <Text style={[styles.nom, { color: couleurs.textBody }]} numberOfLines={1}>
-            {profil.displayName ?? profil.username}
+            {fiche?.displayName ?? profil.username}
           </Text>
           <Text style={[styles.adresse, { color: couleurs.textSecondary }]} numberOfLines={1}>
             {t.pseudoAdresse(profil.username)}
@@ -158,10 +167,10 @@ export default function Moi() {
       {solde !== null ? (
         <Card surface="panel" padding={15} radius="lg">
           <View style={styles.soldeLigne}>
+            {/* UNE SEULE FOIS. `CreditIndicator` PORTE déjà son libellé — il
+                le rend à côté du nombre. Le doubler d'un texte au-dessus
+                donnait « Votre solde / 5 Votre solde », vu à l'écran. */}
             <View style={styles.pleine}>
-              <Text style={[styles.mention, { color: couleurs.textSecondary }]}>
-                {t.moiSolde}
-              </Text>
               <CreditIndicator label={t.moiSolde} balance={solde} variant="solde" />
             </View>
             <Button onPress={() => routeur.push("/(app)/recharge")}>{t.moiRecharger}</Button>
@@ -197,6 +206,10 @@ export default function Moi() {
                     {etatDuMur(mur) === "publie" ? t.moiMurVisible : t.moiMurDesactive}
                   </Text>
                 </Pressable>
+                {/* CHAQUE ÉTAT PORTE SON GESTE. Publié, on partage ; éteint,
+                    on invite à publier. La carte disait « Mur désactivé » et
+                    n'offrait RIEN — un constat sans issue, alors que la
+                    planche attache une action à chacun des deux états. */}
                 {adresseDuMur ? (
                   <Button
                     variant="text"
@@ -205,12 +218,16 @@ export default function Moi() {
                   >
                     {t.moiPartager}
                   </Button>
-                ) : null}
+                ) : (
+                  <Button variant="text" onPress={() => routeur.push("/(app)/monmur")}>
+                    {t.moiPublierMur}
+                  </Button>
+                )}
               </View>
             </Card>
           ) : null}
 
-          {/* LES WISHLISTS : le décompte se lit, l'écran attend §3.29. */}
+          {/* LES WISHLISTS : le décompte se lit, et chaque état porte son geste. */}
           {listes !== null ? (
             <Card surface="panel" padding={13} radius="lg" style={styles.carte}>
               <View style={styles.ligne}>
@@ -228,6 +245,12 @@ export default function Moi() {
                       : listes === 1 ? t.moiListesUne : t.moiListesN(listes)}
                   </Text>
                 </Pressable>
+                {/* Même règle que le Mur au-dessus : « Aucune liste » sans
+                    geste est une impasse. L'écran des listes existe désormais —
+                    le commentaire qui disait « attend §3.29 » est périmé. */}
+                <Button variant="text" onPress={() => routeur.push("/(app)/listes")}>
+                  {listes > 0 ? t.moiPartager : t.moiCreerListe}
+                </Button>
               </View>
             </Card>
           ) : null}

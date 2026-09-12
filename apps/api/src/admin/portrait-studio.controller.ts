@@ -22,6 +22,8 @@ import { AuditService } from "./audit.service.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
 import { StudioEssaiService } from "../studio/essai.service.js";
 import { axesManquants } from "../studio/couverture.js";
+import type { StockagePort } from "../stockage/stockage.port.js";
+import { PhotoSourceService } from "../me/photo-source.service.js";
 
 /* Le Studio du portrait, côté administration.
  *
@@ -50,6 +52,8 @@ export class PortraitStudioService {
     @Inject(AuditService) private readonly journal: AuditService,
     @Inject(StudioConfigurationService) private readonly configs: StudioConfigurationService,
     @Inject(StudioEssaiService) private readonly essais: StudioEssaiService,
+    @Inject("STOCKAGE_PORT") private readonly stockage: StockagePort,
+    @Inject(PhotoSourceService) private readonly photoSources: PhotoSourceService,
   ) {}
 
   /* Les deux écrans du brief de design en un seul appel : ce qui tourne, et ce
@@ -94,7 +98,9 @@ export class PortraitStudioService {
 
   async listerProfils(): Promise<ProfilsStudio> {
     const lignes = await this.prisma.studioProfile.findMany({ orderBy: { createdAt: "asc" } });
-    const items = lignes.map((l) => this.rendreProfil(l));
+    /* En parallèle : chaque rendu signe une URL, et les enchaîner ferait autant
+       d'allers-retours que de profils pour un calcul local. */
+    const items = await Promise.all(lignes.map((l) => this.rendreProfil(l)));
     return {
       items,
       manquant: axesManquants(items.map((p) => ({ sensible: p.sensible, contenu: p.contenu }))),
@@ -132,13 +138,82 @@ export class PortraitStudioService {
    * essais avec le profil rendrait d'un coup impubliables des configurations
    * qu'on avait bel et bien vues tourner — et le lien entre le ménage d'hier
    * et le refus d'aujourd'hui ne se ferait pas. */
+  /* LE DÉPÔT D'UNE PHOTO D'EXEMPLE — deux temps, comme côté utilisateur.
+   *
+   * Le fichier ne traverse pas l'API : l'écran téléverse DIRECTEMENT sur le
+   * stockage par une URL signée, puis dit qu'il a fini. Faire passer deux
+   * mégaoctets par le serveur coûterait sa mémoire à chaque dépôt, et pour
+   * rien.
+   *
+   * Sous le préfixe `essais` : personne n'a payé cette image, et une règle de
+   * cycle de vie doit pouvoir la balayer sans toucher aux portraits achetés. */
+  async deposerPhotoProfil(id: string): Promise<{ url: string; expireDans: number; typeMime: string }> {
+    const existe = await this.prisma.studioProfile.findUnique({ where: { id } });
+    if (!existe) throw new AppError("not_found", "unknown simulation profile");
+
+    const { cle, url, expireDans } = await this.stockage.deposer("essais", "image/jpeg");
+    await this.prisma.studioProfile.update({ where: { id }, data: { photoDepotKey: cle } });
+    return { url, expireDans, typeMime: "image/jpeg" };
+  }
+
+  /* CONFIRMER : on relit l'objet et on le JUGE, avec les seuils de la
+   * production — `photoSources.verdictSur`.
+   *
+   * UNE SEULE BARRE, et c'est le propos : une photo d'exemple que la production
+   * refuserait ferait un essai qui ne représente pas ce qui se passera. Et
+   * l'administrateur découvre ses propres seuils en s'en servant, ce qui vaut
+   * mieux qu'une note d'aide.
+   *
+   * UN REFUS EFFACE TOUT DE SUITE : garder une image qu'on vient de refuser
+   * n'aurait aucun usage. */
+  async confirmerPhotoProfil(id: string): Promise<ProfilStudio> {
+    const existe = await this.prisma.studioProfile.findUnique({ where: { id } });
+    if (!existe) throw new AppError("not_found", "unknown simulation profile");
+    if (existe.photoDepotKey === null)
+      throw new AppError("conflict", "no photo deposit is pending");
+
+    const cle = existe.photoDepotKey;
+    let refus: string | null;
+    try {
+      refus = await this.photoSources.verdictSur(cle);
+    } catch (err: unknown) {
+      await this.prisma.studioProfile.update({ where: { id }, data: { photoDepotKey: null } });
+      await this.stockage.effacer(cle).catch(() => undefined);
+      throw err instanceof AppError ? err : new AppError("validation_failed", "this photo could not be read");
+    }
+
+    if (refus !== null) {
+      await this.prisma.studioProfile.update({ where: { id }, data: { photoDepotKey: null } });
+      await this.stockage.effacer(cle).catch(() => undefined);
+      /* LA RAISON VOYAGE DANS LE DÉTAIL, pas dans le message : l'écran a ses
+         phrases, et les traduire ici les figerait en une langue. */
+      throw new AppError("validation_failed", "this photo cannot be used", { raison: refus });
+    }
+
+    /* L'ANCIENNE S'EN VA. On choisit une photo, puis on en choisit une autre —
+       la garder ferait vivre au stockage un fichier que plus rien ne désigne. */
+    const ancienne = existe.photoKey;
+    const ligne = await this.prisma.studioProfile.update({
+      where: { id }, data: { photoKey: cle, photoDepotKey: null },
+    });
+    if (ancienne !== null) await this.stockage.effacer(ancienne).catch(() => undefined);
+    return this.rendreProfil(ligne);
+  }
+
   async supprimerProfil(id: string): Promise<void> {
     const existe = await this.prisma.studioProfile.findUnique({ where: { id } });
     if (!existe) throw new AppError("not_found", "unknown simulation profile");
     await this.prisma.studioProfile.delete({ where: { id } });
   }
 
-  private rendreProfil(l: { id: string; label: string; isSensitive: boolean; payload: unknown; createdAt: Date }): ProfilStudio {
+  /* LA CLÉ DEVIENT UNE URL AU MOMENT DE RENDRE, jamais avant — la même règle
+     que pour l'image d'un essai. Le lien ne vaut que quelques minutes, et le
+     ranger le ferait mourir avant d'être ouvert. La signature est locale, pas
+     un appel réseau. */
+  private async rendreProfil(l: {
+    id: string; label: string; isSensitive: boolean; payload: unknown;
+    photoKey: string | null; createdAt: Date;
+  }): Promise<ProfilStudio> {
     return {
       id: l.id,
       libelle: l.label,
@@ -146,6 +221,13 @@ export class PortraitStudioService {
       // Relu par le schéma : un profil écrit par une version antérieure doit
       // tomber ici, à la lecture, et non au milieu d'un essai déjà payé.
       contenu: profilContenuSchema.parse(l.payload),
+      /* Une photo absente rend un lien nul, et une photo dont la lecture échoue
+         aussi : l'écran montre alors l'éprouvette sans sa photo plutôt que de
+         se fermer. Une vignette manquante se voit ; un écran en erreur cache
+         tout le reste. */
+      photoUrl: l.photoKey === null
+        ? null
+        : await this.stockage.lire(l.photoKey).catch(() => null),
       creeLe: l.createdAt.toISOString(),
     };
   }
@@ -153,15 +235,17 @@ export class PortraitStudioService {
   // ── Les essais ────────────────────────────────────────────────────────────
 
   async essayer(adminId: string, entree: z.infer<typeof lancementEssaiPortraitSchema>) {
-    return this.essais.essayerPortrait(adminId, entree.reglages, entree.profileId, entree.ambianceId);
+    return this.essais.essayerPortrait(
+      adminId, entree.reglages, entree.profileId, entree.ambianceId, entree.voie ?? "illustration",
+    );
   }
 
   async listerEssais(configId?: string): Promise<{ items: EssaiStudio[] }> {
     return { items: await this.essais.lister(configId) };
   }
 
-  async juger(id: string, verdict: VerdictEssai): Promise<EssaiStudio> {
-    return this.essais.juger(id, verdict);
+  async juger(id: string, verdict: VerdictEssai, reference = false): Promise<EssaiStudio> {
+    return this.essais.juger(id, verdict, reference);
   }
 
   // ── Les valeurs candidates ────────────────────────────────────────────────
@@ -174,14 +258,9 @@ export class PortraitStudioService {
    * état normal à afficher — les prix changent sans nous prévenir, et zéro se
    * prendrait pour un fait. */
   async candidats(): Promise<CandidatsStudio> {
-    const [modeles, gabarits] = await Promise.all([
-      this.prisma.aIModel.findMany({ orderBy: [{ provider: "asc" }, { modelKey: "asc" }] }),
-      this.prisma.promptTemplate.findMany({
-        where: { isActive: true },
-        orderBy: [{ kind: "asc" }, { key: "asc" }],
-        select: { id: true, kind: true, key: true, version: true },
-      }),
-    ]);
+    const modeles = await this.prisma.aIModel.findMany({
+      orderBy: [{ provider: "asc" }, { modelKey: "asc" }],
+    });
 
     return {
       modeles: modeles.map((m) => ({
@@ -201,7 +280,6 @@ export class PortraitStudioService {
       groupesAmbiance: [...GROUPES_AMBIANCE],
       motifs: [...MOTIFS_IDENTITAIRES],
       champsDuProche: [...CHAMPS_DU_PROCHE],
-      gabarits: gabarits.map((g) => ({ id: g.id, genre: g.kind, cle: g.key, version: g.version })),
     };
   }
 }
@@ -275,6 +353,24 @@ export class PortraitStudioController {
     return this.service.modifierProfil(id, corps);
   }
 
+  /* DEUX TEMPS, comme côté utilisateur : une URL pour déposer, puis la
+     confirmation qui relit et juge. Le fichier ne traverse pas l'API. */
+  @Post("profiles/:id/photo/depot")
+  @Role("admin")
+  @HttpCode(200)
+  deposerPhotoProfil(@Param("id", ParseUUIDPipe) id: string) {
+    return this.service.deposerPhotoProfil(id);
+  }
+
+  /* 200 et non 204 : on rend le profil, dont l'URL de la photo — l'écran
+     l'affiche aussitôt, sans relire la liste entière. */
+  @Post("profiles/:id/photo")
+  @Role("admin")
+  @HttpCode(200)
+  confirmerPhotoProfil(@Param("id", ParseUUIDPipe) id: string): Promise<ProfilStudio> {
+    return this.service.confirmerPhotoProfil(id);
+  }
+
   @Delete("profiles/:id")
   @HttpCode(204)
   supprimerProfil(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
@@ -319,7 +415,7 @@ export class PortraitStudioController {
     @Param("id", ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(verdictEssaiSchema)) corps: z.infer<typeof verdictEssaiSchema>,
   ) {
-    return this.service.juger(id, corps.verdict);
+    return this.service.juger(id, corps.verdict, corps.reference ?? false);
   }
 
   @Get("candidates")

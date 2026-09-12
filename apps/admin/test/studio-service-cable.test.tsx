@@ -26,9 +26,29 @@ const REGLAGES = {
       consigne: bilingue("Un papier grené.", "Grained paper."),
     },
     {
-      id: "lilas", groupe: "photo_style", actif: true,
+      /* LES DEUX VOIES PARTAGENT LEUR FAMILLE depuis le 11 septembre : il n'y a
+         plus de groupe `photo_style`, et il n'a jamais eu d'ambiance. */
+      id: "lilas", groupe: "illustration_family", actif: true,
       libelle: bilingue("Lilas", "Lilac"), description: null,
       consigne: bilingue("Une lumière lilas.", "Lilac light."),
+    },
+  ],
+  /* Troisième maquette à porter le manque, et dernière : `compositions` est
+     arrivé aux réglages du portrait sans que les serveurs simulés de l'admin le
+     suivent. `.strict()` refusait alors la configuration entière, et l'écran ne
+     rendait rien. */
+  compositions: [
+    {
+      id: "papier", actif: true,
+      libelle: bilingue("Papier", "Paper"), description: null,
+      palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#5A4B93"],
+      cadre: { fond: "#FFFFFF", bande: "#EDEAF7", texte: "#221F2B", mention: "#5A4B93" },
+    },
+    {
+      id: "encre", actif: true,
+      libelle: bilingue("Encre", "Ink"), description: null,
+      palette: ["#EDEAF7", "#7B6BB7", "#F0CFB4", "#FFFFFF"],
+      cadre: { fond: "#221F2B", bande: "#17161F", texte: "#F2F0F7", mention: "#EDEAF7" },
     },
   ],
 };
@@ -57,8 +77,29 @@ const reponse = (statut: number, corps?: unknown): Response =>
     headers: corps === undefined ? {} : { "content-type": "application/json" },
   });
 
+const axe = (pour: number, contre: number, sans: number) => ({ pour, contre, sans });
+
+/* La version en service a produit ; la rangée non — c'est le cas ordinaire
+   d'une version publiée puis remplacée le lendemain. */
+const PERFORMANCE = {
+  unite: "portrait",
+  versions: [{
+    configId: "11111111-1111-4111-8111-111111111111",
+    version: 3,
+    publieeLe: "2026-09-02T11:00:00.000Z",
+    produites: 9,
+    gestes: axe(6, 1, 2),
+    avis: axe(2, 1, 6),
+  }],
+  horsVersion: { produites: 14, gestes: axe(9, 3, 2), avis: axe(0, 0, 14) },
+};
+
 function serveur(sur: Record<string, (u: string, i?: RequestInit) => Response> = {}) {
   const table: Record<string, (u: string, i?: RequestInit) => Response> = {
+    /* LA MESURE EST SERVIE PAR DÉFAUT : l'écran la lit à chaque ouverture, et
+       un cas qui déclare ses propres routes pour éprouver autre chose n'a pas à
+       y penser. Sans elle, l'analyse échoue et l'écran ne rend plus. */
+    "/admin/studio/portrait/performance": () => reponse(200, PERFORMANCE),
     "/admin/portrait-studio/config/history": () => reponse(200, { items: [config(), RANGEE] }),
     "/admin/portrait-studio/config/rollback": () => reponse(200, config()),
     "/admin/portrait-studio/config": () => reponse(200, { enService: config(), brouillon: null }),
@@ -187,5 +228,41 @@ describe("les réglages en service, sur les données du serveur", () => {
     render(<App />);
     await waitFor(() => expect(screen.getByRole("navigation")).toBeInTheDocument());
     expect(screen.queryByText(t.sections.studioService)).toBeNull();
+  });
+  /* ─── Ce que chaque version a produit ─────────────────────────────────────── */
+
+  /* MÊME LECTURE QUE DANS L'ATELIER DES TEXTES, et le même service derrière :
+     ce qui change d'une nature à l'autre est la table qu'on compte, pas le
+     raisonnement. La route était servie et aucun écran ne l'atteignait. */
+  it("montre les deux axes d'une version publiée", async () => {
+    const appels = serveur();
+    await ouvrir();
+
+    /* ON PEUT GARDER UN PORTRAIT SANS LE TROUVER RÉUSSI : six gardés d'un côté,
+       un seul jugé bon de l'autre. Un chiffre unique aurait confondu les deux. */
+    expect(await screen.findByText(/6 gardés/)).toBeInTheDocument();
+    expect(screen.getByText(/1 mauvais/)).toBeInTheDocument();
+    // « Sans » figure toujours : six des neuf n'ont rien dit.
+    expect(screen.getByText(/6 sans avis/)).toBeInTheDocument();
+    expect(appels.mock.calls.some(([u]) => String(u).includes("/studio/portrait/performance"))).toBe(true);
+  });
+
+  /* Une version qui n'a rien produit le dit, plutôt que d'afficher des zéros —
+     une publication remplacée le lendemain est un fait, pas un trou. */
+  it("dit qu'une version n'a rien produit", async () => {
+    serveur();
+    await ouvrir();
+
+    expect(await screen.findAllByText(t.studioService.rien)).not.toHaveLength(0);
+  });
+
+  /* CE QUI N'A PAS DE VERSION SE DIT, jamais ne se tait : un total qui ne tombe
+     pas juste fait douter du compte, pas des données. */
+  it("compte à part ce qui n'appartient à aucune version", async () => {
+    serveur();
+    await ouvrir();
+
+    expect(await screen.findByText(/Avant le lien : 14 portraits, dont 3 rejetés/))
+      .toBeInTheDocument();
   });
 });

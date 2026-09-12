@@ -131,7 +131,11 @@ Le domaine sert les fichiers d'association ; l'application déclare les chemins 
 
 - La **notation du décompte** — `J−3` / `3 days`, à éprouver par un test utilisateur. **Ne pas la figer dans un composant.**
 - Les **schémas détaillés** de requête et de réponse, ressource par ressource.
-- Les **noms des trois styles de photo** du portrait.
+- ~~Les **noms des trois styles de photo** du portrait.~~ **Sans objet depuis le
+  11 septembre 2026** : la voie photo ouvre la même famille d'ambiances que
+  l'illustration — nature, animal, abstrait. Il n'y a jamais eu de styles à
+  nommer, et le groupe vide qui les attendait rendait la voie invisible. Voir
+  `spec-portrait-lehno.md` §2.4.
 
 **Un code nouveau : `generation_unavailable`, en `503`.** Aucun modèle d'IA ne peut répondre — la chaîne de la tâche est vide, ou tous ses rangs ont échoué. **503 et non 500** : l'API va bien, c'est un fournisseur tiers qui ne répond pas, et la demande vaudra encore dans cinq minutes.
 

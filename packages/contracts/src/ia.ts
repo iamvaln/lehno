@@ -21,6 +21,9 @@ export const TACHES_IA = [
   "sensitive_detection",
   "message",
   "gift_ideas",
+  /* Le texte qui PRÉCÈDE l'image : il lit les notes et rend les mots qui
+     comptent. Ce sont eux qui partent au modèle d'image, jamais les notes. */
+  "portrait_brief",
   "illustration",
   "photo_style",
 ] as const;
@@ -35,6 +38,7 @@ export const CAPACITE_REQUISE: Record<TacheIA, CapaciteIA> = {
   sensitive_detection: "text",
   message: "text",
   gift_ideas: "text",
+  portrait_brief: "text",
   illustration: "image",
   photo_style: "image",
 };
@@ -65,6 +69,21 @@ export const MODELES_IA: Record<string, EntreeModele> = {
   "deepseek:deepseek-reasoner": { fournisseur: "deepseek", modele: "deepseek-reasoner", capacite: "text" },
   "xai:grok-4.6": { fournisseur: "xai", modele: "grok-4.6", capacite: "text" },
   "xai:grok-imagine-image": { fournisseur: "xai", modele: "grok-imagine-image", capacite: "image" },
+  /* `gpt-image-2` en tête des chaînes d'image, et voici ce qui l'y met — trois
+     apports qui touchent exactement ce que le portrait demande :
+     - LE RENDU DU TEXTE : texte dense, petits caractères, jeux de caractères
+       multilingues, mises en page complexes. Le portrait porte une bande de
+       texte par-dessus le motif, et c'est le point faible historique des
+       modèles d'image — celui qui obligeait à envisager de composer le texte
+       nous-mêmes.
+     - LE SUIVI D'INSTRUCTION : le modèle est nativement multimodal, l'image
+       n'est pas un système à part. Nos ambiances sont des consignes en
+       français, pas des mots-clés.
+     - LA COHÉRENCE DES VISAGES entre variantes, qui décidera de la voie
+       « photo » quand elle viendra.
+     `gpt-image-1` RESTE au catalogue : une configuration publiée peut le
+     désigner, et le retirer casserait ce qui tourne. */
+  "openai:gpt-image-2": { fournisseur: "openai", modele: "gpt-image-2", capacite: "image" },
   "openai:gpt-image-1": { fournisseur: "openai", modele: "gpt-image-1", capacite: "image" },
 };
 
@@ -88,8 +107,17 @@ export const CLES_MODELES = Object.keys(MODELES_IA);
  * des notes — la tâche au plus gros volume — précisément pour ça : il n'y est
  * appelé que si les deux autres sont tombés.
  *
- * Les deux chaînes d'image n'ont que deux rangs. Ce n'est pas un oubli : parmi
- * les fournisseurs retenus, seuls xAI et OpenAI produisent des images. */
+ * Les chaînes d'image n'ont que deux fournisseurs. Ce n'est pas un oubli :
+ * parmi ceux retenus, seuls xAI et OpenAI produisent des images. Elles ont trois
+ * rangs quand même, les deux modèles d'OpenAI encadrant celui de xAI.
+ *
+ * `gpt-image-2` PASSE DEVANT, et pas par nouveauté : c'est le rendu de texte qui
+ * décide. Le portrait porte une bande de texte, et un modèle qui écrit mal
+ * oblige à composer ce texte soi-même — un tout autre travail.
+ *
+ * Un écart de POIDS mesuré sur la version 1, à revérifier sur la 2 : xAI rend
+ * ~130 Ko de base64, OpenAI ~1,8 Mo. Treize fois plus, et cette chaîne traverse
+ * la mémoire du serveur en entier. */
 export const CHAINES_PAR_DEFAUT: Record<TacheIA, readonly string[]> = {
   note_classification: [
     "anthropic:claude-haiku-4-5-20251001",
@@ -111,8 +139,17 @@ export const CHAINES_PAR_DEFAUT: Record<TacheIA, readonly string[]> = {
     "deepseek:deepseek-chat",
     "xai:grok-4.6",
   ],
-  illustration: ["xai:grok-imagine-image", "openai:gpt-image-1"],
-  photo_style: ["xai:grok-imagine-image", "openai:gpt-image-1"],
+  /* Le brief prend le MEILLEUR modèle de texte, pas le moins cher. Il décide de
+     ce qu'un dessin montrera d'une personne, à partir de ce qu'on a écrit sur
+     elle en confidence — et une erreur ici se voit sur l'image, après paiement.
+     Même arbitrage que le message, pour la même raison. */
+  portrait_brief: [
+    "anthropic:claude-opus-5",
+    "anthropic:claude-sonnet-5",
+    "deepseek:deepseek-reasoner",
+  ],
+  illustration: ["openai:gpt-image-2", "xai:grok-imagine-image", "openai:gpt-image-1"],
+  photo_style: ["openai:gpt-image-2", "xai:grok-imagine-image", "openai:gpt-image-1"],
 };
 
 /* Le disjoncteur. Trois échecs D'AFFILÉE écartent un modèle pour cinq minutes.

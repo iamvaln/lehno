@@ -32,7 +32,17 @@ export interface PaidActionSheetProps {
   cout: number;
   solde?: number | undefined;
   onConfirmer?: (() => void) | undefined;
-  onRecharger?: (() => void) | undefined;
+  /* LA RECHARGE EST OBLIGATOIRE, pour la même raison que le coût.
+     
+     Elle n'est pas une action secondaire : SOLDE INSUFFISANT, elle DEVIENT
+     l'action principale de la feuille, et la seule qui avance. Optionnelle,
+     un appelant qui l'oubliait laissait « Recharger » sans destination — on
+     lisait « il ne vous en reste pas assez », on appuyait sur le seul geste
+     offert, et rien ne se passait. Deux écrans sur cinq l'oubliaient.
+     
+     Le rendre obligatoire fait porter la garde au compilateur : on ne peut
+     plus ouvrir cette feuille sans dire où l'on recharge. */
+  onRecharger: () => void;
   onAnnuler?: (() => void) | undefined;
   insetBas?: number | undefined;
 }

@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Inject, Injectable, Patch, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
 import { motifSchema } from "@lehno/contracts";
+import type { MesuresDesModeles } from "@lehno/contracts";
 import {
   CAPACITE_REQUISE, RANGS_RECOMMANDES, TACHES_IA, type TacheIA,
 } from "@lehno/contracts";
@@ -10,6 +11,7 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AdminGuard } from "./admin.guard.js";
 import { Role, RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
+import { MesuresStudioService } from "../studio/mesures.service.js";
 
 const modeleSchema = z.object({
   id: z.string().uuid(),
@@ -274,13 +276,30 @@ export class AIModelsService {
 @Controller("admin/ai-models")
 @UseGuards(AdminGuard, RoleGuard)
 export class AIModelsController {
-  constructor(@Inject(AIModelsService) private readonly service: AIModelsService) {}
+  constructor(
+    @Inject(AIModelsService) private readonly service: AIModelsService,
+    @Inject(MesuresStudioService) private readonly mesures$: MesuresStudioService,
+  ) {}
 
   // Le support consulte : comprendre quel modèle a produit un contenu raté fait
   // partie de l'assistance quotidienne.
   @Get()
   lister() {
     return this.service.listerModeles();
+  }
+
+  /* CE QUE LES PRODUCTIONS DE CE MODÈLE ONT VALU, toutes natures confondues.
+   *
+   * Un tarif sans taux de rejet ne dit que la moitié : le modèle le moins cher
+   * peut coûter le plus, en productions refaites. La question se pose ICI, au
+   * registre, et non par nature — le tarif y est le même partout.
+   *
+   * Route à part de `GET /admin/ai-models` : le registre se lit à chaque
+   * ouverture d'écran, et ces comptes traversent trois tables. Les fondre
+   * ferait payer l'agrégat à qui vient seulement basculer un interrupteur. */
+  @Get("metrics")
+  mesures(): Promise<MesuresDesModeles> {
+    return this.mesures$.mesurerLesModeles();
   }
 
   // « Piloter les modèles d'IA » appartient à l'admin (ux-admin §6).

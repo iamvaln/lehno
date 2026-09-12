@@ -10,7 +10,7 @@ function echeance(date: string, kind: Occurrence["kind"] = "birthday", n = date)
     id: `1111${n.replace(/\D/g, "").slice(0, 4)}-1111-4111-8111-111111111111`,
     eventId: "22222222-2222-4222-8222-222222222222",
     personId: "33333333-3333-4333-8333-333333333333",
-    personDisplayName: "Proche", kind, nature: "happy", label: kind === "other" ? "Soutenance" : null,
+    personDisplayName: "Proche", isSelf: false, kind, nature: "happy", label: kind === "other" ? "Soutenance" : null,
     occurrenceDate: date, occurrenceYear: Number(date.slice(0, 4)),
     status: "upcoming", daysUntil: 0, age: null,
   };

@@ -81,6 +81,55 @@ describe("les souhaits notés sur la fiche d'un proche", () => {
     expect((await souhaits.listForOccurrence(awa, o)).map((x) => x.id)).toEqual([s.id]);
   });
 
+  /* LA PROVENANCE EN CLAIR, remontée depuis ce qui a produit le souhait.
+   *
+   * `origin` dit la CATÉGORIE, ces deux champs disent le fait. « Collecté » ne
+   * rappelle ni qui l'a dit ni quand : trois mois plus tard, on regarde une
+   * ligne sans savoir si elle vient de sa sœur en janvier ou d'un collègue la
+   * semaine dernière — et c'est ce qui décide si on l'offre.
+   *
+   * La chaîne existait déjà en base ; rien ne la servait. */
+  it("rend le mot et la date de la contribution qui l'a produit", async () => {
+    const o = await occasion(awa);
+    const souhait = await souhaits.createForOccurrence(awa, o, { label: "Un carnet" });
+
+    const lien = await db.prisma.collectionLink.create({
+      data: { userId: awa, type: "public", token: randomBytes(8).toString("hex") },
+    });
+    const contribution = await db.prisma.submission.create({
+      data: {
+        userId: awa, collectionLinkId: lien.id,
+        submitterName: "Rose", personalNote: "Elle en parle depuis Noël",
+        createdAt: new Date("2026-01-04T09:00:00.000Z"),
+      },
+    });
+    await db.prisma.submittedWish.create({
+      data: { submissionId: contribution.id, label: "Un carnet", wishlistItemId: souhait.id },
+    });
+    await db.prisma.wishlistItem.update({
+      where: { id: souhait.id }, data: { origin: "collected" },
+    });
+
+    const [relu] = await souhaits.listForOccurrence(awa, o);
+    expect(relu!.origin).toBe("collected");
+    expect(relu!.originNote).toBe("Elle en parle depuis Noël");
+    // LA DATE DU GESTE D'ORIGINE, pas celle de la ligne : la contribution est
+    // de janvier, le souhait a été écrit à l'instant.
+    expect(relu!.originAt).toBe("2026-01-04T09:00:00.000Z");
+  });
+
+  /* Nuls sur un souhait noté de sa propre main : il n'y a rien à rapporter, on
+     était là. C'est le cas ordinaire, et il ne doit pas obliger le service à
+     inventer une provenance pour remplir le champ. */
+  it("ne rapporte aucune provenance sur ce qu'on a noté soi-même", async () => {
+    const o = await occasion(awa);
+    await souhaits.createForOccurrence(awa, o, { label: "Un livre" });
+
+    const [relu] = await souhaits.listForOccurrence(awa, o);
+    expect(relu!.originNote).toBeNull();
+    expect(relu!.originAt).toBeNull();
+  });
+
   /* La PROVENANCE est posée par le serveur, jamais lue du corps. Sans cette
      garde, un ajout personnel pourrait se déclarer `collected` et se faire
      passer pour une confidence du proche lui-même — l'écran affiche cette

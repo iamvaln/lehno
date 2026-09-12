@@ -1,11 +1,12 @@
 import { Controller, Get, Inject, Injectable, Req, UseGuards } from "@nestjs/common";
-import { catalogueServi, type StudioOptions } from "@lehno/contracts";
+import { catalogueServi, clesDApercu, type StudioOptions } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { Feature } from "../flags/feature.decorator.js";
 import { FeatureGuard } from "../flags/feature.guard.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
+import type { StockagePort } from "../stockage/stockage.port.js";
 
 /* Ce que le studio propose à l'utilisateur — spec technique §5.4.
  *
@@ -18,13 +19,44 @@ import { StudioConfigurationService } from "../studio/configuration.service.js";
 
 const ACTION_PORTRAIT = "portrait";
 
+/* Une heure pour une vignette, là où un portrait a dix minutes.
+ *
+ * Ce n'est pas la même chose qu'on protège. Un portrait est le contenu de
+ * QUELQU'UN, et un lien recopié ne doit pas lui survivre longtemps. Une vignette
+ * de catalogue est la même pour tout le monde et ne dit rien de personne : la
+ * faire expirer vite obligerait seulement à rouvrir l'écran pour que les images
+ * réapparaissent. */
+const DUREE_APERCU = 3600;
+
 @Injectable()
 export class StudioOptionsService {
   // @Inject explicite : esbuild/vitest n'émet pas design:paramtypes.
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(StudioConfigurationService) private readonly configs: StudioConfigurationService,
+    @Inject("STOCKAGE_PORT") private readonly stockage: StockagePort,
   ) {}
+
+  /* LES VIGNETTES, SIGNÉES AVANT DE COMPOSER LE CATALOGUE.
+   *
+   * `catalogueServi` est pure et synchrone — c'est ce qui la rend éprouvable
+   * sans base. Signer ne l'est pas. On résout donc les clés ici et on lui passe
+   * la table.
+   *
+   * UNE SIGNATURE QUI ÉCHOUE NE FERME PAS L'ÉCRAN. La clé manque alors de la
+   * table, la vignette sort nulle, et la grille retombe sur la description —
+   * ce que le contrat prévoit déjà pour un catalogue sans référence. Laisser
+   * remonter l'erreur ferait dépendre l'ouverture du studio de la santé du
+   * stockage, pour des images qui ne sont qu'un confort de choix. */
+  private async apercus(reglages: Parameters<typeof clesDApercu>[0]) {
+    const table = new Map<string, string>();
+    await Promise.all(clesDApercu(reglages).map(async (cle) => {
+      try {
+        table.set(cle, await this.stockage.lire(cle, DUREE_APERCU));
+      } catch { /* Vignette absente plutôt qu'écran fermé — voir ci-dessus. */ }
+    }));
+    return table;
+  }
 
   async options(userId: string): Promise<StudioOptions> {
     /* LES DEUX configurations : le catalogue de l'application les réunit — les
@@ -61,12 +93,12 @@ export class StudioOptionsService {
        souvent — on écrit en anglais à quelqu'un depuis une application réglée
        en français. */
     const langue = compte?.uiLanguage === "en" ? "en" : "fr";
+    const reglagesPortrait = this.configs.reglagesPortraitDe(portrait);
 
     return {
       catalogue: catalogueServi(
-        this.configs.reglagesMessageDe(message),
-        this.configs.reglagesPortraitDe(portrait),
-        langue,
+        this.configs.reglagesMessageDe(message), reglagesPortrait, langue,
+        await this.apercus(reglagesPortrait),
       ),
       /* LE PRIX VIENT DE LA BASE. Il se règle en administration sans
          livraison ; une constante ici afficherait l'ancien tarif sur tout un

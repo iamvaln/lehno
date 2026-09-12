@@ -15,8 +15,22 @@ import { z } from "zod";
    d'entrées qu'aucun chemin ne sait rendre. Un type absent d'ici n'échoue pas
    à l'écriture, il échoue à la LECTURE, longtemps après, chez le client. */
 export const NOTIFICATION_TYPES = [
-  "event_reminder", "event_day_of", "digest", "contribution_received",
-  "wish_received", "enrichment_nudge_global", "enrichment_nudge_person",
+  "event_reminder", "event_day_of",
+  /* MA PROPRE DATE, séparée de celle d'un proche depuis le 12 septembre.
+     Deux types plutôt qu'un drapeau sur les deux précédents, parce que les
+     préférences se règlent PAR TYPE : ne pas vouloir qu'on vous rappelle votre
+     propre anniversaire ne dit rien de celui de votre mère. Un drapeau n'aurait
+     donné aucun interrupteur pour les séparer. */
+  "own_date_reminder", "own_date_day_of",
+  "digest", "contribution_received",
+  "wish_received",
+  /* LA VIE DE MA LISTE PARTAGÉE. Elles manquaient — et le commentaire au-dessus
+     annonçait exactement cette panne : `shared-wishlist.service.ts` les écrit
+     en base depuis le premier jour, et le centre de notifications les REFUSAIT
+     à la lecture. Un type absent d'ici n'échoue pas à l'écriture, il échoue
+     chez le client, longtemps après. */
+  "wish_reserved", "wish_reservation_cancelled",
+  "enrichment_nudge_global", "enrichment_nudge_person",
   "activation_first_person", "activation_first_note", "activation_unused_credits",
   "activation_collect_link", "activation_invite",
   "generation_ready", "payment_succeeded", "payment_failed", "credits_received",

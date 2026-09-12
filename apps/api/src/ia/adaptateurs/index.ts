@@ -48,7 +48,12 @@ export function construireAdaptateurs(env: NodeJS.ProcessEnv = process.env): Rec
 
   if (env["OPENAI_API_KEY"])
     /* OpenAI REFUSE response_format sur gpt-image-1 — 400, « Unknown
-       parameter ». Il rend déjà du base64 sans qu'on le demande. */
+       parameter ». Il rend déjà du base64 sans qu'on le demande.
+       CONSTATÉ SUR LA VERSION 1, SUPPOSÉ SUR LA 2. Le drapeau vaut pour le
+       fournisseur, pas pour un modèle : si `gpt-image-2` se mettait à exiger le
+       champ, il faudrait le porter par modèle et non par table. Ça se tranche
+       en appelant, pas en lisant une documentation — et le premier essai réel
+       le dira, avec un 400 explicite plutôt qu'un silence. */
     table["openai"] = new ImageAdaptateur(
       env["OPENAI_API_KEY"], "https://api.openai.com/v1", "openai", false,
     );

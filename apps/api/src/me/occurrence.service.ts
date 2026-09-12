@@ -16,7 +16,12 @@ type LigneJointe = {
   event: {
     kind: string; eventNature: string; label: string | null;
     referenceDate: Date;
-    person: { id: string; displayName: string; birthDate: Date | null; birthYearKnown: boolean };
+    person: {
+      id: string; displayName: string; birthDate: Date | null; birthYearKnown: boolean;
+      // §13.2 : l'échéance dit de qui elle est. Il faut le déclarer ici aussi —
+      // ce type restreint volontairement ce que `rendre` a le droit de lire.
+      isSelf: boolean;
+    };
   };
 };
 
@@ -107,6 +112,10 @@ export class OccurrenceService {
       eventId: l.eventId,
       personId: l.event.person.id,
       personDisplayName: l.event.person.displayName,
+      /* §13.2 : l'échéance DIT de qui elle est, au lieu de laisser chaque écran
+         le redéduire en relisant le carnet. La personne est déjà jointe — ça ne
+         coûte rien, et ça évite un appel par écran. */
+      isSelf: l.event.person.isSelf,
       kind: l.event.kind as Occurrence["kind"],
       nature: l.event.eventNature as Occurrence["nature"],
       label: l.event.label,

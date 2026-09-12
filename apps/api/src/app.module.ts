@@ -5,6 +5,12 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { CorrelationMiddleware } from "./common/correlation.middleware.js";
 import { RateLimitService } from "./common/rate-limit.service.js";
 import { PrismaService } from "./prisma/prisma.service.js";
+import { ClientApiService } from "./clients/client-api.service.js";
+import { VersionsService } from "./clients/versions.service.js";
+import { VersionGuard } from "./clients/version.guard.js";
+import { ClientGuard } from "./clients/client.guard.js";
+import { ClientsApiController } from "./admin/clients-api.controller.js";
+import { VersionsController } from "./admin/versions.controller.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthGuard } from "./auth/auth.guard.js";
 import { SignupService } from "./onboarding/signup.service.js";
@@ -16,6 +22,12 @@ import { AttributsService } from "./me/attributs.service.js";
 import { GenerationService } from "./me/generation.service.js";
 import { GenerationController, MessagesController } from "./me/generation.controller.js";
 import { RechargeService } from "./payments/recharge.service.js";
+import { RecuService } from "./payments/recu.service.js";
+import { IdeeService } from "./me/idee.service.js";
+import { PortraitService } from "./me/portrait.service.js";
+import { PhotoSourceService } from "./me/photo-source.service.js";
+import { PortraitController } from "./me/portrait.controller.js";
+import { IdeeController } from "./me/idee.controller.js";
 import { MethodesService } from "./payments/methodes.service.js";
 import { MethodesController } from "./payments/methodes.controller.js";
 import {
@@ -34,9 +46,10 @@ import { TokenService } from "./auth/token.service.js";
 import { AppleIdentityVerifier, GoogleIdentityVerifier } from "./auth/providers.js";
 import { ConsoleMailAdapter } from "./mail/console.adapter.js";
 import { ResendAdapter } from "./mail/resend.adapter.js";
-import { ProfileController } from "./me/profile.controller.js";
+import { ProfileController, MediaController } from "./me/profile.controller.js";
 import { ProfileService } from "./me/profile.service.js";
-import { PersonController } from "./me/person.controller.js";
+import { AvatarService } from "./me/avatar.service.js";
+import { PersonController, SelfPersonController } from "./me/person.controller.js";
 import { PersonService } from "./me/person.service.js";
 import { EventController } from "./me/event.controller.js";
 import { EventService } from "./me/event.service.js";
@@ -103,11 +116,14 @@ import { DashboardController, DashboardService } from "./admin/dashboard.control
 import { AdminMaintenanceController, AdminMaintenanceService } from "./admin/maintenance.controller.js";
 import { MetriquesController, MetriquesService } from "./admin/metriques.controller.js";
 import { PaymentStatsController, PaymentStatsService } from "./admin/payment-stats.controller.js";
-import { StudioController, StudioService } from "./admin/studio.controller.js";
 import { PortraitStudioController, PortraitStudioService } from "./admin/portrait-studio.controller.js";
+import { TexteStudioController, TexteStudioService } from "./admin/texte-studio.controller.js";
+import { StudioPerformanceController } from "./admin/studio-performance.controller.js";
+import { StudioPerformanceService } from "./admin/studio-performance.service.js";
 import { StudioOptionsController, StudioOptionsService } from "./me/studio.controller.js";
 import { StudioConfigurationService } from "./studio/configuration.service.js";
 import { StudioEssaiService } from "./studio/essai.service.js";
+import { MesuresStudioService } from "./studio/mesures.service.js";
 import { AmorceStudioService } from "./studio/amorce.service.js";
 import { MaintenanceService } from "./maintenance/maintenance.service.js";
 import { MaintenanceGuard } from "./maintenance/maintenance.guard.js";
@@ -147,7 +163,9 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
      concurrents inoffensifs. */
   imports: [ScheduleModule.forRoot()],
   controllers: [
-    AuthController, ProfileController, PersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, NotificationController, ConfigController, LegalController,
+    ClientsApiController,
+    VersionsController,
+    AuthController, ProfileController, MediaController, PersonController, SelfPersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, NotificationController, ConfigController, LegalController,
     SecurityController,
     AccountController, DeviceController, DataExportController, SupportController,
     OccurrenceWishesController, WishController,
@@ -158,10 +176,25 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     WaitlistController, ContactController,
     WallController, WishLinkController, CollectionLinksController, SubmissionsController, ReceivedWishesController,
     PublicWallController, PublicCollectController, PublicWishesController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, ReasonsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, MethodesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, PaymentStatsController, AdminMaintenanceController, StudioController, PortraitStudioController, StudioOptionsController, MeController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, ReasonsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, MethodesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, IdeeController, PortraitController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, PaymentStatsController, AdminMaintenanceController, PortraitStudioController, TexteStudioController, StudioPerformanceController, StudioOptionsController, MeController,
   ],
   providers: [
     PrismaService,
+    /* Résout le client de chaque requête. Injecté par `CorrelationMiddleware`,
+       donc il doit vivre ici et non dans un module de surface : le middleware
+       tourne sur `*`, avant que la moindre route ne soit choisie. */
+    ClientApiService,
+    VersionsService,
+    /* Juste après l'arrêt pour intervention, et avant tout le reste : une
+       application trop vieille ne doit pas commencer à travailler. Elle DORT
+       derrière son paramètre — l'allumer alors qu'aucun build n'envoie encore
+       `x-app-build` mettrait tout le monde dehors d'un coup. */
+    /* AVANT celle des versions, et l'ordre compte : inviter à mettre à jour un
+       client qu'on ne reconnaît même pas serait lui promettre que le problème
+       vient de son binaire. La question « qui êtes-vous » précède « quelle
+       version ». Elle dort aussi derrière son paramètre. */
+    { provide: APP_GUARD, useClass: ClientGuard },
+    { provide: APP_GUARD, useClass: VersionGuard },
     // Garde GLOBAL, et le premier de tous : un arrêt pour intervention vaut
     // pour toute l'API, pas surface par surface. Posé ici plutôt que sur
     // chaque contrôleur — un contrôleur ajouté demain est couvert sans que
@@ -355,6 +388,10 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     AttributsService,
     GenerationService,
     RechargeService,
+    RecuService,
+    IdeeService,
+    PortraitService,
+    PhotoSourceService,
     MethodesService,
     CatalogueIAService,
     RouteurIAService,
@@ -364,6 +401,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     { provide: FOURNISSEURS_IA, useFactory: () => construireAdaptateurs() },
     FeatureGuard,
     ProfileService,
+    AvatarService,
     TenantRepository,
     EventService,
     OccurrenceService,
@@ -407,15 +445,16 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     MetriquesService,
     PaymentStatsService,
     AdminMaintenanceService,
-    StudioService,
     // Le Studio du portrait. `StudioConfigurationService` est partagé entre la
     // surface d'administration et `/me/studio/options` : deux exemplaires
     // calculeraient l'empreinte chacun de leur côté, et la règle de
     // publication cesserait d'être la même des deux côtés du mur.
     StudioConfigurationService,
+    MesuresStudioService,
     StudioEssaiService,
     AmorceStudioService,
     PortraitStudioService,
+    TexteStudioService, StudioPerformanceService,
     StudioOptionsService,
   ],
 })

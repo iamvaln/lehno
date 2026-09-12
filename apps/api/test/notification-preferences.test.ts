@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { NotificationPreferencesService } from "../src/me/notification-preferences.service.js";
-import { notificationPreferencesSchema } from "@lehno/contracts";
+import { notificationPreferencesSchema, CONFIGURABLE_NOTIFICATION_TYPES } from "@lehno/contracts";
 
 describe("préférences de notification", () => {
   let db: TestDb;
@@ -28,12 +28,21 @@ describe("préférences de notification", () => {
     expect(notificationPreferencesSchema.safeParse(await svc.get(userId)).success).toBe(true);
   });
 
-  // Une ligne absente vaut le défaut (§3.11) : sans écriture préalable, un
-  // compte neuf doit déjà voir ses onze types configurables réglés à
-  // « poussée et courriel activés ».
+  /* Une ligne absente vaut le défaut (§3.11) : sans écriture préalable, un
+     compte neuf doit déjà voir TOUS ses types configurables réglés à « poussée
+     et courriel activés ».
+
+     LE COMPTE SE DÉRIVE DU CONTRAT, il ne s'écrit pas en chiffres. Un « 11 »
+     littéral redisait `CONFIGURABLE_NOTIFICATION_TYPES.length` sans le dire, et
+     tombait à chaque nature ajoutée — en nommant un écart de comptage là où le
+     fait à garder est « aucune n'est oubliée ». */
   it("rend le défaut activé pour un type sans ligne en base", async () => {
     const lu = await svc.get(userId);
-    expect(lu.preferences).toHaveLength(11);
+    expect(lu.preferences).toHaveLength(CONFIGURABLE_NOTIFICATION_TYPES.length);
+    // Et l'ENSEMBLE, pas seulement le compte : douze lignes du bon nombre mais
+    // portant deux fois le même type passeraient un simple décompte.
+    expect([...lu.preferences].map((p) => p.type).sort())
+      .toEqual([...CONFIGURABLE_NOTIFICATION_TYPES].sort());
     for (const p of lu.preferences) {
       expect(p.pushEnabled).toBe(true);
       expect(p.emailEnabled).toBe(true);

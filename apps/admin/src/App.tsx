@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
+import type { ZodType } from "zod";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { Acces, Assistance, Liens, Metriques, StatsTransactions, Studio, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { Acces, Assistance, Liens, Metriques, StatsTransactions, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, StudioProfils, StudioTextes, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -49,15 +50,18 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  canauxSchema, catalogueIaSchema, chainesIaSchema, comptesAdminSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  canauxSchema, catalogueIaSchema, mesuresDesModelesSchema, chainesIaSchema, comptesAdminSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  urlMediaRenduSchema, motifsAdminSchema,
   pageAssistanceSchema, pageContactSchema, pageAttenteSchema, pageRetoursSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
   paiementDetailSchema, paliersSchema,
   pageConnexionsSchema, pageSuppressionsSchema, parametresSchema,
-  profilAdminSchema, catalogueGabaritsSchema,
+  profilAdminSchema,
   type Intervention,
   etatPortraitSchema, historiquePortraitSchema,
-  profilsStudioSchema, candidatsStudioSchema, essaisStudioSchema,
+  profilsStudioSchema,
+  depotPhotoSourceSchema, candidatsStudioSchema, essaisStudioSchema,
+  etatTexteSchema, historiqueTexteSchema, performanceSchema, essaiLanceSchema, type NatureTexte, type EssaiStudio,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
@@ -279,10 +283,15 @@ export function App(): ReactNode {
   const [tourSuppressions, setTourSuppressions] = useState(0);
   const [tourModeles, setTourModeles] = useState(0);
   const [tourDrapeaux, setTourDrapeaux] = useState(0);
+  const [tourMotifs, setTourMotifs] = useState(0);
   const [tourCredits, setTourCredits] = useState(0);
   const [tourAcces, setTourAcces] = useState(0);
   const [tourProfil, setTourProfil] = useState(0);
   const [tourStudio, setTourStudio] = useState(0);
+  /* La nature affichée par l'atelier des textes. Elle vit ici et non dans
+     l'écran : c'est elle qui décide de la route lue, donc de la ressource. */
+  const [natureTexte, setNatureTexte] = useState<NatureTexte>("message");
+  const [dernierEssaiTexte, setDernierEssaiTexte] = useState<EssaiStudio | null>(null);
   const [essaiEnCours, setEssaiEnCours] = useState(false);
   const [tourAssistance, setTourAssistance] = useState(0);
   const [ongletAssistance, setOngletAssistance] = useState<"demandes" | "contact" | "attente" | "retours">("demandes");
@@ -570,10 +579,55 @@ export function App(): ReactNode {
       ? {
         catalogue: await api.appeler("/admin/ai-models", { schema: catalogueIaSchema }),
         chaines: await api.appeler("/admin/ai-routes", { schema: chainesIaSchema }),
+        /* CE QUE LES PRODUCTIONS DE CHAQUE MODÈLE ONT VALU. Route à part du
+           catalogue : ces comptes traversent trois tables, et les fondre
+           ferait payer l'agrégat à qui vient seulement basculer un
+           interrupteur. */
+        mesures: await api.appeler("/admin/ai-models/metrics", { schema: mesuresDesModelesSchema }),
       }
       : null),
     [section, tourModeles],
   );
+
+  /* LE REGISTRE DES MOTIFS, lu UNE FOIS pour tout l'outil.
+   *
+   * Le serveur EXIGE un code de motif sur tout geste qui en propose — c'est la
+   * table qui décide, pas le schéma. L'outil n'en envoyait aucun : neuf gestes
+   * étaient refusés en 422, dont changer un paramètre, confirmer un versement
+   * et ajuster des crédits. Rien ne le signalait, parce que les épreuves
+   * d'écran simulent le serveur et que celles de l'API envoient le code.
+   *
+   * Un seul appel, et non un par dialogue : les motifs ne changent pas pendant
+   * une séance, et quinze appels au moment d'ouvrir quinze dialogues feraient
+   * clignoter chaque confirmation. */
+  const etatMotifs = useRessource(
+    /* APRÈS LA CONNEXION, jamais avant. Sans la dépendance à `connecte`, la
+       lecture partait au montage — c'est-à-dire sur l'écran de connexion, sans
+       jeton : elle rendait 401, et n'était jamais reprise. Les listes de motifs
+       restaient vides, et tout geste que le registre couvre repartait sans
+       code, donc en 422. Le défaut se voyait à l'écran, pas dans les épreuves :
+       celles-ci ouvrent l'application AVEC une session déjà écrite. */
+    () => (connecte
+      ? api.appeler("/admin/reasons/all", { schema: motifsAdminSchema })
+      : Promise.resolve(null)),
+    /* `tourMotifs` relit le registre après une écriture — et cette lecture-là
+       sert DEUX choses : l'écran des motifs, et les listes proposées dans tous
+       les dialogues de l'outil. Ajouter un motif doit donc le rendre
+       immédiatement choisissable, sans recharger la page. */
+    [connecte, tourMotifs],
+  );
+
+  /* Les motifs d'un geste, dans la langue de lecture. Vide quand le registre
+     n'en propose pas : le dialogue retombe alors sur « Autre — préciser », et
+     le serveur n'exige rien. */
+  const motifsDe = (geste: string): { code: string; libelle: string }[] =>
+    (etatMotifs.statut === "pret" ? etatMotifs.donnees?.motifs ?? [] : [])
+      /* RETIRÉS EXCLUS. Le registre les garde pour qu'on puisse les remettre,
+         mais le serveur refuse un code retiré : les proposer ferait échouer le
+         geste après coup, avec un motif choisi dans une liste qu'on venait
+         d'offrir. */
+      .filter((m) => m.actif && m.gestes.includes(geste))
+      .map((m) => ({ code: m.code, libelle: langue === "en" ? m.en : m.fr }));
 
   const etatDrapeaux = useRessource(
     () => (section === "fonctionnalites"
@@ -688,6 +742,49 @@ export function App(): ReactNode {
      brouillon s'il existe, la version en service sinon), les profils contre
      lesquels essayer, les modèles dans lesquels choisir, et les essais du jour.
      Un écran qui n'aurait que trois des quatre ne se lirait pas d'un regard. */
+  /* LES PROFILS SEULS, avec leur COUVERTURE. L'Atelier lit la même route mais
+     ne garde que `items` : ce qui manque au jeu d'éprouvettes ne l'intéresse
+     pas, il applique une configuration. Ici c'est l'inverse — on entretient le
+     jeu, donc on veut d'abord savoir ce qu'il ne couvre pas. */
+  const etatProfils = useRessource(
+    () => (section === "studioProfils"
+      ? api.appeler("/admin/portrait-studio/profiles", { schema: profilsStudioSchema })
+      : Promise.resolve(null)),
+    [section, tourStudio],
+  );
+
+  /* L'ATELIER DES TEXTES. Quatre appels : ce qui tourne et ce qu'on compose,
+     ce qui a servi avant, les éprouvettes, les modèles dans lesquels choisir.
+     Un écran qui n'aurait que trois des quatre ne se lirait pas.
+
+     L'HISTORIQUE SUIT LA NATURE, comme la configuration : il est dans la même
+     clé, donc il est relu au changement d'onglet. Le laisser hors de la clé
+     ferait lire les publications du message sous l'onglet des idées, et rien à
+     l'écran ne le dirait. */
+  const etatTextes = useRessource(
+    () => (section === "textes"
+      ? Promise.all([
+          api.appeler(`/admin/text-studio/${natureTexte}/config`, { schema: etatTexteSchema }),
+          api.appeler(`/admin/text-studio/${natureTexte}/config/history`, { schema: historiqueTexteSchema }),
+          /* SANS `configId` : les essais de toute la nature, c'est ce qu'on
+             regarde pour comparer deux versions. Bornés à une, ils ne diraient
+             pas si la précédente faisait mieux. */
+          api.appeler(`/admin/text-studio/${natureTexte}/trials`, { schema: essaisStudioSchema }),
+          /* CE QUE CHAQUE VERSION A PRODUIT. Hors des deux ateliers — la
+             question « cette version fait-elle mieux que la précédente ? » se
+             pose pour les quatre natures, et la ranger dans l'un d'eux
+             obligerait à l'écrire deux fois. */
+          api.appeler(`/admin/studio/${natureTexte}/performance`, { schema: performanceSchema }),
+          api.appeler("/admin/portrait-studio/profiles", { schema: profilsStudioSchema }),
+          api.appeler("/admin/portrait-studio/candidates", { schema: candidatsStudioSchema }),
+        ]).then(([etat, historique, essais, performance, profils, candidats]) => ({
+          etat, historique: historique.items, essais: essais.items, performance,
+          profils: profils.items, candidats,
+        }))
+      : Promise.resolve(null)),
+    [section, natureTexte, tourStudio],
+  );
+
   const etatAtelier = useRessource(
     () => (section === "atelier"
       ? Promise.all([
@@ -710,27 +807,33 @@ export function App(): ReactNode {
       ? Promise.all([
           api.appeler("/admin/portrait-studio/trials", { schema: essaisStudioSchema }),
           api.appeler("/admin/portrait-studio/config/history", { schema: historiquePortraitSchema }),
-        ]).then(([essais, historique]) => ({
+          api.appeler("/admin/portrait-studio/config", { schema: etatPortraitSchema }),
+        ]).then(([essais, historique, etat]) => ({
           essais: essais.items,
           publiees: historique.items.filter((c) => c.etat === "published"),
+          /* LA TÊTE — le brouillon s'il existe, ce qui tourne sinon. C'est
+             exactement ce que le serveur ajuste quand on pose une vignette, et
+             lire ailleurs ferait dire à l'écran qu'une ambiance a déjà la
+             sienne alors que le brouillon en porte une autre. */
+          tete: etat.brouillon ?? etat.enService,
         }))
       : Promise.resolve(null)),
     [section, tourStudio],
   );
 
-  const etatGabarits = useRessource(
-    () => (section === "gabarits"
-      ? api.appeler("/admin/portrait-studio/templates", { schema: catalogueGabaritsSchema })
-      : Promise.resolve(null)),
-    [section, tourStudio],
-  );
 
   const etatStudio = useRessource(
     () => (section === "studioService"
       ? Promise.all([
           api.appeler("/admin/portrait-studio/config", { schema: etatPortraitSchema }),
           api.appeler("/admin/portrait-studio/config/history", { schema: historiquePortraitSchema }),
-        ]).then(([etat, historique]) => ({ etat, historique: historique.items }))
+          /* CE QUE CHAQUE VERSION A PRODUIT. La lecture vit hors des deux
+             ateliers : la question se pose pour les quatre natures, et la
+             ranger dans l'un d'eux obligerait à l'écrire deux fois. */
+          api.appeler("/admin/studio/portrait/performance", { schema: performanceSchema }),
+        ]).then(([etat, historique, performance]) => ({
+          etat, historique: historique.items, performance,
+        }))
       : Promise.resolve(null)),
     [section, tourStudio],
   );
@@ -852,6 +955,30 @@ export function App(): ReactNode {
                 }
               })();
             }}
+            /* LES CINQ ROUTES DES RÉGLAGES, derrière un seul rappel.
+               La cible dit laquelle, `id` nul dit qu'on crée. Le motif voyage
+               DANS le corps — il n'est pas un en-tête ni un paramètre : c'est
+               une donnée du geste, que le serveur exige et journalise. */
+            /* LA PIÈCE S'OUVRE À LA DEMANDE, dans un onglet à part.
+               On demande l'URL au moment du clic et on l'ouvre aussitôt : elle
+               est signée pour quelques minutes, et la garder dans l'état ferait
+               un lien mort au deuxième clic — un lien mort sur une pièce
+               justificative se lit comme une pièce manquante.
+               `noopener` : la page ouverte ne doit pas pouvoir manipuler
+               l'outil qui l'a ouverte, et c'est un fichier déposé par un
+               tiers. */
+            onOuvrirLeRecu={() => {
+              void (async () => {
+                try {
+                  const { url } = await api.appeler(`/admin/payments/${paiementOuvert}/proof`, {
+                    schema: urlMediaRenduSchema,
+                  });
+                  window.open(url, "_blank", "noopener,noreferrer");
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                }
+              })();
+            }}
           />
         ) : null)}
       />
@@ -876,6 +1003,7 @@ export function App(): ReactNode {
     vue = (
       <TransactionManuelle
         langue={langue}
+        motifs={motifsDe("credit_adjust")}
         comptes={(etatComptesMouvement.statut === "pret" && etatComptesMouvement.donnees
           ? etatComptesMouvement.donnees.items
           : []
@@ -912,6 +1040,39 @@ export function App(): ReactNode {
       role,
       langue,
       onglet: ongletCredits,
+      motifsConfirmer: motifsDe("payment_confirm"),
+      motifsRejeter: motifsDe("payment_reject"),
+      onEnregistrerReglage: (
+        cible: "palier" | "canal" | "compte",
+        id: string | null,
+        valeurs: Record<string, unknown>,
+        motif: string,
+      ) => {
+        /* LES CINQ ROUTES DES RÉGLAGES, derrière un seul rappel.
+           La cible dit laquelle, `id` nul dit qu'on crée. Le motif voyage DANS
+           le corps — il n'est ni un en-tête ni un paramètre : c'est une donnée
+           du geste, que le serveur exige et journalise. */
+        const chemins = {
+          palier: "/admin/credit-bundles",
+          canal: "/admin/payment-channels",
+          compte: "/admin/collection-accounts",
+        } as const;
+        void (async () => {
+          try {
+            await api.appeler(id === null ? chemins[cible] : `${chemins[cible]}/${id}`, {
+              methode: id === null ? "POST" : "PATCH",
+              corps: { ...valeurs, reason: motif },
+            });
+          } catch (echec) {
+            if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+          } finally {
+            /* On relit dans tous les cas : après un refus, ce qui est affiché
+               est l'état d'avant, et c'est lui qui fait foi. */
+            setTourCredits((n) => n + 1);
+          }
+        })();
+      },
+
       onOnglet: setOngletCredits,
       filtreEtat: filtresPaiements.etat,
       filtreMode: filtresPaiements.mode,
@@ -1022,6 +1183,157 @@ export function App(): ReactNode {
           enfant={(page) => <Assistance {...communAssistance} demandes={page?.items ?? []} />} />
       );
     }
+  } else if (section === "studioProfils") {
+    /* Écrire puis relire, comme partout : après un refus, l'état affiché est
+       celui d'avant, et c'est lui qui fait foi. */
+    const ecrireProfil = (chemin: string, methode: "PATCH" | "DELETE", corps?: unknown): void => {
+      void (async () => {
+        try {
+          await api.appeler(chemin, { methode, ...(corps === undefined ? {} : { corps }) });
+        } catch (echec) {
+          if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+        } finally {
+          setTourStudio((n) => n + 1);
+        }
+      })();
+    };
+    vue = (
+      <Ressource
+        etat={etatProfils}
+        t={t}
+        enfant={(registre) => (registre ? (
+          <StudioProfils
+            role={role}
+            langue={langue}
+            profils={registre.items}
+            manquant={registre.manquant}
+            onRenommer={(id, champs) => ecrireProfil(`/admin/portrait-studio/profiles/${id}`, "PATCH", champs)}
+            /* LES TROIS TEMPS DU DÉPÔT, et le fichier ne traverse jamais l'API :
+               on demande une URL signée, on téléverse DIRECTEMENT sur le
+               stockage, puis on dit qu'on a fini — et c'est le serveur qui
+               relit l'objet et le juge avec les seuils de la production.
+               Le `PUT` part par `fetch` NU, sans notre en-tête d'autorisation :
+               l'URL porte déjà sa signature, et y joindre un jeton
+               d'administration l'enverrait à un tiers. */
+            onPhoto={async (id, fichier) => {
+              try {
+                const depot = await api.appeler(
+                  `/admin/portrait-studio/profiles/${id}/photo/depot`,
+                  /* LE MÊME SCHÉMA QUE LE DÉPÔT CÔTÉ UTILISATEUR : la forme est
+                     identique — une URL, sa durée, le type signé — et en
+                     écrire une seconde donnerait deux endroits où la changer.
+                     La clé n'y figure pas, des deux côtés, et pour la même
+                     raison. */
+                  { methode: "POST", schema: depotPhotoSourceSchema },
+                );
+                const envoi = await fetch(depot.url, {
+                  method: "PUT",
+                  headers: { "content-type": depot.typeMime },
+                  body: fichier,
+                });
+                /* `reseau_indisponible` : le stockage a refusé le dépôt, et
+                   l'outil n'a rien de plus précis à en dire — inventer un code
+                   que le dictionnaire ne connaît pas afficherait une phrase
+                   vide. */
+                if (!envoi.ok) throw new ErreurApi("reseau_indisponible", envoi.status);
+                await api.appeler(`/admin/portrait-studio/profiles/${id}/photo`, { methode: "POST" });
+              } catch (echec) {
+                if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+              } finally {
+                setTourStudio((n) => n + 1);
+              }
+            }}
+            onSupprimer={(id) => ecrireProfil(`/admin/portrait-studio/profiles/${id}`, "DELETE")}
+            onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "textes") {
+    /* Écrire puis relire, comme partout. Et le DERNIER ESSAI se retient ici :
+       c'est la réponse de `POST trials` qui le porte, et la relecture de la
+       configuration ne le rendrait pas — l'écran perdrait ce qu'on vient de
+       regarder au moment même où il en a besoin. */
+    /* LE SCHÉMA N'EST PAS UN LUXE ICI : sans lui, `appeler` ne LIT PAS le corps
+       — « rien à lire non plus si l'appelant n'a pas dit quoi lire » — et rend
+       `undefined`. Le dernier essai n'était donc jamais retenu : la réponse du
+       lancement partait à la poubelle, et l'analyse portait sur un néant.
+       Les écritures qui n'ont rien à relire le laissent absent, et c'est
+       exactement ce que la règle du client demande. */
+    const ecrireTexte = async <T,>(
+      chemin: string, methode: "PATCH" | "POST", corps: unknown, schema?: ZodType<T>,
+    ): Promise<T | null> => {
+      try {
+        return await api.appeler<T>(chemin, {
+          methode, corps, ...(schema === undefined ? {} : { schema }),
+        });
+      } catch (echec) {
+        if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+        return null;
+      } finally {
+        setTourStudio((n) => n + 1);
+      }
+    };
+    vue = (
+      <Ressource
+        etat={etatTextes}
+        t={t}
+        enfant={(donnees) => {
+          if (!donnees) return null;
+          /* ON COMPOSE À PARTIR DE CE QUI EXISTE : le brouillon s'il y en a un,
+             la version en service sinon. Ni l'un ni l'autre — une nature jamais
+             semée — et il n'y a rien à régler : on le dit plutôt que d'ouvrir un
+             formulaire vide qui publierait des réglages inventés. */
+          const depart = donnees.etat.brouillon ?? donnees.etat.enService;
+          if (!depart) return <EmptyState titre={t.studioTextes.enService.aucune} texte={t.studioTextes.sous} />;
+          return (
+            <StudioTextes
+              role={role}
+              langue={langue}
+              nature={natureTexte}
+              onNature={(n) => { setNatureTexte(n); setDernierEssaiTexte(null); }}
+              depart={depart}
+              enService={donnees.etat.enService}
+              historique={donnees.historique}
+              performance={donnees.performance}
+              profils={donnees.profils}
+              candidats={donnees.candidats}
+              dernier={dernierEssaiTexte}
+              essais={donnees.essais}
+              onEnregistrer={(reglages) => {
+                void ecrireTexte(`/admin/text-studio/${natureTexte}/config`, "PATCH", { reglages });
+              }}
+              onEssayer={(reglages, profileId) => {
+                void (async () => {
+                  const lance = await ecrireTexte(
+                    `/admin/text-studio/${natureTexte}/trials`, "POST",
+                    { reglages, profileId }, essaiLanceSchema,
+                  );
+                  setDernierEssaiTexte(lance?.essai ?? null);
+                })();
+              }}
+              onPublier={(configId, note) => {
+                void ecrireTexte("/admin/text-studio/config/publish", "POST", { configId, note });
+              }}
+              /* `reason`, et non `note` : le retour arrière ne raconte pas ce
+                 que la version apporte — elle l'a déjà dit à sa publication —,
+                 il dit POURQUOI on y revient. Le contrat nomme les deux champs
+                 différemment pour cette raison. */
+              onRevenir={(configId, motif) => {
+                void ecrireTexte("/admin/text-studio/config/rollback", "POST", { configId, reason: motif });
+              }}
+              /* LE VERDICT D'UN TEXTE NE PORTE PAS DE RÉFÉRENCE : il n'a pas
+                 d'image, et `verdictEssaiTexteSchema` REFUSE le champ plutôt
+                 que de l'ignorer. On n'envoie donc que le verdict. */
+              onJuger={(essaiId, verdict) => {
+                void ecrireTexte(`/admin/text-studio/trials/${essaiId}`, "PATCH", { verdict });
+              }}
+              onRetour={aller}
+            />
+          );
+        }}
+      />
+    );
   } else if (section === "atelier") {
     vue = (
       <Ressource
@@ -1056,13 +1368,16 @@ export function App(): ReactNode {
               // Le plus récent : c'est celui qu'on vient de lancer.
               dernier={a.essais[0] ?? null}
               enCours={essaiEnCours}
-              onEssayer={(reglages, profileId, ambianceId) => {
+              onEssayer={(reglages, profileId, ambianceId, voie) => {
                 setEssaiEnCours(true);
                 void (async () => {
                   try {
                     await api.appeler("/admin/portrait-studio/trials", {
                       methode: "POST",
-                      corps: { reglages, profileId, ambianceId },
+                      /* LA VOIE PART AVEC : c'est elle qui dit quel modèle
+                         appeler, et l'omettre ferait éprouver l'illustration
+                         pour publier la photo. */
+                      corps: { reglages, profileId, ambianceId, voie },
                     });
                   } catch (echec) {
                     if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
@@ -1138,30 +1453,22 @@ export function App(): ReactNode {
         t={t}
         enfant={(e) => (e ? (
           <StudioEssais
+            role={role}
             langue={langue}
             essais={e.essais}
             publiees={e.publiees}
-            onRetour={aller}
-          />
-        ) : null)}
-      />
-    );
-  } else if (section === "gabarits") {
-    vue = (
-      <Ressource
-        etat={etatGabarits}
-        t={t}
-        enfant={(catalogue) => (catalogue ? (
-          <Studio
-            role={role}
-            langue={langue}
-            gabarits={catalogue.items}
-            onRevenir={(gabarit, motif) => {
+            tete={e.tete}
+            /* LA VIGNETTE EST GRATUITE : elle n'entre pas dans l'empreinte —
+               c'est ce que l'humain regarde, pas ce que le modèle lit —, donc
+               elle passe par l'enregistrement direct et ne réclame aucun essai.
+               Un seul appel pose le verdict ET la référence : les séparer
+               laisserait un essai « retenu » sans la vignette demandée, et
+               personne ne saurait que la moitié du geste a échoué. */
+            onVignette={(essaiId) => {
               void (async () => {
                 try {
-                  await api.appeler(`/admin/portrait-studio/templates/${gabarit.id}`, {
-                    methode: "PATCH",
-                    corps: { isActive: true, reason: motif },
+                  await api.appeler(`/admin/portrait-studio/trials/${essaiId}`, {
+                    methode: "PATCH", corps: { verdict: "kept", reference: true },
                   });
                 } catch (echec) {
                   if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
@@ -1186,6 +1493,7 @@ export function App(): ReactNode {
             langue={langue}
             etat={studio.etat}
             historique={studio.historique}
+            performance={studio.performance}
             onRevenir={(config, motif) => {
               void (async () => {
                 try {
@@ -1223,9 +1531,14 @@ export function App(): ReactNode {
             // son accès, et le serveur refuse les deux.
             moiId={page.items.find((a) => a.email === api.session()?.email)?.id ?? ""}
             comptes={page.items}
+            motifsDuGeste={motifsDe}
             onInviter={(invitation) => ecrireAcces("/admin/admins", "POST", invitation)}
-            onChangerRole={(id, role, reason) => ecrireAcces(`/admin/admins/${id}`, "PATCH", { role, reason })}
-            onRevoquer={(id, reason) => ecrireAcces(`/admin/admins/${id}`, "DELETE", { reason })}
+            onChangerRole={(id, role, reason, reasonCode) => ecrireAcces(`/admin/admins/${id}`, "PATCH", {
+              role, reason, ...(reasonCode !== undefined ? { reasonCode } : {}),
+            })}
+            onRevoquer={(id, reason, reasonCode) => ecrireAcces(`/admin/admins/${id}`, "DELETE", {
+              reason, ...(reasonCode !== undefined ? { reasonCode } : {}),
+            })}
             onRetour={aller}
           />
         ) : null)}
@@ -1257,6 +1570,37 @@ export function App(): ReactNode {
                 }
               })();
             }}
+            onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "motifs") {
+    /* ÉCRIRE ET RELIRE, comme les drapeaux. Une écriture qui échoue laisse
+       l'état d'avant à l'écran, et c'est lui qui fait foi : on relit dans tous
+       les cas. */
+    const ecrireMotif = (chemin: string, methode: "POST" | "PATCH", corps: unknown): void => {
+      void (async () => {
+        try {
+          await api.appeler(chemin, { methode, corps });
+        } catch (echec) {
+          if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+        } finally {
+          setTourMotifs((n) => n + 1);
+        }
+      })();
+    };
+    vue = (
+      <Ressource
+        etat={etatMotifs}
+        t={t}
+        enfant={(registre) => (registre ? (
+          <Motifs
+            role={role}
+            langue={langue}
+            motifs={registre.motifs}
+            onCreer={(motif, raison) => ecrireMotif("/admin/reasons", "POST", { ...motif, reason: raison })}
+            onModifier={(id, champs, raison) => ecrireMotif(`/admin/reasons/${id}`, "PATCH", { ...champs, reason: raison })}
             onRetour={aller}
           />
         ) : null)}
@@ -1301,6 +1645,8 @@ export function App(): ReactNode {
             langue={langue}
             modeles={charge.catalogue.items}
             chaines={charge.chaines.items}
+            mesures={charge.mesures.modeles}
+            seuil={charge.mesures.seuil}
             onReordonner={(tache, modeleIds, motif) => {
               void (async () => {
                 try {
@@ -1319,12 +1665,16 @@ export function App(): ReactNode {
                 }
               })();
             }}
-            onBasculer={(modele, actif, motif) => {
+            motifsDuGeste={motifsDe}
+            onBasculer={(modele, actif, motif, code) => {
               void (async () => {
                 try {
                   await api.appeler("/admin/ai-models", {
                     methode: "PATCH",
-                    corps: { id: modele.id, enabled: actif, reason: motif },
+                    corps: {
+                      id: modele.id, enabled: actif, reason: motif,
+                      ...(code !== undefined ? { reasonCode: code } : {}),
+                    },
                   });
                 } catch (echec) {
                   /* Le serveur refuse d'éteindre le dernier modèle en service
@@ -1576,7 +1926,8 @@ export function App(): ReactNode {
                 }
               })();
             }}
-            onEnregistrer={(valeurs, motif) => {
+            motifs={motifsDe("parameter_update")}
+            onEnregistrer={(valeurs, motif, code) => {
               void (async () => {
                 // Un paramètre à la fois : le serveur écrit et journalise chaque
                 // clé dans sa propre transaction, et une écriture refusée ne
@@ -1586,7 +1937,13 @@ export function App(): ReactNode {
                   if (!avant || String(avant.valeur) === String(parametre.valeur)) continue;
                   await api.appeler("/admin/parameters", {
                     methode: "PATCH",
-                    corps: { key: parametre.cle, value: String(parametre.valeur), reason: motif },
+                    corps: {
+                      key: parametre.cle, value: String(parametre.valeur), reason: motif,
+                      /* LE CODE, exigé par le serveur sur tout geste que le
+                         registre couvre. Sans lui : 422 `reason_code_unknown`,
+                         et le paramètre ne change pas. */
+                      ...(code !== undefined ? { reasonCode: code } : {}),
+                    },
                   });
                 }
                 setTourParametres((n) => n + 1);
@@ -1598,6 +1955,20 @@ export function App(): ReactNode {
       />
     );
   } else if (section === "suppressions") {
+    /* Régler un remboursement, puis RELIRE la file : le geste change l'état du
+       compte — il n'attend plus de versement —, et une liste qui ne se rafraîchit
+       pas laisserait la ligne réclamer ce qu'on vient de faire. */
+    const reglerLeRemboursement = async (
+      paiementId: string, chemin: "refund" | "refund-abandon", corps: unknown,
+    ): Promise<void> => {
+      try {
+        await api.appeler(`/admin/payments/${paiementId}/${chemin}`, { methode: "POST", corps });
+      } catch (echec) {
+        if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+      } finally {
+        setTourSuppressions((n) => n + 1);
+      }
+    };
     vue = (
       <Ressource
         etat={etatSuppressions}
@@ -1609,6 +1980,19 @@ export function App(): ReactNode {
             demandes={file.items}
             onRestaurer={(demande, motif) => changerEtat(demande.id, "active", motif)}
             onEffacer={(demande, motif) => changerEtat(demande.id, "deleted", motif)}
+            /* LES DEUX GESTES VISENT LE PAIEMENT, pas le compte : c'est le
+               versement qu'on règle, et c'est lui qui retenait l'effacement.
+               D'où l'identifiant du remboursement et non celui de la demande —
+               les confondre enverrait le geste sur un compte, et le serveur
+               répondrait « paiement inconnu » sans qu'on voie pourquoi. */
+            onVerser={(demande, reference, motif) => {
+              if (!demande.remboursement) return;
+              void reglerLeRemboursement(demande.remboursement.id, "refund", { reference, reason: motif });
+            }}
+            onAbandonner={(demande, motif) => {
+              if (!demande.remboursement) return;
+              void reglerLeRemboursement(demande.remboursement.id, "refund-abandon", { reason: motif });
+            }}
           />
         ) : null)}
       />

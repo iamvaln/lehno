@@ -6,6 +6,7 @@ const ECHEANCE = {
   eventId: "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
   personId: "3f2504e0-4f89-11d3-9a0c-0305e82c3302",
   personDisplayName: "Awa Diop",
+  isSelf: false,
   kind: "birthday" as const,
   nature: "happy" as const,
   label: null,
@@ -22,6 +23,7 @@ const ACCUEIL = {
   counts: { today: 1, thisWeek: 2 },
   unreadNotifications: 3,
   hasPersons: true,
+  hasWishlist: true,
   remainingOccurrences: 0,
 };
 
@@ -49,6 +51,20 @@ describe("l'accueil en un appel", () => {
     });
     expect(premier.hasPersons).toBe(false);
     expect(calme.hasPersons).toBe(true);
+  });
+
+  /* Même économie pour la liste de souhaits : l'accueil invite à en faire une
+     tant qu'il n'y en a pas, et l'invitation doit disparaître ensuite. Sans ce
+     drapeau, le client appelle `/me/wishlists` sur l'écran le plus ouvert de
+     l'application rien que pour choisir d'afficher une invitation. */
+  it("dit si le compte a déjà une liste de souhaits", () => {
+    expect(homeSchema.parse({ ...ACCUEIL, hasWishlist: false }).hasWishlist).toBe(false);
+    expect(homeSchema.parse({ ...ACCUEIL, hasWishlist: true }).hasWishlist).toBe(true);
+    // Le drapeau est OBLIGATOIRE : un client qui l'oublie doit s'en apercevoir
+    // ici, pas en affichant l'invitation à qui a déjà sa liste.
+    const sans: Record<string, unknown> = { ...ACCUEIL };
+    delete sans["hasWishlist"];
+    expect(() => homeSchema.parse(sans)).toThrow();
   });
 
   // Le décompte de la cloche accompagne la réponse parce que l'en-tête

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { motifSchema } from "@lehno/contracts";
 import { Button } from "../base/Button.js";
 
@@ -22,11 +22,33 @@ export interface ConfirmWithReasonProps {
   /** Ce que l'action entraîne, dit sans détour. */
   consequence?: string;
   destructif?: boolean;
-  /** Motifs proposés. « Autre — préciser » est ajouté d'office. */
-  motifs?: string[];
+  /* Motifs proposés. « Autre — préciser » est ajouté d'office.
+   *
+   * DEUX FORMES, et la seconde est celle qui compte. Un simple libellé ne peut
+   * pas être compté : les libellés sont bilingues, et le même geste s'inscrivait
+   * « Fraude suspectée » ou « Suspected fraud » selon la langue au moment du
+   * clic. La forme `{ code, libelle }` porte le code stable du registre — c'est
+   * lui qui part au serveur, qui l'exige sur tout geste ayant des motifs.
+   *
+   * La forme en chaînes reste acceptée pour les gestes que le registre ne
+   * couvre pas encore : le serveur ne leur demande alors aucun code. */
+  motifs?: readonly string[] | readonly { code: string; libelle: string }[];
   libelles?: LibellesConfirmation;
-  onConfirmer: (motif: string) => void;
+  /** Le motif écrit, et le CODE du registre quand il en vient un. */
+  onConfirmer: (motif: string, code?: string) => void;
   onAnnuler: () => void;
+  /* Ce qu'on règle, au-dessus du motif.
+   *
+   * Un réglage sensible et sa justification ne se séparent pas : les poser sur
+   * deux écrans ferait enregistrer d'abord et justifier ensuite — donc parfois
+   * pas du tout. Le dialogue reste clos tant que le motif ne dit rien, et ce
+   * qu'on a saisi ne part pas sans lui.
+   *
+   * Absent, le dialogue reste ce qu'il était : une confirmation. */
+  children?: ReactNode;
+  /** Ce qui empêche d'enregistrer, quand le formulaire lui-même n'est pas
+   *  formé. Le motif suffisant ne suffit pas si la saisie ne tient pas. */
+  incomplet?: boolean;
 }
 
 // Valeur sentinelle du champ libre : ce n'est pas un motif, c'est le choix d'en
@@ -48,6 +70,8 @@ export function ConfirmWithReason({
   libelles = {},
   onConfirmer,
   onAnnuler,
+  children,
+  incomplet = false,
 }: ConfirmWithReasonProps) {
   const [choix, setChoix] = useState("");
   const [libre, setLibre] = useState("");
@@ -66,7 +90,18 @@ export function ConfirmWithReason({
 
   // Le même contrôle que le serveur, au même endroit du contrat : ce que
   // l'écran laisse passer est exactement ce que l'API accepte.
-  const propose = choix === AUTRE ? libre : choix;
+  /* La liste, ramenée à une seule forme. `valeur` est ce que le sélecteur
+     porte : le code quand il y en a un, le libellé sinon — c'est ce qui permet
+     de retrouver le code au moment de confirmer. */
+  const liste = motifs.map((m) => (typeof m === "string"
+    ? { valeur: m, libelle: m, code: undefined as string | undefined }
+    : { valeur: m.code, libelle: m.libelle, code: m.code }));
+
+  /* Ce qui est ÉCRIT au journal reste le libellé : un code seul rendrait la
+     ligne illisible à qui la relit six mois plus tard. Le code l'accompagne,
+     il ne le remplace pas. */
+  const retenu = liste.find((m) => m.valeur === choix);
+  const propose = choix === AUTRE ? libre : (retenu?.libelle ?? choix);
   const verdict = motifSchema.safeParse(propose);
   const suffisant = verdict.success;
 
@@ -76,6 +111,8 @@ export function ConfirmWithReason({
       <div className="admin-dialogue">
         <h2 className="admin-dialogue-titre" id={idTitre}>{titre}</h2>
         {consequence ? <p className="admin-dialogue-consequence">{consequence}</p> : null}
+
+        {children ? <div className="admin-dialogue-corps">{children}</div> : null}
 
         <div className="admin-dialogue-motif">
           <label className="admin-dialogue-etiquette" data-requis="true" htmlFor={idMotif}>
@@ -89,8 +126,8 @@ export function ConfirmWithReason({
             onChange={(e) => setChoix(e.target.value)}
           >
             <option value="">{libelles.choisir}</option>
-            {motifs.map((motif) => (
-              <option key={motif} value={motif}>{motif}</option>
+            {liste.map((motif) => (
+              <option key={motif.valeur} value={motif.valeur}>{motif.libelle}</option>
             ))}
             <option value={AUTRE}>{libelles.autre}</option>
           </select>
@@ -113,8 +150,8 @@ export function ConfirmWithReason({
           <Button variant="text" onClick={onAnnuler}>{libelles.annuler}</Button>
           <Button
             variant={destructif ? "destructive" : "primary"}
-            disabled={!suffisant}
-            onClick={verdict.success ? () => onConfirmer(verdict.data) : undefined}
+            disabled={!suffisant || incomplet}
+            onClick={verdict.success ? () => onConfirmer(verdict.data, retenu?.code) : undefined}
           >
             {libelles.confirmer}
           </Button>

@@ -1,10 +1,25 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, StudioConfigKind } from "@prisma/client";
 import {
   consigneSysteme, invite, profilContenuSchema,
-  type ContexteMessage, type EssaiStudio, type ProfilContenu,
-  type ReglagesMessage, type ReglagesPortrait, type VerdictEssai,
+  consigneSystemeIdees, inviteIdees,
+  consigneSystemePortrait, invitePortrait, inviteImagePortrait,
+  type ContexteIdees, type ContexteMessage, type ContextePortrait,
+  type EssaiStudio, type NatureTexte, type ProfilContenu,
+  type ReglagesBriefPortrait, type ReglagesIdees,
+  type ReglagesMessage, type ReglagesPortrait, type ReglagesTexte, type VerdictEssai,
 } from "@lehno/contracts";
+
+/* LA TÂCHE D'IA QUE CHAQUE NATURE ÉPROUVE. Les deux vocabulaires existaient
+   déjà et ne se recouvrent pas : `StudioConfigKind` nomme ce qui se règle,
+   `AITask` ce qui s'appelle. La table les relie en un seul endroit — les
+   confondre ferait consigner un essai d'idées sous la tâche du message, et les
+   dépenses du studio deviendraient illisibles. */
+const TACHE_DE: Record<NatureTexte, "message" | "gift_ideas" | "portrait_brief"> = {
+  message: "message",
+  idees: "gift_ideas",
+  portrait_brief: "portrait_brief",
+};
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
 import { RouteurIAService, type Adaptateur } from "../ia/routeur.service.js";
@@ -24,6 +39,11 @@ import type { StockagePort } from "../stockage/stockage.port.js";
  */
 
 type LigneEssai = {
+  /* La nature vient de la CONFIGURATION, jamais d'une colonne recopiée ici :
+     une ligne d'essai ne peut pas changer de nature, et la recopier ouvrirait
+     la possibilité qu'elle contredise sa configuration. Toutes les lectures
+     joignent donc `config`. */
+  config: { kind: StudioConfigKind };
   id: string; studioConfigId: string; studioProfileId: string | null; adminId: string | null;
   provider: string; modelKey: string; status: string; output: unknown;
   cost: unknown; errorCode: string | null; createdAt: Date;
@@ -53,9 +73,22 @@ export class StudioEssaiService {
    * C'est aussi ce qui rend la règle de publication EXACTE : un `StudioTrial`
    * porte `studio_config_id`, donc la configuration doit exister quand l'essai
    * commence. */
-  async essayer(
+  /**
+   * L'ESSAI D'UNE GÉNÉRATION DE TEXTE — message, idées, brief du portrait.
+   *
+   * UN SEUL CHEMIN POUR LES TROIS, et non trois copies. Tout est commun : le
+   * brouillon déposé avant l'appel, le modèle tiré des réglages, le refus nommé
+   * quand l'adaptateur manque, la consignation du résultat. Seule la
+   * COMPOSITION de l'invite diffère, et c'est `composerTexte` qui la porte.
+   *
+   * Cette méthode s'appelait `essayer` et ne servait que le message — et n'était
+   * branchée à AUCUN contrôleur. Les réglages des trois générations de texte
+   * étaient donc figés à ce que le semis avait posé.
+   */
+  async essayerTexte(
+    nature: NatureTexte,
     adminId: string,
-    reglages: ReglagesMessage,
+    reglages: ReglagesTexte,
     profileId: string,
   ): Promise<{ configId: string; essai: EssaiStudio }> {
     const profil = await this.prisma.studioProfile.findUnique({ where: { id: profileId } });
@@ -65,7 +98,7 @@ export class StudioEssaiService {
     const cle = reglages.modele;
     const modele = await this.modeleDemande(cle);
 
-    const config = await this.configs.deposerBrouillon("message", reglages);
+    const config = await this.configs.deposerBrouillon(nature, reglages);
 
     const adaptateur = this.adaptateurs[modele.provider];
     if (!adaptateur) {
@@ -83,10 +116,10 @@ export class StudioEssaiService {
       };
     }
 
-    const { systeme, invite: demande } = this.composer(reglages, contenu);
+    const { systeme, invite: demande } = this.composerTexte(nature, reglages, contenu);
 
     const resultat = await this.routeur.appelerUnSeulModele(
-      "message",
+      TACHE_DE[nature],
       { invite: demande, systeme },
       adaptateur,
       modele,
@@ -103,6 +136,81 @@ export class StudioEssaiService {
         : { status: resultat.etat, errorCode: resultat.code });
 
     return { configId: config.id, essai: await this.rendre(ligne) };
+  }
+
+  /** Le message, par son ancien nom. Gardé pour les appelants qui l'emploient. */
+  async essayer(
+    adminId: string, reglages: ReglagesMessage, profileId: string,
+  ): Promise<{ configId: string; essai: EssaiStudio }> {
+    return this.essayerTexte("message", adminId, reglages, profileId);
+  }
+
+  /* LA COMPOSITION, PAR NATURE — et une table, jamais un `switch` à trois
+     branches dont on oublierait une. Le `Record` indexé sur l'énumération
+     oblige le compilateur : une quatrième nature de texte non traitée ici ne
+     compile pas. */
+  private composerTexte(
+    nature: NatureTexte, reglages: ReglagesTexte, profil: ProfilContenu,
+  ): { systeme: string; invite: string } {
+    if (nature === "message") return this.composer(reglages as ReglagesMessage, profil);
+    if (nature === "idees") return this.composerIdees(reglages as ReglagesIdees, profil);
+    return this.composerBrief(reglages as ReglagesBriefPortrait, profil);
+  }
+
+  /* LES IDÉES. Le profil ne porte pas de budget — il décrit un proche, pas une
+     demande —, et c'est honnête : un essai sans budget éprouve le cas le plus
+     dur, celui où le modèle doit proposer au hasard de l'échelle. */
+  private composerIdees(
+    reglages: ReglagesIdees, p: ProfilContenu,
+  ): { systeme: string; invite: string } {
+    const retient = (champ: (typeof reglages.champsDuProche)[number]): boolean =>
+      reglages.champsDuProche.includes(champ);
+    const contexte: ContexteIdees = {
+      langue: p.langue,
+      nomDUsage: p.nomDUsage,
+      relation: retient("relation") ? p.relation : null,
+      genreDuProche: p.genreDuProche,
+      occasionSensible: p.occasionSensible,
+      age: retient("age") ? p.age : null,
+      notes: retient("notes") ? p.notes : [],
+      // `aEviter` n'est PAS filtrable : c'est une interdiction, pas une matière.
+      aEviter: p.aEviter,
+      texteLibre: retient("texte_libre") ? p.texteLibre : null,
+      budget: null,
+      ...(reglages.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
+      ...(reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
+      nombreDemande: reglages.nombreDemande,
+    };
+    return { systeme: consigneSystemeIdees(contexte), invite: inviteIdees(contexte) };
+  }
+
+  /* LE BRIEF, SANS AMBIANCE. Elle appartient à la configuration de l'IMAGE, et
+     l'essai du brief éprouve le texte : lui en poser une ferait éprouver un
+     couple qu'aucune des deux natures ne gouverne seule. L'essai du PORTRAIT,
+     lui, en pose une — c'est là qu'elle compte. */
+  private composerBrief(
+    reglages: ReglagesBriefPortrait, p: ProfilContenu,
+  ): { systeme: string; invite: string } {
+    const retient = (champ: (typeof reglages.champsDuProche)[number]): boolean =>
+      reglages.champsDuProche.includes(champ);
+    const contexte: ContextePortrait = {
+      langue: p.langue,
+      orientation: p.orientation,
+      nomDUsage: p.nomDUsage,
+      relation: retient("relation") ? p.relation : null,
+      genreDuProche: p.genreDuProche,
+      notes: retient("notes") ? p.notes.map((n) => ({ categorie: n.categorie, contenu: n.contenu })) : [],
+      // Un profil simulé porte des notes et un texte libre, pas de goûts relevés.
+      attributs: [],
+      aEviter: p.aEviter,
+      texteLibre: retient("texte_libre") ? p.texteLibre : null,
+      consigneAmbiance: null,
+      ...(reglages.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
+      ...(reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
+      motsDuPortrait: reglages.motsDuPortrait,
+      motsDeLaPhrase: reglages.motsDeLaPhrase,
+    };
+    return { systeme: consigneSystemePortrait(contexte), invite: invitePortrait(contexte) };
   }
 
   /* Le modèle DEMANDÉ, résolu dans le catalogue.
@@ -159,6 +267,9 @@ export class StudioEssaiService {
     reglages: ReglagesPortrait,
     profileId: string,
     ambianceId: string,
+    /* LA VOIE ÉPROUVÉE. Par défaut l'illustration — le comportement d'avant, et
+       le seul possible tant qu'aucune éprouvette ne portait de photo. */
+    voie: "illustration" | "photo" = "illustration",
   ): Promise<{ configId: string; essai: EssaiStudio }> {
     const profil = await this.prisma.studioProfile.findUnique({ where: { id: profileId } });
     if (!profil) throw new AppError("not_found", "unknown simulation profile");
@@ -169,9 +280,22 @@ export class StudioEssaiService {
        qu'on vient d'envoyer est une erreur d'appel, pas un état du monde. */
     if (!ambiance) throw new AppError("not_found", "unknown ambiance");
 
-    const cle = ambiance.groupe === "photo_style"
-      ? reglages.modeles.photo_style
-      : reglages.modeles.illustration;
+    /* C'EST LA VOIE QUI DIT LE MODÈLE, jamais l'ambiance.
+     *
+     * Il se déduisait du GROUPE de l'ambiance — `photo_style` appelait le
+     * modèle de photo. Les deux voies partagent maintenant le même groupe : ce
+     * qui les distingue est la voie, et une ambiance ne sait plus quel modèle
+     * appeler.
+     *
+     * LA VOIE PHOTO EXIGE UNE PHOTO D'EXEMPLE, portée par l'éprouvette. Sans
+     * elle on appellerait le modèle de photo sans image, et le rendu ne serait
+     * celui d'aucune des deux voies — un essai qui ne montre pas ce que la
+     * production rendra est pire qu'aucun essai, puisqu'il débloque la
+     * publication. On REFUSE en le nommant. */
+    if (voie === "photo" && profil.photoKey === null)
+      throw new AppError("validation_failed", "this simulation profile has no example photo");
+
+    const cle = voie === "photo" ? reglages.modeles.photo_style : reglages.modeles.illustration;
     const modele = await this.modeleDemande(cle);
 
     const config = await this.configs.deposerBrouillon("portrait", reglages);
@@ -185,10 +309,63 @@ export class StudioEssaiService {
       };
     }
 
-    const tache = ambiance.groupe === "photo_style" ? "photo_style" as const : "illustration" as const;
+    /* LE BRIEF D'ABORD, comme en production.
+     *
+     * L'essai envoyait les notes du profil DIRECTEMENT au modèle d'image. Ce
+     * n'est plus ce que fait la production : un modèle de texte lit les notes
+     * et rend les mots qui comptent, et c'est eux seuls qui traversent.
+     *
+     * Sans ce premier appel ici, l'établi n'éprouverait plus ce que la
+     * production rend — le trou même que le découpage en deux configurations a
+     * bouché ailleurs : « publier un changement de style de dessin se
+     * débloquait avec un essai qui avait produit un texte ».
+     *
+     * Le modèle du brief n'est PAS un réglage de CETTE configuration : il vient
+     * de celle de `portrait_brief`, comme en production. Le studio du portrait
+     * règle ce qui touche à l'image ; le brief est du texte, et il a sa propre
+     * nature, ses propres essais et sa propre publication. */
+    const gammeActive = reglages.compositions.find((c) => c.actif);
+    if (!gammeActive) throw new AppError("validation_failed", "no active composition");
+    const gamme = gammeActive.palette;
+
+    const brief = await this.briefDuProfil(ambiance, contenu);
+    if (brief === null) {
+      return {
+        configId: config.id,
+        essai: await this.rendre(await this.consigner(config.id, profil.id, adminId, ambianceId, modele, {
+          status: "error", errorCode: "brief_failed",
+        })),
+      };
+    }
+
+    /* LA PHOTO D'EXEMPLE, lue au moment de l'appel. Elle ne traverse pas la
+       base : on garde sa clé, et les octets ne vivent que le temps de l'appel —
+       comme en production, où la source est lue puis oubliée. */
+    const photo = voie === "photo" && profil.photoKey !== null
+      ? await this.stockage.contenu(profil.photoKey)
+      : undefined;
+
+    /* LA MÊME TÂCHE QUE LE MODÈLE choisi plus haut : l'une décide de l'autre, et
+       les séparer ferait appeler le modèle de photo sur la chaîne de
+       l'illustration — donc mesurer la mauvaise. */
     const resultat = await this.routeur.appelerUnSeulModele(
-      tache,
-      { invite: this.composerPortrait(ambiance.consigne[contenu.langue], contenu) },
+      voie === "photo" ? "photo_style" : "illustration",
+      {
+        // La MÊME palette que la production : l'établi doit montrer la gamme
+        // qui sortira, pas celle du modèle laissé libre.
+        /* La gamme de la PREMIÈRE composition active — l'essai éprouve les
+           réglages qu'on vient d'envoyer, et le studio ne demande pas de
+           composition : il montre ce qu'une gamme donne, pas ce qu'un client
+           choisira. */
+        invite: inviteImagePortrait(
+          brief, ambiance.consigne[contenu.langue], gamme, contenu.langue,
+          /* LA CONSIGNE DE LA PHOTO n'accompagne QUE la photo — mot pour mot ce
+             que fait la production. Sans image, elle demanderait au modèle de
+             s'inspirer d'une photo qu'il n'a pas. */
+          voie === "photo" ? reglages.photo?.consigne[contenu.langue] ?? null : null,
+        ),
+        ...(photo === undefined ? {} : { image: photo }),
+      },
       adaptateur,
       modele,
       { origine: "studio_trial", userId: null, actionRunId: null },
@@ -203,7 +380,11 @@ export class StudioEssaiService {
      */
     let sortie: { cle: string } | null = null;
     if (resultat.etat === "success") {
-      sortie = { cle: await this.stockage.ecrire("portraits", Buffer.from(resultat.contenu, "base64"), "image/png") };
+      /* `essais`, ET NON `portraits` : une séance de réglage produit trente
+         images, et les ranger avec les portraits payés rend impossible la
+         règle de cycle de vie qui les effacerait — elle emporterait ce que les
+         gens ont acheté. Voir le commentaire de `PREFIXES`. */
+      sortie = { cle: await this.stockage.ecrire("essais", Buffer.from(resultat.contenu, "base64"), "image/png") };
     }
 
     const ligne = await this.consigner(config.id, profil.id, adminId, ambianceId, modele,
@@ -213,19 +394,80 @@ export class StudioEssaiService {
     return { configId: config.id, essai: await this.rendre(ligne) };
   }
 
-  /* La consigne de l'ambiance, et le profil. RIEN D'AUTRE.
+  /* LE BRIEF DU PROFIL SIMULÉ, par le même gabarit que la production.
    *
-   * Les garde-fous et la consigne commune appartiennent au message : les
-   * glisser ici enverrait au modèle d'image des instructions sur des tournures
-   * de phrase, et l'empreinte du portrait retomberait à chaque fois qu'on
-   * reformulerait un garde-fou du texte. */
-  private composerPortrait(consigne: string, profil: ProfilContenu): string {
-    const parties = [consigne];
-    /* Le CONTENU des notes, pas leur structure : le modèle d'image n'a que
-       faire d'une catégorie ou d'une date. */
-    if (profil.notes.length > 0) parties.push(profil.notes.map((n) => n.contenu).join(" "));
-    if (profil.texteLibre) parties.push(profil.texteLibre);
-    return parties.join("\n\n");
+   * Il remplace un assemblage qui collait les notes du profil derrière la
+   * consigne d'ambiance et envoyait le tout au modèle d'image. Deux raisons de
+   * l'avoir retiré : la production ne fait plus ça, et l'établi doit montrer ce
+   * qui tournera ; et les notes du profil ne traversent plus jusqu'au
+   * fournisseur d'image, comme celles d'un vrai carnet.
+   *
+   * `null` quand le brief échoue. L'essai le consigne alors comme une erreur
+   * nommée plutôt que de remonter : un établi doit dire LEQUEL des deux appels
+   * a raté, sans quoi on reprend un réglage d'image pour un défaut de texte. */
+  private async briefDuProfil(
+    ambiance: { groupe: string; consigne: { fr: string; en: string } },
+    profil: ProfilContenu,
+  ): Promise<{ mots: string[] } | null> {
+    /* LA CONFIGURATION PUBLIÉE DU BRIEF, lue AVANT de composer le contexte :
+       elle décide à la fois de ce qu'on demande et du modèle qui répond. La
+       lire plus bas reviendrait à composer l'invite sans elle. */
+    const publie = await this.configs.enService("portrait_brief").catch(() => null);
+    const reglagesDuBrief = publie === null ? null : (() => {
+      try { return this.configs.reglagesBriefPortraitDe(publie); } catch { return null; }
+    })();
+
+    const contexte: ContextePortrait = {
+      langue: profil.langue,
+      orientation: profil.orientation,
+      nomDUsage: profil.nomDUsage,
+      relation: profil.relation,
+      genreDuProche: profil.genreDuProche,
+      notes: profil.notes.map((n) => ({ categorie: n.categorie, contenu: n.contenu })),
+      /* LES BORNES PUBLIÉES, comme en production : un essai qui demanderait
+         trois à sept mots là où la configuration en demande huit à dix
+         montrerait un nuage qui n'est pas celui qu'on mettra en service. */
+      ...(reglagesDuBrief ? {
+        ...(reglagesDuBrief.consigneCommune ? { consigneCommune: reglagesDuBrief.consigneCommune } : {}),
+        ...(reglagesDuBrief.gardeFous.length > 0 ? { gardeFous: reglagesDuBrief.gardeFous } : {}),
+        motsDuPortrait: reglagesDuBrief.motsDuPortrait,
+        motsDeLaPhrase: reglagesDuBrief.motsDeLaPhrase,
+      } : {}),
+      /* Un profil simulé n'a pas d'attributs : il porte des notes et un texte
+         libre, pas de goûts relevés. Le gabarit sait s'en passer — il le dit
+         quand il n'a ni l'un ni l'autre. */
+      attributs: [],
+      /* Le profil PORTE ses rejets — le schéma l'exige. Ils entrent dans le
+         brief comme une interdiction, exactement comme un `dislikes_nogo` d'un
+         vrai carnet : c'est le seul endroit où ils sont tenables, puisque le
+         modèle d'image ne verra jamais que les mots retenus. */
+      aEviter: profil.aEviter,
+      texteLibre: profil.texteLibre,
+      consigneAmbiance: ambiance.consigne[profil.langue],
+    };
+
+    try {
+      /* LE MÊME MODÈLE QU'EN PRODUCTION, tiré de la configuration publiée du
+         brief. Sans lui, l'essai du portrait tournerait sur la tête de chaîne
+         pendant que la production suit la configuration — et l'image éprouvée
+         ne serait pas celle qu'on met en service. */
+      const reponse = await this.routeur.executer(
+        "portrait_brief",
+        { invite: invitePortrait(contexte), systeme: consigneSystemePortrait(contexte) },
+        this.adaptateurs,
+        { origine: "studio_trial", userId: null, actionRunId: null },
+        reglagesDuBrief?.modele ?? null,
+      );
+      const objet = JSON.parse(
+        reponse.contenu.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "").trim(),
+      ) as { mots?: unknown };
+      const mots = Array.isArray(objet.mots)
+        ? objet.mots.filter((m): m is string => typeof m === "string")
+        : [];
+      return mots.length > 0 ? { mots } : null;
+    } catch {
+      return null;
+    }
   }
 
   private composer(reglages: ReglagesMessage, profil: ProfilContenu): { systeme: string; invite: string } {
@@ -288,6 +530,7 @@ export class StudioEssaiService {
     issue: { status: string; output?: unknown; cost?: number | null; errorCode?: string },
   ): Promise<LigneEssai> {
     return this.prisma.studioTrial.create({
+      include: { config: { select: { kind: true } } },
       data: {
         studioConfigId: configId,
         studioProfileId: profilId,
@@ -310,7 +553,7 @@ export class StudioEssaiService {
       ...(configId === undefined ? {} : { where: { studioConfigId: configId } }),
       orderBy: { createdAt: "desc" },
       take: 100,
-      include: { admin: { select: { email: true } } },
+      include: { admin: { select: { email: true } }, config: { select: { kind: true } } },
     });
     return Promise.all(lignes.map((l) => this.rendre(l, l.admin?.email ?? null)));
   }
@@ -333,6 +576,7 @@ export class StudioEssaiService {
     return {
       id: l.id,
       configId: l.studioConfigId,
+      nature: l.config.kind,
       profilId: l.studioProfileId,
       etat: l.status as EssaiStudio["etat"],
       // Le modèle demandé, qui est aussi le seul appelé : l'essai ne replie pas.
@@ -358,15 +602,74 @@ export class StudioEssaiService {
    *
    * Il se REPOSE : on se ravise en regardant la vignette du lendemain, et
    * refuser le second geste obligerait à refaire l'essai pour changer d'avis. */
-  async juger(id: string, verdict: VerdictEssai): Promise<EssaiStudio> {
-    const ligne = await this.prisma.studioTrial.findUnique({ where: { id }, select: { id: true } });
+  async juger(id: string, verdict: VerdictEssai, reference = false): Promise<EssaiStudio> {
+    const ligne = await this.prisma.studioTrial.findUnique({ where: { id } });
     if (!ligne) throw new AppError("not_found", "resource not found");
+
+    /* LA RÉFÉRENCE S'ÉCRIT AVANT LE VERDICT, et l'ordre compte : si le dépôt du
+       brouillon refuse — parce que l'essai n'a pas d'image, ou parce qu'aucune
+       configuration n'est en service —, le verdict n'a pas bougé. L'inverse
+       laisserait un essai « retenu » sans la vignette qu'on venait de demander,
+       et personne ne saurait que la moitié du geste a échoué. */
+    if (reference) await this.poserLaReference(ligne, verdict);
+
     const misAJour = await this.prisma.studioTrial.update({
       where: { id },
       data: { verdict },
-      include: { admin: { select: { email: true } } },
+      include: { admin: { select: { email: true } }, config: { select: { kind: true } } },
     });
     return this.rendre(misAJour, misAJour.admin?.email ?? null);
+  }
+
+  /**
+   * Faire de l'image d'un essai la VIGNETTE de son ambiance.
+   *
+   * « Ce n'est pas une chaîne de production nouvelle : c'est un chemin de
+   * publication. » L'image existe déjà dans le stockage — l'essai l'y a rangée.
+   * Il ne manquait que de dire laquelle représente quoi.
+   *
+   * PAR L'ENREGISTREMENT DIRECT, et c'est ce qui rend le geste gratuit : une
+   * vignette n'entre pas dans l'empreinte, donc la modification ne réclame pas
+   * de nouvel essai. Si elle y entrait, choisir une miniature ferait retomber
+   * toute la couverture et il faudrait repayer une génération pour la publier.
+   */
+  private async poserLaReference(
+    essai: { id: string; status: string; output: Prisma.JsonValue | null; ambianceId: string | null },
+    verdict: VerdictEssai,
+  ): Promise<void> {
+    if (verdict !== "kept")
+      throw new AppError("validation_failed", "only a kept trial can represent its ambiance");
+    if (essai.status !== "success")
+      throw new AppError("validation_failed", "this trial produced nothing to show");
+    if (essai.ambianceId === null)
+      throw new AppError("validation_failed", "this trial has no ambiance to represent");
+
+    /* La clé de l'IMAGE, pas la sortie entière. Un essai de texte porte
+       `{ message }` et n'a rien à montrer — le distinguer par la présence d'une
+       clé vaut mieux qu'un champ « type » que personne ne remplirait. */
+    const sortie = essai.output;
+    const cle = sortie !== null && typeof sortie === "object" && !Array.isArray(sortie)
+      ? (sortie as Record<string, unknown>)["cle"]
+      : null;
+    if (typeof cle !== "string")
+      throw new AppError("validation_failed", "this trial produced no image");
+
+    /* LA TÊTE, et non la configuration sur laquelle l'essai a tourné. C'est
+       celle que l'administration a sous les yeux ; repartir d'une ligne
+       antérieure défferait en silence ce qui a été composé depuis. */
+    const tete = (await this.configs.brouillon("portrait"))
+      ?? (await this.configs.enService("portrait"));
+    if (!tete) throw new AppError("resource_inactive", "no portrait configuration to adjust");
+
+    const reglages = this.configs.reglagesPortraitDe(tete);
+    if (!reglages.ambiances.some((a) => a.id === essai.ambianceId))
+      throw new AppError("validation_failed", "this ambiance is no longer in the configuration");
+
+    await this.configs.enregistrerDirect("portrait", {
+      ...reglages,
+      ambiances: reglages.ambiances.map((a) =>
+        (a.id === essai.ambianceId ? { ...a, apercuCle: cle } : a)),
+    });
   }
   /* Une sortie d'image porte `{ cle }` ; une sortie de texte porte `{ message }`.
      On ne signe que la première, et on laisse la seconde telle quelle : deviner

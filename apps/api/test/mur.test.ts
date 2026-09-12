@@ -84,7 +84,7 @@ describe("le Mur et la collecte", () => {
     const depot = new TenantRepository(db.prisma as never);
     const surface = new SurfacePubliqueService(new RateLimitService(db.prisma as never));
     mur = new MurService(db.prisma as never, new FlagsService(db.prisma as never), SITE);
-    collecte = new CollecteService(db.prisma as never, depot, surface);
+    collecte = new CollecteService(db.prisma as never, depot, surface, SITE);
     soumissions = new SubmissionService(db.prisma as never);
     voeux = new VoeuxService(db.prisma as never, surface);
 
@@ -100,8 +100,35 @@ describe("le Mur et la collecte", () => {
   it("naît non publié, et sa page est alors introuvable", async () => {
     const vu = await mur.get(awa);
     expect(vu.isEnabled).toBe(false);
-    expect(vu.publicUrl).toBe(`${SITE}/awa`);
+    expect(vu.publicUrl).toBe(`${SITE}/m/awa`);
     await expect(mur.parPseudo("awa")).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  /* LES ADRESSES SERVIES OUVRENT SUR QUELQUE CHOSE — c'est la seule chose que
+     cette épreuve garde, et elle manquait.
+   *
+   * Le Mur composait `${site}/<pseudo>` et `${site}/wish/<jeton>` : deux
+   * chemins que le site ne sert pas. Le premier est celui que l'application
+   * affiche et que « Partager » envoie ; il partait mort, et celui qui
+   * l'ouvrait concluait que le Mur n'existait pas.
+   *
+   * Rien ne pouvait le voir : une chaîne bien formée qui désigne une page
+   * absente reste une chaîne bien formée. D'où une garde qui compare aux CINQ
+   * surfaces que le site sert vraiment — `/c/`, `/i/`, `/l/`, `/m/`, `/v/` —
+   * plutôt qu'à la forme d'une URL. Ajouter une sixième surface au site sans
+   * la déclarer ici fera tomber ce test, et c'est voulu. */
+  it("compose des adresses que le site sert vraiment", async () => {
+    const SURFACES = ["c", "i", "l", "m", "v"];
+    const segment = (url: string): string => url.slice(SITE.length + 1).split("/")[0] ?? "";
+
+    const vu = await mur.get(awa);
+    expect(SURFACES).toContain(segment(vu.publicUrl));
+
+    /* Le lien de vœux n'existe que dans sa fenêtre : on la fabrique, sans quoi
+       l'épreuve passerait sur un `null` sans rien avoir vérifié. */
+    await soi(awa, 2);
+    const lien = await mur.lienDeVoeux(awa);
+    expect(segment(lien.url)).toBe("v");
   });
 
   /* Garde le 404 sur le Mur d'un compte SUSPENDU. Une suspension qui laisse la
@@ -270,6 +297,58 @@ describe("le Mur et la collecte", () => {
     expect((await db.prisma.collectionLink.findUniqueOrThrow({ where: { id: sien.id } })).isActive).toBe(true);
   });
 
+  /* Garde L'ADRESSE COMPLÈTE du lien de collecte. Elle appartient au serveur :
+     un client qui recompose `${site}/c/${jeton}` porte le domaine en dur, donc
+     se trompe le jour où il change, et rien ne le signale. La liste doit la
+     servir comme la création — c'est la liste que l'écran de partage lit. */
+  it("sert l'adresse complète du lien, à la création comme à la liste", async () => {
+    const p = await db.prisma.person.create({ data: { userId: awa, displayName: "Bila" } });
+    const lien = await collecte.create(awa, { type: "nominatif", personId: p.id });
+    expect(lien.url).toBe(`${SITE}/c/${lien.token}`);
+
+    const [dansLaListe] = await collecte.list(awa);
+    expect(dansLaListe?.url).toBe(`${SITE}/c/${lien.token}`);
+  });
+
+  /* Garde LE MOT D'ACCOMPAGNEMENT, de bout en bout : écrit avec le lien, servi
+     en haut de la page que le proche ouvrira. C'est la promesse littérale de la
+     copie — « il s'affiche en haut de la page qu'on ouvrira » —, et elle ne
+     tient que si les deux extrémités la portent. */
+  it("écrit le mot avec le lien et le sert au formulaire public", async () => {
+    const p = await db.prisma.person.create({ data: { userId: awa, displayName: "Bila" } });
+    const lien = await collecte.create(awa, {
+      type: "nominatif", personId: p.id, message: "dis-moi ce qui te ferait plaisir",
+    });
+    expect(lien.message).toBe("dis-moi ce qui te ferait plaisir");
+    expect((await collecte.formulaire(lien.token)).message).toBe("dis-moi ce qui te ferait plaisir");
+  });
+
+  /* Sans mot, la page ne cite rien — et le champ est SERVI NUL, jamais absent :
+     une clé manquante ferait distinguer au client « pas de mot » de « champ pas
+     encore déployé ». */
+  it("sert un mot nul quand rien n'a été écrit", async () => {
+    const p = await db.prisma.person.create({ data: { userId: awa, displayName: "Bila" } });
+    const lien = await collecte.create(awa, { type: "nominatif", personId: p.id });
+    expect(lien.message).toBeNull();
+    expect((await collecte.formulaire(lien.token)).message).toBeNull();
+  });
+
+  /* ROUVRIR SANS RÉÉCRIRE LE MOT NE L'EFFACE PAS. L'écran de réactivation n'a
+     pas toujours ce champ sous la main ; écrire systématiquement ce qu'il
+     envoie effacerait le mot de quiconque rouvre un lien depuis ailleurs. Le
+     retirer reste possible, mais il faut le demander. */
+  it("garde le mot quand on rouvre sans le redonner, et l'efface quand on le demande", async () => {
+    const p = await db.prisma.person.create({ data: { userId: awa, displayName: "Bila" } });
+    const premier = await collecte.create(awa, { type: "nominatif", personId: p.id, message: "un mot" });
+    await collecte.revoke(awa, premier.id);
+
+    const sansLeDire = await collecte.create(awa, { type: "nominatif", personId: p.id });
+    expect(sansLeDire.message).toBe("un mot");
+
+    const efface = await collecte.create(awa, { type: "nominatif", personId: p.id, message: null });
+    expect(efface.message).toBeNull();
+  });
+
   /* Garde la RÉOUVERTURE du lien de collecte. §3.20 dit « lien révoqué
      (réactivable) » : le jeton circule déjà chez le proche, souvent en favori,
      et c'est par lui qu'il relit le sort de ses souhaits. En frapper un second
@@ -387,6 +466,28 @@ describe("le Mur et la collecte", () => {
     const [s] = await soumissions.list(awa);
     return { personId: p?.id ?? null, submission: s! };
   };
+
+  /* LE NOM DE LA FICHE, pour que la carte du sas s'intitule.
+   *
+   * Il manquait, et le seul champ que l'écran pouvait lire était
+   * `submitterName` — accepté sur un lien PUBLIC seulement, « sur un nominatif,
+   * le propriétaire sait déjà qui il a invité ». Sur toute contribution
+   * nominative il était donc nul, et la carte s'intitulait « Pour Sans nom »
+   * exactement là où elle avait un nom à dire. */
+  it("nomme la fiche visée sur une contribution nominative", async () => {
+    const { submission } = await contribution();
+    expect(submission.personDisplayName).toBe("Bila");
+    // `submitterName` reste nul : c'est le champ de l'autre cas.
+    expect(submission.submitterName).toBeNull();
+  });
+
+  /* Un lien PUBLIC n'a pas encore de fiche — elle naît à la validation. Le nom
+     est donc nul, et c'est `submitterName` qui porte celui de la carte. */
+  it("ne nomme aucune fiche sur une contribution publique", async () => {
+    const { submission } = await contribution({ nominatif: false });
+    expect(submission.personDisplayName).toBeNull();
+    expect(submission.submitterName).toBe("Fatou");
+  });
 
   /* LE cas central : la répartition tient en une seule transaction, et la
      décision porte sur l'ensemble. Sans elle, une panne au milieu laisserait la

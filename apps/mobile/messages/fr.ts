@@ -8,6 +8,13 @@
 // Aucun repli d'une langue sur l'autre : un appel qui oublie sa clé doit
 // échouer, pas s'afficher dans la mauvaise langue.
 
+/* Les nombres en lettres, pour les seules valeurs que l'atelier autorise
+   (trois à six idées). En chiffres, « 4 pistes » casserait le registre de la
+   copie, qui écrit les petits nombres en toutes lettres. */
+const NOMBRES_FR: Record<number, string> = {
+  3: "Trois", 4: "Quatre", 5: "Cinq", 6: "Six",
+};
+
 export const fr = {
   connexionTitre: "Soyez là le jour J",
   connexionTexte: "Les dates de vos proches, et ce que vous savez d'eux. Le moment venu, vous avez déjà tout pour bien faire.",
@@ -33,6 +40,7 @@ export const fr = {
   valider: "Valider",
   codeErreur: "Ce code ne correspond pas. Il vous reste deux essais.",
   codeExpire: "Ce code a expiré.",
+  inscriptionExpiree: "Le délai est passé. Redemandez un code pour reprendre.",
   renvoyerCode: "Renvoyer un code",
   codeRenvoiAttente: (s: number) => "Nouveau code possible dans " + s + " s",
   /* Le plafond de comptes sur cet appareil. Le ton reste factuel : ce n'est pas
@@ -251,6 +259,14 @@ export const fr = {
   murPrivAucunMotTitre: "Personne n'a encore écrit",
   murPrivAucunMotTexte: "Les mots que vos proches déposeront s'afficheront ici.",
   profilPhoto: "Changer la photo",
+  photoChanger: "Changer la photo",
+  photoRetirer: "Retirer la photo",
+  photoEnvoi: "Envoi…",
+  // La permission se demande AU MOMENT du geste ; refusée, elle est durable, et
+  // l'écran doit dire où la reprendre plutôt que de laisser un bouton inerte.
+  photoRefusee: "L'accès aux photos est refusé. Vous pouvez l'autoriser dans les réglages du téléphone.",
+  photoTropLourde: "Cette photo dépasse la taille acceptée. Choisissez-en une plus légère.",
+  photoEchec: "La photo n'est pas partie. Réessayez dans un instant.",
   champPrenom: "Prénom",
   profilNaissance: "Ma date d'anniversaire",
   profilNaissanceAide: "Elle apparaît sur mon Mur si je l'y expose.",
@@ -268,6 +284,9 @@ export const fr = {
   reglagesJ7: "Une semaine avant",
   reglagesJ1: "La veille",
   reglagesJour: "Le jour même",
+  /* « Ma propre date » et non « Mon anniversaire » : la fiche de soi peut
+     porter d'autres dates que la naissance. */
+  reglagesMaDate: "Ma propre date",
   reglagesComment: "Par quel moyen",
   reglagesPush: "Notification",
   reglagesEmail: "E-mail",
@@ -279,6 +298,7 @@ export const fr = {
   reglagesRecap: "Le récapitulatif",
   reglagesRecapFreq: ["Chaque lundi", "Le 1er du mois"],
   reglagesValider: "Les contributions à valider",
+  reglagesMaListe: "Ce que devient ma liste partagée",
   reglagesRelances: "Une date approche et rien n'est prêt",
   reglagesVieCompte: "Un mouvement sur vos crédits",
   reglagesSecuriteToujours: "Les alertes de sécurité vous parviennent quoi qu'il arrive.",
@@ -332,6 +352,12 @@ export const fr = {
   versementDelai: "Le crédit est posé après vérification du versement.",
   versementAutre: "Sans payer",
   versementInviter: (n: number) => n + (n <= 1 ? " crédit" : " crédits") + " par personne invitée",
+  /* L'ÉTIQUETTE, jamais le numéro. Le compte de collecte vient de
+     `/me/collection-accounts`, qui ne rend que les comptes visibles ET actifs.
+     Écrit ici, il enverrait l'argent au mauvais endroit le jour où il change,
+     et personne ne s'en apercevrait avant de chercher un versement qui n'est
+     jamais arrivé — `messages.test.ts` rougit si un numéro revient. */
+  versementNumero: "Le numéro",
   mouvAutrefois: "Plus tôt",
   mouvNote: "Les libellés sont ceux qui figurent sur votre relevé et dans nos registres.",
   mouvVideTitre: "Aucun mouvement",
@@ -374,6 +400,27 @@ export const fr = {
   moiAideCentre: "Questions et contact",
   moiDeconnexion: "Se déconnecter",
 
+  /* LE NOM DE L'ÉCRAN, dans l'en-tête, à côté de la flèche.
+   *
+   * Il manquait partout : on arrivait sur un écran empilé et la première chose
+   * lisible était l'étiquette de son premier bloc, en petites capitales grises.
+   * Les libellés sont ceux de la planche, et ils sont plus COURTS que la rangée
+   * qui y mène — « Sécurité » pour « Sécurité et connexions » : la rangée
+   * annonce, l'en-tête situe, et il partage sa ligne avec la flèche. */
+  enteteProfil: "Mon profil",
+  enteteSecurite: "Sécurité",
+  entetePaiement: "Paiement",
+  enteteRappels: "Rappels",
+  enteteDonnees: "Mes données",
+  enteteAide: "Aide",
+  enteteReservations: "Réservations",
+  enteteReprises: "En cours",
+  enteteListes: "Mes wishlists",
+  enteteMonMur: "Mon Mur",
+  enteteCollecte: "Faire compléter",
+  enteteValider: "À valider",
+  enteteMouvements: "Les mouvements",
+
   /* Moi (3.17) — ce que je montre de moi. Du contenu, qui se partage. */
   moiSous: "Ce que vous montrez de vous.",
   moiPartager: "Partager",
@@ -405,6 +452,8 @@ export const fr = {
   collecteMot: (qui: string) => "Un mot pour " + qui,
   collecteMotAide: "Il s'affiche en haut de la page qu'on ouvrira.",
   collecteMotExemple: "ex. dis-moi ce qui te ferait plaisir, je m'occupe du reste",
+  collecteMotEnregistrer: "Enregistrer le mot",
+  collecteMotLimite: (n: number) => `${n} caractère${n > 1 ? "s" : ""} de trop`,
   collecteApercu: "Voir la page avant d'envoyer",
   collecteRevoqueFait: "Lien révoqué.",
   lienCopieFait: "Lien copié.",
@@ -498,6 +547,12 @@ export const fr = {
   rechargeTitre: "Combien de crédits ?",
   rechargeIntro: "Un crédit par contenu créé pour vous.",
   rechargeUnite: (n: number) => n === 1 ? "1 crédit" : n + " crédits",
+  /* LE SIGNE EST CELUI DE LA MAQUETTE, et le contrat le dit enfin aussi.
+     La maquette écrit « −17 % » : une réduction sur le prix. Le serveur servait
+     `bonusPercent` — un nom qui annonçait des crédits EN PLUS pour le même
+     prix, soit l'inverse de ce que la valeur portait. Le champ s'appelle
+     maintenant `discountPercent` et se déduit des montants ; les deux disent la
+     même chose, et le signe n'a plus à être arbitré ici. */
   rechargeEconomie: (p: number) => "−" + p + " %",
   rechargeAttenteEnCours: "En attente",
   rechargeAttenteSecours: "Si rien ne s'affiche, composez le code de votre opérateur :",
@@ -518,6 +573,10 @@ export const fr = {
   rechargeAboutiTexte: (n: number) => n + " crédits sont sur votre compte.",
   rechargeEchecTitre: "Le paiement n'a pas abouti",
   rechargeEchecTexte: "Rien n'a été prélevé.",
+  /* Le pendant de `rechargeMobile` : la nature du canal, dite sous son nom.
+     Deux canaux du même opérateur portent deux barèmes et se distinguent par
+     leur `label` ; ces deux mots-ci disent seulement par quoi on paie. */
+  rechargeCarte: "Carte bancaire",
   parrainageTitre: "Invitez, et gagnez tous les deux",
   /* Les deux montants sont SERVIS : celui de l'invité par `/public/config`,
      celui du parrain par `/me/referral`. Écrits en dur, ils promettraient
@@ -540,6 +599,32 @@ export const fr = {
   ficheNogoTexte: "Je ne bois pas d'alcool.",
   ficheIdeeTexte: "Valery a parlé d'un moulin à café manuel — le précédent rend l'âme.",
   fichePortraits: "Ses portraits",
+  portraitComposer: "Composer son portrait",
+  portraitLancer: "Lancer le portrait",
+  /* DEUX GESTES, PAS UN INTERRUPTEUR. « Garder » et « Rejeter » engagent
+     l'objet, là où le pouce serait un commentaire — les fondre détruirait la
+     distinction, et avec elle la seule mesure qui dise si l'atelier progresse.
+
+     ET AUCUN DES DEUX N'EST OBLIGATOIRE : la plupart des portraits resteront
+     sans avis, et c'est un état légitime. Refaire n'est pas rejeter. */
+  portraitGarder: "Je garde celui-ci",
+  portraitRejeter: "Celui-ci ne va pas",
+  portraitGardeFait: "Gardé.",
+  portraitRejetFait: "Noté — celui-ci ne va pas.",
+  /* §3 : « L'attente se nomme, avec la matière qu'on a déjà. » Le décompte entre
+     dans la phrase parce que c'est lui qui prouve que la chose est personnelle —
+     la promesse du produit, rendue au moment où elle coûte le plus cher à tenir. */
+  portraitAttenteNotes: (n: number, qui: string) =>
+    "On relit vos " + n + " notes sur " + qui + ".",
+  portraitAttenteSansNote: (qui: string) => "On rassemble ce qu'on sait de " + qui + ".",
+  /* Sans nom — un lien profond n'en porte pas —, on n'écrit pas une phrase à
+     trou : « on relit vos 9 notes sur . » est pire que de ne pas nommer. */
+  portraitAttenteSansNom: "On rassemble ce qu'on sait.",
+  portraitAttenteQuitter: "Vous pouvez fermer, on vous le garde.",
+  /* RIEN NE S'ÉCRIT QUAND UN CATALOGUE NE SE CHARGE PAS. Emprunter « L'écriture
+     n'a pas abouti », qui appartient à la génération, annoncerait un travail
+     perdu là où il n'y en a pas eu, et ferait craindre un crédit parti. */
+  portraitCatalogueAbsent: "Les réglages du portrait n'ont pas pu être chargés.",
   ficheCollecte: "Faire compléter la fiche",
   ficheIdentite: "Modifier l'identité",
   datesTitre: "Vos dates",
@@ -567,6 +652,12 @@ export const fr = {
   collecteRecu: (n: number) => n === 1 ? "Une réponse reçue" : n + " réponses reçues",
   collecteAucune: "Aucune réponse pour l'instant.",
   collecteRevoqueTexte: "Ce lien ne mène plus à rien. Vous pouvez en créer un autre.",
+  collecteRevenu: "Ce qui est revenu",
+  collecteApercuTitre: "La page qui s'ouvrira",
+  collecteApercuInvite: (qui: string) => "L'invitation vient de " + qui + ".",
+  collecteApercuDate: "La date de naissance y est déjà proposée, à confirmer.",
+  collecteApercuDateAbsente: "La date de naissance y est demandée.",
+  collecteApercuMur: "Un lien discret y mène à votre Mur.",
 
   /* ─── Identité d'un proche (3.18) ─── */
   evtLabel: "Le libellé",
@@ -651,6 +742,10 @@ export const fr = {
   notifsVideTexte: "Les rappels et les contributions reçues apparaîtront ici.",
   notifRappel: (qui: string, j: number) => "Dans " + j + " jours : " + qui,
   notifAujourdhui: (qui: string) => "C'est aujourd'hui : " + qui,
+  // Sans nom : « Dans 7 jours : Valentine » lu par Valentine est le défaut
+  // même qu'on répare au serveur.
+  notifMaDateRappel: (j: number) => "Votre date, dans " + j + " jours",
+  notifMaDateAujourdhui: () => "C'est votre jour",
   notifContribution: (n: number) => n === 1
     ? "Une contribution attend votre relecture"
     : n + " contributions attendent votre relecture",
@@ -722,7 +817,6 @@ export const fr = {
   stylLumiereAide: "Le visage émerge d'un fond d'encre.",
   stylSerigraphieAide: "Quatre aplats, aucune nuance.",
   stylSilhouetteAide: "Le contour seul, sans traits.",
-  studioPhotoAvis: "L'image est transmise à un service qui la transforme. Elle n'est pas conservée.",
   studioNote: "Votre note",
   studioNoteDefaut: (qui: string) => "Fait avec soin par " + qui,
   studioAmbiance: "L'ambiance",
@@ -751,7 +845,14 @@ export const fr = {
   prepPortraitTitre: "Un portrait",
   prepPortraitTexte: "Ce qu'il y a à retenir, écrit à partir de vos notes. À garder pour vous ou à partager.",
   prepIdeesTitre: "Des idées de cadeau",
-  prepIdeesTexte: "Cinq pistes qui lui ressemblent, du gratuit au plus cher.",
+  /* LE NOMBRE VIENT DU SERVEUR, il n'est plus écrit ici.
+     « Cinq » était en dur : régler quatre idées à l'atelier aurait laissé
+     l'écran en promettre cinq et en montrer quatre. Nul tant que la réponse
+     n'est pas là — la phrase se passe alors du chiffre plutôt que d'en
+     supposer un. */
+  prepIdeesTexte: (n: number | null) => n === null
+    ? "Des pistes qui lui ressemblent, du gratuit au plus cher."
+    : NOMBRES_FR[n] + " pistes qui lui ressemblent, du gratuit au plus cher.",
   prepMessageTitre: "Un message",
   prepMessageTexte: "Un brouillon dans votre ton, à ajuster avant d'envoyer.",
   prepDeja: "Déjà préparé",
@@ -770,6 +871,7 @@ export const fr = {
   cadrageNote: "Autre chose à savoir ? (facultatif)",
   cadrageNotePlaceholder: (qui: string) => "ex. c'est un cadeau commun avec " + qui,
   cadrageLancer: "Chercher des idées",
+  cadrageNoteLimite: (n: number) => n + (n <= 1 ? " caractère de trop" : " caractères de trop"),
   ideeRetenir: "Retenir",
   ideeLacher: "Retenue",
   ideeMarquerOfferte: "C'est ce que j'ai offert",
@@ -852,6 +954,10 @@ export const fr = {
   souhaitRetraitTitre: "Retirer ce souhait ?",
   souhaitRetraitTexte: "Il quitte votre wishlist et les pages où vous l'avez partagée.",
   souhaitRetraitReserve: "Quelqu'un l'a réservé : la réservation part avec le souhait.",
+  /* Une idée notée pour un proche ne quitte aucune page publique : elle n'y a
+     jamais paru. Lui servir le texte d'un souhait à soi annoncerait un partage
+     qui n'a pas eu lieu. */
+  souhaitRetraitIdee: "Elle quitte cette occasion, et rien ne la garde ailleurs.",
   souhaitRetraitConfirmer: "Retirer",
   souhaitRetraitGarder: "Garder",
   souhaitRetireFait: "Le souhait est retiré.",
@@ -882,6 +988,12 @@ export const fr = {
   modifier: "Modifier",
   videSouhaitsTitre: "Rien de listé pour l'instant",
   videSouhaitsTexte: "Ajoutez une idée, ou partagez un lien de collecte pour la faire remplir.",
+  /* D'où vient une idée notée pour quelqu'un. « noté » — `souhaitOrigine` —
+     couvrait déjà la main du propriétaire ; les deux autres provenances du
+     contrat n'avaient pas de mot, et une idée confiée par le proche lui-même
+     ne vaut pas une idée qu'on a supposée. */
+  souhaitOrigineConfie: "confié",
+  souhaitOrigineIdee: "retenu des idées",
 
   /* ─── Occasion (3.21) ─── */
   occPassee: "Passée",
@@ -930,8 +1042,33 @@ export const fr = {
   genreFeminin: "Féminin",
   genreMasculin: "Masculin",
   profilGenreAide: "Pour que ce que vous signez soit écrit correctement.",
+  profilNomDUsage: "Comment on vous appelle",
+  profilNomDUsageAide: "Si c'est autrement que par votre nom.",
+  profilVotreNaissance: "Votre date de naissance",
+  /* Elle ne crée pas d'anniversaire : naissance et échéance sont deux gestes,
+     ici comme sur la fiche d'un proche. La phrase le dit plutôt que de laisser
+     quelqu'un attendre un rappel qui ne viendra pas. */
+  profilVotreNaissanceAide: "Votre anniversaire ne s'en déduit pas : ajoutez-le ensuite dans Dates.",
+  evtPourMoi: "Moi",
+  /* SA PROPRE DATE NE SE PRÉPARE PAS COMME CELLE D'UN PROCHE : il n'y a rien à
+     envoyer, donc rien à marquer. Ce qu'on y prépare est sa liste. */
+  cartMaListe: "Ma wishlist",
+  /* UNE CLÉ À PART, et pas une retouche de `rechercher`. Les quatre autres
+     emplois de `rechercher` sont sur des écrans qui écartent la fiche de soi :
+     « un proche » y est juste. Ici seul, le carnet s'ouvre à soi — c'est même
+     le seul endroit où une date à soi se pose —, et le champ fermé est le
+     premier mot que lit qui arrive par « Ajouter une date » depuis les
+     wishlists. Lui annoncer qu'on cherche « un proche » démentait la liste
+     qu'il allait ouvrir, où « Moi » est en tête. */
+  evtChercherQui: "Vous ou un proche",
+  listeVotreDateAbsente: "Pour ouvrir une liste sur une de vos dates, il faut d'abord une date à vous.",
   identNaissance: "Date de naissance",
-  identNaissanceAide: "L'anniversaire s'en déduit — inutile de le poser deux fois.",
+  /* VÉRIFIÉ AU SERVEUR : l'anniversaire ne s'en déduit pas. `PersonService.create`
+     ne crée aucune occurrence, et `recalerAnniversaire` porte `if (!anniversaire)
+     return;` — il recale un anniversaire existant, il n'en crée pas. La phrase
+     d'avant promettait un rappel qui ne serait jamais venu, sur le même
+     mécanisme que l'aide d'à côté, dans l'autre sens. */
+  identNaissanceAide: "Son anniversaire ne s'en déduit pas : ajoutez-le ensuite dans Dates.",
   identAnnee: "Année",
   identAnneeInconnue: "Je ne connais pas l'année",
   ficheTopo: "Son topo",
@@ -949,5 +1086,15 @@ export const fr = {
   topoDepuis: (note: string, quand: string) => note + ", " + quand,
   listeArchivee: "Archivée",
   listeArchiveeTexte: "L'occasion est passée. Les réservations sont closes ; la liste reste là pour l'an prochain.",
-  listeMesDatesAucune: "Aucune date à vous pour l'instant.",
+  /* ELLE NE SERT PLUS QU'UN ÉTAT, et elle doit le dire. Elle couvrait autrefois
+     deux cas confondus — n'avoir aucune date, et les avoir toutes employées —
+     où « aucune date à vous » était vrai pour le premier seulement. La rangée
+     des occasions est maintenant vide pour deux raisons distinctes, et cette
+     phrase-ci ne répond que de la seconde. */
+  listeMesDatesAucune: "Toutes vos dates portent déjà une liste.",
+  /* L'aperçu de la liste partagée. « On ne diffuse pas une page qu'on n'a pas
+     vue » : ces trois lignes servent l'écran qui la montre avant l'envoi. */
+  listeRevoquer: "Révoquer le lien",
+  listeRevoqueFait: "Lien révoqué.",
+  listeApercuRien: "Aucun de vos souhaits n'est visible : ils sont tous privés.",
 };

@@ -41,6 +41,53 @@ describe("la programmation des rappels", () => {
     return o.id;
   };
 
+  /* LA MÊME ÉCHÉANCE, MAIS SUR LA FICHE DE SOI. Une date à soi est un `Event`
+     pendu à une `Person` comme celle d'un proche — c'est une décision, pas un
+     renoncement : scinder la table dupliquerait la récurrence, les échéances,
+     les rappels et le calendrier pour un booléen. `isSelf` est donc le SEUL
+     séparateur, et ces cas éprouvent qu'il sépare vraiment. */
+  const echeanceASoi = async (dans: number, leadTimeDays?: number): Promise<string> => {
+    const moi = await db.prisma.person.create({
+      data: { userId: awa, displayName: "Valentine", isSelf: true }, select: { id: true },
+    });
+    const e = await db.prisma.event.create({
+      data: {
+        personId: moi.id, authorUserId: awa, kind: "birthday",
+        referenceDate: dateDe(jour(dans)),
+        ...(leadTimeDays !== undefined
+          ? { schedules: { create: [{ type: "recurrent", unit: "year", interval: 1, leadTimeDays }] } }
+          : {}),
+      },
+      select: { id: true },
+    });
+    const o = await db.prisma.eventOccurrence.create({
+      data: {
+        eventId: e.id, userId: awa,
+        occurrenceDate: dateDe(jour(dans)), occurrenceYear: Number(jour(dans).slice(0, 4)),
+      },
+      select: { id: true },
+    });
+    return o.id;
+  };
+
+  /** Une liste sur cette échéance, avec ou sans souhaits, partagée ou non. */
+  const listeSur = async (
+    occurrenceId: string, souhaits: number, partagee: boolean,
+  ): Promise<string> => {
+    const l = await db.prisma.wishlist.create({
+      data: { userId: awa, eventOccurrenceId: occurrenceId }, select: { id: true },
+    });
+    for (let i = 0; i < souhaits; i += 1) {
+      await db.prisma.ownerWish.create({ data: { wishlistId: l.id, label: `Souhait ${i}` } });
+    }
+    if (partagee) {
+      await db.prisma.wishlistShareLink.create({
+        data: { wishlistId: l.id, token: randomBytes(8).toString("hex") },
+      });
+    }
+    return l.id;
+  };
+
   const filesDe = async (type?: string): Promise<{ channel: string; scheduledFor: Date | null; dedupeKey: string | null }[]> =>
     db.prisma.notification.findMany({
       where: type ? { type: type as never } : {},
@@ -198,5 +245,144 @@ describe("la programmation des rappels", () => {
     // La nature suit : un « bonne fête » sur un anniversaire de décès est
     // impardonnable, et le client ne doit pas avoir à aller la chercher.
     expect(n!.bodyParams).toMatchObject({ nature: "happy" });
+  });
+  /* ─── MA PROPRE DATE ────────────────────────────────────────────────────────
+   *
+   * §13.1 du brief backend, et c'était le plus grave de la liste : le balayage
+   * ne regardait pas `isSelf`, donc il souhaitait au titulaire son propre
+   * anniversaire. Mot pour mot, par courriel, à Valentine, pour l'anniversaire
+   * de Valentine :
+   *
+   *     « Une date pour Valentine approche »
+   *     « Le 7 novembre 2026, dans sept jours. Le bon moment pour préparer un mot. »
+   *
+   * Un écran faux se corrige au prochain déploiement ; un courriel parti ne se
+   * rattrape pas. C'est le seul point de la liste qui SORTAIT du produit. */
+  describe("sur ma propre date", () => {
+    it("n'émet jamais les natures d'un proche", async () => {
+      await echeanceASoi(10, 3);
+      await prog.programmerRappels();
+
+      expect(await filesDe("event_reminder")).toHaveLength(0);
+      expect(await filesDe("event_day_of")).toHaveLength(0);
+    });
+
+    it("émet ses deux natures à elle", async () => {
+      await echeanceASoi(10, 3);
+      await prog.programmerRappels();
+
+      expect((await filesDe("own_date_reminder")).length).toBeGreaterThan(0);
+      expect((await filesDe("own_date_day_of")).length).toBeGreaterThan(0);
+    });
+
+    /* LES DEUX FAMILLES COEXISTENT, et c'est la raison d'être des deux natures :
+       ne pas vouloir qu'on vous rappelle votre propre anniversaire ne dit rien
+       de celui de votre mère. Un drapeau sur `event_reminder` aurait éteint les
+       deux ensemble. */
+    it("laisse passer celle d'un proche le même jour", async () => {
+      await echeanceASoi(10, 3);
+      await echeance(10, 3);
+      await prog.programmerRappels();
+
+      expect((await filesDe("event_reminder")).length).toBeGreaterThan(0);
+      expect((await filesDe("own_date_reminder")).length).toBeGreaterThan(0);
+    });
+
+    /* L'ÉTAT DE LA LISTE VOYAGE AVEC, et c'est lui qui choisit la phrase :
+       préparer, partager, ou rien. Les faits partent bruts — le serveur
+       n'envoie jamais une phrase composée. */
+    it("dit qu'il n'y a pas encore de liste", async () => {
+      await echeanceASoi(10, 3);
+      await prog.programmerRappels();
+
+      const n = await db.prisma.notification.findFirst({
+        where: { type: "own_date_reminder" }, select: { titleKey: true, bodyParams: true },
+      });
+      expect(n!.titleKey).toBe("notification.own_date_reminder");
+      expect(n!.bodyParams).toMatchObject({ wishCount: 0, isShared: false });
+    });
+
+    it("dit qu'une liste attend d'être partagée", async () => {
+      const o = await echeanceASoi(10, 3);
+      await listeSur(o, 3, false);
+      await prog.programmerRappels();
+
+      const n = await db.prisma.notification.findFirst({
+        where: { type: "own_date_reminder" }, select: { bodyParams: true },
+      });
+      expect(n!.bodyParams).toMatchObject({ wishCount: 3, isShared: false });
+    });
+
+    it("dit qu'elle est partagée", async () => {
+      const o = await echeanceASoi(10, 3);
+      await listeSur(o, 2, true);
+      await prog.programmerRappels();
+
+      const n = await db.prisma.notification.findFirst({
+        where: { type: "own_date_reminder" }, select: { bodyParams: true },
+      });
+      expect(n!.bodyParams).toMatchObject({ wishCount: 2, isShared: true });
+    });
+
+    /* UN LIEN RÉVOQUÉ NE COMPTE PAS. `WishlistShareLink.isActive` existe
+       précisément pour qu'on puisse faire tourner un jeton sans perdre la
+       liste ; compter les lignes sans regarder ce drapeau dirait « partagée »
+       d'une liste que plus personne ne peut ouvrir, et ferait taire le seul
+       rappel qui servait à quelque chose. */
+    it("ne tient pas un lien révoqué pour un partage", async () => {
+      const o = await echeanceASoi(10, 3);
+      const l = await listeSur(o, 2, true);
+      await db.prisma.wishlistShareLink.updateMany({
+        where: { wishlistId: l }, data: { isActive: false },
+      });
+      await prog.programmerRappels();
+
+      const n = await db.prisma.notification.findFirst({
+        where: { type: "own_date_reminder" }, select: { bodyParams: true },
+      });
+      expect(n!.bodyParams).toMatchObject({ isShared: false });
+    });
+
+    /* LA ROUTE VISE LA LISTE quand elle existe : c'est là que le geste se fait.
+       L'échéance sinon — d'où l'on en ouvre une. */
+    it("mène à la liste quand il y en a une, à l'échéance sinon", async () => {
+      const sans = await echeanceASoi(10, 3);
+      await prog.programmerRappels();
+      const avantListe = await db.prisma.notification.findFirst({
+        where: { type: "own_date_day_of" }, select: { targetRoute: true },
+      });
+      expect(avantListe!.targetRoute).toBe(`/occurrences/${sans}`);
+
+      await resetDatabase(db.prisma);
+      const u = await db.prisma.user.create({
+        data: {
+          email: `${randomBytes(6).toString("hex")}@example.com`,
+          username: `u${randomBytes(4).toString("hex")}`,
+          referralCode: randomBytes(4).toString("hex").toUpperCase(),
+        },
+      });
+      awa = u.id;
+      const avec = await echeanceASoi(10, 3);
+      const liste = await listeSur(avec, 1, false);
+      await prog.programmerRappels();
+      const apres = await db.prisma.notification.findFirst({
+        where: { type: "own_date_day_of" }, select: { targetRoute: true },
+      });
+      expect(apres!.targetRoute).toBe(`/wishlists/${liste}`);
+    });
+
+    /* L'ÉTAT DE LA LISTE NE PART PAS SUR LA DATE D'UN PROCHE. Le poser partout
+       ferait croire aux phrases des proches qu'elles ont un geste à proposer,
+       alors qu'il n'y a rien à partager chez quelqu'un d'autre. */
+    it("ne charge pas la date d'un proche de l'état d'une liste", async () => {
+      await echeance(10, 3);
+      await prog.programmerRappels();
+      const n = await db.prisma.notification.findFirst({
+        where: { type: "event_reminder" }, select: { bodyParams: true },
+      });
+      const params = n!.bodyParams as Record<string, unknown>;
+      expect(params["wishCount"]).toBeUndefined();
+      expect(params["isShared"]).toBeUndefined();
+    });
   });
 });

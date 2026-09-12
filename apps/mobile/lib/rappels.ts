@@ -15,7 +15,7 @@ import {
  */
 
 export type CleDeGroupe =
-  | "avant" | "jour" | "recap" | "valider" | "relances" | "vie";
+  | "avant" | "jour" | "ma_date" | "recap" | "valider" | "ma_liste" | "relances" | "vie";
 
 export interface Groupe {
   cle: CleDeGroupe;
@@ -43,8 +43,28 @@ const GROUPES: readonly Groupe[] = [
    * interrupteurs qui disent vrai valent mieux que trois qui mentent. */
   { cle: "avant", types: ["event_reminder"], drapeau: null },
   { cle: "jour", types: ["event_day_of"], drapeau: null },
+  /* MA PROPRE DATE A SON INTERRUPTEUR, et c'est la raison d'être des deux
+     natures `own_date_*` : ne pas vouloir qu'on vous rappelle votre propre
+     anniversaire ne dit rien de celui de votre mère. Les ranger avec « avant »
+     et « jour » aurait rendu la séparation inutile.
+
+     Les deux natures partagent une seule bascule, contrairement aux dates des
+     proches. C'est délibéré : sur sa propre date, « avant » et « le jour même »
+     ne se règlent pas séparément — on veut être rappelé de préparer sa liste,
+     ou on ne veut rien. Une bascule qui dit vrai vaut mieux que deux qui
+     partagent un cheveu en quatre. */
+  { cle: "ma_date", types: ["own_date_reminder", "own_date_day_of"], drapeau: null },
   { cle: "recap", types: ["digest"], drapeau: null },
   { cle: "valider", types: ["contribution_received", "wish_received"], drapeau: "collect" },
+  /* CE QUE DEVIENT MA LISTE PARTAGÉE — une réservation, et son annulation.
+     Les deux vont ensemble et ne se règlent pas séparément : être prévenu
+     qu'un cadeau est couvert sans l'être quand il se libère laisserait attendre
+     un cadeau que personne n'apporte.
+
+     Le drapeau est `wishlist.own`, qui gouverne « mes propres listes, leur
+     partage et leur réservation » : sans liste partagée, il n'y a rien à
+     réserver, et l'interrupteur serait sans effet. */
+  { cle: "ma_liste", types: ["wish_reserved", "wish_reservation_cancelled"], drapeau: "wishlist.own" },
   {
     cle: "relances",
     types: ["enrichment_nudge_global", "enrichment_nudge_person"],

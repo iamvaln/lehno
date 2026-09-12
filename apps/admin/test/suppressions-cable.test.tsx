@@ -9,9 +9,16 @@ const t = messages("fr");
 
 const FILE = {
   items: [
-    { id: "u-1", compte: "awa", demandeeLe: "2026-08-01T09:00:00.000Z", echeance: "2026-08-31T09:00:00.000Z", joursRestants: 6, etat: "en_cours" },
-    { id: "u-2", compte: "valery", demandeeLe: "2026-07-01T09:00:00.000Z", echeance: "2026-07-31T09:00:00.000Z", joursRestants: -25, etat: "echue" },
-    { id: "u-3", compte: "sam", demandeeLe: "2026-07-15T09:00:00.000Z", echeance: "2026-08-14T09:00:00.000Z", joursRestants: -11, etat: "attend_remboursement" },
+    { id: "u-1", compte: "awa", demandeeLe: "2026-08-01T09:00:00.000Z", echeance: "2026-08-31T09:00:00.000Z", joursRestants: 6, etat: "en_cours", remboursement: null },
+    { id: "u-2", compte: "valery", demandeeLe: "2026-07-01T09:00:00.000Z", echeance: "2026-07-31T09:00:00.000Z", joursRestants: -25, etat: "echue", remboursement: null },
+    /* CELUI QUI ATTEND SON VIREMENT porte de quoi le régler : sans
+       l'identifiant du paiement, l'écran affiche l'état et n'a aucun geste à
+       offrir — l'impasse qui a laissé les deux routes inatteignables. */
+    {
+      id: "u-3", compte: "sam", demandeeLe: "2026-07-15T09:00:00.000Z",
+      echeance: "2026-08-14T09:00:00.000Z", joursRestants: -11, etat: "attend_remboursement",
+      remboursement: { id: "p-77", montant: 5000, devise: "XAF", numeroDuPayeur: "+237 6 99 00 11 22" },
+    },
   ],
   nextCursor: null,
 };
@@ -174,5 +181,118 @@ describe("le compte qui attend un remboursement", () => {
     const table = screen.getByRole("table");
     expect(within(table).getByText(t.suppressions.etats.attendRemboursement)).toBeInTheDocument();
     expect(within(table).getByText(t.suppressions.etats.echue)).toBeInTheDocument();
+  });
+  /* ─── Le remboursement dû avant l'effacement ──────────────────────────────── */
+
+  /* LA SECTION NE FIGURE PAS AU MENU : on y arrive par la file « à traiter » du
+     tableau de bord, qui doit donc être servie ET la proposer. L'oublier laisse
+     l'écran sur le tableau de bord, et les cas tombent sur « compte
+     introuvable » — un message qui ne dit rien de ce qu'ils éprouvent. */
+  const ouvrirLaFile = async (utilisateur: ReturnType<typeof userEvent.setup>) => {
+    const appels = serveur({
+      "/admin/dashboard": () => reponse(200, {
+        alertes: [], indicateurs: [],
+        aTraiter: [{ id: "f1", element: "Suppressions", section: "suppressions", etat: "en attente", depuis: "2 jours" }],
+      }),
+      "/admin/deletions": () => reponse(200, FILE),
+    });
+    await ouvrirSuppressions(utilisateur);
+    await utilisateur.click(await screen.findByText("Suppressions"));
+    return appels;
+  };
+
+  /* LE VERSEMENT SE FAIT DEHORS, et sa RÉFÉRENCE se rentre ici. Supprimer un
+     compte crée un remboursement en attente, et ce paiement RETIENT
+     l'effacement : tant qu'il n'est pas réglé, le compte ne s'efface pas. Les
+     deux routes existaient depuis leur écriture et n'étaient atteignables par
+     aucun écran. */
+  it("enregistre un remboursement versé, avec sa référence", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = await ouvrirLaFile(utilisateur);
+
+    const ligne = (await screen.findByText("sam")).closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: t.suppressions.verser }));
+
+    // Le montant et le destinataire se relisent AU MOMENT DE CONFIRMER.
+    expect(screen.getByText(/5000 XAF/)).toBeInTheDocument();
+    expect(screen.getByText(/\+237 6 99 00 11 22/)).toBeInTheDocument();
+
+    await utilisateur.type(screen.getByLabelText(t.suppressions.reference), "MTN-4471");
+    await utilisateur.selectOptions(
+      screen.getByLabelText(t.confirmation.motif),
+      t.suppressions.dialogueVerser.motifs[0] as string,
+    );
+    await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
+
+    await waitFor(() => {
+      const envoi = appels.mock.calls.find(([u, i]) =>
+        (i as RequestInit)?.method === "POST" && String(u).includes("/payments/p-77/refund"));
+      expect(envoi).toBeDefined();
+      /* L'IDENTIFIANT EST CELUI DU PAIEMENT, pas celui de la demande : c'est le
+         versement qu'on règle. Les confondre enverrait le geste sur un compte. */
+      expect(String(envoi?.[0])).toContain("/payments/p-77/refund");
+      expect(JSON.parse((envoi?.[1] as RequestInit).body as string)).toMatchObject({
+        reference: "MTN-4471",
+      });
+    });
+  });
+
+  /* SANS RÉFÉRENCE, ON N'ENREGISTRE RIEN. Le contrat l'exige non vide, et
+     laisser envoyer ferait tomber le refus après l'aller-retour — sur un geste
+     qui affirme qu'de l'argent est parti. */
+  it("ferme la confirmation tant que la référence manque", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    await ouvrirLaFile(utilisateur);
+
+    const ligne = (await screen.findByText("sam")).closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: t.suppressions.verser }));
+    await utilisateur.selectOptions(
+      screen.getByLabelText(t.confirmation.motif),
+      t.suppressions.dialogueVerser.motifs[0] as string,
+    );
+
+    expect(screen.getByRole("button", { name: t.confirmation.confirmer })).toBeDisabled();
+  });
+
+  /* RENONCER EXISTE, et il le faut : un numéro fermé, un titulaire injoignable,
+     un montant contesté laissent une demande qui ne peut pas aboutir — et sans
+     porte de sortie, elle retiendrait l'effacement pour toujours. */
+  it("abandonne un remboursement avec son motif", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = await ouvrirLaFile(utilisateur);
+
+    const ligne = (await screen.findByText("sam")).closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: t.suppressions.abandonner }));
+    await utilisateur.selectOptions(
+      screen.getByLabelText(t.confirmation.motif),
+      t.suppressions.dialogueAbandonner.motifs[0] as string,
+    );
+    await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
+
+    await waitFor(() => {
+      const envoi = appels.mock.calls.find(([u, i]) =>
+        (i as RequestInit)?.method === "POST" && String(u).includes("refund-abandon"));
+      expect(envoi).toBeDefined();
+      expect(JSON.parse((envoi?.[1] as RequestInit).body as string)).toMatchObject({
+        reason: t.suppressions.dialogueAbandonner.motifs[0],
+      });
+    });
+  });
+
+  /* LES DEUX GESTES NE PARAISSENT QUE S'IL Y A UN VERSEMENT DÛ. Les offrir
+     partout ferait chercher un remboursement là où il n'y en a pas, et le
+     serveur les refuserait faute de paiement à régler. */
+  it("ne les offre pas sur un compte sans remboursement", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    await ouvrirLaFile(utilisateur);
+
+    const ligne = (await screen.findByText("awa")).closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+
+    expect(await screen.findByRole("menuitem", { name: t.suppressions.restaurer })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: t.suppressions.verser })).toBeNull();
   });
 });

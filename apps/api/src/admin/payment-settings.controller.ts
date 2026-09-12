@@ -9,6 +9,8 @@ import { AdminGuard } from "./admin.guard.js";
 import { Role, RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
 import { poserLAuteurEtLeMotif } from "./historisation.js";
+import { remiseDe } from "../payments/remise.js";
+import { prixUnitaireDuJour } from "../payments/prix-unitaire.js";
 
 /**
  * Les trois tables que l'administration règle : paliers, canaux, comptes de
@@ -23,10 +25,16 @@ import { poserLAuteurEtLeMotif } from "./historisation.js";
  * leviers qui décident de ce qu'un client paie.
  */
 
+/* PAS DE `remisePourcent` EN ENTRÉE, et c'est tout l'objet de la reprise.
+   Il était saisi à la main et rien ne le rattachait aux montants qu'il
+   résume : un palier pouvait annoncer 20 % quand son rapport prix/crédits en
+   valait cinq. Il se déduit maintenant du montant et des crédits, donc régler
+   le montant SUFFIT à régler la remise. Le laisser en entrée rouvrirait la
+   possibilité de les faire diverger — `.strict()` refuse désormais le champ,
+   plutôt que de l'accepter en l'ignorant en silence. */
 const palierSchema = z.object({
   montant: z.number().positive().optional(),
   credits: z.number().int().positive().optional(),
-  remisePourcent: z.number().int().nullable().optional(),
   position: z.number().int().optional(),
   actif: z.boolean().optional(),
   reason: motifSchema,
@@ -42,6 +50,10 @@ const canalCreationSchema = z.object({
   fraisMin: z.number().min(0).nullable().optional(),
   fraisMax: z.number().min(0).nullable().optional(),
   fraisPortesPar: z.enum(["payer", "payee"]).optional(),
+  /* Le code USSD de secours. Nullable ET optionnel, et les deux ne disent pas
+     la même chose : absent = « ne touche pas », nul = « retire-le ». Sans le
+     second, on ne pourrait plus effacer un code devenu faux. */
+  ussd: z.string().trim().min(1).max(32).nullable().optional(),
   devise: z.string().length(3).optional(),
   position: z.number().int().nullable().optional(),
   reason: motifSchema,
@@ -58,6 +70,10 @@ const canalModificationSchema = z.object({
   fraisMin: z.number().min(0).nullable().optional(),
   fraisMax: z.number().min(0).nullable().optional(),
   fraisPortesPar: z.enum(["payer", "payee"]).optional(),
+  /* Le code USSD de secours. Nullable ET optionnel, et les deux ne disent pas
+     la même chose : absent = « ne touche pas », nul = « retire-le ». Sans le
+     second, on ne pourrait plus effacer un code devenu faux. */
+  ussd: z.string().trim().min(1).max(32).nullable().optional(),
   position: z.number().int().nullable().optional(),
   actif: z.boolean().optional(),
   reason: motifSchema,
@@ -126,14 +142,22 @@ export class PaymentSettingsService {
   // ─── Les paliers ─────────────────────────────────────────────────────────
 
   async paliers() {
-    const lignes = await this.prisma.creditBundle.findMany({ orderBy: { position: "asc" } });
+    /* LA MÊME FORMULE QUE CELLE SERVIE AU MOBILE, et le même prix unitaire.
+       C'est la raison d'être de `remise.ts` : deux implantations dériveraient,
+       et le panneau montrerait un chiffre pendant que l'application en
+       afficherait un autre sur le même palier, au même instant. Poser
+       « 10 crédits à 1700 » doit se lire « −10 % » ici comme là-bas. */
+    const [lignes, unitaire] = await Promise.all([
+      this.prisma.creditBundle.findMany({ orderBy: { position: "asc" } }),
+      prixUnitaireDuJour(this.prisma),
+    ]);
     return {
       items: lignes.map((p) => ({
         id: p.id,
         montant: Number(p.amount),
         devise: p.currency,
         credits: p.credits,
-        remisePourcent: p.bonusPercent,
+        remisePourcent: remiseDe(unitaire, Number(p.amount), p.credits),
         position: p.position,
         actif: p.isActive,
       })),
@@ -153,7 +177,6 @@ export class PaymentSettingsService {
           data: {
             ...(entree.montant !== undefined ? { amount: entree.montant } : {}),
             ...(entree.credits !== undefined ? { credits: entree.credits } : {}),
-            ...(entree.remisePourcent !== undefined ? { bonusPercent: entree.remisePourcent } : {}),
             ...(entree.position !== undefined ? { position: entree.position } : {}),
             ...(entree.actif !== undefined ? { isActive: entree.actif } : {}),
           },
@@ -181,6 +204,7 @@ export class PaymentSettingsService {
         fraisMin: c.feeMin === null ? null : Number(c.feeMin),
         fraisMax: c.feeMax === null ? null : Number(c.feeMax),
         fraisPortesPar: c.feeBorneBy,
+        ussd: c.ussd,
         devise: c.currency,
         actif: c.isActive,
         position: c.position,
@@ -210,6 +234,7 @@ export class PaymentSettingsService {
             ...(entree.fraisMin !== undefined ? { feeMin: entree.fraisMin } : {}),
             ...(entree.fraisMax !== undefined ? { feeMax: entree.fraisMax } : {}),
             ...(entree.fraisPortesPar !== undefined ? { feeBorneBy: entree.fraisPortesPar } : {}),
+            ...(entree.ussd !== undefined ? { ussd: entree.ussd } : {}),
             ...(entree.devise !== undefined ? { currency: entree.devise } : {}),
             ...(entree.position !== undefined ? { position: entree.position } : {}),
           },
@@ -236,6 +261,7 @@ export class PaymentSettingsService {
             ...(entree.fraisMin !== undefined ? { feeMin: entree.fraisMin } : {}),
             ...(entree.fraisMax !== undefined ? { feeMax: entree.fraisMax } : {}),
             ...(entree.fraisPortesPar !== undefined ? { feeBorneBy: entree.fraisPortesPar } : {}),
+            ...(entree.ussd !== undefined ? { ussd: entree.ussd } : {}),
             ...(entree.position !== undefined ? { position: entree.position } : {}),
             ...(entree.actif !== undefined ? { isActive: entree.actif } : {}),
           },

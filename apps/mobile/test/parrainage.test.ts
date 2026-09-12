@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { ReferralSummary } from "@lehno/contracts";
-import { annonceUnGain, codePartageable, filleulsAboutis } from "../lib/parrainage.js";
+import {
+  annonceUnGain, codePartageable, doitVerifierLeParrain, filleulsAboutis,
+} from "../lib/parrainage.js";
 
 const resume = (p: Partial<ReferralSummary> = {}): ReferralSummary => ({
   code: "VAL-4KX2", invited: [], creditsEarned: 0, bonusParInvitation: 2, ...p,
@@ -60,5 +62,31 @@ describe("le décompte des filleuls", () => {
 
   it("rend zéro quand personne n'a été invité", () => {
     expect(filleulsAboutis(resume())).toBe(0);
+  });
+});
+
+/* QUAND INTERROGER LE SERVEUR SUR UN CODE DE PARRAINAGE.
+
+   Le code est FACULTATIF : un champ qu'on n'a pas rempli n'est pas un champ
+   faux. Et interroger à chaque frappe marquerait le champ en rouge pendant
+   qu'on le remplit — « AWA » rend 404 sur le chemin de « AWA-2K4 ». */
+describe("quand vérifier un code de parrainage", () => {
+  it("se tait sur un champ vide ou à peine commencé", () => {
+    expect(doitVerifierLeParrain("")).toBe(false);
+    expect(doitVerifierLeParrain("A")).toBe(false);
+    expect(doitVerifierLeParrain("AW")).toBe(false);
+  });
+
+  it("interroge dès qu'un code peut exister", () => {
+    expect(doitVerifierLeParrain("AWA")).toBe(true);
+    expect(doitVerifierLeParrain("AWA-2K4")).toBe(true);
+  });
+
+  /* Les espaces ne comptent pas : coller un code depuis un message en ramène
+     souvent, et « AW » entouré d'espaces reste trop court pour valoir un appel. */
+  it("ne compte pas les espaces", () => {
+    expect(doitVerifierLeParrain("   ")).toBe(false);
+    expect(doitVerifierLeParrain("  AW  ")).toBe(false);
+    expect(doitVerifierLeParrain("  AWA  ")).toBe(true);
   });
 });

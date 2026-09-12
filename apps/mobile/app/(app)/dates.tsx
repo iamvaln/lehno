@@ -17,6 +17,7 @@ import {
   JOURS_PAR_SEMAINE, decaleDeMois, echeancesParJour, fenetreDesDates,
   grilleDuMois, parMois, titreDuMois,
 } from "../../lib/dates.js";
+import { nomDeLEcheance } from "../../lib/accueil.js";
 import { dateCourte } from "../../lib/carnet.js";
 import { libelleDeLEcheance } from "../../lib/libelles.js";
 
@@ -160,7 +161,7 @@ export default function Dates() {
                     >
                       <View style={styles.identite}>
                         <Text style={[styles.nom, { color: couleurs.textBody }]} numberOfLines={1}>
-                          {e.personDisplayName}
+                          {nomDeLEcheance(e, t.evtPourMoi)}
                         </Text>
                         <Text style={[styles.quoi, { color: couleurs.textSecondary }]} numberOfLines={1}>
                           {quoi(e)}
@@ -317,7 +318,7 @@ function Calendrier({ mois, aujourdhui, echeances, langue, onMois, onOuvrir, quo
           >
             <View style={styles.identite}>
               <Text style={[styles.nom, { color: couleurs.textBody }]} numberOfLines={1}>
-                {e.personDisplayName}
+                {nomDeLEcheance(e, t.evtPourMoi)}
               </Text>
               <Text style={[styles.quoi, { color: couleurs.textSecondary }]} numberOfLines={1}>
                 {quoi(e)}

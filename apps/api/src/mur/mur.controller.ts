@@ -4,11 +4,11 @@ import {
 } from "@nestjs/common";
 import {
   updateWallSchema, createCollectionLinkSchema, submissionDecisionSchema,
-  receivedWishDecisionSchema,
+  receivedWishDecisionSchema, receivedWishVisibilitySchema,
   type UpdateWallInput, type Wall, type PublicWall, type WishLink,
   type CollectionLink, type CreateCollectionLinkInput,
   type Submission, type SubmissionDecisionInput,
-  type ReceivedWish, type ReceivedWishDecisionInput,
+  type ReceivedWish, type ReceivedWishDecisionInput, type ReceivedWishVisibilityInput,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
@@ -172,5 +172,20 @@ export class ReceivedWishesController {
     @Body(new ZodValidationPipe(receivedWishDecisionSchema)) body: ReceivedWishDecisionInput,
   ): Promise<ReceivedWish> {
     return this.voeux.decide(req.userId, id, body);
+  }
+
+  /* EXPOSER UN VŒU SUR LE MUR, ou taire son auteur — deux réglages distincts.
+   *
+   * PATCH et non POST : le vœu existe, on change deux de ses champs. Distinct
+   * de `/decision`, qui est la MODÉRATION — approuver dit « je garde ce mot »,
+   * exposer dit « et je le montre ». Les fondre obligerait à publier tout ce
+   * qu'on approuve. */
+  @Patch(":id/visibility")
+  exposer(
+    @Req() req: AuthedRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(receivedWishVisibilitySchema)) body: ReceivedWishVisibilityInput,
+  ): Promise<ReceivedWish> {
+    return this.voeux.exposer(req.userId, id, body);
   }
 }

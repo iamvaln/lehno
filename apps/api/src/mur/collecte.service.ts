@@ -11,14 +11,18 @@ import { nouveauJeton, SurfacePubliqueService } from "./jetons.js";
 // Ce que la base rend pour un lien, réduit à ce que le contrat porte.
 type LigneLien = {
   id: string; type: string; token: string; personId: string | null;
-  isActive: boolean; createdAt: Date;
+  message: string | null; isActive: boolean; createdAt: Date;
 };
 
-function rendre(l: LigneLien): CollectionLink {
+function rendre(l: LigneLien, siteWeb: string): CollectionLink {
   return {
     id: l.id,
     type: l.type as CollectionLink["type"],
     token: l.token,
+    // La barre finale du site est retirée : sans elle, `//c/…` sort une adresse
+    // que les messageries coupent au mauvais endroit.
+    url: `${siteWeb.replace(/\/+$/, "")}/c/${l.token}`,
+    message: l.message,
     personId: l.personId,
     isActive: l.isActive,
     createdAt: l.createdAt.toISOString(),
@@ -34,6 +38,7 @@ export class CollecteService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(TenantRepository) private readonly depot: TenantRepository,
     @Inject(SurfacePubliqueService) private readonly surface: SurfacePubliqueService,
+    @Inject("PUBLIC_WEB_URL") private readonly siteWeb: string,
   ) {}
 
   // ── L'espace privé ────────────────────────────────────────────────────────
@@ -43,7 +48,7 @@ export class CollecteService {
       where: { userId },
       orderBy: { createdAt: "desc" },
     });
-    return lignes.map(rendre);
+    return lignes.map((l) => rendre(l, this.siteWeb));
   }
 
   /* Créer, ou ROUVRIR le lien qui existait déjà.
@@ -74,9 +79,15 @@ export class CollecteService {
     if (existant) {
       const rouvert = await this.prisma.collectionLink.update({
         where: { id: existant.id },
-        data: { isActive: true },
+        /* Le mot se REMPLACE quand il est fourni, et se garde sinon.
+           `undefined` n'écrit pas, `null` efface : c'est ce qui permet de
+           rouvrir un lien sans avoir à réécrire son mot, tout en laissant le
+           retirer explicitement. Écrire systématiquement `input.message`
+           effacerait le mot de quiconque rouvre un lien depuis un écran qui
+           n'a pas ce champ. */
+        data: { isActive: true, ...(input.message !== undefined ? { message: input.message } : {}) },
       });
-      return rendre(rouvert);
+      return rendre(rouvert, this.siteWeb);
     }
 
     const ligne = await this.prisma.collectionLink.create({
@@ -85,9 +96,10 @@ export class CollecteService {
         type: input.type,
         token: nouveauJeton(),
         personId: input.type === "nominatif" ? input.personId! : null,
+        message: input.message ?? null,
       },
     });
-    return rendre(ligne);
+    return rendre(ligne, this.siteWeb);
   }
 
   /* Révoquer, jamais supprimer. La ligne porte les contributions déjà reçues :
@@ -134,6 +146,10 @@ export class CollecteService {
     return {
       type: lien.type as PublicCollectForm["type"],
       ownerDisplayName: lien.user.displayName ?? lien.user.username,
+      /* Le mot de celui qui invite, en haut de la page — la promesse faite à
+         l'écran où on l'écrit. Servi sur les DEUX natures de lien : il ne dit
+         rien de la fiche visée, seulement pourquoi on ouvre cette page. */
+      message: lien.message,
       /* Rien de la fiche sur un lien PUBLIC : celui-ci se partage au monde, et
          y servir un nom ou une date exposerait une fiche à quiconque relaie
          l'adresse. Le formulaire public demande, il ne montre pas. */

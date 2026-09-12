@@ -28,6 +28,22 @@ const CATALOGUE = {
   ],
 };
 
+/* CE QUE LES PRODUCTIONS DE CHAQUE MODÈLE ONT VALU. Le premier est au-dessus
+   du seuil, le second en dessous — les deux cas que l'écran doit distinguer. */
+const MESURES = {
+  seuil: 5,
+  modeles: [
+    {
+      cle: "claude-opus-5", fournisseur: "anthropic",
+      productions: 120, avis: 20, rejets: 3, taux: 0.15,
+    },
+    {
+      cle: "deepseek-chat", fournisseur: "deepseek",
+      productions: 4, avis: 1, rejets: 1, taux: null,
+    },
+  ],
+};
+
 const CHAINES = {
   items: [{
     tache: "message",
@@ -54,8 +70,26 @@ const reponse = (statut: number, corps?: unknown): Response =>
     headers: corps === undefined ? {} : { "content-type": "application/json" },
   });
 
+/* LE REGISTRE DES MOTIFS, comme en production : l'outil le lit au démarrage et
+   en tire ceux de chaque geste. Sans lui, les listes seraient vides — et c'est
+   exactement l'état qui rendait ces gestes impossibles. */
+const MOTIFS = {
+  motifs: [
+    { id: "11111111-1111-4111-8111-111111111111", code: "cost_too_high", fr: "Coût trop élevé", en: "Cost too high", actif: true, gestes: ["ai_model_disable"] },
+    { id: "22222222-2222-4222-8222-222222222222", code: "back_to_normal", fr: "Retour à la normale", en: "Back to normal", actif: true, gestes: ["ai_model_enable"] },
+  ],
+};
+
 function serveur(routes: Record<string, (url: string, init?: RequestInit) => Response>) {
   const appels = vi.fn((url: string, init?: RequestInit) => {
+    if (url.includes("/admin/reasons")) return Promise.resolve(reponse(200, MOTIFS));
+    /* LES MESURES SONT SERVIES PAR DÉFAUT, comme les motifs, et AVANT la table :
+       l'écran les lit à chaque ouverture, et un cas qui déclare ses propres
+       routes pour éprouver tout autre chose n'a pas à y penser. Sans cela, la
+       mesure retombe sur la réponse fourre-tout, l'analyse échoue, et l'écran
+       ne rend plus du tout — quatre cas tombaient alors sur « table
+       introuvable », ce qui ne dit rien de ce qu'ils éprouvent. */
+    if (url.includes("/admin/ai-models/metrics")) return Promise.resolve(reponse(200, MESURES));
     for (const [chemin, rendre] of Object.entries(routes)) {
       if (url.includes(chemin)) return Promise.resolve(rendre(url, init));
     }
@@ -144,14 +178,18 @@ describe("les modèles d'IA", () => {
     await utilisateur.click(await screen.findByRole("menuitem", { name: t.modeles.eteindre }));
     await utilisateur.selectOptions(
       screen.getByLabelText(t.confirmation.motif),
-      t.modeles.dialogueEteindre.motifs[0] as string,
+      "cost_too_high",
     );
     await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
 
     await waitFor(() => {
       expect(ecritures(appels)).toHaveLength(1);
       const corps = JSON.parse((ecritures(appels)[0]?.[1] as RequestInit).body as string);
-      expect(corps).toEqual({ id: "m-1", enabled: false, reason: t.modeles.dialogueEteindre.motifs[0] });
+      /* LE CODE PART AVEC LE MOTIF : le serveur l'exige sur `ai_model_disable`,
+         et refusait en 422 sans lui. */
+      expect(corps).toEqual({
+        id: "m-1", enabled: false, reason: "Coût trop élevé", reasonCode: "cost_too_high",
+      });
     });
   });
 
@@ -173,7 +211,7 @@ describe("les modèles d'IA", () => {
     await utilisateur.click(await screen.findByRole("menuitem", { name: t.modeles.eteindre }));
     await utilisateur.selectOptions(
       screen.getByLabelText(t.confirmation.motif),
-      t.modeles.dialogueEteindre.motifs[0] as string,
+      "cost_too_high",
     );
     await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
 
@@ -282,5 +320,33 @@ describe("les modèles d'IA", () => {
     const chaine = screen.getByLabelText(t.modeles.taches["message"] as string);
     const rangs = within(chaine).getAllByRole("listitem");
     expect(within(rangs[0] as HTMLElement).getByRole("button", { name: t.modeles.chaines.promouvoir })).toBeDisabled();
+  });
+  /* ─── Ce que les productions d'un modèle ont valu ────────────────────────── */
+
+  /* UN TARIF SANS TAUX DE REJET NE DIT QUE LA MOITIÉ : le modèle le moins cher
+     peut coûter le plus, en productions refaites. C'est la question du registre,
+     et elle ne se posait nulle part. */
+  it("montre le taux de rejet à côté du tarif", async () => {
+    serveur(LECTURES);
+    await ouvrir(userEvent.setup({ delay: null }));
+
+    /* LE DÉNOMINATEUR EST LE NOMBRE D'AVIS, jamais celui des productions : trois
+       rejets sur vingt avis font quinze pour cent, et non deux et demi sur cent
+       vingt productions. Les non-jugés ne sont pas des satisfaits. */
+    expect(await screen.findByText(/15 %/)).toBeInTheDocument();
+    expect(screen.getByText(/20 avis/)).toBeInTheDocument();
+    // Et le nombre de productions se lit à côté : il dit combien peu ont parlé.
+    expect(screen.getByText(/120 productions/)).toBeInTheDocument();
+  });
+
+  /* SOUS LE SEUIL ON NE CONCLUT PAS — et l'on ne montre surtout pas « 100 % ».
+     Un rejet sur un avis afficherait un modèle neuf comme catastrophique, et
+     quelqu'un l'éteindrait sur un accident. */
+  it("refuse de conclure sous le seuil, et dit combien il en manque", async () => {
+    serveur(LECTURES);
+    await ouvrir(userEvent.setup({ delay: null }));
+
+    expect(await screen.findByText(/Trop tôt — 1 avis sur 5 attendus/)).toBeInTheDocument();
+    expect(screen.queryByText(/100 %/)).toBeNull();
   });
 });

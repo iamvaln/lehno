@@ -60,3 +60,84 @@ describe("les boutons qui ne portent qu'une icône se disent", () => {
     });
   }
 });
+
+/* UN AVATAR NE RÉPÈTE PAS LE NOM QU'ON LIT À CÔTÉ.
+ *
+ * `Avatar` portait `accessibilityLabel={name}` — l'intention était juste, « le
+ * lecteur annonce la personne, pas image ». Mais dans TOUS les endroits où il
+ * paraît, le nom est écrit à côté : le rang du carnet s'annonçait « Awa, Awa,
+ * rien de noté encore, compléter ».
+ *
+ * Constaté dans la hiérarchie d'accessibilité du simulateur, pas deviné.
+ *
+ * Ce test lie le composant à cet usage : le jour où un avatar devra parler,
+ * c'est ce test qu'il faudra contredire — en connaissance de cause.
+ */
+describe("l'avatar se tait, le nom est écrit à côté", () => {
+  const source = readFileSync(
+    new URL("../../../packages/ui-native/src/core/Avatar.tsx", import.meta.url), "utf8",
+  );
+
+  it("ne porte pas d'étiquette d'accessibilité", () => {
+    expect(source).not.toMatch(/accessibilityLabel=\{name\}/);
+  });
+
+  /* Masqué, pas seulement sans étiquette : sans cela l'initiale dessinée —
+     « A » — se lirait à la place du nom, ce qui est pire qu'un doublon. */
+  it("se retire de l'arbre d'accessibilité, descendants compris", () => {
+    expect(source).toMatch(/accessibilityElementsHidden: true/);
+    expect(source).toMatch(/importantForAccessibility: "no-hide-descendants"/);
+  });
+});
+
+/* UNE BASCULE SE TOUCHE PARTOUT, pas seulement sur son interrupteur.
+ *
+ * Le libellé était inerte : il fallait viser une cinquantaine de points sur un
+ * rang large de trois cent cinquante. Le geste naturel — toucher le texte — ne
+ * faisait rien. Le kit demande « 44 px partout » précisément pour ça.
+ *
+ * Constaté en pilotant l'écran d'identité : l'appui sur « Je ne connais pas
+ * l'année » ne basculait rien.
+ */
+describe("une bascule se touche partout", () => {
+  const source = readFileSync(
+    new URL("../composants/Bascule.tsx", import.meta.url), "utf8",
+  );
+
+  it("enveloppe le rang entier dans un geste", () => {
+    expect(source).toMatch(/<Pressable/);
+    expect(source).toMatch(/accessibilityRole="switch"/);
+  });
+
+  /* L'interrupteur se retire de l'arbre : sinon le libellé s'annonce deux
+     fois, une par le rang et une par l'interrupteur qui le reprend. */
+  it("ne fait pas annoncer le libellé deux fois", () => {
+    expect(source).toMatch(/accessibilityElementsHidden/);
+    expect(source).toMatch(/importantForAccessibility="no-hide-descendants"/);
+  });
+});
+
+/* UNE SEULE PASTILLE, ET UNE SEULE RANGÉE DE JOURS.
+ *
+ * `Pastille` était définie TROIS FOIS — `note.tsx`, `evenement.tsx`,
+ * l'identité — avec des noms de props différents (`onPress` là, `appuie` ici)
+ * et des styles recopiés. Trois dessins pour un même geste finissent par
+ * diverger, et rien ne le signale : chacun compile.
+ *
+ * Ce test refuse qu'une quatrième copie apparaisse.
+ */
+describe("les gestes partagés ne se recopient pas", () => {
+  const ecransDuDossier = (dossier: string): string[] =>
+    readdirSync(new URL(`../app/${dossier}`, import.meta.url), { withFileTypes: true })
+      .flatMap((e) => (e.isDirectory()
+        ? ecransDuDossier(`${dossier}${e.name}/`)
+        : e.name.endsWith(".tsx") ? [`${dossier}${e.name}`] : []));
+
+  it("aucun écran ne redéfinit Pastille", () => {
+    const coupables = ecransDuDossier("").filter((f) =>
+      /function Pastille\b/.test(
+        readFileSync(new URL(`../app/${f}`, import.meta.url), "utf8"),
+      ));
+    expect(coupables).toEqual([]);
+  });
+});

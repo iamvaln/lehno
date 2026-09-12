@@ -38,6 +38,12 @@ export const homeSchema = z.object({
      deviner lequel des deux depuis une liste vide : ce drapeau lui évite
      d'appeler /me/persons rien que pour choisir un libellé de bouton. */
   hasPersons: z.boolean(),
+  /* MÊME RAISON que `hasPersons`, pour la même économie : l'accueil décide
+     d'inviter à faire une liste, et l'invitation doit disparaître une fois
+     acceptée. Sans ce drapeau, le client appelle `/me/wishlists` rien que pour
+     ça, sur l'écran le plus ouvert de l'application — une requête de plus,
+     donc de la radio, de la batterie, et un chemin d'erreur à tenir. */
+  hasWishlist: z.boolean(),
   /**
    * Combien d'échéances viennent **au-delà** de celles rendues, dans les douze
    * prochains mois. C'est le nombre de « Voir plus · n restants ».

@@ -34,15 +34,23 @@ const reponse = (statut: number, corps?: unknown): Response =>
     headers: corps === undefined ? {} : { "content-type": "application/json" },
   });
 
+/* LE REGISTRE DES MOTIFS RÉPOND À PART. L'outil le lit une fois au démarrage,
+   pour tous ses dialogues : le laisser tomber dans le double du tableau de bord
+   lui ferait rendre l'état du tableau, et compterait un appel de plus dans les
+   épreuves qui comptent. Ce double ne parle donc que du tableau. */
 function serveur(reponses: Response[] | (() => Promise<Response>)) {
-  const appels = vi.fn();
-  if (typeof reponses === "function") appels.mockImplementation(reponses);
+  const duTableau = vi.fn();
+  if (typeof reponses === "function") duTableau.mockImplementation(reponses);
   else {
-    for (const r of reponses) appels.mockResolvedValueOnce(r);
-    appels.mockResolvedValue(reponse(200, ETAT));
+    for (const r of reponses) duTableau.mockResolvedValueOnce(r);
+    duTableau.mockResolvedValue(reponse(200, ETAT));
   }
-  vi.stubGlobal("fetch", appels);
-  return appels;
+  vi.stubGlobal("fetch", (url: string, init?: RequestInit) => (
+    String(url).includes("/admin/reasons")
+      ? Promise.resolve(reponse(200, { motifs: [] }))
+      : duTableau(url, init)
+  ));
+  return duTableau;
 }
 
 function ouvrir() {

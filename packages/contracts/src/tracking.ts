@@ -53,11 +53,62 @@ export type ProprietesCommunes = {
  * casse rien — la propriété vaut simplement `null`. */
 export const ENTETES_MESURE = {
   surface: "x-lehno-surface",
-  appVersion: "x-lehno-app-version",
   language: "x-lehno-language",
   theme: "x-lehno-theme",
   sessionId: "x-lehno-session",
 } as const;
+
+/* ── CE QUE LE BUILD ANNONCE DE LUI-MÊME ──────────────────────────────────────
+ *
+ * Quand un incident arrive, la première question est toujours la même : qui
+ * appelait, depuis quelle application, dans quelle version. Ces en-têtes-là y
+ * répondent, et ils accompagnent chaque appel pour la même raison que ceux de
+ * la mesure — le schéma d'une route n'a pas à les porter.
+ *
+ * LES NOMS VIENNENT DE MONJETON, et c'est une décision : les deux produits
+ * vivent sur la même machine et se regardent avec les mêmes outils. Des noms
+ * différents pour la même chose obligeraient à tenir deux jeux de requêtes,
+ * deux tableaux de bord et deux habitudes.
+ *
+ * `appVersion` A QUITTÉ `ENTETES_MESURE` pour venir ici, et il n'y a qu'UN
+ * en-tête de version. En poser deux — `x-lehno-app-version` pour la mesure,
+ * `x-app-version` pour la traçabilité — aurait créé deux listes à tenir
+ * d'accord, et c'est la faute dont ce dépôt a déjà payé le prix ailleurs.
+ * L'ancien nom n'était émis par AUCUN client : le renommage ne casse rien.
+ *
+ * `surface` RESTE ET NE SE CONFOND PAS AVEC `clientType`. « app | web | admin »
+ * est une dimension de mesure produit ; « mobile_ios | mobile_android | web »
+ * désigne un identifiant enregistré. La première ne distingue pas iOS
+ * d'Android, la seconde le doit — c'est par elle qu'on coupe un build. */
+export const ENTETES_CLIENT = {
+  clientId: "x-client-id",
+  clientKey: "x-client-key",
+  clientType: "x-client-type",
+  appVersion: "x-app-version",
+  /* L'ENTIER MONOTONE, ET C'EST LUI QUI COMPARE.
+   *
+   * `appVersion` est ce qu'un humain lit ; comparer des `semver` EN CHAÎNES rend
+   * « 1.10.0 » plus ancien que « 1.9.0 », et ce défaut ne se voit qu'au dixième
+   * correctif mineur — au moment où l'on en a le plus besoin.
+   *
+   * `CFBundleVersion` sur iOS, `versionCode` sur Android : les magasins les
+   * exigent déjà croissants. Sur le web, le nombre de commits sur `main`, qui
+   * est monotone et ne demande de compteur à personne. */
+  appBuild: "x-app-build",
+  /** `ios:17.4` ou `android:34`. Le serveur découpe UNE fois, à l'entrée. */
+  os: "x-app-os",
+  env: "x-app-env",
+} as const;
+
+/* Un client enregistré, et il y en a SIX : trois plateformes × deux
+   environnements. La version ne fait PAS partie de l'identifiant — elle voyage
+   dans `x-app-version`. Une paire par build permettrait de couper une version
+   précise, mais demanderait d'en créer une à chaque publication. */
+export const TYPES_CLIENT = ["mobile_ios", "mobile_android", "web"] as const;
+export type TypeClient = (typeof TYPES_CLIENT)[number];
+
+export const ENVS_CLIENT = ["dev", "staging", "prod"] as const;
+export type EnvClient = (typeof ENVS_CLIENT)[number];
 
 // Par où l'on est entré. `code` est l'envoi d'un code à usage unique.
 export const VOIES_ENTREE = ["code", "google", "apple"] as const;

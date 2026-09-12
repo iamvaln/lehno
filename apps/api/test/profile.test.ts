@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { ProfileService } from "../src/me/profile.service.js";
+import { StockageMemoire } from "../src/stockage/memoire.adapter.js";
 import { profileSchema } from "@lehno/contracts";
 
 describe("profil", () => {
@@ -12,7 +13,7 @@ describe("profil", () => {
   afterAll(async () => { await db.close(); });
   beforeEach(async () => {
     await resetDatabase(db.prisma);
-    svc = new ProfileService(db.prisma as never);
+    svc = new ProfileService(db.prisma as never, new StockageMemoire());
     const u = await db.prisma.user.create({
       data: { email: "awa@example.com", username: "awa", referralCode: "A1" },
     });

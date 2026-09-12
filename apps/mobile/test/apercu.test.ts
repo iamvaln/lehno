@@ -4,7 +4,7 @@ import { accepteDesVoeux, anniversaireSansAnnee, pageVide } from "../lib/apercu.
 
 const mur = (p: Partial<PublicWall> = {}): PublicWall => ({
   username: "valentine", displayName: "Valentine", welcomeMessage: null,
-  birthday: null, interests: [], wishLinkToken: null, ...p,
+  birthday: null, interests: [], wishLinkToken: null, wishlistToken: null, ...p,
 });
 
 describe("l'anniversaire sans son année", () => {

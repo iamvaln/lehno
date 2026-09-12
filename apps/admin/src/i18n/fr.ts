@@ -75,12 +75,14 @@ export const fr = {
     acces: "Accès administrateurs",
     parametres: "Paramètres",
     fonctionnalites: "Fonctionnalités",
+    motifs: "Motifs d'audit",
     modeles: "Modèles d'IA",
     studio: "Studio du portrait",
     atelier: "L'Atelier",
+    textes: "Atelier des textes",
     essais: "Les essais",
     studioService: "Réglages en service",
-    gabarits: "Gabarits de production",
+    studioProfils: "Profils de simulation",
     offres: "Offres et croissance",
     metriques: "Métriques",
     audit: "Journal d'audit",
@@ -129,6 +131,214 @@ export const fr = {
 
   // Toute action qui change un état passe par là, et porte un motif : c'est ce
   // qui fait que le journal d'audit dit quelque chose.
+  motifs: {
+    titre: "Motifs d'audit",
+    sous: "Ce qu'on propose de choisir quand un geste demande une raison. Un code se retire, il ne se renomme pas.",
+    ajouter: "Ajouter un motif",
+    modifier: "Modifier",
+    enService: "En service",
+    retire: "Retiré",
+    aucunGeste: "Aucun geste",
+    col: { code: "Code", fr: "Français", en: "Anglais", gestes: "Gestes", etat: "État" },
+    champs: {
+      code: "Code",
+      codeAide: "Minuscules, chiffres et tirets bas. Il ne se renomme jamais : c'est lui qu'on compte.",
+      codeFige: "Il identifie ce motif dans tout l'historique. Le renommer couperait en deux ce qu'il a justifié.",
+      codeFaux: "Une lettre en tête, puis lettres, chiffres ou tirets bas.",
+      fr: "Libellé français",
+      en: "Libellé anglais",
+      gestes: "Gestes concernés",
+      gestesAide: "Séparés par des virgules — par exemple : parameter_update, credit_adjust. Un motif hors de la portée d'un geste est refusé au moment de s'en servir.",
+      actif: "En service",
+      actifAide: "Retiré, il cesse d'être proposé. Ce qu'il a déjà justifié reste lisible.",
+    },
+    vide: {
+      titre: "Aucun motif",
+      texte: "Les motifs proposés aux gestes d'administration apparaissent ici.",
+    },
+    dialogue: {
+      titreCreation: "Ajouter ce motif",
+      titreModification: "Modifier ce motif",
+      consequence: "Il sera proposé aux gestes indiqués, dès l'enregistrement. Le journal d'audit garde ce geste et son motif.",
+      motifs: ["Nouveau cas rencontré", "Libellé à corriger", "Motif devenu inutile"],
+    },
+  },
+  studioProfils: {
+    titre: "Profils de simulation",
+    sous: "Les éprouvettes du studio : des fiches fictives sur lesquelles on essaie une configuration avant de la mettre en service.",
+    /* LA PHOTO D'EXEMPLE. Sans elle, la voie photo ne s'éprouve pas — et
+       `photo.consigne` étant dans l'empreinte, la changer exige un essai que
+       seule cette photo rend possible. */
+    photo: {
+      poser: "Poser une photo d'exemple",
+      aucune: "Aucune",
+      alt: "Photo d'exemple de l'éprouvette",
+      enCours: "Envoi de la photo…",
+    },
+    renommer: "Renommer",
+    supprimer: "Supprimer",
+    sensible: "Cas sensible",
+    ordinaire: "Ordinaire",
+    col: { libelle: "Profil", photo: "Photo d'exemple", nature: "Nature", notes: "Notes", creeLe: "Créé le" },
+    couverture: {
+      complete: "Le jeu couvre tous les axes.",
+      manque: "Aucun profil ne couvre :",
+    },
+    axes: {
+      fiche_riche: "fiche riche", fiche_pauvre: "fiche pauvre",
+      nom_court: "nom court", nom_long: "nom long",
+      langue_fr: "français", langue_en: "anglais",
+      relation_familiale: "lien familial", relation_professionnelle: "lien professionnel",
+      cas_sensible: "cas sensible",
+    },
+    champs: {
+      libelle: "Libellé",
+      sensible: "Cas sensible",
+      sensibleAide: "Un décès, une séparation. Le studio refuse les orientations joyeuses sur ces profils — c'est ce que l'essai doit éprouver.",
+    },
+    vide: {
+      titre: "Aucun profil",
+      texte: "Sans éprouvette, aucun essai n'est possible : l'Atelier n'a rien à quoi appliquer une configuration.",
+    },
+    dialogueRenommer: {
+      titre: "Renommer ce profil",
+      consequence: "Le contenu de l'éprouvette ne change pas — seulement son nom et sa nature.",
+    },
+    dialogueSupprimer: {
+      titre: "Supprimer ce profil",
+      consequence: "Les essais qui s'en sont servis demeurent, avec leur coût et leur verdict ; ils perdent seulement le lien vers la fiche.",
+    },
+  },
+  studioTextes: {
+    titre: "Atelier des textes",
+    sous: "Ce que le modèle lit avant d'écrire — pour le message, les idées de cadeau et le brief du portrait.",
+    natures: { message: "Message", idees: "Idées de cadeau", portrait_brief: "Brief du portrait" },
+    modeleEteint: "écarté du routage",
+    enService: { titre: "Ce qui tourne", version: "Version", aucune: "Rien n'est encore publié pour cette nature." },
+    champs: {
+      consigne: "Consigne commune",
+      consigneAide: "Ce qui s'AJOUTE à la consigne système. Les règles absolues ne se règlent pas d'ici.",
+      gardeFous: "Garde-fous",
+      gardeFousAide: "Ce qui est écarté : symboles, formules, tournures. Entrée pour ajouter, croix pour retirer.",
+      retirer: "Retirer",
+      champsDuProche: "Ce que le modèle reçoit",
+      champsDuProcheAide: "Ce qui sort de chez nous. Décocher « notes », c'est décider que les confidences ne traversent pas.",
+      modele: "Modèle appelé",
+      modeleAide: "Un modèle écarté du routage figure quand même : c'est ici qu'on va voir s'il est revenu.",
+      nombreDemande: "Idées demandées",
+      nombreDemandeAide: "De trois à six. En dessous, rien à comparer et un refus vide la liste ; au-delà, les dernières deviennent des variantes de la première.",
+      motsDuPortrait: "Mots du nuage",
+      motsDuPortraitAide: "De un à douze. Trop peu ne dit rien ; trop noie le dessin.",
+      motsDeLaPhrase: "Mots de la dédicace",
+      motsDeLaPhraseAide: "De deux à vingt-quatre. C'est une contrainte de COMPOSITION : au-delà, la troisième ligne déborde de la bande et la dédicace sort tronquée.",
+      profil: "Éprouvette",
+      profilAide: "Le profil de simulation sur lequel l'essai tourne.",
+    },
+    bornes: { min: "Minimum", max: "Maximum" },
+    langues: { fr: "Français", en: "Anglais" },
+    champsProche: { relation: "Relation", age: "Âge", notes: "Notes", texte_libre: "Texte libre" },
+    orientations: {
+      titre: "Orientations",
+      aide: "L'ordre est celui de l'écran, et la première active est le défaut. Il n'y a pas de champ « défaut » : on le règle en réordonnant.",
+      active: "Active",
+      defaut: "Défaut",
+      monter: "Monter",
+      descendre: "Descendre",
+      aucuneActive: "Au moins une orientation doit rester active : sans elle, l'écran du client n'a rien à proposer.",
+      textes: "Textes",
+      replier: "Replier",
+      consigne: "Consigne de l'orientation",
+      consigneAide: "Ce que le modèle reçoit pour cette orientation-là. La changer fait une version neuve : il faudra un nouvel essai avant de publier.",
+      libelle: "Libellé",
+      libelleAide: "Ce que le client lit dans la liste. Les deux langues sont exigées.",
+      description: "Description",
+      avertissement: "Avertissement",
+      facultatifAide: "Facultatif. Les deux langues ensemble, ou aucune — un côté seul est refusé.",
+      avertissementAide: "Facultatif. Ce qui met en garde avant de choisir cette orientation. Les deux langues ensemble, ou aucune.",
+      texteIncomplet: "Un texte n'est rempli que d'un côté : {lesquelles}. Les deux langues vont ensemble.",
+    },
+    essai: { titre: "Dernier essai", etat: "État :", cout: "Coût :", coutInconnu: "non tarifé" },
+    etats: { success: "réussi", error: "en erreur", timeout: "expiré", refused: "refusé" },
+    sansProfil: {
+      titre: "Aucune éprouvette",
+      texte: "Sans profil de simulation, aucun essai n'est possible — et rien ne se publie sans essai.",
+    },
+    gestes: {
+      enregistrer: "Enregistrer le brouillon",
+      essayer: "Essayer",
+      publier: "Mettre en service",
+      publierImpossible: "Rien à publier pour l'instant.",
+    },
+    /* LE JOURNAL DES ESSAIS de cette nature. Il ne double pas la galerie :
+       celle-ci rend les cent derniers de TOUTES les natures, et l'on vient ici
+       comparer deux versions d'une seule — le même partage que l'atelier du
+       portrait fait avec la sienne. */
+    journal: {
+      titre: "Les essais de cette nature",
+      sous: "Ce qui a été produit ici, et ce qu'on en a pensé. La galerie, elle, garde les cent derniers de toutes les natures.",
+      col: { quand: "Quand", sortie: "Ce qui est sorti", modele: "Modèle", etat: "État", verdict: "Verdict" },
+      verdicts: { kept: "Gardé", discarded: "Écarté" },
+      nonJuge: "—",
+      garder: "Garder",
+      ecarter: "Écarter",
+      aucun: {
+        titre: "Aucun essai",
+        texte: "Rien ne se publie sans essai : c'est ici qu'ils s'inscrivent, avec ce qu'ils ont produit.",
+      },
+    },
+    blocages: {
+      deja_en_service: "Cette version est déjà en service.",
+      aucun_essai_reussi: "Aucun essai réussi ne porte ces réglages. Essayez avant de publier.",
+      etat_depasse: "Cette version est dépassée : on n'y publie pas, on y revient.",
+    },
+    dialoguePublier: {
+      titre: "Mettre ces réglages en service",
+      consequence: "La prochaine génération emploiera ces réglages. Les productions déjà faites ne changent pas.",
+      motifs: ["Essai concluant", "Correction d'une consigne", "Retour d'un cas signalé"],
+      note: "Ce qui change",
+      noteAide: "Une ligne. C'est elle qu'on relira dans l'historique, pas l'écart des réglages.",
+    },
+    /* L'HISTORIQUE VIT DANS L'ATELIER, et non dans un écran jumeau de
+       « Réglages en service » comme pour le portrait. Deux écrans à onglets
+       auraient deux sélections de nature à tenir d'accord, et l'une mentirait
+       sur l'autre dès qu'on changerait d'onglet d'un seul côté. */
+    historique: {
+      titre: "Les publications",
+      sous: "Chaque mise en service de cette nature, avec son auteur et son motif. C'est le journal de l'atelier.",
+      col: { version: "Version", quand: "Publiée le", parQui: "Par", note: "Ce que ça change", etat: "État",
+      gestes: "Ce qu'on en a fait",
+      avis: "Ce qu'on en a pensé",
+      },
+      /* LES TROIS SEAUX D'UN AXE. « Sans » figure TOUJOURS : c'est « personne
+         n'a répondu », et le taire ferait lire deux chiffres comme un total —
+         la version paraîtrait unanime alors que presque personne n'a parlé. */
+      axes: {
+        gestes: { pour: "{n} envoyés", contre: "{n} écartés", sans: "{n} sans suite" },
+        avis: { pour: "{n} bons", contre: "{n} mauvais", sans: "{n} sans avis" },
+      },
+      rien: "Rien produit",
+      // Produit par le gabarit du code, avant qu'une configuration ne soit
+      // publiée. Compté à part et jamais attribué à une version.
+      horsVersion: "Avant le lien : {n} productions, dont {ecartees} écartées. Elles n'appartiennent à aucune version, et ne peuvent pas en recevoir une.",
+      etats: { published: "En service", superseded: "Rangée", draft: "Brouillon" },
+      version: "Version {n}",
+      sansNote: "Publiée sans note.",
+      revenir: "Remettre en service",
+      aucune: {
+        titre: "Aucune publication",
+        texte: "Les mises en service de cette nature s'inscrivent ici, avec leur auteur et leur motif.",
+      },
+      dialogue: {
+        titre: "Remettre la version {n} en service",
+        consequence: "La version en service se range, celle-ci reprend la main. Rien n'est reconstruit, le brouillon en cours n'est pas touché, et le changement rejoint le journal avec son motif.",
+        motifs: [
+          "Les textes se sont dégradés depuis la publication",
+          "La version en service ne tient pas ses garde-fous",
+          "Retour arrière après un essai non concluant",
+        ],
+      },
+    },
+  },
   confirmation: {
     motif: "Motif",
     motifAide: "Le journal d'audit garde ce geste et son motif.",
@@ -204,6 +414,11 @@ export const fr = {
         admin_role_update: "Changement de rôle d'un administrateur",
         admin_revoke: "Révocation d'un accès d'administrateur",
         ai_model_update: "Réglage d'un modèle d'IA",
+        /* CES DEUX-LÀ SURVIVENT AU RETRAIT DES GABARITS, et c'est voulu.
+           L'écran des gabarits de production n'existe plus — le Studio fait la
+           même chose, en marchant —, mais le JOURNAL D'AUDIT garde les gestes
+           qui ont eu lieu. Retirer ces libellés afficherait un code brut à la
+           place d'une phrase sur des lignes qu'on ne peut plus réécrire. */
         prompt_template_create: "Création d'un gabarit de production",
         prompt_template_activate: "Activation d'un gabarit de production",
         support_request_update: "Changement d'état d'une demande d'assistance",
@@ -247,7 +462,7 @@ export const fr = {
   modeles: {
     titre: "Modèles d'IA",
     sous: "Ce qu'on appelle pour chaque tâche, dans quel ordre, et ce que ça coûte au fournisseur.",
-    col: { fournisseur: "Fournisseur", modele: "Modèle", capacite: "Sait faire", etat: "État", emplois: "Où il sert", entree: "Coût entrée", sortie: "Coût sortie" },
+    col: { fournisseur: "Fournisseur", modele: "Modèle", capacite: "Sait faire", etat: "État", emplois: "Où il sert", rejets: "Rejetés", entree: "Coût entrée", sortie: "Coût sortie" },
     capacites: { texte: "Texte", image: "Image" },
     /* Trois états, et surtout pas deux. « Éteint » est la décision d'un humain,
        « momentanément injoignable » le constat du disjoncteur. Ils se réparent
@@ -257,6 +472,15 @@ export const fr = {
     // Un coût absent n'est pas un coût nul : c'est un modèle qu'on n'a pas
     // encore tarifé. « 0 » le ferait passer pour gratuit dans un calcul de marge.
     sansCout: "Non tarifé",
+    /* CE QUE SES PRODUCTIONS ONT VALU. Le dénominateur est le nombre d'AVIS,
+       jamais celui des productions : les non-jugés ne sont pas des satisfaits.
+       Les deux chiffres se lisent ensemble — le taux dit ce qu'en pensent ceux
+       qui ont parlé, le second dit combien peu ont parlé. */
+    tauxRejet: "{taux} % — {rejets} rejets sur {avis} avis, {productions} productions",
+    // « Trop tôt » et non zéro : le premier rejet d'un modèle neuf l'afficherait
+    // à cent pour cent, et quelqu'un l'éteindrait sur un accident.
+    tropTot: "Trop tôt — {avis} avis sur {seuil} attendus",
+    rienProduit: "Rien produit",
     sansEmploi: "Dans aucune chaîne",
     unite: "$ / M jetons",
     taches: {
@@ -392,10 +616,13 @@ export const fr = {
 
     detail: {
       titre: "Paiement",
+      ouvrirRecu: "Ouvrir le reçu",
+      sansRecu: "Aucun reçu déposé",
       groupes: { operation: "L'opération", montants: "Les montants", histoire: "Son histoire" },
       champs: {
         reference: "Référence", compte: "Compte de collecte", frais: "Frais",
         montant: "Prix du palier", attendu: "Attendu sur le compte", recu: "Constaté",
+        recuPiece: "Reçu",
         ecart: "Écart", motifEchec: "Motif du refus", credits: "Crédits",
       },
       histoire: { etat: "État", debut: "Depuis", duree: "Durée", origine: "Provoqué par", parQui: "Par", motif: "Motif" },
@@ -468,20 +695,47 @@ export const fr = {
     },
 
     reglages: {
+      formulaire: {
+        modifier: "Modifier",
+        ajouterCanal: "Ajouter un canal",
+        ajouterCompte: "Ajouter un compte",
+        titrePalier: "Modifier le palier",
+        titreCanalNeuf: "Ajouter un canal",
+        titreCanal: "Modifier le canal",
+        titreCompteNeuf: "Ajouter un compte de collecte",
+        titreCompte: "Modifier le compte de collecte",
+        consequence: "Prend effet dès l'enregistrement, pour tous les clients. Le journal d'audit garde ce geste et son motif.",
+        precedente: "Avant",
+        oui: "Oui",
+        non: "Non",
+        champs: {
+          fraisFixe: "Frais fixes",
+          fraisMin: "Frais minimum",
+          fraisMax: "Frais maximum",
+          ussd: "Code USSD de secours",
+          nature: "Nature",
+          position: "Ordre d'affichage",
+          actif: "En service",
+        },
+      },
+
       paliers: {
         titre: "Paliers d'achat",
         sous: "Ce qu'on propose à l'achat. Aucune saisie libre : le plus petit palier fixe le minimum.",
+        vide: { titre: "Aucun palier", texte: "Les offres d'achat de crédits apparaissent ici. Sans palier, personne ne peut recharger." },
         col: { montant: "Prix", credits: "Crédits", remise: "Remise", position: "Ordre", etat: "État" },
       },
       canaux: {
         titre: "Canaux et barèmes",
         sous: "Ce que le service propose, et ce que l'opérateur prend. Un canal ne se supprime pas, il se désactive.",
+        vide: { titre: "Aucun canal", texte: "Les moyens d'encaissement et leurs frais apparaissent ici. Sans canal, aucun versement ne se déclare." },
         col: { libelle: "Canal", pays: "Pays", frais: "Frais", portes: "À la charge de", etat: "État" },
         portes: { payer: "Du client", payee: "Du service" },
       },
       comptes: {
         titre: "Comptes de collecte",
         sous: "Les comptes sur lesquels les clients versent.",
+        vide: { titre: "Aucun compte de collecte", texte: "Les comptes sur lesquels les clients versent apparaissent ici. Sans compte, le versement manuel n'a pas de destination." },
         col: { libelle: "Compte", operateur: "Opérateur", numero: "Numéro", visible: "Dans l'application", etat: "État" },
         visible: "Proposé", masque: "Masqué",
       },
@@ -854,6 +1108,27 @@ export const fr = {
     restantN: "{n} jours",
     restaurer: "Restaurer",
     effacer: "Effacer sans attendre",
+    /* LES DEUX GESTES DU REMBOURSEMENT. Le versement se fait DEHORS — depuis un
+       téléphone ou la console d'un opérateur —, et c'est sa référence qu'on
+       rentre ici. L'outil ne verse pas, il enregistre ; et c'est ce geste qui
+       libère l'effacement retenu. */
+    verser: "Remboursement versé",
+    abandonner: "Renoncer au remboursement",
+    reference: "Référence du virement",
+    referenceAide: "Celle que l'opérateur a rendue. C'est la seule preuve que l'argent est parti — sans elle, « remboursé » n'est qu'une affirmation.",
+    sansNumero: "numéro inconnu",
+    dialogueVerser: {
+      titre: "Enregistrer le remboursement de {compte}",
+      consequence: "Vous déclarez avoir envoyé {montant} {devise} au {numero}. Les crédits correspondants sont repris, et l'effacement du compte n'est plus retenu.",
+      motifs: ["Virement effectué", "Remboursement groupé", "Régularisation"],
+    },
+    dialogueAbandonner: {
+      titre: "Renoncer au remboursement de {compte}",
+      // Sans porte de sortie, une demande qui ne peut pas aboutir retiendrait
+      // l'effacement pour toujours.
+      consequence: "Aucun argent ne sera envoyé, et les crédits ne sont pas repris. L'effacement du compte n'est plus retenu.",
+      motifs: ["Numéro fermé ou injoignable", "Titulaire sans réponse", "Montant contesté"],
+    },
     dialogueEffacer: {
       titre: "Effacer {compte} maintenant ?",
       consequence: "L'effacement est définitif : fiches, notes, contenus produits et surfaces publiques disparaissent. Ce qui reste du délai de grâce s'arrête là.",
@@ -874,6 +1149,8 @@ export const fr = {
     faits: {
       efface: "Compte effacé. Motif : {motif}",
       restaure: "Compte restauré. Motif : {motif}",
+      verse: "Remboursement enregistré. Référence : {reference}",
+      abandonne: "Remboursement abandonné. Motif : {motif}",
     },
     vide: {
       titre: "Rien en attente d'effacement",
@@ -1036,6 +1313,11 @@ export const fr = {
       titre: "La chaîne",
       ambiance: "Ambiance éprouvée",
       profil: "Profil d'essai",
+      voie: "Voie éprouvée",
+      /* C'est la VOIE qui dit le modèle, jamais l'ambiance : les deux voies
+         partagent la même famille d'ambiances. */
+      voies: { illustration: "Illustration", photo: "Photo traitée" },
+      sansPhoto: "Cette éprouvette n'a pas de photo d'exemple : la voie photo ne peut pas s'éprouver sur elle. On en dépose une depuis « Profils de simulation ».",
       modele: "Modèle appelé",
       sansTarif: "Tarif inconnu",
       enPanne: "Écarté du routage jusqu'au {date}",
@@ -1049,6 +1331,27 @@ export const fr = {
       consigne: "Consigne de l'ambiance",
       consigneAide: "Ce texte part au modèle tel quel, dans la langue de l'ambiance.",
       nonEnregistre: "non enregistré",
+    },
+    /* LA VOIE PHOTO. La consigne est LUE PAR LE MODÈLE — elle entre dans
+       l'invite dès que la voie est la photo, donc dans l'empreinte ; les trois
+       seuils refusent une photo AVANT tout appel, et le modèle ne les voit
+       jamais. D'où deux blocs, et un seul liséré. */
+    photo: {
+      titre: "La voie photo",
+      sous: "Ce qu'on demande au modèle de faire de la photo déposée, et ce qu'on refuse d'accepter.",
+      consigne: "Consigne de la photo",
+      consigneAide: "Elle part dans l'invite avec la photo. La changer fait une version neuve : il faudra un nouvel essai avant de publier.",
+      seuils: "Ce qu'on refuse à l'arrivée",
+      seuilsAide: "Ces trois seuils écartent une photo avant tout appel au modèle. Les changer ne redemande aucun essai.",
+      coteMin: "Plus petit côté, en pixels",
+      coteMinAide: "De 256 à 4096. En dessous, agrandir invente des détails — et le modèle rend un visage qui n'est celui de personne.",
+      luminositeMin: "Luminosité moyenne",
+      luminositeMinAide: "De 0 à 255. Une photo trop sombre ne porte pas ce qu'on lui demande d'inspirer ; l'éclaircir révélerait du bruit.",
+      nettetteMin: "Contraste local",
+      // On ne promet pas une mesure de flou : c'en est une approchée.
+      nettetteMinAide: "De 0 à 128. C'est l'écart-type des niveaux, une mesure APPROCHÉE de la netteté — une image floue a peu de contraste local. Ce n'est pas un calcul de flou.",
+      absent: "Aucun réglage n'est publié pour la photo. Les seuils ci-dessous sont ceux du code et s'appliquent déjà ; la consigne, elle, n'existe pas — le modèle ne reçoit rien sur la photo.",
+      consigneExigee: "Les réglages de la photo vont ensemble : sans la consigne dans les deux langues, les seuils ne peuvent pas être publiés.",
     },
     interne: {
       titre: "Ce que seule l'application lit",
@@ -1138,6 +1441,8 @@ export const fr = {
     // déjà vu.
     pourquoi: "L'Atelier ne montre que la journée. Ici, les cent derniers essais — de quoi revoir sans repayer l'appel.",
     filtre: {
+      nature: "Nature",
+      toutesNatures: "Toutes",
       ambiance: "Ambiance",
       toutesAmbiances: "Toutes",
       sansAmbiance: "Sans ambiance",
@@ -1155,6 +1460,26 @@ export const fr = {
       discarded: "Écarté",
       publie: "Publié",
       nonJuge: "Non jugé",
+    },
+    /* LES QUATRE NATURES PARAISSENT ICI, et la galerie les rendait déjà sans
+       les nommer : elles partagent la table des essais. Deux essais du même
+       modèle, l'un pour le portrait et l'autre pour les idées, se
+       ressemblaient — et la forme de la sortie ne les sépare pas, les trois
+       natures de texte rendant toutes un message. */
+    natures: {
+      portrait: "Portrait",
+      message: "Message",
+      idees: "Idées de cadeau",
+      portrait_brief: "Brief du portrait",
+    },
+    /* LA VIGNETTE D'UNE AMBIANCE. Le geste est GRATUIT — elle n'entre pas dans
+       l'empreinte, c'est ce que l'humain regarde et non ce que le modèle lit —
+       et il écrit un BROUILLON : rien ne change pour les utilisateurs tant que
+       personne n'a publié. D'où l'absence de motif et de confirmation. */
+    vignette: {
+      poser: "En faire la vignette de l'ambiance",
+      estLa: "Vignette de l'ambiance",
+      aide: "L'application montre cette image sur le choix de l'ambiance — personne ne sait départager « chaleureux » et « sobre » dans l'abstrait. Le geste retient l'essai et écrit un brouillon ; rien ne change pour les utilisateurs tant que la version n'est pas publiée.",
     },
     carte: {
       alt: "Résultat de l'essai",
@@ -1211,7 +1536,17 @@ export const fr = {
       parQui: "Par",
       note: "Ce que ça change",
       etat: "État",
+      gestes: "Ce qu'on en a fait",
+      avis: "Ce qu'on en a pensé",
     },
+    /* LES TROIS SEAUX D'UN AXE. « Sans » figure toujours : c'est « personne n'a
+       répondu », et le taire ferait lire deux chiffres comme un total. */
+    axes: {
+      gestes: { pour: "{n} gardés", contre: "{n} rejetés", sans: "{n} sans suite" },
+      avis: { pour: "{n} bons", contre: "{n} mauvais", sans: "{n} sans avis" },
+    },
+    rien: "Rien produit",
+    horsVersion: "Avant le lien : {n} portraits, dont {ecartees} rejetés. Ils n'appartiennent à aucune version, et ne peuvent pas en recevoir une.",
     etats: {
       published: "En service",
       superseded: "Rangée",
@@ -1237,45 +1572,6 @@ export const fr = {
     },
   },
 
-  studio: {
-    titre: "Studio du portrait",
-    sous: "Les gabarits de production en service, et ce qui les a précédés.",
-    portee: "Cette entrée montre les réglages en service. La composition d'un brouillon et le banc d'essai ne sont pas encore possibles : le modèle de données ne porte pas de brouillon, et aucun fournisseur d'IA n'est branché.",
-    col: {
-      genre: "Production",
-      cle: "Gabarit",
-      version: "En service",
-      modele: "Modèle appelé",
-      parQui: "Publié par",
-      corps: "Consigne",
-    },
-    genres: {
-      message: "Message",
-      illustration: "Illustration",
-      photo_style: "Style de photo",
-      note_classification: "Classement des notes",
-      sensitive_detection: "Détection des cas sensibles",
-    },
-    version: "Version {n}",
-    aucune: "Aucune",
-    parPriorite: "Au routage par priorité",
-    parMigration: "Posé à l'installation",
-    historique: "Historique de « {cle} »",
-    revenir: "Remettre en service",
-    dialogue: {
-      titre: "Remettre la version {n} en service",
-      consequence: "La version en service se range, celle-ci reprend la main. Rien n'est reconstruit, et le changement rejoint le journal d'audit avec son motif.",
-      motifs: [
-        "Les productions se sont dégradées depuis la publication",
-        "La version en service ne tient pas ses garde-fous",
-        "Retour arrière après un essai non concluant",
-      ],
-    },
-    vide: {
-      titre: "Aucun gabarit",
-      texte: "Les gabarits de production s'inscrivent ici dès qu'une première version est publiée.",
-    },
-  },
 
   liens: {
     titre: "Liens externes",

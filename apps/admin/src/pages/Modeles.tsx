@@ -3,7 +3,7 @@ import { Breadcrumb, PageHeader } from "../composants/page/index.js";
 import { DataTable, EmptyState, StatusPill, type Colonne } from "../composants/donnees/index.js";
 import { ConfirmWithReason } from "../composants/actions/index.js";
 import { messages, type Langue } from "../i18n/index.js";
-import type { AdminRole, ChaineIa, ModeleIa } from "@lehno/contracts";
+import type { AdminRole, ChaineIa, MesureModele, ModeleIa } from "@lehno/contracts";
 
 /**
  * Le catalogue des modèles, et la chaîne de repli de chaque tâche.
@@ -28,16 +28,28 @@ import type { AdminRole, ChaineIa, ModeleIa } from "@lehno/contracts";
  */
 export interface ModelesProps {
   role: AdminRole;
+  /** Ce que les productions de chaque modèle ont valu, toutes natures confondues. */
+  mesures?: MesureModele[];
+  /** Sous ce nombre d'AVIS, on ne conclut pas. Il vient du serveur. */
+  seuil?: number;
   langue?: Langue;
   modeles: ModeleIa[];
   chaines?: ChaineIa[];
-  onBasculer?: (modele: ModeleIa, actif: boolean, motif: string) => void;
+  onBasculer?: (modele: ModeleIa, actif: boolean, motif: string, code?: string) => void;
+  /** Les motifs du registre, par geste — allumer et éteindre n'ont pas les mêmes. */
+  motifsDuGeste?: (geste: string) => readonly { code: string; libelle: string }[];
   onReordonner?: (tache: string, modeleIds: string[], motif: string) => void;
   onRetour?: (id: string) => void;
 }
 
+/** Les gabarits portent des trous nommés ; on les remplit sans dépendance. */
+const remplir = (gabarit: string, valeurs: Record<string, string | number>): string =>
+  Object.entries(valeurs).reduce((a, [c, v]) => a.split(`{${c}}`).join(String(v)), gabarit);
+
 export function Modeles({
-  role, langue = "fr", modeles, chaines = [], onBasculer, onReordonner, onRetour,
+  role, langue = "fr", modeles, chaines = [], mesures = [], seuil = 0,
+  onBasculer, onReordonner, onRetour,
+  motifsDuGeste = () => [],
 }: ModelesProps): ReactNode {
   const t = messages(langue);
   const [geste, setGeste] = useState<ModeleIa | null>(null);
@@ -83,6 +95,34 @@ export function Modeles({
       rendu: (m) => (m.emplois.length === 0
         ? t.modeles.sansEmploi
         : m.emplois.map((e) => `${t.modeles.taches[e.tache] ?? e.tache} (${e.rang})`).join(" · ")),
+    },
+    /* CE QUE SES PRODUCTIONS ONT VALU — à côté du tarif, et c'est le propos :
+       un tarif sans taux de rejet ne dit que la moitié. Le modèle le moins cher
+       peut coûter le plus, en productions refaites.
+       LE DÉNOMINATEUR EST LE NOMBRE D'AVIS, jamais celui des productions : les
+       non-jugés ne sont pas des satisfaits. Les deux chiffres se lisent
+       ensemble — le taux dit ce qu'en pensent ceux qui ont parlé, le second dit
+       combien peu ont parlé. */
+    {
+      cle: "rejets",
+      titre: t.modeles.col.rejets,
+      aligne: "right",
+      rendu: (m) => {
+        const mesure = mesures.find((x) => x.fournisseur === m.fournisseur && x.cle === m.modele);
+        if (mesure === undefined || mesure.productions === 0) return t.modeles.rienProduit;
+        /* NUL N'EST PAS ZÉRO : sous le seuil on dit « trop tôt », sinon le
+           premier rejet d'un modèle neuf l'affiche à cent pour cent et
+           quelqu'un l'éteint sur un accident. */
+        if (mesure.taux === null) {
+          return remplir(t.modeles.tropTot, { avis: mesure.avis, seuil });
+        }
+        return remplir(t.modeles.tauxRejet, {
+          taux: Math.round(mesure.taux * 100),
+          rejets: mesure.rejets,
+          avis: mesure.avis,
+          productions: mesure.productions,
+        });
+      },
     },
     { cle: "coutEntree", titre: t.modeles.col.entree, discret: true, aligne: "right", rendu: (m) => cout(m.coutEntree) },
     { cle: "coutSortie", titre: t.modeles.col.sortie, discret: true, aligne: "right", rendu: (m) => cout(m.coutSortie) },
@@ -190,7 +230,9 @@ export function Modeles({
           destructif={geste.actif}
           titre={dialogue.titre.replace("{modele}", geste.modele)}
           consequence={dialogue.consequence}
-          motifs={[...dialogue.motifs]}
+          /* Le serveur exige le code sur `ai_model_enable` et
+             `ai_model_disable` : sans lui, basculer un modèle rend 422. */
+          motifs={motifsDuGeste(geste.actif ? "ai_model_disable" : "ai_model_enable")}
           libelles={{
             motif: t.confirmation.motif,
             choisir: t.confirmation.motifManquant,
@@ -201,8 +243,8 @@ export function Modeles({
             confirmer: t.confirmation.confirmer,
           }}
           onAnnuler={() => setGeste(null)}
-          onConfirmer={(motif) => {
-            onBasculer?.(geste, !geste.actif, motif);
+          onConfirmer={(motif, code) => {
+            onBasculer?.(geste, !geste.actif, motif, code);
             setGeste(null);
           }}
         />

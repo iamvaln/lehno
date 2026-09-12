@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { ORIENTATIONS } from "./gabarits.js";
 import { PERSON_REGISTERS, PERSON_RELATIONS } from "./me.js";
-import { reglagesMessageSchema, reglagesPortraitSchema } from "./studio.js";
+import {
+  reglagesMessageSchema, reglagesPortraitSchema,
+  reglagesIdeesSchema, reglagesBriefPortraitSchema,
+} from "./studio.js";
 
 /* Le Studio du portrait, côté administration — `ux-admin-lehno.md` §5.9 et le
  * brief fonctionnel du 27 août.
@@ -57,9 +60,13 @@ const configurationAvec = <T extends z.ZodTypeAny>(reglages: T) =>
 }).strict();
 
 export const configurationMessageSchema = configurationAvec(reglagesMessageSchema);
+export const configurationIdeesSchema = configurationAvec(reglagesIdeesSchema);
+export const configurationBriefPortraitSchema = configurationAvec(reglagesBriefPortraitSchema);
 export const configurationPortraitSchema = configurationAvec(reglagesPortraitSchema);
 
 export type ConfigurationMessage = z.infer<typeof configurationMessageSchema>;
+export type ConfigurationIdees = z.infer<typeof configurationIdeesSchema>;
+export type ConfigurationBriefPortrait = z.infer<typeof configurationBriefPortraitSchema>;
 export type ConfigurationPortrait = z.infer<typeof configurationPortraitSchema>;
 
 /* Les deux écrans du brief de design en un seul appel : ce qui tourne, et ce
@@ -70,15 +77,159 @@ const etatAvec = <T extends z.ZodTypeAny>(config: T) =>
   z.object({ enService: config.nullable(), brouillon: config.nullable() }).strict();
 
 export const etatMessageSchema = etatAvec(configurationMessageSchema);
+export const etatIdeesSchema = etatAvec(configurationIdeesSchema);
+export const etatBriefPortraitSchema = etatAvec(configurationBriefPortraitSchema);
 export const etatPortraitSchema = etatAvec(configurationPortraitSchema);
+
+/* ── CE QUE LES VERSIONS ONT PRODUIT ─────────────────────────────────────────
+ *
+ * La lecture qui donne son sens à tout l'atelier. Jusqu'ici on publiait sans
+ * jamais savoir si on avait amélioré quoi que ce soit : aucune production ne
+ * portait d'avis négatif, et aucune ne disait quelle version l'avait produite.
+ * Les deux manquaient ensemble et il les fallait ensemble — un pouce en bas
+ * sans savoir quelle version l'a produit ne mesure rien, et une version publiée
+ * sans avis ne dit pas si elle vaut mieux que la précédente.
+ *
+ * L'UNITÉ COMPTÉE N'EST PAS LA MÊME PARTOUT, et la nommer évite de comparer des
+ * choses qui ne se comparent pas : un message, un portrait, une IDÉE. Le jeu
+ * d'idées porte la version, mais l'avis se pose idée par idée — compter les
+ * jeux dirait « trois productions » là où quinze avis ont été rendus.
+ */
+export const UNITES_PRODUITES = ["message", "portrait", "idee"] as const;
+export type UniteProduite = (typeof UNITES_PRODUITES)[number];
+
+/* DEUX AXES, JAMAIS FONDUS — et c'est la première phrase du brief mobile de
+ * l'avis : « le statut dit ce qu'on FAIT de l'objet, l'avis ce qu'on en PENSE,
+ * et c'est un pas de plus ».
+ *
+ * La première rédaction de ce schéma les fondait pourtant dans un seul couple
+ * `positifs`/`negatifs` — et pire, la même colonne ne comptait pas la même
+ * chose selon la nature : le STATUT pour le message et le portrait, l'AVIS
+ * pour les idées. Trois natures sous un schéma unique, dans un écran fait pour
+ * les comparer : « envoyé » et « pouce en haut » finissaient dans la même case.
+ *
+ * On peut garder sans aimer — une image qu'on ne trouve pas réussie mais qu'on
+ * garde quand même dit quelque chose de précis, que ni l'un ni l'autre ne
+ * porterait seul. Les deux axes se lisent donc côte à côte. */
+const troisSeaux = {
+  /** Le geste franchi, ou le pouce levé, selon l'axe. */
+  pour: z.number().int().min(0),
+  /** Le geste contraire, ou le pouce baissé. */
+  contre: z.number().int().min(0),
+  /* SANS N'EST PAS UN « NI L'UN NI L'AUTRE » : c'est « personne n'a répondu »,
+     ce qui ne se compte pas de la même façon dans une moyenne. Le rendre à part
+     évite qu'un panneau le range d'un côté ou de l'autre. */
+  sans: z.number().int().min(0),
+} as const;
+
+export const axeSchema = z.object(troisSeaux).strict();
+
+export const performanceVersionSchema = z.object({
+  configId: z.string().uuid(),
+  /** Nul pour un brouillon jamais publié — qui n'a donc rien produit. */
+  version: z.number().int().positive().nullable(),
+  publieeLe: z.string().nullable(),
+  /** Tout ce que cette version a produit, avis ou non. */
+  produites: z.number().int().min(0),
+  /* CE QU'ON EN A FAIT : envoyé, approuvé, retenu en souhait — contre rejeté.
+     C'est une préférence RÉVÉLÉE, la plus fiable des deux parce qu'elle ne
+     demande rien à personne. */
+  gestes: axeSchema,
+  /* CE QU'ON EN A PENSÉ : le pouce, et lui seul. Rare, et c'est normal — donner
+     un avis est un geste qu'on ne franchit pas forcément. Rare ne veut pas dire
+     faible : c'est le seul des deux qui dise si le texte était BON, et non
+     seulement s'il a servi. */
+  avis: axeSchema,
+}).strict();
+
+export type Axe = z.infer<typeof axeSchema>;
+
+export const performanceSchema = z.object({
+  unite: z.enum(UNITES_PRODUITES),
+  /* De la plus récente à la plus ancienne — « comparée à la précédente » est la
+     question qu'on pose, et elle se lit de haut en bas. */
+  versions: z.array(performanceVersionSchema),
+  /* Ce qui a été produit SANS configuration publiée, par le gabarit du code.
+     Compté à part et jamais attribué : lui donner une version ferait porter à
+     une configuration des avis qu'elle n'a pas mérités, et c'est précisément le
+     chiffre qu'on veut pouvoir croire. */
+  horsVersion: performanceVersionSchema.omit({ configId: true, version: true, publieeLe: true }),
+}).strict();
+
+export type Performance = z.infer<typeof performanceSchema>;
 
 export const historiqueMessageSchema = z.object({
   items: z.array(configurationMessageSchema),
 }).strict();
 
+export const historiqueIdeesSchema = z.object({
+  items: z.array(configurationIdeesSchema),
+}).strict();
+
+export const historiqueBriefPortraitSchema = z.object({
+  items: z.array(configurationBriefPortraitSchema),
+}).strict();
+
 export const historiquePortraitSchema = z.object({
   items: z.array(configurationPortraitSchema),
 }).strict();
+
+/* ── L'ATELIER DES TEXTES ────────────────────────────────────────────────────
+ *
+ * TROIS NATURES SUR UN SEUL JEU DE ROUTES, et non trois contrôleurs jumeaux.
+ * Le corps ne diffère que par la forme des réglages ; le reste — enregistrer,
+ * essayer, publier, revenir en arrière — est rigoureusement le même geste. Trois
+ * copies divergeraient au premier durcissement, et l'une des trois garderait
+ * l'ancienne règle sans que personne ne s'en aperçoive.
+ *
+ * Ce qui distingue les natures est validé À L'ENTRÉE, par le schéma de la
+ * nature demandée : un corps d'idées posté sur le chemin du message est refusé
+ * par `.strict()`, pas par un contrôle écrit à la main. */
+export const NATURES_TEXTE = ["message", "idees", "portrait_brief"] as const;
+export type NatureTexte = (typeof NATURES_TEXTE)[number];
+
+/* LES QUATRE NATURES DU STUDIO — l'image, et les trois textes.
+ *
+ * `NATURES_TEXTE` n'en dit que trois parce que les routes des textes n'en
+ * servent que trois. Mais un ESSAI peut porter n'importe laquelle des quatre :
+ * ils vivent tous dans la même table, et la galerie les rend tous. */
+export const NATURES_STUDIO = ["portrait", ...NATURES_TEXTE] as const;
+export type NatureStudio = (typeof NATURES_STUDIO)[number];
+
+/** Les réglages d'une des trois générations de texte, quelle qu'elle soit. */
+export type ReglagesTexte =
+  z.infer<typeof reglagesMessageSchema>
+  | z.infer<typeof reglagesIdeesSchema>
+  | z.infer<typeof reglagesBriefPortraitSchema>;
+
+/** Les réglages d'une nature de texte, en union discriminée par le chemin. */
+export const reglagesTexteSchemas = {
+  message: reglagesMessageSchema,
+  idees: reglagesIdeesSchema,
+  portrait_brief: reglagesBriefPortraitSchema,
+} as const;
+
+export const etatTexteSchema = z.union([
+  etatMessageSchema, etatIdeesSchema, etatBriefPortraitSchema,
+]);
+export const historiqueTexteSchema = z.union([
+  historiqueMessageSchema, historiqueIdeesSchema, historiqueBriefPortraitSchema,
+]);
+export const configurationTexteSchema = z.union([
+  configurationMessageSchema, configurationIdeesSchema, configurationBriefPortraitSchema,
+]);
+
+export type EtatTexte = z.infer<typeof etatTexteSchema>;
+export type HistoriqueTexte = z.infer<typeof historiqueTexteSchema>;
+export type ConfigurationTexte = z.infer<typeof configurationTexteSchema>;
+
+/* L'ESSAI D'UN TEXTE N'A PAS D'AMBIANCE — celle du portrait en exige une parce
+   qu'elle décide du modèle d'image appelé. Ici le modèle vient de la
+   configuration elle-même, et le profil suffit à dire sur quoi on éprouve. */
+export const lancementEssaiTexteSchema = z.object({
+  profileId: z.string().uuid(),
+}).strict();
+
 
 /* L'enregistrement DIRECT : ce que seule l'application lit (brief §3).
  *
@@ -150,6 +301,12 @@ export const profilStudioSchema = z.object({
   libelle: z.string(),
   sensible: z.boolean(),
   contenu: profilContenuSchema,
+  /* LA PHOTO D'EXEMPLE — une URL signée, valable quelques minutes, ou nul.
+     Sur le PROFIL et non sur l'essai : pour comparer deux versions il faut
+     tenir la photo constante. Fournie à chaque essai, elle varierait, et l'on
+     comparerait deux réglages sur deux images — c'est-à-dire rien.
+     Nulle pour la plupart : seule la voie photo en a besoin. */
+  photoUrl: z.string().nullable(),
   creeLe: z.string(),
 }).strict();
 
@@ -219,11 +376,47 @@ export type VerdictEssai = (typeof VERDICTS_ESSAI)[number];
    serait vide dès la troisième. */
 export const verdictEssaiSchema = z.object({
   verdict: z.enum(VERDICTS_ESSAI),
+  /**
+   * « C'EST CELLE-CI QUI REPRÉSENTE L'AMBIANCE. »
+   *
+   * Le geste qui manquait : retenir un essai est déjà un verdict, mais rien ne
+   * disait lequel des essais retenus sert de vignette au catalogue. Posé ici et
+   * non sur une route à part, parce que c'est le MÊME moment — on regarde une
+   * image, on la garde, et on décide si c'est elle qu'on montre.
+   *
+   * Il ne vaut qu'avec `kept` : faire d'un essai écarté la vignette d'une
+   * ambiance montrerait au client ce qu'on vient de refuser.
+   *
+   * Ce qu'il écrit est un BROUILLON, jamais la version en service. La vignette
+   * suit la version publiée comme le reste du catalogue — sans quoi une image
+   * retenue changerait ce que voient les utilisateurs avant que quiconque ait
+   * publié quoi que ce soit.
+   */
+  reference: z.boolean().optional(),
+}).strict();
+/* LE VERDICT D'UN ESSAI DE TEXTE, sans `reference`.
+ *
+ * Celui du portrait la porte : « c'est celle-ci qui représente l'ambiance »,
+ * et elle désigne la vignette du catalogue. Un essai de texte n'a pas d'image —
+ * il n'y a rien à montrer, et une ambiance ne se représente pas par une phrase.
+ *
+ * Le champ est RETIRÉ plutôt qu'ignoré. `.strict()` refuse alors le corps qui
+ * le porte, au lieu de l'accepter en silence : un administrateur qui croirait
+ * poser une vignette sur un essai de message doit l'apprendre tout de suite, et
+ * non découvrir qu'il ne s'est rien passé. */
+export const verdictEssaiTexteSchema = z.object({
+  verdict: z.enum(VERDICTS_ESSAI),
 }).strict();
 
 export const essaiStudioSchema = z.object({
   id: z.string().uuid(),
   configId: z.string().uuid(),
+  /* CE QUE CET ESSAI A ÉPROUVÉ. La galerie rend les quatre natures — elles
+     partagent la table —, et sans ce champ elle ne peut ni les nommer ni les
+     séparer : deux essais du même modèle, l'un pour le portrait, l'autre pour
+     les idées, s'y ressemblent. La déduire de la forme de `sortie` ne suffit
+     pas — les trois natures de texte rendent toutes un message. */
+  nature: z.enum(NATURES_STUDIO),
   profilId: z.string().uuid().nullable(),
   etat: z.enum(ETATS_ESSAI),
   /** Le modèle DEMANDÉ, qui est aussi le seul appelé : l'essai ne replie pas. */
@@ -245,6 +438,21 @@ export const essaiStudioSchema = z.object({
   ambianceId: z.string().max(60).nullable(),
 }).strict();
 
+/* CE QUE RENDRE UN ESSAI : la ligne d'essai, et le brouillon qu'il vient de
+ * faire naître.
+ *
+ * Les DEUX, parce que l'essai crée deux ressources — « le brouillon naît AVANT
+ * l'appel » — et que l'atelier a besoin des deux : l'essai pour montrer ce qui
+ * est sorti, la configuration pour savoir sur quoi publier ensuite. Rendre le
+ * seul essai obligerait l'écran à relire la configuration pour retrouver un
+ * identifiant que le serveur tenait déjà. */
+export const essaiLanceSchema = z.object({
+  configId: z.string().uuid(),
+  essai: essaiStudioSchema,
+}).strict();
+
+export type EssaiLance = z.infer<typeof essaiLanceSchema>;
+
 export const essaisStudioSchema = z.object({
   items: z.array(essaiStudioSchema),
 }).strict();
@@ -261,6 +469,12 @@ export const essaisStudioSchema = z.object({
 export const lancementEssaiPortraitSchema = z.object({
   reglages: reglagesPortraitSchema,
   profileId: z.string().uuid(),
+  /* LA VOIE ÉPROUVÉE. Absente, c'est l'illustration — le comportement d'avant,
+     et le seul possible jusqu'ici.
+     « photo » exige que l'éprouvette porte une photo d'exemple : sans elle, on
+     appellerait le modèle de photo sans image, et le rendu ne serait celui
+     d'aucune des deux voies. Le refus est NOMMÉ plutôt que silencieux. */
+  voie: z.enum(["illustration", "photo"]).optional(),
   /* L'AMBIANCE ÉPROUVÉE, et il en faut une.
    *
    * C'est elle qui décide du modèle appelé : une famille d'illustration et un
@@ -302,11 +516,6 @@ export const candidatsStudioSchema = z.object({
   groupesAmbiance: z.array(z.string()),
   motifs: z.array(z.string()),
   champsDuProche: z.array(z.string()),
-  /** Les gabarits en service, par genre et par clé. Vide tant que le Studio
-   *  n'a rien publié en base — voir la note de `gabarits.ts`. */
-  gabarits: z.array(z.object({
-    id: z.string(), genre: z.string(), cle: z.string(), version: z.number().int(),
-  }).strict()),
 }).strict();
 
 export type EtatMessage = z.infer<typeof etatMessageSchema>;
@@ -315,3 +524,45 @@ export type ProfilStudio = z.infer<typeof profilStudioSchema>;
 export type ProfilsStudio = z.infer<typeof profilsStudioSchema>;
 export type EssaiStudio = z.infer<typeof essaiStudioSchema>;
 export type CandidatsStudio = z.infer<typeof candidatsStudioSchema>;
+
+/* ── LES MESURES D'UNE NATURE ────────────────────────────────────────────────
+ *
+ * « Combien de pouces en bas par version, comparée à la précédente » — le §6 du
+ * brief admin studio. C'est ce qui donne son sens à l'atelier : sans elles, on
+ * publie sans jamais savoir si l'on a amélioré quoi que ce soit.
+ *
+ * LE DÉNOMINATEUR EST LE NOMBRE D'AVIS, jamais celui des productions. `null`
+ * veut dire « personne n'a tranché », jamais « satisfait » : compter les
+ * non-jugés reviendrait à les compter du bon côté, et cent quinze silences
+ * passeraient pour cent quinze contentements.
+ *
+ * LES DEUX CHIFFRES SE LISENT ENSEMBLE : le taux dit ce qu'en pensent ceux qui
+ * ont parlé, le nombre de productions dit combien peu ont parlé. */
+/* LA MESURE PAR MODÈLE — « ce modèle vaut-il son prix ? », qui n'est pas la
+ * même question que « ma consigne a-t-elle aidé ? ». Une version fige un
+ * modèle, mais un modèle sert plusieurs versions.
+ *
+ * C'EST LE MODÈLE DE LA TENTATIVE QUI A ABOUTI, et lui seul : un repli laisse
+ * plusieurs lignes d'usage pour une seule production, et blâmer toute la chaîne
+ * chargerait celui qui a échoué avant d'avoir rien écrit. */
+export const mesureModeleSchema = z.object({
+  cle: z.string(),
+  fournisseur: z.string(),
+  productions: z.number().int(),
+  avis: z.number().int(),
+  rejets: z.number().int(),
+  taux: z.number().nullable(),
+}).strict();
+
+/* LES MODÈLES DU REGISTRE — toutes natures confondues, avec leur seuil.
+ *
+ * Le seuil VOYAGE AVEC LA MESURE ici aussi : l'écrire dans l'écran en ferait
+ * deux endroits à changer, et l'un des deux resterait sur l'ancienne valeur. */
+export const mesuresDesModelesSchema = z.object({
+  seuil: z.number().int(),
+  modeles: z.array(mesureModeleSchema),
+}).strict();
+
+export type MesuresDesModeles = z.infer<typeof mesuresDesModelesSchema>;
+
+export type MesureModele = z.infer<typeof mesureModeleSchema>;

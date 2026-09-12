@@ -13,6 +13,25 @@ import { nouveauJeton } from "./jetons.js";
 // base à chaque appel comme ConfigService : écrits en dur, ils deviendraient
 // faux le jour où l'administration les change, et une fenêtre fermée trop tôt
 // ne se voit qu'à l'absence de vœux.
+/* `/v/<jeton>`, le chemin du dépôt de vœux — celui que le site sert.
+ *
+ * Ces adresses composaient `/wish/<jeton>`, qui n'existe nulle part : le site
+ * ne connaît que cinq surfaces à jeton, `/c/`, `/i/`, `/l/`, `/m/` et `/v/`.
+ * Le lien partait donc mort, et rien ne le signalait — ni un test, ni un type :
+ * une chaîne bien formée qui désigne une page absente reste une chaîne bien
+ * formée.
+ *
+ * Écrit UNE fois, parce qu'il l'était deux : la lecture du Mur et la création
+ * du lien composaient chacune la sienne, et une correction sur l'une aurait
+ * laissé l'autre menteuse.
+ *
+ * La barre finale du site est retirée : sans elle, `//v/…` sort une adresse que
+ * les messageries coupent au mauvais endroit — même raison que pour le lien de
+ * collecte. */
+function adresseDeVoeux(site: string, jeton: string): string {
+  return `${site.replace(/\/+$/, "")}/v/${jeton}`;
+}
+
 const LEAD_PAR_DEFAUT = 7;
 const TRAIL_PAR_DEFAUT = 30;
 
@@ -50,12 +69,12 @@ export class MurService {
    * `upsert` sur `userId`, qui est unique : deux ouvertures simultanées de
    * l'écran ne créent pas deux Murs, c'est la base qui tranche.
    */
-  private async ligne(userId: string): Promise<{ isEnabled: boolean; showBirthdayDate: boolean; welcomeMessage: string | null }> {
+  private async ligne(userId: string): Promise<{ isEnabled: boolean; showBirthdayDate: boolean; showWishlist: boolean; welcomeMessage: string | null }> {
     return this.prisma.wall.upsert({
       where: { userId },
       create: { userId },
       update: {},
-      select: { isEnabled: true, showBirthdayDate: true, welcomeMessage: true },
+      select: { isEnabled: true, showBirthdayDate: true, showWishlist: true, welcomeMessage: true },
     });
   }
 
@@ -153,11 +172,18 @@ export class MurService {
       slug: compte.username,
       isEnabled: mur.isEnabled,
       showBirthdayDate: mur.showBirthdayDate,
+      showWishlist: mur.showWishlist,
       welcomeMessage: mur.welcomeMessage,
-      publicUrl: `${this.siteUrl}/${compte.username}`,
+      /* `/m/<pseudo>`, le chemin que le site sert RÉELLEMENT.
+         Cette adresse composait `${site}/<pseudo>` — un chemin qui n'existe
+         pas : le site préfixe la langue puis tombe sur son attrape-tout, qui
+         rend 404. C'est l'adresse que l'application AFFICHE et que le bouton
+         « Partager » envoie : elle partait donc morte, et celui qui l'ouvrait
+         concluait que le Mur n'existait pas. */
+      publicUrl: `${this.siteUrl}/m/${compte.username}`,
       wishLinkUrl:
         lien && fenetre && fenetre.ouverte && lien.occurrence.id === fenetre.occurrenceId
-          ? `${this.siteUrl}/wish/${lien.token}`
+          ? adresseDeVoeux(this.siteUrl, lien.token)
           : null,
       interests: (moi?.attributes ?? []).map((a) => ({
         id: a.id,
@@ -181,6 +207,7 @@ export class MurService {
       const champs: Record<string, unknown> = {};
       if (input.isEnabled !== undefined) champs["isEnabled"] = input.isEnabled;
       if (input.showBirthdayDate !== undefined) champs["showBirthdayDate"] = input.showBirthdayDate;
+      if (input.showWishlist !== undefined) champs["showWishlist"] = input.showWishlist;
       if (input.welcomeMessage !== undefined) champs["welcomeMessage"] = input.welcomeMessage;
       if (Object.keys(champs).length > 0) {
         await tx.wall.update({ where: { userId }, data: champs });
@@ -265,7 +292,7 @@ export class MurService {
     id: string;
     username: string;
     displayName: string | null;
-    mur: { showBirthdayDate: boolean; welcomeMessage: string | null };
+    mur: { showBirthdayDate: boolean; showWishlist: boolean; welcomeMessage: string | null };
   }): Promise<PublicWall> {
     const moi = await this.soi(entree.id);
 
@@ -282,9 +309,10 @@ export class MurService {
        conditions doivent tenir ensemble — un lien vivant, une fenêtre ouverte,
        et le drapeau `wishes` allumé. Laisser le client en juger lui ferait
        proposer un bouton qui mène à un 404 le jour où l'une tombe. */
-    const [fenetre, voeuxActifs] = await Promise.all([
+    const [fenetre, voeuxActifs, listesActives] = await Promise.all([
       this.fenetreCourante(entree.id),
       this.flags.estActif("wishes"),
+      this.flags.estActif("wishlist.own"),
     ]);
     let wishLinkToken: string | null = null;
     if (voeuxActifs && fenetre?.ouverte) {
@@ -293,6 +321,21 @@ export class MurService {
         select: { token: true },
       });
       wishLinkToken = lien?.token ?? null;
+    }
+
+    /* LA LISTE, résolue de la même façon et sous les mêmes conditions — plus
+       une : le propriétaire doit l'avoir exposée. C'est le seul des deux qui se
+       règle, parce que la liste dit ce qu'on possède déjà et ce qu'on convoite,
+       là où un vœu déposé ne dit rien de celui qui le reçoit.
+       La fenêtre vaut pour les deux : hors de la période de l'occasion, il n'y
+       a pas de liste courante à montrer. */
+    let wishlistToken: string | null = null;
+    if (listesActives && entree.mur.showWishlist && fenetre?.ouverte) {
+      const partage = await this.prisma.wishlistShareLink.findFirst({
+        where: { wishlist: { eventOccurrenceId: fenetre.occurrenceId }, isActive: true },
+        select: { token: true },
+      });
+      wishlistToken = partage?.token ?? null;
     }
 
     return {
@@ -308,6 +351,7 @@ export class MurService {
         .filter((a) => a.isPublic)
         .map((a) => ({ kind: a.kind as NatureExposable, value: a.value })),
       wishLinkToken,
+      wishlistToken,
     };
   }
 
@@ -338,7 +382,7 @@ export class MurService {
     });
     return {
       token: lien.token,
-      url: `${this.siteUrl}/wish/${lien.token}`,
+      url: adresseDeVoeux(this.siteUrl, lien.token),
       occurrenceId: lien.eventOccurrenceId,
       closesOn: fenetre.fermeLe,
     };

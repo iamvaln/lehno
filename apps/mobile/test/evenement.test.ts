@@ -53,7 +53,9 @@ describe("le type vient des métadonnées, jamais du drapeau", () => {
   });
 
   it("n'enregistre pas sans type connu", () => {
-    expect(pretAEnregistrer({ personId: QUELQUUN, kind: null, libelle: "", date: "" })).toBe(false);
+    expect(pretAEnregistrer({
+      personId: QUELQUUN, kind: null, libelle: "", date: "", naissanceConnue: true,
+    })).toBe(false);
   });
 });
 
@@ -74,18 +76,28 @@ describe("ce que chaque type demande", () => {
   });
 
   it("n'enregistre un événement libre ni sans libellé ni sans date", () => {
-    const base = { personId: QUELQUUN, kind: "other" as const };
+    // La naissance ne regarde pas un événement libre : il porte sa propre date.
+    const base = { personId: QUELQUUN, kind: "other" as const, naissanceConnue: false };
     expect(pretAEnregistrer({ ...base, libelle: "  ", date: "2027-03-04" })).toBe(false);
     expect(pretAEnregistrer({ ...base, libelle: "Mariage", date: "" })).toBe(false);
     expect(pretAEnregistrer({ ...base, libelle: "Mariage", date: "2027-03-04" })).toBe(true);
   });
 
-  /* PAS de date de naissance exigée du proche ici : le serveur la réclame, et
-     c'est lui qui a le dernier mot. Deux règles pour une, et la nôtre se
-     tromperait sur une fiche corrigée ailleurs entre-temps. */
-  it("laisse enregistrer un anniversaire dès qu'un proche est désigné", () => {
-    expect(pretAEnregistrer({ personId: QUELQUUN, kind: "birthday", libelle: "", date: "" })).toBe(true);
-    expect(pretAEnregistrer({ personId: null, kind: "birthday", libelle: "", date: "" })).toBe(false);
+  /* J'AVAIS ÉCRIT L'INVERSE ICI, et l'argument méritait mieux qu'un effacement :
+     « pas de naissance exigée, le serveur la réclame et c'est lui qui a le
+     dernier mot ; deux règles pour une, et la nôtre se tromperait sur une fiche
+     corrigée ailleurs entre-temps. »
+
+     Le dernier mot lui reste. Mais ce n'est pas DEUX règles : l'écran affiche
+     déjà « nous ne connaissons pas la date de naissance de X » à partir de la
+     MÊME donnée. Si elle est périmée, le message l'est aussi — et un bouton qui
+     contredit le message qu'il surmonte est pire que deux affichages périmés
+     ensemble. On ne fait pas appuyer pour apprendre ce qu'on vient d'écrire. */
+  it("n'enregistre un anniversaire que si la naissance est connue", () => {
+    const anniv = { personId: QUELQUUN, kind: "birthday" as const, libelle: "", date: "" };
+    expect(pretAEnregistrer({ ...anniv, naissanceConnue: true })).toBe(true);
+    expect(pretAEnregistrer({ ...anniv, naissanceConnue: false })).toBe(false);
+    expect(pretAEnregistrer({ ...anniv, personId: null, naissanceConnue: true })).toBe(false);
   });
 });
 

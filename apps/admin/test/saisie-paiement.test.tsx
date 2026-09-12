@@ -15,8 +15,8 @@ const PALIERS = { items: [
   { id: "b-3", montant: 2000, devise: "XAF", credits: 22, remisePourcent: 10, position: 3, actif: false },
 ] };
 const CANAUX = { items: [
-  { id: "c-1", nature: "mobile_money", operateur: "orange_money", pays: "CM", libelle: "Orange Money", fraisPourcent: 2, fraisFixe: 0, fraisMin: null, fraisMax: null, fraisPortesPar: "payer", devise: "XAF", actif: true, position: 1 },
-  { id: "c-2", nature: "mobile_money", operateur: "mtn_momo", pays: "CM", libelle: "MTN MoMo", fraisPourcent: 2, fraisFixe: 0, fraisMin: null, fraisMax: null, fraisPortesPar: "payer", devise: "XAF", actif: false, position: 2 },
+  { id: "c-1", nature: "mobile_money", operateur: "orange_money", pays: "CM", libelle: "Orange Money", fraisPourcent: 2, fraisFixe: 0, fraisMin: null, fraisMax: null, fraisPortesPar: "payer", devise: "XAF", ussd: null, actif: true, position: 1 },
+  { id: "c-2", nature: "mobile_money", operateur: "mtn_momo", pays: "CM", libelle: "MTN MoMo", fraisPourcent: 2, fraisFixe: 0, fraisMin: null, fraisMax: null, fraisPortesPar: "payer", devise: "XAF", ussd: null, actif: false, position: 2 },
 ] };
 const COLLECTE = { items: [
   { id: "a-1", libelle: "Orange Money principal", operateur: "orange_money", numero: "690000000", visibleDansApp: true, actif: true, position: 1 },

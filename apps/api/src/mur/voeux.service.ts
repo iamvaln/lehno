@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
-  ReceivedWish, ReceivedWishDecisionInput,
+  ReceivedWish, ReceivedWishDecisionInput, ReceivedWishVisibilityInput,
   PublicWishForm, SubmitWishInput,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -38,8 +38,55 @@ export class VoeuxService {
       authorName: v.authorName,
       content: v.content,
       status: v.status as ReceivedWish["status"],
+      isPublic: v.isPublic,
+      showAuthor: v.showAuthor,
       createdAt: v.createdAt.toISOString(),
     }));
+  }
+
+  /**
+   * Exposer un vœu reçu sur le Mur, ou taire son auteur.
+   *
+   * DEUX RÉGLAGES DISTINCTS, et c'est ce qui rend le geste utile : « je le
+   * montre sans dire de qui » est exactement ce qu'on veut d'un mot maladroit
+   * qu'on garde quand même.
+   *
+   * RETIRER LA PUBLICATION RETIRE L'AUTEUR AVEC ELLE. La base l'exige — montrer
+   * le nom de quelqu'un sur un vœu qu'on n'expose pas ne veut rien dire —, et
+   * le faire ici plutôt que de refuser évite un aller-retour où le client
+   * devrait deviner qu'il faut envoyer les deux. L'oubli produirait sinon un
+   * réglage actif que rien n'affiche, et qui ressortirait le jour où l'on
+   * republie.
+   *
+   * SEUL UN VŒU APPROUVÉ S'EXPOSE. Un vœu en attente n'a pas encore été lu par
+   * son destinataire ; le publier sauterait la modération, qui est la seule
+   * chose qui protège son Mur de ce qu'un inconnu y écrit.
+   */
+  async exposer(
+    userId: string, id: string, reglage: ReceivedWishVisibilityInput,
+  ): Promise<ReceivedWish> {
+    const ligne = await this.prisma.receivedWish.findFirst({
+      where: { id, userId },
+      select: { status: true, isPublic: true },
+    });
+    if (!ligne) throw ABSENT();
+    if (ligne.status !== "approved")
+      throw new AppError("conflict", "only an approved wish can be shown");
+
+    const expose = reglage.isPublic ?? ligne.isPublic;
+    await this.prisma.receivedWish.update({
+      where: { id },
+      data: {
+        ...(reglage.isPublic === undefined ? {} : { isPublic: reglage.isPublic }),
+        // Retiré d'office quand le vœu cesse d'être exposé.
+        ...(expose === false
+          ? { showAuthor: false }
+          : reglage.showAuthor === undefined ? {} : { showAuthor: reglage.showAuthor }),
+      },
+    });
+
+    const [rendu] = await this.list(userId).then((tous) => tous.filter((v) => v.id === id));
+    return rendu!;
   }
 
   /* Approuver ou rejeter — et une seule fois.

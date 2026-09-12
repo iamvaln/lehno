@@ -128,3 +128,48 @@ describe("le portrait produit", () => {
   });
 
 });
+
+describe("le budget d'une demande d'idées", () => {
+  const OCCASION = "3f2504e0-4f89-11d3-9a0c-0305e82c3304";
+
+  /* « Jusqu'à 20 000 » est la façon dont on pense un budget bien plus souvent
+     qu'un intervalle fermé. Les deux bornes sont donc facultatives séparément. */
+  it("accepte une borne seule, dans les deux sens", () => {
+    expect(() => startGenerationSchema.parse({
+      kind: "gift_ideas", occurrenceId: OCCASION, budget: { max: 20_000 },
+    })).not.toThrow();
+    expect(() => startGenerationSchema.parse({
+      kind: "gift_ideas", occurrenceId: OCCASION, budget: { min: 5_000 },
+    })).not.toThrow();
+  });
+
+  // Un budget vide ne borne rien : il ferait croire à un cadrage qui n'existe pas.
+  it("refuse un budget sans aucune borne", () => {
+    expect(() => startGenerationSchema.parse({
+      kind: "gift_ideas", occurrenceId: OCCASION, budget: {},
+    })).toThrow();
+  });
+
+  it("refuse une fourchette inversée", () => {
+    expect(() => startGenerationSchema.parse({
+      kind: "gift_ideas", occurrenceId: OCCASION, budget: { min: 20_000, max: 5_000 },
+    })).toThrow();
+  });
+
+  /* ON N'ACHÈTE RIEN AVEC UN MESSAGE. L'accepter en silence ferait croire qu'il
+     agit — le genre de champ qu'on renseigne pendant des mois avant de
+     découvrir qu'il n'a jamais rien changé. */
+  it("refuse un budget hors des idées de cadeaux", () => {
+    expect(() => startGenerationSchema.parse({
+      kind: "wish_message", occurrenceId: OCCASION, budget: { max: 20_000 },
+    })).toThrow();
+  });
+
+  // Aucune devise au lancement : elle vient de la configuration. La demander au
+  // client la rendrait négociable par qui envoie la requête.
+  it("n'accepte pas de devise du client", () => {
+    expect(() => startGenerationSchema.parse({
+      kind: "gift_ideas", occurrenceId: OCCASION, budget: { max: 20_000, devise: "XAF" },
+    })).toThrow();
+  });
+});

@@ -1,14 +1,16 @@
 import { Body, Controller, Get, HttpCode, Inject, Param, ParseUUIDPipe, Post, Req, UseGuards } from "@nestjs/common";
 import {
-  declarePaymentSchema, paymentPreviewInputSchema,
+  declarePaymentSchema, paymentPreviewInputSchema, demandeDeDepotRecuSchema,
   type CreditBundle, type DeclarePaymentInput, type PaymentDetail,
   type PaymentPreview, type PaymentPreviewInput,
+  type DemandeDeDepotRecu, type DepotRecu, type UrlMedia,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { Feature } from "../flags/feature.decorator.js";
 import { FeatureGuard } from "../flags/feature.guard.js";
 import { RechargeService } from "./recharge.service.js";
+import { RecuService } from "./recu.service.js";
 
 type AuthedRequest = { userId: string };
 
@@ -66,7 +68,10 @@ export class CollectionAccountsController {
 @UseGuards(FeatureGuard, AuthGuard)
 @Feature("topup.manual")
 export class PaymentsController {
-  constructor(@Inject(RechargeService) private readonly recharge: RechargeService) {}
+  constructor(
+    @Inject(RechargeService) private readonly recharge: RechargeService,
+    @Inject(RecuService) private readonly recus: RecuService,
+  ) {}
 
   /* `200`, pas `201` : l'aperçu ne crée rien. C'est un POST parce qu'il porte
      des paramètres, pas parce qu'il écrit — et un `201` ferait croire à
@@ -97,5 +102,49 @@ export class PaymentsController {
     @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
   ): Promise<PaymentDetail> {
     return this.recharge.lire(req.userId, id);
+  }
+
+  /* LE REÇU SE JOINT APRÈS LA DÉCLARATION, sur le paiement créé.
+   *
+   * Pas pendant : quand quelqu'un déclare, il a DÉJÀ versé son argent. Exiger
+   * le fichier à cet instant le laisserait coincé, argent parti, si son dépôt
+   * échoue. La référence de transaction reste obligatoire, elle ; le reçu la
+   * complète quand elle a été mal recopiée ou que le montant ne tombe pas
+   * juste.
+   *
+   * Le chemin du dépôt : le serveur signe une URL, le téléphone dépose dessus,
+   * puis confirme. Les octets ne traversent jamais l'API — un relevé de deux
+   * mégaoctets occuperait une connexion pour rien.
+   *
+   * 200 et non 201 : rien n'est créé ici, on délivre une permission. */
+  @Post(":id/proof/depot")
+  @HttpCode(200)
+  depotRecu(
+    @Req() req: AuthedRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(demandeDeDepotRecuSchema)) corps: DemandeDeDepotRecu,
+  ): Promise<DepotRecu> {
+    return this.recus.depot(req.userId, id, corps.contentType);
+  }
+
+  /* Aucun corps, et l'identifiant du chemin ne CHOISIT pas la cible : elle a été
+     fixée au dépôt, où l'appartenance a été vérifiée. L'accepter du client
+     permettrait de rattacher son reçu au paiement d'un autre. Il sert à refuser
+     tôt une confirmation qui ne vise pas ce paiement-là. */
+  @Post(":id/proof")
+  @HttpCode(204)
+  async confirmerRecu(
+    @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    await this.recus.confirmer(req.userId, id);
+  }
+
+  /* Relire SON propre reçu. L'écran de suivi le montre — sans quoi la personne
+     ne saurait pas ce qu'elle a envoyé, ni si elle doit le refaire. */
+  @Get(":id/proof")
+  urlDuRecu(
+    @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<UrlMedia> {
+    return this.recus.urlDe(id, { userId: req.userId });
   }
 }
