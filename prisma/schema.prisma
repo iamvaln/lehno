@@ -1662,13 +1662,27 @@ model GeneratedMessage {
    * coûteraient deux fois pour un crédit débité une fois.
    */
   shortContent      String?                @map("short_content")
+  /// LA VERSION QUI A PRODUIT CE MESSAGE. Le portrait la portait déjà ; le
+  /// message non, et sans elle un avis ne mesure rien : on apprend qu'une
+  /// production a déplu, pas laquelle des consignes en est cause.
+  ///
+  /// NULLABLE POUR DE BON, et pas seulement le temps d'une migration : les
+  /// messages déjà en base n'ont pas ce lien, et rien ne peut l'inventer — on
+  /// ne sait pas ce qui tournait quand ils ont été écrits. Leur poser la
+  /// version courante serait pire qu'un trou : ce serait une donnée fausse, et
+  /// le panneau la compterait.
+  ///
+  /// `Restrict`, comme pour le portrait : une configuration citée par un
+  /// message ne se supprime pas, sinon la consigne qui l'a produit est perdue.
+  studioConfigId    String?                @map("studio_config_id") @db.Uuid
   status            GeneratedMessageStatus @default(generated)
   createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz
 
-  actionRun  ActionRun       @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
-  occurrence EventOccurrence @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
-  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actionRun    ActionRun       @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  occurrence   EventOccurrence @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studioConfig StudioConfig?   @relation(fields: [studioConfigId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
   @@index([eventOccurrenceId])
@@ -2100,6 +2114,7 @@ model StudioConfig {
   @@index([fingerprint])
   @@map("studio_config")
   portraits   Portrait[]
+  messages    GeneratedMessage[]
 }
 
 /**

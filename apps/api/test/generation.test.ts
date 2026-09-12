@@ -765,4 +765,86 @@ describe("la génération d'un message", () => {
       expect(await solde()).toBe(4);
     });
   });
+  /* LA VERSION QUI A PRODUIT LE MESSAGE.
+   *
+   * Le portrait la portait déjà ; le message non. Sans elle, un avis ne mesure
+   * rien : on apprend qu'une production a déplu, pas laquelle des consignes en
+   * est cause — et tout le §6 du brief admin studio repose là-dessus. */
+  describe("la version qui l'a produit", () => {
+    it("retient la configuration en service", async () => {
+      await crediter(5);
+      const enService = await db.prisma.studioConfig.findFirstOrThrow({
+        where: { kind: "message", state: "published" },
+      });
+
+      // `lancer` rend LE MESSAGE PRODUIT — voir `attendre.ts`.
+      const message = await lancer({ anthropic: repond() });
+
+      expect(message.studioConfigId).toBe(enService.id);
+    });
+
+    /* CELLE QUI A COMPOSÉ L'INVITE, et non celle en service à l'arrivée.
+     *
+     * Entre le début et la fin, un administrateur peut publier. Relire la
+     * configuration à la conclusion attribuerait le message à une version qui
+     * ne l'a pas écrit — et le panneau créditerait la nouvelle d'un rejet dû à
+     * l'ancienne, ce qui est exactement l'inverse de ce qu'on veut mesurer.
+     *
+     * La publication se fait DEPUIS LE DOUBLE : il est appelé après la
+     * composition et avant l'écriture, c'est-à-dire précisément dans la
+     * fenêtre qui pose le problème. */
+    it("garde celle qui a composé l'invite, même si l'on publie entre-temps", async () => {
+      await crediter(5);
+      const premiere = await db.prisma.studioConfig.findFirstOrThrow({
+        where: { kind: "message", state: "published" },
+      });
+
+      const configs = new StudioConfigurationService(
+        db.prisma as never, new AuditService(db.prisma as never),
+      );
+      const publiePendant: Adaptateur = {
+        async appeler(): Promise<ReponseIA> {
+          const suivante = await configs.deposerBrouillon(
+            "message",
+            { ...configs.reglagesMessageDe(premiere), consigneCommune: "Écris plus court." },
+          );
+          await db.prisma.studioConfig.updateMany({
+            where: { kind: "message", state: "published" }, data: { state: "superseded" },
+          });
+          await db.prisma.studioConfig.update({
+            where: { id: suivante.id },
+            data: { state: "published", version: 2, publishedAt: new Date() },
+          });
+          /* LA MÊME SORTIE QUE LE DOUBLE ORDINAIRE : le service attend un JSON
+             `{ message, court }`, et une chaîne nue ferait échouer l'analyse —
+             le cas tomberait alors sur « la génération n'a rien produit », ce
+             qui ne dit rien de la fenêtre qu'il éprouve. */
+          return { contenu: SORTIE };
+        },
+      };
+
+      const message = await lancer({ anthropic: publiePendant });
+
+      expect(message.studioConfigId).toBe(premiere.id);
+      // Et la seconde est bien devenue celle en service : la fenêtre a joué.
+      const maintenant = await db.prisma.studioConfig.findFirstOrThrow({
+        where: { kind: "message", state: "published" },
+      });
+      expect(maintenant.id).not.toBe(premiere.id);
+    });
+
+    /* AUCUNE CONFIGURATION EN SERVICE : la production reprend les valeurs du
+       code, et prétendre qu'une version l'a faite serait faux. Nul, donc — et
+       le panneau saura dire « avant le lien » plutôt que de compter. */
+    it("laisse le lien nul quand rien n'est publié", async () => {
+      await crediter(5);
+      await db.prisma.studioConfig.updateMany({
+        where: { kind: "message", state: "published" }, data: { state: "superseded" },
+      });
+
+      const message = await lancer({ anthropic: repond() });
+
+      expect(message.studioConfigId).toBeNull();
+    });
+  });
 });

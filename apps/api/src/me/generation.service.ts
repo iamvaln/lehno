@@ -137,7 +137,7 @@ export class GenerationService {
        relire ailleurs coûterait une seconde requête et, surtout, laisserait la
        porte ouverte à ce qu'il vienne d'une AUTRE version que celle dont
        l'invite est tirée. L'empreinte les lie ; le code doit les lier aussi. */
-    const { contexte, modele } = await this.rassembler(userId, occurrence.id, orientation, options);
+    const { contexte, modele, configId } = await this.rassembler(userId, occurrence.id, orientation, options);
 
     /* Le REFUS D'ENTRÉE : une orientation joyeuse sur une occasion sensible.
      *
@@ -164,7 +164,7 @@ export class GenerationService {
       execution,
       fini: this.enArrierePlan(execution.id, userId, async () => {
         const sortie = await this.produire(contexte, userId, execution.id, modele);
-        return this.conclure(execution.id, userId, occurrence.id, sortie);
+        return this.conclure(execution.id, userId, occurrence.id, sortie, configId);
       }),
     };
   }
@@ -798,6 +798,10 @@ export class GenerationService {
 
   private async conclure(
     actionRunId: string, userId: string, occurrenceId: string, sortie: SortieMessage,
+    /* Nul quand aucune configuration n'est en service : la production reprend
+       alors les valeurs du code, et prétendre qu'une version l'a faite serait
+       faux. Voir `rassembler`. */
+    configId: string | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
       /* Le coût RÉEL, agrégé depuis les tentatives. Un repli en produit
@@ -818,6 +822,7 @@ export class GenerationService {
           actionRunId, userId, eventOccurrenceId: occurrenceId,
           content: sortie.message,
           ...(sortie.court ? { shortContent: sortie.court } : {}),
+          ...(configId === null ? {} : { studioConfigId: configId }),
         },
       });
     });
@@ -932,7 +937,7 @@ export class GenerationService {
   private async rassembler(
     userId: string, occurrenceId: string, orientation: Orientation,
     options: { langue?: "fr" | "en"; texteLibre?: string | null },
-  ): Promise<{ contexte: ContexteMessage; modele: string | null }> {
+  ): Promise<{ contexte: ContexteMessage; modele: string | null; configId: string | null }> {
     const occurrence = await this.prisma.eventOccurrence.findUniqueOrThrow({
       where: { id: occurrenceId },
       include: { event: { include: { person: true } } },
@@ -991,7 +996,12 @@ export class GenerationService {
     const reglages = publie === null ? null : this.configs.reglagesMessageDe(publie);
     const orientationPubliee = reglages?.orientations.find((o) => o.id === orientation);
 
-    return { modele: reglages?.modele ?? null, contexte: {
+    /* LA VERSION EST RETENUE ICI, au moment où l'on compose — pas à la
+       conclusion. Entre les deux, un administrateur peut publier : relire la
+       configuration en fin de course attribuerait le message à une version qui
+       ne l'a pas écrit, et le panneau créditerait la nouvelle d'un rejet dû à
+       l'ancienne. C'est CELLE QUI A COMPOSÉ L'INVITE qu'on garde. */
+    return { configId: publie?.id ?? null, modele: reglages?.modele ?? null, contexte: {
       langue: options.langue ?? (proche.language === "en" ? "en" : "fr"),
       orientation,
       ...(orientationPubliee ? { consigneOrientation: orientationPubliee.consigne } : {}),
