@@ -32,7 +32,17 @@ const bilingueSchema = z.object({
   en: z.string().trim().min(1).max(2000),
 }).strict();
 
-const bilingueFacultatifSchema = bilingueSchema.nullable();
+/* BILINGUE OU NUL — et surtout PAS « facultatif », comme il s'est appelé.
+ *
+ * C'est `.nullable()`, jamais `.optional()` : la clé est OBLIGATOIRE, seule sa
+ * valeur peut être nulle. Omettre `description` fait refuser l'orientation
+ * entière, et le refus parle d'un mauvais TYPE — il n'aide donc pas celui qui a
+ * simplement oublié la clé.
+ *
+ * Le nom disait le contraire de ce que le schéma fait, et un client écrit sur la
+ * foi de ce nom aurait sauté la clé. Il n'y a pas de demi-mesure non plus : un
+ * côté rempli et l'autre vide est refusé — c'est null, ou les deux. */
+const bilingueOuNulSchema = bilingueSchema.nullable();
 
 export type Bilingue = z.infer<typeof bilingueSchema>;
 
@@ -130,9 +140,9 @@ export const orientationReglageSchema = z.object({
   /** Lu par l'application seule : désactiver fait disparaître sans livraison. */
   actif: z.boolean(),
   libelle: bilingueSchema,
-  description: bilingueFacultatifSchema,
+  description: bilingueOuNulSchema,
   /** L'avertissement affiché AU MOMENT du choix — l'hommage change le gabarit. */
-  avertissement: bilingueFacultatifSchema,
+  avertissement: bilingueOuNulSchema,
   /** Lu par le modèle : entre dans l'empreinte. */
   consigne: bilingueSchema,
 }).strict();
@@ -143,7 +153,7 @@ export const ambianceReglageSchema = z.object({
   actif: z.boolean(),
   apercuCle: apercuSchema,
   libelle: bilingueSchema,
-  description: bilingueFacultatifSchema,
+  description: bilingueOuNulSchema,
   /** Lu par le modèle : entre dans l'empreinte. */
   consigne: bilingueSchema,
 }).strict();
@@ -156,7 +166,7 @@ export const voieImageReglageSchema = z.object({
   id: z.enum(VOIES_IMAGE),
   actif: z.boolean(),
   libelle: bilingueSchema,
-  description: bilingueFacultatifSchema,
+  description: bilingueOuNulSchema,
   /* La voie SE MONTRE aussi : « Illustration », « Photo traitée » et « Aucune
      image » sont trois rendus, et le troisième n'est pas rien — le motif de
      marque tient le fond. Les départager en mots demanderait de l'imagination. */
@@ -236,7 +246,7 @@ export const compositionReglageSchema = z.object({
   id: z.string().regex(/^[a-z0-9_]{1,60}$/),
   actif: z.boolean(),
   libelle: bilingueSchema,
-  description: bilingueFacultatifSchema,
+  description: bilingueOuNulSchema,
   /* UNE GAMME SE MONTRE OU N'EXISTE PAS. « Encre » ne se départage pas de
      « Lilas » par une phrase, et la gamme elle-même ne descend pas au client —
      l'écran montre la composition, pas ses quatre codes hexadécimaux. Sans

@@ -126,8 +126,11 @@ puisque la position est l'ordre de l'écran, pas la matière.
 
 ##### Un bilingue est entier ou nul — jamais à moitié
 
-`bilingueFacultatifSchema` est `bilingueSchema.nullable()`, et chaque côté exige
-au moins un caractère. Il n'existe donc pas d'orientation dont la description
+`bilingueOuNulSchema` est `bilingueSchema.nullable()`, et chaque côté exige au
+moins un caractère. **Il s'appelait `bilingueFacultatifSchema`, et le nom disait
+le contraire du schéma** : `.nullable()` n'est pas `.optional()`, la clé est
+obligatoire, et l'omettre fait refuser l'orientation entière sur un message qui
+parle d'un mauvais type. Il n'existe donc pas d'orientation dont la description
 serait écrite en français seulement : le contrat la refuse, **et les deux
 facultatifs se retirent en entier ou pas du tout**.
 
