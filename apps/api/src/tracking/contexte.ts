@@ -136,7 +136,19 @@ function entier(valeur: string | null): number | null {
 }
 
 function dansLaListe<T extends string>(liste: readonly T[], valeur: string | null): T | null {
-  return (liste as readonly string[]).includes(valeur ?? "") ? (valeur as T) : null;
+  /* LA CASSE NE COMPTE PAS, et ce n'est pas de la complaisance.
+   *
+   * Les briefs des clients annonçaient `MOBILE_IOS` — repris de monjeton, qui
+   * stocke ses types en majuscules —, là où ce contrat compare à `mobile_ios`.
+   * Un build qui aurait suivi le brief serait passé en phase 1, où rien ne
+   * refuse, et se serait fait mettre dehors LE JOUR OÙ L'ON ALLUME LA PHASE 2 :
+   * invisible pendant des semaines, catastrophique d'un coup.
+   *
+   * On normalise ici plutôt que de compter sur trois équipes pour accorder une
+   * casse. Les briefs sont corrigés aussi — mais un seul des deux correctifs
+   * aurait laissé le piège ouvert pour le prochain client. */
+  const net = valeur?.toLowerCase() ?? "";
+  return (liste as readonly string[]).includes(net) ? (net as T) : null;
 }
 
 /* `ios:17.4` DEVIENT DEUX CHAMPS, ET LE DÉCOUPAGE SE FAIT ICI, UNE FOIS.

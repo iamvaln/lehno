@@ -13,6 +13,10 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   reason_code_unknown: 422,
   unauthorized: 401, session_expired: 401, refresh_reused: 401, federated_token_invalid: 401,
   forbidden: 403, account_suspended: 403, account_pending_deletion: 403,
+  /* 403 comme les trois précédents, mais l'écran doit pouvoir les distinguer :
+     « cette application n'est pas reconnue » n'est pas « votre compte est
+     refusé », et l'utilisateur chercherait au mauvais endroit. */
+  client_unknown: 403,
   not_found: 404,
   conflict: 409, username_taken: 409, federated_already_linked: 409,
   // 410, seul de tout le contrat. Un lien de collecte révoqué a existé : le

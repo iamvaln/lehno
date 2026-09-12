@@ -48,5 +48,6 @@ export const en = {
     // would send people looking for a mistake they did not make.
     generation_unavailable: "We can't reach the model right now. Your credits haven't been spent — try again in a few minutes.",
     upgrade_required: "This version of the app is no longer supported. Update it to carry on.",
+    client_unknown: "This app isn't recognised. Reinstall it from the official store.",
   },
 } as const;
