@@ -3,7 +3,7 @@ import { Breadcrumb, PageHeader } from "../composants/page/index.js";
 import { DataTable, EmptyState, StatusPill, type Colonne } from "../composants/donnees/index.js";
 import { ConfirmWithReason } from "../composants/actions/index.js";
 import { messages, type Langue } from "../i18n/index.js";
-import type { AdminRole, ConfigurationPortrait, EtatPortrait } from "@lehno/contracts";
+import type { AdminRole, Axe, ConfigurationPortrait, EtatPortrait, Performance } from "@lehno/contracts";
 
 /**
  * Réglages en service — un écran de LECTURE qui répond à deux questions, et à
@@ -28,6 +28,10 @@ export interface StudioServiceProps {
   langue?: Langue;
   etat: EtatPortrait;
   historique: ConfigurationPortrait[];
+  /* CE QUE CHAQUE VERSION A PRODUIT. Même lecture que dans l'atelier des
+     textes, et le même service derrière : ce qui change d'une nature à l'autre
+     est la table qu'on compte, pas le raisonnement. */
+  performance?: Performance | null;
   /** Remet une version antérieure en service. À l'appelant de l'envoyer. */
   onRevenir?: (config: ConfigurationPortrait, motif: string) => void;
   onRetour?: (id: string) => void;
@@ -42,7 +46,7 @@ function enDate(iso: string, langue: Langue): string {
 }
 
 export function StudioService(
-  { role, langue = "fr", etat, historique, onRevenir, onRetour }: StudioServiceProps,
+  { role, langue = "fr", etat, historique, performance = null, onRevenir, onRetour }: StudioServiceProps,
 ): ReactNode {
   const t = messages(langue);
   const d = t.studioService;
@@ -50,6 +54,26 @@ export function StudioService(
 
   const remplir = (gabarit: string, valeurs: Record<string, string | number>): string =>
     Object.entries(valeurs).reduce((a, [c, v]) => a.split(`{${c}}`).join(String(v)), gabarit);
+
+  const mesureDe = (configId: string) =>
+    performance?.versions.find((v) => v.configId === configId);
+
+  /* Les trois seaux d'un axe, en une ligne. « Sans » figure TOUJOURS : c'est
+     « personne n'a répondu », et le taire ferait lire deux chiffres comme un
+     total — la version paraîtrait unanime alors que presque personne n'a
+     parlé. */
+  const rendreAxe = (
+    axe: Axe | undefined,
+    libelles: { pour: string; contre: string; sans: string },
+    rien: string,
+  ): string => {
+    if (axe === undefined || axe.pour + axe.contre + axe.sans === 0) return rien;
+    return [
+      remplir(libelles.pour, { n: axe.pour }),
+      remplir(libelles.contre, { n: axe.contre }),
+      remplir(libelles.sans, { n: axe.sans }),
+    ].join(" · ");
+  };
 
   const colonnes: Colonne<ConfigurationPortrait & { id: string }>[] = [
     {
@@ -64,6 +88,21 @@ export function StudioService(
     },
     { cle: "parQui", titre: d.col.parQui, rendu: (c) => c.parQui ?? "—" },
     { cle: "note", titre: d.col.note, rendu: (c) => c.note ?? "—" },
+    /* DEUX AXES, DEUX COLONNES : on peut garder un portrait sans le trouver
+       réussi — on a payé, et il faut bien en sortir un. Le geste est une
+       préférence RÉVÉLÉE, l'avis est déclaré donc rare.
+       DES COMPTES, PAS UN TAUX : la mesure n'en borne aucun, et en inventer un
+       afficherait « 100 % » sur une version qui n'a qu'un seul avis. */
+    {
+      cle: "gestes",
+      titre: d.col.gestes,
+      rendu: (c) => rendreAxe(mesureDe(c.id)?.gestes, d.axes.gestes, d.rien),
+    },
+    {
+      cle: "avis",
+      titre: d.col.avis,
+      rendu: (c) => rendreAxe(mesureDe(c.id)?.avis, d.axes.avis, d.rien),
+    },
     {
       cle: "etat",
       titre: d.col.etat,
@@ -140,6 +179,18 @@ export function StudioService(
           )}
           onAction={(id, c) => { if (id === "revenir") setARemettre(c); }}
         />
+        {/* CE QUI N'A PAS DE VERSION SE DIT, jamais ne se tait : produit avant
+            qu'une configuration ne soit publiée, ou pendant qu'aucune ne
+            l'était. Une ligne à part — un total qui ne tombe pas juste fait
+            douter du compte, pas des données. */}
+        {performance && performance.horsVersion.produites > 0 ? (
+          <p className="admin-section-sous">
+            {remplir(d.horsVersion, {
+              n: performance.horsVersion.produites,
+              ecartees: performance.horsVersion.gestes.contre,
+            })}
+          </p>
+        ) : null}
       </section>
 
       {aRemettre === null ? null : (

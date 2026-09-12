@@ -826,7 +826,13 @@ export function App(): ReactNode {
       ? Promise.all([
           api.appeler("/admin/portrait-studio/config", { schema: etatPortraitSchema }),
           api.appeler("/admin/portrait-studio/config/history", { schema: historiquePortraitSchema }),
-        ]).then(([etat, historique]) => ({ etat, historique: historique.items }))
+          /* CE QUE CHAQUE VERSION A PRODUIT. La lecture vit hors des deux
+             ateliers : la question se pose pour les quatre natures, et la
+             ranger dans l'un d'eux obligerait à l'écrire deux fois. */
+          api.appeler("/admin/studio/portrait/performance", { schema: performanceSchema }),
+        ]).then(([etat, historique, performance]) => ({
+          etat, historique: historique.items, performance,
+        }))
       : Promise.resolve(null)),
     [section, tourStudio],
   );
@@ -1448,6 +1454,7 @@ export function App(): ReactNode {
             langue={langue}
             etat={studio.etat}
             historique={studio.historique}
+            performance={studio.performance}
             onRevenir={(config, motif) => {
               void (async () => {
                 try {

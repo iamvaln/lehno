@@ -1368,8 +1368,16 @@ export const en: typeof fr = {
       quand: "Published on",
       parQui: "By",
       note: "What it changes",
+      gestes: "What was done with it",
+      avis: "What was thought of it",
       etat: "State",
     },
+    axes: {
+      gestes: { pour: "{n} kept", contre: "{n} rejected", sans: "{n} untouched" },
+      avis: { pour: "{n} good", contre: "{n} poor", sans: "{n} unrated" },
+    },
+    rien: "Nothing produced",
+    horsVersion: "Before the link: {n} portraits, {ecartees} of them rejected. They belong to no version, and cannot be given one.",
     etats: {
       published: "Live",
       superseded: "Retired",
