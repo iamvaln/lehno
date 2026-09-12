@@ -63,5 +63,9 @@ export const fr = {
        Elle ne dit pas non plus « erreur » : rien n'est cassé, il manque une
        mise à jour. */
     upgrade_required: "Cette version de l'application n'est plus servie. Mettez-la à jour pour continuer.",
+    /* ELLE NE PARLE PAS DU COMPTE, et c'est tout l'intérêt d'un code à part :
+       « votre compte est refusé » enverrait chercher au mauvais endroit. Et elle
+       n'invite pas à réessayer — rien ne changera. */
+    client_unknown: "Cette application n'est pas reconnue. Réinstallez-la depuis la boutique officielle.",
   },
 } as const;

@@ -39,6 +39,17 @@ export const ERROR_CODES = [
      « mettre à jour » plutôt qu'un refus qu'on lirait comme une panne de
      compte. */
   "upgrade_required",
+  /* LE CLIENT N'EST PAS RECONNU — 403, et un code à part de `forbidden`.
+     Cinq causes, une seule réponse : identifiant absent, inconnu, client coupé,
+     clé fausse, type discordant. Dire laquelle apprendrait à un script
+     lesquelles il a devinées ; les cinq restent dans le journal, où l'on veut
+     tout savoir.
+     À PART DE `forbidden` parce que l'écran doit pouvoir dire « cette
+     application n'est pas reconnue » plutôt que « votre compte est refusé » —
+     les deux se lisent en 403, et l'utilisateur chercherait au mauvais endroit.
+     Et surtout : ce n'est PAS rattrapable par une reconnexion, donc le client ne
+     doit ni renouveler son jeton ni réessayer. */
+  "client_unknown",
   // Une action payante lancée sans provision, ou une reprise qui creuserait le
   // solde. 422 : la demande est bien formée, c'est l'état du compte qui ne s'y
   // prête pas. Le contrat commun le cite comme l'exemple même d'un code stable.

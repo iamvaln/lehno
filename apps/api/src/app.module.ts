@@ -8,6 +8,7 @@ import { PrismaService } from "./prisma/prisma.service.js";
 import { ClientApiService } from "./clients/client-api.service.js";
 import { VersionsService } from "./clients/versions.service.js";
 import { VersionGuard } from "./clients/version.guard.js";
+import { ClientGuard } from "./clients/client.guard.js";
 import { ClientsApiController } from "./admin/clients-api.controller.js";
 import { VersionsController } from "./admin/versions.controller.js";
 import { AuthController } from "./auth/auth.controller.js";
@@ -188,6 +189,11 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
        application trop vieille ne doit pas commencer à travailler. Elle DORT
        derrière son paramètre — l'allumer alors qu'aucun build n'envoie encore
        `x-app-build` mettrait tout le monde dehors d'un coup. */
+    /* AVANT celle des versions, et l'ordre compte : inviter à mettre à jour un
+       client qu'on ne reconnaît même pas serait lui promettre que le problème
+       vient de son binaire. La question « qui êtes-vous » précède « quelle
+       version ». Elle dort aussi derrière son paramètre. */
+    { provide: APP_GUARD, useClass: ClientGuard },
     { provide: APP_GUARD, useClass: VersionGuard },
     // Garde GLOBAL, et le premier de tous : un arrêt pour intervention vaut
     // pour toute l'API, pas surface par surface. Posé ici plutôt que sur

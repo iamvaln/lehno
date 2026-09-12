@@ -19,12 +19,26 @@ se prennent, ce qu'elles coûtent, et ce qui arrive quand le serveur refuse.
 ```
 X-Client-Id      la constante du build
 X-Client-Key     la constante du build
-X-Client-Type    MOBILE_IOS | MOBILE_ANDROID
+X-Client-Type    mobile_ios | mobile_android   ← en MINUSCULES (§2 bis)
 X-App-Version    1.4.2          ← app.json, `expo.version`
 X-App-Build      412            ← le BUILD, entier monotone (§3 bis)
 X-App-OS         ios:17.4       ← Platform.OS + Platform.Version
 X-App-Env        prod | staging | dev
 ```
+
+### §2 bis — la casse, et pourquoi ce paragraphe existe
+
+*Ajouté le 13 septembre. La première version de ce document annonçait
+`MOBILE_IOS`, en majuscules, repris de monjeton qui range ses types ainsi.*
+
+**Le contrat de Lehno compare à `mobile_ios`, en minuscules.** Un build qui aurait
+suivi le brief serait passé en phase 1 — où rien ne refuse — et se serait fait
+mettre dehors **le jour où l'on allume la phase 2**. Invisible pendant des
+semaines, catastrophique d'un coup.
+
+Le serveur normalise désormais la casse, donc les deux passent. **Envoyez quand
+même les minuscules** : c'est ce que le contrat déclare, et se fier à une
+tolérance revient à parier qu'elle ne changera pas.
 
 **Ils se posent au seul endroit qui appelle le réseau.** `lib/api.ts` construit
 déjà ses en-têtes à un point unique ; c'est là, et nulle part ailleurs. Les poser
@@ -110,7 +124,7 @@ fois.
 
 ## 4. Ce qui arrive quand le serveur refuse
 
-### 403 — client inconnu, clé fausse, type discordant
+### 403 `client_unknown` — l'application n'est pas reconnue
 
 **En phase 1, ça n'arrive pas** : le serveur ne refuse rien. En phase 2, c'est le
 signe d'un build mal configuré ou d'une clé révoquée.
@@ -119,10 +133,21 @@ Ce n'est **pas** rattrapable par l'utilisateur : ni reconnexion, ni réessai. Un
 écran d'arrêt, comme celui de la maintenance — `ArretProvider` existe déjà et
 porte cette forme.
 
+**Le code d'enveloppe est `client_unknown`**, et il est distinct de `forbidden` —
+c'était une promesse de ce document que le serveur ne tenait pas encore le
+13 septembre : la garde levait un `forbidden` ordinaire, indiscernable d'un
+compte suspendu, et l'écran aurait montré « votre compte est refusé » à quelqu'un
+dont le compte va très bien. C'est corrigé.
+
 **Ne pas le confondre avec une expiration de jeton.** La couche d'appel renouvelle
-le jeton sur un 401 ; un 403 de client doit s'en distinguer par son code
-d'enveloppe, sinon l'application tournerait en boucle à renouveler un jeton qui
-n'est pas le problème.
+sur un 401 ; sur `client_unknown`, elle ne doit **ni renouveler ni réessayer** —
+rien ne changera, et l'application tournerait en boucle sur un jeton qui n'est pas
+le problème.
+
+**Cinq causes, une seule réponse** : identifiant absent, inconnu, client coupé,
+clé fausse, type discordant. Le serveur ne dit pas laquelle — le dire
+apprendrait à un script lesquelles il a devinées — et l'écran n'a rien d'utile à
+en faire de toute façon.
 
 ### 426 — mettez à jour (phase 3)
 

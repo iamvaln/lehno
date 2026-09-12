@@ -39,7 +39,7 @@ trafic.
 ```
 X-Client-Id      constante du build
 X-Client-Key     constante du build
-X-Client-Type    WEB
+X-Client-Type    web                           ← en MINUSCULES
 X-App-Version    la version du paquet — 0.3.1
 X-App-Build      un entier monotone posé par la CI (§7.4)
 X-App-OS         web:<navigateur>   ← voir §4
