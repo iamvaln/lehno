@@ -1279,14 +1279,23 @@ export const versionAppSchema = z.object({
   storeUrl: z.string().nullable(),
   notes: z.string().nullable(),
   publishedAt: z.string(),
-  /* COMBIEN D'APPAREILS ONT ÉTÉ VUS SOUS CE BUILD, sur les trente derniers
-     jours. Ce n'est pas un ornement : poser `forcesUpdate` met hors service tous
-     les appareils en dessous, et c'est le geste le plus lourd du panneau — plus
-     lourd que couper un client, parce qu'il ne se voit pas venir. Le poser sans
-     savoir combien de gens il déloge serait le poser à l'aveugle.
-     Compté sur les CONNEXIONS, donc approché : quelqu'un qui ne s'est pas
-     reconnecté depuis un mois n'y figure pas. Mieux vaut un chiffre approché
-     qu'aucun. */
+  /* COMBIEN DE COMPTES ONT ÉTÉ VUS SOUS CE BUILD, sur les trente derniers jours.
+   *
+   * IL DIT L'AMPLEUR, IL NE DÉCIDE PAS. Ce commentaire affirmait que poser
+   * `forcesUpdate` sans lui serait « le poser à l'aveugle » — c'est faux, et
+   * corrigé le 13 septembre : on force quand il y a rupture de compatibilité ou
+   * correctif de sécurité obligatoire, et dans ces deux cas tout le monde doit
+   * passer. Dix appareils ou dix mille, la décision est la même.
+   *
+   * Le lire comme un critère serait trompeur à l'envers : plus il y a de monde
+   * sur une version cassée ou vulnérable, plus il est URGENT de la faire
+   * quitter, jamais moins.
+   *
+   * Ce qu'il sert vraiment : préparer ce qui suit — l'assistance prévenue, une
+   * annonce rédigée.
+   *
+   * Compté sur les CONNEXIONS, donc approché : quelqu'un qui ne s'est pas
+   * reconnecté depuis un mois n'y figure pas. */
   comptesVusRecemment: z.number().int().min(0),
 }).strict();
 

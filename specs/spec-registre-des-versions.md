@@ -254,14 +254,32 @@ qu'ailleurs : **poser `forcesUpdate` met hors service tous les appareils en
 dessous**. C'est le geste le plus lourd du panneau — plus lourd que couper un
 client, parce qu'il ne se voit pas venir.
 
-**Ce que l'écran doit montrer avant de le poser** : combien d'appareils seraient
-concernés. La phase 1 ne le sait pas — elle journalise, elle ne compte pas. C'est
-l'argument qui ferait revenir l'agrégat écarté au §5.4 du plan, et il vaut mieux
-que celui d'origine : on ne veut pas « savoir quelles versions appellent », on
-veut **savoir qui l'on s'apprête à bloquer**.
+> **Tranché le 13 septembre.** Deux corrections, et la seconde est à ma charge.
+>
+> **1. Le compteur EXISTE** — contrairement à ce que ce paragraphe annonçait.
+> `versionAppSchema` porte `comptesVusRecemment`, calculé par un agrégat des
+> comptes distincts par build sur trente jours. L'agrégat « écarté » au §5.4 du
+> plan a été construit.
+>
+> **2. Mais il n'éclaire PAS la décision de forcer.** `forcesUpdate` ne se pose
+> pas quand le nombre le permet : il se pose quand il y a **rupture de
+> compatibilité** ou **correctif de sécurité obligatoire**. Dans ces deux cas il
+> faut que tout le monde passe — dix appareils ou dix mille, la décision est la
+> même.
+>
+> Le présenter comme un critère serait même trompeur à l'envers : plus il y a
+> d'appareils sur une version cassée ou vulnérable, plus il est **urgent** de
+> les faire passer, jamais moins.
 
-> **À trancher.** Sans ce compteur, `forcesUpdate` se pose à l'aveugle. Faut-il
-> le construire avec ce lot, ou poser le drapeau sans filet en attendant ?
+**À quoi il sert donc**, et c'est ce que l'écran doit en faire : dire l'**ampleur
+de ce qui suit**, pas s'il faut le faire. Combien de personnes devront mettre à
+jour se prépare — l'assistance en sera prévenue, une annonce se rédige — mais ce
+n'est pas ce qui décide.
+
+**Ce que l'écran doit garantir** : que la raison soit **consignée**, et que la
+confirmation dise ce que le geste SIGNIFIE — « tous les appareils en dessous ne
+pourront plus appeler tant qu'ils n'auront pas mis à jour ». Une phrase, et le
+chiffre à côté comme contexte, jamais comme question.
 
 ### 7.3 Ce que le panneau ne doit PAS offrir
 
