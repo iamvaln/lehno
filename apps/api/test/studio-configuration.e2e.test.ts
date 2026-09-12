@@ -492,4 +492,73 @@ describe("administration — la configuration du studio", () => {
     const res = await appeler("POST", "/config/publish", entete, { configId: brouillon.id, note: MOTIF });
     expect(res.status).toBe(200);
   });
+  /* ─── La photo d'exemple d'une éprouvette ─────────────────────────────────── */
+
+  /* SANS ELLE, LA VOIE PHOTO NE S'ÉPROUVE PAS — et `photo.consigne` étant dans
+   * l'empreinte, la changer exige un essai que seule cette photo rend possible.
+   *
+   * DEUX TEMPS, comme côté utilisateur : une URL signée pour déposer, puis une
+   * confirmation qui relit l'objet et le JUGE avec les seuils de la production.
+   * Le fichier ne traverse jamais l'API. */
+  describe("la photo d'exemple", () => {
+    /* ON RELIT CELLE QU'ON A VISÉE, par son identifiant. `findFirstOrThrow`
+       sans ordre rend n'importe laquelle des éprouvettes semées — et le cas
+       vérifiait alors une ligne sur laquelle il n'avait rien fait. */
+    const uneEprouvette = () => db.prisma.studioProfile.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
+    const relire = (id: string) => db.prisma.studioProfile.findUniqueOrThrow({ where: { id } });
+
+    it("garde une place, sans donner la clé", async () => {
+      const { entete } = await session("admin");
+      const profil = await uneEprouvette();
+
+      const res = await appeler("POST", `/profiles/${profil.id}/photo/depot`, entete);
+      expect(res.status).toBe(200);
+      const corps = (await res.json()) as Record<string, unknown>;
+
+      expect(corps["url"]).toBeTruthy();
+      /* LA CLÉ NE SORT PAS. La donner permettrait de la remplacer par celle
+         d'un autre objet — un portrait payé, un reçu — et de nous faire signer
+         une lecture dessus. Doctrine de `depotAvatarSchema`. */
+      expect(corps["cle"]).toBeUndefined();
+      // Elle est gardée côté serveur, le temps que le téléversement aboutisse.
+      expect((await relire(profil.id)).photoDepotKey).not.toBeNull();
+    });
+
+    /* CONFIRMER SANS AVOIR DÉPOSÉ est un conflit, pas un succès vide : sinon un
+       second appel promeut une photo qu'on n'a pas déposée. */
+    it("refuse de confirmer sans dépôt en cours", async () => {
+      const { entete } = await session("admin");
+      const profil = await uneEprouvette();
+
+      const res = await appeler("POST", `/profiles/${profil.id}/photo`, entete);
+      expect(res.status).toBe(409);
+    });
+
+    /* UNE SEULE BARRE POUR TOUS : une photo d'exemple que la production
+       refuserait ferait un essai qui ne représente pas ce qui se passera. Ici
+       l'objet annoncé n'existe pas — le téléversement n'a pas eu lieu —, et la
+       place gardée se libère pour qu'un second essai reparte proprement. */
+    it("libère la place quand l'objet ne se lit pas", async () => {
+      const { entete } = await session("admin");
+      const profil = await uneEprouvette();
+      await appeler("POST", `/profiles/${profil.id}/photo/depot`, entete);
+
+      const res = await appeler("POST", `/profiles/${profil.id}/photo`, entete);
+
+      // `validation_failed` répond 400 : c'est une erreur d'appel, pas un état
+      // du monde qui empêcherait le geste.
+      expect(res.status).toBe(400);
+      expect((await relire(profil.id)).photoDepotKey).toBeNull();
+      expect((await relire(profil.id)).photoKey).toBeNull();
+    });
+
+    /* Le support ne règle pas le studio, photo comprise : la dépense et la
+       consigne en préparation lui sont fermées. */
+    it("reste hors de portée du support", async () => {
+      const { entete } = await session("support");
+      const profil = await uneEprouvette();
+
+      expect((await appeler("POST", `/profiles/${profil.id}/photo/depot`, entete)).status).toBe(403);
+    });
+  });
 });
