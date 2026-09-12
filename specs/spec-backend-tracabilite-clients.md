@@ -45,54 +45,68 @@ concorder. Ce n'est pas une redondance : un `X-Client-Type` qui ne correspond pa
 exactement ce qu'on veut voir. C'est le contrôle de monjeton, et il vaut d'être
 repris.
 
-### `ClientVersionSeen` — l'agrégat
+### Ce que les tables historisées gagnent
+
+*Révisé le 12 septembre après arbitrage. La première version posait une table
+d'agrégat quotidien. Elle est retirée : **ce sont des logs, du verbeux**, et ces
+mêmes champs sur tout ce qui est déjà historisé. Le §5.4 du plan dit pourquoi, et
+à quelle condition on y reviendrait.*
+
+Six tables, et la règle est la même pour toutes : **une ligne qu'on relira un
+jour pour comprendre ce qui s'est passé dit d'où elle vient.**
 
 ```prisma
-model ClientVersionSeen {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  /// Le JOUR, pas l'instant. C'est la granularité de la question posée :
-  /// « quelles versions nous appellent cette semaine ». À l'heure près, la table
-  /// serait vingt-quatre fois plus grosse pour une précision dont personne n'a
-  /// l'usage.
-  day         DateTime @db.Date
-  /// Nul pour un appel sans en-têtes — en phase 1, c'est le cas le plus fréquent,
-  /// et c'est justement ce qu'on vient mesurer.
-  clientId    String?  @map("client_id") @db.VarChar(64)
-  clientType  String?  @map("client_type") @db.VarChar(20)
-  appVersion  String?  @map("app_version") @db.VarChar(20)
-  /// Découpé à l'entrée depuis `X-App-OS` : `ios:17.4` donne `ios` et `17.4`.
-  /// On découpe UNE fois, au bord, plutôt que de laisser chaque lecture le
-  /// refaire — et une lecture qui oublie de découper compte « ios:17.4 » et
-  /// « ios:17.5 » comme deux systèmes différents.
-  osName      String?  @map("os_name") @db.VarChar(20)
-  osVersion   String?  @map("os_version") @db.VarChar(20)
-  calls       BigInt   @default(0)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  /// LA CLÉ DE L'AGRÉGAT. C'est elle qui fait tenir la table : un `upsert` sur
-  /// cette combinaison, jamais un `insert` par requête.
-  @@unique([day, clientId, clientType, appVersion, osName, osVersion])
-  @@index([day])
-  @@map("client_version_seen")
-}
+/// Portés par login_activity, audit_log, ai_usage, action_run,
+/// credit_transaction et payment.
+///
+/// NULLABLES POUR DE BON, et pas le temps d'une migration : les lignes d'avant
+/// ce lot n'ont pas cette information, et rien ne peut l'inventer. Leur poser
+/// une valeur courante serait pire qu'un trou — ce serait une donnée fausse.
+clientId   String? @map("client_id")   @db.VarChar(64)
+clientType String? @map("client_type") @db.VarChar(20)
+appVersion String? @map("app_version") @db.VarChar(20)
+osName     String? @map("os_name")     @db.VarChar(20)
+osVersion  String? @map("os_version")  @db.VarChar(20)
 ```
 
-**Postgres traite les nuls comme distincts dans un index unique.** Un appel sans
-en-têtes créerait donc une ligne par requête — exactement ce qu'on voulait
-éviter. Deux façons de s'en sortir, à trancher : un index unique sur des
-`COALESCE(..., '')`, ou des colonnes non nulles avec `''` comme valeur
-d'« inconnu ». **Proposé** : la seconde, plus simple à lire et à requêter, avec un
-commentaire qui dit pourquoi `''` et non `NULL`.
+`login_activity` montre déjà la forme : elle porte `ip`, `user_agent` et
+`geo_approx`. Ce lot lui ajoute ce qui manquait — de quelle application, dans
+quelle version.
 
-### Ce que les tables existantes gagnent
+**`osName` et `osVersion` séparés, jamais la chaîne composée.** `X-App-OS` arrive
+en `ios:17.4` et se découpe **une fois, au bord**. Une lecture qui oublierait de
+découper compterait `ios:17.4` et `ios:17.5` comme deux systèmes différents.
 
-`ai_usage`, `action_run` et `login_activity` reçoivent `client_id`,
-`client_type`, `app_version`. Nullables, et pour de bon : les lignes d'avant ce
-lot n'ont pas cette information, et rien ne peut l'inventer.
+### L'IP sur les deux tables de transaction
 
-C'est ce que fait monjeton sur son journal d'appels IA. On l'élargit aux deux
-autres parce que ce sont les trois tables qu'on relit quand quelque chose coûte
-ou surprend.
+`credit_transaction` et `payment` gagnent en plus :
+
+```prisma
+/// L'ORIGINE DE LA DÉCLARATION, et c'est un ÉCART ASSUMÉ à la doctrine du
+/// dépôt : `auth.controller.ts` écrit que l'IP « ne sert qu'à composer la clé du
+/// limiteur […] : elle n'est ni journalisée ni renvoyée ».
+///
+/// Une transaction n'est pas une requête ordinaire : elle SE CONTESTE. En mode
+/// semi-manuel, quelqu'un déclare avoir payé, un administrateur décide, et des
+/// crédits changent de main. Le jour où deux récits s'opposent, l'origine de la
+/// déclaration est souvent la seule chose qui tranche — et elle ne se
+/// reconstitue pas après coup. `login_activity` fait déjà ça pour les
+/// connexions, avec le même raisonnement.
+///
+/// `Inet` comme sur `login_activity`, pas `VarChar` : le type dit ce que c'est,
+/// et Postgres refuse alors ce qui n'est pas une adresse.
+ip String? @db.Inet
+```
+
+**Elle se lit par `req.ip`**, dont la valeur dépend du réglage « trust proxy »
+posé au démarrage. **Jamais `X-Forwarded-For` directement** : sans borne déclarée,
+n'importe qui forgerait son origine — c'est ce que `common/trust-proxy.ts` évite
+déjà, et il refuse d'ailleurs la valeur `true`.
+
+**Ce qu'il faut assumer** : une transaction se garde pour la comptabilité, donc
+plus longtemps qu'un journal. L'IP la suit. C'est une donnée personnelle qui vit
+le temps de la pièce, et l'export comme l'effacement du compte doivent la traiter
+comme telle — voir le point 4 du §7 du plan.
 
 ---
 
@@ -169,19 +183,27 @@ c'est cinquante-neuf de trop.
 
 ---
 
-## 5. L'agrégat ne ralentit pas la requête
+## 5. Rien de tout ça ne ralentit la requête
 
-Le comptage est un `upsert` — donc une écriture — et il ne doit **jamais** être
-sur le chemin de la réponse.
+La ligne de journal s'écrit sur la sortie standard : coût négligeable, et aucune
+écriture en base.
 
-**Proposé** : une file en mémoire, vidée toutes les dix secondes en un seul
-`upsert` par combinaison vue. Le processus qui s'arrête perd au pire dix secondes
-de compteurs, ce qui est sans conséquence sur un agrégat quotidien — et c'est le
-bon échange contre une écriture par requête.
+**Les six champs sur les tables historisées ne coûtent rien non plus**, et c'est
+le point : ces lignes s'écrivent déjà. On ajoute des colonnes à un `insert` qui
+a lieu de toute façon, on n'en provoque aucun.
 
-L'ordonnanceur du dépôt sait déjà faire tourner ce genre de passage.
+C'est précisément ce que la première version de cette spec perdait de vue en
+proposant un agrégat : elle ajoutait une écriture par requête pour une question
+qu'un `grep` résout. Voir le §5.4 du plan.
 
----
+### Le contexte se pose une fois
+
+Le middleware range ce qu'il a lu sur la requête. Tout ce qui écrit ensuite —
+`login_activity`, `ai_usage`, `action_run`, `payment` — le relit de là.
+
+**Le lire deux fois serait la porte ouverte à deux lectures qui divergent** : un
+service qui découperait `X-App-OS` à sa façon, un autre qui prendrait l'en-tête
+brut. Un point de lecture, un point de découpe.
 
 ## 6. L'administration
 
@@ -190,7 +212,9 @@ L'ordonnanceur du dépôt sait déjà faire tourner ce genre de passage.
   jamais plus.
 - `POST admin/api-clients/{id}/rotate` — une clé neuve, l'identifiant inchangé.
 - `PATCH admin/api-clients/{id}` — activer, désactiver.
-- `GET admin/client-versions?depuis=&jusqu=` — **la lecture qui justifie tout ça**.
+Pas de route de lecture des versions : il n'y a pas d'agrégat à lire. La question
+« quelles versions nous appellent » se pose au journal, et c'est suffisant tant
+qu'elle se pose de temps en temps.
 
 Les trois écritures passent par le motif d'audit, comme le reste de
 l'administration : couper un client coupe une application entière, et personne ne
@@ -200,8 +224,9 @@ doit pouvoir le faire sans laisser son nom.
 
 ## 7. Les phases, côté serveur
 
-**Phase 1** — les deux modèles, le middleware en mode observation, les quatre
-champs dans le journal, l'agrégat et son passage. Rien ne refuse rien.
+**Phase 1** — `ApiClient`, le middleware en mode observation, les six champs
+dans la ligne de journal, l'origine sur les six tables historisées, et l'IP sur
+les deux tables de transaction. Rien ne refuse rien.
 
 **Phase 2** — la garde derrière son paramètre. À n'allumer que quand l'agrégat
 montre que les appels portent leurs en-têtes.
@@ -210,7 +235,8 @@ montre que les appels portent leurs en-têtes.
 **426** en dessous du minimum avec le lien du magasin, en-tête de suggestion
 au-dessus. Repris de monjeton presque tel quel.
 
-**Phase 4** — l'écran d'administration.
+**Il n'y a pas de phase 4.** La première version en prévoyait une pour un écran
+au-dessus de l'agrégat. L'agrégat n'est plus au plan, donc l'écran non plus.
 
 ---
 
@@ -218,9 +244,13 @@ au-dessus. Repris de monjeton presque tel quel.
 
 1. **`/v1/auth/*` sous garde ou non** (§3). J'incline vers « sous garde », mais
    c'est un choix qui se voit tout de suite.
-2. **`''` ou `NULL`** pour l'inconnu dans l'agrégat (§1). J'incline vers `''`.
+2. **L'IP sur les transactions et l'effacement du compte** (§1). Une pièce
+   comptable ne s'efface pas ; son IP peut se retirer. À décider avec ce que
+   l'export de données doit en montrer.
 3. **`X-App-Env` comparé au client, ou seulement noté ?** Refuser un build de
    staging qui pointe la production est tentant — mais c'est aussi le moyen le
    plus sûr de se couper un jour d'urgence. **Proposé** : on le note et on le
    signale, on ne refuse pas.
-4. **La rétention de l'agrégat** — dix-huit mois proposés au plan.
+4. **`audit_log` porte-t-il aussi l'IP ?** Un geste d'administration se conteste
+   autant qu'un paiement. Je ne l'ai pas mis pour ne pas élargir sans qu'on en
+   parle, mais l'argument du §1 vaut à l'identique.
