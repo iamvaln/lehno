@@ -53,6 +53,23 @@ export class PortraitService {
     return this.rendre(await this.sien(userId, id));
   }
 
+  /* L'AVIS — ce qu'on en a PENSÉ, et non ce qu'on en a fait.
+   *
+   * `approved` est un GESTE : je garde ce portrait. L'avis est un JUGEMENT, et
+   * les deux se séparent dans la vraie vie — on approuve un portrait passable
+   * parce qu'on a payé et qu'il faut bien en sortir un. Ranger le jugement dans
+   * l'état ferait perdre les deux : on ne distinguerait plus « pas approuvé »
+   * de « jugé mauvais ».
+   *
+   * `null` retire l'avis et sa date avec lui — la contrainte en base l'exige. */
+  async noter(userId: string, id: string, avis: "up" | "down" | null): Promise<PortraitRendu> {
+    await this.sien(userId, id);
+    return this.rendre(await this.prisma.portrait.update({
+      where: { id },
+      data: { feedback: avis, feedbackAt: avis === null ? null : new Date() },
+    }));
+  }
+
   async lister(userId: string): Promise<PortraitRendu[]> {
     const lignes = await this.prisma.portrait.findMany({
       where: { userId },

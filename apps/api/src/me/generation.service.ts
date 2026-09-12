@@ -273,7 +273,7 @@ export class GenerationService {
     } = {},
   ) {
     const occurrence = await this.depot.occurrences(userId).findOrThrow(occurrenceId);
-    const { contexte, modele } = await this.rassemblerIdees(userId, occurrence.id, options);
+    const { contexte, modele, configId } = await this.rassemblerIdees(userId, occurrence.id, options);
 
     const { execution, dejaLancee } = await this.debiter(
       userId, occurrence.id, null, options.cle ?? null, ACTION_IDEES,
@@ -288,7 +288,7 @@ export class GenerationService {
       execution,
       fini: this.enArrierePlan(execution.id, userId, async () => {
         const idees = await this.produireIdees(contexte, userId, execution.id, modele);
-        return this.conclureIdees(execution.id, userId, occurrence.id, idees);
+        return this.conclureIdees(execution.id, userId, occurrence.id, idees, configId);
       }),
     };
   }
@@ -311,11 +311,15 @@ export class GenerationService {
    * Le `.catch` couvre la configuration devenue illisible : la génération
    * continue sur les valeurs du code plutôt que de tomber. Le semis la répare
    * au démarrage suivant, et `reglagesIdeesDe` la nomme dans le journal. */
-  private async reglagesIdees(): Promise<ReglagesIdees | null> {
+  private async reglagesIdees(): Promise<{ reglages: ReglagesIdees; id: string } | null> {
     const publie = await this.configs.enService("idees").catch(() => null);
     if (publie === null) return null;
     try {
-      return this.configs.reglagesIdeesDe(publie);
+      /* L'IDENTIFIANT VOYAGE AVEC LES RÉGLAGES, et non relu plus tard : c'est
+         la version qui a composé l'invite qu'on veut retenir, pas celle en
+         service à l'arrivée. Entre les deux, un administrateur peut publier —
+         et le panneau créditerait la nouvelle d'un rejet dû à l'ancienne. */
+      return { reglages: this.configs.reglagesIdeesDe(publie), id: publie.id };
     } catch {
       return null;
     }
@@ -338,7 +342,7 @@ export class GenerationService {
       texteLibre?: string | null;
       budget?: { min: number | null; max: number | null } | null;
     },
-  ): Promise<{ contexte: ContexteIdees; modele: string | null }> {
+  ): Promise<{ contexte: ContexteIdees; modele: string | null; configId: string | null }> {
     const occurrence = await this.prisma.eventOccurrence.findUniqueOrThrow({
       where: { id: occurrenceId },
       include: { event: { include: { person: true } } },
@@ -386,9 +390,10 @@ export class GenerationService {
      * propre aux idées ». Elle existe : les idées sont une nature à part, avec
      * ses essais et sa publication. Celle du message ne vaut toujours pas ici —
      * ses consignes parlent de ton et de tournure, pas d'objets. */
-    const reglages = await this.reglagesIdees();
+    const publiee = await this.reglagesIdees();
+    const reglages = publiee?.reglages ?? null;
 
-    return { modele: reglages?.modele ?? null, contexte: {
+    return { configId: publiee?.id ?? null, modele: reglages?.modele ?? null, contexte: {
       langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
       ...(reglages?.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
       ...(reglages && reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
@@ -471,6 +476,9 @@ export class GenerationService {
 
   private async conclureIdees(
     actionRunId: string, userId: string, occurrenceId: string, idees: SortieIdee[],
+    /* Nul quand aucune configuration n'est en service : la production reprend
+       les valeurs du code, et prétendre qu'une version l'a faite serait faux. */
+    configId: string | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
       const depense = await tx.aIUsage.aggregate({
@@ -484,6 +492,10 @@ export class GenerationService {
       return tx.generatedIdeaSet.create({
         data: {
           actionRunId, userId, eventOccurrenceId: occurrenceId,
+          /* SUR LE JEU, jamais sur chaque idée : une génération emploie une
+             seule configuration, et la poser quatre fois ferait quatre
+             occasions de diverger. */
+          ...(configId === null ? {} : { studioConfigId: configId }),
           ideas: {
             create: idees.map((i, rang) => ({
               label: i.titre,
@@ -879,6 +891,24 @@ export class GenerationService {
         ...(patch.content === undefined ? {} : { content: patch.content }),
         status: etat,
       },
+    });
+  }
+
+  /* L'AVIS SUR UN MESSAGE — ce qu'on en a PENSÉ, et non ce qu'on en a fait.
+   *
+   * `sent` dit qu'on l'a envoyé, pas qu'on l'a trouvé bon : on envoie un
+   * message qu'on juge moyen, faute de temps pour en refaire un. Les deux
+   * colonnes vivent donc à côté l'une de l'autre, et le statut ne bouge pas.
+   *
+   * `null` retire l'avis, et remet sa date à nul avec lui — la contrainte en
+   * base l'exige, et c'est elle qui garde les deux d'accord. */
+  async noter(userId: string, id: string, avis: "up" | "down" | null) {
+    const brouillon = await this.prisma.generatedMessage.findFirst({ where: { id, userId } });
+    if (!brouillon) throw new AppError("not_found", "unknown message");
+
+    return this.prisma.generatedMessage.update({
+      where: { id },
+      data: { feedback: avis, feedbackAt: avis === null ? null : new Date() },
     });
   }
 

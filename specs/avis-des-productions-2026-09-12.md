@@ -10,18 +10,33 @@ amélioré quoi que ce soit.*
 
 ## 1. Ce qui existe, vérifié dans le code
 
+> **Corrigé le 12 au soir.** La première rédaction de ce tableau disait que les
+> idées « vivent dans la sortie de l'`ActionRun`, sans table ». **C'est faux** :
+> `GeneratedIdeaSet` et `GeneratedIdea` existent, une ligne par proposition — et
+> elles portent déjà l'avis. La recherche portait sur « GiftIdea », un nom que le
+> dépôt n'emploie pas.
+
 | | Porte sa version | Porte un avis |
 |---|---|---|
 | **Portrait** | `studio_config_id`, **nullable** | `generated` · `approved` — on approuve, on ne rejette pas |
-| **Message** | rien | `generated` · `edited` · `sent` — trois gestes, aucun jugement |
-| **Idées de cadeau** | rien — elles vivent dans la sortie de l'`ActionRun`, sans table | — |
+| **Message** | `studio_config_id` depuis #199 | `generated` · `edited` · `sent` — trois gestes, aucun jugement |
+| **Idées de cadeau** | rien, sur `generated_idea_set` | **`feedback` (`up`/`down`) + `feedback_at`, par proposition** |
 
-Seul le portrait sait d'où il vient, et aucune des trois ne sait ce qu'on en a
-pensé.
+**Il n'y a donc pas de forme à inventer : il y en a une à étendre.** Les idées
+tiennent déjà exactement ce que ce document réclamait — deux colonnes nullables,
+nouées par une contrainte en base :
+
+```sql
+CHECK (("feedback" IS NULL) = ("feedback_at" IS NULL));
+```
+
+et son commentaire dit pourquoi : « un avis sans date ne se compare pas dans le
+temps, une date sans avis ne désigne rien. Retirer son avis remet les deux à
+nul. » Le portrait et le message reprennent cette forme telle quelle.
 
 **L'essai, lui, porte un verdict** (`kept` / `discarded`) depuis le premier jour.
 C'est l'asymétrie qui coûte : on juge ce qu'on essaie à trente exemplaires, et
-pas ce qu'on sert à de vrais gens.
+la moitié de ce qu'on sert à de vrais gens.
 
 ---
 
@@ -105,15 +120,45 @@ quelqu'un reviendra en arrière sur un accident.
 
 ---
 
+## 6 bis. La lecture PAR MODÈLE, et non seulement par version
+
+*Demandé le 12 : « les métriques liées à cette appréciation des modèles ».*
+
+Une version fige un modèle (`reglages.modele`), mais **un modèle sert plusieurs
+versions**, et les deux questions ne sont pas la même :
+
+| Question | Dimension |
+|---|---|
+| « ma consigne resserrée a-t-elle aidé ? » | la **version** |
+| « ce modèle vaut-il son prix ? » | le **modèle** |
+
+La seconde appartient au registre des modèles, où vivent déjà l'interrupteur, le
+tarif et la panne. Un tarif sans taux de rejet ne dit que la moitié : le modèle
+le moins cher peut coûter le plus, en productions refaites.
+
+**Le chemin existe** : une production porte son `action_run_id`, et `ai_usage`
+porte `model_id`, `provider`, `model_key` pour ce même `action_run_id`.
+
+> **LE PIÈGE : UN REPLI PRODUIT PLUSIEURS LIGNES D'USAGE.** « Le coût RÉEL,
+> agrégé depuis les tentatives — un repli en produit plusieurs. » Attribuer un
+> rejet à *tous* les modèles d'une exécution blâmerait celui qui a seulement
+> échoué avant, et qui n'a rien écrit. **C'est le modèle de la tentative qui a
+> abouti** qui compte, et lui seul.
+
+---
+
 ## 7. Ce que ce document ne tranche pas
 
 1. **Le seuil** du §6 — dix productions ? vingt ? Il se règle en regardant les
    volumes réels, et il n'y en a pas encore.
 2. **Où le geste vit sur mobile** : sous la production, ou dans le fil ? Le
    design tranche.
-3. **Les idées de cadeau n'ont pas de table.** Leur donner un avis demande
-   d'abord de décider si l'on juge la LISTE ou chaque idée — et le §7 du brief
-   backend attend déjà une décision voisine sur leur quatrième position.
+
+*Tranché le 12 : l'avis vaut AUSSI pour les propositions d'idée, et par
+proposition — ce qui est déjà le cas en base. Ce qui leur manque est le lien
+vers la version, porté par le jeu et non par chaque idée : une génération
+emploie une seule configuration, et le poser par idée ferait quatre fois la
+même donnée avec quatre occasions de diverger.*
 
 ---
 

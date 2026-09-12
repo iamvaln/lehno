@@ -360,4 +360,62 @@ describe("le portrait", () => {
         .rejects.toMatchObject({ code: "not_found" });
     });
   });
+  /* L'AVIS — ce qu'on en a PENSÉ, et non ce qu'on en a fait.
+   *
+   * `approved` dit qu'on garde le portrait ; l'avis dit qu'il était bon. Les
+   * deux se séparent : on approuve un portrait passable parce qu'on a payé et
+   * qu'il faut bien en sortir un. Sans cette distinction, le panneau ne mesure
+   * rien — et tout le §6 du brief admin studio repose là-dessus. */
+  describe("l'avis", () => {
+    const unPortrait = async () => {
+      await crediter(5);
+      await publier();
+      return fini(generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config));
+    };
+
+    it("se pose, et laisse l'état tranquille", async () => {
+      const portrait = await unPortrait();
+
+      await portraits(repond(PNG_MINUSCULE)).noter(awa, portrait.id, "down");
+
+      const ligne = await db.prisma.portrait.findUniqueOrThrow({ where: { id: portrait.id } });
+      expect(ligne.feedback).toBe("down");
+      expect(ligne.feedbackAt).not.toBeNull();
+      // L'état n'a pas bougé : juger n'est pas approuver.
+      expect(ligne.status).toBe("generated");
+    });
+
+    /* UN DOIGT QUI GLISSE NE DOIT PAS ÊTRE DÉFINITIF. Une note qu'on ne peut
+       pas corriger est une note qu'on cesse de donner — et l'avis et sa date
+       partent ENSEMBLE, la contrainte en base l'exige. */
+    it("se retire, et emporte sa date", async () => {
+      const portrait = await unPortrait();
+      const service = portraits(repond(PNG_MINUSCULE));
+
+      await service.noter(awa, portrait.id, "up");
+      await service.noter(awa, portrait.id, null);
+
+      const ligne = await db.prisma.portrait.findUniqueOrThrow({ where: { id: portrait.id } });
+      expect(ligne.feedback).toBeNull();
+      expect(ligne.feedbackAt).toBeNull();
+    });
+
+    /* 404 et non 403 : dire « il existe mais n'est pas à vous » apprendrait
+       qu'il existe, et un identifiant se confirme plus facilement qu'il ne se
+       devine. */
+    it("ne se pose pas sur le portrait d'un autre", async () => {
+      const portrait = await unPortrait();
+      const autre = await db.prisma.user.create({
+        data: {
+          email: `${randomBytes(6).toString("hex")}@example.com`,
+          username: `u${randomBytes(4).toString("hex")}`,
+          referralCode: randomBytes(4).toString("hex").toUpperCase(),
+        },
+        select: { id: true },
+      });
+
+      await expect(portraits(repond(PNG_MINUSCULE)).noter(autre.id, portrait.id, "down"))
+        .rejects.toThrow(/resource not found/);
+    });
+  });
 });

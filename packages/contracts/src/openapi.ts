@@ -38,7 +38,7 @@ import {
 import {
   startGenerationSchema, generationResultSchema, generationsSchema, depotPhotoSourceSchema,
   updateMessageSchema, generatedMessageSchema,
-  ideaFeedbackSchema, generatedIdeaSchema, portraitSchema,
+  avisSchema, ideaFeedbackSchema, generatedIdeaSchema, portraitSchema,
 } from "./me-generation.js";
 import { studioOptionsSchema } from "./me-studio.js";
 import { homeSchema } from "./me-home.js";
@@ -1218,6 +1218,27 @@ const CHEMINS: Chemin[] = [
     reponse: portraitSchema,
   },
   {
+    chemin: "/me/portraits/{id}/feedback",
+    methode: "patch",
+    resume: "Noter un portrait, ou reprendre son avis",
+    authentifie: true,
+    note: [
+      "**L'avis n'est pas l'état.** `approved` dit qu'on GARDE le portrait ;",
+      "l'avis dit qu'il était bon. Les deux se séparent dans la vraie vie — on",
+      "approuve un portrait passable parce qu'on a payé et qu'il faut bien en",
+      "sortir un. Ranger le jugement dans l'état ferait perdre les deux : on ne",
+      "distinguerait plus « pas approuvé » de « jugé mauvais ».",
+      "",
+      "Même forme que sur une idée, et ce n'est pas une coïncidence : il n'y a",
+      "qu'une forme d'avis dans cette API. `null` **retire** l'avis, et sa date",
+      "avec lui.",
+    ].join("\n"),
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: avisSchema,
+    reponse: portraitSchema,
+    statut: 200,
+  },
+  {
     chemin: "/me/portraits/{id}/approve",
     methode: "post",
     resume: "Approuver un portrait — c'est ici que l'image se fabrique",
@@ -2366,6 +2387,26 @@ const CHEMINS: Chemin[] = [
     ].join("\n"),
     authentifie: true,
     reponse: generationResultSchema,
+  },
+  {
+    chemin: "/me/messages/{id}/feedback",
+    methode: "patch",
+    resume: "Noter un message, ou reprendre son avis",
+    authentifie: true,
+    note: [
+      "**Envoyé n'est pas bon.** `sent` dit qu'on l'a envoyé, pas qu'on l'a",
+      "trouvé réussi : on envoie un message qu'on juge moyen, faute de temps",
+      "pour en refaire un. L'avis vit donc à côté de l'état, et le noter n'y",
+      "touche pas.",
+      "",
+      "Distinct de `PATCH /me/messages/{id}`, qui CORRIGE le texte : fondre les",
+      "deux ferait passer une correction pour un avis dès qu'elles voyagent",
+      "ensemble. `null` retire l'avis.",
+    ].join("\n"),
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: avisSchema,
+    reponse: generatedMessageSchema,
+    statut: 200,
   },
   {
     chemin: "/me/messages/{id}",

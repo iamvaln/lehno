@@ -847,4 +847,50 @@ describe("la génération d'un message", () => {
       expect(message.studioConfigId).toBeNull();
     });
   });
+  /* L'AVIS SUR UN MESSAGE — ce qu'on en a PENSÉ, et non ce qu'on en a fait.
+   *
+   * `sent` dit qu'on l'a envoyé, pas qu'on l'a trouvé bon : on envoie un
+   * message qu'on juge moyen, faute de temps pour en refaire un. Les deux
+   * colonnes vivent donc côte à côte, et le statut ne bouge pas. */
+  describe("l'avis", () => {
+    it("se pose sans toucher à l'état", async () => {
+      await crediter(5);
+      const message = await lancer({ anthropic: repond() });
+
+      await service.noter(awa, message.id, "down");
+
+      const ligne = await db.prisma.generatedMessage.findUniqueOrThrow({ where: { id: message.id } });
+      expect(ligne.feedback).toBe("down");
+      expect(ligne.feedbackAt).not.toBeNull();
+      expect(ligne.status).toBe("generated");
+    });
+
+    it("se retire, et emporte sa date", async () => {
+      await crediter(5);
+      const message = await lancer({ anthropic: repond() });
+
+      await service.noter(awa, message.id, "up");
+      await service.noter(awa, message.id, null);
+
+      const ligne = await db.prisma.generatedMessage.findUniqueOrThrow({ where: { id: message.id } });
+      expect(ligne.feedback).toBeNull();
+      expect(ligne.feedbackAt).toBeNull();
+    });
+
+    it("ne se pose pas sur le message d'un autre", async () => {
+      await crediter(5);
+      const message = await lancer({ anthropic: repond() });
+      const autre = await db.prisma.user.create({
+        data: {
+          email: `${randomBytes(6).toString("hex")}@example.com`,
+          username: `u${randomBytes(4).toString("hex")}`,
+          referralCode: randomBytes(4).toString("hex").toUpperCase(),
+        },
+        select: { id: true },
+      });
+
+      await expect(service.noter(autre.id, message.id, "down"))
+        .rejects.toThrow(/unknown message/);
+    });
+  });
 });
