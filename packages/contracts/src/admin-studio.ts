@@ -153,6 +153,7 @@ export const lancementEssaiTexteSchema = z.object({
   profileId: z.string().uuid(),
 }).strict();
 
+
 /* L'enregistrement DIRECT : ce que seule l'application lit (brief §3).
  *
  * Il n'emporte pas de motif, et c'est cohérent avec la prévisualisation : un
@@ -309,6 +310,19 @@ export const verdictEssaiSchema = z.object({
    * publié quoi que ce soit.
    */
   reference: z.boolean().optional(),
+}).strict();
+/* LE VERDICT D'UN ESSAI DE TEXTE, sans `reference`.
+ *
+ * Celui du portrait la porte : « c'est celle-ci qui représente l'ambiance »,
+ * et elle désigne la vignette du catalogue. Un essai de texte n'a pas d'image —
+ * il n'y a rien à montrer, et une ambiance ne se représente pas par une phrase.
+ *
+ * Le champ est RETIRÉ plutôt qu'ignoré. `.strict()` refuse alors le corps qui
+ * le porte, au lieu de l'accepter en silence : un administrateur qui croirait
+ * poser une vignette sur un essai de message doit l'apprendre tout de suite, et
+ * non découvrir qu'il ne s'est rien passé. */
+export const verdictEssaiTexteSchema = z.object({
+  verdict: z.enum(VERDICTS_ESSAI),
 }).strict();
 
 export const essaiStudioSchema = z.object({

@@ -197,28 +197,35 @@ describe("le catalogue servi à l'application", () => {
 
   /* Une voie d'image dont le groupe d'ambiances est vide se retire AVEC lui.
      La garder produirait un choix qui ouvre un groupe inexistant : on choisit
-     « une photo », et rien n'apparaît. C'est l'état du jour — les trois noms
-     de style de photo ne sont pas tranchés. */
+     « une photo », et rien n'apparaît. */
   it("retire une voie d'image dont le groupe d'ambiances est vide", () => {
     const c = catalogueServi(reglagesMessageDeDepart(), modifierPortrait((r) => {
       r.voiesImage.find((v) => v.id === "photo")!.actif = true;
+      // On vide la famille : les DEUX voies la partagent, donc les deux tombent.
+      r.ambiances = [];
     }), "fr");
     const image = c.groups.find((g) => g.id === "image");
     expect(image?.choices.map((x) => x.id)).not.toContain("photo");
-    expect(c.groups.map((g) => g.id)).not.toContain("photo_style");
+    expect(image?.choices.map((x) => x.id)).not.toContain("illustration");
   });
 
-  it("rend la voie photo dès qu'un style existe", () => {
+  /* LES DEUX VOIES OUVRENT LA MÊME FAMILLE. La photo ne change pas le sujet —
+     nature, animal, abstrait valent pour elle comme pour l'illustration — mais
+     d'où l'on part. Elle paraît donc dès qu'on l'active, sans réglage à elle :
+     c'est ce qui la rendait invisible, `photo_style` n'ayant jamais eu la
+     moindre ambiance. */
+  it("rend la voie photo dès qu'on l'active, sur la famille partagée", () => {
     const c = catalogueServi(reglagesMessageDeDepart(), modifierPortrait((r) => {
       r.voiesImage.find((v) => v.id === "photo")!.actif = true;
-      r.ambiances.push({
-        id: "argentique", groupe: "photo_style", actif: true, apercuCle: null,
-        libelle: { fr: "Argentique", en: "Film" }, description: null,
-        consigne: { fr: "Grain argentique, couleurs sourdes.", en: "Film grain, muted colours." },
-      });
     }), "fr");
-    expect(c.groups.find((g) => g.id === "image")?.choices.map((x) => x.id)).toContain("photo");
-    expect(c.groups.map((g) => g.id)).toContain("photo_style");
+
+    const image = c.groups.find((g) => g.id === "image");
+    expect(image?.choices.map((x) => x.id)).toContain("photo");
+    // Et elle déplie la MÊME famille que l'illustration.
+    const photo = image?.choices.find((x) => x.id === "photo");
+    const illustration = image?.choices.find((x) => x.id === "illustration");
+    expect(photo?.revealsGroup).toBe("illustration_family");
+    expect(photo?.revealsGroup).toBe(illustration?.revealsGroup);
   });
 
   /* Le catalogue servi doit être NAVIGABLE par les fonctions que le client

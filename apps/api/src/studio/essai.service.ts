@@ -277,9 +277,22 @@ export class StudioEssaiService {
        qu'on vient d'envoyer est une erreur d'appel, pas un état du monde. */
     if (!ambiance) throw new AppError("not_found", "unknown ambiance");
 
-    const cle = ambiance.groupe === "photo_style"
-      ? reglages.modeles.photo_style
-      : reglages.modeles.illustration;
+    /* L'ESSAI ÉPROUVE LA VOIE ILLUSTRATION, et il le dit.
+     *
+     * Le modèle se déduisait du GROUPE de l'ambiance — `photo_style` appelait
+     * le modèle de photo. Les deux voies partagent maintenant le même groupe :
+     * ce qui les distingue est la voie, pas l'ambiance, et une ambiance ne sait
+     * plus dire quel modèle appeler.
+     *
+     * Un essai n'a pas de photo : un profil de simulation porte des notes et un
+     * texte libre, pas d'image. Il éprouve donc l'illustration, et c'est le seul
+     * choix honnête — appeler le modèle de photo sans photo produirait un rendu
+     * qui n'est celui d'aucune des deux voies.
+     *
+     * ÉPROUVER LA VOIE PHOTO demandera une photo d'exemple, portée par le profil
+     * ou fournie à l'essai. C'est le seul endroit où cette voie coûte plus qu'un
+     * champ, et c'est écrit ici pour qu'on ne le redécouvre pas. */
+    const cle = reglages.modeles.illustration;
     const modele = await this.modeleDemande(cle);
 
     const config = await this.configs.deposerBrouillon("portrait", reglages);
@@ -322,9 +335,10 @@ export class StudioEssaiService {
       };
     }
 
-    const tache = ambiance.groupe === "photo_style" ? "photo_style" as const : "illustration" as const;
+    /* La même tâche que le modèle choisi plus haut : l'essai éprouve la voie
+       illustration, faute de photo d'exemple. Voir le commentaire de `cle`. */
     const resultat = await this.routeur.appelerUnSeulModele(
-      tache,
+      "illustration",
       {
         // La MÊME palette que la production : l'établi doit montrer la gamme
         // qui sortira, pas celle du modèle laissé libre.

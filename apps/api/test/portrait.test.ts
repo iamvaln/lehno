@@ -4,6 +4,7 @@ import { reglagesPortraitDeDepart } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { GenerationService } from "../src/me/generation.service.js";
 import { PortraitService } from "../src/me/portrait.service.js";
+import { PhotoSourceService } from "../src/me/photo-source.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
 import { AuditService } from "../src/admin/audit.service.js";
 import { StudioConfigurationService } from "../src/studio/configuration.service.js";
@@ -70,10 +71,13 @@ describe("le portrait", () => {
       new RouteurIAService(db.prisma as never), { anthropic: a }, configs(),
     );
 
+  const photos = (): PhotoSourceService =>
+    new PhotoSourceService(db.prisma as never, configs(), stockage);
+
   const portraits = (a: Adaptateur): PortraitService =>
     new PortraitService(
       db.prisma as never, new RouteurIAService(db.prisma as never),
-      { anthropic: a, xai: a, openai: a }, configs(), stockage,
+      { anthropic: a, xai: a, openai: a }, configs(), stockage, photos(),
     );
 
   /* La configuration PUBLIÉE. Sans elle le service refuse — et c'est voulu :

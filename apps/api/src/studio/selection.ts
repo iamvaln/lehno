@@ -46,7 +46,11 @@ export type SelectionPortrait = {
    chercher une ambiance qui ne viendra jamais. */
 const GROUPE_OUVERT: Record<VoieImage, GroupeAmbiance | null> = {
   illustration: "illustration_family",
-  photo: "photo_style",
+  /* LA MÊME FAMILLE QUE L'ILLUSTRATION. « Nature », « animal », « abstrait »
+     disent ce qu'on veut voir ; la photo ne change pas le sujet, seulement d'où
+     l'on part. Ce qui distingue les deux voies est le MODÈLE appelé, et il se
+     déduit de la voie — pas du groupe. */
+  photo: "illustration_family",
   aucune: null,
 };
 

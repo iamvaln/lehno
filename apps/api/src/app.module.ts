@@ -19,6 +19,7 @@ import { RechargeService } from "./payments/recharge.service.js";
 import { RecuService } from "./payments/recu.service.js";
 import { IdeeService } from "./me/idee.service.js";
 import { PortraitService } from "./me/portrait.service.js";
+import { PhotoSourceService } from "./me/photo-source.service.js";
 import { PortraitController } from "./me/portrait.controller.js";
 import { IdeeController } from "./me/idee.controller.js";
 import { MethodesService } from "./payments/methodes.service.js";
@@ -364,6 +365,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     RecuService,
     IdeeService,
     PortraitService,
+    PhotoSourceService,
     MethodesService,
     CatalogueIAService,
     RouteurIAService,

@@ -30,6 +30,20 @@ export type ContexteAppel = {
 export type DemandeIA = {
   readonly invite: string;
   readonly systeme?: string;
+  /**
+   * L'IMAGE DONT ON S'INSPIRE, en octets bruts — jamais en base64.
+   *
+   * Présente, l'adaptateur d'image appelle `images/edits` au lieu de
+   * `images/generations` : ce sont deux points d'entrée, deux dialectes, et le
+   * second n'accepte pas d'image. Un seul champ facultatif plutôt que deux
+   * méthodes — la tâche, le modèle et l'invite sont les mêmes, et deux méthodes
+   * auraient fait recopier le repli, le disjoncteur et la mesure d'usage.
+   *
+   * EN OCTETS parce que `images/edits` attend du multipart : le base64 le
+   * ferait décoder pour rien, et une photo de trois mégaoctets pèserait quatre
+   * en mémoire le temps du transit.
+   */
+  readonly image?: Buffer;
 };
 
 export type ReponseIA = {

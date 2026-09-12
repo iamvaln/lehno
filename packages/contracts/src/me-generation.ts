@@ -103,6 +103,37 @@ export const startGenerationSchema = z.object({
 
 export type StartGenerationInput = z.infer<typeof startGenerationSchema>;
 
+/**
+ * LE DÉPÔT D'UNE PHOTO DONT LE PORTRAIT S'INSPIRE.
+ *
+ * Même forme que `depotAvatarSchema`, et même doctrine : le client reçoit une
+ * URL de dépôt et RIEN D'AUTRE. Pas la clé — la lui donner permettrait de la
+ * remplacer par celle d'un reçu de paiement ou d'un export de données, et de
+ * nous faire signer une lecture dessus.
+ *
+ * Pas de `tailleMax` ici, à la différence de l'avatar : ce qu'on refuse n'est
+ * pas un poids mais une IMAGE — trop petite, trop sombre, trop plate. Ces
+ * seuils se règlent au studio et ne se recopient pas au client : il ne saurait
+ * pas mesurer la netteté, et les lui servir l'inviterait à refuser lui-même une
+ * photo que le serveur aurait acceptée.
+ */
+export const depotPhotoSourceSchema = z.object({
+  url: z.string().url(),
+  /** Secondes avant que l'URL de dépôt ne meure. */
+  expireDans: z.number().int().positive(),
+  /** Ce que le stockage acceptera : le dépôt est signé POUR ce type. */
+  typeMime: z.string(),
+}).strict();
+
+export type DepotPhotoSource = z.infer<typeof depotPhotoSourceSchema>;
+
+/* LES TROIS REFUS, nommés. Ils voyagent dans le détail d'une erreur de
+   validation, et c'est l'écran qui les traduit : « trop sombre » n'a pas la
+   même phrase en français et en anglais, et la figer au serveur reviendrait à
+   choisir la langue de quelqu'un d'autre. */
+export const REFUS_PHOTO = ["trop_petite", "trop_sombre", "trop_floue"] as const;
+export type RefusPhoto = (typeof REFUS_PHOTO)[number];
+
 /* L'état sur le fil est plus riche que `action_run.status`, qui ne connaît que
    `success` et `failure` — et n'existe qu'à la fin. Le lancement débite et rend
    aussitôt un identifiant, sans attendre la production : sans un état « en

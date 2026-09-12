@@ -11,7 +11,18 @@
  */
 
 /** Les préfixes du compartiment. Un seul seau, cinq territoires. */
-export const PREFIXES = ["portraits", "avatars", "souhaits", "recus", "exports"] as const;
+/* `sources` EST LE SEUL PRÉFIXE DONT LE CONTENU EST DESTINÉ À DISPARAÎTRE.
+ *
+ * Les photos qu'un utilisateur dépose pour qu'on s'en inspire y vivent le temps
+ * de la génération, et pas une minute de plus : « l'image est transmise à un
+ * service qui la transforme, et elle n'est pas conservée ; après traitement la
+ * source est effacée » (spec portrait §2.4). C'est une promesse faite à l'écran
+ * au moment du dépôt, donc elle doit s'exécuter.
+ *
+ * Un préfixe à part, et non `portraits` : le jour où l'on posera une règle de
+ * cycle de vie côté R2, elle portera sur celui-ci seul — poser « efface après
+ * sept jours » sur `portraits` effacerait ce que les gens ont payé. */
+export const PREFIXES = ["portraits", "avatars", "souhaits", "recus", "exports", "sources"] as const;
 export type Prefixe = (typeof PREFIXES)[number];
 
 export type Depot = {

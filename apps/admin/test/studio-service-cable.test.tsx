@@ -26,7 +26,9 @@ const REGLAGES = {
       consigne: bilingue("Un papier grené.", "Grained paper."),
     },
     {
-      id: "lilas", groupe: "photo_style", actif: true,
+      /* LES DEUX VOIES PARTAGENT LEUR FAMILLE depuis le 11 septembre : il n'y a
+         plus de groupe `photo_style`, et il n'a jamais eu d'ambiance. */
+      id: "lilas", groupe: "illustration_family", actif: true,
       libelle: bilingue("Lilas", "Lilac"), description: null,
       consigne: bilingue("Une lumière lilas.", "Lilac light."),
     },

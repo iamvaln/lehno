@@ -44,20 +44,57 @@ export class ImageAdaptateur implements Adaptateur {
     if (!cle) throw new Error(`une clé d'API est requise pour ${nom}`);
   }
 
+  /**
+   * UNE IMAGE FOURNIE CHANGE DE POINT D'ENTRÉE, pas de méthode.
+   *
+   * `images/generations` FABRIQUE une image depuis une invite ; `images/edits`
+   * en TRANSFORME une qu'on lui donne. Ce sont deux chemins, deux dialectes —
+   * JSON d'un côté, multipart de l'autre —, et le premier n'accepte pas
+   * d'image du tout.
+   *
+   * `response_format` ne se pose pas ici : `images/edits` rend du base64 chez
+   * les deux fournisseurs. Le drapeau qui départage `generations` n'a donc pas
+   * d'équivalent — vérifié plutôt que supposé, comme pour l'autre chemin.
+   */
+  private async editer(modele: string, demande: DemandeIA, image: Buffer): Promise<Response> {
+    const corps = new FormData();
+    corps.append("model", modele);
+    corps.append("prompt", demande.invite);
+    corps.append("n", "1");
+    /* `Blob` plutôt qu'un flux : la photo est déjà en mémoire — elle vient du
+       stockage — et `FormData` a besoin de sa taille pour composer l'en-tête.
+       Le nom de fichier compte : certains fournisseurs refusent une partie qui
+       n'en porte pas. */
+    corps.append("image", new Blob([new Uint8Array(image)], { type: "image/jpeg" }), "source.jpg");
+
+    /* PAS DE `content-type` À LA MAIN. `fetch` pose lui-même
+       `multipart/form-data` AVEC la frontière qu'il a engendrée ; l'écrire
+       ferait un en-tête sans frontière, et le serveur ne saurait pas découper
+       le corps. */
+    return fetch(`${this.base}/images/edits`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${this.cle}` },
+      body: corps,
+      signal: AbortSignal.timeout(DELAI_MS),
+    });
+  }
+
   async appeler(modele: string, demande: DemandeIA): Promise<ReponseIA> {
     let res: Response;
     try {
-      res = await fetch(`${this.base}/images/generations`, {
-        method: "POST",
-        headers: { authorization: `Bearer ${this.cle}`, "content-type": "application/json" },
-        body: JSON.stringify({
-          model: modele,
-          prompt: demande.invite,
-          n: 1,
-          ...(this.demandeLeFormat ? { response_format: "b64_json" } : {}),
-        }),
-        signal: AbortSignal.timeout(DELAI_MS),
-      });
+      res = demande.image !== undefined
+        ? await this.editer(modele, demande, demande.image)
+        : await fetch(`${this.base}/images/generations`, {
+          method: "POST",
+          headers: { authorization: `Bearer ${this.cle}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            model: modele,
+            prompt: demande.invite,
+            n: 1,
+            ...(this.demandeLeFormat ? { response_format: "b64_json" } : {}),
+          }),
+          signal: AbortSignal.timeout(DELAI_MS),
+        });
     } catch (err: unknown) {
       throw traduireReseau(err);
     }

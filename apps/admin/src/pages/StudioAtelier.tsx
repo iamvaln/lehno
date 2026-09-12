@@ -81,12 +81,17 @@ export function StudioAtelier(
   const ambiance = reglages.ambiances.find((a) => a.id === ambianceId) ?? null;
   const rendu = dernier !== null && dernier.etat === "success";
 
-  /* Le modèle appelé se DÉDUIT de l'ambiance : une famille d'illustration et un
-     style de photo ne passent pas par le même. Sans elle, l'essai choisirait
-     pour nous, et prouverait une voie qu'on ne voulait pas éprouver. */
-  const cleModele = ambiance?.groupe === "photo_style"
-    ? reglages.modeles.photo_style
-    : reglages.modeles.illustration;
+  /* LE MODÈLE DE L'ESSAI EST CELUI DE L'ILLUSTRATION, toujours.
+   *
+   * Il se déduisait de l'ambiance — un « style de photo » appelait le modèle de
+   * photo. Les deux voies partagent désormais la même famille : nature, animal
+   * et abstrait valent pour l'une comme pour l'autre, et une ambiance ne dit
+   * plus quel modèle appeler. C'est la VOIE qui le dit.
+   *
+   * Un essai n'a pas de photo — un profil de simulation porte des notes, pas
+   * d'image —, il éprouve donc l'illustration. Éprouver la voie photo demandera
+   * une photo d'exemple, et le serveur le dit au même endroit. */
+  const cleModele = reglages.modeles.illustration;
   const modele = candidats.modeles.find((m) => m.cle === cleModele) ?? null;
 
   const poserConsigne = (texte: string): void => {

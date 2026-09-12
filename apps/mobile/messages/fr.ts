@@ -783,7 +783,6 @@ export const fr = {
   stylLumiereAide: "Le visage émerge d'un fond d'encre.",
   stylSerigraphieAide: "Quatre aplats, aucune nuance.",
   stylSilhouetteAide: "Le contour seul, sans traits.",
-  studioPhotoAvis: "L'image est transmise à un service qui la transforme. Elle n'est pas conservée.",
   studioNote: "Votre note",
   studioNoteDefaut: (qui: string) => "Fait avec soin par " + qui,
   studioAmbiance: "L'ambiance",
