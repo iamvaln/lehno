@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "../src/App.js";
 import { magasinLocal } from "../src/api/session.js";
@@ -61,13 +61,19 @@ const reponse = (statut: number, corps?: unknown): Response =>
     headers: corps === undefined ? {} : { "content-type": "application/json" },
   });
 
-function serveur(essais: unknown[]) {
+function serveur(essais: unknown[], tete: unknown = BROUILLON) {
   const table: Record<string, () => Response> = {
     "/admin/portrait-studio/config/history": () => reponse(200, { items: [EN_SERVICE, BROUILLON] }),
+    /* LA TÊTE — déclarée AVANT `trials`, et le tri par longueur s'en charge :
+       c'est elle qui dit quelle vignette chaque ambiance porte aujourd'hui. */
+    "/admin/portrait-studio/config": () => reponse(200, { enService: EN_SERVICE, brouillon: tete }),
     "/admin/portrait-studio/trials": () => reponse(200, { items: essais }),
   };
   const chemins = Object.keys(table).sort((a, b) => b.length - a.length);
-  const appels = vi.fn((url: string) => {
+  /* `init` est ignoré par la table mais DÉCLARÉ : c'est lui qu'on relit pour
+     savoir ce que l'écran a envoyé, et un faux `fetch` typé sur la seule URL
+     passe à l'exécution mais fait rougir le typecheck — c'est-à-dire la CI. */
+  const appels = vi.fn((url: string, _init?: RequestInit) => {
     for (const chemin of chemins) {
       if (url.includes(chemin)) return Promise.resolve(table[chemin]!());
     }
@@ -244,5 +250,63 @@ describe("les essais, sur les données du serveur", () => {
     await utilisateur.selectOptions(screen.getByLabelText(d.filtre.nature), "message");
 
     expect(await screen.findByText("Bon anniversaire.")).toBeInTheDocument();
+  });
+  /* ─── La vignette d'une ambiance ────────────────────────────────────────── */
+
+  /* PERSONNE NE SAIT DÉPARTAGER « chaleureux » et « sobre » dans l'abstrait : le
+     catalogue montre l'image qu'on aura, et le panneau est le seul endroit où
+     elle se pose. Le geste était servi et n'existait nulle part à l'écran. */
+  it("offre de faire d'un essai la vignette de son ambiance", async () => {
+    const appels = serveur([essai()]);
+    const utilisateur = await ouvrir();
+
+    await utilisateur.click(await screen.findByRole("button", { name: d.vignette.poser }));
+
+    const envoi = appels.mock.calls.find(([u, i]) =>
+      (i as RequestInit)?.method === "PATCH" && String(u).includes("/trials/"));
+    /* UN SEUL APPEL pose le verdict ET la référence : les séparer laisserait un
+       essai « retenu » sans la vignette demandée, et personne ne saurait que la
+       moitié du geste a échoué. */
+    expect(JSON.parse((envoi?.[1] as RequestInit).body as string))
+      .toEqual({ verdict: "kept", reference: true });
+  });
+
+  it("dit celle qui l'est déjà, plutôt que de l'offrir", async () => {
+    const tete = config("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "draft");
+    tete.reglages = {
+      ...REGLAGES,
+      ambiances: REGLAGES.ambiances.map((a) => ({ ...a, apercuCle: "k" })),
+    };
+    serveur([essai()], tete);
+    await ouvrir();
+
+    expect(await screen.findByText(d.vignette.estLa)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: d.vignette.poser })).toBeNull();
+  });
+
+  /* TROIS REFUS DU SERVEUR, fermés d'avance : une sortie de texte n'a pas
+     d'image, un essai sans ambiance n'a rien à représenter, et une ambiance
+     disparue de la tête ne se représente plus. */
+  it.each([
+    ["une sortie sans image", { sortie: { message: "Bon anniversaire." } }],
+    ["un essai sans ambiance", { ambianceId: null }],
+    ["une ambiance absente de la tête", { ambianceId: "disparue" }],
+  ])("n'offre pas le geste sur %s", async (_nom, sur) => {
+    serveur([essai(sur)]);
+    await ouvrir();
+    await waitFor(() => expect(screen.getByText(new RegExp(d.natures.portrait))).toBeInTheDocument());
+
+    expect(screen.queryByRole("button", { name: d.vignette.poser })).toBeNull();
+  });
+
+  /* Le studio est fermé au support, et un geste qu'il ne peut pas faire ne
+     s'affiche pas — pas même en gris. */
+  it("ne l'offre pas au support", async () => {
+    localStorage.clear();
+    magasinLocal.ecrire({ acces: "a", rafraichissement: "r", role: "support", email: "sam@lehno.app" });
+    serveur([essai()]);
+    render(<App />);
+
+    expect(within(screen.getByRole("navigation")).queryByText(t.sections.studio)).toBeNull();
   });
 });

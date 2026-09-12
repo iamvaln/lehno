@@ -1277,6 +1277,11 @@ export const en: typeof fr = {
       idees: "Gift ideas",
       portrait_brief: "Portrait brief",
     },
+    vignette: {
+      poser: "Make it the mood's thumbnail",
+      estLa: "Mood's thumbnail",
+      aide: "The app shows this image on the mood picker — nobody can tell \u00ab warm \u00bb from \u00ab plain \u00bb in the abstract. The action keeps the trial and writes a draft; nothing changes for users until the version is published.",
+    },
     carte: {
       alt: "Trial result",
       echoue: "Nothing was produced: {code}",

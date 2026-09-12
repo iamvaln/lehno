@@ -1395,6 +1395,15 @@ export const fr = {
       idees: "Idées de cadeau",
       portrait_brief: "Brief du portrait",
     },
+    /* LA VIGNETTE D'UNE AMBIANCE. Le geste est GRATUIT — elle n'entre pas dans
+       l'empreinte, c'est ce que l'humain regarde et non ce que le modèle lit —
+       et il écrit un BROUILLON : rien ne change pour les utilisateurs tant que
+       personne n'a publié. D'où l'absence de motif et de confirmation. */
+    vignette: {
+      poser: "En faire la vignette de l'ambiance",
+      estLa: "Vignette de l'ambiance",
+      aide: "L'application montre cette image sur le choix de l'ambiance — personne ne sait départager « chaleureux » et « sobre » dans l'abstrait. Le geste retient l'essai et écrit un brouillon ; rien ne change pour les utilisateurs tant que la version n'est pas publiée.",
+    },
     carte: {
       alt: "Résultat de l'essai",
       echoue: "Rien n'a été produit : {code}",

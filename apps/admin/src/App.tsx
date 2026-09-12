@@ -790,9 +790,15 @@ export function App(): ReactNode {
       ? Promise.all([
           api.appeler("/admin/portrait-studio/trials", { schema: essaisStudioSchema }),
           api.appeler("/admin/portrait-studio/config/history", { schema: historiquePortraitSchema }),
-        ]).then(([essais, historique]) => ({
+          api.appeler("/admin/portrait-studio/config", { schema: etatPortraitSchema }),
+        ]).then(([essais, historique, etat]) => ({
           essais: essais.items,
           publiees: historique.items.filter((c) => c.etat === "published"),
+          /* LA TÊTE — le brouillon s'il existe, ce qui tourne sinon. C'est
+             exactement ce que le serveur ajuste quand on pose une vignette, et
+             lire ailleurs ferait dire à l'écran qu'une ambiance a déjà la
+             sienne alors que le brouillon en porte une autre. */
+          tete: etat.brouillon ?? etat.enService,
         }))
       : Promise.resolve(null)),
     [section, tourStudio],
@@ -1370,9 +1376,30 @@ export function App(): ReactNode {
         t={t}
         enfant={(e) => (e ? (
           <StudioEssais
+            role={role}
             langue={langue}
             essais={e.essais}
             publiees={e.publiees}
+            tete={e.tete}
+            /* LA VIGNETTE EST GRATUITE : elle n'entre pas dans l'empreinte —
+               c'est ce que l'humain regarde, pas ce que le modèle lit —, donc
+               elle passe par l'enregistrement direct et ne réclame aucun essai.
+               Un seul appel pose le verdict ET la référence : les séparer
+               laisserait un essai « retenu » sans la vignette demandée, et
+               personne ne saurait que la moitié du geste a échoué. */
+            onVignette={(essaiId) => {
+              void (async () => {
+                try {
+                  await api.appeler(`/admin/portrait-studio/trials/${essaiId}`, {
+                    methode: "PATCH", corps: { verdict: "kept", reference: true },
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourStudio((n) => n + 1);
+                }
+              })();
+            }}
             onRetour={aller}
           />
         ) : null)}

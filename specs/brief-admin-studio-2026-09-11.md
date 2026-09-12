@@ -60,7 +60,14 @@ L'application montre donc l'image qu'on aura, sur les voies d'image, les
 familles d'ambiance et les compositions. **Pas sur l'orientation** — c'est le
 propos, pas le rendu.
 
-**Le panneau est le seul endroit où elle se pose**, et le geste manque à l'écran :
+**Le panneau est le seul endroit où elle se pose**, et le geste manquait à
+l'écran. *Fait le 12 : il vit dans la **galerie**, et non dans l'Atelier — la
+vignette est par ambiance, on choisit celle qui la représente en comparant
+plusieurs essais, et l'Atelier n'a que le dernier de la séance. La galerie lit
+désormais la tête, parce que c'est elle que le serveur ajuste ; lire ailleurs
+ferait dire à l'écran qu'une ambiance a déjà sa vignette alors que le brouillon
+en porte une autre. Les trois refus sont fermés d'avance plutôt qu'offerts puis
+refusés en 400.*
 
 ```
 PATCH admin/portrait-studio/trials/:id   { verdict: "kept", reference: true }
