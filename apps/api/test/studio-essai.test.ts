@@ -269,6 +269,37 @@ describe("l'essai du studio", () => {
     expect(vus[1]!.invite).not.toContain("Léa");
   });
 
+  /* L'IMAGE D'UN ESSAI NE SE RANGE PAS AVEC LES PORTRAITS PAYÉS.
+   *
+   * Elle le faisait : `essayerPortrait` écrivait sous `portraits`, et une
+   * séance de réglage en produit trente. La règle de cycle de vie qui les
+   * effacerait devenait donc IMPOSABLE — posée sur `portraits`, elle aurait
+   * emporté ce que les gens ont acheté ; pas posée, les essais s'accumulent.
+   *
+   * Le port écrivait déjà ce raisonnement pour `sources`. Les essais y
+   * échappaient. */
+  it("range son image sous « essais », jamais avec les portraits payés", async () => {
+    const brief = JSON.stringify({
+      mots: ["la terre sous les ongles"],
+      phrase: "Celle qui recommence jusqu'à ce que ça tienne.",
+    });
+    let appel = 0;
+    const double = faux(() => ({ contenu: appel++ === 0 ? brief : "aW1hZ2U=" }));
+    monter({ anthropic: double, xai: double, openai: double });
+    await modele("openai", "gpt-image-2");
+    const cerveau = await modele("anthropic", "brief");
+    await db.prisma.aITaskRoute.create({
+      data: { task: "portrait_brief", modelId: cerveau.id, rank: 1 },
+    });
+
+    const p = await profil();
+    const { essai } = await essais.essayerPortrait(adminId, reglagesPortraitDeDepart(), p.id, "nature");
+
+    const cle = (essai.sortie as { cle?: string } | null)?.cle;
+    expect(cle).toMatch(/^essais\//);
+    expect(cle).not.toMatch(/^portraits\//);
+  });
+
   /* Un établi doit dire LEQUEL des deux appels a raté. Sans ça, on reprend un
      réglage d'image pour un défaut de texte — et on cherche longtemps. */
   it("nomme l'échec du brief plutôt que de le confondre avec celui de l'image", async () => {
