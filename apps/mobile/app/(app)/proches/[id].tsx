@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
-  estActive, noteListSchema, personAttributesSchema, personSchema,
+  estActive, noteListSchema, personAttributesSchema, personSchema, portraitListSchema,
   type Note, type Person, type PersonAttribute,
 } from "@lehno/contracts";
 import {
@@ -16,6 +16,7 @@ import {
 import { useLangue } from "../../../lib/langue.js";
 import { appel, ErreurDApi } from "../../../lib/api.js";
 import { messageDErreur } from "../../../lib/session.js";
+import { dernierPortraitDe, libelleDuRangPortrait } from "../../../lib/portrait.js";
 import { useDrapeaux } from "../../../lib/DrapeauxProvider.js";
 import { useCategories } from "../../../lib/MetadonneesProvider.js";
 import {
@@ -53,7 +54,13 @@ interface Sortie {
   // Le drapeau qui la gouverne, ou rien quand elle est du socle.
   drapeau: string | null;
   // La route, ou `null` tant que l'écran n'existe pas dans ce lot.
-  route: "/(app)/proches/identite" | "/(app)/collecte" | null;
+  route: "/(app)/proches/identite" | "/(app)/collecte" | "/portrait" | null;
+  /* CE QUE LA SORTIE PASSE, quand ce n'est pas `{ id }`. Les deux premières
+     rouvrent la fiche sous un autre angle et se contentent de son
+     identifiant ; le portrait, lui, VISE le proche et le nomme. Absent vaut
+     « comme les autres » plutôt que de faire porter à chaque rang une forme
+     dont une seule a besoin. */
+  params?: Record<string, string>;
 }
 
 export default function Proche() {
@@ -75,6 +82,11 @@ export default function Proche() {
      bougeait, rien n'expliquait, aucun geste à faire. C'est ainsi qu'on a
      découvert que deux appels lancés ensemble se marchaient dessus au
      renouvellement — voir le verrou dans `lib/api.ts`. */
+  /* L'IDENTIFIANT DU DERNIER, PAS UN BOOLÉEN : le rang doit savoir OÙ ALLER,
+     pas seulement quoi écrire. Nul tant qu'on ne sait pas, et c'est le bon
+     défaut — inviter à composer quand on n'a pas pu lire la liste est moins
+     faux que de promettre une collection qu'on n'a peut-être pas. */
+  const [dernierPortrait, setDernierPortrait] = useState<string | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
 
   const demande = useCallback(async () => {
@@ -91,14 +103,34 @@ export default function Proche() {
     setTopo(personAttributesSchema.parse(attributs).attributes);
   }, [id]);
 
+  const portraitsOuverts = estActive(actives, "generation.portrait");
+
   const charge = useCallback(async () => {
     try {
       await demande();
+      /* LEQUEL, ET NON COMBIEN : le rang doit savoir où aller. La collection,
+         elle, vit dans l'écran du portrait.
+
+         `gouvernee` : `/me/portraits` est fermée par `@Feature` côté serveur.
+         Sans ce drapeau, son 404 se lirait comme une ressource absente et ne
+         ferait pas relire la liste des drapeaux — alors que c'est exactement ce
+         qu'il signale quand elle vient de bouger.
+
+         Dans son propre `try/catch` : une liste en panne ne doit pas emporter
+         une fiche qui a des notes, des dates et une identité à montrer. */
+      if (portraitsOuverts) {
+        try {
+          const lus = portraitListSchema.parse(
+            await appel<unknown>("/me/portraits", { gouvernee: true }),
+          );
+          setDernierPortrait(dernierPortraitDe(lus.portraits, id));
+        } catch { /* Voir ci-dessus : on reste sur l'invitation à composer. */ }
+      }
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
     }
-  }, [demande, langue]);
+  }, [demande, langue, portraitsOuverts, id]);
 
   /* À CHAQUE RETOUR, PAS SEULEMENT AU PREMIER AFFICHAGE.
    *
@@ -162,7 +194,22 @@ export default function Proche() {
   const TOUTES: Sortie[] = [
     { cle: "collecte", icone: "link", libelle: t.ficheCollecteCourt, drapeau: "collect", route: "/(app)/collecte" },
     { cle: "identite", icone: "user-pen", libelle: t.ficheIdentiteCourt, drapeau: null, route: "/(app)/proches/identite" },
-    { cle: "portrait", icone: "sparkles", libelle: t.fichePortraitsCourt, drapeau: "generation.portrait", route: null },
+    /* Le portrait VISE quelqu'un, là où les deux autres sorties partent d'une
+       fiche déjà ouverte. `qui` sert à ÉCRIRE — la feuille payante le nomme —
+       et `personId` à viser ; lui seul compte pour le serveur.
+
+       ON PASSE `id` QUAND IL Y EN A UN, `personId` sinon : c'est ce couple qui
+       décide, à l'arrivée, si l'on relit ou si l'on compose. */
+    {
+      cle: "portrait",
+      icone: "sparkles",
+      libelle: libelleDuRangPortrait(dernierPortrait !== null, t),
+      drapeau: "generation.portrait",
+      route: "/portrait",
+      params: dernierPortrait === null
+        ? { personId: id, qui: proche?.callingName ?? proche?.displayName ?? "" }
+        : { id: dernierPortrait, qui: proche?.callingName ?? proche?.displayName ?? "" },
+    },
   ];
   /* « Ajouter une note » et « Ajouter une date » ne sont pas des sorties de la
      rangée : ce sont les deux gestes de même poids que le kit met côte à côte,
@@ -338,7 +385,7 @@ export default function Proche() {
               variant="outline"
               full
               icon={s.icone}
-              onPress={() => routeur.push({ pathname: s.route!, params: { id: proche.id } })}
+              onPress={() => routeur.push({ pathname: s.route!, params: s.params ?? { id: proche.id } })}
             >
               {s.libelle}
             </Button>
