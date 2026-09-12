@@ -66,16 +66,16 @@ describe("ce que les versions ont produit", () => {
     const p = await db.prisma.person.create({
       data: { userId: awa, displayName: "Célarine" }, select: { id: true },
     });
-    /* L'IMAGE SUIT L'APPROBATION, DANS LES DEUX SENS — une contrainte en base
-       le tient : un portrait approuvé sans image promettrait une image qui
-       n'arrive pas, une image sans approbation serait une dépense que personne
-       n'a demandée. La fixture la respecte plutôt que de la contourner. */
+    /* L'IMAGE EXISTE DÈS LA COMPOSITION — une contrainte en base le tient :
+       `(status = 'generated') = (image_key IS NULL)`. Le brief seul n'a pas
+       d'image, tout le reste en a une, avis ou non. La fixture la respecte
+       plutôt que de la contourner. */
     await db.prisma.portrait.create({
       data: {
         actionRunId: await execution(), userId: awa, personId: p.id,
         content: "des mots", visualPath: "illustration", compositionId: "papier",
         status: status as never,
-        ...(status === "approved" ? { imageKey: `portraits/${randomBytes(6).toString("hex")}.png` } : {}),
+        ...(status === "generated" ? {} : { imageKey: `portraits/${randomBytes(6).toString("hex")}.png` }),
         ...(catalogue === null ? {} : { studioConfigId: catalogue }),
         ...(brief === null ? {} : { briefStudioConfigId: brief }),
       },
@@ -242,12 +242,18 @@ describe("ce que les versions ont produit", () => {
         .toMatchObject({ produites: 1, negatifs: 1 });
     });
 
-    it("laisse « en attente » du côté sans avis", async () => {
+    /* LES DEUX ÉTATS SANS AVIS, et le second est le cas le plus fréquent : une
+       image composée que personne n'a jugée. La plupart des portraits y
+       resteront, puisque refaire n'est pas rejeter et que rien n'oblige à se
+       prononcer. Les ranger d'un côté ou de l'autre ferait dire à la moyenne
+       l'inverse de ce qui s'est passé. */
+    it("laisse le brief et l'image non jugée du côté sans avis", async () => {
       const catalogue = await config("portrait", 1);
       await portrait(catalogue, null, "generated");
+      await portrait(catalogue, null, "composed");
 
       expect((await service.lire("portrait")).versions[0])
-        .toMatchObject({ positifs: 0, negatifs: 0, sansAvis: 1 });
+        .toMatchObject({ produites: 2, positifs: 0, negatifs: 0, sansAvis: 2 });
     });
   });
 

@@ -213,7 +213,7 @@ describe("le portrait", () => {
     });
   });
 
-  describe("l'approbation", () => {
+  describe("la composition", () => {
     const unPortrait = async () => {
       await crediter(5);
       return fini(generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config));
@@ -232,7 +232,7 @@ describe("le portrait", () => {
       const portrait = await unPortrait();
 
       const image = repond(PNG_MINUSCULE);
-      await portraits(image).approuver(awa, portrait.id);
+      await portraits(image).composer(awa, portrait.id);
 
       const envoye = image.vu[0]!;
       expect(envoye).toContain("le jardin du matin");
@@ -248,7 +248,7 @@ describe("le portrait", () => {
      *
      * Pire que l'écart visuel — le brief a été composé avec la consigne de
      * l'ambiance CHOISIE. L'image ne correspondait donc pas au texte qu'on
-     * venait de relire pour l'approuver. */
+     * venait de relire avant de lancer la composition. */
     it("compose l'image avec l'ambiance choisie, pas la première du catalogue", async () => {
       await publier();
       await crediter(5);
@@ -261,7 +261,7 @@ describe("le portrait", () => {
       expect(portrait.ambianceId).toBe("abstrait");
 
       const image = repond(PNG_MINUSCULE);
-      await portraits(image).approuver(awa, portrait.id);
+      await portraits(image).composer(awa, portrait.id);
 
       // La consigne de l'abstrait, pas celle de la nature.
       expect(image.vu[0]).toContain("formes");
@@ -297,8 +297,8 @@ describe("le portrait", () => {
       });
 
       const image = repond(PNG_MINUSCULE);
-      const rendu = await portraits(image).approuver(awa, portrait.id);
-      expect(rendu.status).toBe("approved");
+      const rendu = await portraits(image).composer(awa, portrait.id);
+      expect(rendu.status).toBe("composed");
       // La consigne d'ORIGINE, celle qui a produit le brief.
       expect(image.vu[0]).toContain("élément naturel");
     });
@@ -307,8 +307,8 @@ describe("le portrait", () => {
       await publier();
       const portrait = await unPortrait();
 
-      const rendu = await portraits(repond(PNG_MINUSCULE)).approuver(awa, portrait.id);
-      expect(rendu.status).toBe("approved");
+      const rendu = await portraits(repond(PNG_MINUSCULE)).composer(awa, portrait.id);
+      expect(rendu.status).toBe("composed");
       expect(rendu.imageUrl).not.toBeNull();
 
       const ligne = await db.prisma.portrait.findUniqueOrThrow({ where: { id: portrait.id } });
@@ -318,13 +318,13 @@ describe("le portrait", () => {
 
     /* Deux frappes sur le même bouton sont la chose la plus banale du monde sur
        un téléphone : la seconde ne doit pas coûter un appel de modèle. */
-    it("approuver deux fois ne fabrique qu'une image", async () => {
+    it("composer deux fois ne fabrique qu'une image", async () => {
       await publier();
       const portrait = await unPortrait();
 
       const image = repond(PNG_MINUSCULE);
-      const un = await portraits(image).approuver(awa, portrait.id);
-      const deux = await portraits(image).approuver(awa, portrait.id);
+      const un = await portraits(image).composer(awa, portrait.id);
+      const deux = await portraits(image).composer(awa, portrait.id);
 
       expect(deux.id).toBe(un.id);
       expect(image.vu).toHaveLength(1);
@@ -333,19 +333,19 @@ describe("le portrait", () => {
     /* ON REFUSE PLUTÔT QUE DE RETOMBER SUR LE GABARIT DU CODE, à la différence
        du message. Un repli ferait composer une image avec des réglages que
        personne n'a publiés — donc une image qu'aucun essai n'a montrée. */
-    it("refuse d'approuver sans configuration publiée", async () => {
+    it("refuse de composer sans configuration publiée", async () => {
       await publier();
       const portrait = await unPortrait();
       // La configuration disparaît APRÈS le lancement : plus rien à relire.
       await db.prisma.portrait.update({ where: { id: portrait.id }, data: { studioConfigId: null } });
       await db.prisma.studioConfig.deleteMany({ where: { kind: "portrait" } });
-      await expect(portraits(repond(PNG_MINUSCULE)).approuver(awa, portrait.id))
+      await expect(portraits(repond(PNG_MINUSCULE)).composer(awa, portrait.id))
         .rejects.toMatchObject({ code: "resource_inactive" });
     });
 
     // 404 et non 403 : dire « il existe mais n'est pas à vous » apprendrait
     // qu'il existe.
-    it("ne laisse pas approuver le portrait d'un autre", async () => {
+    it("ne laisse pas composer le portrait d'un autre", async () => {
       await publier();
       const portrait = await unPortrait();
       const bila = await db.prisma.user.create({
@@ -356,95 +356,113 @@ describe("le portrait", () => {
         },
         select: { id: true },
       });
-      await expect(portraits(repond(PNG_MINUSCULE)).approuver(bila.id, portrait.id))
+      await expect(portraits(repond(PNG_MINUSCULE)).composer(bila.id, portrait.id))
         .rejects.toMatchObject({ code: "not_found" });
     });
   });
-  /* ─── LE REJET ──────────────────────────────────────────────────────────────
+  /* ─── LES DEUX VERDICTS ─────────────────────────────────────────────────────
    *
-   * §6 du brief du panneau : on pouvait approuver, jamais rejeter. L'atelier
-   * publiait donc des configurations sans jamais savoir s'il avait amélioré
-   * quoi que ce soit — un pouce en bas sans savoir quelle version l'a produit
-   * ne mesure rien, et une version publiée sans avis ne dit pas si elle vaut
-   * mieux que la précédente. */
-  describe("le rejet", () => {
-    const unPortrait = async () => {
+   * §6 du brief du panneau, révisé le 12 septembre. On pouvait approuver, jamais
+   * rejeter — et « approuver » fabriquait l'image dans le même geste, si bien
+   * qu'aucun état ne portait « composée, pas encore jugée ». On ne pouvait donc
+   * juger qu'un TEXTE, alors que ce qu'on juge est ce qu'on a vu. */
+  describe("les verdicts", () => {
+    /* UNE SEULE CONFIGURATION PUBLIÉE PAR NATURE — un index unique partiel le
+       tient. Publier une fois pour le cas, pas une fois par portrait. */
+    beforeEach(async () => { await publier(); });
+
+    const uneImage = async () => {
       await crediter(5);
-      return fini(generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config));
+      const p = await fini(generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config));
+      const service = portraits(repond(PNG_MINUSCULE));
+      await service.composer(awa, p.id);
+      return { id: p.id, service };
     };
 
-    it("marque le portrait rejeté", async () => {
-      await publier();
-      const portrait = await unPortrait();
-
-      const rejete = await portraits(repond(PNG_MINUSCULE)).rejeter(awa, portrait.id);
-      expect(rejete.status).toBe("rejected");
+    /* LA COMPOSITION NE VAUT PAS ACCEPTATION. C'est le changement, et le cas qui
+       le garde : sans lui, on pourrait recâbler `composer` sur `approved` sans
+       que rien ne tombe, et l'état « pas encore jugée » disparaîtrait. */
+    it("laissent le portrait composé tant que personne ne se prononce", async () => {
+      const { id, service } = await uneImage();
+      const lu = await service.lire(awa, id);
+      expect(lu.status).toBe("composed");
+      expect(lu.imageUrl).not.toBeNull();
     });
 
-    /* IL NE FABRIQUE RIEN. C'est la moitié qui compte : un rejet qui appellerait
-       le modèle d'image coûterait exactement ce qu'on refuse de payer. */
-    it("n'appelle aucun modèle d'image", async () => {
-      await publier();
-      const portrait = await unPortrait();
+    it("posent l'avis demandé", async () => {
+      const { id, service } = await uneImage();
+      expect((await service.approuver(awa, id)).status).toBe("approved");
 
-      const image = repond(PNG_MINUSCULE);
-      await portraits(image).rejeter(awa, portrait.id);
-      expect(image.vu).toEqual([]);
+      const autre = await uneImage();
+      expect((await autre.service.rejeter(awa, autre.id)).status).toBe("rejected");
     });
 
-    /* ET IL NE REND RIEN. Le crédit a payé le TEXTE, qui est là et qu'on vient
-       de lire — c'est en le lisant qu'on le rejette. Rembourser ferait de la
-       relecture un essai gratuit, ce que le découpage en deux temps évite. */
-    it("ne rembourse pas le crédit", async () => {
-      await publier();
-      const portrait = await unPortrait();
-      const avant = await solde();
+    /* L'IMAGE RESTE, MÊME REJETÉE. Un rejet est un AVIS, pas une suppression :
+       l'utilisateur a payé cette image, et la détruire parce qu'elle lui plaît
+       moins reviendrait à lui reprendre ce qu'il a acheté. */
+    it("ne détruisent jamais l'image", async () => {
+      const { id, service } = await uneImage();
+      const cle = (await db.prisma.portrait.findUniqueOrThrow({
+        where: { id }, select: { imageKey: true },
+      })).imageKey;
 
-      await portraits(repond(PNG_MINUSCULE)).rejeter(awa, portrait.id);
-      expect(await solde()).toBe(avant);
+      const rejete = await service.rejeter(awa, id);
+
+      expect(rejete.imageUrl).not.toBeNull();
+      /* La clé RÉELLEMENT écrite, et le fichier avec : une clé littérale qui
+         n'existe jamais rendrait ce cas vert sans rien éprouver. */
+      expect(stockage.contenuDe(cle!)).toBeDefined();
     });
 
-    /* IDEMPOTENT, comme l'approbation et pour la même raison : deux frappes sur
-       le même bouton sont la chose la plus banale du monde sur un téléphone. */
-    it("se répète sans rien changer", async () => {
-      await publier();
-      const portrait = await unPortrait();
+    /* RÉVERSIBLES, dans les deux sens, parce que rien ne se détruit. Refaire
+       n'est pas rejeter, et changer d'idée ne doit rien coûter. */
+    it("se reprennent dans les deux sens", async () => {
+      const { id, service } = await uneImage();
+
+      await service.rejeter(awa, id);
+      expect((await service.approuver(awa, id)).status).toBe("approved");
+      expect((await service.rejeter(awa, id)).status).toBe("rejected");
+    });
+
+    it("se répètent sans rien changer", async () => {
+      const { id, service } = await uneImage();
+      await service.approuver(awa, id);
+      expect((await service.approuver(awa, id)).status).toBe("approved");
+    });
+
+    /* ON NE JUGE PAS UN BRIEF. Sans image composée il n'y a rien à voir, et un
+       avis porté là mesurerait la qualité du TEXTE en laissant croire qu'il
+       mesure celle du portrait — c'est précisément le chiffre qu'on veut
+       pouvoir croire. */
+    it("refusent de juger un portrait sans image", async () => {
+      await crediter(5);
+      const p = await fini(generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config));
       const service = portraits(repond(PNG_MINUSCULE));
 
-      await service.rejeter(awa, portrait.id);
-      expect((await service.rejeter(awa, portrait.id)).status).toBe("rejected");
+      await expect(service.approuver(awa, p.id)).rejects.toMatchObject({ code: "conflict" });
+      await expect(service.rejeter(awa, p.id)).rejects.toMatchObject({ code: "conflict" });
     });
 
-    /* LES DEUX GESTES SE FERMENT L'UN L'AUTRE. Approuver un portrait rejeté
-       fabriquerait l'image qu'on venait de refuser, et le compteur de rejets
-       par version — la seule mesure qui dise si l'atelier progresse — compterait
-       un refus sur un portrait finalement retenu. */
-    it("ferme la porte à l'approbation", async () => {
-      await publier();
-      const portrait = await unPortrait();
-      const service = portraits(repond(PNG_MINUSCULE));
+    /* ET UN PORTRAIT JUGÉ NE SE RECOMPOSE PAS : refaire son image changerait
+       sous les yeux ce sur quoi l'avis a été porté, et ferait payer deux fois un
+       appel de modèle sur un seul crédit. */
+    it("ferment la porte à une seconde composition", async () => {
+      const { id, service } = await uneImage();
+      const avant = (await db.prisma.portrait.findUniqueOrThrow({
+        where: { id }, select: { imageKey: true },
+      })).imageKey;
 
-      await service.rejeter(awa, portrait.id);
-      await expect(service.approuver(awa, portrait.id))
-        .rejects.toMatchObject({ code: "conflict" });
+      await service.rejeter(awa, id);
+      const apres = await service.composer(awa, id);
+
+      expect(apres.status).toBe("rejected");
+      expect((await db.prisma.portrait.findUniqueOrThrow({
+        where: { id }, select: { imageKey: true },
+      })).imageKey).toBe(avant);
     });
 
-    /* ET RÉCIPROQUEMENT : l'image d'un portrait approuvé est fabriquée et payée
-       en appel de modèle. Le rejet aurait dû venir avant, et l'accepter après
-       laisserait croire qu'il défait quelque chose. */
-    it("ne s'applique plus à un portrait approuvé", async () => {
-      await publier();
-      const portrait = await unPortrait();
-      const service = portraits(repond(PNG_MINUSCULE));
-
-      await service.approuver(awa, portrait.id);
-      await expect(service.rejeter(awa, portrait.id))
-        .rejects.toMatchObject({ code: "conflict" });
-    });
-
-    it("ne rejette pas le portrait d'un autre compte", async () => {
-      await publier();
-      const portrait = await unPortrait();
+    it("ne jugent pas le portrait d'un autre compte", async () => {
+      const { id, service } = await uneImage();
       const bila = await db.prisma.user.create({
         data: {
           email: `${randomBytes(6).toString("hex")}@example.com`,
@@ -453,8 +471,7 @@ describe("le portrait", () => {
         },
         select: { id: true },
       });
-      await expect(portraits(repond(PNG_MINUSCULE)).rejeter(bila.id, portrait.id))
-        .rejects.toMatchObject({ code: "not_found" });
+      await expect(service.rejeter(bila.id, id)).rejects.toMatchObject({ code: "not_found" });
     });
   });
 

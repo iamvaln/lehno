@@ -62,74 +62,86 @@ export class PortraitService {
     return Promise.all(lignes.map((l) => this.rendre(l)));
   }
 
-  /**
-   * Rejeter : « pas celui-là ».
+  /* ── LES DEUX VERDICTS ──────────────────────────────────────────────────────
    *
-   * C'EST LE SEUL AVIS NÉGATIF QUE LE PRODUIT SAIT RECEVOIR, et il manquait :
-   * on pouvait approuver, jamais rejeter, donc publier une configuration sans
-   * jamais savoir si on avait amélioré quoi que ce soit. Joint à la version qui
-   * l'a produit, il répond enfin à « celle-ci fait-elle mieux que la
-   * précédente ? ».
+   * ILS PORTENT SUR CE QU'ON A VU, jamais sur un texte. Tant que l'image n'est
+   * pas composée, il n'y a rien à juger — et c'était le défaut : `approuver`
+   * fabriquait l'image ET valait acceptation, si bien qu'on ne pouvait rejeter
+   * qu'un brief.
    *
-   * IL NE COÛTE RIEN ET NE REND RIEN. Le crédit a payé le TEXTE, qui est là et
-   * qu'on a lu — c'est précisément en le lisant qu'on le rejette. Rembourser
-   * ferait de la relecture un essai gratuit, et c'est exactement ce que le
-   * découpage en deux temps évite.
+   * ILS NE DÉTRUISENT RIEN, donc ils se reprennent. L'image reste quel que soit
+   * l'avis : l'utilisateur l'a payée, et la détruire parce qu'elle lui plaît
+   * moins reviendrait à lui reprendre ce qu'il a acheté. Comme rien ne se perd,
+   * changer d'idée ne coûte rien et se fait dans les deux sens.
    *
-   * IDEMPOTENT, comme l'approbation, et pour la même raison : deux frappes sur
-   * le même bouton sont la chose la plus banale du monde sur un téléphone.
-   *
-   * Un portrait APPROUVÉ ne se rejette plus : l'image est fabriquée et payée en
-   * appel de modèle. Le rejet aurait dû venir avant, et l'accepter après
-   * laisserait croire qu'il défait quelque chose.
+   * ILS SONT FACULTATIFS. La plupart des portraits resteront `composed` :
+   * refaire n'est pas rejeter — on peut en produire cinq en changeant les
+   * réglages et les garder tous. « Sans avis » n'est pas un « ni l'un ni
+   * l'autre », c'est « personne n'a répondu ».
    */
-  async rejeter(userId: string, id: string): Promise<PortraitRendu> {
+  approuver(userId: string, id: string): Promise<PortraitRendu> {
+    return this.juger(userId, id, "approved");
+  }
+
+  rejeter(userId: string, id: string): Promise<PortraitRendu> {
+    return this.juger(userId, id, "rejected");
+  }
+
+  private async juger(
+    userId: string, id: string, verdict: "approved" | "rejected",
+  ): Promise<PortraitRendu> {
     const ligne = await this.sien(userId, id);
-    if (ligne.status === "rejected") return this.rendre(ligne);
-    if (ligne.status === "approved")
-      throw new AppError("conflict", "an approved portrait cannot be rejected");
+    if (ligne.status === verdict) return this.rendre(ligne);
+
+    /* ON NE JUGE PAS UN BRIEF. Sans image composée, il n'y a rien à voir : un
+       avis porté là mesurerait la qualité du texte en laissant croire qu'il
+       mesure celle du portrait — et c'est précisément le chiffre qu'on veut
+       pouvoir croire. */
+    if (ligne.status === "generated")
+      throw new AppError("conflict", "compose the image before judging it");
 
     return this.rendre(await this.prisma.portrait.update({
       where: { id: ligne.id },
-      data: { status: "rejected" },
+      data: { status: verdict },
     }));
   }
 
   /**
-   * Approuver : c'est ici que l'image se fabrique.
+   * Composer : c'est ici que l'image se fabrique — et rien d'autre.
    *
-   * IDEMPOTENT. Un portrait déjà approuvé rend le sien plutôt qu'un conflit ou
+   * ELLE NE VAUT PAS ACCEPTATION, et c'est le changement du 12 septembre. Les
+   * deux tenaient dans le même geste : fabriquer valait approuver, si bien
+   * qu'aucun état ne portait « composée, pas encore jugée » et qu'on ne pouvait
+   * rejeter qu'un texte. Le portrait sort d'ici en `composed`, et l'avis vient
+   * après — sur ce qu'on a vu.
+   *
+   * Le bouton de l'écran dit d'ailleurs « Composer l'image » depuis le premier
+   * jour : c'est le serveur qui appelait ça « approuver ».
+   *
+   * IDEMPOTENT. Un portrait déjà composé rend le sien plutôt qu'un conflit ou
    * une seconde image : deux frappes sur le même bouton sont la chose la plus
    * banale du monde sur un téléphone, et la seconde ne doit pas coûter un appel
-   * de modèle. La contrainte en base lie d'ailleurs l'image et l'approbation
-   * dans les deux sens — un portrait approuvé a toujours son image.
+   * de modèle. Un portrait déjà jugé ne se recompose pas non plus — son image
+   * existe, et en refaire une changerait sous les yeux ce qui a été jugé.
    */
-  async approuver(userId: string, id: string): Promise<PortraitRendu> {
+  async composer(userId: string, id: string): Promise<PortraitRendu> {
     const ligne = await this.sien(userId, id);
-    if (ligne.status === "approved") return this.rendre(ligne);
-
-    /* UN PORTRAIT REJETÉ NE S'APPROUVE PAS. Le rejet dit « je ne paie pas
-       celui-là » : l'accepter ensuite fabriquerait l'image qu'on venait de
-       refuser, et le compteur de rejets par version — la seule mesure qui dise
-       si l'atelier progresse — compterait un refus sur un portrait retenu.
-       Ce qu'on veut après un rejet est une NOUVELLE génération, qui se paie. */
-    if (ligne.status === "rejected")
-      throw new AppError("conflict", "a rejected portrait cannot be approved");
+    if (ligne.status !== "generated") return this.rendre(ligne);
 
     /* LA CONFIGURATION QUI A PRODUIT LE BRIEF, pas celle en service.
      *
      * On lisait la courante. Reformuler la consigne d'une ambiance entre le
      * lancement et l'approbation composait donc l'image avec un texte, et le
      * brief avec un autre — le dessin ne correspondait plus à ce qu'on venait
-     * de relire pour l'approuver.
+     * de relire avant de lancer la composition.
      *
      * L'historique existait déjà : chaque publication est une ligne, celle
      * qu'on remplace passe en `superseded`. Il ne manquait que ce lien.
      *
      * ET ÇA SUPPRIME UN REFUS qu'on n'aurait pas dû avoir à écrire : une
-     * ambiance retirée du catalogue faisait échouer l'approbation. Dans la
-     * configuration d'origine, elle y est toujours — un portrait payé
-     * s'approuve, quoi qu'on ait publié depuis. */
+     * ambiance retirée du catalogue faisait échouer la composition. Dans la
+     * configuration d'origine, elle y est toujours — un portrait payé se
+     * compose, quoi qu'on ait publié depuis. */
     const reglages = await this.reglagesDuPortrait(ligne.studioConfigId);
     const { mots, phrase } = this.motsDe(ligne.content);
 
@@ -242,11 +254,14 @@ export class PortraitService {
        par une URL signée à la demande. */
     const cleImage = await this.stockage.ecrire("portraits", finie, "image/png");
 
-    const approuve = await this.prisma.portrait.update({
+    /* `composed` ET NON `approved` : l'image existe, personne n'a encore dit ce
+       qu'il en pense. C'est un état terminal légitime — la plupart des portraits
+       y resteront, puisque rien n'oblige à donner un avis. */
+    const composee = await this.prisma.portrait.update({
       where: { id },
-      data: { status: "approved", imageKey: cleImage },
+      data: { status: "composed", imageKey: cleImage },
     });
-    return this.rendre(approuve);
+    return this.rendre(composee);
   }
 
   /* Les réglages du portrait : les SIENS quand il les a notés, ceux en service

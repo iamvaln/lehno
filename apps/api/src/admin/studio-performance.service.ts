@@ -111,6 +111,11 @@ export class StudioPerformanceService {
       by: [colonne, "status"],
       _count: { _all: true },
     });
+    /* `generated` ET `composed` TOMBENT DU CÔTÉ SANS AVIS, et c'est le cas le
+       plus fréquent : la plupart des portraits y resteront. Refaire n'est pas
+       rejeter — on peut en produire cinq en changeant les réglages et les garder
+       tous —, et rien n'oblige à se prononcer. Les ranger d'un côté ou de
+       l'autre ferait dire à la moyenne l'inverse de ce qui s'est passé. */
     return this.ranger(lignes.map((l) => ({
       cle: (l as Record<string, unknown>)[colonne] as string | null,
       positif: l.status === "approved",

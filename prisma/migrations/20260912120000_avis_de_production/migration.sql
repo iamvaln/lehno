@@ -74,3 +74,14 @@ ALTER TABLE "portrait"
   ON DELETE RESTRICT ON UPDATE CASCADE;
 CREATE INDEX "portrait_brief_studio_config_id_status_idx"
   ON "portrait" ("brief_studio_config_id", "status");
+
+-- L'ÉTAT QUI MANQUAIT : « composée, pas encore jugée ».
+--
+-- `approuver` fabriquait l'image ET valait acceptation dans le même geste. Aucun
+-- état ne portait donc « l'image existe, personne n'a dit ce qu'il en pense » :
+-- on ne pouvait rejeter qu'un TEXTE, alors que ce qu'on juge est ce qu'on a vu.
+--
+-- C'est un état TERMINAL LÉGITIME, et la plupart des portraits y resteront.
+-- Refaire n'est pas rejeter : quelqu'un peut produire cinq portraits en changeant
+-- les réglages et les garder tous. Rien n'oblige à donner un avis.
+ALTER TYPE "PortraitStatus" ADD VALUE IF NOT EXISTS 'composed';

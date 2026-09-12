@@ -173,15 +173,22 @@ export type Generation = z.infer<typeof generationSchema>;
 
 // ── Le portrait produit ─────────────────────────────────────────────────────
 
-/* `rejected` — « pas celui-là ». Il n'existait pas : on pouvait approuver,
-   jamais rejeter, et l'atelier publiait donc des configurations sans jamais
-   savoir s'il avait amélioré quoi que ce soit.
-
-   UN STATUT ET NON UN POUCE POSÉ À CÔTÉ : approuver FABRIQUE l'image et coûte,
-   les deux s'excluent. C'est aussi ce qui rend le ménage du stockage possible —
-   sans rejet explicite, on ne peut rien effacer sans risquer d'emporter ce que
-   quelqu'un gardait. */
-export const PORTRAIT_STATUSES = ["generated", "approved", "rejected"] as const;
+/* QUATRE MOMENTS, ET C'EST LE DEUXIÈME QUI MANQUAIT.
+ *
+ * `generated` — le brief seul : des mots et une phrase, aucune image.
+ * `composed`  — l'image existe, personne n'a dit ce qu'il en pense.
+ * `approved`  — « je garde celle-ci ».
+ * `rejected`  — « celle-ci ne va pas ». L'image RESTE.
+ *
+ * Composer valait acceptation, si bien qu'aucun état ne portait « composée, pas
+ * encore jugée » : on ne pouvait rejeter qu'un TEXTE, alors que ce qu'on juge
+ * est ce qu'on a vu.
+ *
+ * `composed` EST UN ÉTAT TERMINAL LÉGITIME, et la plupart des portraits y
+ * resteront. Refaire n'est pas rejeter : on peut en produire cinq en changeant
+ * les réglages et les garder tous. Comme pour les idées, l'absence d'avis n'est
+ * pas un « ni l'un ni l'autre » — c'est « personne n'a répondu ». */
+export const PORTRAIT_STATUSES = ["generated", "composed", "approved", "rejected"] as const;
 export type PortraitStatus = (typeof PORTRAIT_STATUSES)[number];
 
 /* Ce que l'écran affiche. Aucun réglage n'y figure : ils ont servi à composer

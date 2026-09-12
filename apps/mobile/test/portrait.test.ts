@@ -4,7 +4,7 @@ import {
   type Portrait, type StudioConfig,
 } from "@lehno/contracts";
 import {
-  apresLeChoix, approbation, changementDeSignature, etatDuPortrait, feuilleDePartage,
+  apresLeChoix, composition, verdict, changementDeSignature, etatDuPortrait, feuilleDePartage,
   laFeuilleDeposeUnFichier, laProductionEstRefusee,
   motDAccompagnement, offreDeRefaire, ouverture, relanceDuPortrait,
   selectionParDefaut, signatureARemettre,
@@ -97,21 +97,78 @@ describe("les trois moments de l'écran", () => {
      les deux, il y a un instant où le portrait est validé et n'a pas d'image.
      Le dire « prêt » afficherait un cadre vide et offrirait un partage sur
      rien. */
-  it("un portrait validé sans image attend encore sa composition", () => {
-    expect(etatDuPortrait(portrait({ status: "approved" }))).toBe("composition");
+  it("un portrait jugé sans image attend encore sa composition", () => {
+    for (const status of ["composed", "approved", "rejected"] as const) {
+      expect(etatDuPortrait(portrait({ status }))).toBe("composition");
+    }
+  });
+
+  /* UN AVIS NE CHANGE RIEN À CE QU'IL Y A À VOIR. L'image reste même rejetée —
+     un rejet est un avis, pas une suppression —, donc les trois statuts qui ont
+     une image se rejoignent sur « prêt ». */
+  it("montre l'image quelle que soit l'opinion portée dessus", () => {
+    for (const status of ["composed", "approved", "rejected"] as const) {
+      expect(etatDuPortrait(portrait({ status, imageUrl: IMAGE }))).toBe("pret");
+    }
   });
 });
 
-describe("approuver", () => {
-  it("passe le portrait à validé", () => {
-    expect(approbation(portrait())).toEqual({
-      chemin: `/me/portraits/${PORTRAIT}`,
-      corps: { status: "approved" },
+describe("composer", () => {
+  /* LA ROUTE ET LA MÉTHODE SONT LE CŒUR DU CAS. L'écran envoyait
+     `PATCH /me/portraits/{id}` avec `{ status: "approved" }` — une route qui
+     n'existe ni à l'API ni au contrat, vérifié le 12 septembre. Le geste
+     échouait donc en silence, et aucun cas ne le disait parce que celui-ci
+     comparait l'envoi à lui-même sans jamais regarder la méthode. */
+  it("poste sur le sous-chemin de composition", () => {
+    expect(composition(portrait())).toEqual({
+      chemin: `/me/portraits/${PORTRAIT}/compose`,
+      methode: "POST",
+      corps: {},
     });
   });
 
-  it("ne s'offre pas deux fois", () => {
-    expect(approbation(portrait({ status: "approved", imageUrl: IMAGE }))).toBeNull();
+  /* ON NE COMPOSE PAS DEUX FOIS : l'image existe, la refaire changerait sous
+     les yeux ce qui a peut-être déjà été jugé. */
+  it("ne s'offre plus dès que l'image existe", () => {
+    for (const status of ["composed", "approved", "rejected"] as const) {
+      expect(composition(portrait({ status, imageUrl: IMAGE }))).toBeNull();
+    }
+  });
+});
+
+/* LES DEUX VERDICTS, sur une image qu'on a vue. */
+describe("juger", () => {
+  it("poste sur le geste demandé", () => {
+    expect(verdict(portrait({ status: "composed", imageUrl: IMAGE }), "approved")).toEqual({
+      chemin: `/me/portraits/${PORTRAIT}/approve`,
+      methode: "POST",
+      corps: {},
+    });
+    expect(verdict(portrait({ status: "composed", imageUrl: IMAGE }), "rejected")).toEqual({
+      chemin: `/me/portraits/${PORTRAIT}/reject`,
+      methode: "POST",
+      corps: {},
+    });
+  });
+
+  /* ON NE JUGE PAS UN BRIEF : sans image, il n'y a rien à voir, et un avis porté
+     là mesurerait la qualité du texte en laissant croire qu'il mesure celle du
+     portrait. */
+  it("ne s'offre pas tant que l'image n'existe pas", () => {
+    expect(verdict(portrait(), "approved")).toBeNull();
+    expect(verdict(portrait(), "rejected")).toBeNull();
+  });
+
+  /* RÉVERSIBLE, parce que rien ne se détruit : on change d'avis dans les deux
+     sens. Seul le même avis redit s'éteint. */
+  it("se reprend dans les deux sens, mais ne se redit pas", () => {
+    const approuve = portrait({ status: "approved", imageUrl: IMAGE });
+    expect(verdict(approuve, "approved")).toBeNull();
+    expect(verdict(approuve, "rejected")).not.toBeNull();
+
+    const rejete = portrait({ status: "rejected", imageUrl: IMAGE });
+    expect(verdict(rejete, "rejected")).toBeNull();
+    expect(verdict(rejete, "approved")).not.toBeNull();
   });
 });
 
@@ -119,12 +176,14 @@ describe("la signature en pied", () => {
   it("se retire par null, jamais par une chaîne vide", () => {
     expect(changementDeSignature(portrait(), null)).toEqual({
       chemin: `/me/portraits/${PORTRAIT}`,
+      methode: "PATCH",
       corps: { senderNote: null },
     });
     // Une saisie vidée vaut un retrait : une chaîne vide serait une note qui
     // existe et ne s'affiche pas, et le gabarit lui garderait sa place.
     expect(changementDeSignature(portrait(), "   ")).toEqual({
       chemin: `/me/portraits/${PORTRAIT}`,
+      methode: "PATCH",
       corps: { senderNote: null },
     });
   });

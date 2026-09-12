@@ -1802,16 +1802,40 @@ model GeneratedIdea {
 /// l'approbation. Le contrat le dit — « l'image composée, produite à
 /// l'approbation ». C'est aussi la modération : on relit avant de fabriquer.
 enum PortraitStatus {
+  /** Le brief seul : des mots et une phrase, aucune image. */
   generated
+  /**
+   * L'IMAGE EXISTE, ET PERSONNE N'A ENCORE DIT CE QU'IL EN PENSE.
+   *
+   * Il manquait, et son absence faussait tout : `approuver` fabriquait l'image
+   * ET valait acceptation dans le même geste, si bien qu'aucun état ne portait
+   * « composée, pas encore jugée ». On ne pouvait donc rejeter qu'un TEXTE,
+   * jamais un portrait — alors que ce qu'on juge est ce qu'on a vu.
+   *
+   * C'EST UN ÉTAT TERMINAL LÉGITIME. La plupart des portraits y resteront :
+   * refaire n'est pas rejeter — quelqu'un peut en produire cinq en changeant
+   * les réglages et les garder tous —, et rien n'oblige à donner un avis.
+   * Comme pour les idées, l'absence d'avis n'est pas un « ni l'un ni l'autre » :
+   * c'est « personne n'a répondu », et ça ne se compte pas pareil.
+   */
+  composed
+  /** « Je garde celle-ci. » */
   approved
   /**
-   * « Pas celui-là. » Il n'existait pas : on pouvait approuver, jamais rejeter,
-   * et l'atelier publiait donc des configurations sans jamais savoir s'il avait
-   * amélioré quoi que ce soit.
-   * UN STATUT ET NON UN POUCE À CÔTÉ : approuver FABRIQUE l'image et coûte, les
-   * deux s'excluent. C'est aussi ce qui rend le ménage du stockage possible —
-   * sans rejet explicite, on ne peut rien effacer sans risquer d'emporter ce
-   * que quelqu'un gardait.
+   * « Celle-ci ne va pas. »
+   *
+   * L'IMAGE RESTE. Un rejet est un AVIS, pas une suppression : l'utilisateur a
+   * payé cette image, et la détruire parce qu'elle lui plaît moins reviendrait
+   * à lui reprendre ce qu'il a acheté. Comme rien ne se détruit, l'avis se
+   * reprend — on peut changer d'idée dans les deux sens.
+   *
+   * ET IL NE SERT PAS AU MÉNAGE DU STOCKAGE, contrairement à ce que le §6 du
+   * brief laissait entendre. Une image composée pèse un à deux mégaoctets ;
+   * mille comptes avec cinq portraits chacun font moins de dix gigaoctets, soit
+   * quelques centimes par mois. Effacer ce que les gens ont payé pour économiser
+   * ça serait un très mauvais échange. Ce qui a besoin d'une règle de cycle de
+   * vie est ce que PERSONNE n'a payé : les essais d'administration et les
+   * sources, qui ont chacun leur préfixe.
    */
   rejected
 }

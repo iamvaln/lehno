@@ -64,12 +64,33 @@ export class PortraitController {
     return this.portraits.lire(req.userId, id);
   }
 
-  /* APPROUVER FABRIQUE L'IMAGE. C'est le second temps, et la modération : on
-     relit le texte avant de payer un dessin.
+  /* COMPOSER FABRIQUE L'IMAGE, et rien d'autre. C'est le second temps, et la
+     modération : on relit le texte avant de payer un dessin.
+
+     Le bouton de l'écran dit « Composer l'image » depuis le premier jour ; seul
+     le serveur appelait ça « approuver », et ce nom mêlait la fabrication à
+     l'acceptation. Le portrait sort d'ici en `composed` — l'avis vient après,
+     sur ce qu'on a vu.
+
      200 et non 201 : le portrait existe déjà, il change d'état. Et l'appel est
-     IDEMPOTENT — un portrait déjà approuvé rend le sien plutôt qu'une seconde
+     IDEMPOTENT — un portrait déjà composé rend le sien plutôt qu'une seconde
      image, parce que deux frappes sur le même bouton sont la chose la plus
      banale du monde sur un téléphone. */
+  @Post(":id/compose")
+  composer(
+    @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<Portrait> {
+    return this.portraits.composer(req.userId, id);
+  }
+
+  /* LES DEUX VERDICTS. Ils portent sur une image COMPOSÉE — juger un brief
+     mesurerait la qualité du texte en laissant croire qu'il mesure celle du
+     portrait.
+
+     Ils ne détruisent rien, donc ils se reprennent : l'image reste quel que soit
+     l'avis, puisque l'utilisateur l'a payée. Et ils sont facultatifs — la
+     plupart des portraits resteront sans avis, ce qui est un état légitime et
+     non un oubli. */
   @Post(":id/approve")
   approuver(
     @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
@@ -77,12 +98,6 @@ export class PortraitController {
     return this.portraits.approuver(req.userId, id);
   }
 
-  /* REJETER NE FABRIQUE RIEN, ET NE REND RIEN. Le crédit a payé le texte, qui
-     est là et qu'on vient de lire — c'est en le lisant qu'on le rejette.
-     Rembourser ferait de la relecture un essai gratuit, ce que le découpage en
-     deux temps évite justement.
-     200 comme l'approbation : le portrait existe, il change d'état. Et
-     idempotent pour la même raison — deux frappes sur le même bouton. */
   @Post(":id/reject")
   rejeter(
     @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
