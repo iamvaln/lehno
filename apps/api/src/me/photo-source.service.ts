@@ -206,8 +206,12 @@ export class PhotoSourceService {
     try {
       const { photo } = this.configs.reglagesPortraitDe(publie);
       if (photo === undefined) return DEFAUTS;
-      const { consigne: _, ...reste } = photoReglageSchema.parse(photo);
-      return reste;
+      /* On écarte la consigne : elle n'est pas un seuil, et la rendre ici la
+         ferait voyager jusqu'au jugement d'une photo, qui n'en a que faire.
+         Nommer les trois qu'on garde plutôt que celle qu'on jette évite la
+         variable inutile — le lint la refusait. */
+      const { coteMin, luminositeMin, nettetteMin } = photoReglageSchema.parse(photo);
+      return { coteMin, luminositeMin, nettetteMin };
     } catch {
       return DEFAUTS;
     }

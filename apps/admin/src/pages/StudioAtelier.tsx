@@ -5,8 +5,15 @@ import { ConfirmWithReason } from "../composants/actions/index.js";
 import { messages, type Langue } from "../i18n/index.js";
 import type {
   AdminRole, CandidatsStudio, ConfigurationPortrait, EssaiStudio,
-  ProfilStudio, ReglagesPortrait,
+  PhotoReglage, ProfilStudio, ReglagesPortrait,
 } from "@lehno/contracts";
+import { reglagesPortraitDeDepart } from "@lehno/contracts";
+
+/* LES VALEURS DU CODE, celles que `photo-source.service` applique quand aucune
+   configuration ne porte le bloc. On les lit du semis plutôt que de les
+   recopier : trois nombres écrits à deux endroits finissent par diverger, et
+   l'écran annoncerait alors des seuils que le serveur n'applique pas. */
+const PHOTO_DU_CODE: PhotoReglage = reglagesPortraitDeDepart().photo!;
 
 /**
  * L'Atelier — un poste de travail qui se lit d'un regard.
@@ -104,6 +111,30 @@ export function StudioAtelier(
     setSale(true);
   };
 
+  /* LE BLOC PHOTO EST FACULTATIF EN BASE, et le toucher le fait naître entier.
+     On part des valeurs du CODE parce que ce sont celles qui s'appliquent déjà :
+     partir de zéros durcirait les seuils à l'insu de celui qui n'a touché que
+     la consigne. La consigne, elle, naît VIDE — absente, le modèle ne reçoit
+     rien sur la photo, et lui inventer un texte publierait une instruction que
+     personne n'a écrite. */
+  const photo: PhotoReglage = reglages.photo
+    ?? { ...PHOTO_DU_CODE, consigne: { fr: "", en: "" } };
+
+  const poserPhoto = (champ: keyof PhotoReglage, valeur: unknown): void => {
+    setReglages((r) => ({ ...r, photo: { ...photo, [champ]: valeur } as PhotoReglage }));
+    setSale(true);
+  };
+
+  const poserConsignePhoto = (l: Langue, texte: string): void =>
+    poserPhoto("consigne", { ...photo.consigne, [l]: texte });
+
+  /* LES RÉGLAGES DE LA PHOTO VONT ENSEMBLE. `photoReglageSchema` exige la
+     consigne dans ses deux langues : on ne peut pas publier des seuils sans
+     elle. Sans ce contrôle, on remonte un seuil de vingt pixels, on garde, et
+     le refus tombe sur un champ qu'on n'a pas touché. */
+  const photoBoiteuse = reglages.photo !== undefined
+    && (photo.consigne.fr.trim() === "" || photo.consigne.en.trim() === "");
+
   const poserMotif = (cle: "bande" | "fondSansImage", valeur: string): void => {
     setReglages((r) => ({ ...r, motifs: { ...r.motifs, [cle]: valeur } as typeof r.motifs }));
     setSale(true);
@@ -139,7 +170,9 @@ export function StudioAtelier(
   /* Ce qui empêche de publier, dit par le serveur plutôt que redeviné ici : un
      booléen seul obligerait l'écran à refaire la règle, et à la refaire faux le
      jour où elle change. */
-  const empechement = !rendu
+  const empechement = photoBoiteuse
+    ? d.photo.consigneExigee
+    : !rendu
     ? d.gestes.publierSansEssai
     : depart.blocage === "deja_en_service"
       ? d.gestes.publierDejaEnService
@@ -245,6 +278,74 @@ export function StudioAtelier(
             )}
           </section>
 
+          {/* LA VOIE PHOTO — deux familles dans une seule section, et un seul
+              liséré. La consigne part dans l'invite avec la photo : elle est
+              dans l'empreinte, donc la changer redemande un essai. Les trois
+              seuils refusent une photo AVANT tout appel — le modèle ne les voit
+              jamais, et les changer ne redemande rien. */}
+          <section className="admin-section" role="region" aria-labelledby="atelier-photo">
+            <h2 id="atelier-photo" className="admin-section-titre">{d.photo.titre}</h2>
+            <p className="admin-section-sous">{d.photo.sous}</p>
+
+            {/* L'ABSENCE N'EST PAS SYMÉTRIQUE, et la dire mal tromperait : sans
+                bloc publié, les seuils du code s'appliquent DÉJÀ, tandis que la
+                consigne n'existe pas du tout — le modèle ne reçoit rien sur la
+                photo. Montrer les trois nombres sans cette phrase les ferait
+                passer pour des réglages enregistrés. */}
+            {reglages.photo === undefined ? (
+              <p className="gabarit-note">{d.photo.absent}</p>
+            ) : null}
+            {/* L'EMPÊCHEMENT NE SE DIT QU'À UN ENDROIT — sous les gestes, là où
+                l'écran dit déjà pourquoi chacun est fermé. Le répéter ici en
+                ferait deux, et deux textes du même état finissent par se
+                contredire le jour où l'un des deux change. */}
+
+            <div className="admin-lu-par-le-modele">
+              <div className="admin-rang">
+                <span className="admin-rang-label">{d.photo.consigne}</span>
+                <p className="admin-rang-aide">{d.photo.consigneAide}</p>
+                <div className="admin-bilingue">
+                  {(["fr", "en"] as const).map((l) => (
+                    <div key={l} className="admin-bilingue-cote">
+                      <label htmlFor={`atelier-photo-consigne-${l}`}>{t.studioTextes.langues[l]}</label>
+                      <textarea
+                        id={`atelier-photo-consigne-${l}`}
+                        rows={3}
+                        maxLength={2000}
+                        value={photo.consigne[l]}
+                        onChange={(e) => poserConsignePhoto(l, e.target.value)}
+                        disabled={role !== "admin"}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <h3 className="admin-section-titre">{d.photo.seuils}</h3>
+            <p className="admin-section-sous">{d.photo.seuilsAide}</p>
+            {([
+              ["coteMin", d.photo.coteMin, d.photo.coteMinAide, 256, 4096],
+              ["luminositeMin", d.photo.luminositeMin, d.photo.luminositeMinAide, 0, 255],
+              ["nettetteMin", d.photo.nettetteMin, d.photo.nettetteMinAide, 0, 128],
+            ] as const).map(([cle, libelle, aide, min, max]) => (
+              <div className="admin-rang" key={cle}>
+                <label className="admin-rang-label" htmlFor={`atelier-photo-${cle}`}>{libelle}</label>
+                <p className="admin-rang-aide">{aide}</p>
+                <input
+                  id={`atelier-photo-${cle}`}
+                  type="number"
+                  min={min}
+                  max={max}
+                  className="admin-champ admin-focus"
+                  value={photo[cle]}
+                  onChange={(e) => poserPhoto(cle, Number(e.target.value))}
+                  disabled={role !== "admin"}
+                />
+              </div>
+            ))}
+          </section>
+
           <section className="admin-section" role="region" aria-labelledby="atelier-ouvrage">
             <h2 id="atelier-ouvrage" className="admin-section-titre">{d.ouvrage.titre}</h2>
             {dernier === null ? (
@@ -277,14 +378,14 @@ export function StudioAtelier(
               <div className="admin-actions">
                 <button
                   type="button"
-                  disabled={enCours || ambiance === null || profileId === ""}
+                  disabled={enCours || ambiance === null || profileId === "" || photoBoiteuse}
                   onClick={() => onEssayer?.(reglages, profileId, ambianceId)}
                 >
                   {enCours ? d.gestes.enCours : d.gestes.essayer}
                 </button>
                 <button
                   type="button"
-                  disabled={!rendu}
+                  disabled={!rendu || photoBoiteuse}
                   onClick={() => { onGarder?.(reglages, dernier?.id ?? null); setSale(false); }}
                 >
                   {d.gestes.garder}

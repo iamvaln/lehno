@@ -311,4 +311,78 @@ describe("l'Atelier, sur les données du serveur", () => {
     const effacements = appels.mock.calls.filter(([, i]) => (i as RequestInit)?.method === "DELETE");
     expect(effacements).toHaveLength(0);
   });
+  /* ─── La voie photo ─────────────────────────────────────────────────────── */
+
+  /* LE BLOC EST FACULTATIF EN BASE — `REGLAGES` ci-dessus ne le porte pas, comme
+     toute configuration écrite avant lui. L'absence n'est pas symétrique, et
+     c'est ce que l'écran doit dire : les seuils du code s'appliquent DÉJÀ,
+     tandis que la consigne n'existe pas du tout. */
+  it("dit que rien n'est publié, et montre les seuils qui s'appliquent", async () => {
+    serveur();
+    await ouvrir();
+
+    expect(await screen.findByText(d.photo.absent)).toBeInTheDocument();
+    expect(screen.getByLabelText(d.photo.coteMin)).toHaveValue(512);
+    expect(screen.getByLabelText(d.photo.luminositeMin)).toHaveValue(30);
+    expect(screen.getByLabelText(d.photo.nettetteMin)).toHaveValue(12);
+  });
+
+  /* TOUCHER UN SEUIL FAIT NAÎTRE LE BLOC ENTIER, et le schéma exige alors la
+     consigne dans ses deux langues. Sans ce contrôle, on remonte un seuil de
+     vingt pixels, on garde, et le refus tombe sur un champ qu'on n'a pas
+     touché — les trois gestes qui emportent les réglages se ferment donc. */
+  it("ferme les gestes tant que la consigne de la photo manque", async () => {
+    serveur();
+    const utilisateur = await ouvrir();
+    await screen.findByText(d.photo.absent);
+
+    await utilisateur.clear(screen.getByLabelText(d.photo.coteMin));
+    await utilisateur.type(screen.getByLabelText(d.photo.coteMin), "800");
+
+    expect(await screen.findByText(d.photo.consigneExigee)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: d.gestes.essayer })).toBeDisabled();
+    expect(screen.getByRole("button", { name: d.gestes.publier })).toBeDisabled();
+  });
+
+  /* LA CONSIGNE NE S'INVENTE PAS. Le bloc naît des valeurs du CODE pour les
+     seuils — ce sont celles qui s'appliquent déjà —, mais la consigne naît
+     VIDE : lui donner un texte de départ publierait une instruction que
+     personne n'a écrite. */
+  it("part des seuils du code, jamais d'une consigne inventée", async () => {
+    serveur();
+    const utilisateur = await ouvrir();
+    await screen.findByText(d.photo.absent);
+
+    await utilisateur.type(screen.getByLabelText(t.studioTextes.langues.fr), "Inspire-toi du cadrage.");
+
+    // Le bloc existe désormais : les seuils du code l'ont rempli.
+    expect(screen.getByLabelText(d.photo.coteMin)).toHaveValue(512);
+    // Et l'autre langue est restée vide, donc les gestes restent fermés.
+    expect(screen.getByText(d.photo.consigneExigee)).toBeInTheDocument();
+  });
+
+  it("envoie le bloc entier une fois les deux langues écrites", async () => {
+    const appels = serveur();
+    const utilisateur = await ouvrir();
+    await screen.findByText(d.photo.absent);
+
+    await utilisateur.type(screen.getByLabelText(t.studioTextes.langues.fr), "Inspire-toi du cadrage.");
+    await utilisateur.type(screen.getByLabelText(t.studioTextes.langues.en), "Draw on the framing.");
+    await utilisateur.clear(screen.getByLabelText(d.photo.nettetteMin));
+    await utilisateur.type(screen.getByLabelText(d.photo.nettetteMin), "20");
+
+    expect(screen.queryByText(d.photo.consigneExigee)).not.toBeInTheDocument();
+    await utilisateur.click(screen.getByRole("button", { name: d.gestes.essayer }));
+
+    const envoi = appels.mock.calls.find(([u, i]) =>
+      (i as RequestInit)?.method === "POST" && String(u).includes("/portrait-studio/trials"));
+    const corps = JSON.parse((envoi?.[1] as RequestInit).body as string) as
+      { reglages: { photo: { consigne: { fr: string; en: string }; nettetteMin: number; coteMin: number } } };
+    expect(corps.reglages.photo.consigne).toEqual({
+      fr: "Inspire-toi du cadrage.", en: "Draw on the framing.",
+    });
+    expect(corps.reglages.photo.nettetteMin).toBe(20);
+    // Les deux seuils qu'on n'a pas touchés partent tels que le code les pose.
+    expect(corps.reglages.photo.coteMin).toBe(512);
+  });
 });
