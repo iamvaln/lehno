@@ -599,6 +599,22 @@ export const fr = {
   ficheNogoTexte: "Je ne bois pas d'alcool.",
   ficheIdeeTexte: "Valery a parlé d'un moulin à café manuel — le précédent rend l'âme.",
   fichePortraits: "Ses portraits",
+  portraitComposer: "Composer son portrait",
+  portraitLancer: "Lancer le portrait",
+  /* §3 : « L'attente se nomme, avec la matière qu'on a déjà. » Le décompte entre
+     dans la phrase parce que c'est lui qui prouve que la chose est personnelle —
+     la promesse du produit, rendue au moment où elle coûte le plus cher à tenir. */
+  portraitAttenteNotes: (n: number, qui: string) =>
+    "On relit vos " + n + " notes sur " + qui + ".",
+  portraitAttenteSansNote: (qui: string) => "On rassemble ce qu'on sait de " + qui + ".",
+  /* Sans nom — un lien profond n'en porte pas —, on n'écrit pas une phrase à
+     trou : « on relit vos 9 notes sur . » est pire que de ne pas nommer. */
+  portraitAttenteSansNom: "On rassemble ce qu'on sait.",
+  portraitAttenteQuitter: "Vous pouvez fermer, on vous le garde.",
+  /* RIEN NE S'ÉCRIT QUAND UN CATALOGUE NE SE CHARGE PAS. Emprunter « L'écriture
+     n'a pas abouti », qui appartient à la génération, annoncerait un travail
+     perdu là où il n'y en a pas eu, et ferait craindre un crédit parti. */
+  portraitCatalogueAbsent: "Les réglages du portrait n'ont pas pu être chargés.",
   ficheCollecte: "Faire compléter la fiche",
   ficheIdentite: "Modifier l'identité",
   datesTitre: "Vos dates",

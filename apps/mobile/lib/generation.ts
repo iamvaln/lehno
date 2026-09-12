@@ -218,3 +218,30 @@ export function offreDeRefaire(actives: readonly string[]): boolean {
    en permanence, et le coût d'une génération n'a jamais paru à l'écran.
    
    Il n'y a pas de mode gratuit à ménager. Ce qui se paie s'annonce. */
+
+/* L'ATTENTE SE NOMME, AVEC LA MATIÈRE QU'ON A DÉJÀ.
+ *
+ * Le crédit part AVANT l'appel au modèle. À la troisième seconde, on a déjà
+ * payé, et une roue qui tourne ne dit pas ce qu'on a acheté — c'est le seul
+ * endroit de l'application où le silence coûte de l'argent. Dire « on relit vos
+ * 9 notes sur Awa » transforme le temps mort en preuve que la chose est
+ * personnelle, ce qui est la promesse du produit.
+ *
+ * ZÉRO NOTE N'EST PAS UNE PHRASE À ÉCRIRE. « On relit vos 0 notes » annonce
+ * qu'on va produire à partir de rien — ce qui est faux, la fiche porte un nom,
+ * un genre, une relation — et décourage juste après le débit.
+ *
+ * SANS NOM NON PLUS : il vient d'un paramètre de route, absent sur un lien
+ * profond, et « on relit vos 9 notes sur . » est pire que de ne pas nommer. */
+export function phraseDeLAttente(
+  notes: number,
+  qui: string | null,
+  t: {
+    portraitAttenteNotes: (n: number, qui: string) => string;
+    portraitAttenteSansNote: (qui: string) => string;
+    portraitAttenteSansNom: string;
+  },
+): string {
+  if (qui === null || qui === "") return t.portraitAttenteSansNom;
+  return notes > 0 ? t.portraitAttenteNotes(notes, qui) : t.portraitAttenteSansNote(qui);
+}
