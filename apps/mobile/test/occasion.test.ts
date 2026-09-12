@@ -23,6 +23,7 @@ const occasion = (jours: number, nature: Occurrence["nature"] = "happy"): Occurr
   eventId: uuid(10),
   personId: uuid(20),
   personDisplayName: "Valery",
+  isSelf: false,
   kind: "birthday",
   nature,
   label: null,

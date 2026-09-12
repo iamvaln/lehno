@@ -1,31 +1,70 @@
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import { PrismaClient } from "@prisma/client";
-import { execFileSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { MODELE, VARIABLE, urlDe } from "./socle.js";
 
 export type TestDb = { prisma: PrismaClient; url: string; close: () => Promise<void> };
 
+/* UNE BASE NEUVE PAR FICHIER — CLONÉE, PLUS RECONSTRUITE.
+ *
+ * Le conteneur et les migrations appartiennent maintenant au `globalSetup`
+ * (`socle.ts`), qui dit pourquoi. Il ne reste ici que le clonage.
+ *
+ * CE QUI NE CHANGE PAS : chaque fichier reçoit toujours une base VIERGE, données
+ * de référence comprises. L'isolation entre fichiers n'est pas assouplie — c'est
+ * elle qui empêche qu'un fichier basculant un drapeau empoisonne le suivant, et
+ * `resetDatabase` ne la donnerait pas, puisqu'il PRÉSERVE délibérément les
+ * tables de référence.
+ *
+ * CE QUI CHANGE : `CREATE DATABASE … TEMPLATE` copie les fichiers du modèle.
+ * Postgres ne rejoue aucune migration — des millisecondes au lieu d'une
+ * vingtaine de secondes.
+ */
 export async function withDatabase(): Promise<TestDb> {
-  const container: StartedPostgreSqlContainer = await new PostgreSqlContainer("postgres:16-alpine").start();
-  try {
-    const url = container.getConnectionUri();
-    // migrate deploy plutôt que db push : on veut tester les migrations réelles,
-    // y compris le SQL écrit à la main que Prisma n'exprime pas.
-    execFileSync("pnpm", ["prisma", "migrate", "deploy"], {
-      env: { ...process.env, DATABASE_URL: url },
-      stdio: "inherit",
-    });
-    const prisma = new PrismaClient({ datasources: { db: { url } } });
-    return {
-      prisma,
-      url,
-      close: async () => { await prisma.$disconnect(); await container.stop(); },
-    };
-  } catch (error) {
-    // Le conteneur ne doit pas survivre à un échec de migration : sans ça,
-    // chaque erreur de SQL écrit à la main en laisse un derrière elle.
-    await container.stop();
-    throw error;
+  const uri = process.env[VARIABLE];
+  /* Sans socle, on ne se débrouille pas en silence : un fichier lancé hors de
+     la configuration lèverait son propre conteneur, et la course redeviendrait
+     lente sans que personne ne s'en aperçoive. Mieux vaut dire ce qui manque. */
+  if (uri === undefined) {
+    throw new Error(
+      `${VARIABLE} absente : le socle des épreuves n'a pas tourné. `
+      + "Lancez par `pnpm test` — `globalSetup` y lève le conteneur une fois pour toute la course.",
+    );
   }
+
+  /* UN NOM TIRÉ AU SORT, ET NON UN COMPTEUR. Vitest isole les modules par
+     fichier : un compteur de module repartirait de zéro à chaque fichier, et
+     deux fichiers se disputeraient le même nom de base. */
+  const base = `t_${randomBytes(8).toString("hex")}`;
+
+  /* On passe par la base par défaut pour créer le clone : `CREATE DATABASE …
+     TEMPLATE` exige qu'AUCUNE session ne soit connectée au modèle, et s'y
+     connecter pour lancer la copie serait précisément la session qui l'empêche. */
+  const administration = new PrismaClient({ datasources: { db: { url: urlDe(uri, "postgres") } } });
+  try {
+    await administration.$executeRawUnsafe(`create database "${base}" template "${MODELE}"`);
+  } finally {
+    await administration.$disconnect();
+  }
+
+  const url = urlDe(uri, base);
+  const prisma = new PrismaClient({ datasources: { db: { url } } });
+  return {
+    prisma,
+    url,
+    /* La base clonée s'efface : le conteneur vit toute la course, et cent bases
+       s'y accumuleraient. `with (force)` coupe les connexions qu'une application
+       Nest mal refermée laisserait derrière elle — sans lui, un seul fichier
+       distrait ferait échouer tous les ménages suivants. */
+    close: async () => {
+      await prisma.$disconnect();
+      const menage = new PrismaClient({ datasources: { db: { url: urlDe(uri, "postgres") } } });
+      try {
+        await menage.$executeRawUnsafe(`drop database if exists "${base}" with (force)`);
+      } finally {
+        await menage.$disconnect();
+      }
+    },
+  };
 }
 
 // Décision d'architecture (tâche 7, ratifiée) : `resetDatabase` vide

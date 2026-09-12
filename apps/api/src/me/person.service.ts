@@ -1,9 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
   CreatePersonInput, Person, PersonList, UpdatePersonInput, ListPersonsQuery,
-  SelfPersonInput,
+  SelfPersonInput, SelfPersonPatchInput,
 } from "@lehno/contracts";
 import { PAGE_PROCHES } from "@lehno/contracts";
+import { AppError } from "../common/errors.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
 import { EventService } from "./event.service.js";
@@ -137,7 +138,15 @@ export class PersonService {
        La recherche porte sur les DEUX noms : quelqu'un cherche « maman » sans
        savoir si sa fiche dit « Maman » ou « Maman Chantal », et le nom d'usage
        est justement celui par lequel on l'appelle. */
-    const tous = query.q === undefined ? bruts : bruts.filter((p) => {
+    /* LA FICHE DE SOI SORT SUR DEMANDE, et avant la découpe comme le reste :
+       filtrer une page déjà coupée laisserait un trou sur une page et pas sur
+       l'autre. Incluse par défaut — « Pour qui » ne pourrait plus viser sa
+       propre date sans elle, et c'est le blocage que la fiche a levé. */
+    const avecSoi = query.includeSelf === false
+      ? bruts.filter((p) => !p.isSelf)
+      : bruts;
+
+    const tous = query.q === undefined ? avecSoi : avecSoi.filter((p) => {
       const aiguille = sansAccents(query.q!);
       return sansAccents(p.displayName).includes(aiguille)
         || (p.callingName !== null && sansAccents(p.callingName).includes(aiguille));
@@ -276,6 +285,18 @@ export class PersonService {
       if (gagnante === null) throw cause;
       return this.corrigerSoi(userId, gagnante.id, input);
     }
+  }
+
+  /* LA CORRECTION D'UN SEUL CHAMP — §13.4.
+   *
+   * Elle ne CRÉE PAS, et c'est la différence avec `ecrireSoi` : on ne devine pas
+   * un `displayName` pour quelqu'un qui n'a envoyé qu'une langue. Une fiche
+   * absente rend 404, comme sa lecture — l'écran sait alors qu'il doit passer
+   * par l'écriture complète, au lieu de recevoir une fiche à demi inventée. */
+  async corrigerSaFiche(userId: string, input: SelfPersonPatchInput): Promise<Person> {
+    const existante = await this.soi(userId);
+    if (existante === null) throw new AppError("not_found", "resource not found");
+    return this.update(userId, existante.id, input as UpdatePersonInput);
   }
 
   private async corrigerSoi(

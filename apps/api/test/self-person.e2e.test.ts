@@ -72,6 +72,16 @@ describe("la fiche de soi", () => {
       body: JSON.stringify(corps),
     });
 
+  const corriger = (corps: unknown, t = jeton) =>
+    fetch(`${baseUrl}/v1/me/self`, {
+      method: "PATCH",
+      headers: { authorization: `Bearer ${t}`, "content-type": "application/json" },
+      body: JSON.stringify(corps),
+    });
+
+  const carnet = (requete = "", t = jeton) =>
+    fetch(`${baseUrl}/v1/me/persons${requete}`, { headers: { authorization: `Bearer ${t}` } });
+
   const MOI = { displayName: "Awa", gender: "female", birthDate: "1994-03-12" } as const;
 
   it("n'existe pas avant qu'on l'écrive", async () => {
@@ -182,5 +192,108 @@ describe("la fiche de soi", () => {
       },
     });
     expect((await liste(sienne.id)).status).toBeGreaterThanOrEqual(400);
+  });
+  /* ─── §13.4 — LA CORRECTION D'UN SEUL CHAMP ─────────────────────────────────
+   *
+   * `PUT` est un remplacement : il exige `displayName`, donc un écran qui ne
+   * veut changer que la langue devait lire la fiche entière pour la renvoyer.
+   * Ce n'est pas théorique — c'est ce qui a fait RETIRER l'écriture de
+   * `language` depuis le mobile plutôt que de risquer d'écraser le reste. */
+  describe("se corrige champ par champ", () => {
+    it("écrit un seul champ sans toucher aux autres", async () => {
+      await ecrire(MOI);
+      const res = await corriger({ language: "fr" });
+      expect(res.status).toBe(200);
+
+      const fiche = personSchema.parse(await res.json());
+      expect(fiche.language).toBe("fr");
+      // Ce que le PUT aurait exigé de renvoyer, et qu'on n'a pas renvoyé.
+      expect(fiche.displayName).toBe("Awa");
+      expect(fiche.birthDate).toBe("1994-03-12");
+    });
+
+    /* ELLE NE CRÉE PAS. Créer ici obligerait à inventer un `displayName` pour
+       quelqu'un qui n'a envoyé qu'une langue — et l'écran ne saurait pas qu'il
+       vient de nommer sa propre fiche « undefined ». */
+    it("rend 404 quand la fiche n'existe pas encore", async () => {
+      expect((await corriger({ language: "fr" })).status).toBe(404);
+    });
+
+    /* UN CORPS VIDE EST REFUSÉ. Un 200 sur un PATCH qui n'envoie rien
+       apprendrait à l'écran que son enregistrement a marché. */
+    it("refuse un corps vide", async () => {
+      await ecrire(MOI);
+      expect((await corriger({})).status).toBe(400);
+    });
+
+    it("refuse un champ que la fiche de soi n'a pas", async () => {
+      await ecrire(MOI);
+      // `relation` : on n'est pas sa propre relation, et le contrat le retire.
+      expect((await corriger({ relation: "sister" })).status).toBe(400);
+    });
+
+    /* LE RECALAGE DE L'ANNIVERSAIRE PASSE PAR LÀ AUSSI. Corriger sa naissance
+       sans lui laisserait l'échéance sur l'ancienne date jusqu'au jour dit — et
+       c'est sa propre date, celle qu'on remarque le moins vite parce qu'on ne
+       se la souhaite pas. */
+    it("recale l'anniversaire quand la naissance change", async () => {
+      await ecrire(MOI);
+      const soi = await db.prisma.person.findFirstOrThrow({ where: { userId, isSelf: true } });
+      await db.prisma.event.create({
+        data: { personId: soi.id, kind: "birthday", referenceDate: new Date("2027-03-12") },
+      });
+
+      await corriger({ birthDate: "1994-07-20" });
+
+      const anniversaire = await db.prisma.event.findFirstOrThrow({
+        where: { personId: soi.id, kind: "birthday" },
+      });
+      expect(anniversaire.referenceDate.toISOString().slice(5, 10)).toBe("07-20");
+    });
+  });
+
+  /* ─── §13.3 — DEDANS OU DEHORS DU CARNET ────────────────────────────────────
+   *
+   * Elle reste INCLUSE par défaut, et ce n'est pas de la timidité : « Pour qui »
+   * ne listait que les proches, on ne pouvait donc pas inscrire sa propre date.
+   * L'exclure d'office réinstallerait le blocage que la fiche a levé. */
+  describe("dans le carnet", () => {
+    const lu = async (requete: string): Promise<{ persons: { displayName: string }[]; total: number }> =>
+      (await (await carnet(requete)).json()) as { persons: { displayName: string }[]; total: number };
+    const noms = async (requete = ""): Promise<string[]> =>
+      (await lu(requete)).persons.map((p) => p.displayName);
+    const total = async (requete = ""): Promise<number> => (await lu(requete)).total;
+
+    beforeEach(async () => {
+      await ecrire(MOI);
+      await db.prisma.person.create({ data: { userId, displayName: "Karim" } });
+    });
+
+    it("y paraît par défaut", async () => {
+      expect(await noms()).toContain("Awa");
+      expect(await total()).toBe(2);
+    });
+
+    it("en sort sur demande", async () => {
+      expect(await noms("?includeSelf=false")).toEqual(["Karim"]);
+    });
+
+    /* LE TOTAL SUIT LE FILTRE. Un total qui compterait une fiche absente de la
+       liste ferait afficher « Voir plus · 1 restant » sur une page complète, et
+       personne ne comprendrait ce qui manque. */
+    it("ne se compte plus dans le total quand elle en sort", async () => {
+      expect(await total("?includeSelf=false")).toBe(1);
+    });
+
+    /* SEUL « false » EXCLUT, et le reste est REFUSÉ plutôt qu'interprété :
+       `Boolean("false")` vaut vrai, et s'y fier aurait rendu le paramètre
+       décoratif. Un `includeSelf=0` silencieusement ignoré est pire qu'un 400. */
+    it("refuse une valeur qui n'est pas un booléen", async () => {
+      expect((await carnet("?includeSelf=0")).status).toBe(400);
+    });
+
+    it("l'inclut quand on le demande explicitement", async () => {
+      expect(await noms("?includeSelf=true")).toContain("Awa");
+    });
   });
 });

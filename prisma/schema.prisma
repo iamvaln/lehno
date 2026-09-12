@@ -1031,8 +1031,25 @@ model WishReservation {
 }
 
 enum NotificationType {
+  /**
+   * LA DATE D'UN PROCHE. Ces deux-là ne partent JAMAIS sur une date à soi :
+   * « Une date pour Valentine approche », par courriel, à Valentine, pour
+   * l'anniversaire de Valentine. Le séparateur est `person.is_self`, et le
+   * filtre vit dans ProgrammationService.
+   */
   event_reminder
   event_day_of
+  /**
+   * MA PROPRE DATE, et elle n'appelle pas les mêmes gestes.
+   * Ce qu'on a à rappeler sur sa propre date n'est pas d'écrire un mot à
+   * quelqu'un — c'est de préparer sa liste, puis de la PARTAGER : une liste que
+   * personne n'a reçue ne sert à rien. Deux types plutôt qu'un drapeau sur les
+   * précédents, parce que les préférences se règlent PAR TYPE : quelqu'un qui
+   * ne veut pas qu'on lui rappelle son propre anniversaire veut toujours qu'on
+   * lui rappelle celui de sa mère.
+   */
+  own_date_reminder
+  own_date_day_of
   digest
   contribution_received
   wish_received

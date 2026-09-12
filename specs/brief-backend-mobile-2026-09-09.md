@@ -593,6 +593,17 @@ c'est-à-dire qu'ils se produisent dès qu'un titulaire pose sa date.
 
 ### 13.1 Le planificateur vous souhaite votre propre anniversaire — le plus grave
 
+> **RÉGLÉ le 12 septembre**, et par **le juste**, pas par le minimum.
+> `own_date_reminder` et `own_date_day_of` existent, avec leurs phrases et leur
+> interrupteur (« Ma propre date »). L'état de la liste — `wishCount`,
+> `isShared` — voyage avec la notification et choisit laquelle des trois
+> phrases se compose ; un lien de partage révoqué ne compte pas pour un
+> partage. Le cas sensible ne parle jamais de liste.
+>
+> Ce qui suit reste tel qu'il a été écrit le 11 au soir : c'est le constat qui
+> a motivé le correctif, et le raturer effacerait la raison d'être des deux
+> natures.
+
 `apps/api/src/me/programmation.service.ts:62-127`
 
 `garnir()` balaie **toutes** les `eventOccurrence` de l'horizon. Aucun filtre,

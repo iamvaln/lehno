@@ -179,8 +179,10 @@ export default function Rappels() {
   const libelle: Record<CleDeGroupe, string> = {
     avant: t.reglagesJ7,
     jour: t.reglagesJour,
+    ma_date: t.reglagesMaDate,
     recap: t.reglagesRecap,
     valider: t.reglagesValider,
+    ma_liste: t.reglagesMaListe,
     relances: t.reglagesRelances,
     vie: t.reglagesVieCompte,
   };
