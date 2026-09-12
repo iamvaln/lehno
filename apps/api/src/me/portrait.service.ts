@@ -87,6 +87,31 @@ export class PortraitService {
     return this.juger(userId, id, "rejected");
   }
 
+  /* LA NOTE DE L'EXPÉDITEUR SE CHANGE AVANT LA COMPOSITION, ET SEULEMENT AVANT.
+   *
+   * Après, elle est dans les pixels : l'accepter promettrait un effet qui
+   * n'arrive pas. C'est précisément le genre de réglage qui ne règle rien, et
+   * l'écran doit donc retirer l'interrupteur une fois l'image faite plutôt que
+   * de le griser.
+   *
+   * `null` RETIRE, et c'est une valeur : le contrat l'exige explicite, parce
+   * qu'omettre le champ voudrait dire « ne touche pas ». La chaîne vide retire
+   * aussi — une note qui existe et ne s'affiche pas garderait sa place dans la
+   * bande, et la bande se calcule sur ce qu'elle porte. */
+  async changerLaNote(
+    userId: string, id: string, note: string | null,
+  ): Promise<PortraitRendu> {
+    const ligne = await this.sien(userId, id);
+    if (ligne.status !== "generated")
+      throw new AppError("conflict", "the sender note is fixed once the image is composed");
+
+    const propre = note === null || note.trim() === "" ? null : note.trim();
+    return this.rendre(await this.prisma.portrait.update({
+      where: { id: ligne.id },
+      data: { senderNote: propre },
+    }));
+  }
+
   private async juger(
     userId: string, id: string, verdict: "approved" | "rejected",
   ): Promise<PortraitRendu> {
@@ -246,7 +271,17 @@ export class PortraitService {
     const finie = await composerLePortrait(
       Buffer.from(resultat.contenu, "base64"),
       composition.cadre,
-      { phrase, nom: proche.callingName ?? proche.displayName },
+      {
+        phrase,
+        nom: proche.callingName ?? proche.displayName,
+        /* LA NOTE DE L'EXPÉDITEUR ENTRE DANS LE FICHIER. Elle ne le faisait pas :
+           l'écran la montrait dans son aperçu, la spécification la range dans la
+           bande, et le portrait partagé n'en portait aucune trace. On voyait une
+           chose avant de composer et une autre après.
+           C'est le dernier moment où elle peut changer — après, elle est dans les
+           pixels. D'où le refus d'y toucher une fois composé. */
+        note: ligne.senderNote,
+      },
     );
 
     /* CE QU'ON RANGE EST UNE CLÉ, jamais l'image. Un modèle rend un à deux

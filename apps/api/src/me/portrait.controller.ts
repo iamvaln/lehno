@@ -1,7 +1,9 @@
 import {
-  Controller, Get, HttpCode, Inject, Param, ParseUUIDPipe, Post, Req, UseGuards,
+  Body, Controller, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards,
 } from "@nestjs/common";
-import type { DepotPhotoSource, Portrait } from "@lehno/contracts";
+import { updatePortraitSchema } from "@lehno/contracts";
+import type { DepotPhotoSource, Portrait, UpdatePortraitInput } from "@lehno/contracts";
+import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { Feature } from "../flags/feature.decorator.js";
 import { FeatureGuard } from "../flags/feature.guard.js";
@@ -81,6 +83,20 @@ export class PortraitController {
     @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
   ): Promise<Portrait> {
     return this.portraits.composer(req.userId, id);
+  }
+
+  /* LA NOTE DE L'EXPÉDITEUR — la route qui manquait.
+     L'écran envoyait ce `PATCH` depuis le premier jour ; il n'existait ni ici ni
+     au contrat, donc l'interrupteur de signature échouait en silence.
+     AVANT LA COMPOSITION SEULEMENT : après, la note est dans les pixels du
+     fichier, et l'accepter promettrait un effet qui n'arrive pas. */
+  @Patch(":id")
+  changerLaNote(
+    @Req() req: AuthedRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(updatePortraitSchema)) corps: UpdatePortraitInput,
+  ): Promise<Portrait> {
+    return this.portraits.changerLaNote(req.userId, id, corps.senderNote);
   }
 
   /* LES DEUX VERDICTS. Ils portent sur une image COMPOSÉE — juger un brief

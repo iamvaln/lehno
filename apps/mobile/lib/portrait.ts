@@ -178,11 +178,14 @@ export function changementDeSignature(portrait: Portrait, voulue: string | null)
   const propre = voulue === null ? null : voulue.trim();
   const cible = propre === "" ? null : propre;
   if (cible === portrait.senderNote) return null;
-  /* CE `PATCH` N'A PAS DE ROUTE EN FACE, et l'interrupteur est donc mort —
-     constaté le 12 septembre en réparant la composition. La spécification §5.4
-     la prévoit pourtant (« approuver, modifier le message ou la note de
-     l'expéditeur »). On laisse la forme juste plutôt que de la tordre : c'est
-     au serveur d'ouvrir `PATCH /me/portraits/{id}`. */
+  /* AVANT LA COMPOSITION SEULEMENT. Après, la note est dans les pixels du
+     fichier : la changer ne changerait plus rien à ce qu'on partage, et le
+     serveur rend 409. L'écran retire donc l'interrupteur au lieu de le griser —
+     un interrupteur gris ne dirait pas pourquoi.
+
+     Ce `PATCH` n'avait pas de route en face jusqu'au 12 septembre : le geste
+     échouait en silence depuis le premier jour. */
+  if (portrait.status !== "generated") return null;
   return { chemin: `${RACINE}/${portrait.id}`, methode: "PATCH", corps: { senderNote: cible } };
 }
 

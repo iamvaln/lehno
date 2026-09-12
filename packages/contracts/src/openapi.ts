@@ -37,6 +37,7 @@ import {
 } from "./me-events.js";
 import {
   startGenerationSchema, generationResultSchema, generationsSchema, depotPhotoSourceSchema,
+  updatePortraitSchema,
   updateMessageSchema, generatedMessageSchema,
   ideaFeedbackSchema, generatedIdeaSchema, portraitSchema,
 } from "./me-generation.js";
@@ -1216,6 +1217,33 @@ const CHEMINS: Chemin[] = [
     ].join("\n"),
     parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
     reponse: portraitSchema,
+  },
+  {
+    chemin: "/me/portraits/{id}",
+    methode: "patch",
+    resume: "Changer la note de l'expéditeur, ou la retirer",
+    authentifie: true,
+    note: [
+      "« Fait avec soin par Valentine » — **proposée puis modifiable** (spec",
+      "§79), et elle se retire : `null` est une **valeur**, pas une absence.",
+      "Omettre le champ voudrait dire « ne touche pas », c'est-à-dire l'inverse",
+      "du geste. Une chaîne vide retire aussi.",
+      "",
+      "### Avant la composition SEULEMENT",
+      "",
+      "Après, la note est dans les **pixels** du fichier : la changer ne",
+      "changerait plus l'image, et l'accepter promettrait un effet qui n'arrive",
+      "pas — exactement le genre de réglage qui ne règle rien. **409** sur un",
+      "portrait déjà composé, et l'écran doit retirer l'interrupteur plutôt que",
+      "de le griser.",
+      "",
+      "Cette route **n'existait pas**, et l'écran l'appelait pourtant depuis le",
+      "premier jour : l'interrupteur de signature échouait en silence.",
+    ].join("\n"),
+    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    corps: updatePortraitSchema,
+    reponse: portraitSchema,
+    statut: 200,
   },
   {
     chemin: "/me/portraits/{id}/compose",

@@ -119,6 +119,24 @@ function lignes(phrase: string, largeurMax: number, taille: number): string[] {
   return sorties.slice(0, 3);
 }
 
+/* UNE SEULE LIGNE, coupée à la mesure. Rendre `null` quand il n'y a rien à
+   poser plutôt qu'une chaîne vide : le gabarit teste alors une absence, pas un
+   contenu vide, et la bande sait se resserrer. */
+function laNote(note: string | null, largeurMax: number, taille: number): string | null {
+  const propre = note?.trim() ?? "";
+  if (propre === "") return null;
+  if (largeur(propre, "texte", taille) <= largeurMax) return propre;
+
+  const ELLIPSE = "…";
+  const place = largeurMax - largeur(ELLIPSE, "texte", taille);
+  let coupe = "";
+  for (const c of propre) {
+    if (largeur(coupe + c, "texte", taille) > place) break;
+    coupe += c;
+  }
+  return `${coupe.trimEnd()}${ELLIPSE}`;
+}
+
 /**
  * Poser l'illustration dans son cadre, avec la phrase et la mention.
  *
@@ -128,7 +146,17 @@ function lignes(phrase: string, largeurMax: number, taille: number): string[] {
 export async function composerLePortrait(
   illustration: Buffer,
   cadre: Cadre,
-  textes: { readonly phrase: string; readonly nom: string },
+  /* `note` — LA NOTE DE L'EXPÉDITEUR, « Fait avec soin par Valentine ».
+   *
+   * Elle manquait, et le fichier partait sans elle : la spécification la range
+   * pourtant dans la bande (« le nom du proche · le message · la note de
+   * l'expéditeur · le pied de marque »), et l'écran la montrait dans son aperçu.
+   * On voyait donc une chose avant de composer et une autre après — le portrait
+   * partagé, le seul qui compte, n'en portait aucune trace.
+   *
+   * Nulle quand l'expéditeur l'a retirée : c'est un état légitime, pas un
+   * oubli. La bande se resserre alors d'autant. */
+  textes: { readonly phrase: string; readonly nom: string; readonly note?: string | null },
 ): Promise<Buffer> {
   const s = await image();
 
@@ -161,9 +189,25 @@ export async function composerLePortrait(
    * amont, et le gabarit borne la phrase à vingt-quatre mots — deux gardes en
    * amont valent mieux qu'un couperet à l'arrivée. */
   const tailleMention = pt(PART.mention);
+
+  /* LA NOTE TIENT SUR UNE LIGNE, et on la coupe en MESURANT plutôt qu'en
+     comptant les caractères — même raison que la phrase : quarante « i » et
+     quarante « m » n'occupent pas la même place. Le contrat la borne déjà à
+     cent vingt caractères ; ceci est la seconde garde, celle qui tient si
+     quelqu'un desserre la première. L'ellipse dit que c'est coupé, au lieu de
+     laisser croire que la note s'arrêtait là. */
+  const note = laNote(textes.note ?? null, COTE - marge * 2, tailleMention);
+
+  /* La bande grandit d'une ligne quand la note est là, et ne bouge pas quand
+     elle a été retirée : une hauteur fixe laisserait un blanc qu'on lirait
+     comme un défaut de composition. */
   const hautBande = Math.max(
     pt(PART.bandeMin),
-    Math.round(lignesDeLaPhrase.length * tailleTexte * 1.4 + tailleMention * 2.2 + marge * 1.6),
+    Math.round(
+      lignesDeLaPhrase.length * tailleTexte * 1.4
+      + (note === null ? 0 : tailleMention * 1.7)
+      + tailleMention * 2.2 + marge * 1.6,
+    ),
   );
   const hautIllustration = COTE - hautBande;
 
@@ -197,6 +241,7 @@ export async function composerLePortrait(
   <rect x="0" y="${hautIllustration}" width="${COTE}" height="${hautBande}" fill="${cadre.bande}"/>
   <rect x="0" y="${hautIllustration}" width="${COTE}" height="${Math.max(1, pt(PART.filet))}" fill="${cadre.mention}" opacity="0.35"/>
   ${lignesDeLaPhrase.map((l, i) => `<path d="${tracer(l, "titre", tailleTexte, marge, departTexte + i * tailleTexte * 1.4)}" fill="${cadre.texte}"/>`).join("\n  ")}
+  ${note === null ? "" : `<path d="${tracer(note, "texte", tailleMention, marge, departTexte + lignesDeLaPhrase.length * tailleTexte * 1.4 + tailleMention * 0.4)}" fill="${cadre.mention}" opacity="0.6"/>`}
   <path d="${tracer(textes.nom, "texte", tailleMention, marge, COTE - marge * 0.9)}" fill="${cadre.mention}" opacity="0.7"/>
   <path d="${tracer(MENTION, "texteMoyen", tailleMention, COTE - marge - largeur(MENTION, "texteMoyen", tailleMention), COTE - marge * 0.9)}" fill="${cadre.mention}" opacity="0.7"/>
 </svg>`;

@@ -173,6 +173,16 @@ describe("juger", () => {
 });
 
 describe("la signature en pied", () => {
+  /* ELLE NE SE CHANGE PLUS UNE FOIS L'IMAGE COMPOSÉE. La note est alors dans les
+     pixels du fichier : la basculer ne changerait plus rien à ce qu'on partage,
+     et le serveur rend 409. L'écran retire donc l'interrupteur au lieu de le
+     griser — un interrupteur gris ne dirait pas pourquoi. */
+  it("ne s'offre plus dès que l'image existe", () => {
+    for (const status of ["composed", "approved", "rejected"] as const) {
+      expect(changementDeSignature(portrait({ status, imageUrl: IMAGE }), null)).toBeNull();
+    }
+  });
+
   it("se retire par null, jamais par une chaîne vide", () => {
     expect(changementDeSignature(portrait(), null)).toEqual({
       chemin: `/me/portraits/${PORTRAIT}`,

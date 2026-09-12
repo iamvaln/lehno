@@ -557,18 +557,26 @@ export default function PortraitEcran() {
             ) : null}
           </View>
 
-          {/* Pas de mention « sur votre Mur » : le portrait n'y va pas. */}
-          <View style={[styles.pied, { borderTopColor: couleurs.borderHairline }]}>
-            <Bascule
-              premier
-              libelle={t.portraitSignature}
-              actif={avecSignature}
-              onBascule={(v) => void basculeLaSignature(v)}
-            />
-            <Text style={[styles.aide, { color: couleurs.textMention }]}>
-              {t.portraitSignatureAide(signataire ?? t.portraitSignature2)}
-            </Text>
-          </View>
+          {/* Pas de mention « sur votre Mur » : le portrait n'y va pas.
+
+              L'INTERRUPTEUR DISPARAÎT UNE FOIS L'IMAGE COMPOSÉE, il ne se grise
+              pas. La note est alors dans les pixels du fichier : la basculer ne
+              changerait plus rien à ce qu'on partage, et le serveur rend 409. Un
+              interrupteur gris ne dirait pas pourquoi ; un interrupteur absent
+              ne promet rien. */}
+          {etat === "avalider" ? (
+            <View style={[styles.pied, { borderTopColor: couleurs.borderHairline }]}>
+              <Bascule
+                premier
+                libelle={t.portraitSignature}
+                actif={avecSignature}
+                onBascule={(v) => void basculeLaSignature(v)}
+              />
+              <Text style={[styles.aide, { color: couleurs.textMention }]}>
+                {t.portraitSignatureAide(signataire ?? t.portraitSignature2)}
+              </Text>
+            </View>
+          ) : null}
 
           {/* Ce qui a été dépensé, dit après coup. Toujours : il n'y a pas de
               mode gratuit à ménager, le crédit se consomme quoi qu'il arrive. */}

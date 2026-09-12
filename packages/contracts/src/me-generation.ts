@@ -211,6 +211,25 @@ export const portraitSchema = z.object({
 
 export type Portrait = z.infer<typeof portraitSchema>;
 
+/* CHANGER LA NOTE DE L'EXPÉDITEUR — « Fait avec soin par Valentine ».
+ *
+ * Elle est « proposée puis modifiable » (spec §79), et se retire : `null` est
+ * donc une valeur, pas une absence. L'omettre voudrait dire « ne touche pas »,
+ * c'est-à-dire l'inverse du geste.
+ *
+ * AVANT LA COMPOSITION SEULEMENT. Après, elle est dans les pixels du fichier :
+ * la changer ne changerait plus l'image, et l'accepter promettrait un effet qui
+ * n'arrive pas — exactement le genre de réglage qui ne règle rien. La route
+ * rend 409 sur un portrait déjà composé.
+ *
+ * Cette route N'EXISTAIT PAS. L'écran envoyait pourtant ce `PATCH` depuis le
+ * premier jour, et l'interrupteur échouait donc en silence. */
+export const updatePortraitSchema = z.object({
+  senderNote: z.string().trim().max(120).nullable(),
+}).strict();
+
+export type UpdatePortraitInput = z.infer<typeof updatePortraitSchema>;
+
 // ── Le brouillon de message ─────────────────────────────────────────────────
 
 /* `rejected` est DISTINCT d'`edited`, qui dit « je l'ai arrangé » : un message

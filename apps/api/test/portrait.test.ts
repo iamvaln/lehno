@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
+import sharp from "sharp";
 import { reglagesPortraitDeDepart, reglagesBriefPortraitDeDepart } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { GenerationService } from "../src/me/generation.service.js";
@@ -360,6 +361,112 @@ describe("le portrait", () => {
         .rejects.toMatchObject({ code: "not_found" });
     });
   });
+  /* ─── LA NOTE DE L'EXPÉDITEUR ───────────────────────────────────────────────
+   *
+   * « Fait avec soin par Valentine ». La route qui la change N'EXISTAIT PAS —
+   * l'écran envoyait pourtant ce `PATCH` depuis le premier jour, donc
+   * l'interrupteur échouait en silence. Et la note n'entrait pas non plus dans
+   * le fichier composé : on voyait une chose dans l'aperçu et une autre dans ce
+   * qu'on partageait. */
+  describe("la note de l'expéditeur", () => {
+    const unBrief = async () => {
+      await crediter(5);
+      return fini(generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config, {
+        motDeLExpediteur: "Fait avec soin par Awa",
+      }));
+    };
+
+    it("se change avant la composition", async () => {
+      await publier();
+      const p = await unBrief();
+      const service = portraits(repond(PNG_MINUSCULE));
+
+      const change = await service.changerLaNote(awa, p.id, "Avec toute mon affection");
+      expect(change.senderNote).toBe("Avec toute mon affection");
+    });
+
+    /* `null` RETIRE, et la chaîne vide aussi : une note qui existe et ne
+       s'affiche pas garderait sa place dans la bande, qui se calcule sur ce
+       qu'elle porte. */
+    it("se retire par null comme par une chaîne vide", async () => {
+      await publier();
+      const service = portraits(repond(PNG_MINUSCULE));
+
+      for (const vide of [null, "", "   "]) {
+        const p = await unBrief();
+        expect((await service.changerLaNote(awa, p.id, vide)).senderNote).toBeNull();
+      }
+    });
+
+    /* APRÈS LA COMPOSITION, ELLE EST DANS LES PIXELS. L'accepter promettrait un
+       effet qui n'arrive pas — précisément le genre de réglage qui ne règle
+       rien. */
+    it("ne se change plus une fois l'image composée", async () => {
+      await publier();
+      const p = await unBrief();
+      const service = portraits(repond(PNG_MINUSCULE));
+      await service.composer(awa, p.id);
+
+      await expect(service.changerLaNote(awa, p.id, "trop tard"))
+        .rejects.toMatchObject({ code: "conflict" });
+    });
+
+    /* ELLE ENTRE DANS LE FICHIER, et c'est le cas qui compte : elle n'y entrait
+       pas. On ne peut pas lire le texte d'un PNG, mais la bande GRANDIT d'une
+       ligne pour l'accueillir — et rien d'autre dans la composition ne la fait
+       grandir. */
+    it("entre dans l'image composée", async () => {
+      await publier();
+      const service = portraits(repond(PNG_MINUSCULE));
+
+      const avecNote = await unBrief();
+      const compose = await service.composer(awa, avecNote.id);
+      const cleAvec = (await db.prisma.portrait.findUniqueOrThrow({
+        where: { id: compose.id }, select: { imageKey: true },
+      })).imageKey;
+
+      const sansNote = await unBrief();
+      await service.changerLaNote(awa, sansNote.id, null);
+      const nu = await service.composer(awa, sansNote.id);
+      const cleSans = (await db.prisma.portrait.findUniqueOrThrow({
+        where: { id: nu.id }, select: { imageKey: true },
+      })).imageKey;
+
+      const hauteurDeBande = async (cle: string): Promise<number> => {
+        const png = stockage.contenuDe(cle)!;
+        const { data, info } = await sharp(png)
+          .extract({ left: 8, top: 0, width: 1, height: 1080 })
+          .raw().toBuffer({ resolveWithObject: true });
+        // La bande du cadre « papier ». On remonte jusqu'à ce que la couleur change.
+        const bas = [0, 1, 2].map((i) => data[1079 * info.channels + i]!);
+        let haut = 1080;
+        for (let y = 1079; y >= 0; y -= 1) {
+          const proche = bas.every((c, i) => Math.abs(data[y * info.channels + i]! - c) < 8);
+          if (!proche) break;
+          haut = y;
+        }
+        return 1080 - haut;
+      };
+
+      expect(await hauteurDeBande(cleAvec!)).toBeGreaterThan(await hauteurDeBande(cleSans!));
+    });
+
+    it("ne se change pas depuis un autre compte", async () => {
+      await publier();
+      const p = await unBrief();
+      const bila = await db.prisma.user.create({
+        data: {
+          email: `${randomBytes(6).toString("hex")}@example.com`,
+          username: `u${randomBytes(4).toString("hex")}`,
+          referralCode: randomBytes(4).toString("hex").toUpperCase(),
+        },
+        select: { id: true },
+      });
+      await expect(portraits(repond(PNG_MINUSCULE)).changerLaNote(bila.id, p.id, "volé"))
+        .rejects.toMatchObject({ code: "not_found" });
+    });
+  });
+
   /* ─── LES DEUX VERDICTS ─────────────────────────────────────────────────────
    *
    * §6 du brief du panneau, révisé le 12 septembre. On pouvait approuver, jamais
