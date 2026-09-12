@@ -166,11 +166,20 @@ export const fr = {
   studioProfils: {
     titre: "Profils de simulation",
     sous: "Les éprouvettes du studio : des fiches fictives sur lesquelles on essaie une configuration avant de la mettre en service.",
+    /* LA PHOTO D'EXEMPLE. Sans elle, la voie photo ne s'éprouve pas — et
+       `photo.consigne` étant dans l'empreinte, la changer exige un essai que
+       seule cette photo rend possible. */
+    photo: {
+      poser: "Poser une photo d'exemple",
+      aucune: "Aucune",
+      alt: "Photo d'exemple de l'éprouvette",
+      enCours: "Envoi de la photo…",
+    },
     renommer: "Renommer",
     supprimer: "Supprimer",
     sensible: "Cas sensible",
     ordinaire: "Ordinaire",
-    col: { libelle: "Profil", nature: "Nature", notes: "Notes", creeLe: "Créé le" },
+    col: { libelle: "Profil", photo: "Photo d'exemple", nature: "Nature", notes: "Notes", creeLe: "Créé le" },
     couverture: {
       complete: "Le jeu couvre tous les axes.",
       manque: "Aucun profil ne couvre :",

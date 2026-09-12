@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "../src/App.js";
 import { magasinLocal } from "../src/api/session.js";
@@ -50,9 +50,16 @@ function serveur(routes: Record<string, (url: string, init?: RequestInit) => Res
   const table: Record<string, (url: string, init?: RequestInit) => Response> = {
     "/admin/portrait-studio/profiles": () => reponse(200, REGISTRE), ...routes,
   };
+  /* LE PLUS LONG CHEMIN GAGNE, et il faut les deux propriétés à la fois :
+     la table compare par `includes`, donc « /profiles » capterait
+     « /profiles/{id}/photo/depot » — une route neuve disparaît derrière son
+     préfixe. Et l'ordre de déclaration ne suffit pas : mettre les surcharges
+     devant ferait écraser celle qui porte la MÊME clé par le défaut qui suit.
+     Le tri règle les deux. */
+  const chemins = Object.keys(table).sort((a, b) => b.length - a.length);
   const appels = vi.fn((url: string, init?: RequestInit) => {
-    for (const [chemin, rendre] of Object.entries(table)) {
-      if (url.includes(chemin)) return Promise.resolve(rendre(url, init));
+    for (const chemin of chemins) {
+      if (url.includes(chemin)) return Promise.resolve(table[chemin]!(url, init));
     }
     return Promise.resolve(reponse(200, { alertes: [], indicateurs: [], aTraiter: [] }));
   });
@@ -171,5 +178,69 @@ describe("les profils de simulation du studio", () => {
     render(<App />);
 
     expect(within(screen.getByRole("navigation")).queryByText(t.sections.studio)).not.toBeInTheDocument();
+  });
+  /* ─── La photo d'exemple ──────────────────────────────────────────────────── */
+
+  /* SANS ELLE, LA VOIE PHOTO NE S'ÉPROUVE PAS — et `photo.consigne` étant dans
+     l'empreinte, la changer exige un essai que seule cette photo rend possible.
+     Les deux routes existaient et aucun écran ne les atteignait. */
+  it("dépose une photo en trois temps, et le fichier ne passe pas par l'API", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur({
+      /* LA CLÉ DOIT ÊTRE PLUS LONGUE QUE LE DÉFAUT : la table compare par
+         `includes` et retient le chemin le plus long. « /photo/depot » seul est
+         plus court que « /admin/portrait-studio/profiles », qui gagnerait — et
+         l'écran recevrait le registre là où il attend une URL signée. */
+      "/admin/portrait-studio/profiles/11111111-1111-4111-8111-111111111111/photo/depot": () => reponse(200, {
+        url: "https://stockage.test/depot-signe", expireDans: 600, typeMime: "image/jpeg",
+      }),
+    });
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText("Sœur, fiche riche")).closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: p.photo.poser }));
+
+    /* LE CHAMP EST CACHÉ — un par rang ferait un tableau illisible —, et
+       `userEvent.upload` refuse d'agir sur un élément invisible. On pose donc
+       le fichier par l'événement de changement, qui est exactement ce que le
+       navigateur émet après le sélecteur. */
+    const champ = document.querySelector("input[type=file]") as HTMLInputElement;
+    fireEvent.change(champ, {
+      target: { files: [new File(["xx"], "elle.jpg", { type: "image/jpeg" })] },
+    });
+
+    await waitFor(() => {
+      const chemins = appels.mock.calls.map(([u]) => String(u));
+      // 1. L'URL signée, 3. la confirmation — toutes deux par notre API.
+      expect(chemins.some((u) => u.includes("/profiles/11111111-1111-4111-8111-111111111111/photo/depot"))).toBe(true);
+      expect(chemins.some((u) => u.endsWith("/profiles/11111111-1111-4111-8111-111111111111/photo"))).toBe(true);
+      /* 2. LE FICHIER VA DIRECTEMENT AU STOCKAGE, et le `PUT` part SANS notre
+         en-tête d'autorisation : l'URL porte déjà sa signature, et y joindre un
+         jeton d'administration l'enverrait à un tiers. */
+      const envoi = appels.mock.calls.find(([u]) => String(u).includes("stockage.test"));
+      expect(envoi).toBeDefined();
+      expect((envoi?.[1] as RequestInit).method).toBe("PUT");
+      expect((envoi?.[1] as RequestInit).headers).not.toHaveProperty("authorization");
+    });
+  });
+
+  /* LA PHOTO SE VOIT, ET SON ABSENCE AUSSI : c'est ce qui dit d'un regard
+     quelles éprouvettes peuvent servir à la voie photo. */
+  it("montre la photo quand il y en a une, et le dit sinon", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({
+      "/admin/portrait-studio/profiles": () => reponse(200, {
+        items: [
+          profil({ photoUrl: "https://stockage.test/une-photo.jpg" }),
+          profil({ id: "22222222-2222-4222-8222-222222222222", libelle: "Collègue" }),
+        ],
+        manquant: [],
+      }),
+    });
+    await ouvrir(utilisateur);
+
+    expect(await screen.findByRole("img", { name: p.photo.alt })).toBeInTheDocument();
+    expect(screen.getByText(p.photo.aucune)).toBeInTheDocument();
   });
 });
