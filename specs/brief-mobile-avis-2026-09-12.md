@@ -199,21 +199,25 @@ serveur lit ceux-là.
 
 ---
 
-## 8. Un défaut du contrat, signalé et pas encore corrigé
+## 8. Un doublon du contrat, corrigé le jour même
 
-`/me/occurrences/{id}/wishes` et `/me/occurrences/{occurrenceId}/wishes` sont
-déclarés **tous les deux**, en `GET` et en `POST`, pour la même route — avec deux
-noms de paramètre différents.
+*Ce paragraphe annonçait d'abord des « opérations concurrentes ». C'était
+exagéré, et la question posée en revue — « en quoi c'est concurrent ? » — a
+obligé à regarder au lieu de défendre. Voici ce qu'il en était.*
 
-Un client engendré depuis `openapi.json` y trouve deux opérations concurrentes, et
-l'une des deux se trompe de nom de paramètre. Ce n'est pas un problème pour un
-client écrit à la main, qui appelle l'URL qu'il veut ; c'en est un pour tout ce
-qui lit le contrat comme une source.
+Le serveur sert **une seule** route de souhaits par occasion,
+`/me/occurrences/{occurrenceId}/wishes` (`wish.controller.ts`). Le contrat la
+déclarait **deux fois** : une fois sous ce nom, une fois sous
+`/me/occurrences/{id}/wishes` — avec un nom de paramètre qu'aucun contrôleur
+n'emploie.
 
-Ça se corrige au contrat, pas au mobile. C'est noté ici pour que quelqu'un le
-prenne.
+**Rien n'était en concurrence et rien ne cassait.** L'URL est la même, et un
+client écrit à la main appelle ce qu'il veut. Le défaut est de documentation : le
+contrat est engendré depuis les schémas Zod et sert de source à qui le lit — il
+est censé dire une chose par route, et il en disait deux.
 
----
+C'est corrigé : la déclaration riche garde son texte et prend le nom de
+paramètre du contrôleur, la maigre disparaît. Rien à faire côté mobile.
 
 ## 9. Par quoi commencer, si l'ordre compte
 
