@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { maintenanceStatusSchema, type MaintenanceStatus } from "@lehno/contracts";
 import { appelPublic, ErreurDApi, surEchec } from "./api.js";
 import { delaiDAttente, estUnArret } from "./arret.js";
+import { leClientEstRefuse } from "./session.js";
 
 /* L'arrêt pour intervention — l'écran qui remplace l'application entière.
  *
@@ -20,6 +21,10 @@ import { delaiDAttente, estUnArret } from "./arret.js";
 
 interface Arret {
   enCours: boolean;
+  /* CE N'EST PAS LE SERVICE QUI S'ARRÊTE, C'EST CE BUILD QUI EST REFUSÉ. Les
+     deux prennent l'écran, et c'est la seule chose qu'ils ont en commun : une
+     maintenance passe et se décompte, un client non reconnu ne passera pas. */
+  refuse: boolean;
   /* Le délai que le serveur annonce, décompté sur place. L'écran l'affiche ;
      il ne l'invente pas, sans quoi deux versions du parc appliqueraient deux
      règles — et mille téléphones reviendraient à la même seconde. */
@@ -38,6 +43,10 @@ export function ArretProvider({ children }: { children: ReactNode }) {
   const [enCours, setEnCours] = useState(false);
   const [secondes, setSecondes] = useState<number | null>(null);
   const [until, setUntil] = useState<string | null>(null);
+  /* Un refus de client ne se lève pas tout seul : il n'est jamais remis à faux.
+     Le seul retour possible passe par une mise à jour ou une reconfiguration du
+     build, donc par un redémarrage. */
+  const [refuse, setRefuse] = useState(false);
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const interroge = useCallback(async () => {
@@ -65,6 +74,16 @@ export function ArretProvider({ children }: { children: ReactNode }) {
      milieu d'une séance se découvre : il n'attend pas un redémarrage. */
   const signale = useCallback((erreur: unknown) => {
     if (!(erreur instanceof ErreurDApi)) return;
+    /* LE CLIENT REFUSÉ S'ARRÊTE AUSSI, MAIS PAS DE LA MÊME FAÇON. Une
+       maintenance passe : elle porte un délai, on décompte, on réinterroge. Un
+       build non reconnu ne passera pas — ni reconnexion, ni réessai, ni attente
+       n'y changeront quoi que ce soit. On pose donc l'arrêt SANS décompte, et
+       l'écran n'offre pas de « Réessayer » qui tournerait à vide. */
+    if (leClientEstRefuse(erreur.statut, erreur.code)) {
+      setRefuse(true);
+      setEnCours(true);
+      return;
+    }
     if (!estUnArret(erreur.statut, erreur.code)) return;
     /* Les deux voyagent AVEC le refus : sans elles, il faudrait un second
        appel juste pour savoir quoi afficher, au moment précis où l'on cherche
@@ -83,14 +102,14 @@ export function ArretProvider({ children }: { children: ReactNode }) {
   // Le décompte, puis une interrogation quand il tombe à zéro. Pas de rappel
   // avant : le serveur a dit combien attendre, on attend.
   useEffect(() => {
-    if (!enCours || secondes === null) return;
+    if (refuse || !enCours || secondes === null) return;
     if (secondes <= 0) { void interroge(); return; }
     minuteur.current = setTimeout(() => setSecondes((s) => (s === null ? null : s - 1)), 1000);
     return () => { if (minuteur.current) clearTimeout(minuteur.current); };
-  }, [enCours, secondes, interroge]);
+  }, [refuse, enCours, secondes, interroge]);
 
   return (
-    <Contexte.Provider value={{ enCours, secondes, until, signale, reessaie: () => void interroge() }}>
+    <Contexte.Provider value={{ enCours, refuse, secondes, until, signale, reessaie: () => void interroge() }}>
       {children}
     </Contexte.Provider>
   );

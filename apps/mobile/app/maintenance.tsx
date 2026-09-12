@@ -37,7 +37,7 @@ export default function Maintenance() {
   const { t, langue } = useLangue();
   const { theme, couleurs } = useTheme();
   const insets = useSafeAreaInsets();
-  const { until, reessaie } = useArret();
+  const { refuse, until, reessaie } = useArret();
   /* L'heure que le SERVEUR annonce, mise à l'heure du téléphone. Je la
      calculais depuis le rythme de réessai — deux choses distinctes, et les
      confondre annonçait un retour que personne n'avait promis. */
@@ -126,20 +126,34 @@ export default function Maintenance() {
         })}
       </View>
 
-      <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.maintTitre}</Text>
+      {/* DEUX ARRÊTS, UN SEUL ÉCRAN, et ce n'est pas une économie : les deux
+          disent la même chose — il n'y a rien à faire d'ici — et n'en diffèrent
+          que par ce qu'on attend. Un second écran aurait dupliqué la vague, la
+          mise en page et le respect du mouvement réduit pour changer deux
+          phrases. */}
+      <Text style={[styles.titre, { color: couleurs.textBody }]}>
+        {refuse ? t.refusTitre : t.maintTitre}
+      </Text>
       <Text style={[styles.texte, { color: couleurs.textSecondary }]}>
         {/* L'heure se CALCULE depuis le délai du serveur, et ne paraît qu'au-delà
             d'un quart d'heure. Sans elle, on dit seulement qu'une mise à jour est
             en cours : pas de « bientôt », pas d'estimation inventée. */}
-        {heure ? t.maintHeure(heure) : t.maintTexte}
+        {refuse ? t.refusTexte : heure ? t.maintHeure(heure) : t.maintTexte}
       </Text>
 
-      <View style={styles.sorties}>
-        <Button variant="outline" full icon="refresh-cw" onPress={reessaie}>
-          {t.maintReessayer}
-        </Button>
-        <Text style={[styles.lien, { color: couleurs.textMention }]}>{t.maintEtat}</Text>
-      </View>
+      {/* PAS DE « RÉESSAYER » SUR UN REFUS DE CLIENT. Une maintenance passe, et
+          le bouton sert ; un build non reconnu ne passera pas — le geste
+          tournerait à vide et laisserait croire qu'insister peut marcher. Ni
+          lien vers l'état du service : ce n'est pas le service qui est en
+          cause. */}
+      {refuse ? null : (
+        <View style={styles.sorties}>
+          <Button variant="outline" full icon="refresh-cw" onPress={reessaie}>
+            {t.maintReessayer}
+          </Button>
+          <Text style={[styles.lien, { color: couleurs.textMention }]}>{t.maintEtat}</Text>
+        </View>
+      )}
     </View>
   );
 }

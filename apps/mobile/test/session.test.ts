@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { doitRenouveler, sortDeLaSession, leClientEstRefuse, messageDErreur } from "../lib/session.js";
 
@@ -79,5 +80,31 @@ describe("le client refusé n'est pas le compte refusé", () => {
   it("ne renouvelle pas, et ne sort pas de la session", () => {
     expect(doitRenouveler(403, "client_unknown")).toBe(false);
     expect(sortDeLaSession("client_unknown")).toBe(false);
+  });
+});
+
+/* L'ÉCRAN DE REFUS N'OFFRE PAS DE RÉESSAYER, et cette garde lit la source parce
+ * qu'aucun test d'unité ne verrait le bouton revenir.
+ *
+ * La spec le dit deux fois — « ne jamais retenter », « ni reconnexion, ni
+ * réessai » — et le piège est qu'il n'y a qu'UN écran pour deux arrêts : le
+ * bouton appartient à la maintenance, où il sert. Quelqu'un qui sortirait le
+ * bloc de sa condition le rendrait à un refus de client, où il tourne à vide
+ * et laisse croire qu'insister peut marcher.
+ */
+describe("l'écran d'arrêt ne propose rien à qui est refusé", () => {
+  const ecran = readFileSync(
+    new URL("../app/maintenance.tsx", import.meta.url),
+    "utf8",
+  );
+
+  it("garde le bouton de réessai sous la condition du refus", () => {
+    const bloc = ecran.slice(ecran.indexOf("{refuse ? null : ("));
+    expect(bloc).toContain("maintReessayer");
+  });
+
+  it("dit un autre titre et un autre texte quand le client est refusé", () => {
+    expect(ecran).toContain("refuse ? t.refusTitre : t.maintTitre");
+    expect(ecran).toContain("refuse ? t.refusTexte :");
   });
 });
