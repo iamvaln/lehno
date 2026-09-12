@@ -301,6 +301,12 @@ export const profilStudioSchema = z.object({
   libelle: z.string(),
   sensible: z.boolean(),
   contenu: profilContenuSchema,
+  /* LA PHOTO D'EXEMPLE — une URL signée, valable quelques minutes, ou nul.
+     Sur le PROFIL et non sur l'essai : pour comparer deux versions il faut
+     tenir la photo constante. Fournie à chaque essai, elle varierait, et l'on
+     comparerait deux réglages sur deux images — c'est-à-dire rien.
+     Nulle pour la plupart : seule la voie photo en a besoin. */
+  photoUrl: z.string().nullable(),
   creeLe: z.string(),
 }).strict();
 
@@ -463,6 +469,12 @@ export const essaisStudioSchema = z.object({
 export const lancementEssaiPortraitSchema = z.object({
   reglages: reglagesPortraitSchema,
   profileId: z.string().uuid(),
+  /* LA VOIE ÉPROUVÉE. Absente, c'est l'illustration — le comportement d'avant,
+     et le seul possible jusqu'ici.
+     « photo » exige que l'éprouvette porte une photo d'exemple : sans elle, on
+     appellerait le modèle de photo sans image, et le rendu ne serait celui
+     d'aucune des deux voies. Le refus est NOMMÉ plutôt que silencieux. */
+  voie: z.enum(["illustration", "photo"]).optional(),
   /* L'AMBIANCE ÉPROUVÉE, et il en faut une.
    *
    * C'est elle qui décide du modèle appelé : une famille d'illustration et un
