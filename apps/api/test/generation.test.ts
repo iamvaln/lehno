@@ -303,9 +303,25 @@ describe("la génération d'un message", () => {
     it("rattrape une exécution restée en route, et rend le crédit", async () => {
       await crediter(5);
 
-      const { execution } = await fabrique({ anthropic: repond() }).lancerMessage(
+      const { execution, fini } = await fabrique({ anthropic: repond() }).lancerMessage(
         awa, occurrence, "ma_fierte" as never, {},
       );
+
+      /* ON ATTEND LA PRODUCTION AVANT DE SIMULER LA PANNE, et c'est ce qui rend
+         ce cas déterministe.
+         
+         Il forçait `pending` pendant que la tâche de fond écrivait la même
+         ligne : deux écrivains sans coordination, donc un résultat qui dépend de
+         l'entrelacement. Vert seul, rouge dans la suite entière — la pire forme
+         d'échec, celle qu'on met sur le compte de la machine. Vu deux fois dans
+         la même journée, sur deux cas de ce bloc.
+         
+         Attendre d'abord ne retire rien à ce qu'on éprouve : l'état qu'on
+         fabrique ensuite — `pending` avec une date vieille de deux heures — est
+         exactement celui qu'un arrêt du serveur entre le débit et la fin
+         laisserait derrière lui. */
+      await fini;
+
       /* On la VIEILLIT au-delà du seuil plutôt que d'attendre une heure. C'est
          la date de création que le balayeur regarde. */
       await db.prisma.actionRun.update({
