@@ -525,6 +525,21 @@ export function partieLueParLeModelePortrait(r: ReglagesPortrait): unknown {
     ambiances: [...r.ambiances]
       .sort((a, b) => a.id.localeCompare(b.id))
       .map((a) => ({ id: a.id, groupe: a.groupe, consigne: a.consigne })),
+    /* LA CONSIGNE DE LA PHOTO Y ENTRE, ET SES SEUILS N'Y ENTRENT PAS.
+     *
+     * Elle est littéralement dans l'invite : `portrait.service` la passe à
+     * `inviteImagePortrait` dès que la voie est la photo. Hors de l'empreinte,
+     * on la reformulait, l'empreinte ne bougeait pas, la couverture d'essai de
+     * l'ancienne restait valable — et l'on publiait une consigne que personne
+     * n'avait vue. C'est exactement la faute que « rien ne se publie sans
+     * essai » existe pour empêcher, et elle passait par le trou.
+     *
+     * Les trois SEUILS restent dehors, et c'est le pendant du même
+     * raisonnement : ils décident qu'une photo est refusée AVANT tout appel, le
+     * modèle ne les voit jamais, et les y mettre ferait retomber toute la
+     * couverture pour vingt pixels de plus — alors qu'on les règle précisément
+     * au vu de ce qui arrive. */
+    photo: r.photo === undefined ? null : { consigne: r.photo.consigne },
   };
 }
 
