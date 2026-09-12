@@ -182,6 +182,7 @@ export default function Rappels() {
     ma_date: t.reglagesMaDate,
     recap: t.reglagesRecap,
     valider: t.reglagesValider,
+    ma_liste: t.reglagesMaListe,
     relances: t.reglagesRelances,
     vie: t.reglagesVieCompte,
   };

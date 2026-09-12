@@ -298,6 +298,7 @@ export const fr = {
   reglagesRecap: "Le récapitulatif",
   reglagesRecapFreq: ["Chaque lundi", "Le 1er du mois"],
   reglagesValider: "Les contributions à valider",
+  reglagesMaListe: "Ce que devient ma liste partagée",
   reglagesRelances: "Une date approche et rien n'est prêt",
   reglagesVieCompte: "Un mouvement sur vos crédits",
   reglagesSecuriteToujours: "Les alertes de sécurité vous parviennent quoi qu'il arrive.",

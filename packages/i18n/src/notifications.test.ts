@@ -15,6 +15,7 @@ describe("les phrases de notification", () => {
       "notification.activation_first_note": { envoi: 1 },
       "notification.activation_unused_credits": { envoi: 1 },
       "notification.wish_reserved": { wishLabel: "Un carnet" },
+      "notification.wish_reservation_cancelled": { wishLabel: "Un carnet" },
       "notification.own_date_reminder": { days: 7, date: "2026-03-14", nature: "happy" },
       "notification.own_date_day_of": { date: "2026-03-14", nature: "happy" },
     };
@@ -196,6 +197,38 @@ describe("les phrases de notification", () => {
       );
       expect(sans?.corps).not.toContain("liste");
       expect(sans?.titre).toBe("C'est aujourd'hui");
+    });
+  });
+  /* L'ANNULATION D'UNE RÉSERVATION — trois défauts d'un coup, 12 septembre.
+   *
+   * Elle n'était NULLE PART : absente de `NOTIFICATION_TYPES`, donc refusée à
+   * la lecture par le centre ; écrite avec une clé sans son préfixe
+   * `notification.`, donc reconnue par aucun composeur ; et sans texte dans
+   * aucune des deux langues. Elle partait, arrivait, et ne s'affichait jamais.
+   *
+   * Le cas « chaque clé se rend » ci-dessus la couvre désormais. Ceux-ci
+   * gardent ce qu'elle DIT. */
+  describe("une réservation annulée", () => {
+    const phrase = (params: Record<string, unknown>) =>
+      phraseDeNotification("notification.wish_reservation_cancelled", params, "fr");
+
+    /* ELLE NE REPROCHE RIEN. Ce n'est pas un désistement, c'est une place qui
+       se rouvre — et celui qui la lit n'y est pour rien. */
+    it("annonce une place qui se rouvre, pas un désistement", () => {
+      const p = phrase({ wishLabel: "Un carnet" });
+      expect(p?.titre).toBe("Un souhait est de nouveau libre");
+      expect(p?.corps).toBe("Un carnet.");
+    });
+
+    /* LE NOM SEULEMENT S'IL AVAIT ÉTÉ AUTORISÉ : une annulation ne défait pas
+       l'anonymat consenti à la réservation. */
+    it("ne nomme le réservant que s'il l'avait autorisé", () => {
+      expect(phrase({ wishLabel: "Un carnet" })?.corps).not.toContain("Karim");
+      expect(phrase({ wishLabel: "Un carnet", by: "Karim" })?.corps).toContain("Karim");
+    });
+
+    it("se tait plutôt que d'écrire un souhait sans nom", () => {
+      expect(phrase({ by: "Karim" })).toBeNull();
     });
   });
 });

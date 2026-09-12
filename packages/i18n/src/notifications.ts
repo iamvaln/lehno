@@ -238,6 +238,25 @@ const FR: Record<string, Composeur> = {
       corps: par === null ? `${souhait}.` : `${souhait}, par ${par}.`,
     };
   },
+
+  /* SA JUMELLE, ET ELLE N'AVAIT AUCUN TEXTE. Elle existe parce que
+     `wish_reserved` existe : quelqu'un a été prévenu qu'un cadeau était
+     couvert, et il a planifié autour. Ne rien dire quand il se libère
+     laisserait attendre un cadeau que personne n'apporte.
+
+     LE TON NE REPROCHE RIEN. Ce n'est pas un désistement, c'est une place qui
+     se rouvre — et celui qui la lit n'y est pour rien. Comme sa jumelle, elle
+     ne nomme le réservant que s'il l'avait autorisé : une annulation ne défait
+     pas l'anonymat consenti. */
+  "notification.wish_reservation_cancelled": (p) => {
+    const souhait = texte(p, "wishLabel");
+    if (souhait === null) return null;
+    const par = texte(p, "by");
+    return {
+      titre: "Un souhait est de nouveau libre",
+      corps: par === null ? `${souhait}.` : `${souhait}, réservé par ${par}.`,
+    };
+  },
 };
 
 // ─── Anglais ─────────────────────────────────────────────────────────────────
@@ -341,6 +360,16 @@ const EN: Record<string, Composeur> = {
     return {
       titre: "A wish has just been reserved",
       corps: par === null ? `${souhait}.` : `${souhait}, by ${par}.`,
+    };
+  },
+
+  "notification.wish_reservation_cancelled": (p) => {
+    const souhait = texte(p, "wishLabel");
+    if (souhait === null) return null;
+    const par = texte(p, "by");
+    return {
+      titre: "A wish is available again",
+      corps: par === null ? `${souhait}.` : `${souhait}, reserved by ${par}.`,
     };
   },
 };

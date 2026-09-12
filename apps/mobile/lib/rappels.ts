@@ -15,7 +15,7 @@ import {
  */
 
 export type CleDeGroupe =
-  | "avant" | "jour" | "ma_date" | "recap" | "valider" | "relances" | "vie";
+  | "avant" | "jour" | "ma_date" | "recap" | "valider" | "ma_liste" | "relances" | "vie";
 
 export interface Groupe {
   cle: CleDeGroupe;
@@ -56,6 +56,15 @@ const GROUPES: readonly Groupe[] = [
   { cle: "ma_date", types: ["own_date_reminder", "own_date_day_of"], drapeau: null },
   { cle: "recap", types: ["digest"], drapeau: null },
   { cle: "valider", types: ["contribution_received", "wish_received"], drapeau: "collect" },
+  /* CE QUE DEVIENT MA LISTE PARTAGÉE — une réservation, et son annulation.
+     Les deux vont ensemble et ne se règlent pas séparément : être prévenu
+     qu'un cadeau est couvert sans l'être quand il se libère laisserait attendre
+     un cadeau que personne n'apporte.
+
+     Le drapeau est `wishlist.own`, qui gouverne « mes propres listes, leur
+     partage et leur réservation » : sans liste partagée, il n'y a rien à
+     réserver, et l'interrupteur serait sans effet. */
+  { cle: "ma_liste", types: ["wish_reserved", "wish_reservation_cancelled"], drapeau: "wishlist.own" },
   {
     cle: "relances",
     types: ["enrichment_nudge_global", "enrichment_nudge_person"],

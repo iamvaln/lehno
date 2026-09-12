@@ -279,6 +279,7 @@ export const en = {
   reglagesRecap: "The recap",
   reglagesRecapFreq: ["Every Monday", "The 1st of the month"],
   reglagesValider: "Contributions waiting for you",
+  reglagesMaListe: "What becomes of my shared list",
   reglagesRelances: "A date is coming and nothing is ready",
   reglagesVieCompte: "A movement on your credits",
   reglagesSecuriteToujours: "Security alerts reach you whatever happens.",

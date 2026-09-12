@@ -458,7 +458,11 @@ export class SharedWishlistService {
             ? {}
             : { eventOccurrenceId: souhait.wishlist.eventOccurrenceId }),
           channel: "in_app",
-          titleKey: "wish_reservation_cancelled",
+          /* AVEC SON PRÉFIXE, comme sa jumelle deux cents lignes plus bas et
+             comme tout ce que le module i18n sait composer. Sans lui, aucun
+             composeur ne reconnaissait la clé : la notification partait,
+             arrivait, et ne se rendait dans aucune langue. */
+          titleKey: "notification.wish_reservation_cancelled",
           // Le nom SEULEMENT s'il avait été autorisé — même arbitrage qu'à la
           // réservation. Une annulation ne défait pas l'anonymat consenti.
           bodyParams: reservation?.showIdentity && reservation.displayName
