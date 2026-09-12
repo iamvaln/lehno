@@ -17,6 +17,26 @@ n'en sont plus.
 
 **C'est réparé.** L'atelier des textes a maintenant ses deux gestes manquants :
 
+> *Branchés le 12 : l'atelier porte le journal de sa nature, avec les deux
+> verdicts. Il ne double pas la galerie — celle-ci garde les cent derniers
+> essais de toutes les natures, et l'on vient ici comparer deux versions d'une
+> seule.*
+>
+> **Une précision sur le reproche de ce paragraphe.** Ajouter `nature` au
+> contrat de l'essai (#186) n'a pas créé de colonne : elle vient d'une
+> **jointure** sur `studio_config`, et le commentaire du service le dit. Il n'y
+> a donc pas de seconde vérité — la configuration reste seule à dire la nature,
+> et l'essai la rapporte sans pouvoir la contredire. Les deux approches se
+> complètent : la route bornée sert l'atelier d'une nature, le champ sert la
+> galerie qui les mêle toutes.
+>
+> **Deux défauts trouvés en branchant.** L'atelier ne montrait pas le texte
+> produit — il annonçait l'état et le coût de l'essai, et rien de plus. Et le
+> dernier essai n'était jamais retenu : `api.appeler` ne lit le corps que si
+> l'appelant passe un schéma, ce que l'écran ne faisait pas. L'épreuve censée
+> le couvrir passait au vert sur « Aucun essai réussi ne porte ces réglages »,
+> la phrase qui dit le contraire.
+
 | Route | Ce qu'elle fait |
 |---|---|
 | `GET admin/text-studio/:nature/trials` | les essais de cette nature. `?configId=` les borne à une version |
