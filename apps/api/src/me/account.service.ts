@@ -8,6 +8,7 @@ import { PrismaService } from "../prisma/prisma.service.js";
 import { OtpService } from "../auth/otp.service.js";
 import { TokenService } from "../auth/token.service.js";
 import { AppError } from "../common/errors.js";
+import { origine } from "../clients/origine.js";
 import {
   DELAI_METHODE_DEFAUT_JOURS, creditsRemboursables, methodeEligibleAuRemboursement,
   montantDuRemboursement, soldeTotal,
@@ -315,6 +316,7 @@ export class AccountService {
 
     await tx.payment.create({
       data: {
+        ...origine(),
         userId,
         paymentMethodId: methode.id,
         direction: "refund",

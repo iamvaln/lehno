@@ -8,6 +8,7 @@ import { AppError } from "../common/errors.js";
 import { fraisDe, type Bareme } from "./frais.js";
 import { remiseDe } from "./remise.js";
 import { prixUnitaireDuJour } from "./prix-unitaire.js";
+import { origine } from "../clients/origine.js";
 
 /* La recharge par palier, voie semi-manuelle.
  *
@@ -156,6 +157,7 @@ export class RechargeService {
     try {
       ligne = await this.prisma.payment.create({
       data: {
+        ...origine(),
         userId,
         mode: "semi_manual",
         // Tout vient de la base, rien du corps de la requête.

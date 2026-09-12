@@ -14,6 +14,7 @@ import { SignupService } from "../onboarding/signup.service.js";
 import type { MailPort } from "../mail/mail.port.js";
 import type { VerifyOutcome, RegisterInput, Registered, RequestOtpResult } from "@lehno/contracts";
 import { otpEmail } from "../mail/templates.js";
+import { origine } from "../clients/origine.js";
 
 type VerifyInput = {
   email: string; code: string; deviceId?: string;
@@ -175,6 +176,7 @@ export class AuthService {
     if (creation.plafondAtteint) {
       await this.prisma.loginActivity.create({
         data: {
+          ...origine(),
           userId: null, attemptedEmail: email, result: "failure",
           method: "otp", ip: input.ip ?? null,
           userAgent: input.userAgent ?? null,
@@ -185,6 +187,7 @@ export class AuthService {
 
     await this.prisma.loginActivity.create({
       data: {
+        ...origine(),
         userId: creation.user.id, attemptedEmail: email, result: "success",
         method: "otp", ip: input.ip ?? null,
         userAgent: input.userAgent ?? null,
@@ -232,6 +235,7 @@ export class AuthService {
   ): Promise<void> {
     await this.prisma.loginActivity.create({
       data: {
+        ...origine(),
         userId, attemptedEmail: input.email, result,
         method: "otp", ip: input.ip ?? null,
         userAgent: input.userAgent ?? null,

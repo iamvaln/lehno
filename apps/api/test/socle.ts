@@ -38,7 +38,22 @@ export function urlDe(uri: string, base: string): string {
 let conteneur: StartedPostgreSqlContainer | null = null;
 
 export async function setup(): Promise<void> {
-  conteneur = await new PostgreSqlContainer("postgres:16-alpine").start();
+  /* UN SOCLE QUI NE PEUT PAS SE LEVER NE FAIT PAS ÉCHOUER LA COURSE.
+   *
+   * Ce montage tourne à CHAQUE course, y compris quand aucun des fichiers
+   * demandés ne touche à la base. Lever ici privait donc de Docker des épreuves
+   * purement unitaires qui n'en ont jamais eu besoin — une régression que le
+   * passage au conteneur unique a introduite, et qu'on ne voit que le jour où
+   * le démon est arrêté.
+   *
+   * On se tait, et c'est `withDatabase()` qui nomme ce qui manque, au moment où
+   * quelqu'un le demande vraiment. */
+  try {
+    conteneur = await new PostgreSqlContainer("postgres:16-alpine").start();
+  } catch {
+    conteneur = null;
+    return;
+  }
   const uri = conteneur.getConnectionUri();
   try {
     /* Le modèle a SA base à lui, et ce n'est pas cosmétique : une base qui sert
