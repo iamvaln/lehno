@@ -79,48 +79,20 @@ export class PortraitService {
    * IDEMPOTENT, comme l'approbation, et pour la même raison : deux frappes sur
    * le même bouton sont la chose la plus banale du monde sur un téléphone.
    *
-   * ET IL EFFACE L'IMAGE QUAND IL Y EN A UNE — révisé le 12 septembre.
-   *
-   * Une première version refusait de rejeter un portrait approuvé. C'était
-   * cohérent en soi, et ça rendait le §7 INAPPLICABLE : un portrait rejeté n'a
-   * jamais eu d'image — elle ne se fabrique qu'à l'approbation —, donc le rejet
-   * ne libérait jamais rien. Or ce qui s'accumule dans le stockage, ce sont
-   * précisément les portraits APPROUVÉS qu'on refait : « refaire » est une
-   * génération complète, chaque approbation range une image, et rien ne dit
-   * laquelle on voulait.
-   *
-   * La contrainte en base dit déjà « rejeté ⇒ pas d'image ». La transition DOIT
-   * donc libérer le fichier, et c'est ce qui fait du ménage un effet du geste de
-   * l'utilisateur plutôt qu'une devinette côté serveur : lui seul sait laquelle
-   * des trois il voulait.
-   *
-   * C'EST IRRÉVERSIBLE, et l'écran doit le dire. On n'efface rien d'autre : le
-   * texte reste, la ligne reste, l'avis reste — c'est lui qu'on vient chercher.
+   * Un portrait APPROUVÉ ne se rejette plus : l'image est fabriquée et payée en
+   * appel de modèle. Le rejet aurait dû venir avant, et l'accepter après
+   * laisserait croire qu'il défait quelque chose.
    */
   async rejeter(userId: string, id: string): Promise<PortraitRendu> {
     const ligne = await this.sien(userId, id);
     if (ligne.status === "rejected") return this.rendre(ligne);
+    if (ligne.status === "approved")
+      throw new AppError("conflict", "an approved portrait cannot be rejected");
 
-    const cle = ligne.imageKey;
-
-    /* LA BASE D'ABORD, LE FICHIER ENSUITE. L'inverse laisserait, si l'écriture
-       échoue, un portrait qui se dit approuvé et dont l'image n'existe plus —
-       un écran qui promet une image qui ne viendra jamais. Dans cet ordre, le
-       pire cas est un fichier orphelin que plus rien ne désigne, et celui-là se
-       ramasse. */
-    const rejete = await this.prisma.portrait.update({
+    return this.rendre(await this.prisma.portrait.update({
       where: { id: ligne.id },
-      data: { status: "rejected", imageKey: null },
-    });
-
-    if (cle !== null) {
-      /* L'effacement ne fait pas échouer le rejet. Le geste de l'utilisateur est
-         enregistré ; un stockage momentanément indisponible ne doit pas le lui
-         redemander, et l'objet ne désigne plus rien. */
-      await this.stockage.effacer(cle).catch(() => undefined);
-    }
-
-    return this.rendre(rejete);
+      data: { status: "rejected" },
+    }));
   }
 
   /**
