@@ -84,10 +84,12 @@ type Orientation = {
   id: string; actif: boolean;
   libelle: Bilingue;
   consigne: Bilingue;
-  /* NULLABLES, ET NON PARTIELS : `bilingueFacultatifSchema` est un bilingue
-     entier ou un nul. Une description avec le français rempli et l'anglais
-     vide n'existe pas — le contrat la refuse, et l'écran doit le dire AVANT
-     d'envoyer plutôt qu'après l'aller-retour. */
+  /* NULLABLES, ET NON PARTIELS : `bilingueOuNulSchema` est un bilingue entier
+     ou un nul. Une description avec le français rempli et l'anglais vide
+     n'existe pas — le contrat la refuse, et l'écran doit le dire AVANT
+     d'envoyer plutôt qu'après l'aller-retour.
+     La clé, elle, reste OBLIGATOIRE : c'est `.nullable()`, pas `.optional()`.
+     D'où la remise à `null` plutôt que le retrait de la propriété. */
   description: Bilingue | null;
   avertissement: Bilingue | null;
 };
