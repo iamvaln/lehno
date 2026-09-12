@@ -41,6 +41,7 @@ X-Client-Id      constante du build
 X-Client-Key     constante du build
 X-Client-Type    WEB
 X-App-Version    la version du paquet — 0.3.1
+X-App-Build      un entier monotone posé par la CI (§7.4)
 X-App-OS         web:<navigateur>   ← voir §4
 X-App-Env        prod | staging | dev
 ```
@@ -131,7 +132,18 @@ en silence, ou de l'omettre parce qu'il n'y était pas.
 1. **Deux paires web, ou une ?** (§1) J'incline nettement vers deux.
 2. **L'admin en fait-il partie ?** (§5)
 3. **`web:<navigateur>` sans version** (§4) — ou faut-il la version ?
-4. **La version du paquet web** : `package.json` porte `0.1.0` comme le mobile.
-   Est-ce qu'on la fait vivre, ou est-ce qu'on envoie plutôt le SHA du commit
-   déployé ? Pour un site qui se déploie en continu, **le SHA dit plus** — il n'y
-   a pas de « version » que quelqu'un installerait.
+4. **La version du paquet web, et son build.** `package.json` porte `0.1.0`
+   comme le mobile. Pour un site qui se déploie en continu, **le SHA du commit
+   dit plus** qu'un numéro que personne n'installe — mais un SHA **ne se compare
+   pas**, et le registre des versions décide de « plus ancien que » sur un entier
+   monotone.
+
+   **Proposé** : `x-app-version` porte le SHA court, qu'un humain relie à un
+   déploiement ; `x-app-build` porte **le nombre de commits sur `main`**
+   (`git rev-list --count HEAD`), qui est monotone et ne demande de compteur à
+   personne. Les deux sortent de la même commande au moment de la compilation.
+
+5. **Le 426 sur le web a-t-il un sens ?** Un site se recharge tout seul : il n'y
+   a pas de magasin à ouvrir. **Proposé** (voir `spec-registre-des-versions.md`
+   §8.2) : le registre couvre le web pour la traçabilité, et un `forcesUpdate`
+   n'y déclenche qu'un **rechargement forcé** — pas un écran de magasin.

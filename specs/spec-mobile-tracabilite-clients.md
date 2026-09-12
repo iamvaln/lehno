@@ -21,6 +21,7 @@ X-Client-Id      la constante du build
 X-Client-Key     la constante du build
 X-Client-Type    MOBILE_IOS | MOBILE_ANDROID
 X-App-Version    1.4.2          ← app.json, `expo.version`
+X-App-Build      412            ← le BUILD, entier monotone (§3 bis)
 X-App-OS         ios:17.4       ← Platform.OS + Platform.Version
 X-App-Env        prod | staging | dev
 ```
@@ -66,6 +67,29 @@ Si les OTA sont employées, `X-App-Version` devrait porter aussi
 s'arrête au numéro du magasin, et c'est précisément le cas où l'on cherche.
 **À trancher avec le backend**, parce que ça change le format de l'en-tête.
 
+### Le build, et pourquoi il compte plus que la version
+
+*Ajouté le 12 septembre avec `spec-registre-des-versions.md`.*
+
+**La version est ce qu'un humain lit ; le build est ce qui compare.** Comparer
+des `semver` en chaînes rendrait « 1.10.0 » plus ancien que « 1.9.0 », et ce
+défaut ne se voit qu'au dixième correctif mineur — au moment où l'on en a le plus
+besoin.
+
+| | où le prendre |
+| --- | --- |
+| iOS | `CFBundleVersion` — l'entier que le magasin exige croissant |
+| Android | `versionCode` — idem, exigé par Play |
+
+Sous Expo, les deux se déclarent dans `app.config.ts` (`ios.buildNumber`,
+`android.versionCode`) et se relisent par `Constants.expoConfig`. **Ils doivent
+être posés par la chaîne de publication**, pas à la main : un build qui repart
+avec le même entier que le précédent rendrait deux releases indiscernables.
+
+**Un appel sans `x-app-build` ne peut pas être comparé** : il est traité comme
+inconnu, donc invité à se mettre à jour. Ce n'est pas une punition, c'est la seule
+réponse sensée.
+
 ### Le système
 
 `Platform.OS` donne `ios` ou `android` ; `Platform.Version` donne `17.4` ou le
@@ -100,10 +124,20 @@ le jeton sur un 401 ; un 403 de client doit s'en distinguer par son code
 d'enveloppe, sinon l'application tournerait en boucle à renouveler un jeton qui
 n'est pas le problème.
 
-### 426 — version trop ancienne (phase 3)
+### 426 — mettez à jour (phase 3)
 
-Le corps porte l'URL du magasin. Écran bloquant, un seul bouton : ouvrir le
-magasin. Rien d'autre à l'écran — c'est le seul geste possible.
+Le corps porte l'URL du magasin **et la version attendue**. Écran bloquant, un
+seul bouton : ouvrir le magasin. Rien d'autre à l'écran — c'est le seul geste
+possible.
+
+**Trois causes, une seule réponse**, et c'est délibéré : la version est déclassée,
+elle est sous un `forcesUpdate`, ou elle est **inconnue du registre**. Le
+troisième cas est celui d'un build parti au magasin sans être enregistré — l'écran
+ne doit pas le distinguer, parce que le geste est le même et qu'il n'y a rien
+d'utile à dire de plus à quelqu'un qui attend d'ouvrir son application.
+
+**Ne jamais retenter**, et ne pas confondre avec un jeton expiré : la couche
+d'appel renouvelle sur un 401, et boucler ici tournerait à vide.
 
 ### En-tête de suggestion (phase 3)
 
@@ -140,7 +174,10 @@ qui rendrait le journal incomplet sans que rien ne tombe.
 
 ## 7. À trancher avant d'écrire
 
-1. **Les OTA** (§3). Si elles sont employées, le format de `X-App-Version` change.
+1. **Les OTA** (§3). Si elles sont employées, `x-app-build` doit-il porter
+   l'identifiant de la mise à jour plutôt que celui du binaire ? Deux appareils
+   sur le même build du magasin peuvent faire tourner deux codes différents — et
+   c'est précisément le cas où l'on cherche.
 2. **Le niveau d'API Android** : brut ou converti (§3).
 3. **Où vivent les deux constantes** : EAS proposé, à confirmer avec qui tient la
    chaîne de compilation.

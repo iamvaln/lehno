@@ -204,10 +204,27 @@ distinct par cause. Le passage de la phase 1 à la phase 2 est **un réglage**, 
 un déploiement — un paramètre système, coupable en une minute si quelque chose
 dérape.
 
-**Phase 3 — la politique de version.** `min_supported` et `latest` par
-plateforme, **426** en dessous du minimum, et un en-tête de suggestion au-dessus.
-C'est ce qui permet de retirer un chemin sans casser les téléphones qui ne se
-mettent pas à jour.
+**Phase 3 — le registre des versions.** *Révisé le 12 septembre : ce paragraphe
+décrivait un plancher repris de monjeton. La demande est plus forte — une version
+publiée est une version ENREGISTRÉE, et une version inconnue n'est pas servie.*
+
+Le détail vit dans `spec-registre-des-versions.md`. Les trois points qui changent
+par rapport au plancher :
+
+- **Une liste blanche, pas un plancher.** Elle tend un piège — un build parti au
+  magasin sans être enregistré bloquerait tous ses utilisateurs — et la spec dit
+  comment le désamorcer : une version inconnue reçoit **« mettez à jour »**, pas
+  un refus sec. Le pire cas d'un oubli devient « on invite à réinstaller » au
+  lieu de « l'application ne marche plus ».
+- **`forcesUpdate` se pose sur la release qui casse**, et non sur un plancher
+  qu'il faudrait penser à relever — on y pense toujours après. Le drapeau se pose
+  au seul moment où l'on sait qu'on a cassé quelque chose.
+- **Un `buildNumber` en plus de la version, et c'est LUI qui compare.** Comparer
+  des `semver` en chaînes rendrait « 1.10.0 » plus ancien que « 1.9.0 ». Le
+  `versionCode` Android et le `CFBundleVersion` iOS sont des entiers monotones.
+
+Un script ops enregistre la version **avant** la soumission au magasin — c'est ce
+qui rend l'oubli rare.
 
 **Il n'y a pas de phase 4.** La première version de ce plan en prévoyait une pour
 un écran d'administration au-dessus d'un agrégat. L'agrégat n'est plus au plan
