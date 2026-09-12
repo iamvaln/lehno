@@ -17,6 +17,11 @@ import { VersionsService } from "./versions.service.js";
  */
 const PARAMETRE = "version_guard_enabled";
 
+/* Le seul environnement où une version se périme. Voir les deux exemptions dans
+   `canActivate` : hors production, il n'y a ni magasin à ouvrir ni binaire
+   figé — seulement des gens qui reconstruisent. */
+const ENVIRONNEMENT_JUGE = "prod";
+
 /* LES MÊMES CHEMINS HORS GARDE QUE LE RESTE.
  *
  * `/public/*` : un lien de liste s'ouvre dans le navigateur de quelqu'un qui n'a
@@ -48,6 +53,31 @@ export class VersionGuard implements CanActivate {
     if (!(await this.actif())) return true;
 
     const c = contexteCourant();
+
+    /* ── DEUX EXEMPTIONS, ET ELLES SONT LE CŒUR DE CETTE GARDE ─────────────────
+     *
+     * SANS CLIENT RECONNU, ON NE JUGE PAS. Le type et l'environnement viennent
+     * de la paire présentée, pas des en-têtes — ceux-là sont déclaratifs. Sans
+     * paire reconnue, on ne sait ni quelle plateforme ni quel environnement, et
+     * décider « ce build est trop vieux » sur une déclaration reviendrait à
+     * laisser le client choisir s'il veut être jugé.
+     *
+     * HORS PRODUCTION, ON NE JUGE PAS NON PLUS — et c'est ce qui débloque le
+     * développement. Un build de développement, Expo Go, une diffusion interne
+     * n'ont AUCUN numéro de build : `eas.json` porte `appVersionSource:
+     * "remote"`, donc le numéro n'existe que dans les binaires qu'EAS produit.
+     * Sans cette exemption, allumer cette garde mettrait dehors toute l'équipe
+     * et tous les testeurs internes, avec un « mettez à jour » qu'aucun magasin
+     * ne peut satisfaire.
+     *
+     * L'EXEMPTION SE DÉCIDE SUR L'ENVIRONNEMENT ENREGISTRÉ, jamais sur
+     * `x-app-env`. Un build de production qui déclarerait `dev` ne s'exempterait
+     * de rien : c'est la paire présentée qui tranche, et elle est en base. C'est
+     * aussi pourquoi il existe SIX paires et non trois — l'environnement fait
+     * partie de l'identité du client, pas de ce qu'il raconte. */
+    if (c.clientVerdict !== "reconnu") return true;
+    if (c.clientEnv !== ENVIRONNEMENT_JUGE) return true;
+
     const exigence = await this.versions.exiger(c.clientType, c.appBuild);
     if (exigence.etat !== "a_mettre_a_jour") return true;
 

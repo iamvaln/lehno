@@ -68,8 +68,10 @@ export class CorrelationMiddleware implements NestMiddleware {
         clientType: contexte.clientType,
       });
       contexte.clientVerdict = verdict.etat;
+      contexte.clientEnv = verdict.etat === "reconnu" ? verdict.environment : null;
     } catch {
       contexte.clientVerdict = null;
+      contexte.clientEnv = null;
     }
 
     dansLeContexte(contexte, next);

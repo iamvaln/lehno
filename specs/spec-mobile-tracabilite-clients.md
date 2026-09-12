@@ -95,14 +95,49 @@ besoin.
 | iOS | `CFBundleVersion` — l'entier que le magasin exige croissant |
 | Android | `versionCode` — idem, exigé par Play |
 
-Sous Expo, les deux se déclarent dans `app.config.ts` (`ios.buildNumber`,
-`android.versionCode`) et se relisent par `Constants.expoConfig`. **Ils doivent
-être posés par la chaîne de publication**, pas à la main : un build qui repart
-avec le même entier que le précédent rendrait deux releases indiscernables.
+**Corrigé le 13 septembre — la première version de ce paragraphe était fausse
+pour ce dépôt.** Elle disait de déclarer `ios.buildNumber` et
+`android.versionCode` dans `app.config.ts`. Or `eas.json` porte déjà
+`appVersionSource: "remote"` et `autoIncrement: true` : **le numéro vit chez EAS**,
+et le figer dans le dépôt entre en conflit avec le versionnage distant — Expo en
+avertit, et on obtiendrait deux sources pour un même nombre, dont celle qui perd
+est silencieuse.
 
-**Un appel sans `x-app-build` ne peut pas être comparé** : il est traité comme
-inconnu, donc invité à se mettre à jour. Ce n'est pas une punition, c'est la seule
-réponse sensée.
+**Il se lit par `expo-application`, champ `nativeBuildVersion`** : ce que le
+binaire porte réellement, donc ce que le magasin a stampé. La chaîne fait déjà ce
+que ce document réclamait ; c'est le chemin de lecture qui était mal décrit.
+
+### Quand il n'y a pas de build : **on omet l'en-tête**
+
+Ni chaîne vide, ni valeur convenue comme `dev`. L'absence est honnête ; `"dev"`
+serait une chaîne magique à traiter à part partout, et une chaîne vide ne se
+distingue pas d'un bug.
+
+**Et l'absence n'atteint jamais la décision**, parce que les builds qui n'ont pas
+de numéro sont hors production, donc exemptés — voir §3 ter. Le serveur, lui,
+n'accepte que des entiers : toute autre valeur vaut « pas de build ».
+
+### §3 ter — hors production, le registre ne s'applique pas
+
+*Ajouté le 13 septembre, en réponse au blocage signalé par la session mobile.*
+
+Un build de développement, Expo Go, une diffusion interne **n'ont aucun numéro de
+build** — c'est la conséquence directe d'`appVersionSource: "remote"`. Sans
+exemption, allumer la garde des versions mettrait dehors toute l'équipe et tous
+les testeurs, avec un « mettez à jour » qu'aucun magasin ne peut satisfaire.
+
+**L'exemption se décide sur l'environnement du client ENREGISTRÉ**, pas sur
+`x-app-env`. Un build de production qui déclarerait `dev` ne s'exempterait de
+rien : c'est la **paire présentée** qui tranche, et elle est en base. C'est aussi
+la raison d'être des six paires — l'environnement fait partie de l'identité du
+client, pas de ce qu'il raconte.
+
+**Ce que ça demande au mobile** : les builds de développement et de recette
+présentent la paire `staging`, les builds du magasin la paire `prod`. C'est tout.
+
+**Et sans client reconnu, rien n'est jugé non plus** : le type et l'environnement
+viennent de la paire, jamais des en-têtes. Décider sur une déclaration
+reviendrait à laisser le client choisir s'il veut être jugé.
 
 ### Le système
 
@@ -188,7 +223,13 @@ interrompre : une bannière discrète, une fois par session au plus.
 
 - Les six en-têtes partent sur un appel authentifié **et** sur un appel public.
 - `X-Client-Type` suit `Platform.OS`, et ne vient pas d'une constante.
-- Un 403 de client ne déclenche **pas** le renouvellement de jeton.
+- Un 403 `client_unknown` ne déclenche **pas** le renouvellement de jeton.
+- **Et il ne fait pas effacer les jetons pendant `/auth/refresh`.** La mécanique
+  de renouvellement les efface sur n'importe quel échec ; `client_unknown` doit
+  en être exclu explicitement. Sans ça, un build mal configuré déconnecterait
+  tout le monde au lieu d'afficher son écran — et la reconnexion échouerait pour
+  la même raison, en boucle. Rien à faire côté serveur ; tout côté client, donc
+  ce cas doit exister.
 - Le format de `X-App-OS` est bien `<os>:<version>`, y compris quand
   `Platform.Version` est un entier.
 
@@ -199,10 +240,13 @@ qui rendrait le journal incomplet sans que rien ne tombe.
 
 ## 7. À trancher avant d'écrire
 
-1. **Les OTA** (§3). Si elles sont employées, `x-app-build` doit-il porter
-   l'identifiant de la mise à jour plutôt que celui du binaire ? Deux appareils
-   sur le même build du magasin peuvent faire tourner deux codes différents — et
-   c'est précisément le cas où l'on cherche.
-2. **Le niveau d'API Android** : brut ou converti (§3).
+1. *(tranché le 13 septembre — plus une question.)* **Les OTA ne sont pas
+   employées** : ni `updates` ni `runtimeVersion` dans la configuration.
+   `x-app-build` porte donc le binaire seul, et deux appareils sur le même build
+   font tourner le même code. Écrit ici pour que ça ne redevienne pas une
+   question.
+2. *(tranché — plus une question.)* **Le niveau d'API Android part brut**,
+   comme proposé. La lecture des journaux porte la mention : Android remonte un
+   niveau d'API (`34`), pas une version commerciale (`14`).
 3. **Où vivent les deux constantes** : EAS proposé, à confirmer avec qui tient la
    chaîne de compilation.
