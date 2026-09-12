@@ -414,6 +414,39 @@ describe("la génération d'un message", () => {
       expect((await service.corriger(awa, m.id, { content: "encore une version" })).status).toBe("sent");
     });
 
+    /* ─── LE REJET ────────────────────────────────────────────────────────────
+     *
+     * §6 du brief du panneau : aucune production ne portait d'avis négatif. On
+     * publiait donc des configurations sans jamais savoir si on avait amélioré
+     * quoi que ce soit. */
+    it("se rejette, et c'est distinct d'une retouche", async () => {
+      await crediter(5);
+      const m = await lancer({ anthropic: repond() });
+      expect((await service.corriger(awa, m.id, { markRejected: true })).status).toBe("rejected");
+    });
+
+    /* `rejected` N'EST PAS `edited`. Le premier dit « il ne va pas », le second
+       « je l'ai arrangé » — un message corrigé reste un message qu'on garde, et
+       les confondre mesurerait la retouche au lieu du ratage. */
+    it("ne se confond pas avec une correction", async () => {
+      await crediter(5);
+      const m = await lancer({ anthropic: repond() });
+      await service.corriger(awa, m.id, { content: "Ma version à moi" });
+      expect((await service.corriger(awa, m.id, { markRejected: true })).status).toBe("rejected");
+    });
+
+    /* ON NE REJETTE PAS CE QUI EST DÉJÀ PARTI. Le rejet est un avis sur la
+       production, et il ne veut plus rien dire une fois le message envoyé : ce
+       qui est parti a manifestement convenu. Le laisser passer fausserait la
+       seule mesure qu'on vient chercher. */
+    it("ne s'applique plus à un message envoyé", async () => {
+      await crediter(5);
+      const m = await lancer({ anthropic: repond() });
+      await service.corriger(awa, m.id, { markSent: true });
+      await expect(service.corriger(awa, m.id, { markRejected: true }))
+        .rejects.toMatchObject({ code: "conflict" });
+    });
+
     it("ne se corrige pas depuis un autre compte", async () => {
       await crediter(5);
       const m = await lancer({ anthropic: repond() });

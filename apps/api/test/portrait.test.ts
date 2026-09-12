@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
-import { reglagesPortraitDeDepart } from "@lehno/contracts";
+import { reglagesPortraitDeDepart, reglagesBriefPortraitDeDepart } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { GenerationService } from "../src/me/generation.service.js";
 import { PortraitService } from "../src/me/portrait.service.js";
@@ -358,6 +358,160 @@ describe("le portrait", () => {
       });
       await expect(portraits(repond(PNG_MINUSCULE)).approuver(bila.id, portrait.id))
         .rejects.toMatchObject({ code: "not_found" });
+    });
+  });
+  /* ─── LE REJET ──────────────────────────────────────────────────────────────
+   *
+   * §6 du brief du panneau : on pouvait approuver, jamais rejeter. L'atelier
+   * publiait donc des configurations sans jamais savoir s'il avait amélioré
+   * quoi que ce soit — un pouce en bas sans savoir quelle version l'a produit
+   * ne mesure rien, et une version publiée sans avis ne dit pas si elle vaut
+   * mieux que la précédente. */
+  describe("le rejet", () => {
+    const unPortrait = async () => {
+      await crediter(5);
+      return fini(generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config));
+    };
+
+    it("marque le portrait rejeté", async () => {
+      await publier();
+      const portrait = await unPortrait();
+
+      const rejete = await portraits(repond(PNG_MINUSCULE)).rejeter(awa, portrait.id);
+      expect(rejete.status).toBe("rejected");
+    });
+
+    /* IL NE FABRIQUE RIEN. C'est la moitié qui compte : un rejet qui appellerait
+       le modèle d'image coûterait exactement ce qu'on refuse de payer. */
+    it("n'appelle aucun modèle d'image", async () => {
+      await publier();
+      const portrait = await unPortrait();
+
+      const image = repond(PNG_MINUSCULE);
+      await portraits(image).rejeter(awa, portrait.id);
+      expect(image.vu).toEqual([]);
+    });
+
+    /* ET IL NE REND RIEN. Le crédit a payé le TEXTE, qui est là et qu'on vient
+       de lire — c'est en le lisant qu'on le rejette. Rembourser ferait de la
+       relecture un essai gratuit, ce que le découpage en deux temps évite. */
+    it("ne rembourse pas le crédit", async () => {
+      await publier();
+      const portrait = await unPortrait();
+      const avant = await solde();
+
+      await portraits(repond(PNG_MINUSCULE)).rejeter(awa, portrait.id);
+      expect(await solde()).toBe(avant);
+    });
+
+    /* IDEMPOTENT, comme l'approbation et pour la même raison : deux frappes sur
+       le même bouton sont la chose la plus banale du monde sur un téléphone. */
+    it("se répète sans rien changer", async () => {
+      await publier();
+      const portrait = await unPortrait();
+      const service = portraits(repond(PNG_MINUSCULE));
+
+      await service.rejeter(awa, portrait.id);
+      expect((await service.rejeter(awa, portrait.id)).status).toBe("rejected");
+    });
+
+    /* LES DEUX GESTES SE FERMENT L'UN L'AUTRE. Approuver un portrait rejeté
+       fabriquerait l'image qu'on venait de refuser, et le compteur de rejets
+       par version — la seule mesure qui dise si l'atelier progresse — compterait
+       un refus sur un portrait finalement retenu. */
+    it("ferme la porte à l'approbation", async () => {
+      await publier();
+      const portrait = await unPortrait();
+      const service = portraits(repond(PNG_MINUSCULE));
+
+      await service.rejeter(awa, portrait.id);
+      await expect(service.approuver(awa, portrait.id))
+        .rejects.toMatchObject({ code: "conflict" });
+    });
+
+    /* ET RÉCIPROQUEMENT : l'image d'un portrait approuvé est fabriquée et payée
+       en appel de modèle. Le rejet aurait dû venir avant, et l'accepter après
+       laisserait croire qu'il défait quelque chose. */
+    it("ne s'applique plus à un portrait approuvé", async () => {
+      await publier();
+      const portrait = await unPortrait();
+      const service = portraits(repond(PNG_MINUSCULE));
+
+      await service.approuver(awa, portrait.id);
+      await expect(service.rejeter(awa, portrait.id))
+        .rejects.toMatchObject({ code: "conflict" });
+    });
+
+    it("ne rejette pas le portrait d'un autre compte", async () => {
+      await publier();
+      const portrait = await unPortrait();
+      const bila = await db.prisma.user.create({
+        data: {
+          email: `${randomBytes(6).toString("hex")}@example.com`,
+          username: `u${randomBytes(4).toString("hex")}`,
+          referralCode: randomBytes(4).toString("hex").toUpperCase(),
+        },
+        select: { id: true },
+      });
+      await expect(portraits(repond(PNG_MINUSCULE)).rejeter(bila.id, portrait.id))
+        .rejects.toMatchObject({ code: "not_found" });
+    });
+  });
+
+  /* ─── CE QUI A PRODUIT QUOI ─────────────────────────────────────────────────
+   *
+   * Sans ce lien, un rejet ne mesure rien : on saurait qu'un portrait a déplu
+   * sans savoir quelle consigne a choisi ses mots. */
+  describe("la version qui l'a produit", () => {
+    /* DEUX COLONNES, DEUX NATURES, et c'est l'écart trouvé le 12 septembre :
+       `studioConfigId` se disait « la configuration qui a produit le brief »,
+       alors que c'est le CATALOGUE — ambiances, compositions, modèle d'image.
+       La consigne qui écrit le texte est `portrait_brief`, une autre nature, et
+       elle ne se notait nulle part. */
+    it("garde le catalogue ET la consigne du brief, séparément", async () => {
+      await publier();
+      const brief = await db.prisma.studioConfig.create({
+        data: {
+          kind: "portrait_brief", state: "published", version: 1,
+          // Les réglages de DÉPART, jamais fabriqués à la main : le schéma est
+          // `.strict()`, et une fixture approximative serait jugée ILLISIBLE —
+          // donc non attribuée, donc ce cas passerait pour un défaut du code.
+          settings: reglagesBriefPortraitDeDepart() as never,
+          fingerprint: randomBytes(8).toString("hex"),
+        },
+        select: { id: true },
+      });
+
+      await crediter(5);
+      const portrait = await fini(
+        generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config),
+      );
+
+      const ligne = await db.prisma.portrait.findUniqueOrThrow({
+        where: { id: portrait.id },
+        select: { studioConfigId: true, briefStudioConfigId: true },
+      });
+      expect(ligne.studioConfigId).toBe(config);
+      expect(ligne.briefStudioConfigId).toBe(brief.id);
+      // Deux versions distinctes : l'une choisit les mots, l'autre les dessine.
+      expect(ligne.briefStudioConfigId).not.toBe(ligne.studioConfigId);
+    });
+
+    /* SANS CONFIGURATION DE BRIEF PUBLIÉE, le texte vient du gabarit du code —
+       qui n'a pas de version. Lui en attribuer une ferait porter à une
+       configuration des avis qu'elle n'a pas mérités, et c'est précisément le
+       chiffre qu'on veut pouvoir croire. */
+    it("n'attribue rien quand le brief vient du code", async () => {
+      await publier();
+      await crediter(5);
+      const portrait = await fini(
+        generation(repond(BRIEF)).lancerPortrait(awa, proche, selection(), config),
+      );
+
+      const ligne = await db.prisma.portrait.findUniqueOrThrow({
+        where: { id: portrait.id }, select: { briefStudioConfigId: true },
+      });
+      expect(ligne.briefStudioConfigId).toBeNull();
     });
   });
 });
