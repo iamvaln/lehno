@@ -601,6 +601,16 @@ export const fr = {
   fichePortraits: "Ses portraits",
   portraitComposer: "Composer son portrait",
   portraitLancer: "Lancer le portrait",
+  /* DEUX GESTES, PAS UN INTERRUPTEUR. « Garder » et « Rejeter » engagent
+     l'objet, là où le pouce serait un commentaire — les fondre détruirait la
+     distinction, et avec elle la seule mesure qui dise si l'atelier progresse.
+
+     ET AUCUN DES DEUX N'EST OBLIGATOIRE : la plupart des portraits resteront
+     sans avis, et c'est un état légitime. Refaire n'est pas rejeter. */
+  portraitGarder: "Je garde celui-ci",
+  portraitRejeter: "Celui-ci ne va pas",
+  portraitGardeFait: "Gardé.",
+  portraitRejetFait: "Noté — celui-ci ne va pas.",
   /* §3 : « L'attente se nomme, avec la matière qu'on a déjà. » Le décompte entre
      dans la phrase parce que c'est lui qui prouve que la chose est personnelle —
      la promesse du produit, rendue au moment où elle coûte le plus cher à tenir. */

@@ -23,7 +23,7 @@ import { dateCourte } from "../lib/carnet.js";
 import { coutDe } from "../lib/preparation.js";
 import { delaiAvantLaProchaine, doitInterroger, phraseDeLAttente } from "../lib/generation.js";
 import {
-  apresLeChoix, composition, changementDeSignature, etatDuPortrait, feuilleDePartage,
+  apresLeChoix, composition, verdict, changementDeSignature, etatDuPortrait, feuilleDePartage,
   laGrilleMontreDesImages, queViseTOn,
   laFeuilleDeposeUnFichier, laProductionEstRefusee, motDAccompagnement, offreDeRefaire,
   ouverture, relanceDuPortrait, selectionParDefaut, signatureARemettre, type Plateforme,
@@ -314,6 +314,19 @@ export default function PortraitEcran() {
     const envoi = composition(portrait);
     if (!envoi) return;
     if (await patche(envoi)) setAccuse(t.portraitApprouveFait);
+  };
+
+  /* LES DEUX VERDICTS, et ils ne se ressemblent pas aux deux gestes du haut :
+     ceux-là engagent l'objet, celui-ci dit ce qu'on en pense. `verdict` rend
+     `null` quand l'avis est déjà porté — redire la même chose n'appellerait
+     rien —, et l'écran s'en sert pour éteindre le bouton déjà tenu. */
+  const juge = async (avis: "approved" | "rejected"): Promise<void> => {
+    if (!portrait) return;
+    const envoi = verdict(portrait, avis);
+    if (!envoi) return;
+    if (await patche(envoi)) {
+      setAccuse(avis === "approved" ? t.portraitGardeFait : t.portraitRejetFait);
+    }
   };
 
   /* L'INTERRUPTEUR NE FAIT QUE RETIRER ET REMETTRE. La note se rédige au studio
@@ -660,6 +673,40 @@ export default function PortraitEcran() {
               </>
             )}
 
+            {/* LES DEUX VERDICTS NE PORTENT QUE SUR UNE IMAGE QU'ON A VUE.
+                Juger un brief mesurerait la qualité du texte en laissant croire
+                qu'il mesure celle du portrait — le serveur rend 409, et l'écran
+                ne le propose pas.
+
+                ILS SE TAISENT QUAND ILS SONT DÉJÀ PORTÉS, plutôt que de se
+                griser : `verdict` rend `null`, et un bouton qui ne ferait rien
+                ne dirait pas pourquoi. Changer d'avis reste possible — l'autre
+                bouton, lui, reste offert. */}
+            {etat === "pret" ? (
+              <View style={styles.verdicts}>
+                {verdict(portrait, "approved") ? (
+                  <Button
+                    variant="outline"
+                    icon="check"
+                    disabled={enCours}
+                    onPress={() => void juge("approved")}
+                  >
+                    {t.portraitGarder}
+                  </Button>
+                ) : null}
+                {verdict(portrait, "rejected") ? (
+                  <Button
+                    variant="text"
+                    icon="x"
+                    disabled={enCours}
+                    onPress={() => void juge("rejected")}
+                  >
+                    {t.portraitRejeter}
+                  </Button>
+                ) : null}
+              </View>
+            ) : null}
+
             {/* « REFAIRE » JETTE CELUI-CI POUR EN REDEMANDER UN AUTRE, et le
                 paie. Il vient donc en dernier, après les gestes gratuits, et
                 s'annonce par une feuille : rien ne se paie en silence. */}
@@ -766,6 +813,9 @@ const styles = StyleSheet.create({
     letterSpacing: nativeLetterSpacing(11, nativeTracking.kicker),
   },
   gestes: { gap: nativeSpace[8], marginTop: nativeSpace[20] },
+  /* Côte à côte, et non l'un sous l'autre : ce sont deux réponses à la même
+     question, et les empiler ferait lire la seconde comme un repli. */
+  verdicts: { flexDirection: "row", gap: nativeSpace[8], marginTop: nativeSpace[12] },
   pied: { marginTop: nativeSpace[24], paddingTop: nativeSpace[16], borderTopWidth: 1 },
   aide: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, lineHeight: 19 },
 });
