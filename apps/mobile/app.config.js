@@ -30,5 +30,29 @@ module.exports = ({ config }) => ({
   extra: {
     ...(config.extra ?? {}),
     oneSignalAppId: process.env.ONESIGNAL_APP_ID ?? null,
+    /* L'IDENTITÉ DU CLIENT, déposée à la compilation.
+     *
+     * Ces trois valeurs identifient un build ; elles ne le protègent pas. Elles
+     * seront lisibles dans le `.ipa` et dans l'`.apk`, c'est attendu, et ça ne
+     * doit surprendre personne à la relecture.
+     *
+     * PAS DANS `.env` DU DÉPÔT : elles diffèrent par build et par profil EAS,
+     * et les figer ici les enverrait toutes au même endroit.
+     *
+     * `appEnv` COMMANDE UNE EXEMPTION, et c'est pourquoi il ne se déduit pas.
+     * Les builds de développement et de recette présentent la paire `staging`,
+     * ceux du magasin la paire `prod` — et le serveur décide sur la paire
+     * ENREGISTRÉE, jamais sur cette déclaration. L'écart entre les deux est
+     * justement l'incident qu'il cherche : un build de recette qui pointe la
+     * production. Le déduire d'`__DEV__` aurait annoncé `prod` sur toute
+     * diffusion interne, donc fabriqué cet incident à chaque fois.
+     *
+     * ABSENTES, ON POSE `null` PLUTÔT QUE D'ÉCHOUER, comme au-dessus : un poste
+     * qui n'a pas les variables doit construire et démarrer normalement. En
+     * phase 1 rien ne refuse ; le jour où la garde s'allume, un build sans paire
+     * est un build mal configuré, et c'est au serveur de le dire. */
+    clientId: process.env.LEHNO_CLIENT_ID ?? null,
+    clientKey: process.env.LEHNO_CLIENT_KEY ?? null,
+    appEnv: process.env.LEHNO_APP_ENV ?? null,
   },
 });

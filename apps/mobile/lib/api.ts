@@ -1,9 +1,11 @@
 import Constants from "expo-constants";
-import { NativeModules } from "react-native";
+import * as Application from "expo-application";
+import { NativeModules, Platform } from "react-native";
 import { errorEnvelopeSchema, type ErrorCode, type ErrorEnvelope, type Session } from "@lehno/contracts";
 import { adresseDeLApi } from "./adresse-api.js";
 import { doitRenouveler, sortDeLaSession } from "./session.js";
 import { effaceLesJetons, litLesJetons, poseLesJetons } from "./jetons.js";
+import { clientHeaders, type BuildIdentity } from "./client.js";
 import { unSeulALaFois } from "./verrou.js";
 import { estHorsConnexion } from "./reseau.js";
 import { estGarde } from "./cache.js";
@@ -116,13 +118,50 @@ async function litLEnveloppe(reponse: Response): Promise<ErrorEnvelope | null> {
   }
 }
 
+/* L'IDENTITÉ DU BUILD, lue une seule fois. Rien de tout ceci ne change d'un
+   appel à l'autre, et la relire à chaque requête ferait croire le contraire.
+
+   LE NUMÉRO DE BUILD VIENT DU BINAIRE, pas de la configuration. `eas.json` porte
+   `appVersionSource: "remote"` : le numéro n'existe que dans ce qu'EAS a
+   produit, et le figer dans `app.config.js` créerait une seconde source qui
+   diverge en silence. `expo-application` rend ce que le magasin a stampé —
+   c'est-à-dire ce qui identifie vraiment ce build. Nul en développement, et le
+   §`clientHeaders` ne l'envoie alors pas. */
+const IDENTITE: BuildIdentity = {
+  clientId: (Constants.expoConfig?.extra?.["clientId"] as string | undefined) ?? null,
+  clientKey: (Constants.expoConfig?.extra?.["clientKey"] as string | undefined) ?? null,
+  version: Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? null,
+  build: Application.nativeBuildVersion ?? null,
+  os: Platform.OS,
+  osVersion: Platform.Version,
+  /* IL VIENT DE LA CONFIGURATION DU BUILD, PAS D'`__DEV__`.
+   *
+   * `__DEV__` ne connaît que deux états, et un build de recette n'en est pas un :
+   * il est compilé en production, donc `__DEV__` y vaut `false` et il aurait
+   * annoncé `prod`. Or il présente la paire `staging`.
+   *
+   * Le serveur lit précisément cet écart : « son ÉCART avec l'environnement
+   * enregistré dit qu'un build de recette pointe la production, et c'est
+   * précisément l'incident qu'on veut voir ». Déduire cette valeur d'`__DEV__`
+   * aurait donc FABRIQUÉ un incident à chaque diffusion interne — un faux positif
+   * sur le signal le plus important du lot.
+   *
+   * `dev` quand la configuration ne dit rien : c'est le seul cas où l'on tourne
+   * sans build, donc sans profil EAS. */
+  env: (Constants.expoConfig?.extra?.["appEnv"] as string | undefined) ?? "dev",
+};
+
 async function envoie(chemin: string, options: RequestInit, jeton?: string): Promise<Response> {
   const base = adresseCourante();
   if (!base) throw new SansAdresseDApi();
+  /* LE SEUL `fetch` DU PAQUET, et c'est ce qui rend les en-têtes de client
+     fiables : les poser appel par appel garantirait qu'un appel écrit dans six
+     mois les oublie. `api-un-seul-fetch.test.ts` garde cette unicité. */
   return fetch(`${base}/v1${chemin}`, {
     ...options,
     headers: {
       "content-type": "application/json",
+      ...clientHeaders(IDENTITE),
       ...(jeton ? { authorization: `Bearer ${jeton}` } : {}),
       ...options.headers,
     },

@@ -9,7 +9,8 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL": "http://localhost:3001",
-        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a"
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a",
+        "LEHNO_APP_ENV": "dev"
       },
       "android": {
         "buildType": "apk"
@@ -25,7 +26,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.lehno.io",
-        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a"
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a",
+        "LEHNO_APP_ENV": "staging"
       }
     },
     "production": {
@@ -34,7 +36,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.lehno.io"
+        "EXPO_PUBLIC_API_URL": "https://api.lehno.io",
+        "LEHNO_APP_ENV": "prod"
       }
     }
   },
