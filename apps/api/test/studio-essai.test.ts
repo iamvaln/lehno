@@ -311,6 +311,9 @@ describe("l'essai du studio", () => {
        modèle de photo sans image — et le rendu ne serait celui d'aucune des
        deux voies. Un essai qui ne montre pas ce que la production rendra est
        PIRE qu'aucun essai, puisqu'il débloque la publication. */
+    /* LE REFUS VIENT EN PREMIER, avant toute recherche de modèle — donc avant
+       tout appel et toute dépense. La sonde le prouve : retiré, le cas tombe
+       sur « modèle absent du catalogue » et non sur l'absence de photo. */
     it("refuse sur une éprouvette sans photo d'exemple", async () => {
       let appel = 0;
       const double = faux(() => ({ contenu: appel++ === 0 ? BRIEF : "aW1hZ2U=" }));
