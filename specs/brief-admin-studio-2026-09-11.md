@@ -106,7 +106,32 @@ fournit une, soit les profils en gagnent une.
 
 ---
 
-## 5. Les réglages de la photo — un bloc à mettre au formulaire
+## 5. ~~Les réglages de la photo — un bloc à mettre au formulaire~~ — FAIT le 12
+
+> **Le bloc est au formulaire de l'Atelier**, en deux familles et un seul
+> liséré : la consigne porte celui de « ce que le modèle lit », les trois seuils
+> non.
+>
+> **Un défaut trouvé en l'écrivant, et corrigé d'abord.** `photo.consigne` est
+> littéralement dans l'invite — `portrait.service` la passe à
+> `inviteImagePortrait` dès que la voie est la photo — et
+> `partieLueParLeModelePortrait` ne la portait pas. On la reformulait,
+> l'empreinte ne bougeait pas, la couverture d'essai de l'ancienne restait
+> valable, et **la publication s'ouvrait sur une consigne que personne n'avait
+> vue**. Les trois seuils restent dehors, eux, pour la raison inverse : le
+> modèle ne les voit jamais, et les compter ferait retomber la couverture pour
+> vingt pixels.
+>
+> **Et l'absence du bloc n'est pas symétrique** — c'est ce que ce paragraphe
+> demandait de savoir afficher, et c'était plus subtil qu'« afficher vide ».
+> Sans rien de publié, les seuils du code s'appliquent **déjà** (512/30/12),
+> tandis que la consigne n'existe pas du tout. Montrer les trois nombres sans
+> le dire les ferait passer pour des réglages enregistrés.
+>
+> D'où la naissance du bloc : seuils depuis le semis, consigne **vide**. Et
+> comme le schéma exige la consigne dans ses deux langues, toucher un seuil la
+> rend obligatoire — les trois gestes qui emportent les réglages se ferment tant
+> qu'elle manque.
 
 `reglagesPortraitSchema` porte un bloc `photo`, **facultatif** :
 
