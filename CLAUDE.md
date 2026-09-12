@@ -151,10 +151,14 @@ deux langues. Ça change, mais pas d'un coup.
 
 **Deux choses ne changent pas, et ce ne sont pas des exceptions :**
 
-- **Les textes affichés restent en français.** C'est la langue du produit, pas
-  celle du code. Seules les *clés* suivent la règle : `portraitAttenteQuitter`
-  deviendrait `portraitWaitLeave`, la phrase qu'elle porte ne bouge pas.
-- **Les specs restent en français.** C'est la langue de la conception.
+- **Les textes affichés ne sont concernés ni de près ni de loin.** Le produit est
+  bilingue : `messages/fr.ts` et `messages/en.ts` portent les deux, et le client
+  reçoit la sienne. Cette règle ne parle que des **clés**, qui sont des
+  identifiants comme les autres — `portraitAttenteQuitter` deviendrait
+  `portraitWaitLeave`, et les deux phrases qu'elle porte ne bougent pas d'un
+  caractère, chacune dans sa langue.
+- **Les specs restent en français.** C'est la langue de la conception, et elles
+  ne sont lues que par l'équipe.
 
 **Pourquoi on ne traduit pas l'existant au fil de l'eau**, et le piège n'est pas
 où on le croit : renommer paraît risqué et ne l'est pas — le compilateur vérifie

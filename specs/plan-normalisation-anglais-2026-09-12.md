@@ -27,7 +27,7 @@ le dépôt fait. Il a tout francisé.
 | `apps/api/src` | 294 symboles | mécanique |
 | `packages/ui-native/src` | 211 symboles | mécanique |
 | `apps/admin/src` | 181 symboles | mécanique |
-| clés de libellés | 867 (mobile) + 44 (admin) | mécanique |
+| clés de libellés | 867 (mobile) + 44 (admin) | mécanique — les **clés**, pas les textes |
 | noms de fichiers | ~25 | mécanique, mais casse l'historique |
 | **commentaires** | **27 230 lignes, 478 fichiers** | **au jugement** |
 
@@ -155,17 +155,20 @@ Une convention qui a fait ses preuves ailleurs : `<chose>` pour une valeur,
 booléen (`destructive`, `dismissible`, `first`). À trancher par lui, pas par le
 code.
 
-**Ce qui ne change pas, et il faut le dire clairement : les textes affichés
-restent en français.** C'est la langue du produit, pas celle du code. Seules les
-**clés** changent (`portraitAttenteQuitter` → `portraitWaitLeave`), jamais les
-phrases.
+**Ce qui ne change pas : les textes eux-mêmes.** Le produit est bilingue —
+`messages/fr.ts` et `messages/en.ts` portent les deux langues, et le client
+reçoit la sienne. Seules les **clés** changent
+(`portraitAttenteQuitter` → `portraitWaitLeave`) ; les deux phrases qu'elles
+portent ne bougent pas d'un caractère.
 
 ---
 
 ## 6. Ce que les specs doivent devenir
 
 **Les specs restent en français.** Ce sont des documents de conception, lus par
-des humains francophones, et leur prose porte le vocabulaire du métier.
+l'équipe, et leur prose porte le vocabulaire du métier. C'est le seul endroit du
+dépôt où le français reste la règle — les textes du produit, eux, ne sont pas
+« en français » : ils sont dans les deux langues, et le client reçoit la sienne.
 
 Sept d'entre elles citent des symboles du code entre accents graves —
 `composeLAccueil`, `apresLeChoix`, `groupesAtteignables`. Ces citations
