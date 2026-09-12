@@ -220,6 +220,13 @@ Les trois écritures passent par le motif d'audit, comme le reste de
 l'administration : couper un client coupe une application entière, et personne ne
 doit pouvoir le faire sans laisser son nom.
 
+**Ce que l'écran doit porter est décrit dans `spec-registre-des-versions.md` §7**,
+avec celui des versions — les deux surfaces vivent côte à côte au panneau, et les
+décrire à deux endroits les ferait diverger. Le point à ne pas manquer : **la clé
+ne se relit jamais**, donc l'écran doit le dire au moment où il l'affiche. C'est
+le seul instant où quelqu'un peut la copier, et un panneau qui la présente comme
+une donnée ordinaire fera perdre des clés.
+
 ---
 
 ## 7. Les phases, côté serveur
@@ -231,9 +238,11 @@ les deux tables de transaction. Rien ne refuse rien.
 **Phase 2** — la garde derrière son paramètre. À n'allumer que quand l'agrégat
 montre que les appels portent leurs en-têtes.
 
-**Phase 3** — `MobileVersionPolicy` : `min_supported` et `latest` par plateforme,
-**426** en dessous du minimum avec le lien du magasin, en-tête de suggestion
-au-dessus. Repris de monjeton presque tel quel.
+**Phase 3** — le registre des versions, et il n'est plus « repris de monjeton
+presque tel quel » : voir `spec-registre-des-versions.md`. Une liste blanche
+plutôt qu'un plancher, `forcesUpdate` posé sur la release qui casse, et un
+`buildNumber` qui décide des comparaisons — les `semver` en chaînes rendraient
+« 1.10.0 » plus ancien que « 1.9.0 ».
 
 **Il n'y a pas de phase 4.** La première version en prévoyait une pour un écran
 au-dessus de l'agrégat. L'agrégat n'est plus au plan, donc l'écran non plus.
