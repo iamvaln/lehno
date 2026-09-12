@@ -1,8 +1,8 @@
 import {
   Body, Controller, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards,
 } from "@nestjs/common";
-import { avisSchema } from "@lehno/contracts";
-import type { AvisInput, DepotPhotoSource, Portrait } from "@lehno/contracts";
+import { updatePortraitSchema, avisSchema } from "@lehno/contracts";
+import type { AvisInput, DepotPhotoSource, Portrait, UpdatePortraitInput } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { Feature } from "../flags/feature.decorator.js";
@@ -66,12 +66,47 @@ export class PortraitController {
     return this.portraits.lire(req.userId, id);
   }
 
-  /* APPROUVER FABRIQUE L'IMAGE. C'est le second temps, et la modération : on
-     relit le texte avant de payer un dessin.
+  /* COMPOSER FABRIQUE L'IMAGE, et rien d'autre. C'est le second temps, et la
+     modération : on relit le texte avant de payer un dessin.
+
+     Le bouton de l'écran dit « Composer l'image » depuis le premier jour ; seul
+     le serveur appelait ça « approuver », et ce nom mêlait la fabrication à
+     l'acceptation. Le portrait sort d'ici en `composed` — l'avis vient après,
+     sur ce qu'on a vu.
+
      200 et non 201 : le portrait existe déjà, il change d'état. Et l'appel est
-     IDEMPOTENT — un portrait déjà approuvé rend le sien plutôt qu'une seconde
+     IDEMPOTENT — un portrait déjà composé rend le sien plutôt qu'une seconde
      image, parce que deux frappes sur le même bouton sont la chose la plus
      banale du monde sur un téléphone. */
+  @Post(":id/compose")
+  composer(
+    @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<Portrait> {
+    return this.portraits.composer(req.userId, id);
+  }
+
+  /* LA NOTE DE L'EXPÉDITEUR — la route qui manquait.
+     L'écran envoyait ce `PATCH` depuis le premier jour ; il n'existait ni ici ni
+     au contrat, donc l'interrupteur de signature échouait en silence.
+     AVANT LA COMPOSITION SEULEMENT : après, la note est dans les pixels du
+     fichier, et l'accepter promettrait un effet qui n'arrive pas. */
+  @Patch(":id")
+  changerLaNote(
+    @Req() req: AuthedRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(updatePortraitSchema)) corps: UpdatePortraitInput,
+  ): Promise<Portrait> {
+    return this.portraits.changerLaNote(req.userId, id, corps.senderNote);
+  }
+
+  /* LES DEUX VERDICTS. Ils portent sur une image COMPOSÉE — juger un brief
+     mesurerait la qualité du texte en laissant croire qu'il mesure celle du
+     portrait.
+
+     Ils ne détruisent rien, donc ils se reprennent : l'image reste quel que soit
+     l'avis, puisque l'utilisateur l'a payée. Et ils sont facultatifs — la
+     plupart des portraits resteront sans avis, ce qui est un état légitime et
+     non un oubli. */
   /* PATCH et non POST : on pose un avis sur une production qui existe, on ne
      crée rien. Même chemin et même corps que sur une idée — une seule forme
      d'avis dans toute l'API. */
@@ -89,5 +124,12 @@ export class PortraitController {
     @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
   ): Promise<Portrait> {
     return this.portraits.approuver(req.userId, id);
+  }
+
+  @Post(":id/reject")
+  rejeter(
+    @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<Portrait> {
+    return this.portraits.rejeter(req.userId, id);
   }
 }

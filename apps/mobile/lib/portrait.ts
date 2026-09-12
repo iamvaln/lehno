@@ -40,6 +40,11 @@ import {
    `envoiDeLaNote` et de `correctionDuMessage`. L'écran choisit le verbe. */
 export interface Envoi {
   chemin: string;
+  /* LA MÉTHODE VOYAGE AVEC LE CHEMIN depuis le 12 septembre. L'écran envoyait
+     `PATCH` pour tout, et la composition est un `POST` sur un sous-chemin :
+     l'approbation partait donc sur une route qui N'EXISTE PAS — vérifié, ni à
+     l'API ni au contrat. Le geste échouait en silence pour l'utilisateur. */
+  methode: "POST" | "PATCH";
   corps: CorpsDePortrait | StartGenerationInput;
 }
 
@@ -102,35 +107,56 @@ export function ouverture(id: string | undefined): Ouverture {
 
 export type Etat = "avalider" | "composition" | "pret";
 
-/* TROIS ÉTATS, ET LE TROISIÈME EST CELUI QU'ON OUBLIE.
+/* TROIS MOMENTS D'ÉCRAN POUR QUATRE STATUTS, et ce n'est pas un décalage : ce
+ * que l'écran doit savoir est « ai-je une image à montrer », pas quel avis on a
+ * porté dessus.
  *
- * `generated` → il reste à approuver, et l'approbation est le geste mis en
- * avant : c'est elle qui déclenche la composition de l'image.
+ * `generated` → le brief seul. Le geste mis en avant est « Composer l'image ».
  *
- * `approved` AVEC image → tout est là : on enregistre, on partage.
+ * TOUT LE RESTE AVEC IMAGE → prêt : on enregistre, on partage, on juge.
+ * `composed`, `approved` et `rejected` s'y rejoignent — un avis ne change rien
+ * à ce qu'il y a à voir, et l'image reste même rejetée.
  *
- * `approved` SANS image → l'approbation est passée, la composition n'a pas
- * encore rendu. C'est la combinaison qui piège : la traiter comme « prêt »
- * afficherait un cadre vide et ouvrirait une feuille de partage sur une adresse
- * nulle. On la nomme, l'écran l'attend. */
+ * TOUT LE RESTE SANS IMAGE → la composition est lancée et n'a pas rendu. C'est
+ * la combinaison qui piège : la traiter comme « prêt » afficherait un cadre vide
+ * et ouvrirait une feuille de partage sur une adresse nulle. On la nomme,
+ * l'écran l'attend. */
 export function etatDuPortrait(portrait: Portrait): Etat {
-  if (portrait.status !== "approved") return "avalider";
+  if (portrait.status === "generated") return "avalider";
   return portrait.imageUrl ? "pret" : "composition";
 }
 
-// ── Approuver ───────────────────────────────────────────────────────────────
+// ── Composer, puis juger ────────────────────────────────────────────────────
 
-/* « Le portrait passe de produit à validé, et rejoint la collection du
- * proche » — et c'est le moment où l'image se compose.
+/* COMPOSER FABRIQUE L'IMAGE, et rien d'autre.
  *
- * ON N'APPROUVE PAS DEUX FOIS. Un portrait déjà `approved` recomposerait-il son
- * image ? Personne ne le sait, et c'est bien le problème : un second appel
- * risque de refaire un travail payé, ou d'échouer sur un état que l'écran
- * croyait sûr. Rendre `null` retire le bouton plutôt que d'offrir un geste dont
- * on ignore l'effet. */
-export function approbation(portrait: Portrait): Envoi | null {
-  if (portrait.status === "approved") return null;
-  return { chemin: `${RACINE}/${portrait.id}`, corps: { status: "approved" } };
+ * Cette fonction s'appelait `approbation` et envoyait `PATCH /me/portraits/{id}`
+ * avec `{ status: "approved" }`. Deux défauts d'un coup : cette route n'existe
+ * pas — vérifié le 12 septembre, ni à l'API ni au contrat, donc le geste
+ * échouait —, et le nom mêlait la fabrication à l'acceptation. Le bouton de
+ * l'écran disait « Composer l'image » depuis le premier jour.
+ *
+ * ON NE COMPOSE PAS DEUX FOIS. Un portrait qui a déjà son image recomposerait un
+ * travail payé, ou changerait sous les yeux ce qui a été jugé. Rendre `null`
+ * retire le bouton plutôt que d'offrir un geste dont on ignore l'effet. */
+export function composition(portrait: Portrait): Envoi | null {
+  if (portrait.status !== "generated") return null;
+  return { chemin: `${RACINE}/${portrait.id}/compose`, methode: "POST", corps: {} };
+}
+
+/* LES DEUX VERDICTS, sur une image qu'on a vue.
+ *
+ * FACULTATIFS : la plupart des portraits resteront sans avis, et c'est un état
+ * légitime — refaire n'est pas rejeter, on peut en produire cinq en changeant
+ * les réglages et les garder tous.
+ *
+ * RÉVERSIBLES, parce que rien ne se détruit : l'image reste quel que soit
+ * l'avis. Redire le même avis ne sert à rien — d'où le `null`, qui éteint le
+ * bouton déjà porté. */
+export function verdict(portrait: Portrait, avis: "approved" | "rejected"): Envoi | null {
+  if (portrait.status === "generated" || portrait.status === avis) return null;
+  const geste = avis === "approved" ? "approve" : "reject";
+  return { chemin: `${RACINE}/${portrait.id}/${geste}`, methode: "POST", corps: {} };
 }
 
 // ── La signature en pied ────────────────────────────────────────────────────
@@ -152,7 +178,15 @@ export function changementDeSignature(portrait: Portrait, voulue: string | null)
   const propre = voulue === null ? null : voulue.trim();
   const cible = propre === "" ? null : propre;
   if (cible === portrait.senderNote) return null;
-  return { chemin: `${RACINE}/${portrait.id}`, corps: { senderNote: cible } };
+  /* AVANT LA COMPOSITION SEULEMENT. Après, la note est dans les pixels du
+     fichier : la changer ne changerait plus rien à ce qu'on partage, et le
+     serveur rend 409. L'écran retire donc l'interrupteur au lieu de le griser —
+     un interrupteur gris ne dirait pas pourquoi.
+
+     Ce `PATCH` n'avait pas de route en face jusqu'au 12 septembre : le geste
+     échouait en silence depuis le premier jour. */
+  if (portrait.status !== "generated") return null;
+  return { chemin: `${RACINE}/${portrait.id}`, methode: "PATCH", corps: { senderNote: cible } };
 }
 
 /* Ce que l'interrupteur remet quand on le rallume.
@@ -304,6 +338,7 @@ export function relanceDuPortrait(
   if (valideSelection(catalogue, selection).length > 0) return null;
   return {
     chemin: "/me/generations",
+    methode: "POST",
     corps: { kind: "portrait", personId, studioSelection: { ...selection } },
   };
 }

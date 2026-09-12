@@ -23,7 +23,7 @@ import { dateCourte } from "../lib/carnet.js";
 import { coutDe } from "../lib/preparation.js";
 import { delaiAvantLaProchaine, doitInterroger } from "../lib/generation.js";
 import {
-  apresLeChoix, approbation, changementDeSignature, etatDuPortrait, feuilleDePartage,
+  apresLeChoix, composition, changementDeSignature, etatDuPortrait, feuilleDePartage,
   laFeuilleDeposeUnFichier, laProductionEstRefusee, motDAccompagnement, offreDeRefaire,
   ouverture, relanceDuPortrait, selectionParDefaut, signatureARemettre, type Plateforme,
 } from "../lib/portrait.js";
@@ -252,11 +252,14 @@ export default function PortraitEcran() {
     };
   }, [enProduction, langue, qui, routeur, t]);
 
-  const patche = async (envoi: { chemin: string; corps: unknown }): Promise<boolean> => {
+  const patche = async (envoi: { chemin: string; methode: "POST" | "PATCH"; corps: unknown }): Promise<boolean> => {
     setEnCours(true);
     try {
+      /* LA MÉTHODE VIENT DE L'ENVOI. Elle était câblée à `PATCH` pour tout, et
+         la composition est un `POST` sur un sous-chemin : le geste partait donc
+         sur une route inexistante et échouait. */
       const neuf = portraitSchema.parse(await appel<unknown>(envoi.chemin, {
-        method: "PATCH",
+        method: envoi.methode,
         body: JSON.stringify(envoi.corps),
       }));
       setPortrait(neuf);
@@ -270,9 +273,9 @@ export default function PortraitEcran() {
     }
   };
 
-  const approuve = async (): Promise<void> => {
+  const compose = async (): Promise<void> => {
     if (!portrait) return;
-    const envoi = approbation(portrait);
+    const envoi = composition(portrait);
     if (!envoi) return;
     if (await patche(envoi)) setAccuse(t.portraitApprouveFait);
   };
@@ -506,7 +509,7 @@ export default function PortraitEcran() {
             {etat === "avalider" ? (
               /* L'APPROBATION EST LE GESTE MIS EN AVANT : c'est elle qui
                  déclenche la composition de l'image, donc tout le reste. */
-              <Button full icon="check" disabled={enCours} onPress={() => void approuve()}>
+              <Button full icon="check" disabled={enCours} onPress={() => void compose()}>
                 {t.portraitApprouver}
               </Button>
             ) : (
@@ -554,18 +557,26 @@ export default function PortraitEcran() {
             ) : null}
           </View>
 
-          {/* Pas de mention « sur votre Mur » : le portrait n'y va pas. */}
-          <View style={[styles.pied, { borderTopColor: couleurs.borderHairline }]}>
-            <Bascule
-              premier
-              libelle={t.portraitSignature}
-              actif={avecSignature}
-              onBascule={(v) => void basculeLaSignature(v)}
-            />
-            <Text style={[styles.aide, { color: couleurs.textMention }]}>
-              {t.portraitSignatureAide(signataire ?? t.portraitSignature2)}
-            </Text>
-          </View>
+          {/* Pas de mention « sur votre Mur » : le portrait n'y va pas.
+
+              L'INTERRUPTEUR DISPARAÎT UNE FOIS L'IMAGE COMPOSÉE, il ne se grise
+              pas. La note est alors dans les pixels du fichier : la basculer ne
+              changerait plus rien à ce qu'on partage, et le serveur rend 409. Un
+              interrupteur gris ne dirait pas pourquoi ; un interrupteur absent
+              ne promet rien. */}
+          {etat === "avalider" ? (
+            <View style={[styles.pied, { borderTopColor: couleurs.borderHairline }]}>
+              <Bascule
+                premier
+                libelle={t.portraitSignature}
+                actif={avecSignature}
+                onBascule={(v) => void basculeLaSignature(v)}
+              />
+              <Text style={[styles.aide, { color: couleurs.textMention }]}>
+                {t.portraitSignatureAide(signataire ?? t.portraitSignature2)}
+              </Text>
+            </View>
+          ) : null}
 
           {/* Ce qui a été dépensé, dit après coup. Toujours : il n'y a pas de
               mode gratuit à ménager, le crédit se consomme quoi qu'il arrive. */}

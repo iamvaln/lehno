@@ -15047,7 +15047,9 @@
                             "type": "string",
                             "enum": [
                               "generated",
-                              "approved"
+                              "composed",
+                              "approved",
+                              "rejected"
                             ]
                           },
                           "content": {
@@ -15779,7 +15781,9 @@
                       "type": "string",
                       "enum": [
                         "generated",
-                        "approved"
+                        "composed",
+                        "approved",
+                        "rejected"
                       ]
                     },
                     "content": {
@@ -15816,6 +15820,247 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Changer la note de l'expéditeur, ou la retirer",
+        "description": "« Fait avec soin par Valentine » — **proposée puis modifiable** (spec\n§79), et elle se retire : `null` est une **valeur**, pas une absence.\nOmettre le champ voudrait dire « ne touche pas », c'est-à-dire l'inverse\ndu geste. Une chaîne vide retire aussi.\n\n### Avant la composition SEULEMENT\n\nAprès, la note est dans les **pixels** du fichier : la changer ne\nchangerait plus l'image, et l'accepter promettrait un effet qui n'arrive\npas — exactement le genre de réglage qui ne règle rien. **409** sur un\nportrait déjà composé, et l'écran doit retirer l'interrupteur plutôt que\nde le griser.\n\nCette route **n'existait pas**, et l'écran l'appelait pourtant depuis le\npremier jour : l'interrupteur de signature échouait en silence.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "senderNote": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "senderNote"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès"
           },
           "500": {
             "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
@@ -16079,7 +16324,287 @@
                       "type": "string",
                       "enum": [
                         "generated",
-                        "approved"
+                        "composed",
+                        "approved",
+                        "rejected"
+                      ]
+                    },
+                    "content": {
+                      "type": "string"
+                    },
+                    "contentShort": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "senderNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "imageUrl": {
+                      "type": "string",
+                      "format": "uri",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "personId",
+                    "status",
+                    "content",
+                    "contentShort",
+                    "senderNote",
+                    "imageUrl",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/portraits/{id}/compose": {
+      "post": {
+        "summary": "Composer l'image du portrait — le second temps",
+        "description": "**Gouverné par le drapeau `generation.portrait`.**\n\n### Deux temps, et le second est la modération\n\nLe lancement rend un **texte** que son auteur relit ; l'image ne se\nfabrique qu'ici. Produire les deux d'un coup ferait payer une image que\npersonne ne veut — et une image **se refait, elle ne se retouche pas**.\n\n**Comptez plusieurs dizaines de secondes** : un modèle d'image met de\nquinze à vingt secondes, parfois plus. L'écran doit montrer une attente.\n\n### Composer ne vaut PAS acceptation\n\nLe portrait en sort en **`composed`** : l'image existe, personne n'a\nencore dit ce qu'il en pense. C'est un **état terminal légitime**, et la\nplupart des portraits y resteront — rien n'oblige à donner un avis.\n\nCette route s'appelait `/approve`, et ce nom mêlait la fabrication à\nl'acceptation : aucun état ne portait « composée, pas encore jugée », si\nbien qu'on ne pouvait rejeter qu'un **texte**. Le bouton de l'écran, lui,\ndisait « Composer l'image » depuis le premier jour.\n\nL'appel est **idempotent** : un portrait déjà composé rend le sien plutôt\nqu'une seconde image, et ne coûte pas un second appel de modèle. Un\nportrait déjà jugé ne se recompose pas non plus — en refaire une\nchangerait sous les yeux ce qui a été jugé.\n\n**Aucun crédit n'est repris** si la fabrication échoue : le crédit a payé\nle texte, qui est là.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "personId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "generated",
+                        "composed",
+                        "approved",
+                        "rejected"
                       ]
                     },
                     "content": {
@@ -16317,8 +16842,8 @@
     },
     "/me/portraits/{id}/approve": {
       "post": {
-        "summary": "Approuver un portrait — c'est ici que l'image se fabrique",
-        "description": "**Gouverné par le drapeau `generation.portrait`.**\n\n### Deux temps, et le second est la modération\n\nLe lancement rend un **texte** que son auteur relit ; l'image ne se\nfabrique qu'à l'approbation. Produire les deux d'un coup ferait payer\nune image que personne ne veut — et une image **se refait, elle ne se\nretouche pas**.\n\n**Comptez plusieurs dizaines de secondes** : un modèle d'image met de\nquinze à vingt secondes, parfois plus. L'écran doit montrer une attente.\n\nL'appel est **idempotent** : un portrait déjà approuvé rend le sien\nplutôt qu'une seconde image, et ne coûte pas un second appel de modèle.\n\n**Aucun crédit n'est repris** si la fabrication échoue : le crédit a payé\nle texte, qui est là.",
+        "summary": "Garder ce portrait — « celle-ci me va »",
+        "description": "Un des deux **verdicts**, et ils portent sur une image **composée** :\njuger un brief mesurerait la qualité du texte en laissant croire qu'il\nmesure celle du portrait. Sur un portrait encore `generated`, la route\nrend **409**.\n\n**Facultatif.** La plupart des portraits resteront sans avis, et c'est un\nétat légitime, pas un oubli — « refaire » n'est pas « rejeter » : on peut\nproduire cinq portraits en changeant les réglages et les garder tous.\n\n**Réversible**, parce que rien ne se détruit : l'avis se change dans les\ndeux sens. Idempotent.",
         "security": [
           {
             "bearerAuth": []
@@ -16355,7 +16880,287 @@
                       "type": "string",
                       "enum": [
                         "generated",
-                        "approved"
+                        "composed",
+                        "approved",
+                        "rejected"
+                      ]
+                    },
+                    "content": {
+                      "type": "string"
+                    },
+                    "contentShort": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "senderNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "imageUrl": {
+                      "type": "string",
+                      "format": "uri",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "personId",
+                    "status",
+                    "content",
+                    "contentShort",
+                    "senderNote",
+                    "imageUrl",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/portraits/{id}/reject": {
+      "post": {
+        "summary": "Rejeter ce portrait — « celle-ci ne va pas »",
+        "description": "L'autre verdict, et le seul avis négatif que le produit sache recevoir.\nC'est lui qui dit si une version de configuration fait mieux que la\nprécédente — sans lui, on publiait sans jamais le savoir.\n\n### L'image RESTE\n\nUn rejet est un **avis**, pas une suppression. L'utilisateur a payé cette\nimage ; la détruire parce qu'elle lui plaît moins reviendrait à lui\nreprendre ce qu'il a acheté. Comme rien ne se perd, l'avis **se reprend**.\n\nIl ne sert donc pas au ménage du stockage. Ce qui a besoin d'une règle de\ncycle de vie est ce que *personne* n'a payé — les essais\nd'administration et les sources —, et chacun a déjà son préfixe.\n\nMêmes règles que `/approve` : sur une image composée seulement (**409**\nsinon), facultatif, réversible, idempotent.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "personId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "generated",
+                        "composed",
+                        "approved",
+                        "rejected"
                       ]
                     },
                     "content": {
@@ -28482,7 +29287,8 @@
                           "enum": [
                             "generated",
                             "edited",
-                            "sent"
+                            "sent",
+                            "rejected"
                           ]
                         },
                         "createdAt": {
@@ -28898,7 +29704,8 @@
                                 "enum": [
                                   "generated",
                                   "edited",
-                                  "sent"
+                                  "sent",
+                                  "rejected"
                                 ]
                               },
                               "createdAt": {
@@ -29319,7 +30126,8 @@
                           "enum": [
                             "generated",
                             "edited",
-                            "sent"
+                            "sent",
+                            "rejected"
                           ]
                         },
                         "createdAt": {
@@ -29702,7 +30510,8 @@
                       "enum": [
                         "generated",
                         "edited",
-                        "sent"
+                        "sent",
+                        "rejected"
                       ]
                     },
                     "createdAt": {
@@ -29947,6 +30756,9 @@
                   },
                   "markSent": {
                     "type": "boolean"
+                  },
+                  "markRejected": {
+                    "type": "boolean"
                   }
                 },
                 "additionalProperties": false
@@ -29982,7 +30794,8 @@
                       "enum": [
                         "generated",
                         "edited",
-                        "sent"
+                        "sent",
+                        "rejected"
                       ]
                     },
                     "createdAt": {

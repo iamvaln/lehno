@@ -304,9 +304,25 @@ describe("la génération d'un message", () => {
     it("rattrape une exécution restée en route, et rend le crédit", async () => {
       await crediter(5);
 
-      const { execution } = await fabrique({ anthropic: repond() }).lancerMessage(
+      const { execution, fini } = await fabrique({ anthropic: repond() }).lancerMessage(
         awa, occurrence, "ma_fierte" as never, {},
       );
+
+      /* ON ATTEND LA PRODUCTION AVANT DE SIMULER LA PANNE, et c'est ce qui rend
+         ce cas déterministe.
+         
+         Il forçait `pending` pendant que la tâche de fond écrivait la même
+         ligne : deux écrivains sans coordination, donc un résultat qui dépend de
+         l'entrelacement. Vert seul, rouge dans la suite entière — la pire forme
+         d'échec, celle qu'on met sur le compte de la machine. Vu deux fois dans
+         la même journée, sur deux cas de ce bloc.
+         
+         Attendre d'abord ne retire rien à ce qu'on éprouve : l'état qu'on
+         fabrique ensuite — `pending` avec une date vieille de deux heures — est
+         exactement celui qu'un arrêt du serveur entre le débit et la fin
+         laisserait derrière lui. */
+      await fini;
+
       /* On la VIEILLIT au-delà du seuil plutôt que d'attendre une heure. C'est
          la date de création que le balayeur regarde. */
       await db.prisma.actionRun.update({
@@ -413,6 +429,39 @@ describe("la génération d'un message", () => {
       const m = await lancer({ anthropic: repond() });
       await service.corriger(awa, m.id, { markSent: true });
       expect((await service.corriger(awa, m.id, { content: "encore une version" })).status).toBe("sent");
+    });
+
+    /* ─── LE REJET ────────────────────────────────────────────────────────────
+     *
+     * §6 du brief du panneau : aucune production ne portait d'avis négatif. On
+     * publiait donc des configurations sans jamais savoir si on avait amélioré
+     * quoi que ce soit. */
+    it("se rejette, et c'est distinct d'une retouche", async () => {
+      await crediter(5);
+      const m = await lancer({ anthropic: repond() });
+      expect((await service.corriger(awa, m.id, { markRejected: true })).status).toBe("rejected");
+    });
+
+    /* `rejected` N'EST PAS `edited`. Le premier dit « il ne va pas », le second
+       « je l'ai arrangé » — un message corrigé reste un message qu'on garde, et
+       les confondre mesurerait la retouche au lieu du ratage. */
+    it("ne se confond pas avec une correction", async () => {
+      await crediter(5);
+      const m = await lancer({ anthropic: repond() });
+      await service.corriger(awa, m.id, { content: "Ma version à moi" });
+      expect((await service.corriger(awa, m.id, { markRejected: true })).status).toBe("rejected");
+    });
+
+    /* ON NE REJETTE PAS CE QUI EST DÉJÀ PARTI. Le rejet est un avis sur la
+       production, et il ne veut plus rien dire une fois le message envoyé : ce
+       qui est parti a manifestement convenu. Le laisser passer fausserait la
+       seule mesure qu'on vient chercher. */
+    it("ne s'applique plus à un message envoyé", async () => {
+      await crediter(5);
+      const m = await lancer({ anthropic: repond() });
+      await service.corriger(awa, m.id, { markSent: true });
+      await expect(service.corriger(awa, m.id, { markRejected: true }))
+        .rejects.toMatchObject({ code: "conflict" });
     });
 
     it("ne se corrige pas depuis un autre compte", async () => {

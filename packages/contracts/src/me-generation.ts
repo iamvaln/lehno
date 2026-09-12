@@ -173,7 +173,22 @@ export type Generation = z.infer<typeof generationSchema>;
 
 // ── Le portrait produit ─────────────────────────────────────────────────────
 
-export const PORTRAIT_STATUSES = ["generated", "approved"] as const;
+/* QUATRE MOMENTS, ET C'EST LE DEUXIÈME QUI MANQUAIT.
+ *
+ * `generated` — le brief seul : des mots et une phrase, aucune image.
+ * `composed`  — l'image existe, personne n'a dit ce qu'il en pense.
+ * `approved`  — « je garde celle-ci ».
+ * `rejected`  — « celle-ci ne va pas ». L'image RESTE.
+ *
+ * Composer valait acceptation, si bien qu'aucun état ne portait « composée, pas
+ * encore jugée » : on ne pouvait rejeter qu'un TEXTE, alors que ce qu'on juge
+ * est ce qu'on a vu.
+ *
+ * `composed` EST UN ÉTAT TERMINAL LÉGITIME, et la plupart des portraits y
+ * resteront. Refaire n'est pas rejeter : on peut en produire cinq en changeant
+ * les réglages et les garder tous. Comme pour les idées, l'absence d'avis n'est
+ * pas un « ni l'un ni l'autre » — c'est « personne n'a répondu ». */
+export const PORTRAIT_STATUSES = ["generated", "composed", "approved", "rejected"] as const;
 export type PortraitStatus = (typeof PORTRAIT_STATUSES)[number];
 
 /* Ce que l'écran affiche. Aucun réglage n'y figure : ils ont servi à composer
@@ -196,9 +211,31 @@ export const portraitSchema = z.object({
 
 export type Portrait = z.infer<typeof portraitSchema>;
 
+/* CHANGER LA NOTE DE L'EXPÉDITEUR — « Fait avec soin par Valentine ».
+ *
+ * Elle est « proposée puis modifiable » (spec §79), et se retire : `null` est
+ * donc une valeur, pas une absence. L'omettre voudrait dire « ne touche pas »,
+ * c'est-à-dire l'inverse du geste.
+ *
+ * AVANT LA COMPOSITION SEULEMENT. Après, elle est dans les pixels du fichier :
+ * la changer ne changerait plus l'image, et l'accepter promettrait un effet qui
+ * n'arrive pas — exactement le genre de réglage qui ne règle rien. La route
+ * rend 409 sur un portrait déjà composé.
+ *
+ * Cette route N'EXISTAIT PAS. L'écran envoyait pourtant ce `PATCH` depuis le
+ * premier jour, et l'interrupteur échouait donc en silence. */
+export const updatePortraitSchema = z.object({
+  senderNote: z.string().trim().max(120).nullable(),
+}).strict();
+
+export type UpdatePortraitInput = z.infer<typeof updatePortraitSchema>;
+
 // ── Le brouillon de message ─────────────────────────────────────────────────
 
-export const MESSAGE_STATUSES = ["generated", "edited", "sent"] as const;
+/* `rejected` est DISTINCT d'`edited`, qui dit « je l'ai arrangé » : un message
+   corrigé reste un message qu'on garde, et les confondre mesurerait la retouche
+   au lieu du ratage. */
+export const MESSAGE_STATUSES = ["generated", "edited", "sent", "rejected"] as const;
 export type MessageStatus = (typeof MESSAGE_STATUSES)[number];
 
 /**
@@ -237,9 +274,23 @@ export type GeneratedMessage = z.infer<typeof generatedMessageSchema>;
 export const updateMessageSchema = z.object({
   content: z.string().trim().min(1).max(4000).optional(),
   markSent: z.boolean().optional(),
-}).strict().refine((v) => v.content !== undefined || v.markSent !== undefined, {
-  message: "au moins un champ doit être fourni",
-});
+  /* « Celui-là ne va pas. » C'est l'avis qui manquait, et sans lequel publier
+     une configuration ne se mesure pas : un pouce en bas dit quelque chose,
+     l'absence de geste ne dit rien.
+     Il ne se combine à RIEN — ni à une correction, ni à un envoi. Corriger un
+     message qu'on rejette n'a pas de sens, et l'envoyer non plus ; les accepter
+     ensemble laisserait deux gestes contradictoires décider par leur ordre
+     d'application. */
+  markRejected: z.boolean().optional(),
+}).strict()
+  .refine(
+    (v) => v.content !== undefined || v.markSent !== undefined || v.markRejected !== undefined,
+    { message: "au moins un champ doit être fourni" },
+  )
+  .refine(
+    (v) => v.markRejected !== true || (v.content === undefined && v.markSent !== true),
+    { message: "un rejet ne se combine ni à une correction ni à un envoi" },
+  );
 
 export type UpdateMessageInput = z.infer<typeof updateMessageSchema>;
 

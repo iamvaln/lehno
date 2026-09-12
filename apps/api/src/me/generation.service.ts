@@ -325,13 +325,15 @@ export class GenerationService {
     }
   }
 
-  private async reglagesBriefPortrait(): Promise<ReglagesBriefPortrait | null> {
+  /* Elle rend AUSSI l'identifiant, et il suit le sort des réglages : nul dès que
+     la production retombe sur le gabarit du code. Voir `reglagesIdees`. */
+  private async reglagesBriefPortrait(): Promise<{ reglages: ReglagesBriefPortrait | null; configId: string | null }> {
     const publie = await this.configs.enService("portrait_brief").catch(() => null);
-    if (publie === null) return null;
+    if (publie === null) return { reglages: null, configId: null };
     try {
-      return this.configs.reglagesBriefPortraitDe(publie);
+      return { reglages: this.configs.reglagesBriefPortraitDe(publie), configId: publie.id };
     } catch {
-      return null;
+      return { reglages: null, configId: null };
     }
   }
 
@@ -531,7 +533,7 @@ export class GenerationService {
     options: { langue?: "fr" | "en"; texteLibre?: string | null; motDeLExpediteur?: string | null; cle?: string | null } = {},
   ) {
     const proche = await this.depot.persons(userId).findOrThrow(personId);
-    const { contexte, modele } = await this.rassemblerPortrait(userId, proche.id, selection, options);
+    const { contexte, modele, briefConfigId } = await this.rassemblerPortrait(userId, proche.id, selection, options);
 
     const { execution, dejaLancee } = await this.debiter(
       userId, null, selection.orientation, options.cle ?? null, ACTION_PORTRAIT,
@@ -544,7 +546,7 @@ export class GenerationService {
       fini: this.enArrierePlan(execution.id, userId, async () => {
         const brief = await this.produireLeBrief(contexte, userId, execution.id, modele);
         return this.conclurePortrait(
-          execution.id, userId, proche.id, selection, configId, brief,
+          execution.id, userId, proche.id, selection, configId, briefConfigId, brief,
           options.motDeLExpediteur ?? null,
         );
       }),
@@ -559,7 +561,7 @@ export class GenerationService {
   private async rassemblerPortrait(
     userId: string, personId: string, selection: SelectionPortrait,
     options: { langue?: "fr" | "en"; texteLibre?: string | null },
-  ): Promise<{ contexte: ContextePortrait; modele: string | null }> {
+  ): Promise<{ contexte: ContextePortrait; modele: string | null; briefConfigId: string | null }> {
     const proche = await this.prisma.person.findUniqueOrThrow({ where: { id: personId } });
     const moi = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId }, select: { uiLanguage: true },
@@ -601,9 +603,9 @@ export class GenerationService {
        l'image qui les dessine ; l'une s'éprouve sur un modèle de texte, l'autre
        sur un modèle d'image. Les confondre était exactement le défaut que le
        découpage message/portrait a réparé. */
-    const reglages = await this.reglagesBriefPortrait();
+    const { reglages, configId: briefConfigId } = await this.reglagesBriefPortrait();
 
-    return { modele: reglages?.modele ?? null, contexte: {
+    return { modele: reglages?.modele ?? null, briefConfigId, contexte: {
       // La langue du COMPTE : le portrait se lit par celui qui l'offre, comme
       // les idées. Le message, lui, part chez le proche et prend la sienne.
       langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
@@ -681,7 +683,8 @@ export class GenerationService {
 
   private async conclurePortrait(
     actionRunId: string, userId: string, personId: string, selection: SelectionPortrait,
-    configId: string, brief: SortiePortrait, motDeLExpediteur: string | null,
+    configId: string, briefConfigId: string | null, brief: SortiePortrait,
+    motDeLExpediteur: string | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
       const depense = await tx.aIUsage.aggregate({
@@ -709,12 +712,24 @@ export class GenerationService {
           // La gamme se relira dans la configuration : on fige LEQUEL, pas les
           // quatre couleurs — les recopier ici les ferait diverger d'elle.
           compositionId: selection.composition.id,
-          /* LA CONFIGURATION QUI A PRODUIT CE BRIEF. L'approbation relira SA
-             consigne, pas celle du catalogue courant : reformuler une ambiance
-             entre les deux temps composerait l'image avec un texte et le brief
-             avec un autre. L'historique existait — il ne manquait que ce
-             lien. */
+          /* LE CATALOGUE — nature `portrait`. L'approbation relira SA consigne,
+             pas celle du catalogue courant : reformuler une ambiance entre les
+             deux temps composerait l'image avec un texte et le brief avec un
+             autre. L'historique existait — il ne manquait que ce lien.
+
+             LE NOM DIT « BRIEF » DANS L'ANCIEN COMMENTAIRE, ET C'ÉTAIT FAUX :
+             cette ligne-ci est la configuration du catalogue, celle qui porte
+             les ambiances, les compositions et le modèle d'image. Le brief a la
+             sienne — `briefStudioConfigId`, juste en dessous —, et les deux sont
+             bien deux versions distinctes : l'une écrit le texte, l'autre
+             dessine. Les confondre, c'est exactement le défaut que le découpage
+             en quatre natures a réparé. */
           studioConfigId: configId,
+          /* LA CONFIGURATION QUI A ÉCRIT LE TEXTE — nature `portrait_brief`.
+             Elle ne se notait nulle part : on pouvait rejeter un portrait sans
+             que rien ne dise quelle consigne avait choisi ses mots, et l'avis
+             se perdait. Nulle quand le brief vient du gabarit du code. */
+          ...(briefConfigId === null ? {} : { briefStudioConfigId: briefConfigId }),
           content: JSON.stringify({ mots: brief.mots, phrase: brief.phrase }),
           ...(brief.phraseCourte === null ? {} : { shortContent: brief.phraseCourte }),
           ...(motDeLExpediteur === null ? {} : { senderNote: motDeLExpediteur }),
@@ -877,13 +892,27 @@ export class GenerationService {
    * qu'un texte a été retouché est ce qui rend le taux de régénération lisible.
    * `sent` l'emporte ensuite — un message envoyé puis corrigé reste envoyé,
    * puisque le destinataire a déjà lu la version d'avant. */
-  async corriger(userId: string, id: string, patch: { content?: string | undefined; markSent?: boolean | undefined }) {
+  async corriger(
+    userId: string,
+    id: string,
+    patch: { content?: string | undefined; markSent?: boolean | undefined; markRejected?: boolean | undefined },
+  ) {
     const brouillon = await this.prisma.generatedMessage.findFirst({ where: { id, userId } });
     if (!brouillon) throw new AppError("not_found", "unknown message");
 
-    const etat = patch.markSent === true
-      ? "sent" as const
-      : (patch.content !== undefined && brouillon.status === "generated" ? "edited" as const : brouillon.status);
+    /* ON NE REJETTE PAS UN MESSAGE DÉJÀ PARTI. Le rejet est un avis sur la
+       production — « celui-là ne va pas » —, et il ne veut plus rien dire une
+       fois le message envoyé : ce qui est parti a manifestement convenu. Le
+       laisser passer fausserait la seule mesure qu'on vient chercher. */
+    if (patch.markRejected === true && brouillon.status === "sent") {
+      throw new AppError("conflict", "a sent message cannot be rejected");
+    }
+
+    const etat = patch.markRejected === true
+      ? "rejected" as const
+      : patch.markSent === true
+        ? "sent" as const
+        : (patch.content !== undefined && brouillon.status === "generated" ? "edited" as const : brouillon.status);
 
     return this.prisma.generatedMessage.update({
       where: { id },

@@ -1639,6 +1639,13 @@ enum GeneratedMessageStatus {
   generated
   edited
   sent
+  /**
+   * « Celui-là ne va pas. » Distinct d'`edited`, qui dit « je l'ai arrangé » —
+   * un message corrigé reste un message qu'on garde, et le confondre avec un
+   * rejet mesurerait la retouche au lieu du ratage.
+   * Terminal comme `sent` : on ne rejette pas un message déjà parti.
+   */
+  rejected
 
   @@map("generated_message_status")
 }
@@ -1691,6 +1698,8 @@ model GeneratedMessage {
 
   @@index([userId, createdAt])
   @@index([eventOccurrenceId])
+  /// « Combien de rejets par version » — la lecture qui justifie tout ça.
+  @@index([studioConfigId, status])
   @@map("generated_message")
 }
 
@@ -1738,6 +1747,7 @@ model GeneratedIdeaSet {
   ideas      GeneratedIdea[]
 
   @@index([userId, createdAt])
+  @@index([studioConfigId])
   @@map("generated_idea_set")
 }
 
@@ -1793,8 +1803,42 @@ model GeneratedIdea {
 /// l'approbation. Le contrat le dit — « l'image composée, produite à
 /// l'approbation ». C'est aussi la modération : on relit avant de fabriquer.
 enum PortraitStatus {
+  /** Le brief seul : des mots et une phrase, aucune image. */
   generated
+  /**
+   * L'IMAGE EXISTE, ET PERSONNE N'A ENCORE DIT CE QU'IL EN PENSE.
+   *
+   * Il manquait, et son absence faussait tout : `approuver` fabriquait l'image
+   * ET valait acceptation dans le même geste, si bien qu'aucun état ne portait
+   * « composée, pas encore jugée ». On ne pouvait donc rejeter qu'un TEXTE,
+   * jamais un portrait — alors que ce qu'on juge est ce qu'on a vu.
+   *
+   * C'EST UN ÉTAT TERMINAL LÉGITIME. La plupart des portraits y resteront :
+   * refaire n'est pas rejeter — quelqu'un peut en produire cinq en changeant
+   * les réglages et les garder tous —, et rien n'oblige à donner un avis.
+   * Comme pour les idées, l'absence d'avis n'est pas un « ni l'un ni l'autre » :
+   * c'est « personne n'a répondu », et ça ne se compte pas pareil.
+   */
+  composed
+  /** « Je garde celle-ci. » */
   approved
+  /**
+   * « Celle-ci ne va pas. »
+   *
+   * L'IMAGE RESTE. Un rejet est un AVIS, pas une suppression : l'utilisateur a
+   * payé cette image, et la détruire parce qu'elle lui plaît moins reviendrait
+   * à lui reprendre ce qu'il a acheté. Comme rien ne se détruit, l'avis se
+   * reprend — on peut changer d'idée dans les deux sens.
+   *
+   * ET IL NE SERT PAS AU MÉNAGE DU STOCKAGE, contrairement à ce que le §6 du
+   * brief laissait entendre. Une image composée pèse un à deux mégaoctets ;
+   * mille comptes avec cinq portraits chacun font moins de dix gigaoctets, soit
+   * quelques centimes par mois. Effacer ce que les gens ont payé pour économiser
+   * ça serait un très mauvais échange. Ce qui a besoin d'une règle de cycle de
+   * vie est ce que PERSONNE n'a payé : les essais d'administration et les
+   * sources, qui ont chacun leur préfixe.
+   */
+  rejected
 }
 
 /**
@@ -1858,6 +1902,19 @@ model Portrait {
   /// `Restrict` : une configuration citée par un portrait ne se supprime pas,
   /// sinon la consigne qui a produit le texte est perdue.
   studioConfigId String?       @map("studio_config_id") @db.Uuid
+  /**
+   * LA CONFIGURATION QUI A ÉCRIT LE TEXTE — nature `portrait_brief`, distincte
+   * de `studioConfigId` juste au-dessus, qui est le CATALOGUE (nature
+   * `portrait` : ambiances, compositions, modèle d'image).
+   * Les deux sont deux versions réelles et séparées : l'une choisit les mots,
+   * l'autre les dessine, l'une s'éprouve sur un modèle de texte, l'autre sur un
+   * modèle d'image. Les confondre est le défaut que le découpage en quatre
+   * natures a réparé — et le commentaire d'à côté disait « brief » pour une
+   * ligne qui n'en était pas une.
+   * Sans elle, rejeter un portrait ne disait pas quelle consigne avait choisi
+   * ses mots : l'avis se perdait à mi-chemin.
+   */
+  briefStudioConfigId String?   @map("brief_studio_config_id") @db.Uuid
   /// CE QU'ON EN A PENSÉ, et non ce qu'on en a fait. `approved` est un GESTE —
   /// je garde ce portrait ; l'avis est un JUGEMENT. Les deux se séparent dans
   /// la vraie vie : on approuve un portrait passable parce qu'on a payé. Les
@@ -1873,10 +1930,14 @@ model Portrait {
   actionRun    ActionRun     @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   person       Person        @relation(fields: [personId], references: [id], onDelete: Cascade)
-  studioConfig StudioConfig? @relation(fields: [studioConfigId], references: [id], onDelete: Restrict)
+  studioConfig      StudioConfig? @relation("portraitCatalogue", fields: [studioConfigId], references: [id], onDelete: Restrict)
+  briefStudioConfig StudioConfig? @relation("portraitBrief", fields: [briefStudioConfigId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
   @@index([personId])
+  @@index([briefStudioConfigId, status])
+  /// « Combien de rejets par version » — la lecture qui justifie tout ça.
+  @@index([studioConfigId, status])
   @@map("portrait")
 }
 
@@ -2133,7 +2194,14 @@ model StudioConfig {
   @@index([state, createdAt])
   @@index([fingerprint])
   @@map("studio_config")
-  portraits   Portrait[]
+  portraits        Portrait[] @relation("portraitCatalogue")
+  /// Les portraits dont elle a écrit le TEXTE — nature `portrait_brief`. Deux
+  /// liens distincts vers la même table parce que ce sont deux natures : l'une
+  /// choisit les mots, l'autre les dessine.
+  briefsDePortrait Portrait[] @relation("portraitBrief")
+  /// Les productions de texte qui la citent. Elles répondent à la question qui
+  /// donne son sens à l'atelier : « cette version fait-elle mieux que la
+  /// précédente ? » — combien de rejets, sur combien de productions.
   messages    GeneratedMessage[]
   jeuxDIdees  GeneratedIdeaSet[]
 }
