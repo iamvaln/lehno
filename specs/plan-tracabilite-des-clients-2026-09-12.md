@@ -104,65 +104,114 @@ fois, plutôt que de laisser chaque lecture le refaire.
 
 ---
 
-## 5. Où la trace se pose : trois niveaux, et pas un journal par requête
+## 5. Où la trace se pose
 
-**Un journal par requête est le réflexe, et c'est le mauvais.** À quelques
-centaines de milliers d'appels par mois, la table grossit sans borne pour
-répondre à une question — « quelles versions nous appellent » — qu'un compteur
-résout en mille fois moins de place.
+*Révisé le 12 septembre après arbitrage. La première version faisait d'un
+agrégat quotidien la pièce centrale. Ce n'est pas ce qu'on cherche : **ce sont
+des logs, du verbeux** — et ces mêmes champs sur tout ce qui est déjà historisé.*
 
-### Niveau 1 — la ligne de journal, à chaque requête
+### 5.1 La ligne de journal, à chaque requête
 
-Ce que le serveur écrit déjà sur sa sortie standard gagne quatre champs :
-`clientId`, `clientType`, `appVersion`, `appOs`. Coût nul en base, et c'est ce
-qu'on lit pendant un incident, à côté de l'identifiant de corrélation qui existe
-déjà.
+Ce que le serveur écrit déjà sur sa sortie standard gagne les champs des
+en-têtes : `clientId`, `clientType`, `appVersion`, `osName`, `osVersion`, `env`.
 
-### Niveau 2 — l'agrégat quotidien, pour la question qui se pose vraiment
+Coût nul en base. C'est ce qu'on lit pendant un incident, à côté de
+l'identifiant de corrélation qui existe déjà — et les deux ensemble suffisent à
+suivre un appel de bout en bout.
 
-Une table `client_version_seen` : une ligne par **(jour, client, plateforme,
-version d'app, version d'OS)**, avec un compteur. Quelques dizaines de lignes par
-jour au lieu de centaines de milliers.
+**C'est le cœur du lot.** Le reste en découle.
 
-Elle répond à « quelles versions parlent encore au serveur », « depuis quand
-cette version a disparu », « combien d'appareils sont restés sur l'ancienne » —
-sans qu'aucune requête n'écrive une ligne à elle.
+### 5.2 Tout ce qui est historisé porte l'origine
 
-### Niveau 3 — l'origine sur ce qui persiste déjà
+La règle, et elle est simple : **une ligne qu'on relira un jour pour comprendre
+ce qui s'est passé dit d'où elle vient.**
 
-Les lignes qu'on relit quand quelque chose coûte ou surprend gagnent le client et
-la version : `ai_usage`, `action_run`, `login_activity`. C'est ce que fait
-monjeton, et c'est ce qui permet de dire « cet appel à 0,40 $ vient du build
-Android 1.4.2 ».
+| table | ce qu'elle garde | ce qu'elle gagne |
+| --- | --- | --- |
+| `login_activity` | les connexions — porte déjà `ip` et `user_agent` | le client, le type, la version |
+| `audit_log` | les gestes d'administration | idem — quelle version du panneau |
+| `ai_usage` | ce qu'un appel de modèle a coûté | idem — quel build a déclenché la dépense |
+| `action_run` | ce qui a été payé en crédits | idem |
+| `credit_transaction` | les mouvements de crédit | idem **+ l'IP** (§5.3) |
+| `payment` | les paiements | idem **+ l'IP** (§5.3) |
 
----
+`login_activity` montre la forme à suivre : elle porte déjà `ip`, `user_agent` et
+`geo_approx`. Ce lot lui ajoute simplement ce qui manquait — de quelle
+application, dans quelle version.
+
+### 5.3 L'IP sur les transactions, et pourquoi c'est un écart assumé
+
+**Le dépôt a une doctrine sur l'IP, et elle est explicite.** `auth.controller.ts`
+l'écrit :
+
+> « Cette IP ne sert qu'à composer la clé du limiteur […] : elle n'est ni
+> journalisée ni renvoyée ici. »
+
+La poser sur `credit_transaction` et `payment` est donc un écart, et il se
+justifie plutôt qu'il ne se glisse.
+
+**Une transaction n'est pas une requête ordinaire.** Elle se conteste. En mode
+semi-manuel, quelqu'un déclare avoir payé, un administrateur décide, et des
+crédits changent de main. Le jour où deux récits s'opposent, l'origine de la
+déclaration est souvent la seule chose qui tranche — et elle ne se reconstitue
+pas après coup.
+
+`login_activity` fait déjà exactement ça pour les connexions, avec le même
+raisonnement : ce sont les gestes qu'on relit quand quelque chose cloche.
+
+**Ce que ça implique, et qu'il faut assumer** : une transaction se garde pour la
+comptabilité, donc plus longtemps qu'un journal. L'IP la suit. C'est une donnée
+personnelle qui vit le temps de la pièce comptable, et l'export comme
+l'effacement du compte doivent la traiter comme telle.
+
+L'IP se lit par `req.ip`, dont la valeur dépend du réglage « trust proxy » déjà
+posé au démarrage. **Jamais `X-Forwarded-For` directement** : sans borne, chacun
+forgerait son origine.
+
+### 5.4 Ce qu'on ne fait PAS
+
+**Pas de journal par requête en base.** La ligne de journal suffit, et une table
+qui grossirait sans borne pour répondre à « quelles versions nous appellent »
+coûterait cent fois ce que la question vaut.
+
+Si un jour cette question se pose assez souvent pour mériter mieux qu'un `grep`,
+un **agrégat quotidien** — une ligne par (jour, client, version, système), avec un
+compteur — la résout en quelques dizaines de lignes par jour. **Ce n'est pas dans
+ce lot**, et il ne faut pas le préparer « au cas où » : le journal répond déjà, et
+une table qu'on remplit sans la lire est une table qu'on finit par croire.
+
+*À savoir si on y vient un jour* : gabee compte en **appareils** et non en
+appels — une ligne par appareil, `upsert` sur son identifiant, avec `lastSeen`.
+C'est la bonne unité pour « combien d'appareils sont restés sur l'ancienne
+version », qui est la question qui décide d'une mise à jour forcée. Dix appels
+d'un même téléphone ressemblent à dix dans un compteur d'appels.
 
 ## 6. Les phases
 
 **Phase 1 — la trace, sans rien bloquer.** Le modèle `ApiClient`, la lecture des
-en-têtes, les quatre champs dans le journal, l'agrégat quotidien. **Le middleware
-n'interdit rien** : un appel sans en-têtes passe et se note « inconnu ».
+en-têtes, les six champs dans la ligne de journal, et l'origine sur les six
+tables historisées — IP comprise sur les deux tables de transaction. **Le
+middleware n'interdit rien** : un appel sans en-têtes passe et se note
+« inconnu ».
 
 C'est délibéré. Bloquer d'emblée couperait les applications déjà installées, qui
 n'envoient rien — et on découvrirait la panne en production. On commence par
-regarder, et on voit ce qui arrive.
+regarder.
 
 **Phase 2 — la garde.** Une fois que le journal montre que tous les appels
 portent leurs en-têtes, on refuse ceux qui n'en ont pas : 403, avec un code
-distinct pour chaque cause. Le passage de la phase 1 à la phase 2 est **un
-réglage**, pas un déploiement — un paramètre système, coupable en une minute si
-quelque chose dérape.
+distinct par cause. Le passage de la phase 1 à la phase 2 est **un réglage**, pas
+un déploiement — un paramètre système, coupable en une minute si quelque chose
+dérape.
 
 **Phase 3 — la politique de version.** `min_supported` et `latest` par
 plateforme, **426** en dessous du minimum, et un en-tête de suggestion au-dessus.
 C'est ce qui permet de retirer un chemin sans casser les téléphones qui ne se
 mettent pas à jour.
 
-**Phase 4 — la lecture au panneau.** « Quelles versions nous appellent, et
-combien », par semaine. Sans elle, l'agrégat est une table que personne ne
-regarde.
-
----
+**Il n'y a pas de phase 4.** La première version de ce plan en prévoyait une pour
+un écran d'administration au-dessus d'un agrégat. L'agrégat n'est plus au plan
+(§5.4), donc l'écran non plus.
 
 ## 7. Ce qui reste à trancher
 
@@ -187,9 +236,10 @@ Ces points ne sont pas des détails de mise en œuvre : ils changent le travail.
    confirmer : ces valeurs ne passent **pas** par `.env` du dépôt, qui n'est
    édité que par le propriétaire.
 
-4. **La rétention de l'agrégat.** Une ligne par jour et par combinaison, ça reste
-   petit — mais « petit pour toujours » n'existe pas. **Proposé** : on garde
-   dix-huit mois, ce qui couvre deux cycles annuels de comparaison.
+4. **L'IP sur les transactions et l'effacement du compte.** Elle vit le temps de
+   la pièce comptable, donc plus longtemps que le reste. **À confirmer** : ce que
+   l'export de données en montre, et ce que l'effacement d'un compte en fait —
+   une pièce comptable ne s'efface pas, mais son IP peut se retirer.
 
 5. **`X-App-Env`.** Utile pour ne pas mêler les chiffres du staging à ceux de la
    production. Mais si chaque environnement a déjà ses propres clés (point 2),

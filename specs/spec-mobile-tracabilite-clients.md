@@ -71,9 +71,9 @@ s'arrête au numéro du magasin, et c'est précisément le cas où l'on cherche.
 `Platform.OS` donne `ios` ou `android` ; `Platform.Version` donne `17.4` ou le
 niveau d'API Android (un entier, `34`, pas `14`). **Attention** : le serveur
 range cette valeur telle quelle, donc Android remontera des niveaux d'API. C'est
-utilisable, mais il faut le savoir en lisant les chiffres — ou convertir côté
+utilisable, mais il faut le savoir en lisant les journaux — ou convertir côté
 client, ce qui demande une table à tenir à jour. **Proposé** : on envoie brut, et
-la lecture du panneau porte la mention.
+la spec backend porte la mention.
 
 ### `X-Client-Type`
 

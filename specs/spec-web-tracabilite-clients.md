@@ -88,9 +88,8 @@ Si un jour le web appelle une surface sous garde, la règle du mobile s'applique
 Le format `<os>:<version>` ne veut pas dire grand-chose dans un navigateur.
 
 **Proposé** : `web:<nom du navigateur>` déduit de l'agent utilisateur —
-`web:chrome`, `web:safari`. Sans version : elle change toutes les six semaines et
-ferait exploser le nombre de combinaisons dans l'agrégat quotidien pour une
-information dont personne n'a l'usage.
+`web:chrome`, `web:safari`. Sans version : elle change toutes les six semaines,
+et personne n'a l'usage de cette précision-là.
 
 **Sur la voie serveur, il n'y a pas de navigateur du tout.** Proposé : `web:ssr`,
 qui dit ce que c'est plutôt que de laisser un champ vide qu'on lirait comme un
