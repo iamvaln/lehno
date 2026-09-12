@@ -25,7 +25,7 @@ const liste = (n: number, p: Partial<Wishlist> = {}): Wishlist => ({
 
 const occasion = (n: number): Occurrence => ({
   id: uuid(100 + n), eventId: uuid(200 + n), personId: uuid(1),
-  personDisplayName: "Moi", kind: "birthday", nature: "happy", label: null,
+  personDisplayName: "Moi", isSelf: false, kind: "birthday", nature: "happy", label: null,
   occurrenceDate: "2026-09-03", occurrenceYear: 2026, status: "upcoming",
   daysUntil: 5, age: 30,
 });

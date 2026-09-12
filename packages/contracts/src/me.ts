@@ -153,6 +153,19 @@ export const listPersonsQuerySchema = z
        contourner en demandant tout le carnet annulerait la pagination qu'on
        vient de poser. */
     q: z.string().trim().min(1).max(120).optional(),
+    /* LA FICHE DE SOI, DEDANS OU DEHORS — §13.3, 12 septembre.
+     *
+     * Elle reste INCLUSE par défaut, et ce n'est pas de la timidité : c'est ce
+     * que « Pour qui » exige. Ce sélecteur ne listait que les proches, on ne
+     * pouvait donc pas inscrire sa propre date, et l'exclure d'office
+     * réinstallerait précisément le blocage que la fiche de soi a levé.
+     *
+     * L'écran du carnet, lui, veut la retirer — « mes proches » ne se compte
+     * pas soi-même. D'où l'échappatoire plutôt que l'inverse. Le `total` SUIT
+     * le filtre : un total qui compterait une fiche absente de la liste ferait
+     * afficher « Voir plus · 1 restant » sur une page complète, et personne ne
+     * comprendrait ce qui manque. */
+    includeSelf: z.boolean().optional(),
   })
   .strict();
 
@@ -287,6 +300,32 @@ export const selfPersonSchema = champsDeProche
   .superRefine(bornerLaNaissanceDe);
 
 export type SelfPersonInput = z.infer<typeof selfPersonSchema>;
+
+/* LE PARTIEL DE LA FICHE DE SOI — §13.4, 12 septembre.
+ *
+ * `PUT` est un REMPLACEMENT : il exige `displayName`, et un écran qui voudrait
+ * corriger un seul champ devait donc lire la fiche entière d'abord, puis la
+ * renvoyer intégralement. Ce n'est pas théorique — c'est ce qui a fait RETIRER
+ * l'écriture de `language` depuis le mobile plutôt que de la laisser diverger :
+ * l'écran du profil ne connaissait pas les autres champs, et les aurait écrasés.
+ *
+ * Dérivé de la création comme `updatePersonSchema` l'est de la sienne, et pour
+ * la même raison : deux déclarations divergeraient, et la validation d'une
+ * correction finirait plus laxiste que celle d'une écriture complète.
+ *
+ * Le corps vide est REFUSÉ. Un `PATCH {}` ne ferait rien et rendrait 200, ce
+ * qui apprendrait à l'écran que son enregistrement a marché alors qu'il n'a
+ * rien envoyé. */
+export const selfPersonPatchSchema = champsDeProche
+  .omit({ relation: true, relationHint: true })
+  .partial()
+  .strict()
+  .refine((v) => Object.keys(v).length > 0, {
+    message: "au moins un champ doit être fourni",
+  })
+  .superRefine(bornerLaNaissanceDe);
+
+export type SelfPersonPatchInput = z.infer<typeof selfPersonPatchSchema>;
 
 // ── Les notes ───────────────────────────────────────────────────────────────
 

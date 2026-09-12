@@ -16,8 +16,9 @@ import {
 } from "@nestjs/common";
 import {
   createPersonSchema, updatePersonSchema, listPersonsQuerySchema, selfPersonSchema,
+  selfPersonPatchSchema,
   type CreatePersonInput, type Person, type PersonAttributes, type PersonList, type UpdatePersonInput,
-  type SelfPersonInput,
+  type SelfPersonInput, type SelfPersonPatchInput,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
@@ -56,6 +57,7 @@ export class PersonController {
     @Query("offset") offset?: string,
     @Query("limit") limit?: string,
     @Query("q") q?: string,
+    @Query("includeSelf") includeSelf?: string,
   ): Promise<PersonList> {
     const analyse = listPersonsQuerySchema.safeParse({
       ...(sort !== undefined ? { sort } : {}),
@@ -63,6 +65,13 @@ export class PersonController {
       ...(offset !== undefined ? { offset: Number(offset) } : {}),
       ...(limit !== undefined ? { limit: Number(limit) } : {}),
       ...(q !== undefined ? { q } : {}),
+      /* SEUL « false » EXCLUT. `Boolean("false")` vaut vrai, et s'y fier aurait
+         rendu le paramètre décoratif — il aurait inclus la fiche quoi qu'on
+         écrive. Tout autre texte est refusé par le schéma plutôt qu'interprété :
+         un `?includeSelf=0` silencieusement ignoré est pire qu'un 400. */
+      ...(includeSelf !== undefined
+        ? { includeSelf: includeSelf === "false" ? false : includeSelf === "true" ? true : includeSelf }
+        : {}),
     });
     if (!analyse.success) {
       throw new AppError("validation_failed", "invalid persons query", {
@@ -169,5 +178,20 @@ export class SelfPersonController {
     @Body(new ZodValidationPipe(selfPersonSchema)) body: SelfPersonInput,
   ): Promise<Person> {
     return this.persons.ecrireSoi(req.userId, body);
+  }
+
+  /* ET SA CORRECTION PARTIELLE — §13.4. Le `PUT` exige `displayName` : un écran
+     qui ne veut changer que la langue devait lire la fiche entière pour pouvoir
+     la renvoyer, et c'est ce qui a fait retirer l'écriture de `language` depuis
+     le mobile plutôt que de risquer d'écraser le reste.
+
+     Elle NE CRÉE PAS : 404 quand la fiche n'existe pas, et l'écran passe alors
+     par le `PUT`. Créer ici obligerait à inventer un nom. */
+  @Patch()
+  corriger(
+    @Req() req: AuthedRequest,
+    @Body(new ZodValidationPipe(selfPersonPatchSchema)) body: SelfPersonPatchInput,
+  ): Promise<Person> {
+    return this.persons.corrigerSaFiche(req.userId, body);
   }
 }

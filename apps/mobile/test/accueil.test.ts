@@ -11,7 +11,7 @@ function echeance(jours: number, n = jours): Occurrence {
     id: `1111111${n}-1111-4111-8111-111111111111`,
     eventId: "22222222-2222-4222-8222-222222222222",
     personId: "33333333-3333-4333-8333-333333333333",
-    personDisplayName: `Proche ${n}`, kind: "birthday", nature: "happy",
+    personDisplayName: `Proche ${n}`, isSelf: false, kind: "birthday", nature: "happy",
     label: null, occurrenceDate: "2026-09-01", occurrenceYear: 2026,
     status: "upcoming", daysUntil: jours, age: null,
   };

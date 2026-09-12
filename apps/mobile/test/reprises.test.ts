@@ -25,7 +25,7 @@ function echeance(n: number, jours: number, qui = `Proche ${n}`): Occurrence {
     id: uuid(n),
     eventId: uuid(900 + n),
     personId: uuid(800 + n),
-    personDisplayName: qui, kind: "birthday", nature: "happy",
+    personDisplayName: qui, isSelf: false, kind: "birthday", nature: "happy",
     label: null, occurrenceDate: "2026-09-01", occurrenceYear: 2026,
     status: "upcoming", daysUntil: jours, age: null,
   };

@@ -5101,7 +5101,7 @@
     "/me/persons": {
       "get": {
         "summary": "Lister ses proches — le carnet, trié et paginé",
-        "description": "### Une enveloppe, non plus un tableau\n\n`{ persons, total }`. Le total sert « Voir plus · n restants » : un\ncurseur ne saurait pas le donner, et à l'échelle d'un carnet personnel le\ndécalage numéroté est exact.\n\n### Le tri, et sa direction\n\n`sort=date` (défaut) range sur la prochaine échéance, `sort=alpha` sur le\nnom. `direction=asc` (défaut) ou `desc` : « par date » ne dit rien tant\nqu'on ne sait pas de quel bout.\n\n**Une fiche sans date passe en FIN de liste dans les DEUX sens.** Jamais\nen tête à l'inversion : le carnet sert à voir qui a une date qui\napproche, et une fiche à compléter y occuperait la place de ce qui presse.\n\n**Changer de tri revient à la première page** — remettre `offset` à zéro.\nLe serveur ne s'en souvient pas, c'est au client de le faire.\n\n### Ce que chaque fiche porte pour sa ligne\n\n`notesCount` — les notes DURABLES seules, celles que rend\n`/me/persons/{id}/notes`. Compter aussi celles de circonstance ferait dire\n« 7 notes » à une fiche qui n'en montre que trois.\n\n`nextOccurrence` — nulle quand le proche n'a aucune date ; la ligne\naffiche alors « Compléter » à la place du décompte. `daysUntil` est signé.\n\nLes deux voyagent AVEC la fiche : les chercher autrement ferait un appel\npar proche, soit quarante-trois sur le carnet d'essai du handoff.\n\n### La recherche\n\n`q` filtre sur le nom affiché ET le nom d'usage — quelqu'un cherche\n« maman » sans savoir si la fiche dit « Maman » ou « Maman Chantal ».\n\n**Insensible à la casse et aux accents** : « emile » trouve « Émile ».\nSur un marché où les claviers ne portent pas toujours les accents,\nl'inverse rendrait la recherche inutilisable pour la moitié des noms.\n\n**Elle se combine au tri et à la pagination**, et s'applique AVANT eux :\n`total` compte les correspondances, pas le carnet entier. Ne filtrez pas\nune page déjà chargée — un proche de la troisième page resterait\nintrouvable, et c'est le défaut que ce paramètre corrige.\n\n§3.15 demande des résultats « classés par proximité de leur prochaine\néchéance » : c'est `sort=date`, le tri par défaut. Rien à ajouter.\n\n### Le genre n'est pas dans ce contrat\n\nNi en lecture, ni en écriture, ni dans `/me/metadata`. Le carnet ne pose\npas la question ; tant que le champ traversait, la règle ne tenait que par\nla retenue du client. La colonne existe en base — c'est un signal de\ngénération de dernier recours, déduit côté serveur, jamais demandé.",
+        "description": "### Une enveloppe, non plus un tableau\n\n`{ persons, total }`. Le total sert « Voir plus · n restants » : un\ncurseur ne saurait pas le donner, et à l'échelle d'un carnet personnel le\ndécalage numéroté est exact.\n\n### Le tri, et sa direction\n\n`sort=date` (défaut) range sur la prochaine échéance, `sort=alpha` sur le\nnom. `direction=asc` (défaut) ou `desc` : « par date » ne dit rien tant\nqu'on ne sait pas de quel bout.\n\n**Une fiche sans date passe en FIN de liste dans les DEUX sens.** Jamais\nen tête à l'inversion : le carnet sert à voir qui a une date qui\napproche, et une fiche à compléter y occuperait la place de ce qui presse.\n\n**Changer de tri revient à la première page** — remettre `offset` à zéro.\nLe serveur ne s'en souvient pas, c'est au client de le faire.\n\n### Ce que chaque fiche porte pour sa ligne\n\n`notesCount` — les notes DURABLES seules, celles que rend\n`/me/persons/{id}/notes`. Compter aussi celles de circonstance ferait dire\n« 7 notes » à une fiche qui n'en montre que trois.\n\n`nextOccurrence` — nulle quand le proche n'a aucune date ; la ligne\naffiche alors « Compléter » à la place du décompte. `daysUntil` est signé.\n\nLes deux voyagent AVEC la fiche : les chercher autrement ferait un appel\npar proche, soit quarante-trois sur le carnet d'essai du handoff.\n\n### La recherche\n\n`q` filtre sur le nom affiché ET le nom d'usage — quelqu'un cherche\n« maman » sans savoir si la fiche dit « Maman » ou « Maman Chantal ».\n\n**Insensible à la casse et aux accents** : « emile » trouve « Émile ».\nSur un marché où les claviers ne portent pas toujours les accents,\nl'inverse rendrait la recherche inutilisable pour la moitié des noms.\n\n**Elle se combine au tri et à la pagination**, et s'applique AVANT eux :\n`total` compte les correspondances, pas le carnet entier. Ne filtrez pas\nune page déjà chargée — un proche de la troisième page resterait\nintrouvable, et c'est le défaut que ce paramètre corrige.\n\n§3.15 demande des résultats « classés par proximité de leur prochaine\néchéance » : c'est `sort=date`, le tri par défaut. Rien à ajouter.\n\n### La fiche de soi est DEDANS par défaut\n\n`includeSelf=false` la retire. Elle est incluse autrement, et ce n'est pas\nde la timidité : « Pour qui » ne listait que les proches, on ne pouvait\ndonc pas inscrire sa propre date, et l'exclure d'office réinstallerait le\nblocage que la fiche de soi a levé.\n\nL'écran du carnet, lui, veut la retirer — « mes proches » ne se compte pas\nsoi-même. **`total` suit le filtre** : un total qui compterait une fiche\nabsente de la liste ferait afficher « Voir plus · 1 restant » sur une page\ncomplète.\n\nSeul `false` exclut. Toute autre valeur est refusée en 400 plutôt\nqu'interprétée : un `includeSelf=0` silencieusement ignoré serait pire.\n\n### Le genre n'est pas dans ce contrat\n\nNi en lecture, ni en écriture, ni dans `/me/metadata`. Le carnet ne pose\npas la question ; tant que le champ traversait, la règle ne tenait que par\nla retenue du client. La colonne existe en base — c'est un signal de\ngénération de dernier recours, déduit côté serveur, jamais demandé.",
         "security": [
           {
             "bearerAuth": []
@@ -5193,6 +5193,21 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 120
+                }
+              ]
+            }
+          },
+          {
+            "name": "includeSelf",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "boolean"
                 }
               ]
             }
@@ -6469,6 +6484,443 @@
                   "displayName",
                   "gender"
                 ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "callingName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "isSelf": {
+                      "type": "boolean"
+                    },
+                    "relation": {
+                      "type": "string",
+                      "enum": [
+                        "famille_proche",
+                        "famille_etendue",
+                        "ami",
+                        "partenaire",
+                        "collegue",
+                        "relation_pro",
+                        "connaissance"
+                      ],
+                      "nullable": true
+                    },
+                    "relationHint": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "birthDate": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "birthYearKnown": {
+                      "type": "boolean"
+                    },
+                    "gender": {
+                      "type": "string",
+                      "enum": [
+                        "female",
+                        "male"
+                      ],
+                      "nullable": true
+                    },
+                    "city": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "country": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "register": {
+                      "type": "string",
+                      "enum": [
+                        "familier",
+                        "amical",
+                        "formel"
+                      ],
+                      "nullable": true
+                    },
+                    "language": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "preferredChannel": {
+                      "type": "string",
+                      "enum": [
+                        "whatsapp",
+                        "sms",
+                        "email",
+                        "autre"
+                      ],
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "notesCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "nextOccurrence": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "occurrenceDate": {
+                          "type": "string"
+                        },
+                        "daysUntil": {
+                          "type": "integer"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "birthday",
+                            "other"
+                          ]
+                        },
+                        "label": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "occurrenceDate",
+                        "daysUntil",
+                        "kind",
+                        "label"
+                      ],
+                      "additionalProperties": false,
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "callingName",
+                    "avatarUrl",
+                    "isSelf",
+                    "relation",
+                    "relationHint",
+                    "birthDate",
+                    "birthYearKnown",
+                    "gender",
+                    "city",
+                    "country",
+                    "register",
+                    "language",
+                    "preferredChannel",
+                    "createdAt",
+                    "notesCount",
+                    "nextOccurrence"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Corriger un champ de sa propre fiche",
+        "description": "Le `PUT` est un REMPLACEMENT : il exige `displayName`, donc un écran qui\nne veut changer que la langue devait lire la fiche entière pour pouvoir la\nrenvoyer. Ce n'est pas théorique — c'est ce qui a fait retirer l'écriture\nde `language` depuis le mobile plutôt que de risquer d'écraser le reste.\n\n**Elle ne crée pas.** 404 quand la fiche n'existe pas : l'écran passe alors\npar le `PUT`. Créer ici obligerait à inventer un `displayName` pour\nquelqu'un qui n'a envoyé qu'une langue.\n\nUn corps vide est refusé : un `PATCH {}` qui rendrait 200 apprendrait à\nl'écran que son enregistrement a marché alors qu'il n'a rien envoyé.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "callingName": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "avatarUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048
+                  },
+                  "register": {
+                    "type": "string",
+                    "enum": [
+                      "familier",
+                      "amical",
+                      "formel"
+                    ]
+                  },
+                  "gender": {
+                    "type": "string",
+                    "enum": [
+                      "female",
+                      "male"
+                    ]
+                  },
+                  "language": {
+                    "type": "string",
+                    "enum": [
+                      "fr",
+                      "en"
+                    ]
+                  },
+                  "birthDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "birthYearKnown": {
+                    "type": "boolean"
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "country": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 2,
+                    "pattern": "^[A-Za-z]{2}$"
+                  },
+                  "preferredChannel": {
+                    "type": "string",
+                    "enum": [
+                      "whatsapp",
+                      "sms",
+                      "email",
+                      "autre"
+                    ]
+                  }
+                },
                 "additionalProperties": false
               }
             }
@@ -10535,6 +10987,9 @@
                       "personDisplayName": {
                         "type": "string"
                       },
+                      "isSelf": {
+                        "type": "boolean"
+                      },
                       "kind": {
                         "type": "string",
                         "enum": [
@@ -10583,6 +11038,7 @@
                       "eventId",
                       "personId",
                       "personDisplayName",
+                      "isSelf",
                       "kind",
                       "nature",
                       "label",
@@ -10838,6 +11294,9 @@
                     "personDisplayName": {
                       "type": "string"
                     },
+                    "isSelf": {
+                      "type": "boolean"
+                    },
                     "kind": {
                       "type": "string",
                       "enum": [
@@ -10886,6 +11345,7 @@
                     "eventId",
                     "personId",
                     "personDisplayName",
+                    "isSelf",
                     "kind",
                     "nature",
                     "label",
@@ -22138,6 +22598,8 @@
                             "enum": [
                               "event_reminder",
                               "event_day_of",
+                              "own_date_reminder",
+                              "own_date_day_of",
                               "digest",
                               "contribution_received",
                               "wish_received",
@@ -22404,6 +22866,8 @@
                           "enum": [
                             "event_reminder",
                             "event_day_of",
+                            "own_date_reminder",
+                            "own_date_day_of",
                             "digest",
                             "contribution_received",
                             "wish_received",
@@ -22462,6 +22926,8 @@
                             "enum": [
                               "event_reminder",
                               "event_day_of",
+                              "own_date_reminder",
+                              "own_date_day_of",
                               "digest",
                               "contribution_received",
                               "wish_received",
@@ -22770,6 +23236,8 @@
                             "enum": [
                               "event_reminder",
                               "event_day_of",
+                              "own_date_reminder",
+                              "own_date_day_of",
                               "digest",
                               "contribution_received",
                               "wish_received",
@@ -23638,6 +24106,9 @@
                           "personDisplayName": {
                             "type": "string"
                           },
+                          "isSelf": {
+                            "type": "boolean"
+                          },
                           "kind": {
                             "type": "string",
                             "enum": [
@@ -23686,6 +24157,7 @@
                           "eventId",
                           "personId",
                           "personDisplayName",
+                          "isSelf",
                           "kind",
                           "nature",
                           "label",
