@@ -3,7 +3,7 @@ import type { Home, Occurrence } from "@lehno/contracts";
 import {
   inviteAFaireUneListe,
   MAX_CARTES, MAX_RANGS, MIN_CARTES, REMPLISSAGE_PLEIN, SEUIL_DE_REDIMENSIONNEMENT,
-  composeLAccueil, doitRepartirDuMaximum, etatDeLAccueil, retrecit,
+  composeLAccueil, doitRepartirDuMaximum, etatDeLAccueil, retrecit, gesteDeLaCarte, nomDeLEcheance,
 } from "../lib/accueil.js";
 
 function echeance(jours: number, n = jours): Occurrence {
@@ -204,5 +204,28 @@ describe("l'invitation à faire une liste", () => {
   // Proposer une liste que le service ne sert pas ouvrirait sur un écran fermé.
   it("se tait quand `wishlist.own` est éteint", () => {
     expect(inviteAFaireUneListe("nominal", false, [])).toBe(false);
+  });
+});
+
+describe("ce qui est à soi", () => {
+  const proche = { personDisplayName: "Awa", isSelf: false };
+  const soi = { personDisplayName: "Valentine", isSelf: true };
+
+  it("dit « Moi » plutôt que votre propre nom", () => {
+    expect(nomDeLEcheance(soi, "Moi")).toBe("Moi");
+  });
+
+  it("nomme le proche par son nom", () => {
+    expect(nomDeLEcheance(proche, "Moi")).toBe("Awa");
+  });
+
+  it("sur sa propre date, le geste est la liste — jamais un message", () => {
+    expect(gesteDeLaCarte(soi, true)).toBe("liste");
+    expect(gesteDeLaCarte(soi, false)).toBe("liste");
+  });
+
+  it("sur la date d'un proche, le geste suit la génération", () => {
+    expect(gesteDeLaCarte(proche, true)).toBe("message");
+    expect(gesteDeLaCarte(proche, false)).toBe("note");
   });
 });

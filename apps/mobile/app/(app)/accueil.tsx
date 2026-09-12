@@ -24,7 +24,7 @@ import { ecranEteint, preparationOuverte } from "../../lib/navigation.js";
 import { composeLesReprises } from "../../lib/reprises.js";
 import {
   REMPLISSAGE_PLEIN, composeLAccueil, doitRepartirDuMaximum, etatDeLAccueil,
-  inviteAFaireUneListe,
+  gesteDeLaCarte, inviteAFaireUneListe, nomDeLEcheance,
   resumeDeLAccueil,
   retrecit, type Remplissage,
 } from "../../lib/accueil.js";
@@ -337,7 +337,7 @@ export default function Accueil() {
             {cartes.map((e, rang) => (
               <View key={e.id} style={{ marginBottom: nativeSpace[12] }}>
                 <EventCard
-                  name={e.personDisplayName}
+                  name={nomDeLEcheance(e, t.evtPourMoi)}
                   what={quoi(e)}
                   countdownLabel={decompte(e)}
                   today={e.daysUntil === 0}
@@ -348,7 +348,13 @@ export default function Accueil() {
                   onPress={() => routeur.push({
                     pathname: "/(app)/occasion", params: { occurrenceId: e.id },
                   })}
-                  {...(rang === 0 ? (preparer ? {
+                  {...(rang === 0 ? (gesteDeLaCarte(e, preparer) === "liste" ? {
+                    /* SA PROPRE DATE : rien à envoyer, rien à marquer. La carte
+                       mène à ses listes, qui est le seul geste qui ait un sens
+                       ici — et « Marquer envoyé » ne suit pas, plus bas. */
+                    prepareLabel: t.cartMaListe,
+                    onPrepare: () => routeur.push("/(app)/listes"),
+                  } : gesteDeLaCarte(e, preparer) === "message" ? {
                     /* « Préparer » sur la PREMIÈRE seulement. Le geste coûte un
                        crédit : le proposer sur trois cartes d'affilée en ferait
                        une barre d'outils au lieu d'une invitation. */
@@ -373,14 +379,14 @@ export default function Accueil() {
                       pathname: "/note", params: { personId: e.personId },
                     }),
                   }) : {})}
-                  {...(rang === 0 && preparer && !envoyes[e.id] ? {
+                  {...(rang === 0 && gesteDeLaCarte(e, preparer) === "message" && !envoyes[e.id] ? {
                     /* « Marquer envoyé » ne mène à aucun écran : c'est un état
                        qui change ici, et l'accusé dit à qui. La carte cesse
                        ensuite de le proposer — rien ne s'envoie deux fois. */
                     markSentLabel: t.marquerEnvoye,
                     onMarkSent: () => {
                       setEnvoyes((v) => ({ ...v, [e.id]: true }));
-                      setAccuse(t.envoiFait(e.personDisplayName));
+                      setAccuse(t.envoiFait(nomDeLEcheance(e, t.evtPourMoi)));
                     },
                   } : {})}
                 />
@@ -390,7 +396,7 @@ export default function Accueil() {
             {rangs.map((e) => (
               <View key={e.id} style={[styles.rang, { borderTopColor: couleurs.borderHairline }]}>
                 <Text style={[styles.rangNom, { color: couleurs.textBody }]} numberOfLines={1}>
-                  {e.personDisplayName}
+                  {nomDeLEcheance(e, t.evtPourMoi)}
                 </Text>
                 <Text style={[styles.rangQuoi, { color: couleurs.textSecondary }]} numberOfLines={1}>
                   {quoi(e)}

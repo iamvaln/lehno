@@ -1050,6 +1050,9 @@ export const fr = {
      quelqu'un attendre un rappel qui ne viendra pas. */
   profilVotreNaissanceAide: "Votre anniversaire ne s'en déduit pas : ajoutez-le ensuite dans Dates.",
   evtPourMoi: "Moi",
+  /* SA PROPRE DATE NE SE PRÉPARE PAS COMME CELLE D'UN PROCHE : il n'y a rien à
+     envoyer, donc rien à marquer. Ce qu'on y prépare est sa liste. */
+  cartMaListe: "Ma wishlist",
   /* UNE CLÉ À PART, et pas une retouche de `rechercher`. Les quatre autres
      emplois de `rechercher` sont sur des écrans qui écartent la fiche de soi :
      « un proche » y est juste. Ici seul, le carnet s'ouvre à soi — c'est même

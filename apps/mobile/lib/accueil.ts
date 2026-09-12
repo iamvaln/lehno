@@ -199,3 +199,44 @@ export function inviteAFaireUneListe(
   if (aUneListe) return false;
   return estActive(actives, "wishlist.own");
 }
+
+// ── Ce qui est à soi ─────────────────────────────────────────────────────────
+
+/* SA PROPRE DATE N'EST PAS CELLE D'UN PROCHE, et l'écran doit le savoir avant
+ * de choisir un nom comme avant de choisir un geste.
+ *
+ * Sur la date d'un proche on prépare CE QU'ON VA LUI ENVOYER ; sur la sienne on
+ * prépare CE QU'ON VA DEMANDER. Ce ne sont pas deux libellés d'une même carte,
+ * ce sont deux cartes.
+ *
+ * Ce que ça coûtait avant `isSelf` au contrat : l'accueil affichait « Valentine ·
+ * Anniversaire · J−57 » avec « Préparer » et « Marquer envoyé », et l'accusé
+ * disait « Envoyé à Valentine » — à Valentine. */
+export function nomDeLEcheance(
+  echeance: { personDisplayName: string; isSelf: boolean },
+  moi: string,
+): string {
+  return echeance.isSelf ? moi : echeance.personDisplayName;
+}
+
+/* CE QUE LA CARTE PROPOSE, et pourquoi elle ne propose pas la même chose.
+ *
+ * `message` — la date d'un proche, génération ouverte : préparer ce qu'on va
+ * lui écrire, puis marquer qu'on l'a envoyé.
+ * `note` — la date d'un proche, génération éteinte : l'action CHANGE
+ * D'IDENTITÉ plutôt que de disparaître, et devient celle du socle, noter une
+ * idée pour la date qui approche. La carte « ne doit pas paraître amputée ».
+ * `liste` — SA PROPRE date : rien à envoyer, rien à marquer. Ce qu'on prépare
+ * est sa liste, et c'est le seul geste qui ait un sens ici.
+ *
+ * MARQUER ENVOYÉ NE SUIT QUE `message`. Sur sa propre date il n'y a rien à
+ * envoyer ; sur une note non plus, rien n'est parti. */
+export type GesteDeLaCarte = "message" | "note" | "liste";
+
+export function gesteDeLaCarte(
+  echeance: { isSelf: boolean },
+  generationOuverte: boolean,
+): GesteDeLaCarte {
+  if (echeance.isSelf) return "liste";
+  return generationOuverte ? "message" : "note";
+}
