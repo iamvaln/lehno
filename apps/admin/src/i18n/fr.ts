@@ -1085,6 +1085,27 @@ export const fr = {
     restantN: "{n} jours",
     restaurer: "Restaurer",
     effacer: "Effacer sans attendre",
+    /* LES DEUX GESTES DU REMBOURSEMENT. Le versement se fait DEHORS — depuis un
+       téléphone ou la console d'un opérateur —, et c'est sa référence qu'on
+       rentre ici. L'outil ne verse pas, il enregistre ; et c'est ce geste qui
+       libère l'effacement retenu. */
+    verser: "Remboursement versé",
+    abandonner: "Renoncer au remboursement",
+    reference: "Référence du virement",
+    referenceAide: "Celle que l'opérateur a rendue. C'est la seule preuve que l'argent est parti — sans elle, « remboursé » n'est qu'une affirmation.",
+    sansNumero: "numéro inconnu",
+    dialogueVerser: {
+      titre: "Enregistrer le remboursement de {compte}",
+      consequence: "Vous déclarez avoir envoyé {montant} {devise} au {numero}. Les crédits correspondants sont repris, et l'effacement du compte n'est plus retenu.",
+      motifs: ["Virement effectué", "Remboursement groupé", "Régularisation"],
+    },
+    dialogueAbandonner: {
+      titre: "Renoncer au remboursement de {compte}",
+      // Sans porte de sortie, une demande qui ne peut pas aboutir retiendrait
+      // l'effacement pour toujours.
+      consequence: "Aucun argent ne sera envoyé, et les crédits ne sont pas repris. L'effacement du compte n'est plus retenu.",
+      motifs: ["Numéro fermé ou injoignable", "Titulaire sans réponse", "Montant contesté"],
+    },
     dialogueEffacer: {
       titre: "Effacer {compte} maintenant ?",
       consequence: "L'effacement est définitif : fiches, notes, contenus produits et surfaces publiques disparaissent. Ce qui reste du délai de grâce s'arrête là.",
@@ -1105,6 +1126,8 @@ export const fr = {
     faits: {
       efface: "Compte effacé. Motif : {motif}",
       restaure: "Compte restauré. Motif : {motif}",
+      verse: "Remboursement enregistré. Référence : {reference}",
+      abandonne: "Remboursement abandonné. Motif : {motif}",
     },
     vide: {
       titre: "Rien en attente d'effacement",

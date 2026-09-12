@@ -189,6 +189,24 @@ export const demandeSuppressionSchema = z.object({
    * qui attend notre virement se lirait comme un compte qui attend le calendrier.
    */
   etat: z.enum(["en_cours", "echue", "attend_remboursement"]),
+  /* LE VERSEMENT DÛ, quand il y en a un. Nul autrement.
+   *
+   * Sans lui, l'écran savait qu'un remboursement retient l'effacement, et ne
+   * pouvait rien en faire : ni dire COMBIEN est dû, ni régler LEQUEL — les deux
+   * routes le désignent par son identifiant. Un état qu'on affiche sans pouvoir
+   * agir dessus est une impasse à l'écran, et c'est ce qui a laissé ces deux
+   * gestes inatteignables depuis leur écriture.
+   *
+   * Le numéro du payeur y est parce que c'est LÀ qu'on envoie l'argent : le
+   * chercher dans un autre écran, entre deux moitiés du même geste, est la
+   * meilleure façon de se tromper de destinataire. */
+  remboursement: z.object({
+    id: z.string(),
+    montant: z.number(),
+    devise: z.string(),
+    /** Nul quand le paiement d'origine n'en portait pas. */
+    numeroDuPayeur: z.string().nullable(),
+  }).strict().nullable(),
 }).strict();
 
 export type DemandeSuppression = z.infer<typeof demandeSuppressionSchema>;

@@ -72,9 +72,16 @@ export const compteDetail: CompteDetail = {
 
 export const suppressions: Page<DemandeSuppression> = {
   items: [
-    { id: "s-1", compte: "nour", demandeeLe: "2026-07-25", echeance: "2026-08-24", joursRestants: 1, etat: "en_cours" },
-    { id: "s-2", compte: "karim", demandeeLe: "2026-07-24", echeance: "2026-08-23", joursRestants: 0, etat: "echue" },
-    { id: "s-3", compte: "fatou", demandeeLe: "2026-08-10", echeance: "2026-09-09", joursRestants: 17, etat: "en_cours" },
+    { id: "s-1", compte: "nour", demandeeLe: "2026-07-25", echeance: "2026-08-24", joursRestants: 1, etat: "en_cours", remboursement: null },
+    { id: "s-2", compte: "karim", demandeeLe: "2026-07-24", echeance: "2026-08-23", joursRestants: 0, etat: "echue", remboursement: null },
+    /* UN COMPTE QUI ATTEND SON VIREMENT — le cas que la démonstration taisait,
+       et sans lequel les deux gestes du remboursement ne se voient nulle part
+       en maquette. */
+    {
+      id: "s-3", compte: "fatou", demandeeLe: "2026-08-10", echeance: "2026-09-09",
+      joursRestants: 17, etat: "attend_remboursement",
+      remboursement: { id: "p-9", montant: 5000, devise: "XAF", numeroDuPayeur: "+237 6 99 00 11 22" },
+    },
   ],
   nextCursor: null,
 };

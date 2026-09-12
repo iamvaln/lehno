@@ -999,6 +999,21 @@ export const en: typeof fr = {
     restantN: "{n} days",
     restaurer: "Restore",
     effacer: "Erase now",
+    verser: "Refund paid",
+    abandonner: "Give up on the refund",
+    reference: "Transfer reference",
+    referenceAide: "The one the operator returned. It is the only proof the money left — without it, « refunded » is just a claim.",
+    sansNumero: "unknown number",
+    dialogueVerser: {
+      titre: "Record the refund for {compte}",
+      consequence: "You are declaring that {montant} {devise} was sent to {numero}. The matching credits are taken back, and the account's erasure is no longer held.",
+      motifs: ["Transfer made", "Batched refund", "Reconciliation"],
+    },
+    dialogueAbandonner: {
+      titre: "Give up on the refund for {compte}",
+      consequence: "No money will be sent, and the credits are not taken back. The account's erasure is no longer held.",
+      motifs: ["Number closed or unreachable", "Holder unresponsive", "Amount disputed"],
+    },
     dialogueEffacer: {
       titre: "Erase {compte} now?",
       consequence: "Erasure is final: profiles, notes, generated content and public surfaces all go. Whatever is left of the grace period stops here.",
@@ -1019,6 +1034,8 @@ export const en: typeof fr = {
     faits: {
       efface: "Account erased. Reason: {motif}",
       restaure: "Account restored. Reason: {motif}",
+      verse: "Refund recorded. Reference: {reference}",
+      abandonne: "Refund given up. Reason: {motif}",
     },
     vide: {
       titre: "Nothing waiting to be erased",

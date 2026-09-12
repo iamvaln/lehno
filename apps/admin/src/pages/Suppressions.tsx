@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import type { AdminRole, DemandeSuppression } from "@lehno/contracts";
-import { PageHeader } from "../composants/page/index.js";
+import { FormRow, PageHeader } from "../composants/page/index.js";
+import { TextField } from "../composants/base/index.js";
 import {
   DataTable,
   EmptyState,
@@ -27,7 +28,7 @@ import { suppressions as suppressionsDemo } from "../fixtures/index.js";
 
 type EtatDemande = DemandeSuppression["etat"];
 type FiltreEtat = EtatDemande | "tous";
-type Geste = "restaurer" | "effacer";
+type Geste = "restaurer" | "effacer" | "verser" | "abandonner";
 
 interface LigneDemande extends DemandeSuppression {
   demandeeTexte: string;
@@ -63,6 +64,15 @@ export interface SuppressionsProps {
   demandes?: DemandeSuppression[];
   onRestaurer?: (demande: DemandeSuppression, motif: string) => void;
   onEffacer?: (demande: DemandeSuppression, motif: string) => void;
+  /* LE VERSEMENT SE FAIT DEHORS, et c'est sa RÉFÉRENCE qu'on rentre ici. Le
+     virement part d'un téléphone ou d'une console d'opérateur ; l'outil ne
+     l'exécute pas, il l'enregistre — et c'est ce geste qui libère l'effacement
+     retenu. */
+  onVerser?: (demande: DemandeSuppression, reference: string, motif: string) => void;
+  /* RENONCER. Un numéro fermé, un titulaire injoignable, un montant contesté
+     laissent une demande qui ne peut pas aboutir — et sans porte de sortie,
+     elle retiendrait l'effacement du compte pour toujours. */
+  onAbandonner?: (demande: DemandeSuppression, motif: string) => void;
 }
 
 export function Suppressions({
@@ -71,6 +81,8 @@ export function Suppressions({
   demandes = suppressionsDemo.items,
   onRestaurer,
   onEffacer,
+  onVerser,
+  onAbandonner,
 }: SuppressionsProps): ReactNode {
   const t = messages(langue);
   const [recherche, setRecherche] = useState("");
@@ -79,6 +91,10 @@ export function Suppressions({
   const [tri, setTri] = useState<EtatTri>({ cle: "echeance", sens: "asc" });
   const [geste, setGeste] = useState<{ id: Geste; demande: DemandeSuppression } | null>(null);
   const [accuse, setAccuse] = useState<string | null>(null);
+  /* LA RÉFÉRENCE DU VIREMENT — celle que l'opérateur rend. C'est la seule
+     preuve que l'argent est parti, et le contrat l'exige non vide : sans elle,
+     « remboursé » serait une affirmation que rien ne soutient. */
+  const [reference, setReference] = useState("");
 
   const date = useMemo(
     () => new Intl.DateTimeFormat(langue === "en" ? "en-GB" : "fr-FR", { day: "numeric", month: "short", year: "numeric" }),
@@ -154,16 +170,34 @@ export function Suppressions({
 
   // Restaurer reste ouvert au support : c'est le geste réversible. Effacer sans
   // attendre est retiré, pas grisé — un bouton désactivé promettrait un droit.
-  const actions = (): ActionLigne[] => {
+  const actions = (ligne: LigneDemande): ActionLigne[] => {
     const liste: ActionLigne[] = [{ id: "restaurer", label: t.suppressions.restaurer }];
-    if (role === "admin") liste.push({ id: "effacer", label: t.suppressions.effacer, danger: true });
+    if (role !== "admin") return liste;
+
+    /* LES DEUX GESTES DU REMBOURSEMENT NE PARAISSENT QUE S'IL Y EN A UN.
+       Les offrir partout ferait chercher un versement là où il n'y en a pas —
+       et le serveur les refuserait, faute de paiement à régler. */
+    if (ligne.remboursement !== null) {
+      liste.push({ id: "verser", label: t.suppressions.verser });
+      liste.push({ id: "abandonner", label: t.suppressions.abandonner, danger: true });
+    }
+
+    /* EFFACER RESTE OFFERT, même en attente de versement : le serveur tranche.
+       Le cacher ferait croire que le compte est bloqué alors qu'un
+       administrateur peut décider de passer outre — c'est une décision, pas
+       une impossibilité. */
+    liste.push({ id: "effacer", label: t.suppressions.effacer, danger: true });
     return liste;
   };
 
   const dialogue = geste
     ? geste.id === "effacer"
       ? t.suppressions.dialogueEffacer
-      : t.suppressions.dialogueRestaurer
+      : geste.id === "verser"
+        ? t.suppressions.dialogueVerser
+        : geste.id === "abandonner"
+          ? t.suppressions.dialogueAbandonner
+          : t.suppressions.dialogueRestaurer
     : null;
 
   const confirmer = (motif: string) => {
@@ -171,11 +205,18 @@ export function Suppressions({
     if (geste.id === "effacer") {
       onEffacer?.(geste.demande, motif);
       setAccuse(t.suppressions.faits.efface.replace("{motif}", motif));
+    } else if (geste.id === "verser") {
+      onVerser?.(geste.demande, reference.trim(), motif);
+      setAccuse(t.suppressions.faits.verse.replace("{reference}", reference.trim()));
+    } else if (geste.id === "abandonner") {
+      onAbandonner?.(geste.demande, motif);
+      setAccuse(t.suppressions.faits.abandonne.replace("{motif}", motif));
     } else {
       onRestaurer?.(geste.demande, motif);
       setAccuse(t.suppressions.faits.restaure.replace("{motif}", motif));
     }
     setGeste(null);
+    setReference("");
   };
 
   const resultats = trouvees.length > 1
@@ -237,7 +278,15 @@ export function Suppressions({
         <ConfirmWithReason
           destructif={geste.id === "effacer"}
           titre={dialogue.titre.replace("{compte}", geste.demande.compte)}
-          consequence={dialogue.consequence}
+          /* LE MONTANT DANS LA CONSÉQUENCE, jamais seulement dans le tableau :
+             c'est au moment de confirmer qu'on veut relire ce qu'on affirme
+             avoir envoyé, et à qui. */
+          consequence={geste.id === "verser" && geste.demande.remboursement
+            ? dialogue.consequence
+              .replace("{montant}", String(geste.demande.remboursement.montant))
+              .replace("{devise}", geste.demande.remboursement.devise)
+              .replace("{numero}", geste.demande.remboursement.numeroDuPayeur ?? t.suppressions.sansNumero)
+            : dialogue.consequence}
           motifs={[...dialogue.motifs]}
           libelles={{
             motif: t.confirmation.motif,
@@ -248,9 +297,25 @@ export function Suppressions({
             annuler: t.confirmation.annuler,
             confirmer: t.confirmation.confirmer,
           }}
-          onAnnuler={() => setGeste(null)}
+          onAnnuler={() => { setGeste(null); setReference(""); }}
           onConfirmer={confirmer}
-        />
+          /* LA CONFIRMATION SE FERME TANT QUE LA RÉFÉRENCE MANQUE. Le contrat
+             l'exige non vide, et laisser envoyer ferait tomber le refus après
+             l'aller-retour, sur un geste qui touche à de l'argent.
+             `incomplet` porte exactement ce cas : « le motif suffisant ne
+             suffit pas si la saisie ne tient pas ». */
+          incomplet={geste.id === "verser" && reference.trim() === ""}
+        >
+          {geste.id !== "verser" ? null : (
+            <FormRow champId="sup-reference" label={t.suppressions.reference} aide={t.suppressions.referenceAide}>
+              <TextField
+                id="sup-reference"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+              />
+            </FormRow>
+          )}
+        </ConfirmWithReason>
       ) : null}
 
       {accuse ? (
