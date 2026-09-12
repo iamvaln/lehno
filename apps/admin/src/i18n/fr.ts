@@ -1304,6 +1304,11 @@ export const fr = {
       titre: "La chaîne",
       ambiance: "Ambiance éprouvée",
       profil: "Profil d'essai",
+      voie: "Voie éprouvée",
+      /* C'est la VOIE qui dit le modèle, jamais l'ambiance : les deux voies
+         partagent la même famille d'ambiances. */
+      voies: { illustration: "Illustration", photo: "Photo traitée" },
+      sansPhoto: "Cette éprouvette n'a pas de photo d'exemple : la voie photo ne peut pas s'éprouver sur elle. On en dépose une depuis « Profils de simulation ».",
       modele: "Modèle appelé",
       sansTarif: "Tarif inconnu",
       enPanne: "Écarté du routage jusqu'au {date}",

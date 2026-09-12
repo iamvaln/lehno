@@ -100,7 +100,7 @@ const PERFORMANCE_VIDE = {
 const PROFILS = {
   items: [{
     id: "22222222-2222-4222-8222-222222222222",
-    libelle: "Sœur, fiche riche", sensible: false,
+    libelle: "Sœur, fiche riche", sensible: false, photoUrl: null,
     contenu: {
       langue: "fr", orientation: "notre_relation", nomDUsage: "Awa", registre: "familier",
       lien: "famille_proche", relation: "ma grande sœur",

@@ -56,7 +56,10 @@ export interface StudioAtelierProps {
   /** Le dernier essai de la séance, celui qu'on regarde. Nul avant le premier. */
   dernier: EssaiStudio | null;
   enCours?: boolean;
-  onEssayer?: (reglages: ReglagesPortrait, profileId: string, ambianceId: string) => void;
+  onEssayer?: (
+    reglages: ReglagesPortrait, profileId: string, ambianceId: string,
+    voie: "illustration" | "photo",
+  ) => void;
   /* Garder et Écarter emportent l'ESSAI qu'ils suivent : le sort d'un résultat
      se lit du geste qui vient après lui, et non d'un troisième bouton à
      apprendre. Nul quand aucun essai n'a encore eu lieu — mais les deux gestes
@@ -81,11 +84,16 @@ export function StudioAtelier(
 
   const [reglages, setReglages] = useState<ReglagesPortrait>(depart.reglages);
   const [ambianceId, setAmbianceId] = useState<string>(depart.reglages.ambiances[0]?.id ?? "");
+  /* LA VOIE ÉPROUVÉE. L'illustration par défaut — c'était le seul choix
+     possible jusqu'ici, et c'est celui qui ne demande rien de plus. */
+  const [voie, setVoie] = useState<"illustration" | "photo">("illustration");
   const [profileId, setProfileId] = useState<string>(profils[0]?.id ?? "");
   const [sale, setSale] = useState(false);
   const [publication, setPublication] = useState(false);
 
   const ambiance = reglages.ambiances.find((a) => a.id === ambianceId) ?? null;
+  /** L'éprouvette choisie — c'est elle qui porte, ou non, une photo d'exemple. */
+  const profil = profils.find((p) => p.id === profileId) ?? null;
   const rendu = dernier !== null && dernier.etat === "success";
 
   /* LE MODÈLE DE L'ESSAI EST CELUI DE L'ILLUSTRATION, toujours.
@@ -209,6 +217,29 @@ export function StudioAtelier(
                 ))}
               </select>
             </div>
+            {/* C'EST LA VOIE QUI DIT LE MODÈLE, jamais l'ambiance : les deux
+                voies partagent la même famille, et une ambiance ne sait plus
+                lequel appeler. Éprouver l'une pour publier l'autre ferait
+                débloquer la publication sur un rendu qu'on n'a pas vu. */}
+            <div className="admin-rang">
+              <label htmlFor="atelier-voie">{d.chaine.voie}</label>
+              <select
+                id="atelier-voie"
+                value={voie}
+                onChange={(e) => setVoie(e.target.value as "illustration" | "photo")}
+                disabled={role !== "admin"}
+              >
+                <option value="illustration">{d.chaine.voies.illustration}</option>
+                <option value="photo">{d.chaine.voies.photo}</option>
+              </select>
+            </div>
+            {/* LA VOIE PHOTO EXIGE UNE PHOTO D'EXEMPLE sur l'éprouvette. On le
+                dit ICI plutôt que de laisser l'essai échouer : le refus arrive
+                avant tout appel, mais l'administrateur l'apprendrait après
+                avoir cliqué. */}
+            {voie === "photo" && profil !== null && profil.photoUrl === null ? (
+              <p className="gabarit-note" data-ton="alerte">{d.chaine.sansPhoto}</p>
+            ) : null}
             <div className="admin-rang">
               <label htmlFor="atelier-profil">{d.chaine.profil}</label>
               <select
@@ -379,7 +410,7 @@ export function StudioAtelier(
                 <button
                   type="button"
                   disabled={enCours || ambiance === null || profileId === "" || photoBoiteuse}
-                  onClick={() => onEssayer?.(reglages, profileId, ambianceId)}
+                  onClick={() => onEssayer?.(reglages, profileId, ambianceId, voie)}
                 >
                   {enCours ? d.gestes.enCours : d.gestes.essayer}
                 </button>
