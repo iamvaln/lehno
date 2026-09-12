@@ -1522,7 +1522,17 @@ export const fr = {
       parQui: "Par",
       note: "Ce que ça change",
       etat: "État",
+      gestes: "Ce qu'on en a fait",
+      avis: "Ce qu'on en a pensé",
     },
+    /* LES TROIS SEAUX D'UN AXE. « Sans » figure toujours : c'est « personne n'a
+       répondu », et le taire ferait lire deux chiffres comme un total. */
+    axes: {
+      gestes: { pour: "{n} gardés", contre: "{n} rejetés", sans: "{n} sans suite" },
+      avis: { pour: "{n} bons", contre: "{n} mauvais", sans: "{n} sans avis" },
+    },
+    rien: "Rien produit",
+    horsVersion: "Avant le lien : {n} portraits, dont {ecartees} rejetés. Ils n'appartiennent à aucune version, et ne peuvent pas en recevoir une.",
     etats: {
       published: "En service",
       superseded: "Rangée",
