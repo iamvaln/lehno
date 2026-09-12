@@ -694,3 +694,43 @@ Même famille, même paragraphe : `PUT` est un remplacement qui exige
 `displayName` et `gender`, donc aucun écran ne peut corriger un champ seul de la
 fiche sans la lire d'abord. C'est ce qui a fait **retirer** l'écriture de
 `language` depuis le mobile plutôt que de la laisser diverger.
+
+---
+
+## 14. Le pouce s'écrit et ne se relit pas — 12 septembre
+
+Relevé en câblant l'avis du portrait, d'après
+`specs/brief-mobile-avis-2026-09-12.md` §9.
+
+`PATCH /me/portraits/{id}/feedback` et `PATCH /me/messages/{id}/feedback`
+existent et **écrivent bien** : `portrait.service.ts:65-71` pose `feedback` et
+`feedbackAt`, et la colonne est au schéma Prisma.
+
+**Mais la lecture ne le rend pas.** `rendre()` (`portrait.service.ts:372-390`)
+ne compose pas le champ, et `portraitSchema` ne le déclare pas. Même chose pour
+`generatedMessageSchema`. Vérifié schéma par schéma :
+
+| Nature | Le contrat rend le pouce |
+|---|---|
+| les idées | **oui** — `generatedIdeaSchema` le porte |
+| le portrait | **non** |
+| le message | **non** |
+
+**Ce que ça donne à l'écran** : un pouce posé disparaît à la réouverture, et le
+geste suivant réécrit la même valeur en croyant la changer. Un avis qu'on ne
+peut pas relire est un avis qu'on cesse de donner — ce que le commentaire
+d'`avisSchema` dit déjà de son retrait : « une note qu'on ne peut pas corriger
+est une note qu'on cesse de donner. »
+
+**Le mobile n'a donc pas câblé le pouce**, et ce n'est pas un report : un
+contrôle qui perd son état à chaque ouverture est pire qu'un contrôle absent.
+Les deux verdicts, eux, sont posés — `status` est rendu, il se relit.
+
+**Ce qu'il faut** : `feedback` sur `portraitSchema` et sur
+`generatedMessageSchema`, et le champ composé dans les deux `rendre()`. Les
+idées montrent la forme.
+
+Une garde tient le constat côté mobile — `apps/mobile/test/avis-gouverne.test.ts`
+**tombe le jour où le champ arrive**, ce qui est exactement quand on veut être
+prévenu. Éprouvée par la panne.
+
