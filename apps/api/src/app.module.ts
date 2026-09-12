@@ -6,7 +6,10 @@ import { CorrelationMiddleware } from "./common/correlation.middleware.js";
 import { RateLimitService } from "./common/rate-limit.service.js";
 import { PrismaService } from "./prisma/prisma.service.js";
 import { ClientApiService } from "./clients/client-api.service.js";
+import { VersionsService } from "./clients/versions.service.js";
+import { VersionGuard } from "./clients/version.guard.js";
 import { ClientsApiController } from "./admin/clients-api.controller.js";
+import { VersionsController } from "./admin/versions.controller.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthGuard } from "./auth/auth.guard.js";
 import { SignupService } from "./onboarding/signup.service.js";
@@ -160,6 +163,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
   imports: [ScheduleModule.forRoot()],
   controllers: [
     ClientsApiController,
+    VersionsController,
     AuthController, ProfileController, MediaController, PersonController, SelfPersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, NotificationController, ConfigController, LegalController,
     SecurityController,
     AccountController, DeviceController, DataExportController, SupportController,
@@ -179,6 +183,12 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
        donc il doit vivre ici et non dans un module de surface : le middleware
        tourne sur `*`, avant que la moindre route ne soit choisie. */
     ClientApiService,
+    VersionsService,
+    /* Juste après l'arrêt pour intervention, et avant tout le reste : une
+       application trop vieille ne doit pas commencer à travailler. Elle DORT
+       derrière son paramètre — l'allumer alors qu'aucun build n'envoie encore
+       `x-app-build` mettrait tout le monde dehors d'un coup. */
+    { provide: APP_GUARD, useClass: VersionGuard },
     // Garde GLOBAL, et le premier de tous : un arrêt pour intervention vaut
     // pour toute l'API, pas surface par surface. Posé ici plutôt que sur
     // chaque contrôleur — un contrôleur ajouté demain est couvert sans que

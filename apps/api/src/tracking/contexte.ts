@@ -30,6 +30,10 @@ export type ContexteMesure = {
    * rougisse — c'est exactement ce que le commentaire du haut dit déjà. */
   clientId: string | null;
   clientType: TypeClient | null;
+  /* L'identité d'un build, et ce sur quoi « plus ancien que » se décide.
+     Nul quand l'en-tête manque ou n'est pas un entier : un appel qu'on ne peut
+     pas comparer est traité comme inconnu, donc invité à se mettre à jour. */
+  appBuild: number | null;
   /** `ios` ou `android`, découpé de `x-app-os`. */
   osName: string | null;
   /** `17.4`, ou le niveau d'API Android. */
@@ -55,8 +59,8 @@ export function contexteCourant(): ContexteMesure {
   return STOCKAGE.getStore() ?? {
     surface: null, appVersion: null, language: null,
     theme: null, sessionId: null, correlationId: null,
-    clientId: null, clientType: null, osName: null, osVersion: null, env: null,
-    clientVerdict: null,
+    clientId: null, clientType: null, appBuild: null,
+    osName: null, osVersion: null, env: null, clientVerdict: null,
   };
 }
 
@@ -107,6 +111,7 @@ export function lireEntetes(
     sessionId: propre(entetes[ENTETES_MESURE.sessionId]),
     correlationId,
     clientId: propre(entetes[ENTETES_CLIENT.clientId]),
+    appBuild: entier(propre(entetes[ENTETES_CLIENT.appBuild])),
     /* Une valeur hors liste vaut « inconnu » et non la valeur brute : la ranger
        telle quelle mettrait dans la colonne ce que le client a bien voulu y
        écrire, et une colonne de journal n'est pas un champ libre. */
@@ -122,6 +127,14 @@ export function lireEntetes(
 /* Rendre la valeur seulement si la liste la connaît. Même raisonnement que la
    surface juste au-dessus : mieux vaut une propriété vide qu'une valeur
    inventée qui polluerait une segmentation. */
+/* UN ENTIER, OU RIEN. Un build « 4.1.2 », « latest » ou vide ne se compare pas ;
+   le prendre pour zéro le rendrait plus ancien que tout et déclencherait une
+   mise à jour forcée sur un client parfaitement à jour. */
+function entier(valeur: string | null): number | null {
+  if (valeur === null || !/^\d{1,9}$/.test(valeur)) return null;
+  return Number(valeur);
+}
+
 function dansLaListe<T extends string>(liste: readonly T[], valeur: string | null): T | null {
   return (liste as readonly string[]).includes(valeur ?? "") ? (valeur as T) : null;
 }

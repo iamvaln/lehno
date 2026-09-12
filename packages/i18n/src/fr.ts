@@ -57,5 +57,11 @@ export const fr = {
     // dire enverrait chercher une faute qu'on n'a pas commise. §4.5 : ce qui
     // s'est passé, ce qu'on a fait, ce qu'on peut faire maintenant.
     generation_unavailable: "Le modèle ne répond pas pour l'instant. Vos crédits n'ont pas été débités — réessayez dans quelques minutes.",
+    /* ELLE NE DIT PAS POURQUOI, et c'est voulu : déclassée, périmée ou inconnue
+       du registre, le geste est le même, et il n'y a rien d'utile à apprendre à
+       quelqu'un qui attend d'ouvrir son application.
+       Elle ne dit pas non plus « erreur » : rien n'est cassé, il manque une
+       mise à jour. */
+    upgrade_required: "Cette version de l'application n'est plus servie. Mettez-la à jour pour continuer.",
   },
 } as const;

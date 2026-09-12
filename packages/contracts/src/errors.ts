@@ -28,6 +28,17 @@ export const ERROR_CODES = [
   // à part de validation_failed, pour que l'écran puisse dire « ce palier n'est
   // plus proposé » au lieu de « la demande est mal formée ».
   "resource_inactive",
+  /* LA VERSION DU CLIENT N'EST PLUS SERVIE — 426, seul de tout le contrat avec
+     le 410 des liens révoqués.
+     Trois causes, une seule réponse : la version est déclassée, elle est sous
+     une release qui force la mise à jour, ou elle est INCONNUE du registre.
+     L'écran ne les distingue pas, et c'est délibéré — le geste est le même, et
+     il n'y a rien d'utile à dire de plus à quelqu'un qui attend d'ouvrir son
+     application.
+     Un code à part de `forbidden` : l'écran doit pouvoir montrer un bouton
+     « mettre à jour » plutôt qu'un refus qu'on lirait comme une panne de
+     compte. */
+  "upgrade_required",
   // Une action payante lancée sans provision, ou une reprise qui creuserait le
   // solde. 422 : la demande est bien formée, c'est l'état du compte qui ne s'y
   // prête pas. Le contrat commun le cite comme l'exemple même d'un code stable.

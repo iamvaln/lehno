@@ -85,6 +85,16 @@ export const ENTETES_CLIENT = {
   clientKey: "x-client-key",
   clientType: "x-client-type",
   appVersion: "x-app-version",
+  /* L'ENTIER MONOTONE, ET C'EST LUI QUI COMPARE.
+   *
+   * `appVersion` est ce qu'un humain lit ; comparer des `semver` EN CHAÎNES rend
+   * « 1.10.0 » plus ancien que « 1.9.0 », et ce défaut ne se voit qu'au dixième
+   * correctif mineur — au moment où l'on en a le plus besoin.
+   *
+   * `CFBundleVersion` sur iOS, `versionCode` sur Android : les magasins les
+   * exigent déjà croissants. Sur le web, le nombre de commits sur `main`, qui
+   * est monotone et ne demande de compteur à personne. */
+  appBuild: "x-app-build",
   /** `ios:17.4` ou `android:34`. Le serveur découpe UNE fois, à l'entrée. */
   os: "x-app-os",
   env: "x-app-env",
