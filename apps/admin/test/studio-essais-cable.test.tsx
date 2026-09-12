@@ -70,7 +70,10 @@ function serveur(essais: unknown[], tete: unknown = BROUILLON) {
     "/admin/portrait-studio/trials": () => reponse(200, { items: essais }),
   };
   const chemins = Object.keys(table).sort((a, b) => b.length - a.length);
-  const appels = vi.fn((url: string) => {
+  /* `init` est ignoré par la table mais DÉCLARÉ : c'est lui qu'on relit pour
+     savoir ce que l'écran a envoyé, et un faux `fetch` typé sur la seule URL
+     passe à l'exécution mais fait rougir le typecheck — c'est-à-dire la CI. */
+  const appels = vi.fn((url: string, _init?: RequestInit) => {
     for (const chemin of chemins) {
       if (url.includes(chemin)) return Promise.resolve(table[chemin]!());
     }
