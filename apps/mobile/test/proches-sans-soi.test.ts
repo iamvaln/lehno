@@ -13,7 +13,6 @@ import { describe, expect, it } from "vitest";
  * impossible.
  */
 const ECRANS: Readonly<Record<string, "sansSoi" | "soiDabord">> = {
-  "(app)/proches/index": "sansSoi",
   "(app)/proches/recherche": "sansSoi",
   "note": "sansSoi",
   /* Poser une date VISE quelqu'un, et ce quelqu'un peut être soi — c'est même
@@ -30,6 +29,13 @@ const ECRANS: Readonly<Record<string, "sansSoi" | "soiDabord">> = {
  * est le produit de cette table, pas la ligne qui la déclenche.
  */
 const DISPENSES: Readonly<Record<string, string>> = {
+  /* NE FILTRE PLUS, ET C'EST LE SERVEUR QUI LE FAIT : `?includeSelf=false`
+     écarte la fiche de soi et fait suivre `total`. Filtrer en plus ici
+     retrancherait une fiche qui n'est déjà plus là, et le décompte redeviendrait
+     faux — par l'autre bout. C'est la seule entrée de cette table qui soit
+     dispensée parce que le besoin a DISPARU, et non parce qu'il n'a jamais
+     existé. */
+  "(app)/proches/index": "le serveur exclut la fiche de soi, includeSelf=false",
   /* Cherche délibérément `isSelf` pour retrouver SA PROPRE fiche et lister
      ses propres échéances — le seul usage du carnet ici. `sansSoi` la
      retirerait avant qu'on ait pu la trouver. */
