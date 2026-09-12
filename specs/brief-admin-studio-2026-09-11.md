@@ -210,11 +210,18 @@ bas par version, comparée à la précédente.
 
 Deux choses s'accumulent dans R2 sans que rien ne les distingue :
 
-- **les images des essais d'administration** — une par essai, et une séance de
-  réglage en compte trente. Elles sont rangées sous le préfixe `portraits`, **le
-  même que les portraits payés**. Une règle de cycle de vie posée là effacerait
-  ce que les gens ont acheté. Un préfixe `essais` réglerait ça, et c'est deux
-  lignes ;
+- ~~**les images des essais d'administration**~~ — **FAIT le 12.** Un préfixe
+  `essais` les recueille, et c'était bien deux lignes. Le point qui méritait
+  d'être vérifié : **les clés déjà écrites ne bougent pas**, rangées entières
+  dans `studio_trial.output` et relues telles quelles — rien à migrer. Le
+  préfixe ne vaut donc que pour la suite, et le ménage du passé demandera une
+  passe qui saura reconnaître les clés venues d'un essai.
+
+  Ce que le paragraphe voyait juste, et qui vaut d'être redit : la règle de
+  cycle de vie était **imposable des deux côtés**. Posée sur `portraits`, elle
+  effaçait ce que les gens ont acheté ; pas posée, les essais s'accumulaient
+  sans fin. Le port écrivait déjà ce raisonnement pour `sources` — les essais y
+  échappaient ;
 - **les portraits refaits.** « Refaire » est une nouvelle génération complète :
   chaque approbation fabrique une image et la range. Quelqu'un qui refait trois
   fois laisse trois images, et rien ne dit laquelle il voulait.
