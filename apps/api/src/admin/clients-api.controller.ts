@@ -3,7 +3,8 @@ import {
   creerClientApiSchema, majClientApiSchema, rotationClientApiSchema,
 } from "@lehno/contracts";
 import type {
-  ClientApi, ClientApiAvecCle, CreerClientApiInput, MajClientApiInput, RotationClientApiInput,
+  ClientApi, ClientApiAvecCle, ClientsApi,
+  CreerClientApiInput, MajClientApiInput, RotationClientApiInput,
 } from "@lehno/contracts";
 import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -47,7 +48,7 @@ export class ClientsApiController {
   ) {}
 
   @Get()
-  async lister(): Promise<{ items: ClientApi[] }> {
+  async lister(): Promise<ClientsApi> {
     const lignes = await this.prisma.apiClient.findMany({
       orderBy: [{ isActive: "desc" }, { label: "asc" }],
     });

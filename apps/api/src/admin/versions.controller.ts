@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common";
 import { enregistrerVersionSchema, majVersionSchema, TYPES_CLIENT } from "@lehno/contracts";
 import type {
-  EnregistrerVersionInput, MajVersionInput, TypeClient, VersionApp,
+  EnregistrerVersionInput, MajVersionInput, TypeClient, VersionApp, VersionsApp,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
@@ -55,7 +55,7 @@ export class VersionsController {
   /* Du build le plus récent au plus ancien — c'est l'ordre dans lequel on lit un
      registre, et celui dont la décision dépend. */
   @Get()
-  async lister(@Query("platform") plateforme?: string): Promise<{ items: VersionApp[] }> {
+  async lister(@Query("platform") plateforme?: string): Promise<VersionsApp> {
     const filtre = plateforme === undefined ? {} : { platform: this.plateforme(plateforme) as never };
     const lignes = await this.prisma.appVersion.findMany({
       where: filtre,
