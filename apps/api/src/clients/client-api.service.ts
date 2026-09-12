@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
-import type { TypeClient } from "@lehno/contracts";
+import type { TypeClient, EnvClient } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 
 /* Résoudre le client d'une requête : qui appelle, depuis quel build.
@@ -24,7 +24,16 @@ export type Annonce = {
 };
 
 export type Verdict =
-  | { etat: "reconnu"; clientId: string; clientType: TypeClient }
+  | {
+      etat: "reconnu";
+      clientId: string;
+      clientType: TypeClient;
+      /* L'ENVIRONNEMENT ENREGISTRÉ, pas celui que l'en-tête déclare.
+         C'est lui qui décide si le registre des versions s'applique — un build
+         de production qui enverrait `x-app-env: dev` ne s'exempterait de rien,
+         puisque c'est la PAIRE présentée qui tranche, et qu'elle est en base. */
+      environment: EnvClient;
+    }
   /* Un motif par cause, et il ne sort JAMAIS vers le client : celui-ci reçoit un
      refus unique. Dire laquelle des deux valeurs est fausse apprendrait à un
      script lesquelles il a devinées. Ici, on veut tout savoir. */
@@ -44,6 +53,7 @@ const DUREE_CACHE_MS = 60_000;
 type Ligne = {
   clientId: string;
   clientType: TypeClient;
+  environment: EnvClient;
   keyHash: string;
   isActive: boolean;
 };
@@ -67,7 +77,10 @@ export class ClientApiService {
        circule hors de son build, et c'est exactement ce qu'on veut voir. */
     if (annonce.clientType !== ligne.clientType) return { etat: "type_discordant" };
 
-    return { etat: "reconnu", clientId: ligne.clientId, clientType: ligne.clientType };
+    return {
+      etat: "reconnu", clientId: ligne.clientId,
+      clientType: ligne.clientType, environment: ligne.environment,
+    };
   }
 
   /** À appeler quand l'administration coupe un client ou tourne sa clé. */
@@ -87,7 +100,10 @@ export class ClientApiService {
     try {
       ligne = await this.prisma.apiClient.findUnique({
         where: { clientId },
-        select: { clientId: true, clientType: true, keyHash: true, isActive: true },
+        select: {
+          clientId: true, clientType: true, environment: true,
+          keyHash: true, isActive: true,
+        },
       }) as Ligne | null;
     } catch {
       return null;

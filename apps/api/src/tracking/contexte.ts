@@ -44,6 +44,12 @@ export type ContexteMesure = {
      DIT être : en phase 1 on ne refuse rien, et c'est justement l'écart entre
      les deux qu'on vient mesurer avant d'allumer la garde. */
   clientVerdict: string | null;
+  /* L'ENVIRONNEMENT DU CLIENT RECONNU — celui de la BASE, à ne pas confondre
+     avec `env`, qui est ce que l'en-tête déclare.
+     Les deux existent exprès : leur ÉCART dit qu'un build de recette pointe la
+     production, et c'est précisément l'incident qu'on veut voir. Mais seule
+     celle-ci décide de quoi que ce soit — l'autre est déclarative. */
+  clientEnv: string | null;
 };
 
 const STOCKAGE = new AsyncLocalStorage<ContexteMesure>();
@@ -60,7 +66,8 @@ export function contexteCourant(): ContexteMesure {
     surface: null, appVersion: null, language: null,
     theme: null, sessionId: null, correlationId: null,
     clientId: null, clientType: null, appBuild: null,
-    osName: null, osVersion: null, env: null, clientVerdict: null,
+    osName: null, osVersion: null, env: null,
+    clientVerdict: null, clientEnv: null,
   };
 }
 
@@ -118,9 +125,10 @@ export function lireEntetes(
     clientType: dansLaListe(TYPES_CLIENT, propre(entetes[ENTETES_CLIENT.clientType])),
     env: dansLaListe(ENVS_CLIENT, propre(entetes[ENTETES_CLIENT.env])),
     ...decouperLOs(propreAvecDeuxPoints(entetes[ENTETES_CLIENT.os])),
-    // Le middleware le remplit après avoir résolu le client ; `lireEntetes` ne
+    // Le middleware les remplit après avoir résolu le client ; `lireEntetes` ne
     // lit que ce qui arrive, elle ne juge pas.
     clientVerdict: null,
+    clientEnv: null,
   };
 }
 
