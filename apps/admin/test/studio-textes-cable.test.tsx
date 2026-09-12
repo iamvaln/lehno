@@ -55,6 +55,25 @@ const HISTORIQUE = config(REGLAGES_MESSAGE, {
   publieeLe: "2026-09-02T11:00:00.000Z", parQui: "sam@lehno.app",
 });
 
+const essai = (sur: Record<string, unknown> = {}) => ({
+  id: "44444444-4444-4444-8444-444444444444",
+  configId: "11111111-1111-4111-8111-111111111111",
+  nature: "message", profilId: "22222222-2222-4222-8222-222222222222",
+  etat: "success",
+  modele: { fournisseur: "anthropic", cle: "claude-sonnet-5" },
+  sortie: { message: "Bon anniversaire, grande sœur." },
+  cout: 0.004, erreur: null, parQui: "sam@lehno.app",
+  quand: "2026-09-11T09:00:00.000Z", verdict: null, ambianceId: null,
+  ...sur,
+});
+
+const ESSAIS = [essai()];
+
+const ESSAI_LANCE = () => reponse(201, {
+  configId: "11111111-1111-4111-8111-111111111111",
+  essai: essai(),
+});
+
 const PROFILS = {
   items: [{
     id: "22222222-2222-4222-8222-222222222222",
@@ -101,6 +120,14 @@ function serveur(routes: Record<string, (url: string, init?: RequestInit) => Res
        parleraient pas de l'écran. */
     "/admin/text-studio/message/config/history": () => reponse(200, { items: [HISTORIQUE] }),
     "/admin/text-studio/idees/config/history": () => reponse(200, { items: [] }),
+    /* LE MÊME CHEMIN SERT DEUX GESTES — `GET` liste, `POST` lance —, et la
+       table ne distingue que l'URL. Sans ce branchement sur la méthode, la
+       réponse d'un lancement arriverait au listage, l'analyse échouerait, et
+       l'écran resterait en « chargement » : seize épreuves rouges qui ne
+       parleraient pas de ce qu'elles éprouvent. */
+    "/admin/text-studio/message/trials": (_u, init) =>
+      (init?.method === "POST" ? ESSAI_LANCE() : reponse(200, { items: ESSAIS })),
+    "/admin/text-studio/idees/trials": () => reponse(200, { items: [] }),
     "/admin/text-studio/message/config": () => reponse(200, {
       enService: null, brouillon: config(REGLAGES_MESSAGE),
     }),
@@ -225,22 +252,10 @@ describe("l'atelier des textes", () => {
 
   it("essaie sur une éprouvette et retient le résultat", async () => {
     const utilisateur = userEvent.setup({ delay: null });
-    const appels = serveur({
-      "/admin/text-studio/message/trials": () => reponse(201, {
-        configId: "11111111-1111-4111-8111-111111111111",
-        essai: {
-          id: "44444444-4444-4444-8444-444444444444",
-          configId: "11111111-1111-4111-8111-111111111111",
-          nature: "message",
-          profilId: "22222222-2222-4222-8222-222222222222",
-          etat: "success",
-          modele: { fournisseur: "anthropic", cle: "claude-sonnet-5" },
-          sortie: { message: "Bon anniversaire." }, cout: 0.004, erreur: null,
-          parQui: "sam@lehno.app", quand: "2026-09-11T09:00:00.000Z",
-          verdict: null, ambianceId: null,
-        },
-      }),
-    });
+    /* Le décor par défaut sert déjà les deux gestes de ce chemin, chacun selon
+       sa méthode : le redéclarer ici pour le seul `POST` ferait manquer la
+       liste. */
+    const appels = serveur();
     await ouvrir(utilisateur);
     await screen.findByLabelText(a.champs.consigne);
 
@@ -248,7 +263,16 @@ describe("l'atelier des textes", () => {
 
     const corps = corpsDe(ecriture(appels, "POST"));
     expect(corps["profileId"]).toBe("22222222-2222-4222-8222-222222222222");
-    expect(await screen.findByText(new RegExp(a.etats.success))).toBeInTheDocument();
+    /* SCOPÉ À LA SECTION du dernier essai, et ce n'est pas du zèle : ce cas
+       passait au VERT sans rien éprouver. Il cherchait « réussi » dans tout
+       l'écran, et tombait sur « Aucun essai réussi ne porte ces réglages » — la
+       phrase qui dit exactement le contraire. Pendant ce temps la section du
+       dernier essai ne paraissait jamais, faute que le corps de la réponse soit
+       lu. */
+    const section = (await screen.findByText(a.essai.titre)).closest("section") as HTMLElement;
+    expect(within(section).getByText(new RegExp(a.etats.success))).toBeInTheDocument();
+    // Et ce que le modèle a écrit y est.
+    expect(within(section).getByText("Bon anniversaire, grande sœur.")).toBeInTheDocument();
   });
 
   /* Le studio dépense de l'argent réel à chaque essai : il est fermé au support
@@ -425,5 +449,98 @@ describe("l'atelier des textes", () => {
     const reglages = corpsDe(ecriture(appels, "PATCH"))["reglages"] as Record<string, unknown>;
     const orientations = reglages["orientations"] as { description: unknown }[];
     expect(orientations[0]!.description).toBeNull();
+  });
+  /* ─── Le journal des essais ─────────────────────────────────────────────── */
+
+  /* LA SORTIE SE REND TELLE QUELLE, sans être relue. Les trois natures rangent
+     `{ message }` — le rendu brut du modèle —, et pour les idées c'est du JSON.
+     L'interpréter masquerait ce qu'on vient éprouver : ce que le modèle a
+     VRAIMENT rendu, y compris quand il rend mal.
+     Le journal, lui, TRONQUE à cent vingt caractères : tout rendre ferait un
+     tableau illisible, n'en rendre rien ferait une table de dates et de modèles
+     qui ne dit pas si l'essai était bon. */
+  it("rend la sortie telle quelle, et la tronque au journal", async () => {
+    const brut = JSON.stringify({
+      idees: Array.from({ length: 4 }, (_, i) => ({
+        titre: `Idée ${i + 1}`, pourquoi: "Parce que ses notes disent qu'elle jardine.",
+      })),
+    });
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({
+      "/admin/text-studio/message/trials": (_u, init) =>
+        (init?.method === "POST" ? ESSAI_LANCE() : reponse(200, {
+          items: [essai({ sortie: { message: brut } })],
+        })),
+    });
+    await ouvrir(utilisateur);
+
+    const debut = brut.slice(0, 120);
+    const ligne = (await screen.findByText(`${debut}…`)).closest("tr") as HTMLElement;
+    expect(ligne).not.toBeNull();
+    // Rien n'a été relu : c'est le JSON du modèle, coupé, pas une liste rendue.
+    expect(ligne.textContent).toContain('{"idees"');
+  });
+
+  it("liste les essais de la nature, avec ce qui en est sorti", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    expect(await screen.findByText(/Bon anniversaire, grande sœur\./)).toBeInTheDocument();
+    expect(appels.mock.calls.some(([u]) =>
+      String(u).includes("/text-studio/message/trials"))).toBe(true);
+  });
+
+  /* LE VERDICT D'UN TEXTE NE PORTE PAS DE RÉFÉRENCE : il n'a pas d'image, et le
+     contrat REFUSE le champ plutôt que de l'ignorer. */
+  it("tranche sur un essai, sans référence", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText(/Bon anniversaire, grande sœur\./))
+      .closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: a.journal.garder }));
+
+    const envoi = appels.mock.calls.find(([u, i]) =>
+      (i as RequestInit)?.method === "PATCH" && String(u).includes("/text-studio/trials/"));
+    expect(envoi).toBeDefined();
+    expect(corpsDe(envoi)).toEqual({ verdict: "kept" });
+  });
+
+  /* Un essai qui n'a rien produit ne se juge pas : il n'y a pas de texte à
+     trouver bon ou mauvais, seulement une panne. */
+  it("ne propose pas de trancher sur un essai en panne", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({
+      "/admin/text-studio/message/trials": (_u, init) =>
+        (init?.method === "POST" ? ESSAI_LANCE() : reponse(200, {
+          items: [essai({ etat: "error", sortie: null, erreur: "upstream_5xx", cout: null })],
+        })),
+    });
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText("upstream_5xx")).closest("tr") as HTMLElement;
+    expect(within(ligne).queryByRole("button", { name: t.table.actions })).not.toBeInTheDocument();
+  });
+
+  /* Le verdict déjà posé ne se repose pas : le geste n'aurait rien à changer. */
+  it("n'offre que l'autre verdict quand l'essai est déjà jugé", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur({
+      "/admin/text-studio/message/trials": (_u, init) =>
+        (init?.method === "POST" ? ESSAI_LANCE() : reponse(200, {
+          items: [essai({ verdict: "kept" })],
+        })),
+    });
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText(/Bon anniversaire, grande sœur\./))
+      .closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+
+    expect(await screen.findByRole("menuitem", { name: a.journal.ecarter })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: a.journal.garder })).not.toBeInTheDocument();
   });
 });

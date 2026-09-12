@@ -241,6 +241,19 @@ export const en: typeof fr = {
       publier: "Put in service",
       publierImpossible: "Nothing to publish right now.",
     },
+    journal: {
+      titre: "Trials for this kind",
+      sous: "What was produced here, and what was made of it. The gallery keeps the last hundred across every kind.",
+      col: { quand: "When", sortie: "What came out", modele: "Model", etat: "State", verdict: "Verdict" },
+      verdicts: { kept: "Kept", discarded: "Set aside" },
+      nonJuge: "\u2014",
+      garder: "Keep",
+      ecarter: "Set aside",
+      aucun: {
+        titre: "No trial yet",
+        texte: "Nothing is published without a trial: this is where they are recorded, with what they produced.",
+      },
+    },
     blocages: {
       deja_en_service: "This version is already in service.",
       aucun_essai_reussi: "No successful trial covers these settings. Try before publishing.",

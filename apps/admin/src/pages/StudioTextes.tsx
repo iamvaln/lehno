@@ -44,6 +44,11 @@ export interface StudioTextesProps {
   candidats: CandidatsStudio;
   /** Le dernier essai de la séance. Nul avant le premier. */
   dernier: EssaiStudio | null;
+  /** Les essais de cette nature, le plus récent d'abord. */
+  essais: EssaiStudio[];
+  /** Tranche sur un essai. Le verdict d'un texte ne porte pas de référence :
+   *  il n'a pas d'image, et une ambiance ne se représente pas par une phrase. */
+  onJuger?: (essaiId: string, verdict: "kept" | "discarded") => void;
   enCours?: boolean;
   onEnregistrer?: (reglages: ReglagesTexte) => void;
   onEssayer?: (reglages: ReglagesTexte, profileId: string) => void;
@@ -68,6 +73,15 @@ const enDate = (iso: string, langue: Langue): string =>
   new Intl.DateTimeFormat(langue === "en" ? "en-GB" : "fr-FR", {
     day: "numeric", month: "long", year: "numeric",
   }).format(new Date(iso));
+
+/** Ce que l'essai a rendu. Les trois natures rangent `{ message }` — le rendu
+ *  brut du modèle —, et l'on ne devine rien de plus. */
+const texteProduit = (e: EssaiStudio): string | null => {
+  const s = e.sortie;
+  if (s === null || typeof s !== "object" || Array.isArray(s)) return null;
+  const message = (s as Record<string, unknown>)["message"];
+  return typeof message === "string" && message.trim() !== "" ? message : null;
+};
 
 const estMessage = (n: NatureTexte): boolean => n === "message";
 const estIdees = (n: NatureTexte): boolean => n === "idees";
@@ -108,8 +122,8 @@ const boiteux = (b: Bilingue | null | undefined): boolean =>
 
 export function StudioTextes({
   role, langue = "fr", nature, onNature, depart, enService, historique, profils,
-  candidats, dernier, enCours = false, onEnregistrer, onEssayer, onPublier,
-  onRevenir, onRetour,
+  candidats, dernier, essais, enCours = false, onEnregistrer, onEssayer,
+  onPublier, onRevenir, onJuger, onRetour,
 }: StudioTextesProps): ReactNode {
   const t = messages(langue);
   const a = t.studioTextes;
@@ -184,6 +198,46 @@ export function StudioTextes({
   };
 
   const modelesDeTexte = candidats.modeles.filter((m) => m.capacite === "text");
+
+  const j = a.journal;
+  const colonnesEssais: Colonne<EssaiStudio & { id: string }>[] = [
+    {
+      cle: "quand",
+      titre: j.col.quand,
+      rendu: (e) => new Intl.DateTimeFormat(langue === "en" ? "en-GB" : "fr-FR", {
+        day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+      }).format(new Date(e.quand)),
+    },
+    {
+      cle: "sortie",
+      titre: j.col.sortie,
+      /* LE TEXTE, TRONQUÉ. Une colonne qui rendrait tout ferait un tableau
+         illisible ; n'en rendre aucun ferait une table de dates et de modèles,
+         qui ne dit pas si l'essai était bon. */
+      rendu: (e) => {
+        const texte = texteProduit(e);
+        if (texte === null) return e.erreur ?? "—";
+        return texte.length > 120 ? `${texte.slice(0, 120)}…` : texte;
+      },
+    },
+    { cle: "modele", titre: j.col.modele, rendu: (e) => e.modele.cle },
+    {
+      cle: "etat",
+      titre: j.col.etat,
+      rendu: (e) => (
+        <StatusPill ton={e.etat === "success" ? "actif" : e.etat === "refused" ? "attente" : "arrete"}>
+          {a.etats[e.etat] ?? e.etat}
+        </StatusPill>
+      ),
+    },
+    {
+      cle: "verdict",
+      titre: j.col.verdict,
+      rendu: (e) => (e.verdict === null
+        ? j.nonJuge
+        : <StatusPill ton={e.verdict === "kept" ? "info" : "neutre"}>{j.verdicts[e.verdict]}</StatusPill>),
+    },
+  ];
 
   const h = a.historique;
   const colonnes: Colonne<ConfigurationTexte & { id: string }>[] = [
@@ -517,6 +571,17 @@ export function StudioTextes({
               {a.essai.cout} {dernier.cout === null ? a.essai.coutInconnu : dernier.cout}
               {dernier.erreur ? ` · ${dernier.erreur}` : ""}
             </p>
+            {/* CE QUE LE MODÈLE A ÉCRIT. L'écran l'a tu jusqu'ici : il annonçait
+                qu'un essai avait réussi et ce qu'il coûtait, sans jamais montrer
+                le texte — c'est-à-dire la seule chose qu'on vient voir.
+                Les trois natures rangent toutes `{ message }`, le rendu du
+                modèle tel quel : pour les idées c'est du JSON, et on le laisse
+                brut plutôt que de l'interpréter. Le relire à notre façon
+                masquerait justement ce qu'on veut éprouver — ce que le modèle a
+                VRAIMENT rendu, y compris quand il rend mal. */}
+            {texteProduit(dernier) === null ? null : (
+              <pre className="admin-sortie-brute">{texteProduit(dernier)}</pre>
+            )}
           </section>
         ) : null}
 
@@ -553,6 +618,39 @@ export function StudioTextes({
           )}
         </div>
       </div>
+
+      {/* LE JOURNAL DES ESSAIS — ce qu'on a produit pour cette nature, et ce
+          qu'on en a pensé. Il ne double pas la galerie : celle-ci rend les cent
+          derniers essais de TOUTES les natures, et l'on vient ici comparer deux
+          versions d'une seule. C'est le partage que l'atelier du portrait fait
+          déjà avec la sienne.
+
+          LE VERDICT NE PORTE PAS DE RÉFÉRENCE. Un essai de texte n'a pas
+          d'image, et `verdictEssaiTexteSchema` refuse le champ plutôt que de
+          l'ignorer : un administrateur qui croirait poser une vignette sur un
+          message doit l'apprendre tout de suite. */}
+      <section className="admin-section" role="region" aria-labelledby="txt-essais">
+        <h2 id="txt-essais" className="admin-section-titre">{a.journal.titre}</h2>
+        <p className="admin-section-sous">{a.journal.sous}</p>
+        <DataTable
+          colonnes={colonnesEssais}
+          lignes={essais.map((e) => ({ ...e, id: e.id }))}
+          libelles={{ actions: t.table.actions }}
+          vide={<EmptyState titre={a.journal.aucun.titre} texte={a.journal.aucun.texte} />}
+          /* Un essai qui n'a rien produit ne se juge pas : il n'y a pas de
+             texte à trouver bon ou mauvais, seulement une panne. Et le support
+             ne tranche sur rien. */
+          actions={(e) => (
+            role === "admin" && e.etat === "success"
+              ? [
+                ...(e.verdict === "kept" ? [] : [{ id: "kept", label: a.journal.garder }]),
+                ...(e.verdict === "discarded" ? [] : [{ id: "discarded", label: a.journal.ecarter }]),
+              ]
+              : []
+          )}
+          onAction={(id, e) => onJuger?.(e.id, id as "kept" | "discarded")}
+        />
+      </section>
 
       {/* L'HISTORIQUE EST L'AUDIT de cette nature : publier et revenir en
           arrière sont les deux seuls gestes qui l'écrivent, et une table qui
