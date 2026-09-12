@@ -59,7 +59,8 @@ import {
   profilAdminSchema,
   type Intervention,
   etatPortraitSchema, historiquePortraitSchema,
-  profilsStudioSchema, candidatsStudioSchema, essaisStudioSchema,
+  profilsStudioSchema,
+  depotPhotoSourceSchema, candidatsStudioSchema, essaisStudioSchema,
   etatTexteSchema, historiqueTexteSchema, performanceSchema, essaiLanceSchema, type NatureTexte, type EssaiStudio,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
@@ -1207,6 +1208,41 @@ export function App(): ReactNode {
             profils={registre.items}
             manquant={registre.manquant}
             onRenommer={(id, champs) => ecrireProfil(`/admin/portrait-studio/profiles/${id}`, "PATCH", champs)}
+            /* LES TROIS TEMPS DU DÉPÔT, et le fichier ne traverse jamais l'API :
+               on demande une URL signée, on téléverse DIRECTEMENT sur le
+               stockage, puis on dit qu'on a fini — et c'est le serveur qui
+               relit l'objet et le juge avec les seuils de la production.
+               Le `PUT` part par `fetch` NU, sans notre en-tête d'autorisation :
+               l'URL porte déjà sa signature, et y joindre un jeton
+               d'administration l'enverrait à un tiers. */
+            onPhoto={async (id, fichier) => {
+              try {
+                const depot = await api.appeler(
+                  `/admin/portrait-studio/profiles/${id}/photo/depot`,
+                  /* LE MÊME SCHÉMA QUE LE DÉPÔT CÔTÉ UTILISATEUR : la forme est
+                     identique — une URL, sa durée, le type signé — et en
+                     écrire une seconde donnerait deux endroits où la changer.
+                     La clé n'y figure pas, des deux côtés, et pour la même
+                     raison. */
+                  { methode: "POST", schema: depotPhotoSourceSchema },
+                );
+                const envoi = await fetch(depot.url, {
+                  method: "PUT",
+                  headers: { "content-type": depot.typeMime },
+                  body: fichier,
+                });
+                /* `reseau_indisponible` : le stockage a refusé le dépôt, et
+                   l'outil n'a rien de plus précis à en dire — inventer un code
+                   que le dictionnaire ne connaît pas afficherait une phrase
+                   vide. */
+                if (!envoi.ok) throw new ErreurApi("reseau_indisponible", envoi.status);
+                await api.appeler(`/admin/portrait-studio/profiles/${id}/photo`, { methode: "POST" });
+              } catch (echec) {
+                if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+              } finally {
+                setTourStudio((n) => n + 1);
+              }
+            }}
             onSupprimer={(id) => ecrireProfil(`/admin/portrait-studio/profiles/${id}`, "DELETE")}
             onRetour={aller}
           />

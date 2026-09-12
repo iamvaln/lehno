@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AdminRole, AxeCouverture, ProfilStudio } from "@lehno/contracts";
 
 import { Breadcrumb, PageHeader, FormRow } from "../composants/page/index.js";
@@ -32,6 +32,11 @@ export interface StudioProfilsProps {
   /** Les axes qu'aucun profil ne couvre. Vide veut dire « rien ne manque ». */
   manquant: AxeCouverture[];
   onRenommer?: (id: string, champs: { libelle?: string; sensible?: boolean }) => void;
+  /* LA PHOTO D'EXEMPLE, sans laquelle la voie photo ne s'éprouve pas.
+     L'APPELANT PORTE LES DEUX TEMPS du dépôt — l'URL signée, le téléversement,
+     puis la confirmation qui juge. L'écran ne fait que choisir le fichier :
+     lui confier le stockage ferait circuler une clé qui n'a rien à faire ici. */
+  onPhoto?: (id: string, fichier: File) => Promise<void>;
   onSupprimer?: (id: string) => void;
   onRetour?: (id: string) => void;
 }
@@ -41,12 +46,32 @@ type Ouvert =
   | { quoi: "supprimer"; profil: ProfilStudio };
 
 export function StudioProfils({
-  role, langue = "fr", profils, manquant, onRenommer, onSupprimer, onRetour,
+  role, langue = "fr", profils, manquant, onRenommer, onPhoto, onSupprimer, onRetour,
 }: StudioProfilsProps): ReactNode {
   const t = messages(langue);
   const p = t.studioProfils;
 
   const [ouvert, setOuvert] = useState<Ouvert | null>(null);
+  /* LE CHOIX DE FICHIER PASSE PAR UN INPUT UNIQUE ET CACHÉ, déclenché depuis le
+     menu d'actions : un champ par rang ferait un tableau illisible, et le
+     navigateur n'ouvre son sélecteur que sur un geste de l'utilisateur — d'où
+     le clic programmé plutôt qu'un appel direct. */
+  const champFichier = useRef<HTMLInputElement>(null);
+  const [pourQui, setPourQui] = useState<ProfilStudio | null>(null);
+  const [televersement, setTeleversement] = useState<"en cours" | null>(null);
+
+  const choisirLaPhoto = (profil: ProfilStudio): void => {
+    setPourQui(profil);
+    champFichier.current?.click();
+  };
+
+  const surFichier = (fichier: File | undefined): void => {
+    if (!fichier || pourQui === null) return;
+    const cible = pourQui;
+    setPourQui(null);
+    setTeleversement("en cours");
+    void onPhoto?.(cible.id, fichier).finally(() => setTeleversement(null));
+  };
   const [libelle, setLibelle] = useState("");
   const [sensible, setSensible] = useState(false);
 
@@ -66,6 +91,17 @@ export function StudioProfils({
 
   const colonnes: Colonne<ProfilStudio>[] = [
     { cle: "libelle", titre: p.col.libelle },
+    /* LA PHOTO SE VOIT, et son absence aussi : c'est ce qui dit d'un regard
+       quelles éprouvettes peuvent servir à la voie photo. Une vignette plutôt
+       qu'un « oui/non » — on reconnaît une photo, on ne reconnaît pas un
+       booléen. */
+    {
+      cle: "photo",
+      titre: p.col.photo,
+      rendu: (profil) => (profil.photoUrl === null
+        ? p.photo.aucune
+        : <img src={profil.photoUrl} alt={p.photo.alt} className="admin-vignette-photo" />),
+    },
     {
       cle: "sensible", titre: p.col.nature,
       rendu: (r) => (
@@ -104,6 +140,26 @@ export function StudioProfils({
           : `${p.couverture.manque} ${manquant.map((a) => p.axes[a]).join(" · ")}`}
       </p>
 
+      {/* L'INPUT EST UNIQUE ET CACHÉ : un par rang ferait un tableau illisible,
+          et le navigateur n'ouvre son sélecteur que sur un geste de
+          l'utilisateur — d'où le clic programmé depuis le menu d'actions.
+          `accept` filtre à l'ouverture ; le serveur juge ensuite pour de bon. */}
+      <input
+        ref={champFichier}
+        type="file"
+        accept="image/jpeg,image/png"
+        hidden
+        onChange={(e) => {
+          surFichier(e.target.files?.[0]);
+          // Le champ se vide : sans cela, rechoisir le MÊME fichier ne
+          // déclencherait aucun changement, et le geste paraîtrait sans effet.
+          e.target.value = "";
+        }}
+      />
+      {televersement === null ? null : (
+        <p className="admin-section-sous">{p.photo.enCours}</p>
+      )}
+
       <DataTable
         colonnes={colonnes}
         lignes={profils}
@@ -112,10 +168,14 @@ export function StudioProfils({
           ? {
             actions: () => [
               { id: "renommer", label: p.renommer },
+              /* UNE SEULE ENTRÉE pour poser et pour remplacer : c'est le même
+                 geste, et deux libellés feraient chercher lequel employer. */
+              { id: "photo", label: p.photo.poser },
               { id: "supprimer", label: p.supprimer, danger: true },
             ],
             onAction: (geste: string, ligne: ProfilStudio) => {
               if (geste === "renommer") ouvrirRenommage(ligne);
+              else if (geste === "photo") choisirLaPhoto(ligne);
               else setOuvert({ quoi: "supprimer", profil: ligne });
             },
           }

@@ -147,11 +147,17 @@ export const en: typeof fr = {
   studioProfils: {
     titre: "Simulation profiles",
     sous: "The studio's test tubes: made-up records a configuration is tried on before going into service.",
+    photo: {
+      poser: "Set an example photo",
+      aucune: "None",
+      alt: "Profile's example photo",
+      enCours: "Sending the photo…",
+    },
     renommer: "Rename",
     supprimer: "Delete",
     sensible: "Sensitive case",
     ordinaire: "Ordinary",
-    col: { libelle: "Profile", nature: "Nature", notes: "Notes", creeLe: "Created" },
+    col: { libelle: "Profile", photo: "Example photo", nature: "Nature", notes: "Notes", creeLe: "Created" },
     couverture: {
       complete: "The set covers every axis.",
       manque: "No profile covers:",
