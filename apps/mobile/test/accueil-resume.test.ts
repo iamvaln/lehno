@@ -9,7 +9,7 @@ const echeance = (date: string) => ({
   label: null, nature: "happy" as const, status: "upcoming" as const,
   personId: "22222222-2222-4222-8222-222222222222",
   kind: "birthday" as const, eventId: "33333333-3333-4333-8333-333333333333",
-  personDisplayName: "Ana", occurrenceDate: date, occurrenceYear: 2026,
+  personDisplayName: "Ana", isSelf: false, occurrenceDate: date, occurrenceYear: 2026,
   daysUntil: 30, age: 30,
 });
 
