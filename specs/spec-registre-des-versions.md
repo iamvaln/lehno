@@ -71,9 +71,15 @@ signalement, dans le panneau. Mais **« plus ancien que » se décide sur le
 L'identité d'un build est donc **(plateforme, buildNumber)**. La version est un
 libellé attaché, pas une clé.
 
-**Conséquence pour le client** : un en-tête de plus, `x-app-build`. Un appel qui
-porte une version sans build ne peut pas être comparé — il est traité comme
-inconnu (§2), donc invité à se mettre à jour.
+**Conséquence pour le client** : un en-tête de plus, `x-app-build`. Quand il n'y
+a pas de build — développement, Expo Go, diffusion interne —, **on omet
+l'en-tête** : ni chaîne vide, ni valeur convenue comme `dev`. L'absence est
+honnête ; une chaîne magique devrait se traiter à part partout, et une chaîne
+vide ne se distingue pas d'un bug. Le serveur n'accepte que des entiers, et toute
+autre valeur vaut « pas de build ».
+
+Cette absence n'atteint jamais la décision, puisque les builds sans numéro sont
+hors production, donc exemptés (§5 bis).
 
 ---
 
@@ -115,16 +121,49 @@ model AppVersion {
 ## 5. La décision, à chaque requête
 
 ```
-1. la plateforme vient de `x-client-type`
-2. le build vient de `x-app-build`
-3. si le build est absent ou inconnu du registre  → 426
-4. si le build est `is_retired`                   → 426
-5. soit P = le plus grand buildNumber non retiré de cette plateforme
+0. si le client n'est pas RECONNU                 → rien (on ne juge pas)
+1. si son environnement ENREGISTRÉ n'est pas prod → rien (§5 bis)
+2. la plateforme vient de la PAIRE, pas de l'en-tête
+3. le build vient de `x-app-build`
+4. si le build est absent ou inconnu du registre  → 426
+5. si le build est `is_retired`                   → 426
+6. soit P = le plus grand buildNumber non retiré de cette plateforme
    qui porte `forcesUpdate`
    si le build < P                                → 426
-6. sinon, si un build plus récent existe          → en-tête de suggestion
-7. sinon                                          → rien
+7. sinon, si un build plus récent existe          → en-tête de suggestion
+8. sinon                                          → rien
 ```
+
+### §5 bis — hors production, le registre ne s'applique pas
+
+*Ajouté le 13 septembre. Ce document ne mentionnait `x-app-env` nulle part, et
+c'était un blocage : la session mobile l'a signalé avant que la garde ne
+s'allume.*
+
+**Les builds de développement n'ont pas de numéro de build.** `eas.json` porte
+`appVersionSource: "remote"` : le numéro n'existe que dans les binaires produits
+par EAS. En Expo Go, en build de développement, en diffusion interne, il n'y a
+rien à envoyer.
+
+Sans exemption, le §5 les traite comme inconnus et leur rend **426** — donc,
+le jour où la garde s'allume, **toute l'équipe et tous les testeurs se font
+mettre dehors**, avec un « mettez à jour » qu'aucun magasin ne peut satisfaire.
+
+**L'exemption se décide sur l'environnement du client ENREGISTRÉ, jamais sur
+`x-app-env`.** Un build de production qui déclarerait `dev` ne s'exempterait de
+rien : c'est la paire présentée qui tranche, et elle est en base.
+
+C'est la raison d'être des six paires — trois plateformes × **deux
+environnements**. L'environnement fait partie de l'identité du client, pas de ce
+qu'il raconte. `x-app-env` reste lu et journalisé : son ÉCART avec
+l'environnement enregistré dit qu'un build de recette pointe la production, et
+c'est précisément l'incident qu'on veut voir.
+
+**Et sans client reconnu, on ne juge pas non plus.** Le type et l'environnement
+viennent de la paire ; décider sur une déclaration reviendrait à laisser le
+client choisir s'il veut être jugé. Conséquence assumée : **la garde des versions
+n'a d'effet que sur un client qui présente une paire valide** — ce qui est de
+toute façon l'ordre dans lequel on allume les deux.
 
 **Le 426 porte le lien du magasin et la version attendue.** Un écran qui dit
 « mettez à jour » sans dire où aller n'est pas un écran, c'est un mur.
@@ -240,9 +279,9 @@ perd la trace de ce qui a existé. `isRetired` dit la même chose et se relit.
    sens que pour une application installée. **Proposé** : le registre couvre le
    web pour la traçabilité, mais `forcesUpdate` n'y déclenche qu'un rechargement
    forcé, pas un écran de magasin.
-3. **Que faire d'un build inconnu en phase de rodage ?** Le §2 propose le 426
-   d'emblée. Un réglage « on note, on ne bloque pas » — comme la phase 1 — serait
-   plus prudent les premières semaines. **Proposé** : le même paramètre système
-   que la garde, pour que les deux s'allument ensemble ou séparément.
+3. *(tranché le 13 septembre — plus une question.)* **La garde a son propre
+   paramètre**, `version_guard_enabled`, distinct de celui des clients. Les deux
+   s'allument séparément, et le §5 bis retire le risque qui rendait cette
+   question urgente : hors production, rien n'est jugé.
 4. **L'entier de compilation du web.** Un compteur de CI, ou le nombre de commits
    sur `main` ? Le second ne demande rien à personne et est monotone.

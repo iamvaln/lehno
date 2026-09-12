@@ -20,7 +20,7 @@ describe("les gardes du client et de la version", () => {
   const VIDE: ContexteMesure = {
     surface: null, appVersion: null, language: null, theme: null, sessionId: null,
     correlationId: null, clientId: null, clientType: null, appBuild: null,
-    osName: null, osVersion: null, env: null, clientVerdict: null,
+    osName: null, osVersion: null, env: null, clientVerdict: null, clientEnv: null,
   };
 
   /** Un contexte de requête, tel que le middleware l'aurait posé. */
@@ -129,12 +129,76 @@ describe("les gardes du client et de la version", () => {
       });
     };
 
+    /* UN CLIENT DE PRODUCTION RECONNU — c'est la seule situation où cette garde
+       décide quoi que ce soit. Tous les cas ci-dessous partent de là. */
+    const enProduction = (build: number | null) => contexte({
+      clientType: "mobile_ios", appBuild: build,
+      clientVerdict: "reconnu", clientEnv: "prod",
+    });
+
     it("laisse tout passer tant qu'elle dort", async () => {
       await poserUneVersion(400);
       const g = garde();
-      await dansLeContexte(contexte({ clientType: "mobile_ios", appBuild: 999 }), async () => {
+      await dansLeContexte(enProduction(999), async () => {
         expect(await g.canActivate(requete("/v1/me/persons"))).toBe(true);
       });
+    });
+
+    /* ─── LES DEUX EXEMPTIONS ────────────────────────────────────────────────
+     *
+     * LE BLOCAGE QU'ELLES EMPÊCHENT, signalé par la session mobile le
+     * 13 septembre : `eas.json` porte `appVersionSource: "remote"`, donc le
+     * numéro de build n'existe QUE dans les binaires produits par EAS. En Expo
+     * Go, en build de développement et en diffusion interne, il n'y a rien à
+     * envoyer — et sans exemption, allumer cette garde mettrait dehors toute
+     * l'équipe et tous les testeurs, avec un « mettez à jour » qu'aucun magasin
+     * ne peut satisfaire. */
+    it("ne juge pas un client hors production, même sans numéro de build", async () => {
+      await allumer("version_guard_enabled");
+      await poserUneVersion(400);
+      const g = garde();
+      for (const env of ["dev", "staging"]) {
+        await dansLeContexte(
+          contexte({ clientType: "mobile_ios", appBuild: null, clientVerdict: "reconnu", clientEnv: env }),
+          async () => { expect(await g.canActivate(requete("/v1/me/persons"))).toBe(true); },
+        );
+      }
+    });
+
+    /* ELLE SE DÉCIDE SUR L'ENVIRONNEMENT ENREGISTRÉ, JAMAIS SUR L'EN-TÊTE.
+       Un build de production qui déclarerait `x-app-env: dev` ne s'exempterait
+       de rien : c'est la paire présentée qui tranche, et elle est en base.
+       Sans ce cas, l'exemption serait un interrupteur que n'importe qui
+       actionne. */
+    it("ne se laisse pas exempter par un en-tête menteur", async () => {
+      await allumer("version_guard_enabled");
+      await poserUneVersion(400);
+      const g = garde();
+      await dansLeContexte(
+        contexte({
+          clientType: "mobile_ios", appBuild: 999, clientVerdict: "reconnu",
+          clientEnv: "prod", env: "dev",
+        }),
+        async () => {
+          await expect(g.canActivate(requete("/v1/me/persons")))
+            .rejects.toMatchObject({ code: "upgrade_required" });
+        },
+      );
+    });
+
+    /* SANS CLIENT RECONNU, ON NE JUGE PAS. Le type et l'environnement viennent
+       de la paire, pas des en-têtes — décider sur une déclaration reviendrait à
+       laisser le client choisir s'il veut être jugé. */
+    it("ne juge pas quand le client n'est pas reconnu", async () => {
+      await allumer("version_guard_enabled");
+      await poserUneVersion(400);
+      const g = garde();
+      for (const verdict of ["absent", "inconnu", "cle_fausse"]) {
+        await dansLeContexte(
+          contexte({ clientType: "mobile_ios", appBuild: 999, clientVerdict: verdict }),
+          async () => { expect(await g.canActivate(requete("/v1/me/persons"))).toBe(true); },
+        );
+      }
     });
 
     /* LE 426 PORTE OÙ ALLER. Un écran qui dit « mettez à jour » sans lien n'est
@@ -143,7 +207,7 @@ describe("les gardes du client et de la version", () => {
       await allumer("version_guard_enabled");
       await poserUneVersion(400);
       const g = garde();
-      await dansLeContexte(contexte({ clientType: "mobile_ios", appBuild: 999 }), async () => {
+      await dansLeContexte(enProduction(999), async () => {
         await expect(g.canActivate(requete("/v1/me/persons"))).rejects.toMatchObject({
           code: "upgrade_required",
           details: { cause: "inconnue", version: "1.0.400", storeUrl: "https://apps.apple.com/lehno" },
@@ -155,7 +219,7 @@ describe("les gardes du client et de la version", () => {
       await allumer("version_guard_enabled");
       await poserUneVersion(400);
       const g = garde();
-      await dansLeContexte(contexte({ clientType: "mobile_ios", appBuild: 400 }), async () => {
+      await dansLeContexte(enProduction(400), async () => {
         expect(await g.canActivate(requete("/v1/me/persons"))).toBe(true);
       });
     });
@@ -164,7 +228,7 @@ describe("les gardes du client et de la version", () => {
       await allumer("version_guard_enabled");
       await poserUneVersion(400);
       const g = garde();
-      await dansLeContexte(contexte({ clientType: "mobile_ios", appBuild: 999 }), async () => {
+      await dansLeContexte(enProduction(999), async () => {
         expect(await g.canActivate(requete("/v1/public/wishlists/abc"))).toBe(true);
       });
     });
