@@ -312,6 +312,92 @@ describe("administration — la configuration du studio", () => {
     expect(await codeDe(res)).toBe("conflict");
   });
 
+  // ── L'intégrité de l'historique ───────────────────────────────────────────
+
+  /* UNE VERSION PUBLIÉE NE SE RÉÉCRIT JAMAIS, et tout l'atelier en dépend.
+   *
+   * L'historique dit « voilà ce qui tournait le 3 septembre » ; un avis porté
+   * sur une version dit « celle-ci valait mieux que la précédente ». Les deux
+   * mentent le jour où les réglages d'une version publiée peuvent changer sous
+   * elle — le numéro cesse alors de désigner un contenu, et l'on compare deux
+   * choses qui ont bougé.
+   *
+   * C'est tenu PAR CONSTRUCTION aujourd'hui : `settings` ne s'écrit qu'en
+   * `create`, jamais en `update`. Mais rien ne l'éprouvait, et un
+   * `update({ data: { settings } })` ajouté demain passerait toutes les suites.
+   * Ces cas fixent la propriété plutôt que le moyen : peu importe par quel
+   * chemin on édite, la ligne publiée doit ressortir identique. */
+  describe("une version publiée ne se réécrit pas", () => {
+    /** Publie une version, et rend sa ligne telle qu'elle est en base. */
+    const publier = async (entete: Record<string, string>, r: ReglagesPortrait) => {
+      const brouillon = await brouillonner(r);
+      await essaiSur(brouillon.id, "success");
+      await appeler("POST", "/config/publish", entete, { configId: brouillon.id, note: MOTIF });
+      return db.prisma.studioConfig.findUniqueOrThrow({ where: { id: brouillon.id } });
+    };
+
+    it("l'édition qui suit crée une ligne NEUVE, et laisse la publiée intacte", async () => {
+      const { entete } = await session("admin");
+      const publiee = await publier(entete, reglages((r) => {
+        r.ambiances[0]!.consigne.fr = "la version en service";
+      }));
+
+      /* On édite alors qu'AUCUN brouillon n'existe : c'est le cas qui compte,
+         puisque la tête est alors la version publiée elle-même. */
+      expect(await configs.brouillon("portrait")).toBeNull();
+      await brouillonner(reglages((r) => { r.ambiances[0]!.consigne.fr = "autre chose"; }));
+
+      const apres = await db.prisma.studioConfig.findUniqueOrThrow({ where: { id: publiee.id } });
+      expect(apres.settings).toEqual(publiee.settings);
+      expect(apres.fingerprint).toBe(publiee.fingerprint);
+      expect(apres.state).toBe("published");
+      expect(apres.version).toBe(publiee.version);
+
+      // Et la nouvelle vit à côté, en brouillon.
+      const brouillon = await configs.brouillon("portrait");
+      expect(brouillon?.id).not.toBe(publiee.id);
+      expect(configs.reglagesPortraitDe(brouillon!).ambiances[0]!.consigne.fr).toBe("autre chose");
+    });
+
+    /* L'ENREGISTREMENT DIRECT EST L'AUTRE PORTE, et la plus discrète : il
+       n'appelle aucun modèle, et c'est par là que passe la pose d'une vignette.
+       S'il modifiait la ligne en service, une vignette changerait ce que
+       l'historique dit d'une version déjà publiée. */
+    it("l'enregistrement direct aussi", async () => {
+      const { entete } = await session("admin");
+      const publiee = await publier(entete, reglages());
+
+      const memes = configs.reglagesPortraitDe(publiee) as ReglagesPortrait;
+      await configs.enregistrerDirect("portrait", {
+        ...memes,
+        ambiances: memes.ambiances.map((a) => ({ ...a, apercuCle: "essais/une-vignette" })),
+      });
+
+      const apres = await db.prisma.studioConfig.findUniqueOrThrow({ where: { id: publiee.id } });
+      expect(apres.settings).toEqual(publiee.settings);
+      expect(apres.state).toBe("published");
+
+      const brouillon = await configs.brouillon("portrait");
+      expect(brouillon?.id).not.toBe(publiee.id);
+      expect(configs.reglagesPortraitDe(brouillon!).ambiances[0]!.apercuCle).toBe("essais/une-vignette");
+    });
+
+    /* Le retour arrière remet une ligne en service SANS la reconstruire : son
+       contenu doit être exactement celui qu'elle portait. */
+    it("le retour arrière ne reconstruit rien", async () => {
+      const { entete } = await session("admin");
+      const une = await publier(entete, reglages((r) => { r.ambiances[0]!.consigne.fr = "la première"; }));
+      await publier(entete, reglages((r) => { r.ambiances[0]!.consigne.fr = "la seconde"; }));
+
+      await appeler("POST", "/config/rollback", entete, { configId: une.id, reason: "la seconde déçoit" });
+
+      const apres = await db.prisma.studioConfig.findUniqueOrThrow({ where: { id: une.id } });
+      expect(apres.settings).toEqual(une.settings);
+      expect(apres.version).toBe(une.version);
+      expect(apres.state).toBe("published");
+    });
+  });
+
   // ── La nature d'un essai ──────────────────────────────────────────────────
 
   /* `GET trials` N'A PAS DE FILTRE PAR NATURE, et c'est délibéré : les quatre

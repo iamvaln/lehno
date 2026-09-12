@@ -8,6 +8,7 @@ import { StudioConfigurationService } from "../src/studio/configuration.service.
 import { RouteurIAService, PanneFournisseur, RefusModele, type Adaptateur, type ReponseIA } from "../src/ia/routeur.service.js";
 import { CatalogueIAService } from "../src/ia/catalogue.service.js";
 import { AmorceStudioService } from "../src/studio/amorce.service.js";
+import { MesuresStudioService } from "../src/studio/mesures.service.js";
 import { fini } from "./attendre.js";
 
 /* La génération d'un message.
@@ -812,6 +813,229 @@ describe("la génération d'un message", () => {
       // La consigne du code a servi.
       expect(modele.invite).toMatch(/CE QU'IL FAUT DIRE/);
       expect(await solde()).toBe(4);
+    });
+  });
+  /* LA VERSION QUI A PRODUIT LE MESSAGE.
+   *
+   * Le portrait la portait déjà ; le message non. Sans elle, un avis ne mesure
+   * rien : on apprend qu'une production a déplu, pas laquelle des consignes en
+   * est cause — et tout le §6 du brief admin studio repose là-dessus. */
+  describe("la version qui l'a produit", () => {
+    it("retient la configuration en service", async () => {
+      await crediter(5);
+      const enService = await db.prisma.studioConfig.findFirstOrThrow({
+        where: { kind: "message", state: "published" },
+      });
+
+      // `lancer` rend LE MESSAGE PRODUIT — voir `attendre.ts`.
+      const message = await lancer({ anthropic: repond() });
+
+      expect(message.studioConfigId).toBe(enService.id);
+    });
+
+    /* CELLE QUI A COMPOSÉ L'INVITE, et non celle en service à l'arrivée.
+     *
+     * Entre le début et la fin, un administrateur peut publier. Relire la
+     * configuration à la conclusion attribuerait le message à une version qui
+     * ne l'a pas écrit — et le panneau créditerait la nouvelle d'un rejet dû à
+     * l'ancienne, ce qui est exactement l'inverse de ce qu'on veut mesurer.
+     *
+     * La publication se fait DEPUIS LE DOUBLE : il est appelé après la
+     * composition et avant l'écriture, c'est-à-dire précisément dans la
+     * fenêtre qui pose le problème. */
+    it("garde celle qui a composé l'invite, même si l'on publie entre-temps", async () => {
+      await crediter(5);
+      const premiere = await db.prisma.studioConfig.findFirstOrThrow({
+        where: { kind: "message", state: "published" },
+      });
+
+      const configs = new StudioConfigurationService(
+        db.prisma as never, new AuditService(db.prisma as never),
+      );
+      const publiePendant: Adaptateur = {
+        async appeler(): Promise<ReponseIA> {
+          const suivante = await configs.deposerBrouillon(
+            "message",
+            { ...configs.reglagesMessageDe(premiere), consigneCommune: "Écris plus court." },
+          );
+          await db.prisma.studioConfig.updateMany({
+            where: { kind: "message", state: "published" }, data: { state: "superseded" },
+          });
+          await db.prisma.studioConfig.update({
+            where: { id: suivante.id },
+            data: { state: "published", version: 2, publishedAt: new Date() },
+          });
+          /* LA MÊME SORTIE QUE LE DOUBLE ORDINAIRE : le service attend un JSON
+             `{ message, court }`, et une chaîne nue ferait échouer l'analyse —
+             le cas tomberait alors sur « la génération n'a rien produit », ce
+             qui ne dit rien de la fenêtre qu'il éprouve. */
+          return { contenu: SORTIE };
+        },
+      };
+
+      const message = await lancer({ anthropic: publiePendant });
+
+      expect(message.studioConfigId).toBe(premiere.id);
+      // Et la seconde est bien devenue celle en service : la fenêtre a joué.
+      const maintenant = await db.prisma.studioConfig.findFirstOrThrow({
+        where: { kind: "message", state: "published" },
+      });
+      expect(maintenant.id).not.toBe(premiere.id);
+    });
+
+    /* AUCUNE CONFIGURATION EN SERVICE : la production reprend les valeurs du
+       code, et prétendre qu'une version l'a faite serait faux. Nul, donc — et
+       le panneau saura dire « avant le lien » plutôt que de compter. */
+    it("laisse le lien nul quand rien n'est publié", async () => {
+      await crediter(5);
+      await db.prisma.studioConfig.updateMany({
+        where: { kind: "message", state: "published" }, data: { state: "superseded" },
+      });
+
+      const message = await lancer({ anthropic: repond() });
+
+      expect(message.studioConfigId).toBeNull();
+    });
+  });
+  /* L'AVIS SUR UN MESSAGE — ce qu'on en a PENSÉ, et non ce qu'on en a fait.
+   *
+   * `sent` dit qu'on l'a envoyé, pas qu'on l'a trouvé bon : on envoie un
+   * message qu'on juge moyen, faute de temps pour en refaire un. Les deux
+   * colonnes vivent donc côte à côte, et le statut ne bouge pas. */
+  describe("l'avis", () => {
+    it("se pose sans toucher à l'état", async () => {
+      await crediter(5);
+      const message = await lancer({ anthropic: repond() });
+
+      await service.noter(awa, message.id, "down");
+
+      const ligne = await db.prisma.generatedMessage.findUniqueOrThrow({ where: { id: message.id } });
+      expect(ligne.feedback).toBe("down");
+      expect(ligne.feedbackAt).not.toBeNull();
+      expect(ligne.status).toBe("generated");
+    });
+
+    it("se retire, et emporte sa date", async () => {
+      await crediter(5);
+      const message = await lancer({ anthropic: repond() });
+
+      await service.noter(awa, message.id, "up");
+      await service.noter(awa, message.id, null);
+
+      const ligne = await db.prisma.generatedMessage.findUniqueOrThrow({ where: { id: message.id } });
+      expect(ligne.feedback).toBeNull();
+      expect(ligne.feedbackAt).toBeNull();
+    });
+
+    it("ne se pose pas sur le message d'un autre", async () => {
+      await crediter(5);
+      const message = await lancer({ anthropic: repond() });
+      const autre = await db.prisma.user.create({
+        data: {
+          email: `${randomBytes(6).toString("hex")}@example.com`,
+          username: `u${randomBytes(4).toString("hex")}`,
+          referralCode: randomBytes(4).toString("hex").toUpperCase(),
+        },
+        select: { id: true },
+      });
+
+      await expect(service.noter(autre.id, message.id, "down"))
+        .rejects.toThrow(/unknown message/);
+    });
+  });
+  /* LES MESURES — « combien de pouces en bas par version, comparée à la
+   * précédente ». C'est ce qui donne son sens à l'atelier : sans elles, on
+   * publie sans jamais savoir si l'on a amélioré quoi que ce soit. */
+  describe("les mesures", () => {
+    const mesures = () => new MesuresStudioService(db.prisma as never);
+
+    const produire = async (n: number) => {
+      await crediter(n + 1);
+      const faits = [];
+      for (let i = 0; i < n; i += 1) faits.push(await lancer({ anthropic: repond() }, "ma_fierte", `c-${i}`));
+      return faits;
+    };
+
+    const noter = (id: string, avis: "up" | "down") =>
+      db.prisma.generatedMessage.update({
+        where: { id }, data: { feedback: avis, feedbackAt: new Date() },
+      });
+
+    /* LE DÉNOMINATEUR EST LE NOMBRE D'AVIS, jamais celui des productions.
+     *
+     * `null` veut dire « personne n'a tranché », jamais « satisfait » : sur dix
+     * productions dont cinq notées, un taux tiré des dix prétendrait que cinq
+     * silences sont cinq contentements. */
+    it("tire le taux des avis, et non des productions", async () => {
+      const faits = await produire(10);
+      for (const m of faits.slice(0, 4)) await noter(m.id, "down");
+      await noter(faits[4]!.id, "up");
+
+      const m = await mesures().mesurer("message");
+      const ligne = m.versions.find((v) => v.configId !== null);
+
+      expect(ligne?.productions).toBe(10);
+      expect(ligne?.avis).toBe(5);
+      expect(ligne?.rejets).toBe(4);
+      // Quatre sur CINQ avis, et non quatre sur dix productions.
+      expect(ligne?.taux).toBeCloseTo(0.8);
+    });
+
+    /* SOUS LE SEUIL, LE TAUX EST NUL — « trop tôt », jamais zéro. Sinon le
+       premier rejet d'une version neuve l'affiche à cent pour cent, et
+       quelqu'un revient en arrière sur un accident. */
+    it("refuse de conclure sous le seuil", async () => {
+      const faits = await produire(3);
+      await noter(faits[0]!.id, "down");
+
+      const m = await mesures().mesurer("message");
+      const ligne = m.versions.find((v) => v.configId !== null);
+
+      expect(m.seuil).toBeGreaterThan(1);
+      expect(ligne?.avis).toBe(1);
+      expect(ligne?.taux).toBeNull();
+    });
+
+    /* LE REPLI NE COMPTE PAS DEUX FOIS, et ne charge pas le modèle qui a
+     * échoué.
+     *
+     * Une production repliée laisse PLUSIEURS lignes d'usage — une par
+     * tentative. Compter toute la chaîne donnerait deux productions pour une, et
+     * blâmerait le modèle qui n'a rien écrit. C'est la tentative qui a ABOUTI
+     * qui compte. */
+    it("attribue la production au modèle qui a abouti, une seule fois", async () => {
+      const [message] = await produire(1);
+      const run = await db.prisma.generatedMessage.findUniqueOrThrow({
+        where: { id: message!.id }, select: { actionRunId: true },
+      });
+      /* La chaîne réelle a déjà écrit son usage ; on lui ajoute un ÉCHEC qui
+         GAGNERAIT l'ordre sans le filtre d'aboutissement — même rang, mais
+         écrit avant. C'est ce qui rend ce cas capable de tomber : posé avec un
+         rang et une date indifférents, il passait au vert par le hasard du
+         départage, et ne gardait rien. */
+      await db.prisma.aIUsage.create({
+        data: {
+          actionRunId: run.actionRunId, purpose: "message", origin: "user_action",
+          provider: "celui-qui-a-echoue", modelKey: "tombe", attempt: 0, status: "error",
+          createdAt: new Date("2020-01-01T00:00:00.000Z"),
+        },
+      });
+      await noter(message!.id, "down");
+
+      const m = await mesures().mesurer("message");
+
+      expect(m.modeles.some((x) => x.fournisseur === "celui-qui-a-echoue")).toBe(false);
+      expect(m.modeles.reduce((n, x) => n + x.productions, 0)).toBe(1);
+    });
+
+    /* LE BRIEF DU PORTRAIT N'EST RELIÉ À RIEN : le `Portrait` retient la
+       configuration de l'IMAGE, pas celle qui a écrit les mots. On le DIT,
+       plutôt que de rendre des tableaux vides qui se liraient « aucun rejet ». */
+    it("dit que le brief du portrait n'est pas mesurable", async () => {
+      const m = await mesures().mesurer("portrait_brief");
+
+      expect(m.relie).toBe(false);
+      expect(m.versions).toHaveLength(0);
     });
   });
 });

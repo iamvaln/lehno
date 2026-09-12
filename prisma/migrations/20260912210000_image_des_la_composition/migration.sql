@@ -3,7 +3,7 @@
 -- L'ancienne contrainte disait « (status = 'approved') = (image_key IS NOT
 -- NULL) ». Elle encodait le défaut qu'on répare : elle affirmait que SEUL ce qui
 -- est accepté a une image, ce qui rendait impossible l'état « composée, pas
--- encore jugée » — et donc impossible de rejeter une image qu'on a vue.
+-- encore jugée » — et donc impossible de juger une image qu'on a vue.
 --
 -- La nouvelle dit la vraie règle : le brief seul n'a pas d'image, tout le reste
 -- en a une. Un rejet n'efface rien — c'est un AVIS, pas une suppression, et

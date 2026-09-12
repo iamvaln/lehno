@@ -1,5 +1,6 @@
 import {
   GROUPES_AMBIANCE, ORIENTATIONS,
+  GROUPE_ORIENTATION, GROUPE_IMAGE, GROUPE_COMPOSITION,
   type GroupeAmbiance, type Orientation, type ReglagesPortrait, type VoieImage,
 } from "@lehno/contracts";
 import { AppError } from "../common/errors.js";
@@ -70,7 +71,19 @@ export function verifierLaSelection(
     throw new AppError("validation_failed", `studio selection: ${quoi}`);
   };
 
-  const orientation = brut["orientation"];
+  /* LES CLÉS VIENNENT DU CONTRAT, elles ne se réécrivent pas ici.
+   *
+   * Elles étaient redites en toutes lettres — `"visual"`, `"illustrationFamily"`
+   * — là où le catalogue sert `image` et `illustration_family`. Deux listes qui
+   * devaient être la même, et rien ne les tenait d'accord : un client qui
+   * répondait à TOUS les groupes annoncés se faisait refuser « unknown visual
+   * path », et aucun portrait ne pouvait être produit, par aucun client.
+   *
+   * `StudioSelection` est indexée par identifiant de GROUPE — c'est la forme
+   * même du contrat, « répondre à un groupe ». Le validateur lit donc les mêmes
+   * identifiants, importés, et le jour où l'un change de nom le serveur suit
+   * sans qu'on y pense. */
+  const orientation = brut[GROUPE_ORIENTATION];
   if (orientation === undefined || !EST_ORIENTATION(orientation))
     return refus("unknown orientation");
 
@@ -78,13 +91,13 @@ export function verifierLaSelection(
      retirée du catalogue hier et demandée aujourd'hui ferait dessiner sur un
      fond qu'on ne sert plus — un lilas sur un fond d'encre qu'on vient de
      supprimer, illisible. */
-  const compositionDemandee = brut["composition"];
+  const compositionDemandee = brut[GROUPE_COMPOSITION];
   if (compositionDemandee === undefined) return refus("a composition is required");
   const composition = reglages.compositions.find((c) => c.id === compositionDemandee);
   if (!composition) return refus("unknown composition");
   if (!composition.actif) return refus(`composition "${compositionDemandee}" is not offered`);
 
-  const voie = brut["visual"];
+  const voie = brut[GROUPE_IMAGE];
   const voieReglee = reglages.voiesImage.find((v) => v.id === voie);
   if (!voieReglee) return refus("unknown visual path");
   if (!voieReglee.actif) return refus(`visual path "${voie}" is not offered`);
@@ -94,7 +107,7 @@ export function verifierLaSelection(
     /* La voie « aucune » n'ouvre rien. Une ambiance envoyée avec elle est un
        client qui n'a pas suivi le catalogue — on le dit plutôt que de
        l'ignorer, sinon il croira que son choix a porté. */
-    if (brut["photoStyle"] !== undefined || brut["illustrationFamily"] !== undefined)
+    if (GROUPES_AMBIANCE.some((g) => brut[g] !== undefined))
       return refus("this visual path takes no ambiance");
     return {
       orientation, voie: voieReglee.id, ambiance: null,
@@ -102,10 +115,12 @@ export function verifierLaSelection(
     };
   }
 
-  /* Le client nomme l'ambiance sous la clé de SON groupe. Chercher les deux et
-     retenir celle qui répond évite au serveur de connaître la convention de
-     nommage du client — le contrat dit qu'il « transporte, il ne juge pas ». */
-  const demandee = brut["photoStyle"] ?? brut["illustrationFamily"] ?? brut["ambiance"];
+  /* L'AMBIANCE SE NOMME SOUS LA CLÉ DE SON GROUPE, et cette clé vient de
+     `GROUPES_AMBIANCE` — la même liste dont le catalogue tire ses groupes.
+     On lit le groupe que la voie OUVRE, pas « l'un des deux au hasard » : deux
+     clés cherchées à la suite laisseraient une ambiance posée sous le mauvais
+     groupe passer pour une réponse au bon. */
+  const demandee = brut[groupe];
   if (demandee === undefined) return refus(`an ambiance is required for "${voieReglee.id}"`);
 
   const ambiance = reglages.ambiances.find((a) => a.id === demandee);

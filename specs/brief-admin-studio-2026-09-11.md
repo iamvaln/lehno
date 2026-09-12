@@ -17,6 +17,26 @@ n'en sont plus.
 
 **C'est réparé.** L'atelier des textes a maintenant ses deux gestes manquants :
 
+> *Branchés le 12 : l'atelier porte le journal de sa nature, avec les deux
+> verdicts. Il ne double pas la galerie — celle-ci garde les cent derniers
+> essais de toutes les natures, et l'on vient ici comparer deux versions d'une
+> seule.*
+>
+> **Une précision sur le reproche de ce paragraphe.** Ajouter `nature` au
+> contrat de l'essai (#186) n'a pas créé de colonne : elle vient d'une
+> **jointure** sur `studio_config`, et le commentaire du service le dit. Il n'y
+> a donc pas de seconde vérité — la configuration reste seule à dire la nature,
+> et l'essai la rapporte sans pouvoir la contredire. Les deux approches se
+> complètent : la route bornée sert l'atelier d'une nature, le champ sert la
+> galerie qui les mêle toutes.
+>
+> **Deux défauts trouvés en branchant.** L'atelier ne montrait pas le texte
+> produit — il annonçait l'état et le coût de l'essai, et rien de plus. Et le
+> dernier essai n'était jamais retenu : `api.appeler` ne lit le corps que si
+> l'appelant passe un schéma, ce que l'écran ne faisait pas. L'épreuve censée
+> le couvrir passait au vert sur « Aucun essai réussi ne porte ces réglages »,
+> la phrase qui dit le contraire.
+
 | Route | Ce qu'elle fait |
 |---|---|
 | `GET admin/text-studio/:nature/trials` | les essais de cette nature. `?configId=` les borne à une version |
@@ -60,7 +80,14 @@ L'application montre donc l'image qu'on aura, sur les voies d'image, les
 familles d'ambiance et les compositions. **Pas sur l'orientation** — c'est le
 propos, pas le rendu.
 
-**Le panneau est le seul endroit où elle se pose**, et le geste manque à l'écran :
+**Le panneau est le seul endroit où elle se pose**, et le geste manquait à
+l'écran. *Fait le 12 : il vit dans la **galerie**, et non dans l'Atelier — la
+vignette est par ambiance, on choisit celle qui la représente en comparant
+plusieurs essais, et l'Atelier n'a que le dernier de la séance. La galerie lit
+désormais la tête, parce que c'est elle que le serveur ajuste ; lire ailleurs
+ferait dire à l'écran qu'une ambiance a déjà sa vignette alors que le brouillon
+en porte une autre. Les trois refus sont fermés d'avance plutôt qu'offerts puis
+refusés en 400.*
 
 ```
 PATCH admin/portrait-studio/trials/:id   { verdict: "kept", reference: true }
@@ -183,11 +210,18 @@ bas par version, comparée à la précédente.
 
 Deux choses s'accumulent dans R2 sans que rien ne les distingue :
 
-- **les images des essais d'administration** — une par essai, et une séance de
-  réglage en compte trente. Elles sont rangées sous le préfixe `portraits`, **le
-  même que les portraits payés**. Une règle de cycle de vie posée là effacerait
-  ce que les gens ont acheté. Un préfixe `essais` réglerait ça, et c'est deux
-  lignes ;
+- ~~**les images des essais d'administration**~~ — **FAIT le 12.** Un préfixe
+  `essais` les recueille, et c'était bien deux lignes. Le point qui méritait
+  d'être vérifié : **les clés déjà écrites ne bougent pas**, rangées entières
+  dans `studio_trial.output` et relues telles quelles — rien à migrer. Le
+  préfixe ne vaut donc que pour la suite, et le ménage du passé demandera une
+  passe qui saura reconnaître les clés venues d'un essai.
+
+  Ce que le paragraphe voyait juste, et qui vaut d'être redit : la règle de
+  cycle de vie était **imposable des deux côtés**. Posée sur `portraits`, elle
+  effaçait ce que les gens ont acheté ; pas posée, les essais s'accumulaient
+  sans fin. Le port écrivait déjà ce raisonnement pour `sources` — les essais y
+  échappaient ;
 - **les portraits refaits.** « Refaire » est une nouvelle génération complète :
   chaque approbation fabrique une image et la range. Quelqu'un qui refait trois
   fois laisse trois images, et rien ne dit laquelle il voulait.

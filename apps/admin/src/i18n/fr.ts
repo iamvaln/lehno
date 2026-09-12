@@ -260,6 +260,23 @@ export const fr = {
       publier: "Mettre en service",
       publierImpossible: "Rien à publier pour l'instant.",
     },
+    /* LE JOURNAL DES ESSAIS de cette nature. Il ne double pas la galerie :
+       celle-ci rend les cent derniers de TOUTES les natures, et l'on vient ici
+       comparer deux versions d'une seule — le même partage que l'atelier du
+       portrait fait avec la sienne. */
+    journal: {
+      titre: "Les essais de cette nature",
+      sous: "Ce qui a été produit ici, et ce qu'on en a pensé. La galerie, elle, garde les cent derniers de toutes les natures.",
+      col: { quand: "Quand", sortie: "Ce qui est sorti", modele: "Modèle", etat: "État", verdict: "Verdict" },
+      verdicts: { kept: "Gardé", discarded: "Écarté" },
+      nonJuge: "—",
+      garder: "Garder",
+      ecarter: "Écarter",
+      aucun: {
+        titre: "Aucun essai",
+        texte: "Rien ne se publie sans essai : c'est ici qu'ils s'inscrivent, avec ce qu'ils ont produit.",
+      },
+    },
     blocages: {
       deja_en_service: "Cette version est déjà en service.",
       aucun_essai_reussi: "Aucun essai réussi ne porte ces réglages. Essayez avant de publier.",
@@ -1394,6 +1411,15 @@ export const fr = {
       message: "Message",
       idees: "Idées de cadeau",
       portrait_brief: "Brief du portrait",
+    },
+    /* LA VIGNETTE D'UNE AMBIANCE. Le geste est GRATUIT — elle n'entre pas dans
+       l'empreinte, c'est ce que l'humain regarde et non ce que le modèle lit —
+       et il écrit un BROUILLON : rien ne change pour les utilisateurs tant que
+       personne n'a publié. D'où l'absence de motif et de confirmation. */
+    vignette: {
+      poser: "En faire la vignette de l'ambiance",
+      estLa: "Vignette de l'ambiance",
+      aide: "L'application montre cette image sur le choix de l'ambiance — personne ne sait départager « chaleureux » et « sobre » dans l'abstrait. Le geste retient l'essai et écrit un brouillon ; rien ne change pour les utilisateurs tant que la version n'est pas publiée.",
     },
     carte: {
       alt: "Résultat de l'essai",

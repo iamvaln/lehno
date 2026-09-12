@@ -346,6 +346,23 @@
   }
 }
 
+/* CE QUE LE MODÈLE A ÉCRIT, rendu tel quel. Une sortie de texte se lit comme
+   le modèle l'a rendue — retours à la ligne compris, et sans reformatage : pour
+   les idées c'est du JSON, et le relire à notre façon masquerait justement ce
+   qu'on vient éprouver. D'où la fonte à chasse fixe et le `pre-wrap`, qui garde
+   les sauts sans forcer un défilement horizontal. */
+.admin-sortie-brute {
+  margin: var(--space-8) 0 0;
+  padding: var(--space-12);
+  background: var(--fond-doux, rgba(0, 0, 0, 0.04));
+  border-radius: var(--rayon-8, 8px);
+  font-family: var(--police-mono, ui-monospace, monospace);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* La galerie des essais. On vient JUGER un résultat : les vignettes se posent
    en grille, larges assez pour qu'on voie ce qui a été produit — une table de
    modèles et de dates ne dit pas si le portrait était bon. */

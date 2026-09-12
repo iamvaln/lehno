@@ -1,8 +1,8 @@
 import { Body, Controller, Get, Inject, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import {
-  startGenerationSchema, updateMessageSchema,
+  avisSchema, startGenerationSchema, updateMessageSchema,
   type GeneratedMessage, type Generation, type GenerationResult,
-  type StartGenerationInput, type UpdateMessageInput, type Orientation,
+  type AvisInput, type StartGenerationInput, type UpdateMessageInput, type Orientation,
   type GenerationKind, type CleDrapeau,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -282,6 +282,28 @@ export class MessagesController {
     @Body(new ZodValidationPipe(updateMessageSchema)) corps: UpdateMessageInput,
   ): Promise<GeneratedMessage> {
     const m = await this.generation.corriger(req.userId, id, corps);
+    return {
+      id: m.id,
+      occurrenceId: m.eventOccurrenceId,
+      content: m.content,
+      contentShort: m.shortContent,
+      status: m.status as GeneratedMessage["status"],
+      createdAt: m.createdAt.toISOString(),
+      updatedAt: m.updatedAt.toISOString(),
+    };
+  }
+
+  /* L'AVIS, à côté de la correction et non dedans. Corriger un message est un
+     geste sur le TEXTE ; le noter est un jugement sur ce que le modèle a rendu.
+     Les fondre dans `PATCH :id` ferait passer une correction pour un avis dès
+     que les deux voyagent ensemble. */
+  @Patch(":id/feedback")
+  async noter(
+    @Req() req: AuthedRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(avisSchema)) corps: AvisInput,
+  ): Promise<GeneratedMessage> {
+    const m = await this.generation.noter(req.userId, id, corps.feedback);
     return {
       id: m.id,
       occurrenceId: m.eventOccurrenceId,

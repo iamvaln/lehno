@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import type { ZodType } from "zod";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
@@ -759,10 +760,15 @@ export function App(): ReactNode {
       ? Promise.all([
           api.appeler(`/admin/text-studio/${natureTexte}/config`, { schema: etatTexteSchema }),
           api.appeler(`/admin/text-studio/${natureTexte}/config/history`, { schema: historiqueTexteSchema }),
+          /* SANS `configId` : les essais de toute la nature, c'est ce qu'on
+             regarde pour comparer deux versions. Bornés à une, ils ne diraient
+             pas si la précédente faisait mieux. */
+          api.appeler(`/admin/text-studio/${natureTexte}/trials`, { schema: essaisStudioSchema }),
           api.appeler("/admin/portrait-studio/profiles", { schema: profilsStudioSchema }),
           api.appeler("/admin/portrait-studio/candidates", { schema: candidatsStudioSchema }),
-        ]).then(([etat, historique, profils, candidats]) => ({
-          etat, historique: historique.items, profils: profils.items, candidats,
+        ]).then(([etat, historique, essais, profils, candidats]) => ({
+          etat, historique: historique.items, essais: essais.items,
+          profils: profils.items, candidats,
         }))
       : Promise.resolve(null)),
     [section, natureTexte, tourStudio],
@@ -790,9 +796,15 @@ export function App(): ReactNode {
       ? Promise.all([
           api.appeler("/admin/portrait-studio/trials", { schema: essaisStudioSchema }),
           api.appeler("/admin/portrait-studio/config/history", { schema: historiquePortraitSchema }),
-        ]).then(([essais, historique]) => ({
+          api.appeler("/admin/portrait-studio/config", { schema: etatPortraitSchema }),
+        ]).then(([essais, historique, etat]) => ({
           essais: essais.items,
           publiees: historique.items.filter((c) => c.etat === "published"),
+          /* LA TÊTE — le brouillon s'il existe, ce qui tourne sinon. C'est
+             exactement ce que le serveur ajuste quand on pose une vignette, et
+             lire ailleurs ferait dire à l'écran qu'une ambiance a déjà la
+             sienne alors que le brouillon en porte une autre. */
+          tete: etat.brouillon ?? etat.enService,
         }))
       : Promise.resolve(null)),
     [section, tourStudio],
@@ -1190,11 +1202,19 @@ export function App(): ReactNode {
        c'est la réponse de `POST trials` qui le porte, et la relecture de la
        configuration ne le rendrait pas — l'écran perdrait ce qu'on vient de
        regarder au moment même où il en a besoin. */
-    const ecrireTexte = async (
-      chemin: string, methode: "PATCH" | "POST", corps: unknown,
-    ): Promise<unknown> => {
+    /* LE SCHÉMA N'EST PAS UN LUXE ICI : sans lui, `appeler` ne LIT PAS le corps
+       — « rien à lire non plus si l'appelant n'a pas dit quoi lire » — et rend
+       `undefined`. Le dernier essai n'était donc jamais retenu : la réponse du
+       lancement partait à la poubelle, et l'analyse portait sur un néant.
+       Les écritures qui n'ont rien à relire le laissent absent, et c'est
+       exactement ce que la règle du client demande. */
+    const ecrireTexte = async <T,>(
+      chemin: string, methode: "PATCH" | "POST", corps: unknown, schema?: ZodType<T>,
+    ): Promise<T | null> => {
       try {
-        return await api.appeler(chemin, { methode, corps });
+        return await api.appeler<T>(chemin, {
+          methode, corps, ...(schema === undefined ? {} : { schema }),
+        });
       } catch (echec) {
         if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
         return null;
@@ -1226,16 +1246,17 @@ export function App(): ReactNode {
               profils={donnees.profils}
               candidats={donnees.candidats}
               dernier={dernierEssaiTexte}
+              essais={donnees.essais}
               onEnregistrer={(reglages) => {
                 void ecrireTexte(`/admin/text-studio/${natureTexte}/config`, "PATCH", { reglages });
               }}
               onEssayer={(reglages, profileId) => {
                 void (async () => {
-                  const rendu = await ecrireTexte(
-                    `/admin/text-studio/${natureTexte}/trials`, "POST", { reglages, profileId },
+                  const lance = await ecrireTexte(
+                    `/admin/text-studio/${natureTexte}/trials`, "POST",
+                    { reglages, profileId }, essaiLanceSchema,
                   );
-                  const lu = essaiLanceSchema.safeParse(rendu);
-                  setDernierEssaiTexte(lu.success ? lu.data.essai : null);
+                  setDernierEssaiTexte(lance?.essai ?? null);
                 })();
               }}
               onPublier={(configId, note) => {
@@ -1247,6 +1268,12 @@ export function App(): ReactNode {
                  différemment pour cette raison. */
               onRevenir={(configId, motif) => {
                 void ecrireTexte("/admin/text-studio/config/rollback", "POST", { configId, reason: motif });
+              }}
+              /* LE VERDICT D'UN TEXTE NE PORTE PAS DE RÉFÉRENCE : il n'a pas
+                 d'image, et `verdictEssaiTexteSchema` REFUSE le champ plutôt
+                 que de l'ignorer. On n'envoie donc que le verdict. */
+              onJuger={(essaiId, verdict) => {
+                void ecrireTexte(`/admin/text-studio/trials/${essaiId}`, "PATCH", { verdict });
               }}
               onRetour={aller}
             />
@@ -1370,9 +1397,30 @@ export function App(): ReactNode {
         t={t}
         enfant={(e) => (e ? (
           <StudioEssais
+            role={role}
             langue={langue}
             essais={e.essais}
             publiees={e.publiees}
+            tete={e.tete}
+            /* LA VIGNETTE EST GRATUITE : elle n'entre pas dans l'empreinte —
+               c'est ce que l'humain regarde, pas ce que le modèle lit —, donc
+               elle passe par l'enregistrement direct et ne réclame aucun essai.
+               Un seul appel pose le verdict ET la référence : les séparer
+               laisserait un essai « retenu » sans la vignette demandée, et
+               personne ne saurait que la moitié du geste a échoué. */
+            onVignette={(essaiId) => {
+              void (async () => {
+                try {
+                  await api.appeler(`/admin/portrait-studio/trials/${essaiId}`, {
+                    methode: "PATCH", corps: { verdict: "kept", reference: true },
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourStudio((n) => n + 1);
+                }
+              })();
+            }}
             onRetour={aller}
           />
         ) : null)}

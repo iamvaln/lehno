@@ -311,19 +311,17 @@ export class GenerationService {
    * Le `.catch` couvre la configuration devenue illisible : la génération
    * continue sur les valeurs du code plutôt que de tomber. Le semis la répare
    * au démarrage suivant, et `reglagesIdeesDe` la nomme dans le journal. */
-  /* Elle rend AUSSI l'identifiant de la version, et il suit le sort des
-     réglages : nul dès que la production retombe sur le gabarit du code.
-     Une configuration publiée mais ILLISIBLE n'a rien produit — lui attribuer
-     les avis d'un texte écrit par le repli lui ferait porter un mérite ou un
-     blâme qui ne sont pas les siens, et c'est exactement le chiffre qu'on veut
-     pouvoir croire. */
-  private async reglagesIdees(): Promise<{ reglages: ReglagesIdees | null; configId: string | null }> {
+  private async reglagesIdees(): Promise<{ reglages: ReglagesIdees; id: string } | null> {
     const publie = await this.configs.enService("idees").catch(() => null);
-    if (publie === null) return { reglages: null, configId: null };
+    if (publie === null) return null;
     try {
-      return { reglages: this.configs.reglagesIdeesDe(publie), configId: publie.id };
+      /* L'IDENTIFIANT VOYAGE AVEC LES RÉGLAGES, et non relu plus tard : c'est
+         la version qui a composé l'invite qu'on veut retenir, pas celle en
+         service à l'arrivée. Entre les deux, un administrateur peut publier —
+         et le panneau créditerait la nouvelle d'un rejet dû à l'ancienne. */
+      return { reglages: this.configs.reglagesIdeesDe(publie), id: publie.id };
     } catch {
-      return { reglages: null, configId: null };
+      return null;
     }
   }
 
@@ -394,9 +392,10 @@ export class GenerationService {
      * propre aux idées ». Elle existe : les idées sont une nature à part, avec
      * ses essais et sa publication. Celle du message ne vaut toujours pas ici —
      * ses consignes parlent de ton et de tournure, pas d'objets. */
-    const { reglages, configId } = await this.reglagesIdees();
+    const publiee = await this.reglagesIdees();
+    const reglages = publiee?.reglages ?? null;
 
-    return { modele: reglages?.modele ?? null, configId, contexte: {
+    return { configId: publiee?.id ?? null, modele: reglages?.modele ?? null, contexte: {
       langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
       ...(reglages?.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
       ...(reglages && reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
@@ -479,6 +478,8 @@ export class GenerationService {
 
   private async conclureIdees(
     actionRunId: string, userId: string, occurrenceId: string, idees: SortieIdee[],
+    /* Nul quand aucune configuration n'est en service : la production reprend
+       les valeurs du code, et prétendre qu'une version l'a faite serait faux. */
     configId: string | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
@@ -493,12 +494,9 @@ export class GenerationService {
       return tx.generatedIdeaSet.create({
         data: {
           actionRunId, userId, eventOccurrenceId: occurrenceId,
-          /* LA VERSION QUI A PRODUIT LE JEU. `GeneratedIdea.feedback` existait,
-             mais la jointure qui devait dire « quelle invite plaît le plus »
-             passait par le GABARIT, table supprimée depuis : l'avis se collectait
-             dans le vide. Le lien vit sur le jeu, pas sur chaque idée — une
-             exécution appelle une configuration, et le répéter cinq fois
-             ajouterait une seconde vérité à tenir d'accord. */
+          /* SUR LE JEU, jamais sur chaque idée : une génération emploie une
+             seule configuration, et la poser quatre fois ferait quatre
+             occasions de diverger. */
           ...(configId === null ? {} : { studioConfigId: configId }),
           ideas: {
             create: idees.map((i, rang) => ({
@@ -827,6 +825,9 @@ export class GenerationService {
 
   private async conclure(
     actionRunId: string, userId: string, occurrenceId: string, sortie: SortieMessage,
+    /* Nul quand aucune configuration n'est en service : la production reprend
+       alors les valeurs du code, et prétendre qu'une version l'a faite serait
+       faux. Voir `rassembler`. */
     configId: string | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
@@ -848,8 +849,6 @@ export class GenerationService {
           actionRunId, userId, eventOccurrenceId: occurrenceId,
           content: sortie.message,
           ...(sortie.court ? { shortContent: sortie.court } : {}),
-          // La version qui l'a écrit. Voir `rassembler` : nulle quand rien n'est
-          // publié, parce que le repli du code n'a pas de version.
           ...(configId === null ? {} : { studioConfigId: configId }),
         },
       });
@@ -921,6 +920,24 @@ export class GenerationService {
         ...(patch.content === undefined ? {} : { content: patch.content }),
         status: etat,
       },
+    });
+  }
+
+  /* L'AVIS SUR UN MESSAGE — ce qu'on en a PENSÉ, et non ce qu'on en a fait.
+   *
+   * `sent` dit qu'on l'a envoyé, pas qu'on l'a trouvé bon : on envoie un
+   * message qu'on juge moyen, faute de temps pour en refaire un. Les deux
+   * colonnes vivent donc à côté l'une de l'autre, et le statut ne bouge pas.
+   *
+   * `null` retire l'avis, et remet sa date à nul avec lui — la contrainte en
+   * base l'exige, et c'est elle qui garde les deux d'accord. */
+  async noter(userId: string, id: string, avis: "up" | "down" | null) {
+    const brouillon = await this.prisma.generatedMessage.findFirst({ where: { id, userId } });
+    if (!brouillon) throw new AppError("not_found", "unknown message");
+
+    return this.prisma.generatedMessage.update({
+      where: { id },
+      data: { feedback: avis, feedbackAt: avis === null ? null : new Date() },
     });
   }
 
@@ -1038,13 +1055,12 @@ export class GenerationService {
     const reglages = publie === null ? null : this.configs.reglagesMessageDe(publie);
     const orientationPubliee = reglages?.orientations.find((o) => o.id === orientation);
 
-    /* L'IDENTIFIANT DE LA VERSION LUE part avec le message, et c'est ce qui rend
-       un rejet mesurable : sans lui on saurait qu'un texte a déplu sans savoir
-       quelle consigne l'a écrit. Nul quand rien n'est publié — la production
-       vient alors du gabarit du code, qui n'a pas de version, et lui en
-       attribuer une attribuerait des avis à une configuration qui n'a rien
-       produit. */
-    return { modele: reglages?.modele ?? null, configId: publie?.id ?? null, contexte: {
+    /* LA VERSION EST RETENUE ICI, au moment où l'on compose — pas à la
+       conclusion. Entre les deux, un administrateur peut publier : relire la
+       configuration en fin de course attribuerait le message à une version qui
+       ne l'a pas écrit, et le panneau créditerait la nouvelle d'un rejet dû à
+       l'ancienne. C'est CELLE QUI A COMPOSÉ L'INVITE qu'on garde. */
+    return { configId: publie?.id ?? null, modele: reglages?.modele ?? null, contexte: {
       langue: options.langue ?? (proche.language === "en" ? "en" : "fr"),
       orientation,
       ...(orientationPubliee ? { consigneOrientation: orientationPubliee.consigne } : {}),

@@ -606,13 +606,29 @@ export function matierePourEmpreintePortrait(r: ReglagesPortrait): string {
 
 // ── Ce que l'application reçoit ─────────────────────────────────────────────
 
-const GROUPE_ORIENTATION = "orientation";
-const GROUPE_IMAGE = "image";
+/* LES IDENTIFIANTS DE GROUPE SONT LES CLÉS DE LA SÉLECTION, et ils s'exportent
+ * depuis le 12 septembre.
+ *
+ * `StudioSelection` est indexée par identifiant de groupe — répondre à un groupe,
+ * c'est poser `selection[groupe.id]`. Le validateur du serveur, lui, lisait ses
+ * propres noms : `visual` là où le catalogue sert `image`, `illustrationFamily`
+ * là où il sert `illustration_family`.
+ *
+ * DEUX LISTES QUI DEVAIENT ÊTRE LA MÊME, et rien ne les tenait d'accord. Un
+ * client qui répondait à TOUS les groupes annoncés se faisait refuser :
+ * « unknown visual path ». Aucun portrait ne pouvait être produit, par aucun
+ * client — et aucun test ne le disait, les cas du validateur lui passant des
+ * sélections écrites à la main avec les bonnes clés.
+ *
+ * Les exporter, c'est supprimer la seconde liste plutôt que la corriger : le
+ * jour où un groupe change de nom, le serveur suit sans qu'on y pense. */
+export const GROUPE_ORIENTATION = "orientation";
+export const GROUPE_IMAGE = "image";
 /* LA COMPOSITION est le SECOND paramètre que le client donne, à côté du type de
    rendu. Elle est à la RACINE et non derrière la voie d'image : on choisit sa
    gamme même quand aucune image n'est produite — la voie « aucune » pose le
    motif sur le fond de la composition, et ce fond se choisit. */
-const GROUPE_COMPOSITION = "composition";
+export const GROUPE_COMPOSITION = "composition";
 
 /** Le groupe qu'une voie d'image ouvre. `aucune` n'ouvre rien : c'est la fin. */
 /* LES DEUX VOIES OUVRENT LE MÊME GROUPE. « Aucune image » n'ouvre rien : c'est

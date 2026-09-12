@@ -1,8 +1,8 @@
 import {
   Body, Controller, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards,
 } from "@nestjs/common";
-import { updatePortraitSchema } from "@lehno/contracts";
-import type { DepotPhotoSource, Portrait, UpdatePortraitInput } from "@lehno/contracts";
+import { updatePortraitSchema, avisSchema } from "@lehno/contracts";
+import type { AvisInput, DepotPhotoSource, Portrait, UpdatePortraitInput } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
 import { Feature } from "../flags/feature.decorator.js";
@@ -107,6 +107,18 @@ export class PortraitController {
      l'avis, puisque l'utilisateur l'a payée. Et ils sont facultatifs — la
      plupart des portraits resteront sans avis, ce qui est un état légitime et
      non un oubli. */
+  /* PATCH et non POST : on pose un avis sur une production qui existe, on ne
+     crée rien. Même chemin et même corps que sur une idée — une seule forme
+     d'avis dans toute l'API. */
+  @Patch(":id/feedback")
+  noter(
+    @Req() req: AuthedRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(avisSchema)) corps: AvisInput,
+  ) {
+    return this.portraits.noter(req.userId, id, corps.feedback);
+  }
+
   @Post(":id/approve")
   approuver(
     @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,

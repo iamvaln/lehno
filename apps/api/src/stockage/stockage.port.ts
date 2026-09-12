@@ -10,7 +10,7 @@
  * fournisseur. Les colonnes s'appellent d'ailleurs déjà `proofKey`.
  */
 
-/** Les préfixes du compartiment. Un seul seau, cinq territoires. */
+/** Les préfixes du compartiment. Un seul seau, sept territoires. */
 /* `sources` EST LE SEUL PRÉFIXE DONT LE CONTENU EST DESTINÉ À DISPARAÎTRE.
  *
  * Les photos qu'un utilisateur dépose pour qu'on s'en inspire y vivent le temps
@@ -22,7 +22,22 @@
  * Un préfixe à part, et non `portraits` : le jour où l'on posera une règle de
  * cycle de vie côté R2, elle portera sur celui-ci seul — poser « efface après
  * sept jours » sur `portraits` effacerait ce que les gens ont payé. */
-export const PREFIXES = ["portraits", "avatars", "souhaits", "recus", "exports", "sources"] as const;
+
+/* `essais` SUIT LA MÊME RÈGLE, et la suivait mal : les images des essais
+ * d'administration se rangeaient sous `portraits`, avec les portraits payés.
+ *
+ * Une séance de réglage en produit trente, et rien ne les distinguait de ce
+ * qu'un client a acheté. La règle de cycle de vie qu'appelle le paragraphe
+ * ci-dessus était donc IMPOSABLE : posée sur `portraits`, elle aurait emporté
+ * les deux ; pas posée, les essais s'accumulent sans fin.
+ *
+ * Les clés déjà écrites ne bougent pas — elles sont rangées entières dans
+ * `studio_trial.output`, et se relisent telles quelles. Ce préfixe ne vaut donc
+ * que pour la suite, et le ménage du passé se fera par une passe qui saura
+ * lesquelles viennent d'un essai. */
+export const PREFIXES = [
+  "portraits", "avatars", "souhaits", "recus", "exports", "sources", "essais",
+] as const;
 export type Prefixe = (typeof PREFIXES)[number];
 
 export type Depot = {

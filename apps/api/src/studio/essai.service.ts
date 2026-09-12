@@ -364,7 +364,11 @@ export class StudioEssaiService {
      */
     let sortie: { cle: string } | null = null;
     if (resultat.etat === "success") {
-      sortie = { cle: await this.stockage.ecrire("portraits", Buffer.from(resultat.contenu, "base64"), "image/png") };
+      /* `essais`, ET NON `portraits` : une séance de réglage produit trente
+         images, et les ranger avec les portraits payés rend impossible la
+         règle de cycle de vie qui les effacerait — elle emporterait ce que les
+         gens ont acheté. Voir le commentaire de `PREFIXES`. */
+      sortie = { cle: await this.stockage.ecrire("essais", Buffer.from(resultat.contenu, "base64"), "image/png") };
     }
 
     const ligne = await this.consigner(config.id, profil.id, adminId, ambianceId, modele,

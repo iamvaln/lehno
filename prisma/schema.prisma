@@ -1669,19 +1669,25 @@ model GeneratedMessage {
    * coûteraient deux fois pour un crédit débité une fois.
    */
   shortContent      String?                @map("short_content")
-  status            GeneratedMessageStatus @default(generated)
-  /**
-   * LA CONFIGURATION QUI L'A PRODUIT. Sans elle, un rejet ne mesure rien : on
-   * saurait qu'un message a déplu sans savoir quelle version l'a écrit, et une
-   * version publiée ne dirait pas si elle vaut mieux que la précédente. Les deux
-   * manquaient ensemble, et il les faut ensemble.
-   * `Restrict` : une configuration citée par une production ne se supprime pas,
-   * sinon la consigne qui l'a produite est perdue et l'avis ne désigne plus rien.
-   * Nullable pour les productions d'avant le 12 septembre — l'inventer serait
-   * pire que l'absence, on attribuerait à une version des avis qu'elle n'a pas
-   * mérités.
-   */
+  /// LA VERSION QUI A PRODUIT CE MESSAGE. Le portrait la portait déjà ; le
+  /// message non, et sans elle un avis ne mesure rien : on apprend qu'une
+  /// production a déplu, pas laquelle des consignes en est cause.
+  ///
+  /// NULLABLE POUR DE BON, et pas seulement le temps d'une migration : les
+  /// messages déjà en base n'ont pas ce lien, et rien ne peut l'inventer — on
+  /// ne sait pas ce qui tournait quand ils ont été écrits. Leur poser la
+  /// version courante serait pire qu'un trou : ce serait une donnée fausse, et
+  /// le panneau la compterait.
+  ///
+  /// `Restrict`, comme pour le portrait : une configuration citée par un
+  /// message ne se supprime pas, sinon la consigne qui l'a produit est perdue.
   studioConfigId    String?                @map("studio_config_id") @db.Uuid
+  /// Même raison et même forme que sur le portrait : `sent` dit qu'on l'a
+  /// envoyé, pas qu'on l'a trouvé bon. On envoie un message qu'on juge moyen,
+  /// faute de temps pour en refaire un.
+  feedback          IdeaFeedback?
+  feedbackAt        DateTime?              @map("feedback_at") @db.Timestamptz
+  status            GeneratedMessageStatus @default(generated)
   createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -1726,24 +1732,19 @@ model GeneratedIdeaSet {
   /// n'existe plus. Nullables POUR ÇA, jamais pour un jeu neuf.
   userId            String?  @map("user_id") @db.Uuid
   eventOccurrenceId String?  @map("event_occurrence_id") @db.Uuid
-  /**
-   * LA CONFIGURATION QUI A PRODUIT LE JEU.
-   * `GeneratedIdea.feedback` existait déjà, et son index portait la question
-   * « quelle version d'invite plaît le plus » — mais la jointure passait par le
-   * GABARIT, table supprimée depuis. L'avis se posait donc sans que rien ne
-   * puisse dire ce qui l'avait mérité : le signal se collectait dans le vide.
-   * Le lien vit sur le JEU et non sur l'idée : une exécution appelle une
-   * configuration, et la poser sur chaque idée la répéterait cinq fois pour un
-   * fait qui ne varie pas.
-   */
+  /// LA VERSION QUI A PRODUIT CE JEU. Portée par le JEU et non par chaque idée :
+  /// une génération emploie une seule configuration, et la poser sur les quatre
+  /// propositions ferait quatre fois la même donnée — avec quatre occasions de
+  /// diverger. Nullable pour de bon : les jeux déjà produits n'ont pas ce lien,
+  /// et rien ne peut l'inventer.
   studioConfigId    String?  @map("studio_config_id") @db.Uuid
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  actionRun    ActionRun        @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
-  user         User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
-  occurrence   EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
-  studioConfig StudioConfig?    @relation(fields: [studioConfigId], references: [id], onDelete: Restrict)
-  ideas        GeneratedIdea[]
+  actionRun  ActionRun        @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  user       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  occurrence EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
+  studioConfig StudioConfig?  @relation(fields: [studioConfigId], references: [id], onDelete: Restrict)
+  ideas      GeneratedIdea[]
 
   @@index([userId, createdAt])
   @@index([studioConfigId])
@@ -1914,6 +1915,14 @@ model Portrait {
    * ses mots : l'avis se perdait à mi-chemin.
    */
   briefStudioConfigId String?   @map("brief_studio_config_id") @db.Uuid
+  /// CE QU'ON EN A PENSÉ, et non ce qu'on en a fait. `approved` est un GESTE —
+  /// je garde ce portrait ; l'avis est un JUGEMENT. Les deux se séparent dans
+  /// la vraie vie : on approuve un portrait passable parce qu'on a payé. Les
+  /// confondre ferait perdre les deux.
+  /// Même forme que `generated_idea`, contrainte comprise : l'avis et sa date
+  /// vont ensemble, et retirer son avis remet les deux à nul.
+  feedback      IdeaFeedback?
+  feedbackAt    DateTime?      @map("feedback_at") @db.Timestamptz
   status        PortraitStatus @default(generated)
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
