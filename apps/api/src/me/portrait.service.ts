@@ -63,6 +63,39 @@ export class PortraitService {
   }
 
   /**
+   * Rejeter : « pas celui-là ».
+   *
+   * C'EST LE SEUL AVIS NÉGATIF QUE LE PRODUIT SAIT RECEVOIR, et il manquait :
+   * on pouvait approuver, jamais rejeter, donc publier une configuration sans
+   * jamais savoir si on avait amélioré quoi que ce soit. Joint à la version qui
+   * l'a produit, il répond enfin à « celle-ci fait-elle mieux que la
+   * précédente ? ».
+   *
+   * IL NE COÛTE RIEN ET NE REND RIEN. Le crédit a payé le TEXTE, qui est là et
+   * qu'on a lu — c'est précisément en le lisant qu'on le rejette. Rembourser
+   * ferait de la relecture un essai gratuit, et c'est exactement ce que le
+   * découpage en deux temps évite.
+   *
+   * IDEMPOTENT, comme l'approbation, et pour la même raison : deux frappes sur
+   * le même bouton sont la chose la plus banale du monde sur un téléphone.
+   *
+   * Un portrait APPROUVÉ ne se rejette plus : l'image est fabriquée et payée en
+   * appel de modèle. Le rejet aurait dû venir avant, et l'accepter après
+   * laisserait croire qu'il défait quelque chose.
+   */
+  async rejeter(userId: string, id: string): Promise<PortraitRendu> {
+    const ligne = await this.sien(userId, id);
+    if (ligne.status === "rejected") return this.rendre(ligne);
+    if (ligne.status === "approved")
+      throw new AppError("conflict", "an approved portrait cannot be rejected");
+
+    return this.rendre(await this.prisma.portrait.update({
+      where: { id: ligne.id },
+      data: { status: "rejected" },
+    }));
+  }
+
+  /**
    * Approuver : c'est ici que l'image se fabrique.
    *
    * IDEMPOTENT. Un portrait déjà approuvé rend le sien plutôt qu'un conflit ou
@@ -74,6 +107,14 @@ export class PortraitService {
   async approuver(userId: string, id: string): Promise<PortraitRendu> {
     const ligne = await this.sien(userId, id);
     if (ligne.status === "approved") return this.rendre(ligne);
+
+    /* UN PORTRAIT REJETÉ NE S'APPROUVE PAS. Le rejet dit « je ne paie pas
+       celui-là » : l'accepter ensuite fabriquerait l'image qu'on venait de
+       refuser, et le compteur de rejets par version — la seule mesure qui dise
+       si l'atelier progresse — compterait un refus sur un portrait retenu.
+       Ce qu'on veut après un rejet est une NOUVELLE génération, qui se paie. */
+    if (ligne.status === "rejected")
+      throw new AppError("conflict", "a rejected portrait cannot be approved");
 
     /* LA CONFIGURATION QUI A PRODUIT LE BRIEF, pas celle en service.
      *

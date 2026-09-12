@@ -1639,6 +1639,13 @@ enum GeneratedMessageStatus {
   generated
   edited
   sent
+  /**
+   * « Celui-là ne va pas. » Distinct d'`edited`, qui dit « je l'ai arrangé » —
+   * un message corrigé reste un message qu'on garde, et le confondre avec un
+   * rejet mesurerait la retouche au lieu du ratage.
+   * Terminal comme `sent` : on ne rejette pas un message déjà parti.
+   */
+  rejected
 
   @@map("generated_message_status")
 }
@@ -1663,15 +1670,30 @@ model GeneratedMessage {
    */
   shortContent      String?                @map("short_content")
   status            GeneratedMessageStatus @default(generated)
+  /**
+   * LA CONFIGURATION QUI L'A PRODUIT. Sans elle, un rejet ne mesure rien : on
+   * saurait qu'un message a déplu sans savoir quelle version l'a écrit, et une
+   * version publiée ne dirait pas si elle vaut mieux que la précédente. Les deux
+   * manquaient ensemble, et il les faut ensemble.
+   * `Restrict` : une configuration citée par une production ne se supprime pas,
+   * sinon la consigne qui l'a produite est perdue et l'avis ne désigne plus rien.
+   * Nullable pour les productions d'avant le 12 septembre — l'inventer serait
+   * pire que l'absence, on attribuerait à une version des avis qu'elle n'a pas
+   * mérités.
+   */
+  studioConfigId    String?                @map("studio_config_id") @db.Uuid
   createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz
 
-  actionRun  ActionRun       @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
-  occurrence EventOccurrence @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
-  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actionRun    ActionRun       @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  occurrence   EventOccurrence @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studioConfig StudioConfig?   @relation(fields: [studioConfigId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
   @@index([eventOccurrenceId])
+  /// « Combien de rejets par version » — la lecture qui justifie tout ça.
+  @@index([studioConfigId, status])
   @@map("generated_message")
 }
 
@@ -1704,14 +1726,27 @@ model GeneratedIdeaSet {
   /// n'existe plus. Nullables POUR ÇA, jamais pour un jeu neuf.
   userId            String?  @map("user_id") @db.Uuid
   eventOccurrenceId String?  @map("event_occurrence_id") @db.Uuid
+  /**
+   * LA CONFIGURATION QUI A PRODUIT LE JEU.
+   * `GeneratedIdea.feedback` existait déjà, et son index portait la question
+   * « quelle version d'invite plaît le plus » — mais la jointure passait par le
+   * GABARIT, table supprimée depuis. L'avis se posait donc sans que rien ne
+   * puisse dire ce qui l'avait mérité : le signal se collectait dans le vide.
+   * Le lien vit sur le JEU et non sur l'idée : une exécution appelle une
+   * configuration, et la poser sur chaque idée la répéterait cinq fois pour un
+   * fait qui ne varie pas.
+   */
+  studioConfigId    String?  @map("studio_config_id") @db.Uuid
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  actionRun  ActionRun        @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
-  user       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
-  occurrence EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
-  ideas      GeneratedIdea[]
+  actionRun    ActionRun        @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
+  user         User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  occurrence   EventOccurrence? @relation(fields: [eventOccurrenceId], references: [id], onDelete: SetNull)
+  studioConfig StudioConfig?    @relation(fields: [studioConfigId], references: [id], onDelete: Restrict)
+  ideas        GeneratedIdea[]
 
   @@index([userId, createdAt])
+  @@index([studioConfigId])
   @@map("generated_idea_set")
 }
 
@@ -1769,6 +1804,16 @@ model GeneratedIdea {
 enum PortraitStatus {
   generated
   approved
+  /**
+   * « Pas celui-là. » Il n'existait pas : on pouvait approuver, jamais rejeter,
+   * et l'atelier publiait donc des configurations sans jamais savoir s'il avait
+   * amélioré quoi que ce soit.
+   * UN STATUT ET NON UN POUCE À CÔTÉ : approuver FABRIQUE l'image et coûte, les
+   * deux s'excluent. C'est aussi ce qui rend le ménage du stockage possible —
+   * sans rejet explicite, on ne peut rien effacer sans risquer d'emporter ce
+   * que quelqu'un gardait.
+   */
+  rejected
 }
 
 /**
@@ -1832,6 +1877,19 @@ model Portrait {
   /// `Restrict` : une configuration citée par un portrait ne se supprime pas,
   /// sinon la consigne qui a produit le texte est perdue.
   studioConfigId String?       @map("studio_config_id") @db.Uuid
+  /**
+   * LA CONFIGURATION QUI A ÉCRIT LE TEXTE — nature `portrait_brief`, distincte
+   * de `studioConfigId` juste au-dessus, qui est le CATALOGUE (nature
+   * `portrait` : ambiances, compositions, modèle d'image).
+   * Les deux sont deux versions réelles et séparées : l'une choisit les mots,
+   * l'autre les dessine, l'une s'éprouve sur un modèle de texte, l'autre sur un
+   * modèle d'image. Les confondre est le défaut que le découpage en quatre
+   * natures a réparé — et le commentaire d'à côté disait « brief » pour une
+   * ligne qui n'en était pas une.
+   * Sans elle, rejeter un portrait ne disait pas quelle consigne avait choisi
+   * ses mots : l'avis se perdait à mi-chemin.
+   */
+  briefStudioConfigId String?   @map("brief_studio_config_id") @db.Uuid
   status        PortraitStatus @default(generated)
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
@@ -1839,10 +1897,14 @@ model Portrait {
   actionRun    ActionRun     @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   person       Person        @relation(fields: [personId], references: [id], onDelete: Cascade)
-  studioConfig StudioConfig? @relation(fields: [studioConfigId], references: [id], onDelete: Restrict)
+  studioConfig      StudioConfig? @relation("portraitCatalogue", fields: [studioConfigId], references: [id], onDelete: Restrict)
+  briefStudioConfig StudioConfig? @relation("portraitBrief", fields: [briefStudioConfigId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
   @@index([personId])
+  @@index([briefStudioConfigId, status])
+  /// « Combien de rejets par version » — la lecture qui justifie tout ça.
+  @@index([studioConfigId, status])
   @@map("portrait")
 }
 
@@ -2099,7 +2161,16 @@ model StudioConfig {
   @@index([state, createdAt])
   @@index([fingerprint])
   @@map("studio_config")
-  portraits   Portrait[]
+  portraits        Portrait[] @relation("portraitCatalogue")
+  /// Les portraits dont elle a écrit le TEXTE — nature `portrait_brief`. Deux
+  /// liens distincts vers la même table parce que ce sont deux natures : l'une
+  /// choisit les mots, l'autre les dessine.
+  briefsDePortrait Portrait[] @relation("portraitBrief")
+  /// Les productions de texte qui la citent. Elles répondent à la question qui
+  /// donne son sens à l'atelier : « cette version fait-elle mieux que la
+  /// précédente ? » — combien de rejets, sur combien de productions.
+  messages    GeneratedMessage[]
+  jeuxDIdees  GeneratedIdeaSet[]
 }
 
 /**

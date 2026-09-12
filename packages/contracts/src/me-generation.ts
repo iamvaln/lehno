@@ -173,7 +173,15 @@ export type Generation = z.infer<typeof generationSchema>;
 
 // ── Le portrait produit ─────────────────────────────────────────────────────
 
-export const PORTRAIT_STATUSES = ["generated", "approved"] as const;
+/* `rejected` — « pas celui-là ». Il n'existait pas : on pouvait approuver,
+   jamais rejeter, et l'atelier publiait donc des configurations sans jamais
+   savoir s'il avait amélioré quoi que ce soit.
+
+   UN STATUT ET NON UN POUCE POSÉ À CÔTÉ : approuver FABRIQUE l'image et coûte,
+   les deux s'excluent. C'est aussi ce qui rend le ménage du stockage possible —
+   sans rejet explicite, on ne peut rien effacer sans risquer d'emporter ce que
+   quelqu'un gardait. */
+export const PORTRAIT_STATUSES = ["generated", "approved", "rejected"] as const;
 export type PortraitStatus = (typeof PORTRAIT_STATUSES)[number];
 
 /* Ce que l'écran affiche. Aucun réglage n'y figure : ils ont servi à composer
@@ -198,7 +206,10 @@ export type Portrait = z.infer<typeof portraitSchema>;
 
 // ── Le brouillon de message ─────────────────────────────────────────────────
 
-export const MESSAGE_STATUSES = ["generated", "edited", "sent"] as const;
+/* `rejected` est DISTINCT d'`edited`, qui dit « je l'ai arrangé » : un message
+   corrigé reste un message qu'on garde, et les confondre mesurerait la retouche
+   au lieu du ratage. */
+export const MESSAGE_STATUSES = ["generated", "edited", "sent", "rejected"] as const;
 export type MessageStatus = (typeof MESSAGE_STATUSES)[number];
 
 /**
@@ -237,9 +248,23 @@ export type GeneratedMessage = z.infer<typeof generatedMessageSchema>;
 export const updateMessageSchema = z.object({
   content: z.string().trim().min(1).max(4000).optional(),
   markSent: z.boolean().optional(),
-}).strict().refine((v) => v.content !== undefined || v.markSent !== undefined, {
-  message: "au moins un champ doit être fourni",
-});
+  /* « Celui-là ne va pas. » C'est l'avis qui manquait, et sans lequel publier
+     une configuration ne se mesure pas : un pouce en bas dit quelque chose,
+     l'absence de geste ne dit rien.
+     Il ne se combine à RIEN — ni à une correction, ni à un envoi. Corriger un
+     message qu'on rejette n'a pas de sens, et l'envoyer non plus ; les accepter
+     ensemble laisserait deux gestes contradictoires décider par leur ordre
+     d'application. */
+  markRejected: z.boolean().optional(),
+}).strict()
+  .refine(
+    (v) => v.content !== undefined || v.markSent !== undefined || v.markRejected !== undefined,
+    { message: "au moins un champ doit être fourni" },
+  )
+  .refine(
+    (v) => v.markRejected !== true || (v.content === undefined && v.markSent !== true),
+    { message: "un rejet ne se combine ni à une correction ni à un envoi" },
+  );
 
 export type UpdateMessageInput = z.infer<typeof updateMessageSchema>;
 

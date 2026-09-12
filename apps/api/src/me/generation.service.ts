@@ -137,7 +137,7 @@ export class GenerationService {
        relire ailleurs coûterait une seconde requête et, surtout, laisserait la
        porte ouverte à ce qu'il vienne d'une AUTRE version que celle dont
        l'invite est tirée. L'empreinte les lie ; le code doit les lier aussi. */
-    const { contexte, modele } = await this.rassembler(userId, occurrence.id, orientation, options);
+    const { contexte, modele, configId } = await this.rassembler(userId, occurrence.id, orientation, options);
 
     /* Le REFUS D'ENTRÉE : une orientation joyeuse sur une occasion sensible.
      *
@@ -164,7 +164,7 @@ export class GenerationService {
       execution,
       fini: this.enArrierePlan(execution.id, userId, async () => {
         const sortie = await this.produire(contexte, userId, execution.id, modele);
-        return this.conclure(execution.id, userId, occurrence.id, sortie);
+        return this.conclure(execution.id, userId, occurrence.id, sortie, configId);
       }),
     };
   }
@@ -273,7 +273,7 @@ export class GenerationService {
     } = {},
   ) {
     const occurrence = await this.depot.occurrences(userId).findOrThrow(occurrenceId);
-    const { contexte, modele } = await this.rassemblerIdees(userId, occurrence.id, options);
+    const { contexte, modele, configId } = await this.rassemblerIdees(userId, occurrence.id, options);
 
     const { execution, dejaLancee } = await this.debiter(
       userId, occurrence.id, null, options.cle ?? null, ACTION_IDEES,
@@ -288,7 +288,7 @@ export class GenerationService {
       execution,
       fini: this.enArrierePlan(execution.id, userId, async () => {
         const idees = await this.produireIdees(contexte, userId, execution.id, modele);
-        return this.conclureIdees(execution.id, userId, occurrence.id, idees);
+        return this.conclureIdees(execution.id, userId, occurrence.id, idees, configId);
       }),
     };
   }
@@ -311,23 +311,31 @@ export class GenerationService {
    * Le `.catch` couvre la configuration devenue illisible : la génération
    * continue sur les valeurs du code plutôt que de tomber. Le semis la répare
    * au démarrage suivant, et `reglagesIdeesDe` la nomme dans le journal. */
-  private async reglagesIdees(): Promise<ReglagesIdees | null> {
+  /* Elle rend AUSSI l'identifiant de la version, et il suit le sort des
+     réglages : nul dès que la production retombe sur le gabarit du code.
+     Une configuration publiée mais ILLISIBLE n'a rien produit — lui attribuer
+     les avis d'un texte écrit par le repli lui ferait porter un mérite ou un
+     blâme qui ne sont pas les siens, et c'est exactement le chiffre qu'on veut
+     pouvoir croire. */
+  private async reglagesIdees(): Promise<{ reglages: ReglagesIdees | null; configId: string | null }> {
     const publie = await this.configs.enService("idees").catch(() => null);
-    if (publie === null) return null;
+    if (publie === null) return { reglages: null, configId: null };
     try {
-      return this.configs.reglagesIdeesDe(publie);
+      return { reglages: this.configs.reglagesIdeesDe(publie), configId: publie.id };
     } catch {
-      return null;
+      return { reglages: null, configId: null };
     }
   }
 
-  private async reglagesBriefPortrait(): Promise<ReglagesBriefPortrait | null> {
+  /* Elle rend AUSSI l'identifiant, et il suit le sort des réglages : nul dès que
+     la production retombe sur le gabarit du code. Voir `reglagesIdees`. */
+  private async reglagesBriefPortrait(): Promise<{ reglages: ReglagesBriefPortrait | null; configId: string | null }> {
     const publie = await this.configs.enService("portrait_brief").catch(() => null);
-    if (publie === null) return null;
+    if (publie === null) return { reglages: null, configId: null };
     try {
-      return this.configs.reglagesBriefPortraitDe(publie);
+      return { reglages: this.configs.reglagesBriefPortraitDe(publie), configId: publie.id };
     } catch {
-      return null;
+      return { reglages: null, configId: null };
     }
   }
 
@@ -338,7 +346,7 @@ export class GenerationService {
       texteLibre?: string | null;
       budget?: { min: number | null; max: number | null } | null;
     },
-  ): Promise<{ contexte: ContexteIdees; modele: string | null }> {
+  ): Promise<{ contexte: ContexteIdees; modele: string | null; configId: string | null }> {
     const occurrence = await this.prisma.eventOccurrence.findUniqueOrThrow({
       where: { id: occurrenceId },
       include: { event: { include: { person: true } } },
@@ -386,9 +394,9 @@ export class GenerationService {
      * propre aux idées ». Elle existe : les idées sont une nature à part, avec
      * ses essais et sa publication. Celle du message ne vaut toujours pas ici —
      * ses consignes parlent de ton et de tournure, pas d'objets. */
-    const reglages = await this.reglagesIdees();
+    const { reglages, configId } = await this.reglagesIdees();
 
-    return { modele: reglages?.modele ?? null, contexte: {
+    return { modele: reglages?.modele ?? null, configId, contexte: {
       langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
       ...(reglages?.consigneCommune ? { consigneCommune: reglages.consigneCommune } : {}),
       ...(reglages && reglages.gardeFous.length > 0 ? { gardeFous: reglages.gardeFous } : {}),
@@ -471,6 +479,7 @@ export class GenerationService {
 
   private async conclureIdees(
     actionRunId: string, userId: string, occurrenceId: string, idees: SortieIdee[],
+    configId: string | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
       const depense = await tx.aIUsage.aggregate({
@@ -484,6 +493,13 @@ export class GenerationService {
       return tx.generatedIdeaSet.create({
         data: {
           actionRunId, userId, eventOccurrenceId: occurrenceId,
+          /* LA VERSION QUI A PRODUIT LE JEU. `GeneratedIdea.feedback` existait,
+             mais la jointure qui devait dire « quelle invite plaît le plus »
+             passait par le GABARIT, table supprimée depuis : l'avis se collectait
+             dans le vide. Le lien vit sur le jeu, pas sur chaque idée — une
+             exécution appelle une configuration, et le répéter cinq fois
+             ajouterait une seconde vérité à tenir d'accord. */
+          ...(configId === null ? {} : { studioConfigId: configId }),
           ideas: {
             create: idees.map((i, rang) => ({
               label: i.titre,
@@ -519,7 +535,7 @@ export class GenerationService {
     options: { langue?: "fr" | "en"; texteLibre?: string | null; motDeLExpediteur?: string | null; cle?: string | null } = {},
   ) {
     const proche = await this.depot.persons(userId).findOrThrow(personId);
-    const { contexte, modele } = await this.rassemblerPortrait(userId, proche.id, selection, options);
+    const { contexte, modele, briefConfigId } = await this.rassemblerPortrait(userId, proche.id, selection, options);
 
     const { execution, dejaLancee } = await this.debiter(
       userId, null, selection.orientation, options.cle ?? null, ACTION_PORTRAIT,
@@ -532,7 +548,7 @@ export class GenerationService {
       fini: this.enArrierePlan(execution.id, userId, async () => {
         const brief = await this.produireLeBrief(contexte, userId, execution.id, modele);
         return this.conclurePortrait(
-          execution.id, userId, proche.id, selection, configId, brief,
+          execution.id, userId, proche.id, selection, configId, briefConfigId, brief,
           options.motDeLExpediteur ?? null,
         );
       }),
@@ -547,7 +563,7 @@ export class GenerationService {
   private async rassemblerPortrait(
     userId: string, personId: string, selection: SelectionPortrait,
     options: { langue?: "fr" | "en"; texteLibre?: string | null },
-  ): Promise<{ contexte: ContextePortrait; modele: string | null }> {
+  ): Promise<{ contexte: ContextePortrait; modele: string | null; briefConfigId: string | null }> {
     const proche = await this.prisma.person.findUniqueOrThrow({ where: { id: personId } });
     const moi = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId }, select: { uiLanguage: true },
@@ -589,9 +605,9 @@ export class GenerationService {
        l'image qui les dessine ; l'une s'éprouve sur un modèle de texte, l'autre
        sur un modèle d'image. Les confondre était exactement le défaut que le
        découpage message/portrait a réparé. */
-    const reglages = await this.reglagesBriefPortrait();
+    const { reglages, configId: briefConfigId } = await this.reglagesBriefPortrait();
 
-    return { modele: reglages?.modele ?? null, contexte: {
+    return { modele: reglages?.modele ?? null, briefConfigId, contexte: {
       // La langue du COMPTE : le portrait se lit par celui qui l'offre, comme
       // les idées. Le message, lui, part chez le proche et prend la sienne.
       langue: options.langue ?? (moi.uiLanguage === "en" ? "en" : "fr"),
@@ -669,7 +685,8 @@ export class GenerationService {
 
   private async conclurePortrait(
     actionRunId: string, userId: string, personId: string, selection: SelectionPortrait,
-    configId: string, brief: SortiePortrait, motDeLExpediteur: string | null,
+    configId: string, briefConfigId: string | null, brief: SortiePortrait,
+    motDeLExpediteur: string | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
       const depense = await tx.aIUsage.aggregate({
@@ -697,12 +714,24 @@ export class GenerationService {
           // La gamme se relira dans la configuration : on fige LEQUEL, pas les
           // quatre couleurs — les recopier ici les ferait diverger d'elle.
           compositionId: selection.composition.id,
-          /* LA CONFIGURATION QUI A PRODUIT CE BRIEF. L'approbation relira SA
-             consigne, pas celle du catalogue courant : reformuler une ambiance
-             entre les deux temps composerait l'image avec un texte et le brief
-             avec un autre. L'historique existait — il ne manquait que ce
-             lien. */
+          /* LE CATALOGUE — nature `portrait`. L'approbation relira SA consigne,
+             pas celle du catalogue courant : reformuler une ambiance entre les
+             deux temps composerait l'image avec un texte et le brief avec un
+             autre. L'historique existait — il ne manquait que ce lien.
+
+             LE NOM DIT « BRIEF » DANS L'ANCIEN COMMENTAIRE, ET C'ÉTAIT FAUX :
+             cette ligne-ci est la configuration du catalogue, celle qui porte
+             les ambiances, les compositions et le modèle d'image. Le brief a la
+             sienne — `briefStudioConfigId`, juste en dessous —, et les deux sont
+             bien deux versions distinctes : l'une écrit le texte, l'autre
+             dessine. Les confondre, c'est exactement le défaut que le découpage
+             en quatre natures a réparé. */
           studioConfigId: configId,
+          /* LA CONFIGURATION QUI A ÉCRIT LE TEXTE — nature `portrait_brief`.
+             Elle ne se notait nulle part : on pouvait rejeter un portrait sans
+             que rien ne dise quelle consigne avait choisi ses mots, et l'avis
+             se perdait. Nulle quand le brief vient du gabarit du code. */
+          ...(briefConfigId === null ? {} : { briefStudioConfigId: briefConfigId }),
           content: JSON.stringify({ mots: brief.mots, phrase: brief.phrase }),
           ...(brief.phraseCourte === null ? {} : { shortContent: brief.phraseCourte }),
           ...(motDeLExpediteur === null ? {} : { senderNote: motDeLExpediteur }),
@@ -798,6 +827,7 @@ export class GenerationService {
 
   private async conclure(
     actionRunId: string, userId: string, occurrenceId: string, sortie: SortieMessage,
+    configId: string | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
       /* Le coût RÉEL, agrégé depuis les tentatives. Un repli en produit
@@ -818,6 +848,9 @@ export class GenerationService {
           actionRunId, userId, eventOccurrenceId: occurrenceId,
           content: sortie.message,
           ...(sortie.court ? { shortContent: sortie.court } : {}),
+          // La version qui l'a écrit. Voir `rassembler` : nulle quand rien n'est
+          // publié, parce que le repli du code n'a pas de version.
+          ...(configId === null ? {} : { studioConfigId: configId }),
         },
       });
     });
@@ -860,13 +893,27 @@ export class GenerationService {
    * qu'un texte a été retouché est ce qui rend le taux de régénération lisible.
    * `sent` l'emporte ensuite — un message envoyé puis corrigé reste envoyé,
    * puisque le destinataire a déjà lu la version d'avant. */
-  async corriger(userId: string, id: string, patch: { content?: string | undefined; markSent?: boolean | undefined }) {
+  async corriger(
+    userId: string,
+    id: string,
+    patch: { content?: string | undefined; markSent?: boolean | undefined; markRejected?: boolean | undefined },
+  ) {
     const brouillon = await this.prisma.generatedMessage.findFirst({ where: { id, userId } });
     if (!brouillon) throw new AppError("not_found", "unknown message");
 
-    const etat = patch.markSent === true
-      ? "sent" as const
-      : (patch.content !== undefined && brouillon.status === "generated" ? "edited" as const : brouillon.status);
+    /* ON NE REJETTE PAS UN MESSAGE DÉJÀ PARTI. Le rejet est un avis sur la
+       production — « celui-là ne va pas » —, et il ne veut plus rien dire une
+       fois le message envoyé : ce qui est parti a manifestement convenu. Le
+       laisser passer fausserait la seule mesure qu'on vient chercher. */
+    if (patch.markRejected === true && brouillon.status === "sent") {
+      throw new AppError("conflict", "a sent message cannot be rejected");
+    }
+
+    const etat = patch.markRejected === true
+      ? "rejected" as const
+      : patch.markSent === true
+        ? "sent" as const
+        : (patch.content !== undefined && brouillon.status === "generated" ? "edited" as const : brouillon.status);
 
     return this.prisma.generatedMessage.update({
       where: { id },
@@ -932,7 +979,7 @@ export class GenerationService {
   private async rassembler(
     userId: string, occurrenceId: string, orientation: Orientation,
     options: { langue?: "fr" | "en"; texteLibre?: string | null },
-  ): Promise<{ contexte: ContexteMessage; modele: string | null }> {
+  ): Promise<{ contexte: ContexteMessage; modele: string | null; configId: string | null }> {
     const occurrence = await this.prisma.eventOccurrence.findUniqueOrThrow({
       where: { id: occurrenceId },
       include: { event: { include: { person: true } } },
@@ -991,7 +1038,13 @@ export class GenerationService {
     const reglages = publie === null ? null : this.configs.reglagesMessageDe(publie);
     const orientationPubliee = reglages?.orientations.find((o) => o.id === orientation);
 
-    return { modele: reglages?.modele ?? null, contexte: {
+    /* L'IDENTIFIANT DE LA VERSION LUE part avec le message, et c'est ce qui rend
+       un rejet mesurable : sans lui on saurait qu'un texte a déplu sans savoir
+       quelle consigne l'a écrit. Nul quand rien n'est publié — la production
+       vient alors du gabarit du code, qui n'a pas de version, et lui en
+       attribuer une attribuerait des avis à une configuration qui n'a rien
+       produit. */
+    return { modele: reglages?.modele ?? null, configId: publie?.id ?? null, contexte: {
       langue: options.langue ?? (proche.language === "en" ? "en" : "fr"),
       orientation,
       ...(orientationPubliee ? { consigneOrientation: orientationPubliee.consigne } : {}),

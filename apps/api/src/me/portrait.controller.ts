@@ -76,4 +76,17 @@ export class PortraitController {
   ): Promise<Portrait> {
     return this.portraits.approuver(req.userId, id);
   }
+
+  /* REJETER NE FABRIQUE RIEN, ET NE REND RIEN. Le crédit a payé le texte, qui
+     est là et qu'on vient de lire — c'est en le lisant qu'on le rejette.
+     Rembourser ferait de la relecture un essai gratuit, ce que le découpage en
+     deux temps évite justement.
+     200 comme l'approbation : le portrait existe, il change d'état. Et
+     idempotent pour la même raison — deux frappes sur le même bouton. */
+  @Post(":id/reject")
+  rejeter(
+    @Req() req: AuthedRequest, @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<Portrait> {
+    return this.portraits.rejeter(req.userId, id);
+  }
 }

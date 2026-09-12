@@ -81,6 +81,54 @@ export const etatIdeesSchema = etatAvec(configurationIdeesSchema);
 export const etatBriefPortraitSchema = etatAvec(configurationBriefPortraitSchema);
 export const etatPortraitSchema = etatAvec(configurationPortraitSchema);
 
+/* ── CE QUE LES VERSIONS ONT PRODUIT ─────────────────────────────────────────
+ *
+ * La lecture qui donne son sens à tout l'atelier. Jusqu'ici on publiait sans
+ * jamais savoir si on avait amélioré quoi que ce soit : aucune production ne
+ * portait d'avis négatif, et aucune ne disait quelle version l'avait produite.
+ * Les deux manquaient ensemble et il les fallait ensemble — un pouce en bas
+ * sans savoir quelle version l'a produit ne mesure rien, et une version publiée
+ * sans avis ne dit pas si elle vaut mieux que la précédente.
+ *
+ * L'UNITÉ COMPTÉE N'EST PAS LA MÊME PARTOUT, et la nommer évite de comparer des
+ * choses qui ne se comparent pas : un message, un portrait, une IDÉE. Le jeu
+ * d'idées porte la version, mais l'avis se pose idée par idée — compter les
+ * jeux dirait « trois productions » là où quinze avis ont été rendus.
+ */
+export const UNITES_PRODUITES = ["message", "portrait", "idee"] as const;
+export type UniteProduite = (typeof UNITES_PRODUITES)[number];
+
+export const performanceVersionSchema = z.object({
+  configId: z.string().uuid(),
+  /** Nul pour un brouillon jamais publié — qui n'a donc rien produit. */
+  version: z.number().int().positive().nullable(),
+  publieeLe: z.string().nullable(),
+  /** Tout ce que cette version a produit, avis ou non. */
+  produites: z.number().int().min(0),
+  /** Retenu : approuvé, envoyé, ou noté d'un pouce en haut. */
+  positifs: z.number().int().min(0),
+  /** Rejeté, ou noté d'un pouce en bas. */
+  negatifs: z.number().int().min(0),
+  /* SANS AVIS N'EST PAS UN « NI L'UN NI L'AUTRE » : c'est « personne n'a
+     répondu », ce qui ne se compte pas de la même façon dans une moyenne. Le
+     rendre à part évite qu'un panneau le range d'un côté ou de l'autre. */
+  sansAvis: z.number().int().min(0),
+}).strict();
+
+export const performanceSchema = z.object({
+  unite: z.enum(UNITES_PRODUITES),
+  /* De la plus récente à la plus ancienne — « comparée à la précédente » est la
+     question qu'on pose, et elle se lit de haut en bas. */
+  versions: z.array(performanceVersionSchema),
+  /* Ce qui a été produit SANS configuration publiée, par le gabarit du code.
+     Compté à part et jamais attribué : lui donner une version ferait porter à
+     une configuration des avis qu'elle n'a pas mérités, et c'est précisément le
+     chiffre qu'on veut pouvoir croire. */
+  horsVersion: performanceVersionSchema.omit({ configId: true, version: true, publieeLe: true }),
+}).strict();
+
+export type Performance = z.infer<typeof performanceSchema>;
+
 export const historiqueMessageSchema = z.object({
   items: z.array(configurationMessageSchema),
 }).strict();
