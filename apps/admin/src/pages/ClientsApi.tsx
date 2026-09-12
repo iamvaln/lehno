@@ -7,85 +7,84 @@ import { messages, type Langue } from "../i18n/index.js";
 import type { AdminRole, ClientApi, TypeClient, EnvClient } from "@lehno/contracts";
 
 /**
- * Les clients de l'API — qui a le droit d'appeler, et sous quel nom.
+ * The API clients — who is allowed to call, and under what name.
  *
- * **LA CLÉ NE PARAÎT QU'UNE FOIS, ET L'ÉCRAN LE DIT.** Elle est rendue en clair
- * à la création et à la rotation, puis jamais plus : la base n'en garde que le
- * haché. L'afficher comme une donnée ordinaire ferait perdre des clés — on la
- * montre donc dans un panneau qui annonce, avant le secret, qu'il ne
- * reviendra pas.
+ * **THE KEY APPEARS ONCE, AND THE SCREEN SAYS SO.** It comes back in the clear
+ * on creation and on rotation, then never again: the database keeps only its
+ * hash. Showing it like ordinary data would lose keys — so it appears in a panel
+ * that warns, BEFORE the secret, that it will not come back.
  *
- * **CE N'EST PAS UNE FRONTIÈRE DE SÉCURITÉ**, et le contrat le dit plus
- * longuement : une application distribuée porte sa clé dans son paquet, donc
- * quiconque la démonte l'obtient. Ce qu'on achète est la RÉVOCATION — couper un
- * client coupe une application entière, sans toucher aux autres.
+ * **IT IS NOT A SECURITY BOUNDARY**, and the contract says so at more length: a
+ * distributed app carries its key in its bundle, so whoever takes the bundle
+ * apart has it. What the key buys is REVOCATION — cutting one client cuts one
+ * whole application, without touching the others.
  *
- * **ON COUPE, ON NE SUPPRIME PAS.** Il n'y a pas de route de suppression : les
- * lignes déjà notées gardent leur référence, et l'historique reste lisible.
+ * **WE CUT, WE DO NOT DELETE.** There is no delete route: rows already recorded
+ * keep their reference, and the history stays readable.
  */
 export interface ClientsApiProps {
   role: AdminRole;
   langue?: Langue;
   clients: ClientApi[];
-  /** La clé en clair, le temps qu'on la copie. Nulle le reste du temps. */
-  cleVisible?: string | null;
-  onFermerLaCle?: () => void;
-  onOuvrir?: (
-    entree: { label: string; clientType: TypeClient; environment: EnvClient },
-    motif: string, code?: string,
+  /** The key in the clear, for as long as it takes to copy it. Null otherwise. */
+  visibleKey?: string | null;
+  onCloseKey?: () => void;
+  onOpen?: (
+    entry: { label: string; clientType: TypeClient; environment: EnvClient },
+    reason: string, reasonCode?: string,
   ) => void;
-  onTourner?: (client: ClientApi, motif: string, code?: string) => void;
-  onBasculer?: (client: ClientApi, motif: string, code?: string) => void;
-  onRetour?: (id: string) => void;
-  /* LES MOTIFS DU REGISTRE, avec leur CODE : le serveur l'exige sur ces gestes,
-     et n'envoyer que la phrase ferait refuser l'écriture après coup. Ceux du
-     dictionnaire, écrits ici, servent de repli quand le registre n'a rien pour
-     ce geste. */
-  motifsDuGeste?: (geste: string) => readonly { code: string; libelle: string }[];
+  onRotate?: (client: ClientApi, reason: string, reasonCode?: string) => void;
+  onToggle?: (client: ClientApi, reason: string, reasonCode?: string) => void;
+  onBack?: (id: string) => void;
+  /* THE REGISTRY'S REASONS, WITH THEIR CODE: the server demands it on these
+     gestures, and sending only the sentence makes the write fail after the fact.
+     The dictionary ones, written in the labels, are the fallback for when the
+     registry has nothing for that gesture. */
+  reasonsFor?: (gesture: string) => readonly { code: string; libelle: string }[];
 }
 
-/* LE NOM DU GESTE CÔTÉ SERVEUR, et il ne se devine pas depuis celui d'ici.
-   Le registre range ses motifs sous `api_client_create`, pas sous « ouvrir » :
-   interroger le registre avec le nom de l'écran rendait une liste vide, donc un
-   motif sans code — et le serveur refuse un geste qui PROPOSE des motifs et
-   n'en reçoit pas le code. La coupure échouait après confirmation. */
-const GESTES = {
-  ouvrir: "api_client_create",
-  tourner: "api_client_rotate",
-  basculer: "api_client_update",
+/* THE SERVER'S NAME FOR THE GESTURE, and it cannot be guessed from this
+   screen's. The registry files its reasons under `api_client_create`, not under
+   "open": asking it with the screen's own name returned an empty list, so a
+   reason went out without its code — and the server REFUSES a gesture that
+   offers reasons and receives none. The cut failed after confirmation. */
+const GESTURES = {
+  open: "api_client_create",
+  rotate: "api_client_rotate",
+  toggle: "api_client_update",
 } as const;
 
-type Geste =
-  | { quoi: "ouvrir" }
-  | { quoi: "tourner"; client: ClientApi }
-  | { quoi: "basculer"; client: ClientApi };
+type Gesture =
+  | { kind: "open" }
+  | { kind: "rotate"; client: ClientApi }
+  | { kind: "toggle"; client: ClientApi };
 
 export function ClientsApi({
-  role, langue = "fr", clients, cleVisible = null, onFermerLaCle,
-  onOuvrir, onTourner, onBasculer, onRetour, motifsDuGeste = () => [],
+  role, langue = "fr", clients, visibleKey = null, onCloseKey,
+  onOpen, onRotate, onToggle, onBack, reasonsFor = () => [],
 }: ClientsApiProps): ReactNode {
   const t = messages(langue);
   const c = t.clientsApi;
 
-  const [geste, setGeste] = useState<Geste | null>(null);
+  const [gesture, setGesture] = useState<Gesture | null>(null);
   const [label, setLabel] = useState("");
-  const [typeClient, setTypeClient] = useState<TypeClient>("mobile_ios");
-  const [env, setEnv] = useState<EnvClient>("prod");
+  const [clientType, setClientType] = useState<TypeClient>("mobile_ios");
+  const [environment, setEnvironment] = useState<EnvClient>("prod");
 
-  const date = (iso: string): string =>
+  const day = (iso: string): string =>
     new Intl.DateTimeFormat(langue === "en" ? "en-GB" : "fr-FR", {
       day: "numeric", month: "short", year: "numeric",
     }).format(new Date(iso));
 
-  const colonnes: Colonne<ClientApi>[] = [
+  const columns: Colonne<ClientApi>[] = [
     { cle: "label", titre: c.col.libelle },
-    /* L'IDENTIFIANT SE LIT, la clé jamais. C'est lui qu'on retrouve dans une
-       ligne de journal, donc lui qu'on vient chercher ici. */
+    /* THE IDENTIFIER IS READABLE, the key never is. It is the identifier that
+       turns up in a log line, so it is the identifier people come here for. */
     { cle: "clientId", titre: c.col.identifiant, discret: true },
     { cle: "clientType", titre: c.col.type, rendu: (l) => c.types[l.clientType] },
     { cle: "environment", titre: c.col.env, rendu: (l) => c.envs[l.environment] },
     {
-      cle: "isActive",
+      cle: "state",
       titre: c.col.etat,
       rendu: (l) => (
         <StatusPill ton={l.isActive ? "actif" : "arrete"}>
@@ -93,31 +92,31 @@ export function ClientsApi({
         </StatusPill>
       ),
     },
-    /* JAMAIS TOURNÉE se dit, et ne se tait pas : une clé qui n'a jamais bougé
-       depuis l'ouverture est une information, pas une case vide. */
+    /* "NEVER ROTATED" IS SAID OUT LOUD, not left blank: a key that has not moved
+       since the client was opened is information, not an empty cell. */
     {
       cle: "rotatedAt",
       titre: c.col.tournee,
       discret: true,
-      rendu: (l) => (l.rotatedAt === null ? c.jamaisTournee : date(l.rotatedAt)),
+      rendu: (l) => (l.rotatedAt === null ? c.jamaisTournee : day(l.rotatedAt)),
     },
   ];
 
-  const dialogue = geste === null
+  const dialog = gesture === null
     ? null
-    : geste.quoi === "ouvrir"
+    : gesture.kind === "open"
       ? c.dialogueOuvrir
-      : geste.quoi === "tourner"
+      : gesture.kind === "rotate"
         ? c.dialogueTourner
-        : geste.client.isActive ? c.dialogueCouper : c.dialogueRouvrir;
+        : gesture.client.isActive ? c.dialogueCouper : c.dialogueRouvrir;
 
-  const confirmer = (motif: string, code?: string): void => {
-    if (geste === null) return;
-    if (geste.quoi === "ouvrir")
-      onOuvrir?.({ label: label.trim(), clientType: typeClient, environment: env }, motif, code);
-    else if (geste.quoi === "tourner") onTourner?.(geste.client, motif, code);
-    else onBasculer?.(geste.client, motif, code);
-    setGeste(null);
+  const confirm = (reason: string, code?: string): void => {
+    if (gesture === null) return;
+    if (gesture.kind === "open")
+      onOpen?.({ label: label.trim(), clientType, environment }, reason, code);
+    else if (gesture.kind === "rotate") onRotate?.(gesture.client, reason, code);
+    else onToggle?.(gesture.client, reason, code);
+    setGesture(null);
     setLabel("");
   };
 
@@ -127,56 +126,52 @@ export function ClientsApi({
         racine={{ id: "tableau", label: t.fil.accueil }}
         items={[{ label: c.titre }]}
         libelle={t.fil.libelle}
-        onNavigate={() => onRetour?.("tableau")}
+        onNavigate={() => onBack?.("tableau")}
       />
       <PageHeader titre={c.titre} sous={c.sous} />
-      {/* Ce que la clé achète, et ce qu'elle n'achète pas — dit une fois, en
-          tête : quelqu'un s'y fierait un jour comme à une frontière de
-          sécurité si ce n'était écrit nulle part. */}
+      {/* What the key buys, and what it does not — said once, at the top:
+          someone would one day trust it as a security boundary if it were
+          written nowhere. */}
       <p className="admin-section-sous">{c.portee}</p>
 
       {role === "admin" ? (
         <div className="admin-actions">
-          <Button onClick={() => setGeste({ quoi: "ouvrir" })}>{c.ouvrir}</Button>
+          <Button onClick={() => setGesture({ kind: "open" })}>{c.ouvrir}</Button>
         </div>
       ) : null}
 
       <DataTable
-        colonnes={colonnes}
+        colonnes={columns}
         lignes={clients}
         libelles={{ actions: t.table.actions }}
         vide={<EmptyState titre={c.vide.titre} texte={c.vide.texte} />}
         {...(role === "admin"
           ? {
             actions: (l: ClientApi) => [
-              { id: "tourner", label: c.tourner },
-              {
-                id: "basculer",
-                label: l.isActive ? c.couper : c.rouvrir,
-                danger: l.isActive,
-              },
+              { id: "rotate", label: c.tourner },
+              { id: "toggle", label: l.isActive ? c.couper : c.rouvrir, danger: l.isActive },
             ],
             onAction: (id: string, l: ClientApi) => {
-              setGeste(id === "tourner" ? { quoi: "tourner", client: l } : { quoi: "basculer", client: l });
+              setGesture(id === "rotate" ? { kind: "rotate", client: l } : { kind: "toggle", client: l });
             },
           }
           : {})}
       />
 
-      {geste !== null && dialogue !== null ? (
+      {gesture !== null && dialog !== null ? (
         <ConfirmWithReason
-          destructif={geste.quoi === "basculer" && geste.client.isActive}
-          titre={geste.quoi === "ouvrir"
-            ? dialogue.titre
-            : dialogue.titre.replace("{client}", geste.client.label)}
-          consequence={dialogue.consequence}
-          /* LE REGISTRE D'ABORD, le dictionnaire en repli : les codes semés
+          destructif={gesture.kind === "toggle" && gesture.client.isActive}
+          titre={gesture.kind === "open"
+            ? dialog.titre
+            : dialog.titre.replace("{client}", gesture.client.label)}
+          consequence={dialog.consequence}
+          /* THE REGISTRY FIRST, the dictionary as fallback: the seeded codes
              (`access_compromised`, `routine_check`, `fixing_an_error`,
-             `new_contract`, `load_test`) portent ce que le serveur attend, et
-             une phrase sans code ferait refuser l'écriture. */
-          motifs={motifsDuGeste(GESTES[geste.quoi]).length > 0
-            ? motifsDuGeste(GESTES[geste.quoi])
-            : [...dialogue.motifs]}
+             `new_contract`, `load_test`) carry what the server expects, and a
+             sentence without a code makes the write fail. */
+          motifs={reasonsFor(GESTURES[gesture.kind]).length > 0
+            ? reasonsFor(GESTURES[gesture.kind])
+            : [...dialog.motifs]}
           libelles={{
             motif: t.confirmation.motif,
             choisir: t.confirmation.motifManquant,
@@ -186,11 +181,11 @@ export function ClientsApi({
             annuler: t.confirmation.annuler,
             confirmer: t.confirmation.confirmer,
           }}
-          onAnnuler={() => { setGeste(null); setLabel(""); }}
-          onConfirmer={confirmer}
-          incomplet={geste.quoi === "ouvrir" && label.trim().length < 2}
+          onAnnuler={() => { setGesture(null); setLabel(""); }}
+          onConfirmer={confirm}
+          incomplet={gesture.kind === "open" && label.trim().length < 2}
         >
-          {geste.quoi !== "ouvrir" ? null : (
+          {gesture.kind !== "open" ? null : (
             <div className="gabarit-form">
               <div className="admin-rang">
                 <label htmlFor="cli-label">{c.champs.libelle}</label>
@@ -207,8 +202,8 @@ export function ClientsApi({
                 <select
                   id="cli-type"
                   className="admin-champ admin-focus"
-                  value={typeClient}
-                  onChange={(e) => setTypeClient(e.target.value as TypeClient)}
+                  value={clientType}
+                  onChange={(e) => setClientType(e.target.value as TypeClient)}
                 >
                   {(Object.keys(c.types) as TypeClient[]).map((k) => (
                     <option key={k} value={k}>{c.types[k]}</option>
@@ -220,8 +215,8 @@ export function ClientsApi({
                 <select
                   id="cli-env"
                   className="admin-champ admin-focus"
-                  value={env}
-                  onChange={(e) => setEnv(e.target.value as EnvClient)}
+                  value={environment}
+                  onChange={(e) => setEnvironment(e.target.value as EnvClient)}
                 >
                   {(Object.keys(c.envs) as EnvClient[]).map((k) => (
                     <option key={k} value={k}>{c.envs[k]}</option>
@@ -233,18 +228,18 @@ export function ClientsApi({
         </ConfirmWithReason>
       ) : null}
 
-      {/* LA CLÉ, UNE SEULE FOIS. L'avertissement vient AVANT le secret : lu
-          après, il arrive quand la fenêtre est déjà fermée dans la tête de
-          celui qui l'a copiée — ou pas copiée. */}
-      {cleVisible === null ? null : (
+      {/* THE KEY, ONCE. The warning comes BEFORE the secret: read after it, the
+          warning arrives when the window has already closed in the mind of
+          whoever copied it — or did not copy it. */}
+      {visibleKey === null ? null : (
         <div className="admin-dialogue" role="dialog" aria-modal="true" aria-labelledby="cli-cle-titre">
           <div className="admin-dialogue-panneau">
             <h2 id="cli-cle-titre" className="admin-section-titre">{c.cle.titre}</h2>
             <p className="gabarit-note" data-ton="alerte">{c.cle.unique}</p>
-            <pre className="admin-sortie-brute">{cleVisible}</pre>
+            <pre className="admin-sortie-brute">{visibleKey}</pre>
             <p className="admin-section-sous">{c.cle.perdue}</p>
             <div className="admin-dialogue-actions">
-              <Button onClick={() => onFermerLaCle?.()}>{c.cle.copiee}</Button>
+              <Button onClick={() => onCloseKey?.()}>{c.cle.copiee}</Button>
             </div>
           </div>
         </div>

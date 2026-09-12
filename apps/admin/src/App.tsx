@@ -1582,35 +1582,35 @@ export function App(): ReactNode {
             role={role}
             langue={langue}
             clients={page.items}
-            cleVisible={cleVisible}
-            onFermerLaCle={() => setCleVisible(null)}
-            motifsDuGeste={motifsDe}
+            visibleKey={cleVisible}
+            onCloseKey={() => setCleVisible(null)}
+            reasonsFor={motifsDe}
             /* LE CODE DU MOTIF PART AVEC LA PHRASE, et ce n'est pas un
                ornement : ces trois gestes ont des motifs au registre, donc le
                serveur en EXIGE le code. Ne remonter que la phrase faisait
                échouer la coupure après confirmation. */
-            onOuvrir={(entree, motif, code) => {
+            onOpen={(entry, reason, code) => {
               void ecrireClient(
                 "/admin/api-clients", "POST",
-                { ...entree, motif, ...(code === undefined ? {} : { reasonCode: code }) }, true,
+                { ...entry, motif: reason, ...(code === undefined ? {} : { reasonCode: code }) }, true,
               );
             }}
-            onTourner={(client, motif, code) => {
+            onRotate={(client, reason, code) => {
               void ecrireClient(
                 `/admin/api-clients/${client.id}/rotate`, "POST",
-                { motif, ...(code === undefined ? {} : { reasonCode: code }) }, true,
+                { motif: reason, ...(code === undefined ? {} : { reasonCode: code }) }, true,
               );
             }}
-            onBasculer={(client, motif, code) => {
+            onToggle={(client, reason, code) => {
               void ecrireClient(
                 `/admin/api-clients/${client.id}`, "PATCH",
                 {
-                  isActive: !client.isActive, motif,
+                  isActive: !client.isActive, motif: reason,
                   ...(code === undefined ? {} : { reasonCode: code }),
                 }, false,
               );
             }}
-            onRetour={aller}
+            onBack={aller}
           />
         ) : null)}
       />
