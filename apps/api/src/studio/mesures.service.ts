@@ -164,9 +164,14 @@ export class MesuresStudioService {
         : Prisma.sql`SELECT "action_run_id", "feedback" FROM "generated_message"`;
 
     /* `DISTINCT ON` sur l'exécution : un repli laisse plusieurs lignes d'usage
-       réussies pour la même tâche — c'est rare mais possible —, et sans lui une
-       production compterait deux fois. On garde la tentative de plus petit
-       rang, c'est-à-dire la première qui a abouti. */
+       pour la même tâche, et sans lui une production compterait deux fois.
+       L'ORDRE DOIT ÊTRE TOTAL, et il ne l'était pas. `attempt` seul ne
+       départage rien : la chaîne écrit `attempt: c.rank`, et ce rang vaut ZÉRO
+       sur le chemin ordinaire — deux lignes du même appel portent donc le même.
+       Postgres choisissait alors arbitrairement, et la mesure pouvait nommer un
+       modèle un jour et l'autre le lendemain, sans que rien ne change.
+       `created_at` ferme l'ordre : à rang égal, c'est la PREMIÈRE écrite qui
+       compte, c'est-à-dire celle qui a effectivement rendu le contenu. */
     return Prisma.sql`
       WITH production AS (${production}),
       abouti AS (
@@ -176,7 +181,7 @@ export class MesuresStudioService {
         WHERE u."status" = 'success'
           AND u."purpose"::text IN ${taches}
           AND u."action_run_id" IS NOT NULL
-        ORDER BY u."action_run_id", u."attempt" ASC
+        ORDER BY u."action_run_id", u."attempt" ASC, u."created_at" ASC
       )
       SELECT
         a."model_key" AS cle,

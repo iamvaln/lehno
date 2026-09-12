@@ -959,12 +959,16 @@ describe("la génération d'un message", () => {
       const run = await db.prisma.generatedMessage.findUniqueOrThrow({
         where: { id: message!.id }, select: { actionRunId: true },
       });
-      // La chaîne réelle a déjà écrit son usage ; on lui ajoute un ÉCHEC en
-      // amont, tel qu'un repli en laisse.
+      /* La chaîne réelle a déjà écrit son usage ; on lui ajoute un ÉCHEC qui
+         GAGNERAIT l'ordre sans le filtre d'aboutissement — même rang, mais
+         écrit avant. C'est ce qui rend ce cas capable de tomber : posé avec un
+         rang et une date indifférents, il passait au vert par le hasard du
+         départage, et ne gardait rien. */
       await db.prisma.aIUsage.create({
         data: {
           actionRunId: run.actionRunId, purpose: "message", origin: "user_action",
           provider: "celui-qui-a-echoue", modelKey: "tombe", attempt: 0, status: "error",
+          createdAt: new Date("2020-01-01T00:00:00.000Z"),
         },
       });
       await noter(message!.id, "down");
