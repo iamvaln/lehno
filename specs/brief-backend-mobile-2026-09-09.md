@@ -29,7 +29,7 @@ cette date, sur `develop`, dans le code — pas de mémoire.
 | **10** — la fiche de soi | **clos** | `GET`/`PUT /me/self`, puis #183 : la fiche naît à l'inscription **et** une migration la donne aux comptes ouverts avant. Ce que l'implémentation mobile a appris depuis est passé au **§13** |
 | **11** — la fiche d'un proche | **clos** | `person.service.ts:219` passe par `enrichir` : la fiche rend enfin son décompte de notes et sa prochaine échéance, comme la liste |
 | **12** — le nom sur la contribution | **clos** | `personDisplayName` est au contrat (`me-contributions.ts:104`) — et le sas n'a plus à charger le carnet pour intituler une carte |
-| **13** — ce qui est à soi ne se reconnaît pas | **ouvert** | le planificateur vous souhaite votre propre anniversaire, et `occurrenceSchema` n'a pas d'`isSelf` |
+| **13** — ce qui est à soi ne se reconnaît pas | **clos** | les quatre points sont livrés : `isSelf` sur l'échéance, `?includeSelf=false`, `PATCH /me/self`, et le planificateur sépare enfin les deux familles de notification |
 
 Les paragraphes ci-dessous gardent leur rédaction d'origine : ils disent ce
 qu'on a vu, quand on l'a vu. Ce tableau dit ce qui en reste.
@@ -567,7 +567,27 @@ où il servait.
 
 ---
 
-## 13. Ce qui est à soi doit se reconnaître, à chaque frontière — 11 septembre au soir
+## 13. Ce qui est à soi doit se reconnaître, à chaque frontière — CLOS le 12 septembre
+
+> **Les quatre points sont livrés**, vérifiés dans le code de `develop` le
+> 12 septembre — pas au message de commit :
+>
+> - **13.1, le courriel** — `programmation.service.ts:75-118` sélectionne
+>   désormais `isSelf` et s'en sert : « `isSelf` SÉPARE LES DEUX FAMILLES de
+>   notification ». C'était le seul point de cette liste qui **sortait du
+>   produit** ; il ne peut plus.
+> - **13.2, `isSelf` sur l'échéance** — au contrat (`me-events.ts`). Les surfaces
+>   peuvent enfin donner à sa propre date les gestes qui lui vont.
+> - **13.3, le carnet sans soi** — `GET /me/persons?includeSelf=false`, et
+>   `total` suit le filtre. Le filtre côté client devient inutile.
+> - **13.4, `PATCH /me/self`** — la fiche se corrige champ par champ, donc
+>   l'écriture de `language` depuis le mobile peut revenir.
+>
+> Voir `specs/brief-mobile-avis-2026-09-12.md` §6 pour ce que chacun ouvre
+> côté mobile. La règle que ce paragraphe posait tient toujours, et c'est ce
+> qui en reste d'utile : **tout objet qui porte une personne et franchit une
+> frontière dit si cette personne est le titulaire du compte.**
+
 
 **La structure ne change pas, et c'est une décision, pas un renoncement.** Une
 date à soi reste un `Event` pendu à une `Person`, et `isSelf` reste le
