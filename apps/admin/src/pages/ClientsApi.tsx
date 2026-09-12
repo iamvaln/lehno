@@ -30,9 +30,12 @@ export interface ClientsApiProps {
   /** La clé en clair, le temps qu'on la copie. Nulle le reste du temps. */
   cleVisible?: string | null;
   onFermerLaCle?: () => void;
-  onOuvrir?: (entree: { label: string; clientType: TypeClient; environment: EnvClient }, motif: string) => void;
-  onTourner?: (client: ClientApi, motif: string) => void;
-  onBasculer?: (client: ClientApi, motif: string) => void;
+  onOuvrir?: (
+    entree: { label: string; clientType: TypeClient; environment: EnvClient },
+    motif: string, code?: string,
+  ) => void;
+  onTourner?: (client: ClientApi, motif: string, code?: string) => void;
+  onBasculer?: (client: ClientApi, motif: string, code?: string) => void;
   onRetour?: (id: string) => void;
   /* LES MOTIFS DU REGISTRE, avec leur CODE : le serveur l'exige sur ces gestes,
      et n'envoyer que la phrase ferait refuser l'écriture après coup. Ceux du
@@ -40,6 +43,17 @@ export interface ClientsApiProps {
      ce geste. */
   motifsDuGeste?: (geste: string) => readonly { code: string; libelle: string }[];
 }
+
+/* LE NOM DU GESTE CÔTÉ SERVEUR, et il ne se devine pas depuis celui d'ici.
+   Le registre range ses motifs sous `api_client_create`, pas sous « ouvrir » :
+   interroger le registre avec le nom de l'écran rendait une liste vide, donc un
+   motif sans code — et le serveur refuse un geste qui PROPOSE des motifs et
+   n'en reçoit pas le code. La coupure échouait après confirmation. */
+const GESTES = {
+  ouvrir: "api_client_create",
+  tourner: "api_client_rotate",
+  basculer: "api_client_update",
+} as const;
 
 type Geste =
   | { quoi: "ouvrir" }
@@ -97,11 +111,12 @@ export function ClientsApi({
         ? c.dialogueTourner
         : geste.client.isActive ? c.dialogueCouper : c.dialogueRouvrir;
 
-  const confirmer = (motif: string): void => {
+  const confirmer = (motif: string, code?: string): void => {
     if (geste === null) return;
-    if (geste.quoi === "ouvrir") onOuvrir?.({ label: label.trim(), clientType: typeClient, environment: env }, motif);
-    else if (geste.quoi === "tourner") onTourner?.(geste.client, motif);
-    else onBasculer?.(geste.client, motif);
+    if (geste.quoi === "ouvrir")
+      onOuvrir?.({ label: label.trim(), clientType: typeClient, environment: env }, motif, code);
+    else if (geste.quoi === "tourner") onTourner?.(geste.client, motif, code);
+    else onBasculer?.(geste.client, motif, code);
     setGeste(null);
     setLabel("");
   };
@@ -159,8 +174,8 @@ export function ClientsApi({
              (`access_compromised`, `routine_check`, `fixing_an_error`,
              `new_contract`, `load_test`) portent ce que le serveur attend, et
              une phrase sans code ferait refuser l'écriture. */
-          motifs={motifsDuGeste(geste.quoi).length > 0
-            ? motifsDuGeste(geste.quoi)
+          motifs={motifsDuGeste(GESTES[geste.quoi]).length > 0
+            ? motifsDuGeste(GESTES[geste.quoi])
             : [...dialogue.motifs]}
           libelles={{
             motif: t.confirmation.motif,

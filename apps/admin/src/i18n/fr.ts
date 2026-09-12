@@ -394,6 +394,65 @@ export const fr = {
       texte: "Les paires ouvertes apparaissent ici, avec leur état et la date de leur dernière rotation.",
     },
   },
+  versions: {
+    titre: "Versions de l'application",
+    sous: "Ce qu'on accepte de servir, et ce qu'on refuse.",
+    /* CE QUE « FORCER » VEUT DIRE, dit une fois en tête. Le geste ne se voit
+       pas venir : personne ne l'a demandé, et l'application s'arrête. Sa
+       conséquence doit se lire AVANT qu'on atteigne le bouton. */
+    portee: "Forcer une mise à jour met hors service tous les appareils en dessous du build, d'un coup. On le fait pour une rupture de compatibilité ou un correctif de sécurité obligatoire — et alors tout le monde doit passer, dix appareils ou dix mille. Le nombre de comptes dit l'ampleur à préparer, jamais s'il faut le faire.",
+    col: {
+      plateforme: "Plateforme", version: "Version", build: "Build", etat: "État",
+      vus: "Comptes vus", publiee: "Publiée le",
+    },
+    plateformes: { mobile_ios: "iOS", mobile_android: "Android", web: "Web" },
+    etats: { servie: "Servie", forcee: "Mise à jour forcée", declassee: "Déclassée" },
+    toutes: "Toutes les plateformes",
+    // Compté sur les connexions des trente derniers jours : quelqu'un qui ne
+    // s'est pas reconnecté depuis un mois n'y figure pas. Le dire approché vaut
+    // mieux que le laisser croire exact.
+    vus: "{n} sur 30 j",
+    ampleur: "{n} comptes ont été vus sur ce build en trente jours : de quoi prévenir l'assistance et rédiger l'annonce.",
+    enregistrer: "Enregistrer une version",
+    forcer: "Forcer la mise à jour",
+    liberer: "Ne plus forcer",
+    declasser: "Déclasser",
+    champs: {
+      plateforme: "Plateforme",
+      version: "Numéro de version",
+      build: "Build",
+      // Le build est l'identité, pas le numéro de version : deux builds peuvent
+      // porter le même « 1.4.0 », et c'est le cas ordinaire d'un correctif
+      // recompilé.
+      buildAide: "C'est lui qui identifie la version, pas son numéro : deux builds peuvent porter le même.",
+      lien: "Lien du magasin (facultatif)",
+      lienInvalide: "Une adresse complète, commençant par https://",
+    },
+    dialogueEnregistrer: {
+      titre: "Enregistrer une version",
+      consequence: "La version devient servie. Elle ne force rien : forcer se décide ensuite, sur la ligne, avec son propre motif.",
+      motifs: ["Nouvelle publication", "Vérification de routine", "Correction d'une erreur"],
+    },
+    dialogueForcer: {
+      titre: "Forcer la mise à jour depuis {version} (build {build})",
+      consequence: "Tous les appareils en dessous de ce build ne pourront plus appeler tant qu'ils n'auront pas mis à jour.",
+      motifs: ["Alerte de sécurité", "Correction d'une erreur", "Accès compromis"],
+    },
+    dialogueLiberer: {
+      titre: "Ne plus forcer depuis {version} (build {build})",
+      consequence: "Les appareils en dessous de ce build sont à nouveau servis, sans avoir rien à faire.",
+      motifs: ["Correction d'une erreur", "Vérification de routine"],
+    },
+    dialogueDeclasser: {
+      titre: "Déclasser {version} (build {build})",
+      consequence: "La version cesse d'être proposée. Rien n'est supprimé : la ligne reste au registre, et l'historique se relit.",
+      motifs: ["Vérification de routine", "Correction d'une erreur"],
+    },
+    vide: {
+      titre: "Aucune version",
+      texte: "Les versions enregistrées apparaissent ici, du build le plus récent au plus ancien.",
+    },
+  },
   confirmation: {
     motif: "Motif",
     motifAide: "Le journal d'audit garde ce geste et son motif.",

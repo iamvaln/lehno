@@ -32,3 +32,4 @@ export { TransactionManuelle, type TransactionManuelleProps, type MouvementManue
 export { StatsTransactions, type StatsTransactionsProps } from "./StatsTransactions.js";
 export { Metriques, type MetriquesProps } from "./Metriques.js";
 export { ClientsApi, type ClientsApiProps } from "./ClientsApi.js";
+export { Versions, type VersionsProps } from "./Versions.js";

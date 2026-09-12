@@ -3,7 +3,7 @@ import type { ZodType } from "zod";
 import { AdminShell, Sidebar, Topbar } from "./composants/coquille/index.js";
 import { EmptyState, Ressource } from "./composants/donnees/index.js";
 import { Toast } from "./composants/signaux/index.js";
-import { ClientsApi, Acces, Assistance, Liens, Metriques, StatsTransactions, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, StudioProfils, StudioTextes, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
+import { ClientsApi, Versions, Acces, Assistance, Liens, Metriques, StatsTransactions, StudioAtelier, StudioEssais, StudioService, TransactionManuelle, TableauDeBord, Liste, Detail, Credits, Drapeaux, Motifs, StudioProfils, StudioTextes, Edition, Lecture, Modeles, SaisiePaiement, Suppressions, Connexion as EcranConnexion, Profil } from "./pages/index.js";
 import type { RequeteComptes } from "./pages/Liste.js";
 import { codeConnu, messages, type CleCode, type Langue } from "./i18n/index.js";
 import { familles as famillesDuRole, sectionAutorisee } from "./navigation.js";
@@ -50,7 +50,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  canauxSchema, catalogueIaSchema, mesuresDesModelesSchema, chainesIaSchema, comptesAdminSchema, clientsApiSchema, clientApiAvecCleSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  canauxSchema, catalogueIaSchema, mesuresDesModelesSchema, chainesIaSchema, comptesAdminSchema, clientsApiSchema, clientApiAvecCleSchema, versionsAppSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
   urlMediaRenduSchema, motifsAdminSchema,
   pageAssistanceSchema, pageContactSchema, pageAttenteSchema, pageRetoursSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
@@ -70,7 +70,7 @@ import {
 import {
   demandeCodeReponseSchema, maintenanceStatusSchema, sessionAdminSchema, statsTransactionsSchema,
   type AdminRole, type ModeTransaction, type PeriodeMetriques, type PeriodeTransactions,
-  type SensTransaction,
+  type SensTransaction, type TypeClient, type VersionApp,
 } from "@lehno/contracts";
 import { creerClient, ErreurApi } from "./api/client.js";
 import { baseApi, magasinAvecMemoire } from "./api/session.js";
@@ -746,6 +746,25 @@ export function App(): ReactNode {
       ? api.appeler("/admin/api-clients", { schema: clientsApiSchema })
       : Promise.resolve(null)),
     [section, tourClients],
+  );
+
+  const [tourVersions, setTourVersions] = useState(0);
+  /* LE FILTRE PART AU SERVEUR, il ne trie pas ce qu'on a déjà : le registre
+     grossit d'une ligne à chaque publication, sur trois plateformes, et
+     filtrer côté écran ferait descendre tout l'historique pour en montrer un
+     tiers. */
+  const [plateformeVersions, setPlateformeVersions] = useState<TypeClient | "all">("all");
+
+  const etatVersions = useRessource(
+    () => (section === "versions"
+      ? api.appeler(
+        plateformeVersions === "all"
+          ? "/admin/app-versions"
+          : `/admin/app-versions?platform=${plateformeVersions}`,
+        { schema: versionsAppSchema },
+      )
+      : Promise.resolve(null)),
+    [section, tourVersions, plateformeVersions],
   );
 
   /* Deux appels, un seul état d'écran : ce qui tourne et ce qui l'a précédé se
@@ -1566,19 +1585,83 @@ export function App(): ReactNode {
             cleVisible={cleVisible}
             onFermerLaCle={() => setCleVisible(null)}
             motifsDuGeste={motifsDe}
-            onOuvrir={(entree, motif) => {
-              void ecrireClient("/admin/api-clients", "POST", { ...entree, motif }, true);
+            /* LE CODE DU MOTIF PART AVEC LA PHRASE, et ce n'est pas un
+               ornement : ces trois gestes ont des motifs au registre, donc le
+               serveur en EXIGE le code. Ne remonter que la phrase faisait
+               échouer la coupure après confirmation. */
+            onOuvrir={(entree, motif, code) => {
+              void ecrireClient(
+                "/admin/api-clients", "POST",
+                { ...entree, motif, ...(code === undefined ? {} : { reasonCode: code }) }, true,
+              );
             }}
-            onTourner={(client, motif) => {
-              void ecrireClient(`/admin/api-clients/${client.id}/rotate`, "POST", { motif }, true);
+            onTourner={(client, motif, code) => {
+              void ecrireClient(
+                `/admin/api-clients/${client.id}/rotate`, "POST",
+                { motif, ...(code === undefined ? {} : { reasonCode: code }) }, true,
+              );
             }}
-            onBasculer={(client, motif) => {
+            onBasculer={(client, motif, code) => {
               void ecrireClient(
                 `/admin/api-clients/${client.id}`, "PATCH",
-                { isActive: !client.isActive, motif }, false,
+                {
+                  isActive: !client.isActive, motif,
+                  ...(code === undefined ? {} : { reasonCode: code }),
+                }, false,
               );
             }}
             onRetour={aller}
+          />
+        ) : null)}
+      />
+    );
+  } else if (section === "versions") {
+    /* Écrire puis relire, comme partout : la réponse d'un PATCH ne porte qu'une
+       ligne, et le compteur des autres a pu bouger entre-temps. */
+    const ecrireVersion = async (
+      chemin: string, methode: "POST" | "PATCH", corps: unknown,
+    ): Promise<void> => {
+      try {
+        await api.appeler(chemin, { methode, corps });
+      } catch (echec) {
+        if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+      } finally {
+        setTourVersions((n) => n + 1);
+      }
+    };
+    /* LE CODE DU MOTIF PART AVEC LA PHRASE : les deux gestes ont des motifs au
+       registre, donc le serveur en exige le code. */
+    const avecCode = (motif: string, code?: string): Record<string, unknown> =>
+      ({ motif, ...(code === undefined ? {} : { reasonCode: code }) });
+    const basculer = (v: VersionApp, champ: "forcesUpdate" | "isRetired") =>
+      (motif: string, code?: string) => {
+        void ecrireVersion(
+          `/admin/app-versions/${v.id}`, "PATCH",
+          { [champ]: !v[champ], ...avecCode(motif, code) },
+        );
+      };
+    vue = (
+      <Ressource
+        etat={etatVersions}
+        t={t}
+        enfant={(page) => (page ? (
+          <Versions
+            role={role}
+            langue={langue}
+            versions={page.items}
+            platform={plateformeVersions}
+            onPlatform={setPlateformeVersions}
+            reasonsFor={motifsDe}
+            onRegister={(entree, motif, code) => {
+              void ecrireVersion("/admin/app-versions", "POST", { ...entree, ...avecCode(motif, code) });
+            }}
+            onForce={(v, motif, code) => basculer(v, "forcesUpdate")(motif, code)}
+            /* DÉCLASSER NE LIBÈRE PAS LE DRAPEAU, et c'est voulu : une version
+               déclassée n'est plus servie, donc ce que `forcesUpdate` disait
+               d'elle reste vrai dans le journal. Les effacer ensemble ferait
+               relire l'histoire à l'envers. */
+            onRetire={(v, motif, code) => basculer(v, "isRetired")(motif, code)}
+            onBack={aller}
           />
         ) : null)}
       />

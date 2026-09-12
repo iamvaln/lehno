@@ -20,10 +20,24 @@ const client = (sur: Record<string, unknown> = {}) => ({
   ...sur,
 });
 
+/* LE REGISTRE, DE LA FORME QUE LE SERVEUR LUI DONNE — `{ motifs }`, avec `fr`,
+   `en` et `actif`, et les gestes SOUS LEUR NOM SERVEUR. Le schéma est strict :
+   un gabarit d'une autre forme ne se lit pas, la liste des motifs revient vide,
+   et chaque épreuve éprouve alors le dictionnaire de repli au lieu du registre.
+   C'est ainsi qu'un écran qui interrogeait le registre sous « tourner » — un nom
+   qui n'existe que chez lui — est resté vert alors que la coupure échouait. */
 const MOTIFS = {
-  items: [
-    { code: "access_compromised", libelle: "Accès compromis", gestes: ["tourner", "basculer"] },
-    { code: "routine_check", libelle: "Vérification de routine", gestes: ["tourner"] },
+  motifs: [
+    {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      code: "access_compromised", fr: "Accès compromis", en: "Access compromised",
+      actif: true, gestes: ["api_client_rotate", "api_client_update"],
+    },
+    {
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      code: "new_contract", fr: "Nouveau contrat", en: "New contract",
+      actif: true, gestes: ["api_client_create"],
+    },
   ],
 };
 
@@ -90,10 +104,7 @@ describe("les clients de l'API", () => {
 
     await utilisateur.click(await screen.findByRole("button", { name: c.ouvrir }));
     await utilisateur.type(screen.getByLabelText(c.champs.libelle), "Android — recette");
-    await utilisateur.selectOptions(
-      screen.getByLabelText(t.confirmation.motif),
-      c.dialogueOuvrir.motifs[0] as string,
-    );
+    await utilisateur.selectOptions(screen.getByLabelText(t.confirmation.motif), "Nouveau contrat");
     await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
 
     expect(await screen.findByText("lk_secrete_123")).toBeInTheDocument();
@@ -117,16 +128,14 @@ describe("les clients de l'API", () => {
     const ligne = (await screen.findByText("iOS — production")).closest("tr") as HTMLElement;
     await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
     await utilisateur.click(await screen.findByRole("menuitem", { name: c.couper }));
-    await utilisateur.selectOptions(
-      screen.getByLabelText(t.confirmation.motif),
-      c.dialogueCouper.motifs[0] as string,
-    );
+    await utilisateur.selectOptions(screen.getByLabelText(t.confirmation.motif), "Accès compromis");
     await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
 
     await waitFor(() => {
       const envoi = appels.mock.calls.find(([, i]) => (i as RequestInit)?.method === "PATCH");
       expect(envoi).toBeDefined();
-      expect(JSON.parse((envoi?.[1] as RequestInit).body as string)).toMatchObject({ isActive: false });
+      expect(JSON.parse((envoi?.[1] as RequestInit).body as string))
+        .toMatchObject({ isActive: false, reasonCode: "access_compromised" });
     });
     // Aucune clé ne s'affiche : le geste n'en produit pas.
     expect(screen.queryByText(c.cle.unique)).toBeNull();

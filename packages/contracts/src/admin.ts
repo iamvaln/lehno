@@ -1310,6 +1310,14 @@ export const versionAppSchema = z.object({
 
 export type VersionApp = z.infer<typeof versionAppSchema>;
 
+/* L'enveloppe de la liste. Elle manquait, comme celle des clients : le
+   contrôleur rend `{ items }` et rien ne le décrivait. */
+export const versionsAppSchema = z.object({
+  items: z.array(versionAppSchema),
+}).strict();
+
+export type VersionsApp = z.infer<typeof versionsAppSchema>;
+
 export const enregistrerVersionSchema = z.object({
   platform: z.enum(TYPES_CLIENT),
   version: z.string().trim().min(1).max(20),
