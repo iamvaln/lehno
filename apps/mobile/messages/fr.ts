@@ -53,6 +53,17 @@ export const fr = {
   maintTexte: "Une mise à jour est en cours.",
   maintHeure: (h: string) => "De retour vers " + h + ".",
   maintReessayer: "Réessayer",
+  /* CE N'EST PAS LE SERVICE QUI S'ARRÊTE, C'EST CETTE VERSION QUI N'EST PLUS
+     RECONNUE. Cinq causes possibles — identifiant absent, inconnu, client coupé,
+     clé fausse, type discordant — et une seule réponse : rien à faire d'ici.
+     Le serveur ne dit pas laquelle, et c'est délibéré : le dire apprendrait à un
+     script lesquelles il a devinées.
+
+     ON NE PARLE PAS DU COMPTE. Celui de la personne va très bien ; lui annoncer
+     qu'il est refusé serait faux, et l'enverrait chercher une réparation qui
+     n'existe pas. */
+  refusTitre: "Cette version n'est plus reconnue",
+  refusTexte: "Installez la dernière version depuis votre magasin d'applications. Votre compte, lui, n'a rien.",
   maintEtat: "Voir l'état du service",
   pseudoTitre: "Choisissez votre pseudo",
   champPseudo: "Pseudo",

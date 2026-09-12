@@ -46,6 +46,8 @@ export const en = {
   maintTexte: "An update is under way.",
   maintHeure: (h: string) => "Back around " + h + ".",
   maintReessayer: "Try again",
+  refusTitre: "This version is no longer recognised",
+  refusTexte: "Install the latest version from your app store. Your account is fine.",
   maintEtat: "Service status",
   pseudoTitre: "Pick your handle",
   champPseudo: "Handle",
