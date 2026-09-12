@@ -493,6 +493,17 @@ export const mesuresStudioSchema = z.object({
   modeles: z.array(mesureModeleSchema),
 }).strict();
 
+/* LES MODÈLES DU REGISTRE — toutes natures confondues, avec leur seuil.
+ *
+ * Le seuil VOYAGE AVEC LA MESURE ici aussi : l'écrire dans l'écran en ferait
+ * deux endroits à changer, et l'un des deux resterait sur l'ancienne valeur. */
+export const mesuresDesModelesSchema = z.object({
+  seuil: z.number().int(),
+  modeles: z.array(mesureModeleSchema),
+}).strict();
+
+export type MesuresDesModeles = z.infer<typeof mesuresDesModelesSchema>;
+
 export type MesureStudio = z.infer<typeof mesureStudioSchema>;
 export type MesureModele = z.infer<typeof mesureModeleSchema>;
 export type MesuresStudio = z.infer<typeof mesuresStudioSchema>;

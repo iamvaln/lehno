@@ -393,10 +393,13 @@ export const en: typeof fr = {
   modeles: {
     titre: "AI models",
     sous: "What we call for each task, in what order, and what it costs at the provider.",
-    col: { fournisseur: "Provider", modele: "Model", capacite: "Handles", etat: "State", emplois: "Where it serves", entree: "Input cost", sortie: "Output cost" },
+    col: { fournisseur: "Provider", modele: "Model", capacite: "Handles", etat: "State", emplois: "Where it serves", rejets: "Rejected", entree: "Input cost", sortie: "Output cost" },
     capacites: { texte: "Text", image: "Image" },
     etats: { actif: "In service", eteint: "Off", enPanne: "Briefly unreachable" },
     sansCout: "Not priced",
+    tauxRejet: "{taux}% — {rejets} rejected of {avis} opinions, {productions} productions",
+    tropTot: "Too early — {avis} opinions of {seuil} needed",
+    rienProduit: "Nothing produced",
     sansEmploi: "In no chain",
     unite: "$ / M tokens",
     taches: {

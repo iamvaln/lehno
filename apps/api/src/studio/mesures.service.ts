@@ -1,7 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import type { StudioConfigKind } from "@prisma/client";
-import type { MesureModele, MesureStudio, MesuresStudio } from "@lehno/contracts";
+import type {
+  MesureModele, MesureStudio, MesuresDesModeles, MesuresStudio,
+} from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 
 /**
@@ -79,6 +81,44 @@ export class MesuresStudioService {
     }
 
     return { nature, relie: true, seuil: SEUIL, versions, modeles: await this.parModele(nature) };
+  }
+
+  /* LES MODÈLES, TOUTES NATURES CONFONDUES — la question du registre.
+   *
+   * « Ce modèle vaut-il son prix ? » ne se pose pas par nature : un modèle sert
+   * le message ET les idées, et son tarif est le même partout. C'est donc la
+   * somme qu'on veut.
+   *
+   * ON ADDITIONNE LES COMPTES, JAMAIS LES TAUX. Trois natures à 10 %, 50 % et
+   * 0 % ne font pas 20 % : la moyenne des taux ignore le nombre d'avis
+   * derrière chacun, et donnerait autant de poids à une nature notée trois fois
+   * qu'à une notée trois cents. Le taux se recalcule à la fin, sur les totaux —
+   * et le seuil s'y applique comme ailleurs. */
+  async mesurerLesModeles(): Promise<MesuresDesModeles> {
+    const parCle = new Map<string, MesureModele>();
+
+    /* `portrait_brief` n'est pas là : aucune production ne porte sa version, et
+       ses appels sont déjà comptés dans ceux du portrait — son brief et son
+       image partagent une exécution. L'y ajouter compterait deux fois. */
+    for (const nature of ["message", "idees", "portrait"] as const) {
+      for (const m of await this.parModele(nature)) {
+        const vu = parCle.get(`${m.fournisseur}:${m.cle}`);
+        if (vu === undefined) {
+          parCle.set(`${m.fournisseur}:${m.cle}`, { ...m });
+          continue;
+        }
+        vu.productions += m.productions;
+        vu.avis += m.avis;
+        vu.rejets += m.rejets;
+      }
+    }
+
+    return {
+      seuil: SEUIL,
+      modeles: [...parCle.values()]
+        .map((m) => ({ ...m, taux: this.taux(m) }))
+        .sort((a, b) => b.productions - a.productions),
+    };
   }
 
   /** Nul sous le seuil : « trop tôt pour conclure », jamais zéro. */
