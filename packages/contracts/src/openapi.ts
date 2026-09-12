@@ -964,7 +964,7 @@ const CHEMINS: Chemin[] = [
   },
   // ——— me/…/wishes (apps/api/src/me) — drapeau `wishlist` ————————————
   {
-    chemin: "/me/occurrences/{id}/wishes",
+    chemin: "/me/occurrences/{occurrenceId}/wishes",
     methode: "get",
     resume: "Lister les souhaits notés pour une occasion",
     authentifie: true,
@@ -985,11 +985,11 @@ const CHEMINS: Chemin[] = [
       "faut pas le confondre avec l'`isPublic` d'une liste partagée",
       "(`/me/owner-wishes`), qui décide, lui, de ce que des visiteurs voient.",
     ].join("\n"),
-    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    parametres: [{ nom: "occurrenceId", dans: "path", schema: z.string().uuid(), requis: true }],
     reponse: z.array(wishSchema),
   },
   {
-    chemin: "/me/occurrences/{id}/wishes",
+    chemin: "/me/occurrences/{occurrenceId}/wishes",
     methode: "post",
     resume: "Noter un souhait sur une occasion",
     authentifie: true,
@@ -1006,7 +1006,7 @@ const CHEMINS: Chemin[] = [
       "Un prix porte toujours sa devise : « 12 000 » ne dit ni des francs CFA",
       "ni des euros.",
     ].join("\n"),
-    parametres: [{ nom: "id", dans: "path", schema: z.string().uuid(), requis: true }],
+    parametres: [{ nom: "occurrenceId", dans: "path", schema: z.string().uuid(), requis: true }],
     corps: createWishSchema,
     reponse: wishSchema,
     // Une ressource neuve, dont le client apprend l'identifiant.
@@ -1072,40 +1072,6 @@ const CHEMINS: Chemin[] = [
     corps: updateWishlistSchema,
     reponse: wishlistSchema,
     statut: 200,
-  },
-  {
-    chemin: "/me/occurrences/{occurrenceId}/wishes",
-    methode: "get",
-    resume: "Les souhaits notés pour une occasion",
-    authentifie: true,
-    note: [
-      "**Gouverné par le drapeau `wishlist`.** Ce sont les souhaits notés POUR",
-      "UN PROCHE — privés, jamais partagés. À ne pas confondre avec",
-      "`/me/wishlists`, qui est MA liste, celle qui se publie.",
-      "",
-      "Les plus récents d'abord : l'écran se lit du haut, et ce qu'on vient de",
-      "noter est ce qu'on cherche à relire.",
-    ].join("\n"),
-    parametres: [{ nom: "occurrenceId", dans: "path", schema: z.string().uuid(), requis: true }],
-    reponse: z.array(wishSchema),
-  },
-  {
-    chemin: "/me/occurrences/{occurrenceId}/wishes",
-    methode: "post",
-    resume: "Noter un souhait pour une occasion",
-    authentifie: true,
-    note: [
-      "**Gouverné par le drapeau `wishlist`.**",
-      "",
-      "Ni `origin` ni `status` au corps, et ce n'est pas un oubli. `origin` dit",
-      "d'où vient le souhait : accepté du client, n'importe quel ajout",
-      "personnel pourrait se déclarer `collected` et se faire passer pour une",
-      "confidence du proche. `status` naît `available`.",
-    ].join("\n"),
-    parametres: [{ nom: "occurrenceId", dans: "path", schema: z.string().uuid(), requis: true }],
-    corps: createWishSchema,
-    reponse: wishSchema,
-    statut: 201,
   },
   // ——— me/ideas — ce qu'on fait d'une idée proposée ————————————————————
   //
