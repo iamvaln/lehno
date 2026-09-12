@@ -267,6 +267,9 @@ export class StudioEssaiService {
     reglages: ReglagesPortrait,
     profileId: string,
     ambianceId: string,
+    /* LA VOIE ÉPROUVÉE. Par défaut l'illustration — le comportement d'avant, et
+       le seul possible tant qu'aucune éprouvette ne portait de photo. */
+    voie: "illustration" | "photo" = "illustration",
   ): Promise<{ configId: string; essai: EssaiStudio }> {
     const profil = await this.prisma.studioProfile.findUnique({ where: { id: profileId } });
     if (!profil) throw new AppError("not_found", "unknown simulation profile");
@@ -277,22 +280,22 @@ export class StudioEssaiService {
        qu'on vient d'envoyer est une erreur d'appel, pas un état du monde. */
     if (!ambiance) throw new AppError("not_found", "unknown ambiance");
 
-    /* L'ESSAI ÉPROUVE LA VOIE ILLUSTRATION, et il le dit.
+    /* C'EST LA VOIE QUI DIT LE MODÈLE, jamais l'ambiance.
      *
-     * Le modèle se déduisait du GROUPE de l'ambiance — `photo_style` appelait
-     * le modèle de photo. Les deux voies partagent maintenant le même groupe :
-     * ce qui les distingue est la voie, pas l'ambiance, et une ambiance ne sait
-     * plus dire quel modèle appeler.
+     * Il se déduisait du GROUPE de l'ambiance — `photo_style` appelait le
+     * modèle de photo. Les deux voies partagent maintenant le même groupe : ce
+     * qui les distingue est la voie, et une ambiance ne sait plus quel modèle
+     * appeler.
      *
-     * Un essai n'a pas de photo : un profil de simulation porte des notes et un
-     * texte libre, pas d'image. Il éprouve donc l'illustration, et c'est le seul
-     * choix honnête — appeler le modèle de photo sans photo produirait un rendu
-     * qui n'est celui d'aucune des deux voies.
-     *
-     * ÉPROUVER LA VOIE PHOTO demandera une photo d'exemple, portée par le profil
-     * ou fournie à l'essai. C'est le seul endroit où cette voie coûte plus qu'un
-     * champ, et c'est écrit ici pour qu'on ne le redécouvre pas. */
-    const cle = reglages.modeles.illustration;
+     * LA VOIE PHOTO EXIGE UNE PHOTO D'EXEMPLE, portée par l'éprouvette. Sans
+     * elle on appellerait le modèle de photo sans image, et le rendu ne serait
+     * celui d'aucune des deux voies — un essai qui ne montre pas ce que la
+     * production rendra est pire qu'aucun essai, puisqu'il débloque la
+     * publication. On REFUSE en le nommant. */
+    if (voie === "photo" && profil.photoKey === null)
+      throw new AppError("validation_failed", "this simulation profile has no example photo");
+
+    const cle = voie === "photo" ? reglages.modeles.photo_style : reglages.modeles.illustration;
     const modele = await this.modeleDemande(cle);
 
     const config = await this.configs.deposerBrouillon("portrait", reglages);
@@ -335,10 +338,18 @@ export class StudioEssaiService {
       };
     }
 
-    /* La même tâche que le modèle choisi plus haut : l'essai éprouve la voie
-       illustration, faute de photo d'exemple. Voir le commentaire de `cle`. */
+    /* LA PHOTO D'EXEMPLE, lue au moment de l'appel. Elle ne traverse pas la
+       base : on garde sa clé, et les octets ne vivent que le temps de l'appel —
+       comme en production, où la source est lue puis oubliée. */
+    const photo = voie === "photo" && profil.photoKey !== null
+      ? await this.stockage.contenu(profil.photoKey)
+      : undefined;
+
+    /* LA MÊME TÂCHE QUE LE MODÈLE choisi plus haut : l'une décide de l'autre, et
+       les séparer ferait appeler le modèle de photo sur la chaîne de
+       l'illustration — donc mesurer la mauvaise. */
     const resultat = await this.routeur.appelerUnSeulModele(
-      "illustration",
+      voie === "photo" ? "photo_style" : "illustration",
       {
         // La MÊME palette que la production : l'établi doit montrer la gamme
         // qui sortira, pas celle du modèle laissé libre.
@@ -348,7 +359,12 @@ export class StudioEssaiService {
            choisira. */
         invite: inviteImagePortrait(
           brief, ambiance.consigne[contenu.langue], gamme, contenu.langue,
+          /* LA CONSIGNE DE LA PHOTO n'accompagne QUE la photo — mot pour mot ce
+             que fait la production. Sans image, elle demanderait au modèle de
+             s'inspirer d'une photo qu'il n'a pas. */
+          voie === "photo" ? reglages.photo?.consigne[contenu.langue] ?? null : null,
         ),
+        ...(photo === undefined ? {} : { image: photo }),
       },
       adaptateur,
       modele,

@@ -22,6 +22,7 @@ import { AuditService } from "./audit.service.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
 import { StudioEssaiService } from "../studio/essai.service.js";
 import { axesManquants } from "../studio/couverture.js";
+import type { StockagePort } from "../stockage/stockage.port.js";
 
 /* Le Studio du portrait, côté administration.
  *
@@ -50,6 +51,7 @@ export class PortraitStudioService {
     @Inject(AuditService) private readonly journal: AuditService,
     @Inject(StudioConfigurationService) private readonly configs: StudioConfigurationService,
     @Inject(StudioEssaiService) private readonly essais: StudioEssaiService,
+    @Inject("STOCKAGE_PORT") private readonly stockage: StockagePort,
   ) {}
 
   /* Les deux écrans du brief de design en un seul appel : ce qui tourne, et ce
@@ -94,7 +96,9 @@ export class PortraitStudioService {
 
   async listerProfils(): Promise<ProfilsStudio> {
     const lignes = await this.prisma.studioProfile.findMany({ orderBy: { createdAt: "asc" } });
-    const items = lignes.map((l) => this.rendreProfil(l));
+    /* En parallèle : chaque rendu signe une URL, et les enchaîner ferait autant
+       d'allers-retours que de profils pour un calcul local. */
+    const items = await Promise.all(lignes.map((l) => this.rendreProfil(l)));
     return {
       items,
       manquant: axesManquants(items.map((p) => ({ sensible: p.sensible, contenu: p.contenu }))),
@@ -138,7 +142,14 @@ export class PortraitStudioService {
     await this.prisma.studioProfile.delete({ where: { id } });
   }
 
-  private rendreProfil(l: { id: string; label: string; isSensitive: boolean; payload: unknown; createdAt: Date }): ProfilStudio {
+  /* LA CLÉ DEVIENT UNE URL AU MOMENT DE RENDRE, jamais avant — la même règle
+     que pour l'image d'un essai. Le lien ne vaut que quelques minutes, et le
+     ranger le ferait mourir avant d'être ouvert. La signature est locale, pas
+     un appel réseau. */
+  private async rendreProfil(l: {
+    id: string; label: string; isSensitive: boolean; payload: unknown;
+    photoKey: string | null; createdAt: Date;
+  }): Promise<ProfilStudio> {
     return {
       id: l.id,
       libelle: l.label,
@@ -146,6 +157,13 @@ export class PortraitStudioService {
       // Relu par le schéma : un profil écrit par une version antérieure doit
       // tomber ici, à la lecture, et non au milieu d'un essai déjà payé.
       contenu: profilContenuSchema.parse(l.payload),
+      /* Une photo absente rend un lien nul, et une photo dont la lecture échoue
+         aussi : l'écran montre alors l'éprouvette sans sa photo plutôt que de
+         se fermer. Une vignette manquante se voit ; un écran en erreur cache
+         tout le reste. */
+      photoUrl: l.photoKey === null
+        ? null
+        : await this.stockage.lire(l.photoKey).catch(() => null),
       creeLe: l.createdAt.toISOString(),
     };
   }
@@ -153,7 +171,9 @@ export class PortraitStudioService {
   // ── Les essais ────────────────────────────────────────────────────────────
 
   async essayer(adminId: string, entree: z.infer<typeof lancementEssaiPortraitSchema>) {
-    return this.essais.essayerPortrait(adminId, entree.reglages, entree.profileId, entree.ambianceId);
+    return this.essais.essayerPortrait(
+      adminId, entree.reglages, entree.profileId, entree.ambianceId, entree.voie ?? "illustration",
+    );
   }
 
   async listerEssais(configId?: string): Promise<{ items: EssaiStudio[] }> {

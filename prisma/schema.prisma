@@ -2390,6 +2390,21 @@ model StudioProfile {
   /// Ce que ce profil met à l'épreuve : « fiche pauvre, nom long, anglais ».
   label       String   @db.VarChar(80)
   payload     Json
+  /// LA PHOTO D'EXEMPLE, pour éprouver la voie photo.
+  ///
+  /// SUR LE PROFIL ET NON SUR L'ESSAI, et ce n'est pas un détail de rangement :
+  /// pour comparer deux versions il faut tenir la photo CONSTANTE. Fournie à
+  /// chaque essai, elle varierait d'un essai à l'autre, et l'on comparerait
+  /// deux réglages sur deux images — c'est-à-dire rien. Portée par
+  /// l'éprouvette, elle est fixe par construction.
+  ///
+  /// Rangée sous le préfixe `essais` comme les images qu'elles produisent :
+  /// personne ne l'a payée, et une règle de cycle de vie doit pouvoir la
+  /// balayer sans toucher à ce que les gens ont acheté.
+  ///
+  /// Nulle pour les profils qui n'en ont pas — la plupart : seule la voie photo
+  /// en a besoin, et l'illustration s'éprouve très bien sans.
+  photoKey    String?  @map("photo_key")
   isSensitive Boolean  @default(false) @map("is_sensitive")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 

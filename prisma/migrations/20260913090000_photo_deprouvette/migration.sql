@@ -1,0 +1,16 @@
+-- LA PHOTO D'EXEMPLE D'UNE ÉPROUVETTE, pour éprouver la voie photo.
+--
+-- Jusqu'ici l'atelier ne pouvait éprouver que l'illustration : un profil de
+-- simulation porte des notes et un texte libre, pas d'image, et appeler le
+-- modèle de photo sans photo produirait un rendu qui n'est celui d'aucune des
+-- deux voies.
+--
+-- SUR LE PROFIL ET NON SUR L'ESSAI. Pour comparer deux versions il faut tenir
+-- la photo CONSTANTE : fournie à chaque essai, elle varierait, et l'on
+-- comparerait deux réglages sur deux images — c'est-à-dire rien. Portée par
+-- l'éprouvette, elle est fixe par construction, ce qui est précisément ce qu'on
+-- attend d'une éprouvette.
+--
+-- Nullable : seule la voie photo en a besoin, et la plupart des profils n'en
+-- auront pas.
+ALTER TABLE "studio_profile" ADD COLUMN "photo_key" TEXT;
