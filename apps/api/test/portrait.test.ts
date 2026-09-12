@@ -96,7 +96,7 @@ describe("le portrait", () => {
 
   const selection = () =>
     verifierLaSelection(reglagesPortraitDeDepart(), {
-      orientation: "notre_relation", visual: "illustration", illustrationFamily: "nature",
+      orientation: "notre_relation", image: "illustration", illustration_family: "nature",
       // Le SECOND paramètre du client : la composition, donc la gamme.
       composition: "papier",
     });
@@ -254,7 +254,7 @@ describe("le portrait", () => {
       await crediter(5);
       // « abstrait » n'est PAS la première ambiance active : « nature » l'est.
       const abstrait = verifierLaSelection(reglagesPortraitDeDepart(), {
-        orientation: "notre_relation", visual: "illustration", illustrationFamily: "abstrait",
+        orientation: "notre_relation", image: "illustration", illustration_family: "abstrait",
         composition: "papier",
       });
       const portrait = await fini(generation(repond(BRIEF)).lancerPortrait(awa, proche, abstrait, config));

@@ -180,3 +180,50 @@ désormais : l'édition qui suit une publication sans brouillon existant,
 l'enregistrement direct, et le retour arrière.
 
 C'est la première brique, et elle est posée.
+
+---
+
+## 10. Deux axes, pas un — et ce qui manque encore au second
+
+*Ajouté le 12 septembre, après arbitrage : ce document décrit l'AVIS, et il en
+manquait la moitié du cadre.*
+
+**Le statut et l'avis sont deux axes, et les confondre écraserait une
+distinction qui compte.**
+
+| | ce qu'il dit |
+| --- | --- |
+| le **statut** | ce qu'on fait de l'objet — composé, gardé, écarté |
+| l'**avis** | ce qu'on en pense, et c'est **un pas de plus** |
+
+**On peut garder sans jamais dire qu'on a aimé** — c'est même le cas ordinaire,
+donner un avis est un geste qu'on ne franchit pas forcément. **Et on peut garder
+sans aimer** : une image qu'on ne trouve pas réussie mais qu'on garde quand même
+dit quelque chose de précis, que ni le statut seul ni l'avis seul ne
+porteraient.
+
+Le §8 ci-dessus dit donc *presque* juste : ce qui débloque le ménage du stockage
+est le **statut** — « je ne garde pas celle-ci » —, pas l'avis. Un pouce en bas
+sur une image qu'on garde n'autorise rien à effacer.
+
+### Ce qui manque : la raison d'un avis négatif
+
+**Un « je n'aime pas » sans raison ne dit pas quoi corriger.** C'est pourtant la
+seule chose qu'on vient chercher : savoir qu'une version déplaît sans savoir en
+quoi ne fait pas avancer la consigne suivante.
+
+**Le flux n'est pas dessiné**, et la colonne attend qu'il le soit — parce que sa
+forme dépend de lui, et se tromper coûte une migration :
+
+- **des motifs fermés** (« hors sujet », « ton faux », « inexact », « fade ») se
+  comptent, se comparent entre versions, et se lisent au panneau d'un coup
+  d'œil. C'est ce qui sert à régler ;
+- **un texte libre** dit ce qu'aucune liste n'avait prévu, et c'est précisément
+  ce qu'on veut les premiers mois — mais il ne se compte pas, et personne ne
+  relit trois cents phrases.
+
+La réponse est probablement **les deux** : un motif obligatoire, un texte libre
+facultatif. C'est la forme qu'a déjà le motif d'administration dans ce dépôt —
+`audit_reason` avec son commentaire —, et elle y a fait ses preuves.
+
+À trancher avant d'écrire la colonne.
