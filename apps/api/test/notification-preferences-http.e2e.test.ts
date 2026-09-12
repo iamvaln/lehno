@@ -5,9 +5,11 @@ import jwt from "jsonwebtoken";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
+import { CONFIGURABLE_NOTIFICATION_TYPES } from "@lehno/contracts";
 
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
+const SECRET_ADMIN = "Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh";
 
 // Même raison que profile-http.e2e.test.ts : AuthGuard et le `.strict()` du
 // corps de PATCH ne s'éprouvent qu'à la route réelle, jamais via le seul
@@ -18,9 +20,15 @@ describe("préférences de notification — HTTP de bout en bout", () => {
   let baseUrl: string;
   let userId: string;
   let token: string;
+  /* `ADMIN_JWT_SECRET` A REJOINT LA LISTE, et ce n'était pas un oubli sans
+     conséquence : ce fichier ne la posait pas, et il ne passait donc QUE DERRIÈRE
+     un autre fichier qui l'avait posée — tous partagent un processus
+     (`singleFork`), donc `process.env` leur est commun. Lancé seul, il tombait
+     à l'assemblage du module, sur `AdminTokenService`. Une épreuve qui dépend de
+     ce qui a tourné avant elle n'éprouve pas ce qu'elle croit. */
   let previousEnv: {
     DATABASE_URL: string | undefined; OTP_PEPPER: string | undefined; JWT_SECRET: string | undefined;
-    LEHNO_MAIL_CONSOLE: string | undefined;
+    ADMIN_JWT_SECRET: string | undefined; LEHNO_MAIL_CONSOLE: string | undefined;
   };
 
   beforeAll(async () => {
@@ -29,11 +37,13 @@ describe("préférences de notification — HTTP de bout en bout", () => {
       DATABASE_URL: process.env.DATABASE_URL,
       OTP_PEPPER: process.env.OTP_PEPPER,
       JWT_SECRET: process.env.JWT_SECRET,
+      ADMIN_JWT_SECRET: process.env.ADMIN_JWT_SECRET,
       LEHNO_MAIL_CONSOLE: process.env.LEHNO_MAIL_CONSOLE,
     };
     process.env.DATABASE_URL = db.url;
     process.env.OTP_PEPPER = PEPPER;
     process.env.JWT_SECRET = SECRET;
+    process.env.ADMIN_JWT_SECRET = SECRET_ADMIN;
     process.env.LEHNO_MAIL_CONSOLE = "1";
 
     app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
@@ -52,6 +62,8 @@ describe("préférences de notification — HTTP de bout en bout", () => {
     else process.env.OTP_PEPPER = previousEnv.OTP_PEPPER;
     if (previousEnv.JWT_SECRET === undefined) delete process.env.JWT_SECRET;
     else process.env.JWT_SECRET = previousEnv.JWT_SECRET;
+    if (previousEnv.ADMIN_JWT_SECRET === undefined) delete process.env.ADMIN_JWT_SECRET;
+    else process.env.ADMIN_JWT_SECRET = previousEnv.ADMIN_JWT_SECRET;
     if (previousEnv.LEHNO_MAIL_CONSOLE === undefined) delete process.env.LEHNO_MAIL_CONSOLE;
     else process.env.LEHNO_MAIL_CONSOLE = previousEnv.LEHNO_MAIL_CONSOLE;
   });
@@ -100,7 +112,9 @@ describe("préférences de notification — HTTP de bout en bout", () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.digestFrequency).toBe("monthly");
-    expect(body.preferences).toHaveLength(11);
+    // Dérivé du contrat : un littéral redisait `CONFIGURABLE_NOTIFICATION_TYPES
+    // .length` sans le dire, et tombait à chaque nature ajoutée.
+    expect(body.preferences).toHaveLength(CONFIGURABLE_NOTIFICATION_TYPES.length);
     expect(body.preferences.find((p) => p.type === "event_reminder"))
       .toMatchObject({ pushEnabled: true, emailEnabled: true });
   });
