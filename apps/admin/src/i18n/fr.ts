@@ -260,6 +260,23 @@ export const fr = {
       publier: "Mettre en service",
       publierImpossible: "Rien à publier pour l'instant.",
     },
+    /* LE JOURNAL DES ESSAIS de cette nature. Il ne double pas la galerie :
+       celle-ci rend les cent derniers de TOUTES les natures, et l'on vient ici
+       comparer deux versions d'une seule — le même partage que l'atelier du
+       portrait fait avec la sienne. */
+    journal: {
+      titre: "Les essais de cette nature",
+      sous: "Ce qui a été produit ici, et ce qu'on en a pensé. La galerie, elle, garde les cent derniers de toutes les natures.",
+      col: { quand: "Quand", sortie: "Ce qui est sorti", modele: "Modèle", etat: "État", verdict: "Verdict" },
+      verdicts: { kept: "Gardé", discarded: "Écarté" },
+      nonJuge: "—",
+      garder: "Garder",
+      ecarter: "Écarter",
+      aucun: {
+        titre: "Aucun essai",
+        texte: "Rien ne se publie sans essai : c'est ici qu'ils s'inscrivent, avec ce qu'ils ont produit.",
+      },
+    },
     blocages: {
       deja_en_service: "Cette version est déjà en service.",
       aucun_essai_reussi: "Aucun essai réussi ne porte ces réglages. Essayez avant de publier.",
