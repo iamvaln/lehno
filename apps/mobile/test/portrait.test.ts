@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   startGenerationSchema, studioConfigSchema, valideSelection,
-  type Portrait, type StudioConfig,
+  type Portrait, type StudioChoice, type StudioConfig,
 } from "@lehno/contracts";
 import {
   apresLeChoix, composition, verdict, changementDeSignature, etatDuPortrait, feuilleDePartage,
-  laFeuilleDeposeUnFichier, laProductionEstRefusee,
+  dernierPortraitDe, laFeuilleDeposeUnFichier, laGrilleMontreDesImages,
+  laProductionEstRefusee, libelleDuRangPortrait, queViseTOn,
   motDAccompagnement, offreDeRefaire, ouverture, relanceDuPortrait,
   selectionParDefaut, signatureARemettre,
 } from "../lib/portrait.js";
@@ -66,12 +67,12 @@ const CATALOGUE: StudioConfig = studioConfigSchema.parse({
 
 describe("l'ouverture de l'écran", () => {
   it("lit le portrait quand l'identifiant est recevable", () => {
-    expect(ouverture(PORTRAIT)).toEqual({ sorte: "lire", chemin: `/me/portraits/${PORTRAIT}` });
+    expect(ouverture(PORTRAIT, undefined)).toEqual({ sorte: "lire", chemin: `/me/portraits/${PORTRAIT}` });
   });
 
   it("n'a rien à lire sans identifiant", () => {
-    expect(ouverture(undefined)).toEqual({ sorte: "sans-objet" });
-    expect(ouverture("")).toEqual({ sorte: "sans-objet" });
+    expect(ouverture(undefined, undefined)).toEqual({ sorte: "sans-objet" });
+    expect(ouverture("", undefined)).toEqual({ sorte: "sans-objet" });
   });
 
   /* UN PARAMÈTRE DE ROUTE N'EST PAS DE CONFIANCE : `…/portrait?id=…` s'atteint
@@ -79,7 +80,7 @@ describe("l'ouverture de l'écran", () => {
      chemin — et un « ../ » sort du préfixe pour viser un autre chemin de /me. */
   it("refuse ce qui n'est pas un identifiant de portrait", () => {
     for (const pose of ["../account", "1 OR 1=1", "%2e%2e%2fwall", "abc"]) {
-      expect(ouverture(pose), pose).toEqual({ sorte: "sans-objet" });
+      expect(ouverture(pose, undefined), pose).toEqual({ sorte: "sans-objet" });
     }
   });
 });
@@ -345,5 +346,83 @@ describe("la voie et l'ambiance, telles que le catalogue les sert", () => {
   it("garde ce qui reste atteignable quand on revient sur ses pas", () => {
     const encre = apresLeChoix(CATALOGUE, selectionParDefaut(CATALOGUE), "ambiance", "encre");
     expect(apresLeChoix(CATALOGUE, encre, "voie", "aucune")).toEqual({ voie: "aucune", ambiance: "encre" });
+  });
+});
+
+describe("composer le premier portrait", () => {
+  const PROCHE = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
+
+  it("ouvre en composition quand le proche est donné et le portrait non", () => {
+    expect(ouverture(undefined, PROCHE)).toEqual({ sorte: "composer", personId: PROCHE });
+  });
+
+  it("préfère LIRE quand les deux sont donnés", () => {
+    expect(ouverture("11111111-2222-3333-4444-555555555555", PROCHE).sorte).toBe("lire");
+  });
+
+  it("refuse un personId qui n'est pas un uuid", () => {
+    expect(ouverture(undefined, "../../admin")).toEqual({ sorte: "sans-objet" });
+  });
+});
+
+describe("qui l'on vise", () => {
+  const portraitDAwa = { personId: "awa" } as unknown as Portrait;
+
+  it("prend le proche du portrait qu'on relit", () => {
+    expect(queViseTOn(portraitDAwa, { sorte: "composer", personId: "bilal" })).toBe("awa");
+  });
+
+  it("prend celui de la route quand on compose", () => {
+    expect(queViseTOn(null, { sorte: "composer", personId: "bilal" })).toBe("bilal");
+  });
+
+  it("ne vise personne sans portrait ni proche", () => {
+    expect(queViseTOn(null, { sorte: "sans-objet" })).toBeNull();
+  });
+});
+
+describe("le rang mène au dernier portrait", () => {
+  const p = (id: string, personId: string) => ({ id, personId }) as unknown as Portrait;
+
+  it("rend le premier de la liste, qui est le plus récent", () => {
+    expect(dernierPortraitDe([p("a", "awa"), p("b", "awa")], "awa")).toBe("a");
+  });
+
+  it("ignore les portraits des autres", () => {
+    expect(dernierPortraitDe([p("a", "bilal"), p("b", "awa")], "awa")).toBe("b");
+  });
+
+  it("rend null quand le proche n'en a aucun", () => {
+    expect(dernierPortraitDe([p("a", "bilal")], "awa")).toBeNull();
+  });
+});
+
+describe("ce que le rang de la fiche annonce", () => {
+  const T = { fichePortraitsCourt: "Portraits", portraitComposer: "Composer son portrait" };
+
+  it("invite à composer quand il n'y en a aucun", () => {
+    expect(libelleDuRangPortrait(false, T)).toBe("Composer son portrait");
+  });
+
+  it("mène aux portraits dès qu'il y en a un", () => {
+    expect(libelleDuRangPortrait(true, T)).toBe("Portraits");
+  });
+});
+
+describe("quand la grille montre des images", () => {
+  const choix = (id: string, previewUrl: string | null): StudioChoice => ({
+    id, label: id, description: null, warning: null, revealsGroup: null, previewUrl,
+  });
+
+  it("montre dès qu'UN choix porte sa vignette", () => {
+    expect(laGrilleMontreDesImages([choix("a", "https://x/1.png"), choix("b", null)])).toBe(true);
+  });
+
+  it("retombe sur le texte quand aucun n'en porte", () => {
+    expect(laGrilleMontreDesImages([choix("a", null), choix("b", null)])).toBe(false);
+  });
+
+  it("retombe sur le texte sur un groupe vide", () => {
+    expect(laGrilleMontreDesImages([])).toBe(false);
   });
 });

@@ -3,7 +3,7 @@ import { Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View }
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  creditBalanceSchema, generationResultSchema, portraitSchema, profileSchema,
+  creditBalanceSchema, generationResultSchema, personSchema, portraitSchema, profileSchema,
   studioOptionsSchema, groupesAtteignables,
   type Portrait, type StudioOptions, type StudioSelection,
 } from "@lehno/contracts";
@@ -21,14 +21,16 @@ import { useDrapeaux } from "../lib/DrapeauxProvider.js";
 import { useActionsPayantes } from "../lib/MetadonneesProvider.js";
 import { dateCourte } from "../lib/carnet.js";
 import { coutDe } from "../lib/preparation.js";
-import { delaiAvantLaProchaine, doitInterroger } from "../lib/generation.js";
+import { delaiAvantLaProchaine, doitInterroger, phraseDeLAttente } from "../lib/generation.js";
 import {
   apresLeChoix, composition, changementDeSignature, etatDuPortrait, feuilleDePartage,
+  laGrilleMontreDesImages, queViseTOn,
   laFeuilleDeposeUnFichier, laProductionEstRefusee, motDAccompagnement, offreDeRefaire,
   ouverture, relanceDuPortrait, selectionParDefaut, signatureARemettre, type Plateforme,
 } from "../lib/portrait.js";
 import { Bascule } from "../composants/Bascule.js";
 import { Choix } from "../composants/Choix.js";
+import { ChoixEnVignettes } from "../composants/ChoixEnVignettes.js";
 
 /* « Aperçu et partage d'un portrait » — §3.22.
  *
@@ -89,7 +91,8 @@ export default function PortraitEcran() {
      éprouve la forme du premier, et le second ne sert qu'à écrire. */
   const { id, qui } = useLocalSearchParams<{ id?: string; qui?: string }>();
 
-  const ouvre = useMemo(() => ouverture(id), [id]);
+  const { personId } = useLocalSearchParams<{ personId?: string }>();
+  const ouvre = useMemo(() => ouverture(id, personId), [id, personId]);
   const chemin = ouvre.sorte === "lire" ? ouvre.chemin : null;
 
   const [portrait, setPortrait] = useState<Portrait | null>(null);
@@ -107,7 +110,14 @@ export default function PortraitEcran() {
      décochant puis la recochant. */
   const [noteRetiree, setNoteRetiree] = useState<string | null>(null);
 
+  /* LA MATIÈRE DE L'ATTENTE. Zéro tant qu'on ne sait pas, et la phrase se replie
+     alors sur celle qui ne compte rien. */
+  const [notes, setNotes] = useState(0);
   const [options, setOptions] = useState<StudioOptions | null>(null);
+  /* « PAS ENCORE LU » N'EST PAS « PAS DE CATALOGUE ». Sans ce troisième état, la
+     composition ne distinguerait pas l'aller-retour en cours d'un échec
+     définitif, et afficherait la même chose pour les deux. */
+  const [catalogueLu, setCatalogueLu] = useState(false);
   const [selection, setSelection] = useState<StudioSelection>({});
   const [solde, setSolde] = useState<number | null>(null);
   const [confirmeLaRelance, setConfirmeLaRelance] = useState(false);
@@ -162,8 +172,14 @@ export default function PortraitEcran() {
      service — le chemin rend alors 422), le prix absent, et le serveur qui
      vient de refuser la nature. Un bouton qui échouerait vaut moins que pas de
      bouton, et un bouton gris ne dirait pas davantage pourquoi. */
-  const peutRefaire = offreDeRefaire(actives) && catalogue !== null && cout !== null
+  /* LE BOOLÉEN, PAS LE TABLEAU. `actives` change d'identité à chaque relecture
+     des drapeaux, même à contenu identique ; en dépendre relancerait la lecture
+     du catalogue et effacerait les choix en cours. */
+  const studioOuvert = offreDeRefaire(actives);
+  const peutRefaire = studioOuvert && catalogue !== null && cout !== null
     && !productionRefusee;
+  /* QUI L'ON VISE, qu'on relise un portrait ou qu'on compose le premier. */
+  const vise = queViseTOn(portrait, ouvre);
 
   /* Le catalogue n'est lu QUE si le drapeau l'autorise. Sans cette garde, un
      lien profond ouvrirait cet écran drapeau éteint, appellerait un chemin que
@@ -171,18 +187,38 @@ export default function PortraitEcran() {
      une panne — sur un compte parfaitement sain. `gouvernee` dit à la couche
      d'appel que ce 404 est un drapeau qui a bougé, pas une ressource absente. */
   useEffect(() => {
-    if (!offreDeRefaire(actives)) return;
+    if (!studioOuvert) return;
     let vivant = true;
     void (async () => {
       try {
         const lu = studioOptionsSchema.parse(await appel<unknown>("/me/studio/options", { gouvernee: true }));
         if (!vivant) return;
         setOptions(lu);
-        setSelection(selectionParDefaut(lu.catalogue));
+        /* LES DÉFAUTS NE SE POSENT QU'UNE FOIS : la liste des drapeaux se relit
+           au retour au premier plan, et les reposer effacerait les choix en
+           cours sans un mot. */
+        setSelection((v) => (Object.keys(v).length > 0 ? v : selectionParDefaut(lu.catalogue)));
       } catch { /* Pas de catalogue, pas de « Refaire » : voir `peutRefaire`. */ }
+      finally { if (vivant) setCatalogueLu(true); }
     })();
     return () => { vivant = false; };
-  }, [actives]);
+  }, [studioOuvert, essai]);
+
+  /* Le décompte des notes ne sert qu'à NOMMER L'ATTENTE : son échec n'est pas
+     une panne, la phrase se replie et le portrait se produit pareil. On le lit
+     avant le lancement plutôt qu'au moment de l'attente — là, un aller-retour
+     de plus s'ajouterait au silence qu'on cherche à combler. */
+  useEffect(() => {
+    if (!vise) return;
+    let vivant = true;
+    void (async () => {
+      try {
+        const lu = personSchema.parse(await appel<unknown>(`/me/persons/${vise}`));
+        if (vivant) setNotes(lu.notesCount);
+      } catch { /* Voir ci-dessus : l'attente se nomme sans décompte. */ }
+    })();
+    return () => { vivant = false; };
+  }, [vise]);
 
   /* Le solde n'est lu QUE si une feuille va l'annoncer, et une seule fois :
      l'aller chercher au moment du geste ferait attendre devant une question
@@ -321,8 +357,8 @@ export default function PortraitEcran() {
   };
 
   const refais = async (): Promise<void> => {
-    if (!portrait || !catalogue) return;
-    const envoi = relanceDuPortrait(portrait.personId, catalogue, selection);
+    if (!vise || !catalogue) return;
+    const envoi = relanceDuPortrait(vise, catalogue, selection);
     if (!envoi) return;
     setEnCours(true);
     setEchecDuGeste(null);
@@ -400,11 +436,43 @@ export default function PortraitEcran() {
     );
   }
 
-  if (!portrait || !etat) {
+  /* EN COMPOSITION ON N'ATTEND PAS UN PORTRAIT, ON ATTEND LE CATALOGUE. La
+     garde d'en dessous tournerait pour toujours, puisque aucun portrait
+     n'arrivera ; mais se contenter de l'écarter laisserait l'écran BLANC — tous
+     les blocs du rendu sont conditionnés, et sans catalogue il ne resterait que
+     le chevron de retour. */
+  if (ouvre.sorte === "composer" && !catalogueLu) {
+    return enveloppe(<LoadingState variant="generation" title={t.chargement} />);
+  }
+  /* `catalogue === null` ET RIEN D'AUTRE : `peutRefaire` mêle trois causes, et
+     les deux autres n'ont rien à faire ici. Le prix arrive par un appel
+     indépendant — un écran rouge clignoterait sur un compte sain —, et un refus
+     de production doit laisser lire son message plutôt que remplacer l'écran. */
+  if (ouvre.sorte === "composer" && catalogue === null) {
+    return enveloppe(
+      <View style={styles.bloc}>
+        <Banner intent="error">{t.portraitCatalogueAbsent}</Banner>
+        <Button
+          variant="outline"
+          full
+          icon="refresh-cw"
+          onPress={() => { setCatalogueLu(false); setEssai((n) => n + 1); }}
+        >
+          {t.maintReessayer}
+        </Button>
+      </View>,
+    );
+  }
+
+  if ((!portrait || !etat) && ouvre.sorte !== "composer") {
     return enveloppe(<LoadingState variant="generation" title={t.chargement} />);
   }
 
-  const avecSignature = portrait.senderNote !== null;
+  /* `!= null` ET NON `!== null` : sans portrait, `portrait?.senderNote` vaut
+     `undefined`, que `!== null` seul laisserait passer pour « signature
+     présente ». Le bloc qui la porte se tait en composition, mais une valeur
+     fausse qui ne se voit pas est celle qui ressort le jour où on le déplace. */
+  const avecSignature = portrait?.senderNote != null;
   const groupes = catalogue ? groupesAtteignables(catalogue, selection) : [];
   const parId = new Map((catalogue?.groups ?? []).map((g) => [g.id, g]));
 
@@ -412,6 +480,12 @@ export default function PortraitEcran() {
     <View style={{ flex: 1 }}>
       {enveloppe(
         <>
+          {/* TOUT CE QUI DÉCRIT UN PORTRAIT attend qu'il y en ait un. En
+              composition il n'y en a pas encore, et ces blocs se taisent — ce
+              qui reste est le catalogue et le départ, c'est-à-dire exactement
+              ce qu'on est venu faire. */}
+          {portrait && etat ? (
+            <>
           {/* L'ÉTAT SE DIT EN HAUT, avant l'image : c'est lui qui explique
               pourquoi les gestes du bas ne sont pas ceux qu'on attendait. */}
           {etat === "avalider" ? (
@@ -457,6 +531,9 @@ export default function PortraitEcran() {
             </Card>
           )}
 
+            </>
+          ) : null}
+
           {/* LES PASTILLES RÈGLENT LA PROCHAINE PRODUCTION, pas celle-ci. Elles
               ne paraissent donc qu'avec « Refaire » : seules, elles
               promettraient de rehabiller l'image sous les yeux — ce que ni le
@@ -472,6 +549,19 @@ export default function PortraitEcran() {
                       dictionnaire embarqué rendrait muette toute option ajoutée
                       en administration, sur tout un parc. */}
                   <SectionLabel>{groupe.label}</SectionLabel>
+                  {laGrilleMontreDesImages(groupe.choices) ? (
+                    /* CE QU'ON REGARDE EST CE QU'ON AURA. La grille remplace les
+                       pastilles dès qu'une vignette est publiée : personne ne
+                       sait départager deux ambiances sur leur nom. */
+                    <ChoixEnVignettes
+                      choix={groupe.choices}
+                      valeur={selection[groupId] ?? null}
+                      pose={(cle) => setSelection((v) => apresLeChoix(catalogue, v, groupId, cle))}
+                    />
+                  ) : (
+                  /* Sans aucune vignette publiée, les pastilles restent le
+                     meilleur choix : elles se lisent d'un coup là où une grille
+                     de cases vides ne montrerait que ce qui manque. */
                   <Choix
                     options={groupe.choices.map((c) => c.id)}
                     libelle={(cle) => groupe.choices.find((c) => c.id === cle)?.label ?? cle}
@@ -485,6 +575,7 @@ export default function PortraitEcran() {
                       if (cle) setSelection((v) => apresLeChoix(catalogue, v, groupId, cle));
                     }}
                   />
+                  )}
                   {/* L'avertissement s'affiche AU MOMENT DU CHOIX, pas après la
                       génération : « l'hommage change le gabarit, et l'apprendre
                       trop tard fait perdre un crédit ». */}
@@ -498,6 +589,34 @@ export default function PortraitEcran() {
             })
             : null}
 
+          {/* L'ATTENTE SE NOMME ET SE QUITTE — §3. C'est le seul endroit de
+              l'application où le silence coûte de l'argent : le crédit part
+              avant l'appel au modèle, et une roue muette ne dit pas ce qu'on
+              vient d'acheter. */}
+          {enProduction ? (
+            <LoadingState
+              variant="generation"
+              title={phraseDeLAttente(notes, qui ?? null, t)}
+              text={t.portraitAttenteQuitter}
+              leaveLabel={t.retour}
+              onLeave={sors}
+            />
+          ) : null}
+
+          {/* LE DÉPART, et il ne paraît qu'en composition : sur un portrait déjà
+              là, c'est « Refaire » qui porte ce geste, plus bas, avec son prix.
+              Deux boutons de lancement sur le même écran laisseraient croire à
+              deux choses différentes. */}
+          {!portrait && peutRefaire && !enProduction ? (
+            <View style={styles.gestes}>
+              <Button full icon="sparkles" disabled={enCours} onPress={() => setConfirmeLaRelance(true)}>
+                {t.portraitLancer}
+              </Button>
+            </View>
+          ) : null}
+
+          {portrait && etat ? (
+            <>
           {/* LA DATE ACCOMPAGNE L'IMAGE : sans elle, deux portraits de la même
               personne sont indistinguables dans sa collection. La PLAGE de
               notes, que la maquette met à côté, n'est pas là — `portraitSchema`
@@ -578,9 +697,12 @@ export default function PortraitEcran() {
             </View>
           ) : null}
 
+            </>
+          ) : null}
+
           {/* Ce qui a été dépensé, dit après coup. Toujours : il n'y a pas de
               mode gratuit à ménager, le crédit se consomme quoi qu'il arrive. */}
-          {cout !== null ? (
+          {portrait && cout !== null ? (
             <CreditIndicator label={t.creditDepense(cout)} cost={cout} />
           ) : null}
         </>,

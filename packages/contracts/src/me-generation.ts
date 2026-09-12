@@ -211,6 +211,17 @@ export const portraitSchema = z.object({
 
 export type Portrait = z.infer<typeof portraitSchema>;
 
+/* LA LISTE, EXPORTÉE — elle ne l'était pas, et `openapi.ts` la composait en
+   ligne. Chaque client la rebâtissait donc chez lui, et deux recompositions
+   finissent par diverger : c'est la même famille de piège que `personDisplayName`
+   absent de la contribution. L'enveloppe `{ portraits }` plutôt qu'un tableau nu
+   est ce que la route rend déjà ; on ne la change pas, on la nomme. */
+export const portraitListSchema = z.object({
+  portraits: z.array(portraitSchema),
+}).strict();
+
+export type PortraitList = z.infer<typeof portraitListSchema>;
+
 /* CHANGER LA NOTE DE L'EXPÉDITEUR — « Fait avec soin par Valentine ».
  *
  * Elle est « proposée puis modifiable » (spec §79), et se retire : `null` est
