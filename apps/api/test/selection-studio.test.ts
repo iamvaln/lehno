@@ -40,31 +40,50 @@ describe("la sélection du studio", () => {
     })).toThrow(/is not offered/);
   });
 
-  /* LE CONTRÔLE QUI COMPTE LE PLUS. Un style de photo demandé sur la voie
-     illustration passerait par le mauvais modèle, et la consigne d'un dessin
-     partirait à un traitement de photo. */
-  it("refuse une ambiance du mauvais groupe", () => {
-    const avecStyle = avec((r) => ({
+  /* LES DEUX VOIES PARTAGENT LEUR FAMILLE — révisé le 11 septembre.
+   *
+   * Ce cas éprouvait qu'un « style de photo » demandé sur la voie illustration
+   * était refusé. Il n'y a plus de styles de photo : nature, animal et abstrait
+   * servent les deux voies, et ce que la photo change n'est pas le sujet mais
+   * d'où l'on part. Le contrôle qu'il gardait n'a plus d'objet — il n'existe
+   * aucune ambiance du « mauvais » groupe.
+   *
+   * CE QUI RESTE VRAI, et que ce cas garde maintenant : « aucune image »
+   * n'ouvre aucun groupe. Demander une ambiance avec cette voie est la seule
+   * incohérence qui subsiste, et elle se refuse AVANT le débit — après, on
+   * aurait payé pour un motif de marque qu'aucune ambiance ne décore. */
+  it("refuse une ambiance quand la voie n'en ouvre aucune", () => {
+    const toutes = avec((r) => r);
+
+    expect(() => verifierLaSelection(toutes, {
+      composition: "papier", orientation: "notre_relation",
+      visual: "aucune", illustrationFamily: "nature",
+    })).toThrow();
+
+    // Sans ambiance, cette voie passe : c'est la fin du choix.
+    expect(verifierLaSelection(toutes, {
+      composition: "papier", orientation: "notre_relation", visual: "aucune",
+    }).ambiance).toBeNull();
+  });
+
+  /* LA MÊME FAMILLE SERT LES DEUX VOIES. Sans ce cas, on pourrait remettre un
+     groupe par voie sans que rien ne tombe — et la voie photo redeviendrait
+     invisible, faute d'ambiance à lui donner. */
+  it("accepte la même ambiance sur l'illustration et sur la photo", () => {
+    const avecPhoto = avec((r) => ({
       ...r,
       voiesImage: r.voiesImage.map((v) => (v.id === "photo" ? { ...v, actif: true } : v)),
-      ambiances: [...r.ambiances, {
-        /* Les deux voies partagent le même groupe : une ambiance sert aussi bien
-           l'illustration que la photo. */
-        id: "argentique", groupe: "illustration_family" as const, actif: true, apercuCle: null,
-        libelle: { fr: "Argentique", en: "Film" },
-        description: null,
-        consigne: { fr: "Un grain argentique.", en: "Film grain." },
-      }],
     }));
 
-    expect(() => verifierLaSelection(avecStyle, {
-      composition: "papier", orientation: "notre_relation", visual: "illustration", illustrationFamily: "argentique",
-    })).toThrow(/does not belong/);
+    expect(verifierLaSelection(avecPhoto, {
+      composition: "papier", orientation: "notre_relation",
+      visual: "illustration", illustrationFamily: "nature",
+    }).ambiance?.id).toBe("nature");
 
-    // Et sur sa propre voie, elle passe.
-    expect(verifierLaSelection(avecStyle, {
-      composition: "papier", orientation: "notre_relation", visual: "photo", photoStyle: "argentique",
-    }).ambiance?.id).toBe("argentique");
+    expect(verifierLaSelection(avecPhoto, {
+      composition: "papier", orientation: "notre_relation",
+      visual: "photo", photoStyle: "nature",
+    }).ambiance?.id).toBe("nature");
   });
 
   /* `photo` est inactive faute de styles nommés. Un client qui la demanderait

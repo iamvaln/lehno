@@ -36,7 +36,7 @@ import {
   occurrenceSchema, listOccurrencesQuerySchema, listEventsQuerySchema,
 } from "./me-events.js";
 import {
-  startGenerationSchema, generationResultSchema, generationsSchema,
+  startGenerationSchema, generationResultSchema, generationsSchema, depotPhotoSourceSchema,
   updateMessageSchema, generatedMessageSchema,
   ideaFeedbackSchema, generatedIdeaSchema, portraitSchema,
 } from "./me-generation.js";
@@ -1133,6 +1133,40 @@ const CHEMINS: Chemin[] = [
       "dix minutes. La ranger donnerait des liens morts.",
     ].join("\n"),
     reponse: z.object({ portraits: z.array(portraitSchema) }).strict(),
+  },
+  {
+    /* LE DÉPÔT D'UNE PHOTO SOURCE, en deux temps — comme l'avatar.
+     *
+     * D'abord une URL signée : le client téléverse DIRECTEMENT sur le stockage,
+     * l'image ne passe pas par l'API. Puis il dit « c'est fait », et c'est là
+     * qu'on juge. */
+    chemin: "/me/portraits/photo/depot",
+    methode: "post",
+    resume: "Ouvrir le dépôt d'une photo dont le portrait s'inspirera",
+    authentifie: true,
+    reponse: depotPhotoSourceSchema,
+    statut: 200,
+    note: [
+      "Le client reçoit une URL de dépôt et RIEN D'AUTRE — pas la clé. La lui donner",
+      "permettrait de la remplacer par celle d'un reçu de paiement ou d'un export de",
+      "données, et de nous faire signer une lecture dessus.",
+    ].join(" "),
+  },
+  {
+    chemin: "/me/portraits/photo",
+    methode: "post",
+    resume: "Confirmer la photo déposée, et la faire juger",
+    authentifie: true,
+    statut: 204,
+    note: [
+      "204 : il n'y a rien à rendre, la clé restant au serveur. Un REFUS part en 400",
+      "avec sa raison dans le détail — `trop_petite`, `trop_sombre`, `trop_floue` —,",
+      "et la photo est alors effacée : plus rien ne la désigne. Les seuils se règlent",
+      "au studio et ne descendent pas au client : il ne saurait pas mesurer la",
+      "netteté, et les lui servir l'inviterait à refuser une photo que le serveur",
+      "aurait acceptée. Une photo acceptée RESTE : on refait un portrait pour en voir",
+      "un autre, et redemander un téléversement à chaque essai serait une corvée.",
+    ].join(" "),
   },
   {
     chemin: "/me/portraits/{id}",

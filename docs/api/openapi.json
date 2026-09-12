@@ -14830,6 +14830,455 @@
         }
       }
     },
+    "/me/portraits/photo/depot": {
+      "post": {
+        "summary": "Ouvrir le dépôt d'une photo dont le portrait s'inspirera",
+        "description": "Le client reçoit une URL de dépôt et RIEN D'AUTRE — pas la clé. La lui donner permettrait de la remplacer par celle d'un reçu de paiement ou d'un export de données, et de nous faire signer une lecture dessus.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "expireDans": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "minimum": 0
+                    },
+                    "typeMime": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url",
+                    "expireDans",
+                    "typeMime"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/portraits/photo": {
+      "post": {
+        "summary": "Confirmer la photo déposée, et la faire juger",
+        "description": "204 : il n'y a rien à rendre, la clé restant au serveur. Un REFUS part en 400 avec sa raison dans le détail — `trop_petite`, `trop_sombre`, `trop_floue` —, et la photo est alors effacée : plus rien ne la désigne. Les seuils se règlent au studio et ne descendent pas au client : il ne saurait pas mesurer la netteté, et les lui servir l'inviterait à refuser une photo que le serveur aurait acceptée. Une photo acceptée RESTE : on refait un portrait pour en voir un autre, et redemander un téléversement à chaque essai serait une corvée.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Succès"
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/portraits/{id}": {
       "get": {
         "summary": "Relire un portrait",
