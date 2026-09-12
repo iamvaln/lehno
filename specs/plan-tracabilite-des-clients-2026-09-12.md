@@ -129,7 +129,7 @@ ce qui s'est passé dit d'où elle vient.**
 | table | ce qu'elle garde | ce qu'elle gagne |
 | --- | --- | --- |
 | `login_activity` | les connexions — porte déjà `ip` et `user_agent` | le client, le type, la version |
-| `audit_log` | les gestes d'administration | idem — quelle version du panneau |
+| `audit_log` | les gestes d'administration | idem — quelle version du panneau. **Pas l'IP** : voir le §8.4 de la spec backend |
 | `ai_usage` | ce qu'un appel de modèle a coûté | idem — quel build a déclenché la dépense |
 | `action_run` | ce qui a été payé en crédits | idem |
 | `credit_transaction` | les mouvements de crédit | idem **+ l'IP** (§5.3) |

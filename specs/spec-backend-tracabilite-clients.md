@@ -251,6 +251,15 @@ au-dessus de l'agrégat. L'agrégat n'est plus au plan, donc l'écran non plus.
    staging qui pointe la production est tentant — mais c'est aussi le moyen le
    plus sûr de se couper un jour d'urgence. **Proposé** : on le note et on le
    signale, on ne refuse pas.
-4. **`audit_log` porte-t-il aussi l'IP ?** Un geste d'administration se conteste
-   autant qu'un paiement. Je ne l'ai pas mis pour ne pas élargir sans qu'on en
-   parle, mais l'argument du §1 vaut à l'identique.
+4. *(tranché le 12 septembre — plus une question.)* **`audit_log` ne porte PAS
+   l'IP**, et l'argument du §1 n'y vaut pas.
+
+   Un geste d'administration porte déjà son **auteur** — `actor_id` — et son
+   **motif obligatoire**. Le *qui* n'y est jamais en doute, contrairement à une
+   déclaration de paiement où la question est précisément « cette personne a-t-
+   elle payé, et depuis où ». L'IP n'ajouterait donc aucune preuve : elle
+   ajouterait de la surveillance du personnel.
+
+   Et `login_activity` **note déjà l'IP** au moment où l'administrateur ouvre sa
+   session. L'origine est traçable une fois, là où elle dit quelque chose ; la
+   reporter sur chaque geste la dupliquerait sans rien apprendre.
