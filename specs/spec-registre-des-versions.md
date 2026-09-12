@@ -218,7 +218,7 @@ laisse casser en silence.
 *Deux surfaces : celle des clients, livrée en phase 1 et jamais décrite ici, et
 celle des versions, qui vient avec ce lot.*
 
-### 7.1 Les clients API — livré (#215), à dessiner
+### 7.1 Les clients API — livré (#215), écran livré depuis
 
 | route | ce qu'elle fait |
 | --- | --- |
@@ -240,6 +240,10 @@ celle des versions, qui vient avec ce lot.*
 - **On coupe, on ne supprime pas.** Il n'y a pas de route de suppression, et
   c'est délibéré : les lignes déjà notées gardent leur référence, et
   l'historique reste lisible.
+
+**L'écran** : `apps/admin/src/pages/ClientsApi.tsx`. L'avertissement précède le
+secret dans le panneau de la clé — lu après, il arrive quand la fenêtre est déjà
+fermée dans la tête de celui qui l'a copiée, ou pas copiée.
 
 ### 7.2 Les versions — ce lot
 
