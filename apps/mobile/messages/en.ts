@@ -535,6 +535,10 @@ export const en = {
   fichePortraits: "Their portraits",
   portraitComposer: "Create their portrait",
   portraitLancer: "Start the portrait",
+  portraitGarder: "I'm keeping this one",
+  portraitRejeter: "This one isn't right",
+  portraitGardeFait: "Kept.",
+  portraitRejetFait: "Noted — this one isn't right.",
   portraitAttenteNotes: (n: number, qui: string) =>
     "Reading your " + n + " notes about " + qui + ".",
   portraitAttenteSansNote: (qui: string) => "Gathering what we know about " + qui + ".",
