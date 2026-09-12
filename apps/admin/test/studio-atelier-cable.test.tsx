@@ -51,7 +51,7 @@ const CONFIG = {
 
 const PROFIL = {
   id: "22222222-2222-4222-8222-222222222222",
-  libelle: "Une amie proche", sensible: false, creeLe: "2026-08-20T08:00:00.000Z",
+  libelle: "Une amie proche", sensible: false, photoUrl: null, creeLe: "2026-08-20T08:00:00.000Z",
   // Champ pour champ ce que `ContexteMessage` attend : un profil n'est pas une
   // fiche allégée, c'est exactement la matière qu'un gabarit reçoit.
   contenu: {
@@ -384,5 +384,46 @@ describe("l'Atelier, sur les données du serveur", () => {
     expect(corps.reglages.photo.nettetteMin).toBe(20);
     // Les deux seuils qu'on n'a pas touchés partent tels que le code les pose.
     expect(corps.reglages.photo.coteMin).toBe(512);
+  });
+  /* ─── La voie éprouvée ────────────────────────────────────────────────────── */
+
+  /* C'EST LA VOIE QUI DIT LE MODÈLE, jamais l'ambiance : les deux voies
+     partagent la même famille depuis #191. Éprouver l'illustration pour publier
+     la photo débloquerait la publication sur un rendu qu'on n'a pas vu — et
+     `photo.consigne` étant dans l'empreinte, c'est précisément ce qui arrivait. */
+  it("envoie la voie choisie avec l'essai", async () => {
+    const appels = serveur();
+    const utilisateur = await ouvrir();
+    await screen.findByText(d.chaine.titre);
+
+    await utilisateur.selectOptions(screen.getByLabelText(d.chaine.voie), "photo");
+    await utilisateur.click(screen.getByRole("button", { name: d.gestes.essayer }));
+
+    const envoi = appels.mock.calls.find(([u, i]) =>
+      (i as RequestInit)?.method === "POST" && String(u).includes("/portrait-studio/trials"));
+    expect(JSON.parse((envoi?.[1] as RequestInit).body as string)).toMatchObject({ voie: "photo" });
+  });
+
+  /* ON LE DIT AVANT DE CLIQUER. Le serveur refuse déjà avant tout appel, mais
+     l'administrateur l'apprendrait après coup — une garde qui arrive au bon
+     moment vaut mieux qu'une garde juste. */
+  it("prévient quand l'éprouvette n'a pas de photo d'exemple", async () => {
+    serveur();
+    const utilisateur = await ouvrir();
+    await screen.findByText(d.chaine.titre);
+
+    await utilisateur.selectOptions(screen.getByLabelText(d.chaine.voie), "photo");
+
+    expect(screen.getByText(d.chaine.sansPhoto)).toBeInTheDocument();
+  });
+
+  /* Et rien ne s'affiche sur l'illustration : l'avertissement ne vaut que pour
+     la voie qui exige une photo. */
+  it("ne prévient pas sur la voie illustration", async () => {
+    serveur();
+    await ouvrir();
+
+    expect(await screen.findByText(d.chaine.titre)).toBeInTheDocument();
+    expect(screen.queryByText(d.chaine.sansPhoto)).toBeNull();
   });
 });

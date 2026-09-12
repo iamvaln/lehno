@@ -28,7 +28,7 @@ const contenu = (notes: number) => ({
 
 const profil = (over: Record<string, unknown> = {}) => ({
   id: "11111111-1111-4111-8111-111111111111",
-  libelle: "Sœur, fiche riche", sensible: false, contenu: contenu(3),
+  libelle: "Sœur, fiche riche", sensible: false, photoUrl: null, contenu: contenu(3),
   creeLe: "2026-09-01T10:00:00.000Z",
   ...over,
 });

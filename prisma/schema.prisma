@@ -2405,6 +2405,14 @@ model StudioProfile {
   /// Nulle pour les profils qui n'en ont pas — la plupart : seule la voie photo
   /// en a besoin, et l'illustration s'éprouve très bien sans.
   photoKey    String?  @map("photo_key")
+  /// LA PLACE GARDÉE d'un téléversement en cours, le temps qu'il aboutisse.
+  ///
+  /// LA CLÉ NE SORT PAS vers le client, même administrateur : c'est la doctrine
+  /// de `depotAvatarSchema` et du dépôt de la photo source. La lui donner
+  /// permettrait de la remplacer par celle d'un autre objet — un portrait payé,
+  /// un reçu — et de nous faire signer une lecture dessus. L'écran dit « c'est
+  /// déposé » ; le serveur sait de quoi il parle.
+  photoDepotKey String? @map("photo_depot_key")
   isSensitive Boolean  @default(false) @map("is_sensitive")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 

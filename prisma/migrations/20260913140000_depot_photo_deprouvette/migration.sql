@@ -1,0 +1,12 @@
+-- LA PLACE GARDÉE d'un téléversement de photo d'exemple, le temps qu'il
+-- aboutisse.
+--
+-- Deux colonnes et non une, exactement comme le dépôt de la photo source côté
+-- utilisateur : la clé en cours ne devient la photo de l'éprouvette qu'une fois
+-- l'objet relu et JUGÉ. Sans cette séparation, une éprouvette porterait une
+-- photo qu'on n'a jamais pu lire.
+--
+-- LA CLÉ NE SORT PAS vers le client, même administrateur — doctrine de
+-- `depotAvatarSchema` : la lui donner permettrait de la remplacer par celle
+-- d'un autre objet, et de nous faire signer une lecture dessus.
+ALTER TABLE "studio_profile" ADD COLUMN "photo_depot_key" TEXT;

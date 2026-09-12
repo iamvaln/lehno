@@ -1332,13 +1332,16 @@ export function App(): ReactNode {
               // Le plus récent : c'est celui qu'on vient de lancer.
               dernier={a.essais[0] ?? null}
               enCours={essaiEnCours}
-              onEssayer={(reglages, profileId, ambianceId) => {
+              onEssayer={(reglages, profileId, ambianceId, voie) => {
                 setEssaiEnCours(true);
                 void (async () => {
                   try {
                     await api.appeler("/admin/portrait-studio/trials", {
                       methode: "POST",
-                      corps: { reglages, profileId, ambianceId },
+                      /* LA VOIE PART AVEC : c'est elle qui dit quel modèle
+                         appeler, et l'omettre ferait éprouver l'illustration
+                         pour publier la photo. */
+                      corps: { reglages, profileId, ambianceId, voie },
                     });
                   } catch (echec) {
                     if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));

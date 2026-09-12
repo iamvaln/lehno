@@ -225,6 +225,17 @@ export class PhotoSourceService {
    * (voir `photoReglageSchema`). Une photo petite ET floue doit s'entendre dire
    * « trop petite » — c'est le reproche qu'on peut corriger.
    */
+  /* LE JUGEMENT, OUVERT — l'atelier s'en sert pour la photo d'exemple d'une
+   * éprouvette.
+   *
+   * UNE SEULE BARRE, et c'est le propos : une photo d'exemple que la production
+   * refuserait ferait un essai qui ne représente pas ce qui se passera. En
+   * écrire un second jeu de seuils pour l'administration les laisserait diverger
+   * — et l'atelier montrerait alors ce que le produit n'accepte pas. */
+  async verdictSur(cle: string): Promise<string | null> {
+    return this.juger(cle, await this.seuils());
+  }
+
   private async juger(
     cle: string, seuils: Omit<PhotoReglage, "consigne">,
   ): Promise<string | null> {
