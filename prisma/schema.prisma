@@ -319,6 +319,10 @@ model CreditTransaction {
   clientId   String? @map("client_id")   @db.VarChar(64)
   clientType String? @map("client_type") @db.VarChar(20)
   appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
   osName     String? @map("os_name")     @db.VarChar(20)
   osVersion  String? @map("os_version")  @db.VarChar(20)
   /* L'ORIGINE DE LA DÉCLARATION, et c'est un ÉCART ASSUMÉ à la doctrine du
@@ -490,6 +494,59 @@ enum ApiClientEnv {
   @@map("api_client_env")
 }
 
+/**
+ * LE REGISTRE DES VERSIONS — ce qu'on accepte de servir.
+ *
+ * Une version publiée est une version ENREGISTRÉE : le serveur ne sert pas ce
+ * qu'il ne connaît pas. C'est une liste blanche, et elle tend un piège qu'il
+ * faut connaître — un build parti au magasin sans être enregistré bloquerait
+ * tous ses utilisateurs.
+ *
+ * CE QUI LE DÉSAMORCE : un build inconnu ne reçoit pas un refus sec, il reçoit
+ * « mettez à jour » — le même 426 qu'une version déclassée. C'est le seul geste
+ * sensé pour un client qu'on ne reconnaît pas, et le pire cas d'un oubli devient
+ * « on invite à réinstaller » au lieu de « l'application ne marche plus ».
+ *
+ * Voir `specs/spec-registre-des-versions.md`.
+ */
+model AppVersion {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platform     ApiClientType
+  /// Ce qu'un humain lit — « 1.4.2 ». PAS une clé : deux builds peuvent porter
+  /// la même version, et c'est le cas ordinaire d'un correctif recompilé.
+  version      String        @db.VarChar(20)
+  /// L'ENTIER MONOTONE, ET C'EST LUI QUI DÉCIDE de « plus ancien que ».
+  /// `CFBundleVersion` sur iOS, `versionCode` sur Android, le nombre de commits
+  /// sur le web. Comparer les `semver` en chaînes rendrait « 1.10.0 » plus
+  /// ancien que « 1.9.0 » — un défaut qui ne se voit qu'au dixième correctif
+  /// mineur, au moment où l'on en a le plus besoin.
+  buildNumber  Int           @map("build_number")
+  /**
+   * « À partir d'ici, ce qui précède ne marche plus. »
+   *
+   * Posé sur la release qui INTRODUIT la rupture, et non sur un plancher qu'il
+   * faudrait penser à relever — on y pense toujours après. Il se pose au seul
+   * moment où l'on sait qu'on a cassé quelque chose.
+   *
+   * Il se lit à l'envers d'un plancher : on cherche le plus récent qui force, et
+   * tout ce qui est en dessous est périmé. Le poser sur 2.0.0 périme 1.x d'un
+   * coup, sans avoir à écrire un numéro.
+   */
+  forcesUpdate Boolean       @default(false) @map("forces_update")
+  /// Déclassée : on ne la sert plus, même si elle est plus récente que le
+  /// dernier `forcesUpdate`. Sert à retirer une version fautive déjà publiée.
+  isRetired    Boolean       @default(false) @map("is_retired")
+  /// Ce que l'écran de mise à jour ouvre. Nul pour le web, qui se recharge.
+  storeUrl     String?       @map("store_url")
+  notes        String?
+  publishedAt  DateTime      @default(now()) @map("published_at") @db.Timestamptz
+
+  /// L'IDENTITÉ D'UN BUILD. La version, elle, peut se répéter.
+  @@unique([platform, buildNumber])
+  @@index([platform, buildNumber])
+  @@map("app_version")
+}
+
 model LoginActivity {
   id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId         String?      @map("user_id") @db.Uuid
@@ -522,6 +579,10 @@ model LoginActivity {
   clientId   String? @map("client_id")   @db.VarChar(64)
   clientType String? @map("client_type") @db.VarChar(20)
   appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
   osName     String? @map("os_name")     @db.VarChar(20)
   osVersion  String? @map("os_version")  @db.VarChar(20)
 
@@ -529,6 +590,9 @@ model LoginActivity {
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
+  /// « Qui est passé, sous quel build, depuis quand » — la lecture qui dit
+  /// combien d'appareils une mise à jour forcée délogerait.
+  @@index([appBuild, createdAt])
   @@map("login_activity")
 }
 
@@ -1521,6 +1585,10 @@ model AuditLog {
   clientId   String? @map("client_id")   @db.VarChar(64)
   clientType String? @map("client_type") @db.VarChar(20)
   appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
   osName     String? @map("os_name")     @db.VarChar(20)
   osVersion  String? @map("os_version")  @db.VarChar(20)
 
@@ -2157,6 +2225,10 @@ model ActionRun {
   clientId   String? @map("client_id")   @db.VarChar(64)
   clientType String? @map("client_type") @db.VarChar(20)
   appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
   osName     String? @map("os_name")     @db.VarChar(20)
   osVersion  String? @map("os_version")  @db.VarChar(20)
 
@@ -2250,6 +2322,10 @@ model AIUsage {
   clientId   String? @map("client_id")   @db.VarChar(64)
   clientType String? @map("client_type") @db.VarChar(20)
   appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
   osName     String? @map("os_name")     @db.VarChar(20)
   osVersion  String? @map("os_version")  @db.VarChar(20)
 
@@ -2792,6 +2868,10 @@ model Payment {
   clientId   String? @map("client_id")   @db.VarChar(64)
   clientType String? @map("client_type") @db.VarChar(20)
   appVersion String? @map("app_version") @db.VarChar(20)
+  /// Le build, parce que c'est LUI qui se compare — et parce qu'il rend lisible
+  /// « combien d'appareils sont sous ce build » avant qu'on ne force une mise à
+  /// jour, ce que la version seule ne dirait pas.
+  appBuild   Int?    @map("app_build")
   osName     String? @map("os_name")     @db.VarChar(20)
   osVersion  String? @map("os_version")  @db.VarChar(20)
   /* L'ORIGINE DE LA DÉCLARATION — écart assumé à la doctrine du dépôt, et le

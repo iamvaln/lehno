@@ -1260,3 +1260,65 @@ export const rotationClientApiSchema = z.object({
 }).strict();
 
 export type RotationClientApiInput = z.infer<typeof rotationClientApiSchema>;
+
+// ── Le registre des versions ────────────────────────────────────────────────
+
+/* CE QU'ON ACCEPTE DE SERVIR. Une version publiée est une version enregistrée.
+ *
+ * `buildNumber` EST L'IDENTITÉ, pas `version` : deux builds peuvent porter la
+ * même version — c'est le cas ordinaire d'un correctif recompilé —, et comparer
+ * des `semver` en chaînes rendrait « 1.10.0 » plus ancien que « 1.9.0 ».
+ */
+export const versionAppSchema = z.object({
+  id: z.string().uuid(),
+  platform: z.enum(TYPES_CLIENT),
+  version: z.string(),
+  buildNumber: z.number().int(),
+  forcesUpdate: z.boolean(),
+  isRetired: z.boolean(),
+  storeUrl: z.string().nullable(),
+  notes: z.string().nullable(),
+  publishedAt: z.string(),
+  /* COMBIEN D'APPAREILS ONT ÉTÉ VUS SOUS CE BUILD, sur les trente derniers
+     jours. Ce n'est pas un ornement : poser `forcesUpdate` met hors service tous
+     les appareils en dessous, et c'est le geste le plus lourd du panneau — plus
+     lourd que couper un client, parce qu'il ne se voit pas venir. Le poser sans
+     savoir combien de gens il déloge serait le poser à l'aveugle.
+     Compté sur les CONNEXIONS, donc approché : quelqu'un qui ne s'est pas
+     reconnecté depuis un mois n'y figure pas. Mieux vaut un chiffre approché
+     qu'aucun. */
+  comptesVusRecemment: z.number().int().min(0),
+}).strict();
+
+export type VersionApp = z.infer<typeof versionAppSchema>;
+
+export const enregistrerVersionSchema = z.object({
+  platform: z.enum(TYPES_CLIENT),
+  version: z.string().trim().min(1).max(20),
+  buildNumber: z.number().int().positive(),
+  /* Il ne se DEVINE pas : c'est une décision humaine, prise en écrivant la
+     release. Une rupture mal détectée bloque tout le monde dans un sens, et
+     laisse casser en silence dans l'autre. */
+  forcesUpdate: z.boolean().optional(),
+  storeUrl: z.string().url().max(500).optional(),
+  notes: z.string().trim().max(500).optional(),
+  motif: motifSchema,
+  reasonCode: z.string().trim().max(48).optional(),
+}).strict();
+
+export type EnregistrerVersionInput = z.infer<typeof enregistrerVersionSchema>;
+
+export const majVersionSchema = z.object({
+  forcesUpdate: z.boolean().optional(),
+  isRetired: z.boolean().optional(),
+  storeUrl: z.string().url().max(500).nullable().optional(),
+  notes: z.string().trim().max(500).nullable().optional(),
+  motif: motifSchema,
+  reasonCode: z.string().trim().max(48).optional(),
+}).strict().refine(
+  (v) => v.forcesUpdate !== undefined || v.isRetired !== undefined
+    || v.storeUrl !== undefined || v.notes !== undefined,
+  { message: "au moins un champ doit être fourni" },
+);
+
+export type MajVersionInput = z.infer<typeof majVersionSchema>;

@@ -21,6 +21,11 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   // sur un jeton tiré au hasard ferait de ce chemin un oracle à jetons.
   link_revoked: 410,
   rate_limited: 429, otp_rate_limited: 429,
+  /* 426, et il ne se confond avec rien : ce n'est ni un refus de compte (403)
+     ni une panne (503), c'est « votre application est trop vieille ». Le corps
+     porte la version attendue et le lien du magasin — un écran qui dit « mettez
+     à jour » sans dire où aller n'est pas un écran, c'est un mur. */
+  upgrade_required: 426,
   internal_error: 500,
   // 503 : la ressource existe, elle est momentanément fermée. Voir
   // maintenance/maintenance.guard.ts — surtout pas 404, qui ferait lire un
@@ -65,6 +70,7 @@ function codeForHttpStatus(status: number): ErrorCode {
     case 403: return "forbidden";
     case 404: return "not_found";
     case 409: return "conflict";
+    case 426: return "upgrade_required";
     case 429: return "rate_limited";
     default: return status >= 500 ? "internal_error" : "validation_failed";
   }

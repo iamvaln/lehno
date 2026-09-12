@@ -47,5 +47,6 @@ export const en = {
     // Not "something went wrong": nothing is wrong on our side, and saying so
     // would send people looking for a mistake they did not make.
     generation_unavailable: "We can't reach the model right now. Your credits haven't been spent — try again in a few minutes.",
+    upgrade_required: "This version of the app is no longer supported. Update it to carry on.",
   },
 } as const;
