@@ -1255,6 +1255,27 @@ export const fr = {
       consigneAide: "Ce texte part au modèle tel quel, dans la langue de l'ambiance.",
       nonEnregistre: "non enregistré",
     },
+    /* LA VOIE PHOTO. La consigne est LUE PAR LE MODÈLE — elle entre dans
+       l'invite dès que la voie est la photo, donc dans l'empreinte ; les trois
+       seuils refusent une photo AVANT tout appel, et le modèle ne les voit
+       jamais. D'où deux blocs, et un seul liséré. */
+    photo: {
+      titre: "La voie photo",
+      sous: "Ce qu'on demande au modèle de faire de la photo déposée, et ce qu'on refuse d'accepter.",
+      consigne: "Consigne de la photo",
+      consigneAide: "Elle part dans l'invite avec la photo. La changer fait une version neuve : il faudra un nouvel essai avant de publier.",
+      seuils: "Ce qu'on refuse à l'arrivée",
+      seuilsAide: "Ces trois seuils écartent une photo avant tout appel au modèle. Les changer ne redemande aucun essai.",
+      coteMin: "Plus petit côté, en pixels",
+      coteMinAide: "De 256 à 4096. En dessous, agrandir invente des détails — et le modèle rend un visage qui n'est celui de personne.",
+      luminositeMin: "Luminosité moyenne",
+      luminositeMinAide: "De 0 à 255. Une photo trop sombre ne porte pas ce qu'on lui demande d'inspirer ; l'éclaircir révélerait du bruit.",
+      nettetteMin: "Contraste local",
+      // On ne promet pas une mesure de flou : c'en est une approchée.
+      nettetteMinAide: "De 0 à 128. C'est l'écart-type des niveaux, une mesure APPROCHÉE de la netteté — une image floue a peu de contraste local. Ce n'est pas un calcul de flou.",
+      absent: "Aucun réglage n'est publié pour la photo. Les seuils ci-dessous sont ceux du code et s'appliquent déjà ; la consigne, elle, n'existe pas — le modèle ne reçoit rien sur la photo.",
+      consigneExigee: "Les réglages de la photo vont ensemble : sans la consigne dans les deux langues, les seuils ne peuvent pas être publiés.",
+    },
     interne: {
       titre: "Ce que seule l'application lit",
       motifBande: "Motif de la bande",
