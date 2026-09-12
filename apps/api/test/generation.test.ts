@@ -8,6 +8,7 @@ import { StudioConfigurationService } from "../src/studio/configuration.service.
 import { RouteurIAService, PanneFournisseur, RefusModele, type Adaptateur, type ReponseIA } from "../src/ia/routeur.service.js";
 import { CatalogueIAService } from "../src/ia/catalogue.service.js";
 import { AmorceStudioService } from "../src/studio/amorce.service.js";
+import { MesuresStudioService } from "../src/studio/mesures.service.js";
 import { fini } from "./attendre.js";
 
 /* La génération d'un message.
@@ -891,6 +892,97 @@ describe("la génération d'un message", () => {
 
       await expect(service.noter(autre.id, message.id, "down"))
         .rejects.toThrow(/unknown message/);
+    });
+  });
+  /* LES MESURES — « combien de pouces en bas par version, comparée à la
+   * précédente ». C'est ce qui donne son sens à l'atelier : sans elles, on
+   * publie sans jamais savoir si l'on a amélioré quoi que ce soit. */
+  describe("les mesures", () => {
+    const mesures = () => new MesuresStudioService(db.prisma as never);
+
+    const produire = async (n: number) => {
+      await crediter(n + 1);
+      const faits = [];
+      for (let i = 0; i < n; i += 1) faits.push(await lancer({ anthropic: repond() }, "ma_fierte", `c-${i}`));
+      return faits;
+    };
+
+    const noter = (id: string, avis: "up" | "down") =>
+      db.prisma.generatedMessage.update({
+        where: { id }, data: { feedback: avis, feedbackAt: new Date() },
+      });
+
+    /* LE DÉNOMINATEUR EST LE NOMBRE D'AVIS, jamais celui des productions.
+     *
+     * `null` veut dire « personne n'a tranché », jamais « satisfait » : sur dix
+     * productions dont cinq notées, un taux tiré des dix prétendrait que cinq
+     * silences sont cinq contentements. */
+    it("tire le taux des avis, et non des productions", async () => {
+      const faits = await produire(10);
+      for (const m of faits.slice(0, 4)) await noter(m.id, "down");
+      await noter(faits[4]!.id, "up");
+
+      const m = await mesures().mesurer("message");
+      const ligne = m.versions.find((v) => v.configId !== null);
+
+      expect(ligne?.productions).toBe(10);
+      expect(ligne?.avis).toBe(5);
+      expect(ligne?.rejets).toBe(4);
+      // Quatre sur CINQ avis, et non quatre sur dix productions.
+      expect(ligne?.taux).toBeCloseTo(0.8);
+    });
+
+    /* SOUS LE SEUIL, LE TAUX EST NUL — « trop tôt », jamais zéro. Sinon le
+       premier rejet d'une version neuve l'affiche à cent pour cent, et
+       quelqu'un revient en arrière sur un accident. */
+    it("refuse de conclure sous le seuil", async () => {
+      const faits = await produire(3);
+      await noter(faits[0]!.id, "down");
+
+      const m = await mesures().mesurer("message");
+      const ligne = m.versions.find((v) => v.configId !== null);
+
+      expect(m.seuil).toBeGreaterThan(1);
+      expect(ligne?.avis).toBe(1);
+      expect(ligne?.taux).toBeNull();
+    });
+
+    /* LE REPLI NE COMPTE PAS DEUX FOIS, et ne charge pas le modèle qui a
+     * échoué.
+     *
+     * Une production repliée laisse PLUSIEURS lignes d'usage — une par
+     * tentative. Compter toute la chaîne donnerait deux productions pour une, et
+     * blâmerait le modèle qui n'a rien écrit. C'est la tentative qui a ABOUTI
+     * qui compte. */
+    it("attribue la production au modèle qui a abouti, une seule fois", async () => {
+      const [message] = await produire(1);
+      const run = await db.prisma.generatedMessage.findUniqueOrThrow({
+        where: { id: message!.id }, select: { actionRunId: true },
+      });
+      // La chaîne réelle a déjà écrit son usage ; on lui ajoute un ÉCHEC en
+      // amont, tel qu'un repli en laisse.
+      await db.prisma.aIUsage.create({
+        data: {
+          actionRunId: run.actionRunId, purpose: "message", origin: "user_action",
+          provider: "celui-qui-a-echoue", modelKey: "tombe", attempt: 0, status: "error",
+        },
+      });
+      await noter(message!.id, "down");
+
+      const m = await mesures().mesurer("message");
+
+      expect(m.modeles.some((x) => x.fournisseur === "celui-qui-a-echoue")).toBe(false);
+      expect(m.modeles.reduce((n, x) => n + x.productions, 0)).toBe(1);
+    });
+
+    /* LE BRIEF DU PORTRAIT N'EST RELIÉ À RIEN : le `Portrait` retient la
+       configuration de l'IMAGE, pas celle qui a écrit les mots. On le DIT,
+       plutôt que de rendre des tableaux vides qui se liraient « aucun rejet ». */
+    it("dit que le brief du portrait n'est pas mesurable", async () => {
+      const m = await mesures().mesurer("portrait_brief");
+
+      expect(m.relie).toBe(false);
+      expect(m.versions).toHaveLength(0);
     });
   });
 });

@@ -8,7 +8,7 @@ import {
   lancementEssaiTexteSchema, publicationStudioSchema, retourArriereStudioSchema,
   verdictEssaiTexteSchema, type VerdictEssai,
   type ConfigurationTexte, type EssaiStudio, type EtatTexte,
-  type HistoriqueTexte, type NatureTexte, type ReglagesTexte,
+  type HistoriqueTexte, type MesuresStudio, type NatureTexte, type ReglagesTexte,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
@@ -17,6 +17,7 @@ import { AdminGuard } from "./admin.guard.js";
 import { Role, RoleGuard } from "./role.guard.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
 import { StudioEssaiService } from "../studio/essai.service.js";
+import { MesuresStudioService } from "../studio/mesures.service.js";
 
 /**
  * L'ATELIER DES TEXTES — le message, les idées, le brief du portrait.
@@ -192,7 +193,10 @@ export class TexteStudioService {
 @UseGuards(AdminGuard, RoleGuard)
 @Role("admin")
 export class TexteStudioController {
-  constructor(@Inject(TexteStudioService) private readonly service: TexteStudioService) {}
+  constructor(
+    @Inject(TexteStudioService) private readonly service: TexteStudioService,
+    @Inject(MesuresStudioService) private readonly mesures$: MesuresStudioService,
+  ) {}
 
   /* La nature se valide DÈS LE PARAMÈTRE, jamais au fond du service. Un chemin
      inconnu doit rendre 400 avec son nom, pas une erreur de lecture trois
@@ -207,6 +211,15 @@ export class TexteStudioController {
   @Get(":nature/config")
   etat(@Param("nature") nature: string): Promise<EtatTexte> {
     return this.service.etat(this.nature(nature));
+  }
+
+  /* LES MESURES — ce qui donne son sens à l'atelier : on publiait sans jamais
+     savoir si l'on avait amélioré quoi que ce soit.
+     Sous `:nature`, comme la configuration et l'historique : on compare une
+     version à la précédente DE LA MÊME nature, jamais d'une nature à l'autre. */
+  @Get(":nature/metrics")
+  mesures(@Param("nature") nature: string): Promise<MesuresStudio> {
+    return this.mesures$.mesurer(this.nature(nature));
   }
 
   @Get(":nature/config/history")
