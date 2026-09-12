@@ -18,9 +18,23 @@ import { PrismaService } from "../prisma/prisma.service.js";
  * réponse nomme donc son unité, pour qu'un panneau ne compare pas des choses
  * qui ne se comparent pas.
  */
-type Comptes = { produites: number; positifs: number; negatifs: number; sansAvis: number };
+/* DEUX AXES, ET LA MÊME FORME POUR LES DEUX.
+ *
+ * La première rédaction n'en tenait qu'un, et la même colonne ne comptait pas
+ * la même chose selon la nature : le STATUT pour le message et le portrait,
+ * l'AVIS pour les idées. « Envoyé » et « pouce en haut » tombaient dans la même
+ * case, dans un écran fait pour comparer les trois.
+ *
+ * LES GESTES sont une préférence RÉVÉLÉE — on ne demande rien à personne, on
+ * regarde ce qui a été fait. L'AVIS est déclaré, donc rare : donner un avis est
+ * un geste qu'on ne franchit pas forcément. Rare ne veut pas dire faible, c'est
+ * le seul des deux qui dise si le texte était BON et non seulement s'il a
+ * servi. */
+type Axe = { pour: number; contre: number; sans: number };
+type Comptes = { produites: number; gestes: Axe; avis: Axe };
 
-const RIEN: Comptes = { produites: 0, positifs: 0, negatifs: 0, sansAvis: 0 };
+const AXE_VIDE: Axe = { pour: 0, contre: 0, sans: 0 };
+const RIEN: Comptes = { produites: 0, gestes: { ...AXE_VIDE }, avis: { ...AXE_VIDE } };
 
 const UNITE: Record<NatureStudio, UniteProduite> = {
   message: "message",
@@ -69,18 +83,27 @@ export class StudioPerformanceService {
   }
 
   private ranger(
-    lignes: { cle: string | null; positif: boolean; negatif: boolean; nombre: number }[],
+    lignes: {
+      cle: string | null; nombre: number;
+      geste: "pour" | "contre" | "sans";
+      avis: "pour" | "contre" | "sans";
+    }[],
   ): Map<string | null, Comptes> {
     const par = new Map<string | null, Comptes>();
     for (const l of lignes) {
-      const c = par.get(l.cle) ?? { ...RIEN };
+      const c = par.get(l.cle)
+        ?? { produites: 0, gestes: { ...AXE_VIDE }, avis: { ...AXE_VIDE } };
       c.produites += l.nombre;
-      if (l.positif) c.positifs += l.nombre;
-      else if (l.negatif) c.negatifs += l.nombre;
-      else c.sansAvis += l.nombre;
+      c.gestes[l.geste] += l.nombre;
+      c.avis[l.avis] += l.nombre;
       par.set(l.cle, c);
     }
     return par;
+  }
+
+  /** Le pouce, rangé sur son axe. Nul veut dire « personne n'a tranché ». */
+  private pouce(f: "up" | "down" | null): "pour" | "contre" | "sans" {
+    return f === "up" ? "pour" : f === "down" ? "contre" : "sans";
   }
 
   /* `edited` COMPTE COMME SANS AVIS, et ce n'est pas un oubli. Il dit « je l'ai
@@ -88,14 +111,18 @@ export class StudioPerformanceService {
      `sent`, donc `edited` seul désigne un texte touché et jamais confirmé. Le
      ranger du côté négatif mesurerait la retouche au lieu du ratage. */
   private async compterMessages(): Promise<Map<string | null, Comptes>> {
+    /* ON GROUPE SUR LES DEUX COLONNES, puisqu'on tient deux axes. Grouper sur
+       le seul statut perdrait l'avis, et c'est ce que faisait la première
+       rédaction — le `feedback` posé sur le message n'était compté nulle part. */
     const lignes = await this.prisma.generatedMessage.groupBy({
-      by: ["studioConfigId", "status"],
+      by: ["studioConfigId", "status", "feedback"],
       _count: { _all: true },
     });
     return this.ranger(lignes.map((l) => ({
       cle: l.studioConfigId,
-      positif: l.status === "sent",
-      negatif: l.status === "rejected",
+      geste: l.status === "sent" ? "pour" as const
+        : l.status === "rejected" ? "contre" as const : "sans" as const,
+      avis: this.pouce(l.feedback),
       nombre: l._count._all,
     })));
   }
@@ -108,7 +135,7 @@ export class StudioPerformanceService {
        qu'on approuve ou rejette. */
     const colonne = nature === "portrait" ? "studioConfigId" : "briefStudioConfigId";
     const lignes = await this.prisma.portrait.groupBy({
-      by: [colonne, "status"],
+      by: [colonne, "status", "feedback"],
       _count: { _all: true },
     });
     /* `generated` ET `composed` TOMBENT DU CÔTÉ SANS AVIS, et c'est le cas le
@@ -118,8 +145,9 @@ export class StudioPerformanceService {
        l'autre ferait dire à la moyenne l'inverse de ce qui s'est passé. */
     return this.ranger(lignes.map((l) => ({
       cle: (l as Record<string, unknown>)[colonne] as string | null,
-      positif: l.status === "approved",
-      negatif: l.status === "rejected",
+      geste: l.status === "approved" ? "pour" as const
+        : l.status === "rejected" ? "contre" as const : "sans" as const,
+      avis: this.pouce(l.feedback),
       nombre: l._count._all,
     })));
   }
@@ -130,12 +158,23 @@ export class StudioPerformanceService {
      répéterait cinq fois pour un fait qui ne varie pas. */
   private async compterIdees(): Promise<Map<string | null, Comptes>> {
     const lignes = await this.prisma.generatedIdea.findMany({
-      select: { feedback: true, set: { select: { studioConfigId: true } } },
+      select: {
+        feedback: true, wishlistItemId: true, acceptedAt: true,
+        set: { select: { studioConfigId: true } },
+      },
     });
+    /* LES IDÉES ONT UN GESTE, ELLES AUSSI, et la première rédaction le prenait
+       pour leur avis. Le geste d'une idée est d'être RETENUE — elle devient un
+       souhait —, et le service des idées le dit déjà : « parmi ce que le modèle
+       a proposé, qu'est-ce qui a été retenu, qui est la seconde mesure de
+       pertinence après l'avis ».
+       `acceptedAt` SANS `wishlistItemId` est le cas intéressant — retenue, puis
+       le souhait supprimé de la liste. Elle a bien été retenue : c'est la date
+       qui fait foi, pas le lien. */
     return this.ranger(lignes.map((l) => ({
       cle: l.set.studioConfigId,
-      positif: l.feedback === "up",
-      negatif: l.feedback === "down",
+      geste: l.acceptedAt === null ? "sans" as const : "pour" as const,
+      avis: this.pouce(l.feedback),
       nombre: 1,
     })));
   }

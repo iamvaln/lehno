@@ -1,13 +1,22 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import type { StudioConfigKind } from "@prisma/client";
-import type {
-  MesureModele, MesureStudio, MesuresDesModeles, MesuresStudio,
-} from "@lehno/contracts";
+import type { MesureModele, MesuresDesModeles } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 
 /**
- * LES MESURES D'UNE NATURE — ce qui donne son sens à l'atelier.
+ * CE QUE LES PRODUCTIONS DE CHAQUE MODÈLE ONT VALU.
+ *
+ * CE SERVICE NE COMPTE PLUS PAR VERSION : `StudioPerformanceService` le fait, et
+ * deux implémentations du même compte auraient fini par diverger — c'est même
+ * arrivé le jour de leur écriture, à quelques heures d'écart. Il ne reste ici
+ * que la question que l'autre ne pose pas : « ce modèle vaut-il son prix ? ».
+ *
+ * Il mesure L'AVIS et lui seul — le pouce —, jamais le geste. Un modèle ne
+ * décide pas qu'on envoie un message ou qu'on garde un portrait : mille choses
+ * s'y mêlent. Ce qu'on lui impute, c'est ce qu'on a pensé de ce qu'il a rendu.
+ *
+ * L'ancien en-tête disait : les mesures d'une nature.
  *
  * « Aucune production ne porte d'avis, et aucune ne dit sur quelle version elle
  * a été produite. Les deux manquent ensemble, et il les faut ensemble : un
@@ -41,47 +50,6 @@ type Compte = { productions: number; avis: number; rejets: number };
 export class MesuresStudioService {
   // @Inject explicite : esbuild/vitest n'émet pas design:paramtypes.
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
-
-  async mesurer(nature: StudioConfigKind): Promise<MesuresStudio> {
-    /* LE BRIEF DU PORTRAIT N'EST RELIÉ À RIEN. `Portrait.studio_config_id`
-       retient la configuration de l'IMAGE ; celle qui a écrit les mots n'est
-       nulle part. On le DIT plutôt que de rendre des tableaux vides, qui se
-       liraient « aucun rejet ». */
-    if (nature === "portrait_brief")
-      return { nature, relie: false, seuil: SEUIL, versions: [], modeles: [] };
-
-    const publiees = await this.prisma.studioConfig.findMany({
-      where: { kind: nature, version: { not: null } },
-      orderBy: { version: "desc" },
-      select: { id: true, version: true, publishedAt: true },
-    });
-
-    const versions: MesureStudio[] = [];
-    for (const c of publiees) {
-      const compte = await this.compter(nature, c.id);
-      versions.push({
-        configId: c.id,
-        version: c.version,
-        publieeLe: c.publishedAt?.toISOString() ?? null,
-        ...compte,
-        taux: this.taux(compte),
-      });
-    }
-
-    /* LA LIGNE « AVANT LE LIEN » — les productions d'avant la colonne, qui
-       n'ont aucune version et ne peuvent pas en avoir. Une ligne à part, jamais
-       un silence : un total qui ne tombe pas juste fait douter du compte, pas
-       des données. */
-    const orphelines = await this.compter(nature, null);
-    if (orphelines.productions > 0) {
-      versions.push({
-        configId: null, version: null, publieeLe: null,
-        ...orphelines, taux: this.taux(orphelines),
-      });
-    }
-
-    return { nature, relie: true, seuil: SEUIL, versions, modeles: await this.parModele(nature) };
-  }
 
   /* LES MODÈLES, TOUTES NATURES CONFONDUES — la question du registre.
    *
@@ -124,38 +92,6 @@ export class MesuresStudioService {
   /** Nul sous le seuil : « trop tôt pour conclure », jamais zéro. */
   private taux(c: Compte): number | null {
     return c.avis < SEUIL ? null : c.rejets / c.avis;
-  }
-
-  private async compter(nature: StudioConfigKind, configId: string | null): Promise<Compte> {
-    const lien = configId === null ? null : configId;
-
-    if (nature === "message") {
-      const [productions, avis, rejets] = await Promise.all([
-        this.prisma.generatedMessage.count({ where: { studioConfigId: lien } }),
-        this.prisma.generatedMessage.count({ where: { studioConfigId: lien, feedback: { not: null } } }),
-        this.prisma.generatedMessage.count({ where: { studioConfigId: lien, feedback: "down" } }),
-      ]);
-      return { productions, avis, rejets };
-    }
-
-    if (nature === "portrait") {
-      const [productions, avis, rejets] = await Promise.all([
-        this.prisma.portrait.count({ where: { studioConfigId: lien } }),
-        this.prisma.portrait.count({ where: { studioConfigId: lien, feedback: { not: null } } }),
-        this.prisma.portrait.count({ where: { studioConfigId: lien, feedback: "down" } }),
-      ]);
-      return { productions, avis, rejets };
-    }
-
-    /* Les idées : l'avis est sur L'IDÉE, la version sur le JEU. On compte donc
-       les idées, en passant par leur jeu. */
-    const ou = { set: { studioConfigId: lien } };
-    const [productions, avis, rejets] = await Promise.all([
-      this.prisma.generatedIdea.count({ where: ou }),
-      this.prisma.generatedIdea.count({ where: { ...ou, feedback: { not: null } } }),
-      this.prisma.generatedIdea.count({ where: { ...ou, feedback: "down" } }),
-    ]);
-    return { productions, avis, rejets };
   }
 
   /* PAR MODÈLE — « ce modèle vaut-il son prix ? ». Un tarif sans taux de rejet

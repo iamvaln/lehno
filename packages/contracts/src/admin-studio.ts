@@ -98,6 +98,32 @@ export const etatPortraitSchema = etatAvec(configurationPortraitSchema);
 export const UNITES_PRODUITES = ["message", "portrait", "idee"] as const;
 export type UniteProduite = (typeof UNITES_PRODUITES)[number];
 
+/* DEUX AXES, JAMAIS FONDUS — et c'est la première phrase du brief mobile de
+ * l'avis : « le statut dit ce qu'on FAIT de l'objet, l'avis ce qu'on en PENSE,
+ * et c'est un pas de plus ».
+ *
+ * La première rédaction de ce schéma les fondait pourtant dans un seul couple
+ * `positifs`/`negatifs` — et pire, la même colonne ne comptait pas la même
+ * chose selon la nature : le STATUT pour le message et le portrait, l'AVIS
+ * pour les idées. Trois natures sous un schéma unique, dans un écran fait pour
+ * les comparer : « envoyé » et « pouce en haut » finissaient dans la même case.
+ *
+ * On peut garder sans aimer — une image qu'on ne trouve pas réussie mais qu'on
+ * garde quand même dit quelque chose de précis, que ni l'un ni l'autre ne
+ * porterait seul. Les deux axes se lisent donc côte à côte. */
+const troisSeaux = {
+  /** Le geste franchi, ou le pouce levé, selon l'axe. */
+  pour: z.number().int().min(0),
+  /** Le geste contraire, ou le pouce baissé. */
+  contre: z.number().int().min(0),
+  /* SANS N'EST PAS UN « NI L'UN NI L'AUTRE » : c'est « personne n'a répondu »,
+     ce qui ne se compte pas de la même façon dans une moyenne. Le rendre à part
+     évite qu'un panneau le range d'un côté ou de l'autre. */
+  sans: z.number().int().min(0),
+} as const;
+
+export const axeSchema = z.object(troisSeaux).strict();
+
 export const performanceVersionSchema = z.object({
   configId: z.string().uuid(),
   /** Nul pour un brouillon jamais publié — qui n'a donc rien produit. */
@@ -105,15 +131,18 @@ export const performanceVersionSchema = z.object({
   publieeLe: z.string().nullable(),
   /** Tout ce que cette version a produit, avis ou non. */
   produites: z.number().int().min(0),
-  /** Retenu : approuvé, envoyé, ou noté d'un pouce en haut. */
-  positifs: z.number().int().min(0),
-  /** Rejeté, ou noté d'un pouce en bas. */
-  negatifs: z.number().int().min(0),
-  /* SANS AVIS N'EST PAS UN « NI L'UN NI L'AUTRE » : c'est « personne n'a
-     répondu », ce qui ne se compte pas de la même façon dans une moyenne. Le
-     rendre à part évite qu'un panneau le range d'un côté ou de l'autre. */
-  sansAvis: z.number().int().min(0),
+  /* CE QU'ON EN A FAIT : envoyé, approuvé, retenu en souhait — contre rejeté.
+     C'est une préférence RÉVÉLÉE, la plus fiable des deux parce qu'elle ne
+     demande rien à personne. */
+  gestes: axeSchema,
+  /* CE QU'ON EN A PENSÉ : le pouce, et lui seul. Rare, et c'est normal — donner
+     un avis est un geste qu'on ne franchit pas forcément. Rare ne veut pas dire
+     faible : c'est le seul des deux qui dise si le texte était BON, et non
+     seulement s'il a servi. */
+  avis: axeSchema,
 }).strict();
+
+export type Axe = z.infer<typeof axeSchema>;
 
 export const performanceSchema = z.object({
   unite: z.enum(UNITES_PRODUITES),
@@ -497,18 +526,6 @@ export type CandidatsStudio = z.infer<typeof candidatsStudioSchema>;
  *
  * LES DEUX CHIFFRES SE LISENT ENSEMBLE : le taux dit ce qu'en pensent ceux qui
  * ont parlé, le nombre de productions dit combien peu ont parlé. */
-export const mesureStudioSchema = z.object({
-  /** Nul pour la ligne « avant le lien » — les productions d'avant la colonne. */
-  configId: z.string().uuid().nullable(),
-  version: z.number().int().nullable(),
-  publieeLe: z.string().nullable(),
-  productions: z.number().int(),
-  avis: z.number().int(),
-  rejets: z.number().int(),
-  /** Nul SOUS LE SEUIL : « trop tôt pour conclure », jamais zéro. */
-  taux: z.number().nullable(),
-}).strict();
-
 /* LA MESURE PAR MODÈLE — « ce modèle vaut-il son prix ? », qui n'est pas la
  * même question que « ma consigne a-t-elle aidé ? ». Une version fige un
  * modèle, mais un modèle sert plusieurs versions.
@@ -525,22 +542,6 @@ export const mesureModeleSchema = z.object({
   taux: z.number().nullable(),
 }).strict();
 
-export const mesuresStudioSchema = z.object({
-  nature: z.enum(NATURES_STUDIO),
-  /* FAUX QUAND AUCUNE PRODUCTION NE PORTE SA VERSION — c'est le cas du brief du
-     portrait : le `Portrait` retient la configuration de l'IMAGE, pas celle qui
-     a écrit les mots. Rendre alors des tableaux vides se lirait « aucun rejet »,
-     ce qui est le pire des mensonges possibles ici. L'écran dit « pas encore
-     mesurable » ; il ne dit pas « tout va bien ». */
-  relie: z.boolean(),
-  /* LE SEUIL VOYAGE AVEC LA MESURE, et n'est pas écrit dans l'écran : le jour
-     où on l'ajuste au vu des volumes réels, un seul endroit change. */
-  seuil: z.number().int(),
-  /** Les versions publiées, la plus récente d'abord. */
-  versions: z.array(mesureStudioSchema),
-  modeles: z.array(mesureModeleSchema),
-}).strict();
-
 /* LES MODÈLES DU REGISTRE — toutes natures confondues, avec leur seuil.
  *
  * Le seuil VOYAGE AVEC LA MESURE ici aussi : l'écrire dans l'écran en ferait
@@ -552,6 +553,4 @@ export const mesuresDesModelesSchema = z.object({
 
 export type MesuresDesModeles = z.infer<typeof mesuresDesModelesSchema>;
 
-export type MesureStudio = z.infer<typeof mesureStudioSchema>;
 export type MesureModele = z.infer<typeof mesureModeleSchema>;
-export type MesuresStudio = z.infer<typeof mesuresStudioSchema>;

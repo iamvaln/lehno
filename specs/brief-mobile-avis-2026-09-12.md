@@ -14,6 +14,12 @@ décision de forme se pose, elle est nommée comme telle et laissée au mobile.
 > **Le statut** dit ce qu'on **fait** de l'objet.
 > **L'avis** dit ce qu'on en **pense**, et c'est un pas de plus.
 
+> *Corrigé le 12 au soir : la mesure du panneau fondait pourtant les deux, et
+> comptait le STATUT pour le message et le portrait, l'AVIS pour les idées —
+> sous un schéma unique. Elle porte maintenant `gestes` et `avis`, de même
+> forme, pour les trois. Rien à changer côté mobile : ce document décrivait
+> déjà la bonne distinction.*
+
 On peut garder sans jamais dire qu'on a aimé — c'est même le cas ordinaire,
 donner un avis est un geste qu'on ne franchit pas forcément. Et on peut garder
 **sans** aimer : une image qu'on ne trouve pas réussie mais qu'on garde quand

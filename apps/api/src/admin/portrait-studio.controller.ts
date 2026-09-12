@@ -12,7 +12,6 @@ import {
   type CandidatsStudio, type ConfigurationPortrait, type EssaiStudio, type EtatPortrait,
   type ReglagesPortrait, type VerdictEssai,
   type ProfilStudio, type ProfilsStudio,
-  type MesuresStudio,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
@@ -22,7 +21,6 @@ import { Role, RoleGuard } from "./role.guard.js";
 import { AuditService } from "./audit.service.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
 import { StudioEssaiService } from "../studio/essai.service.js";
-import { MesuresStudioService } from "../studio/mesures.service.js";
 import { axesManquants } from "../studio/couverture.js";
 
 /* Le Studio du portrait, côté administration.
@@ -206,22 +204,11 @@ export class PortraitStudioService {
 @UseGuards(AdminGuard, RoleGuard)
 @Role("admin")
 export class PortraitStudioController {
-  constructor(
-    @Inject(PortraitStudioService) private readonly service: PortraitStudioService,
-    @Inject(MesuresStudioService) private readonly mesures$: MesuresStudioService,
-  ) {}
+  constructor(@Inject(PortraitStudioService) private readonly service: PortraitStudioService) {}
 
   @Get("config")
   etat(): Promise<EtatPortrait> {
     return this.service.etat();
-  }
-
-  /* LES MESURES du portrait. Même lecture que pour les textes, et le service
-     est le même : ce qui change d'une nature à l'autre est la table qu'on
-     compte, pas le raisonnement. */
-  @Get("metrics")
-  mesures(): Promise<MesuresStudio> {
-    return this.mesures$.mesurer("portrait");
   }
 
   @Get("config/history")

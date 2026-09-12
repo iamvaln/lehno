@@ -9,6 +9,7 @@ import { RouteurIAService, PanneFournisseur, RefusModele, type Adaptateur, type 
 import { CatalogueIAService } from "../src/ia/catalogue.service.js";
 import { AmorceStudioService } from "../src/studio/amorce.service.js";
 import { MesuresStudioService } from "../src/studio/mesures.service.js";
+import { StudioPerformanceService } from "../src/admin/studio-performance.service.js";
 import { fini } from "./attendre.js";
 
 /* La génération d'un message.
@@ -948,6 +949,7 @@ describe("la génération d'un message", () => {
    * publie sans jamais savoir si l'on a amélioré quoi que ce soit. */
   describe("les mesures", () => {
     const mesures = () => new MesuresStudioService(db.prisma as never);
+    const performance = () => new StudioPerformanceService(db.prisma as never);
 
     const produire = async (n: number) => {
       await crediter(n + 1);
@@ -961,39 +963,58 @@ describe("la génération d'un message", () => {
         where: { id }, data: { feedback: avis, feedbackAt: new Date() },
       });
 
-    /* LE DÉNOMINATEUR EST LE NOMBRE D'AVIS, jamais celui des productions.
+    /* LES DEUX AXES NE SE FONDENT PAS, et c'est ce que la première rédaction
+     * faisait — la même colonne comptant le STATUT pour le message et l'AVIS
+     * pour les idées, sous un schéma unique et dans un écran fait pour les
+     * comparer. « Envoyé » et « pouce en haut » tombaient dans la même case.
      *
-     * `null` veut dire « personne n'a tranché », jamais « satisfait » : sur dix
-     * productions dont cinq notées, un taux tiré des dix prétendrait que cinq
-     * silences sont cinq contentements. */
-    it("tire le taux des avis, et non des productions", async () => {
+     * On peut garder sans aimer. Dix messages jamais envoyés, dont quatre
+     * jugés mauvais et un bon, c'est dix « sans geste » ET cinq avis. */
+    it("tient le geste et l'avis sur deux axes séparés", async () => {
       const faits = await produire(10);
       for (const m of faits.slice(0, 4)) await noter(m.id, "down");
       await noter(faits[4]!.id, "up");
 
-      const m = await mesures().mesurer("message");
-      const ligne = m.versions.find((v) => v.configId !== null);
+      const p = await performance().lire("message");
+      const ligne = p.versions.find((v) => v.produites > 0);
 
-      expect(ligne?.productions).toBe(10);
-      expect(ligne?.avis).toBe(5);
-      expect(ligne?.rejets).toBe(4);
-      // Quatre sur CINQ avis, et non quatre sur dix productions.
-      expect(ligne?.taux).toBeCloseTo(0.8);
+      expect(ligne?.produites).toBe(10);
+      // L'avis : quatre contre, un pour, cinq silences.
+      expect(ligne?.avis).toEqual({ pour: 1, contre: 4, sans: 5 });
+      /* Le geste : AUCUN n'a été envoyé. Sans la séparation, les quatre pouces
+         en bas auraient disparu derrière « dix messages non envoyés ». */
+      expect(ligne?.gestes).toEqual({ pour: 0, contre: 0, sans: 10 });
+    });
+
+    /* LE SILENCE N'EST PAS UN AVIS. Noter un message ne l'envoie pas, et
+       l'envoyer ne le note pas : les deux axes bougent indépendamment. */
+    it("un envoi ne vaut pas un avis, et l'inverse non plus", async () => {
+      const [message] = await produire(1);
+      await db.prisma.generatedMessage.update({
+        where: { id: message!.id }, data: { status: "sent" },
+      });
+
+      const p = await performance().lire("message");
+      const ligne = p.versions.find((v) => v.produites > 0);
+
+      expect(ligne?.gestes.pour).toBe(1);
+      // Envoyé, et pourtant personne n'a dit qu'il était bon.
+      expect(ligne?.avis).toEqual({ pour: 0, contre: 0, sans: 1 });
     });
 
     /* SOUS LE SEUIL, LE TAUX EST NUL — « trop tôt », jamais zéro. Sinon le
-       premier rejet d'une version neuve l'affiche à cent pour cent, et
-       quelqu'un revient en arrière sur un accident. */
+       premier rejet d'un modèle neuf l'affiche à cent pour cent, et quelqu'un
+       l'éteint sur un accident. Le seuil vit désormais avec la seule mesure
+       qui rend un taux : celle des modèles. */
     it("refuse de conclure sous le seuil", async () => {
       const faits = await produire(3);
       await noter(faits[0]!.id, "down");
 
-      const m = await mesures().mesurer("message");
-      const ligne = m.versions.find((v) => v.configId !== null);
+      const m = await mesures().mesurerLesModeles();
 
       expect(m.seuil).toBeGreaterThan(1);
-      expect(ligne?.avis).toBe(1);
-      expect(ligne?.taux).toBeNull();
+      expect(m.modeles[0]?.avis).toBe(1);
+      expect(m.modeles[0]?.taux).toBeNull();
     });
 
     /* LE REPLI NE COMPTE PAS DEUX FOIS, et ne charge pas le modèle qui a
@@ -1022,20 +1043,10 @@ describe("la génération d'un message", () => {
       });
       await noter(message!.id, "down");
 
-      const m = await mesures().mesurer("message");
+      const m = await mesures().mesurerLesModeles();
 
       expect(m.modeles.some((x) => x.fournisseur === "celui-qui-a-echoue")).toBe(false);
       expect(m.modeles.reduce((n, x) => n + x.productions, 0)).toBe(1);
-    });
-
-    /* LE BRIEF DU PORTRAIT N'EST RELIÉ À RIEN : le `Portrait` retient la
-       configuration de l'IMAGE, pas celle qui a écrit les mots. On le DIT,
-       plutôt que de rendre des tableaux vides qui se liraient « aucun rejet ». */
-    it("dit que le brief du portrait n'est pas mesurable", async () => {
-      const m = await mesures().mesurer("portrait_brief");
-
-      expect(m.relie).toBe(false);
-      expect(m.versions).toHaveLength(0);
     });
   });
 });

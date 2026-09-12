@@ -145,7 +145,12 @@ describe("ce que les versions ont produit", () => {
       const lu = await service.lire("message");
       expect(lu.unite).toBe("message");
       expect(lu.versions[0]).toMatchObject({
-        configId: v1, version: 1, produites: 4, positifs: 2, negatifs: 1, sansAvis: 1,
+        configId: v1, version: 1, produites: 4,
+        gestes: { pour: 2, contre: 1, sans: 1 },
+        /* AUCUN AVIS N'A ÉTÉ POSÉ : quatre messages traités, zéro pouce. C'est
+           ce que la première rédaction ne pouvait pas dire — elle rangeait
+           « envoyé » dans la même case qu'un pouce en haut. */
+        avis: { pour: 0, contre: 0, sans: 4 },
       });
     });
 
@@ -158,7 +163,7 @@ describe("ce que les versions ont produit", () => {
       await message(v1, "edited");
 
       const lu = await service.lire("message");
-      expect(lu.versions[0]).toMatchObject({ negatifs: 0, sansAvis: 1 });
+      expect(lu.versions[0]).toMatchObject({ gestes: { pour: 0, contre: 0, sans: 1 } });
     });
 
     /* CE QUI N'A PAS DE VERSION SE COMPTE À PART. Une production du gabarit du
@@ -170,8 +175,8 @@ describe("ce que les versions ont produit", () => {
       await message(null, "rejected");
 
       const lu = await service.lire("message");
-      expect(lu.versions[0]).toMatchObject({ produites: 1, positifs: 1 });
-      expect(lu.horsVersion).toMatchObject({ produites: 1, negatifs: 1 });
+      expect(lu.versions[0]).toMatchObject({ produites: 1, gestes: { pour: 1, contre: 0, sans: 0 } });
+      expect(lu.horsVersion).toMatchObject({ produites: 1, gestes: { pour: 0, contre: 1, sans: 0 } });
     });
 
     /* UNE VERSION QUI N'A RIEN PRODUIT PARAÎT QUAND MÊME. Publiée puis
@@ -187,7 +192,11 @@ describe("ce que les versions ont produit", () => {
       // De la plus récente à la plus ancienne : « comparée à la précédente »
       // se lit de haut en bas.
       expect(lu.versions.map((v) => v.configId)).toEqual([v2, v1]);
-      expect(lu.versions[1]).toMatchObject({ produites: 0, positifs: 0, negatifs: 0, sansAvis: 0 });
+      expect(lu.versions[1]).toMatchObject({
+        produites: 0,
+        gestes: { pour: 0, contre: 0, sans: 0 },
+        avis: { pour: 0, contre: 0, sans: 0 },
+      });
     });
 
     /* LA NATURE SÉPARE. Sans ce cas, on pourrait compter toutes les
@@ -219,10 +228,10 @@ describe("ce que les versions ont produit", () => {
       const parBrief = await service.lire("portrait_brief");
 
       expect(parCatalogue.versions[0]).toMatchObject({
-        configId: catalogue, produites: 2, positifs: 1, negatifs: 1,
+        configId: catalogue, produites: 2, gestes: { pour: 1, contre: 1, sans: 0 },
       });
       expect(parBrief.versions[0]).toMatchObject({
-        configId: brief, produites: 2, positifs: 1, negatifs: 1,
+        configId: brief, produites: 2, gestes: { pour: 1, contre: 1, sans: 0 },
       });
       // L'unité est la même des deux côtés : on compte des portraits.
       expect(parCatalogue.unite).toBe("portrait");
@@ -237,9 +246,9 @@ describe("ce que les versions ont produit", () => {
       await portrait(catalogue, null, "rejected");
 
       expect((await service.lire("portrait")).versions[0])
-        .toMatchObject({ produites: 1, negatifs: 1 });
+        .toMatchObject({ produites: 1, gestes: { pour: 0, contre: 1, sans: 0 } });
       expect((await service.lire("portrait_brief")).horsVersion)
-        .toMatchObject({ produites: 1, negatifs: 1 });
+        .toMatchObject({ produites: 1, gestes: { pour: 0, contre: 1, sans: 0 } });
     });
 
     /* LES DEUX ÉTATS SANS AVIS, et le second est le cas le plus fréquent : une
@@ -253,7 +262,7 @@ describe("ce que les versions ont produit", () => {
       await portrait(catalogue, null, "composed");
 
       expect((await service.lire("portrait")).versions[0])
-        .toMatchObject({ produites: 2, positifs: 0, negatifs: 0, sansAvis: 2 });
+        .toMatchObject({ produites: 2, gestes: { pour: 0, contre: 0, sans: 2 } });
     });
   });
 
@@ -268,7 +277,7 @@ describe("ce que les versions ont produit", () => {
       const lu = await service.lire("idees");
       expect(lu.unite).toBe("idee");
       expect(lu.versions[0]).toMatchObject({
-        produites: 5, positifs: 2, negatifs: 1, sansAvis: 2,
+        produites: 5, avis: { pour: 2, contre: 1, sans: 2 },
       });
     });
 
@@ -278,7 +287,7 @@ describe("ce que les versions ont produit", () => {
       await jeu(v1, ["up", null]);
 
       expect((await service.lire("idees")).versions[0])
-        .toMatchObject({ produites: 4, positifs: 2, negatifs: 1, sansAvis: 1 });
+        .toMatchObject({ produites: 4, avis: { pour: 2, contre: 1, sans: 1 } });
     });
 
     it("compte à part les jeux produits sans configuration", async () => {
@@ -287,8 +296,8 @@ describe("ce que les versions ont produit", () => {
       await jeu(null, ["down", "down"]);
 
       const lu = await service.lire("idees");
-      expect(lu.versions[0]).toMatchObject({ produites: 1, positifs: 1 });
-      expect(lu.horsVersion).toMatchObject({ produites: 2, negatifs: 2 });
+      expect(lu.versions[0]).toMatchObject({ produites: 1, avis: { pour: 1, contre: 0, sans: 0 } });
+      expect(lu.horsVersion).toMatchObject({ produites: 2, avis: { pour: 0, contre: 2, sans: 0 } });
     });
   });
 
@@ -297,6 +306,78 @@ describe("ce que les versions ont produit", () => {
   it("rend des compteurs à zéro quand rien n'a été produit", async () => {
     const lu = await service.lire("message");
     expect(lu.versions).toEqual([]);
-    expect(lu.horsVersion).toEqual({ produites: 0, positifs: 0, negatifs: 0, sansAvis: 0 });
+    expect(lu.horsVersion).toEqual({
+      produites: 0,
+      gestes: { pour: 0, contre: 0, sans: 0 },
+      avis: { pour: 0, contre: 0, sans: 0 },
+    });
+  });
+  /* ─── Les deux axes ne se fondent pas ────────────────────────────────────── */
+
+  /* ON PEUT GARDER SANS AIMER, et c'est le cas que la première rédaction ne
+   * pouvait pas rendre : elle tenait UN seul couple, et la même colonne ne
+   * comptait pas la même chose selon la nature — le STATUT pour le message et
+   * le portrait, l'AVIS pour les idées. « Envoyé » et « pouce en haut »
+   * tombaient dans la même case, sous un schéma unique, dans un écran fait
+   * pour comparer les trois.
+   *
+   * Le brief mobile de l'avis s'ouvre pourtant là-dessus : « le statut dit ce
+   * qu'on FAIT de l'objet, l'avis ce qu'on en PENSE, et c'est un pas de plus ». */
+  describe("le geste et l'avis", () => {
+    it("distingue un message envoyé d'un message aimé", async () => {
+      const v1 = await config("message", 1);
+      // Envoyé sans un mot : le geste est franchi, l'avis jamais donné.
+      await message(v1, "sent");
+      /* Gardé en brouillon, et jugé mauvais : l'inverse exact. Écrit
+         directement, l'aide ne rendant pas d'identifiant. */
+      await db.prisma.generatedMessage.create({
+        data: {
+          actionRunId: await execution(), userId: awa, eventOccurrenceId: occurrence,
+          content: "Un texte", status: "generated", studioConfigId: v1,
+          feedback: "down", feedbackAt: new Date(),
+        },
+      });
+
+      const lu = await service.lire("message");
+
+      expect(lu.versions[0]).toMatchObject({
+        produites: 2,
+        gestes: { pour: 1, contre: 0, sans: 1 },
+        avis: { pour: 0, contre: 1, sans: 1 },
+      });
+    });
+
+    /* LE GESTE D'UNE IDÉE EST D'ÊTRE RETENUE — elle devient un souhait —, et
+     * la première rédaction prenait son AVIS pour son geste. Le service des
+     * idées le dit depuis toujours : « parmi ce que le modèle a proposé,
+     * qu'est-ce qui a été retenu, qui est la seconde mesure de pertinence après
+     * l'avis ». */
+    it("compte la retenue d'une idée comme un geste, et son pouce comme un avis", async () => {
+      const v1 = await config("idees", 1);
+      const jeu = await db.prisma.generatedIdeaSet.create({
+        data: {
+          actionRunId: await execution(), userId: awa, studioConfigId: v1,
+          ideas: {
+            create: [
+              // Retenue, et jamais notée.
+              { label: "Un carnet", position: 0, acceptedAt: new Date() },
+              // Notée bonne, et jamais retenue.
+              { label: "Un vinyle", position: 1, feedback: "up", feedbackAt: new Date() },
+              { label: "Des gants", position: 2 },
+            ],
+          },
+        },
+        select: { id: true },
+      });
+      expect(jeu.id).toBeTruthy();
+
+      const lu = await service.lire("idees");
+
+      expect(lu.versions[0]).toMatchObject({
+        produites: 3,
+        gestes: { pour: 1, contre: 0, sans: 2 },
+        avis: { pour: 1, contre: 0, sans: 2 },
+      });
+    });
   });
 });

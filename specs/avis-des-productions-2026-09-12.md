@@ -139,6 +139,43 @@ on l'ajuste au vu des volumes réels, un seul endroit change.
 
 ---
 
+## 6 ter. Deux sessions, une même lecture — et la réconciliation
+
+*12 septembre au soir.*
+
+Deux implémentations de « ce que les versions ont produit » ont atterri à
+quelques heures d'écart : `admin/studio/:nature/performance` d'un côté,
+`…/metrics` sur les deux ateliers de l'autre. **Le second était le mien, et
+c'est lui qui avait tort sur l'emplacement** : ranger la lecture dans l'un des
+deux ateliers oblige à l'écrire deux fois. Une seule route demeure, la leur.
+
+**Mais leur mesure fondait les deux axes**, et pire, la même colonne ne comptait
+pas la même chose selon la nature :
+
+| Nature | ce que `positifs` comptait |
+|---|---|
+| message | `status = sent` — un **geste** |
+| portrait | `status = approved` — un **geste** |
+| idées | `feedback = up` — un **jugement** |
+
+Trois natures sous un schéma unique, dans un écran fait pour les comparer. Et
+le `feedback` posé sur le message et le portrait n'était compté **nulle part**.
+
+**La réponse porte désormais deux axes**, de même forme :
+
+- **`gestes`** — envoyé, approuvé, **retenue en souhait** contre rejeté. Une
+  préférence RÉVÉLÉE, la plus fiable des deux parce qu'elle ne demande rien à
+  personne.
+- **`avis`** — le pouce, et lui seul. Rare, et c'est normal ; rare ne veut pas
+  dire faible, c'est le seul des deux qui dise si le texte était BON et non
+  seulement s'il a servi.
+
+**Les idées ont un geste, elles aussi** : être retenue. Le service des idées
+l'écrivait déjà — « parmi ce que le modèle a proposé, qu'est-ce qui a été
+retenu, qui est la seconde mesure de pertinence après l'avis ».
+
+---
+
 ## 6 bis. La lecture PAR MODÈLE, et non seulement par version
 
 *Demandé le 12 : « les métriques liées à cette appréciation des modèles ».*
@@ -157,6 +194,11 @@ le moins cher peut coûter le plus, en productions refaites.
 
 **Le chemin existe** : une production porte son `action_run_id`, et `ai_usage`
 porte `model_id`, `provider`, `model_key` pour ce même `action_run_id`.
+
+**Cette mesure-là ne suit QUE l'axe de l'avis.** Un modèle ne décide pas qu'on
+envoie un message ou qu'on garde un portrait — mille choses s'y mêlent, à
+commencer par l'occasion et la personne. Ce qu'on lui impute, c'est ce qu'on a
+pensé de ce qu'il a rendu.
 
 > **LE PIÈGE : UN REPLI PRODUIT PLUSIEURS LIGNES D'USAGE.** « Le coût RÉEL,
 > agrégé depuis les tentatives — un repli en produit plusieurs. » Attribuer un
