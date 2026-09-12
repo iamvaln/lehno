@@ -98,13 +98,30 @@ describe("l'écran d'arrêt ne propose rien à qui est refusé", () => {
     "utf8",
   );
 
-  it("garde le bouton de réessai sous la condition du refus", () => {
-    const bloc = ecran.slice(ecran.indexOf("{refuse ? null : ("));
-    expect(bloc).toContain("maintReessayer");
+  /* LE BOUTON EST DERRIÈRE LES DEUX CONDITIONS, et le test le vérifie par leur
+     POSITION plutôt que par une chaîne exacte : la chaîne a déjà changé une fois
+     quand le 426 est venu s'intercaler, et une garde qui tombe à chaque
+     réécriture finit par être désactivée au lieu d'être lue. */
+  it("ne propose « Réessayer » qu'après avoir écarté le refus et la mise à jour", () => {
+    const bouton = ecran.indexOf("maintReessayer");
+    expect(bouton).toBeGreaterThan(-1);
+    expect(ecran.lastIndexOf("refuse ? null :", bouton)).toBeGreaterThan(-1);
+    expect(ecran.lastIndexOf("majRequise ?", bouton)).toBeGreaterThan(-1);
   });
 
-  it("dit un autre titre et un autre texte quand le client est refusé", () => {
-    expect(ecran).toContain("refuse ? t.refusTitre : t.maintTitre");
-    expect(ecran).toContain("refuse ? t.refusTexte :");
+  it("ne le propose qu'une seule fois", () => {
+    expect(ecran.split("maintReessayer").length - 1).toBe(1);
+  });
+
+  it("dit un autre titre et un autre texte pour chacun des trois arrêts", () => {
+    expect(ecran).toContain("refuse ? t.refusTitre : majRequise ? t.majTitre : t.maintTitre");
+    expect(ecran).toContain("refuse ? t.refusTexte : majRequise ? t.majTexte :");
+  });
+
+  /* ET LE MAGASIN NE S'OUVRE QUE S'IL EST CONNU. `lienDuMagasin` rend `null`
+     quand le refus ne portait pas d'adresse — offrir alors un bouton ouvrirait
+     le vide. */
+  it("n'offre le magasin que lorsque le serveur a dit où aller", () => {
+    expect(ecran).toContain("magasin === null ? null : (");
   });
 });

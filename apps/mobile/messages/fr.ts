@@ -62,6 +62,13 @@ export const fr = {
      ON NE PARLE PAS DU COMPTE. Celui de la personne va très bien ; lui annoncer
      qu'il est refusé serait faux, et l'enverrait chercher une réparation qui
      n'existe pas. */
+  /* TROIS CAUSES, UNE SEULE RÉPONSE — déclassée, sous une release qui force la
+     mise à jour, ou inconnue du registre. L'écran ne les distingue pas : le
+     geste est le même, et il n'y a rien d'utile à dire de plus à quelqu'un qui
+     attend d'ouvrir son application. */
+  majTitre: "Une mise à jour est nécessaire",
+  majTexte: "Cette version n'est plus servie. La dernière vous attend sur votre magasin d'applications.",
+  majBouton: "Mettre à jour",
   refusTitre: "Cette version n'est plus reconnue",
   refusTexte: "Installez la dernière version depuis votre magasin d'applications. Votre compte, lui, n'a rien.",
   maintEtat: "Voir l'état du service",
