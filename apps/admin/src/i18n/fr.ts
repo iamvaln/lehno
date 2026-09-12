@@ -296,7 +296,21 @@ export const fr = {
     historique: {
       titre: "Les publications",
       sous: "Chaque mise en service de cette nature, avec son auteur et son motif. C'est le journal de l'atelier.",
-      col: { version: "Version", quand: "Publiée le", parQui: "Par", note: "Ce que ça change", etat: "État" },
+      col: { version: "Version", quand: "Publiée le", parQui: "Par", note: "Ce que ça change", etat: "État",
+      gestes: "Ce qu'on en a fait",
+      avis: "Ce qu'on en a pensé",
+      },
+      /* LES TROIS SEAUX D'UN AXE. « Sans » figure TOUJOURS : c'est « personne
+         n'a répondu », et le taire ferait lire deux chiffres comme un total —
+         la version paraîtrait unanime alors que presque personne n'a parlé. */
+      axes: {
+        gestes: { pour: "{n} envoyés", contre: "{n} écartés", sans: "{n} sans suite" },
+        avis: { pour: "{n} bons", contre: "{n} mauvais", sans: "{n} sans avis" },
+      },
+      rien: "Rien produit",
+      // Produit par le gabarit du code, avant qu'une configuration ne soit
+      // publiée. Compté à part et jamais attribué à une version.
+      horsVersion: "Avant le lien : {n} productions, dont {ecartees} écartées. Elles n'appartiennent à aucune version, et ne peuvent pas en recevoir une.",
       etats: { published: "En service", superseded: "Rangée", draft: "Brouillon" },
       version: "Version {n}",
       sansNote: "Publiée sans note.",

@@ -60,7 +60,7 @@ import {
   type Intervention,
   etatPortraitSchema, historiquePortraitSchema,
   profilsStudioSchema, candidatsStudioSchema, essaisStudioSchema,
-  etatTexteSchema, historiqueTexteSchema, essaiLanceSchema, type NatureTexte, type EssaiStudio,
+  etatTexteSchema, historiqueTexteSchema, performanceSchema, essaiLanceSchema, type NatureTexte, type EssaiStudio,
   type Connexion, type TraceAudit,
 } from "@lehno/contracts";
 // Les données d'aperçu ne servent qu'à la bande de développement. Un écran
@@ -769,10 +769,15 @@ export function App(): ReactNode {
              regarde pour comparer deux versions. Bornés à une, ils ne diraient
              pas si la précédente faisait mieux. */
           api.appeler(`/admin/text-studio/${natureTexte}/trials`, { schema: essaisStudioSchema }),
+          /* CE QUE CHAQUE VERSION A PRODUIT. Hors des deux ateliers — la
+             question « cette version fait-elle mieux que la précédente ? » se
+             pose pour les quatre natures, et la ranger dans l'un d'eux
+             obligerait à l'écrire deux fois. */
+          api.appeler(`/admin/studio/${natureTexte}/performance`, { schema: performanceSchema }),
           api.appeler("/admin/portrait-studio/profiles", { schema: profilsStudioSchema }),
           api.appeler("/admin/portrait-studio/candidates", { schema: candidatsStudioSchema }),
-        ]).then(([etat, historique, essais, profils, candidats]) => ({
-          etat, historique: historique.items, essais: essais.items,
+        ]).then(([etat, historique, essais, performance, profils, candidats]) => ({
+          etat, historique: historique.items, essais: essais.items, performance,
           profils: profils.items, candidats,
         }))
       : Promise.resolve(null)),
@@ -1248,6 +1253,7 @@ export function App(): ReactNode {
               depart={depart}
               enService={donnees.etat.enService}
               historique={donnees.historique}
+              performance={donnees.performance}
               profils={donnees.profils}
               candidats={donnees.candidats}
               dernier={dernierEssaiTexte}

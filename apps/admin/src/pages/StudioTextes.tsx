@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type {
-  AdminRole, CandidatsStudio, ConfigurationTexte, EssaiStudio,
-  NatureTexte, ProfilStudio, ReglagesTexte,
+  AdminRole, Axe, CandidatsStudio, ConfigurationTexte, EssaiStudio,
+  NatureTexte, Performance, ProfilStudio, ReglagesTexte,
 } from "@lehno/contracts";
 import { NATURES_TEXTE } from "@lehno/contracts";
 
@@ -40,6 +40,10 @@ export interface StudioTextesProps {
   enService: ConfigurationTexte | null;
   /** Les versions de cette nature, la plus récente d'abord. */
   historique: ConfigurationTexte[];
+  /* CE QUE CHAQUE VERSION A PRODUIT — la lecture qui donne son sens à
+     l'atelier : on publiait sans jamais savoir si l'on avait amélioré quoi que
+     ce soit. Nulle tant que la mesure n'a pas répondu. */
+  performance?: Performance | null;
   profils: ProfilStudio[];
   candidats: CandidatsStudio;
   /** Le dernier essai de la séance. Nul avant le premier. */
@@ -121,7 +125,7 @@ const boiteux = (b: Bilingue | null | undefined): boolean =>
   && ((b.fr ?? "").trim() === "" || (b.en ?? "").trim() === "");
 
 export function StudioTextes({
-  role, langue = "fr", nature, onNature, depart, enService, historique, profils,
+  role, langue = "fr", nature, onNature, depart, enService, historique, performance = null, profils,
   candidats, dernier, essais, enCours = false, onEnregistrer, onEssayer,
   onPublier, onRevenir, onJuger, onRetour,
 }: StudioTextesProps): ReactNode {
@@ -240,6 +244,28 @@ export function StudioTextes({
   ];
 
   const h = a.historique;
+
+  /** La mesure d'une version, quand la lecture a répondu. */
+  const mesureDe = (configId: string) =>
+    performance?.versions.find((v) => v.configId === configId);
+
+  /* Les trois seaux d'un axe, en une ligne. « Sans » figure TOUJOURS : c'est
+     « personne n'a répondu », et le taire ferait lire deux chiffres comme un
+     total — la version paraîtrait unanime alors que presque personne n'a
+     parlé. */
+  const rendreAxe = (
+    axe: Axe | undefined,
+    libelles: { pour: string; contre: string; sans: string },
+    rien: string,
+  ): string => {
+    if (axe === undefined) return rien;
+    if (axe.pour + axe.contre + axe.sans === 0) return rien;
+    return [
+      remplir(libelles.pour, { n: axe.pour }),
+      remplir(libelles.contre, { n: axe.contre }),
+      remplir(libelles.sans, { n: axe.sans }),
+    ].join(" · ");
+  };
   const colonnes: Colonne<ConfigurationTexte & { id: string }>[] = [
     {
       cle: "version",
@@ -253,6 +279,23 @@ export function StudioTextes({
     },
     { cle: "parQui", titre: h.col.parQui, rendu: (c) => c.parQui ?? "—" },
     { cle: "note", titre: h.col.note, rendu: (c) => c.note ?? "—" },
+    /* DEUX AXES, DEUX COLONNES, et jamais un seul chiffre pour les deux : on
+       peut garder sans aimer. Le geste est une préférence RÉVÉLÉE — on ne
+       demande rien à personne —, l'avis est déclaré, donc rare.
+       DES COMPTES, PAS UN TAUX. La mesure n'en rend pas, et n'en borne aucun :
+       inventer ici un pourcentage ferait afficher « 100 % » sur une version qui
+       n'a qu'un seul avis, et quelqu'un reviendrait en arrière sur un
+       accident. */
+    {
+      cle: "gestes",
+      titre: h.col.gestes,
+      rendu: (c) => rendreAxe(mesureDe(c.id)?.gestes, h.axes.gestes, h.rien),
+    },
+    {
+      cle: "avis",
+      titre: h.col.avis,
+      rendu: (c) => rendreAxe(mesureDe(c.id)?.avis, h.axes.avis, h.rien),
+    },
     {
       cle: "etat",
       titre: h.col.etat,
@@ -677,6 +720,19 @@ export function StudioTextes({
           )}
           onAction={(id, c) => { if (id === "revenir") setARemettre(c); }}
         />
+        {/* CE QUI N'A PAS DE VERSION SE DIT, jamais ne se tait : produit par le
+            gabarit du code, avant qu'une configuration ne soit publiée ou
+            pendant qu'aucune ne l'était. Une ligne à part plutôt qu'un
+            silence — un total qui ne tombe pas juste fait douter du compte,
+            pas des données. */}
+        {performance && performance.horsVersion.produites > 0 ? (
+          <p className="admin-section-sous">
+            {remplir(h.horsVersion, {
+              n: performance.horsVersion.produites,
+              ecartees: performance.horsVersion.gestes.contre,
+            })}
+          </p>
+        ) : null}
       </section>
 
       {publication ? (
