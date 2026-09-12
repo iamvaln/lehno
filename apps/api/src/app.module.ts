@@ -115,6 +115,7 @@ import { TexteStudioController, TexteStudioService } from "./admin/texte-studio.
 import { StudioOptionsController, StudioOptionsService } from "./me/studio.controller.js";
 import { StudioConfigurationService } from "./studio/configuration.service.js";
 import { StudioEssaiService } from "./studio/essai.service.js";
+import { MesuresStudioService } from "./studio/mesures.service.js";
 import { AmorceStudioService } from "./studio/amorce.service.js";
 import { MaintenanceService } from "./maintenance/maintenance.service.js";
 import { MaintenanceGuard } from "./maintenance/maintenance.guard.js";
@@ -424,6 +425,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     // calculeraient l'empreinte chacun de leur côté, et la règle de
     // publication cesserait d'être la même des deux côtés du mur.
     StudioConfigurationService,
+    MesuresStudioService,
     StudioEssaiService,
     AmorceStudioService,
     PortraitStudioService,

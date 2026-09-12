@@ -109,14 +109,33 @@ Un **compte** ne se compare pas : une version qui a tourné un jour et une qui a
 tourné trois semaines n'ont pas produit le même nombre de choses. Le brut ferait
 conclure qu'une version publiée hier est excellente parce qu'elle a deux rejets.
 
-Donc **un taux, et son dénominateur affiché** : « 4 rejets sur 120 productions
-(3 %) · la précédente : 11 sur 150 (7 %) ». Sans le dénominateur, un taux tiré
-de six productions se lirait comme un taux tiré de six cents.
+Donc **un taux, et son dénominateur affiché**. Mais lequel ?
 
-**Et un seuil sous lequel on ne conclut pas.** En dessous d'une poignée de
-productions, l'écran dit « trop tôt pour comparer » plutôt qu'un pourcentage —
-sinon la première production rejetée d'une version neuve l'affiche à 100 %, et
-quelqu'un reviendra en arrière sur un accident.
+> **CE PARAGRAPHE SE CONTREDISAIT, et c'est corrigé.** Il donnait en exemple
+> « 4 rejets sur 120 **productions** (3 %) » — trois paragraphes après avoir
+> écrit que `null` veut dire « personne n'a tranché », jamais « satisfait ».
+> Compter les non-jugés au dénominateur, c'est exactement les compter du bon
+> côté : sur cent vingt productions dont cinq notées, « 3 % » prétend que cent
+> quinze personnes étaient contentes alors qu'elles n'ont rien dit.
+
+**Le dénominateur est le nombre d'AVIS POSÉS**, jamais celui des productions :
+
+> « 4 rejets sur 5 avis (80 %) · sur 120 productions · la précédente : 11 sur
+> 40 avis (28 %), sur 150 productions »
+
+Les deux chiffres se lisent ensemble et disent deux choses différentes : le
+**taux** dit ce qu'en pensent ceux qui ont parlé, le **nombre de productions**
+dit combien peu ont parlé. Cacher le second ferait passer un avis isolé pour un
+verdict.
+
+**Et un seuil sous lequel on ne conclut pas** — porté par les AVIS, puisque
+c'est d'eux que le taux se tire. En dessous d'une poignée, l'écran dit « trop
+tôt pour comparer » plutôt qu'un pourcentage : sinon le premier rejet d'une
+version neuve l'affiche à 100 %, et quelqu'un reviendra en arrière sur un
+accident.
+
+Le seuil **voyage avec la mesure**, il n'est pas écrit dans l'écran : le jour où
+on l'ajuste au vu des volumes réels, un seul endroit change.
 
 ---
 

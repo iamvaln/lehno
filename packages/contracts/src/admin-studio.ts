@@ -435,3 +435,64 @@ export type ProfilStudio = z.infer<typeof profilStudioSchema>;
 export type ProfilsStudio = z.infer<typeof profilsStudioSchema>;
 export type EssaiStudio = z.infer<typeof essaiStudioSchema>;
 export type CandidatsStudio = z.infer<typeof candidatsStudioSchema>;
+
+/* ── LES MESURES D'UNE NATURE ────────────────────────────────────────────────
+ *
+ * « Combien de pouces en bas par version, comparée à la précédente » — le §6 du
+ * brief admin studio. C'est ce qui donne son sens à l'atelier : sans elles, on
+ * publie sans jamais savoir si l'on a amélioré quoi que ce soit.
+ *
+ * LE DÉNOMINATEUR EST LE NOMBRE D'AVIS, jamais celui des productions. `null`
+ * veut dire « personne n'a tranché », jamais « satisfait » : compter les
+ * non-jugés reviendrait à les compter du bon côté, et cent quinze silences
+ * passeraient pour cent quinze contentements.
+ *
+ * LES DEUX CHIFFRES SE LISENT ENSEMBLE : le taux dit ce qu'en pensent ceux qui
+ * ont parlé, le nombre de productions dit combien peu ont parlé. */
+export const mesureStudioSchema = z.object({
+  /** Nul pour la ligne « avant le lien » — les productions d'avant la colonne. */
+  configId: z.string().uuid().nullable(),
+  version: z.number().int().nullable(),
+  publieeLe: z.string().nullable(),
+  productions: z.number().int(),
+  avis: z.number().int(),
+  rejets: z.number().int(),
+  /** Nul SOUS LE SEUIL : « trop tôt pour conclure », jamais zéro. */
+  taux: z.number().nullable(),
+}).strict();
+
+/* LA MESURE PAR MODÈLE — « ce modèle vaut-il son prix ? », qui n'est pas la
+ * même question que « ma consigne a-t-elle aidé ? ». Une version fige un
+ * modèle, mais un modèle sert plusieurs versions.
+ *
+ * C'EST LE MODÈLE DE LA TENTATIVE QUI A ABOUTI, et lui seul : un repli laisse
+ * plusieurs lignes d'usage pour une seule production, et blâmer toute la chaîne
+ * chargerait celui qui a échoué avant d'avoir rien écrit. */
+export const mesureModeleSchema = z.object({
+  cle: z.string(),
+  fournisseur: z.string(),
+  productions: z.number().int(),
+  avis: z.number().int(),
+  rejets: z.number().int(),
+  taux: z.number().nullable(),
+}).strict();
+
+export const mesuresStudioSchema = z.object({
+  nature: z.enum(NATURES_STUDIO),
+  /* FAUX QUAND AUCUNE PRODUCTION NE PORTE SA VERSION — c'est le cas du brief du
+     portrait : le `Portrait` retient la configuration de l'IMAGE, pas celle qui
+     a écrit les mots. Rendre alors des tableaux vides se lirait « aucun rejet »,
+     ce qui est le pire des mensonges possibles ici. L'écran dit « pas encore
+     mesurable » ; il ne dit pas « tout va bien ». */
+  relie: z.boolean(),
+  /* LE SEUIL VOYAGE AVEC LA MESURE, et n'est pas écrit dans l'écran : le jour
+     où on l'ajuste au vu des volumes réels, un seul endroit change. */
+  seuil: z.number().int(),
+  /** Les versions publiées, la plus récente d'abord. */
+  versions: z.array(mesureStudioSchema),
+  modeles: z.array(mesureModeleSchema),
+}).strict();
+
+export type MesureStudio = z.infer<typeof mesureStudioSchema>;
+export type MesureModele = z.infer<typeof mesureModeleSchema>;
+export type MesuresStudio = z.infer<typeof mesuresStudioSchema>;
