@@ -74,6 +74,29 @@ const ESSAI_LANCE = () => reponse(201, {
   essai: essai(),
 });
 
+const axe = (pour: number, contre: number, sans: number) => ({ pour, contre, sans });
+
+const PERFORMANCE = {
+  unite: "message",
+  versions: [{
+    configId: "55555555-5555-4555-8555-555555555555",
+    version: 3,
+    publieeLe: "2026-09-02T11:00:00.000Z",
+    produites: 12,
+    gestes: axe(7, 2, 3),
+    avis: axe(1, 4, 7),
+  }],
+  /* Produites par le gabarit du code, avant qu'une configuration ne soit
+     publiée : comptées à part et jamais attribuées. */
+  horsVersion: { produites: 20, gestes: axe(10, 5, 5), avis: axe(0, 0, 20) },
+};
+
+const PERFORMANCE_VIDE = {
+  unite: "idee",
+  versions: [],
+  horsVersion: { produites: 0, gestes: axe(0, 0, 0), avis: axe(0, 0, 0) },
+};
+
 const PROFILS = {
   items: [{
     id: "22222222-2222-4222-8222-222222222222",
@@ -134,6 +157,13 @@ function serveur(routes: Record<string, (url: string, init?: RequestInit) => Res
     "/admin/text-studio/idees/config": () => reponse(200, {
       enService: null, brouillon: config(REGLAGES_IDEES),
     }),
+    /* LA MESURE EST SERVIE PAR DÉFAUT : l'écran la lit à chaque ouverture, et
+       un cas qui déclare ses propres routes pour éprouver tout autre chose n'a
+       pas à y penser. Sans elle, l'analyse échoue et l'écran ne rend plus —
+       les cas tombent alors sur « introuvable », un message qui ne dit rien de
+       ce qu'ils éprouvent. */
+    "/admin/studio/message/performance": () => reponse(200, PERFORMANCE),
+    "/admin/studio/idees/performance": () => reponse(200, PERFORMANCE_VIDE),
     "/admin/portrait-studio/profiles": () => reponse(200, PROFILS),
     "/admin/portrait-studio/candidates": () => reponse(200, CANDIDATS),
     ...routes,
@@ -542,5 +572,53 @@ describe("l'atelier des textes", () => {
 
     expect(await screen.findByRole("menuitem", { name: a.journal.ecarter })).toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: a.journal.garder })).not.toBeInTheDocument();
+  });
+  /* ─── Ce que chaque version a produit ─────────────────────────────────────── */
+
+  /* LA LECTURE QUI DONNE SON SENS À L'ATELIER : on publiait sans jamais savoir
+     si l'on avait amélioré quoi que ce soit. La route était servie et éprouvée,
+     et aucun écran ne l'atteignait. */
+  it("montre les deux axes d'une version publiée", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText("Consigne resserrée après un signalement."))
+      .closest("tr") as HTMLElement;
+
+    /* DEUX AXES, ET JAMAIS UN SEUL CHIFFRE POUR LES DEUX : on peut garder sans
+       aimer. Sept envoyés d'un côté, quatre jugés mauvais de l'autre. */
+    expect(ligne).toHaveTextContent("7 envoyés");
+    expect(ligne).toHaveTextContent("4 mauvais");
+    /* « SANS » FIGURE TOUJOURS : le taire ferait lire deux chiffres comme un
+       total, et la version paraîtrait unanime alors que sept personnes sur
+       douze n'ont rien dit. */
+    expect(ligne).toHaveTextContent("7 sans avis");
+    expect(appels.mock.calls.some(([u]) => String(u).includes("/studio/message/performance"))).toBe(true);
+  });
+
+  /* CE QUI N'A PAS DE VERSION SE DIT, jamais ne se tait : un total qui ne tombe
+     pas juste fait douter du compte, pas des données. */
+  it("compte à part ce qui n'appartient à aucune version", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+
+    expect(await screen.findByText(/Avant le lien : 20 productions, dont 5 écartées/))
+      .toBeInTheDocument();
+  });
+
+  /* Rien à dire ne s'invente pas : une nature sans production n'affiche ni
+     zéro ni pourcentage, mais qu'elle n'a rien produit. */
+  it("ne montre pas la ligne hors version quand il n'y a rien", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+    await screen.findByLabelText(a.champs.consigne);
+
+    await utilisateur.click(screen.getByRole("tab", { name: a.natures.idees }));
+
+    await screen.findByText(a.historique.aucune.titre);
+    expect(screen.queryByText(/Avant le lien/)).toBeNull();
   });
 });
