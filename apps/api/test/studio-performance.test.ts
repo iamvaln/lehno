@@ -359,11 +359,16 @@ describe("ce que les versions ont produit", () => {
           actionRunId: await execution(), userId: awa, studioConfigId: v1,
           ideas: {
             create: [
+              /* LE DÉCOR EST ASYMÉTRIQUE À DESSEIN : deux retenues, un seul
+                 pouce. Avec une de chaque, les deux axes rendent les mêmes
+                 nombres et le cas ne distingue plus rien — il passait au vert
+                 alors même que le geste d'une idée redevenait son avis. */
               // Retenue, et jamais notée.
               { label: "Un carnet", position: 0, acceptedAt: new Date() },
               // Notée bonne, et jamais retenue.
               { label: "Un vinyle", position: 1, feedback: "up", feedbackAt: new Date() },
-              { label: "Des gants", position: 2 },
+              // Retenue elle aussi, et muette.
+              { label: "Des gants", position: 2, acceptedAt: new Date() },
             ],
           },
         },
@@ -375,7 +380,7 @@ describe("ce que les versions ont produit", () => {
 
       expect(lu.versions[0]).toMatchObject({
         produites: 3,
-        gestes: { pour: 1, contre: 0, sans: 2 },
+        gestes: { pour: 2, contre: 0, sans: 1 },
         avis: { pour: 1, contre: 0, sans: 2 },
       });
     });
