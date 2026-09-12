@@ -18,6 +18,7 @@
     "@lehno/tokens": "workspace:*",
     "@lehno/ui-native": "workspace:^",
     "expo": "~57.0.16",
+    "expo-application": "~57.0.3",
     "expo-constants": "~57.0.14",
     "expo-dev-client": "~57.0.16",
     "expo-file-system": "^57.0.6",
