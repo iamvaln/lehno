@@ -33,12 +33,21 @@ describe("ce que le serveur reçoit", () => {
      des vingt premiers, pas le plus proche du carnet. */
   it("porte le critère, le sens et la page", () => {
     expect(parametresDuCarnet({ cle: "alpha", sens: "desc" }, 40))
-      .toBe("?sort=alpha&direction=desc&offset=40&limit=20");
+      .toBe("?sort=alpha&direction=desc&offset=40&limit=20&includeSelf=false");
+  });
+
+  /* LE PARAMÈTRE EST LA RAISON D'ÊTRE DE TROIS CALCULS DISPARUS. Sans lui, il
+     fallait retirer la fiche de soi, retrancher un du total, et paginer sur les
+     fiches reçues — et on s'y était trompé. Ce cas le tient explicitement, pour
+     que personne ne le retire en croyant nettoyer une chaîne. */
+  it("exclut la fiche de soi, que le serveur rendait parmi les proches", () => {
+    expect(parametresDuCarnet({ cle: "alpha", sens: "asc" }, 0))
+      .toContain("includeSelf=false");
   });
 
   it("demande la première page sans offset hérité", () => {
     expect(parametresDuCarnet({ cle: "date", sens: "asc" }, 0))
-      .toBe("?sort=date&direction=asc&offset=0&limit=20");
+      .toBe("?sort=date&direction=asc&offset=0&limit=20&includeSelf=false");
   });
 });
 
@@ -304,7 +313,7 @@ describe("la recherche passe par le serveur", () => {
      tapée, refaits à chaque ouverture. */
   it("ajoute la requête aux paramètres de la liste", () => {
     expect(parametresDeRecherche(tri, 0, "ana"))
-      .toBe("?sort=date&direction=asc&offset=0&limit=20&q=ana");
+      .toBe("?sort=date&direction=asc&offset=0&limit=20&includeSelf=false&q=ana");
   });
 
   /* LE TRI COURANT SE GARDE. Le contrat veut que la recherche « se combine au

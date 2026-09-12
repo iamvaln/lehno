@@ -37,7 +37,18 @@ export function basculeDeTri(courant: Tri, cle: PersonSort): Tri {
    tête le plus proche DES VINGT PREMIERS, pas le plus proche du carnet — et
    une fiche dont la date tombe loin sortirait de sa propre place. */
 export function parametresDuCarnet(tri: Tri, offset: number): string {
-  return `?sort=${tri.cle}&direction=${tri.sens}&offset=${offset}&limit=${PAGE}`;
+  /* `includeSelf=false` FAIT LE TRAVAIL QUE LE CLIENT FAISAIT MAL.
+   *
+   * La fiche de soi était rendue parmi les proches et `total` la comptait : il
+   * fallait la retirer ici, retrancher un du total, et compter la pagination
+   * sur les fiches REÇUES plutôt que sur celles retenues — faute de quoi un
+   * enregistrement se dédoublait et le dernier ne venait jamais. Trois calculs
+   * pour un booléen, et chacun était une occasion de se tromper ; on s'y était
+   * trompé.
+   *
+   * Le serveur le fait maintenant, et `total` suit le filtre. Seul `false`
+   * exclut — `includeSelf=0` rend 400 plutôt que d'être ignoré en silence. */
+  return `?sort=${tri.cle}&direction=${tri.sens}&offset=${offset}&limit=${PAGE}&includeSelf=false`;
 }
 
 /* LA RECHERCHE PASSE PAR LE SERVEUR, et non plus par un filtre en mémoire.
