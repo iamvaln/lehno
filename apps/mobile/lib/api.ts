@@ -134,9 +134,21 @@ const IDENTITE: BuildIdentity = {
   build: Application.nativeBuildVersion ?? null,
   os: Platform.OS,
   osVersion: Platform.Version,
-  /* `dev` sur tout ce qui n'est pas une construction de production : c'est ce
-     qu'`__DEV__` dit, et il est posé par le paquet lui-même. */
-  env: __DEV__ ? "dev" : "prod",
+  /* IL VIENT DE LA CONFIGURATION DU BUILD, PAS D'`__DEV__`.
+   *
+   * `__DEV__` ne connaît que deux états, et un build de recette n'en est pas un :
+   * il est compilé en production, donc `__DEV__` y vaut `false` et il aurait
+   * annoncé `prod`. Or il présente la paire `staging`.
+   *
+   * Le serveur lit précisément cet écart : « son ÉCART avec l'environnement
+   * enregistré dit qu'un build de recette pointe la production, et c'est
+   * précisément l'incident qu'on veut voir ». Déduire cette valeur d'`__DEV__`
+   * aurait donc FABRIQUÉ un incident à chaque diffusion interne — un faux positif
+   * sur le signal le plus important du lot.
+   *
+   * `dev` quand la configuration ne dit rien : c'est le seul cas où l'on tourne
+   * sans build, donc sans profil EAS. */
+  env: (Constants.expoConfig?.extra?.["appEnv"] as string | undefined) ?? "dev",
 };
 
 async function envoie(chemin: string, options: RequestInit, jeton?: string): Promise<Response> {
