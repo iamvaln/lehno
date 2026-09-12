@@ -39,7 +39,7 @@ import {
   startGenerationSchema, generationResultSchema, generationsSchema, depotPhotoSourceSchema,
   updatePortraitSchema,
   updateMessageSchema, generatedMessageSchema,
-  avisSchema, ideaFeedbackSchema, generatedIdeaSchema, portraitSchema,
+  avisSchema, ideaFeedbackSchema, generatedIdeaSchema, portraitSchema, portraitListSchema,
 } from "./me-generation.js";
 import { studioOptionsSchema } from "./me-studio.js";
 import { homeSchema } from "./me-home.js";
@@ -1136,7 +1136,7 @@ const CHEMINS: Chemin[] = [
       "`imageUrl` est une URL **signée**, refaite à chaque lecture et valable",
       "dix minutes. La ranger donnerait des liens morts.",
     ].join("\n"),
-    reponse: z.object({ portraits: z.array(portraitSchema) }).strict(),
+    reponse: portraitListSchema,
   },
   {
     /* LE DÉPÔT D'UNE PHOTO SOURCE, en deux temps — comme l'avatar.

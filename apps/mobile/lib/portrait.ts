@@ -1,7 +1,7 @@
 import {
   estActive, groupesAtteignables, portraitSchema, valideSelection,
-  type ErrorCode, type Portrait, type StartGenerationInput, type StudioConfig,
-  type StudioSelection,
+  type ErrorCode, type Portrait, type StartGenerationInput, type StudioChoice,
+  type StudioConfig, type StudioSelection,
 } from "@lehno/contracts";
 
 /* « Aperçu et partage d'un portrait » — §3.22, séparé de son affichage.
@@ -83,6 +83,11 @@ const RACINE = "/me/portraits";
 
 export type Ouverture =
   | { sorte: "lire"; chemin: string }
+  /* COMPOSER LE PREMIER. Sans portrait à lire, l'écran n'est pas vide : il
+     s'ouvre sur la composition, parce que c'est le geste que la fiche du proche
+     vient de demander. Le proche voyage par son identifiant, jamais par son
+     nom — le nom sert à écrire, l'identifiant à viser. */
+  | { sorte: "composer"; personId: string }
   | { sorte: "sans-objet" };
 
 /* UN PARAMÈTRE DE ROUTE N'EST PAS DE CONFIANCE : les routes d'expo-router
@@ -97,10 +102,54 @@ export type Ouverture =
  * Sans identifiant recevable il n'y a rien à lire, et surtout rien à relancer :
  * ouvrir une génération pour se donner quelque chose à montrer débiterait un
  * crédit que personne n'a demandé. L'écran le dit par son état vide. */
-export function ouverture(id: string | undefined): Ouverture {
+export function ouverture(id: string | undefined, personId: string | undefined): Ouverture {
   const lu = portraitSchema.shape.id.safeParse(id);
-  if (!lu.success) return { sorte: "sans-objet" };
-  return { sorte: "lire", chemin: `${RACINE}/${lu.data}` };
+  /* LIRE PASSE AVANT COMPOSER quand les deux arrivent : on ne refait pas payer
+     un portrait qu'on a déjà sous la main. La composition reste accessible par
+     « Refaire », qui, lui, annonce son prix. */
+  if (lu.success) return { sorte: "lire", chemin: `${RACINE}/${lu.data}` };
+  const proche = portraitSchema.shape.personId.safeParse(personId);
+  if (proche.success) return { sorte: "composer", personId: proche.data };
+  return { sorte: "sans-objet" };
+}
+
+/* QUI L'ON VISE, quelle que soit la porte par laquelle on est entré.
+ *
+ * En relisant un portrait c'est le proche qu'il porte ; en composant le premier
+ * c'est celui que la fiche vient de désigner. `relanceDuPortrait` n'a jamais
+ * demandé autre chose qu'un identifiant — composer et refaire sont le même
+ * appel, et c'est pour ça qu'il n'y a pas deux écrans. */
+export function queViseTOn(portrait: Portrait | null, ouvre: Ouverture): string | null {
+  if (portrait) return portrait.personId;
+  return ouvre.sorte === "composer" ? ouvre.personId : null;
+}
+
+/* LE RANG DE LA FICHE MÈNE AU DERNIER PORTRAIT, pas à une composition payante.
+ *
+ * Garder un simple booléen suffisait à choisir le libellé, mais pas à savoir où
+ * aller : le rang aurait dit « Portraits » puis ouvert la composition, et le
+ * portrait qu'on venait chercher serait devenu inatteignable depuis toute
+ * l'application.
+ *
+ * La route rend du plus récent au plus ancien — « Mes portraits, du plus récent
+ * au plus ancien » — donc le premier trouvé EST le dernier composé. */
+export function dernierPortraitDe(
+  liste: readonly Portrait[],
+  personId: string,
+): string | null {
+  return liste.find((p) => p.personId === personId)?.id ?? null;
+}
+
+/* UN RANG DIT CE QU'IL FAIT, et ce qu'il fait dépend de ce qui existe.
+ * « Ses portraits » sur une fiche qui n'en porte aucun promet une collection
+ * vide ; « Composer son portrait » sur une fiche qui en a trois cache ce qu'on
+ * vient chercher. Le libellé se décide donc ici, une fois, plutôt que dans un
+ * ternaire du rendu que personne n'éprouve. */
+export function libelleDuRangPortrait(
+  enA: boolean,
+  t: { fichePortraitsCourt: string; portraitComposer: string },
+): string {
+  return enA ? t.fichePortraitsCourt : t.portraitComposer;
 }
 
 // ── Les trois moments du même écran ─────────────────────────────────────────
@@ -366,6 +415,20 @@ export function relanceDuPortrait(
  * priverait quelqu'un d'un geste qui marchait la seconde d'avant. */
 export function laProductionEstRefusee(code: ErrorCode | null): boolean {
   return code === "resource_inactive";
+}
+
+/* UNE GRILLE SANS AUCUNE IMAGE N'EST PAS UNE GRILLE.
+ *
+ * Le catalogue peut ne porter aucune vignette — c'est l'état d'un catalogue
+ * neuf, pas une panne —, et afficher alors des cases grises serait pire que les
+ * pastilles de texte qu'on avait : on aurait remplacé une lecture rapide par
+ * des trous.
+ *
+ * UN SEUL choix suffit pourtant à basculer en grille. Le mélange est voulu : ce
+ * qui a sa référence se montre, ce qui ne l'a pas encore se lit — et l'écart se
+ * voit, ce qui est la meilleure façon de le faire combler. */
+export function laGrilleMontreDesImages(choix: readonly StudioChoice[]): boolean {
+  return choix.some((c) => c.previewUrl !== null);
 }
 
 // ── Le studio, tel que le serveur le sert ───────────────────────────────────

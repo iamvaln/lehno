@@ -89,7 +89,8 @@ export default function PortraitEcran() {
      éprouve la forme du premier, et le second ne sert qu'à écrire. */
   const { id, qui } = useLocalSearchParams<{ id?: string; qui?: string }>();
 
-  const ouvre = useMemo(() => ouverture(id), [id]);
+  const { personId } = useLocalSearchParams<{ personId?: string }>();
+  const ouvre = useMemo(() => ouverture(id, personId), [id, personId]);
   const chemin = ouvre.sorte === "lire" ? ouvre.chemin : null;
 
   const [portrait, setPortrait] = useState<Portrait | null>(null);
