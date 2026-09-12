@@ -301,6 +301,44 @@ model CreditTransaction {
   paymentId  String?       @map("payment_id") @db.Uuid
   reason     String?
   createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * La règle, et elle vaut pour les six tables qui la portent : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   *
+   * NULLABLES POUR DE BON, et pas le temps d'une migration : les lignes d'avant
+   * ce lot n'ont pas cette information, et rien ne peut l'inventer. Leur poser
+   * une valeur courante serait pire qu'un trou — ce serait une donnée fausse,
+   * et une lecture la compterait.
+   *
+   * `osName` et `osVersion` SÉPARÉS, jamais la chaîne composée : `x-app-os`
+   * arrive en `ios:17.4` et se découpe une fois, au bord. Une lecture qui
+   * oublierait de découper compterait `ios:17.4` et `ios:17.5` comme deux
+   * systèmes différents.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+  /* L'ORIGINE DE LA DÉCLARATION, et c'est un ÉCART ASSUMÉ à la doctrine du
+     dépôt : `auth.controller.ts` écrit que l'IP « ne sert qu'à composer la clé
+     du limiteur […] : elle n'est ni journalisée ni renvoyée ».
+
+     UNE TRANSACTION N'EST PAS UNE REQUÊTE ORDINAIRE : ELLE SE CONTESTE. En mode
+     semi-manuel, quelqu'un déclare avoir payé, un administrateur décide, et des
+     crédits changent de main. Le jour où deux récits s'opposent, l'origine de
+     la déclaration est souvent la seule chose qui tranche — et elle ne se
+     reconstitue pas après coup. `login_activity` fait déjà ça pour les
+     connexions, avec le même raisonnement.
+
+     `Inet` comme elle, jamais `VarChar` : le type dit ce que c'est, et Postgres
+     refuse alors ce qui n'est pas une adresse.
+
+     Ce qu'il faut assumer : une transaction se garde pour la comptabilité, donc
+     plus longtemps qu'un journal. L'IP la suit. */
+  ip         String? @db.Inet
+
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   referral Referral? @relation(fields: [referralId], references: [id], onDelete: SetNull)
@@ -385,6 +423,73 @@ model DeviceSignup {
   @@map("device_signup")
 }
 
+/**
+ * UN CLIENT ENREGISTRÉ — un build d'application autorisé à nous appeler.
+ *
+ * Il y en a SIX : trois plateformes (iOS, Android, web) × deux environnements
+ * (staging, production). La VERSION n'entre pas dans l'identité — elle voyage
+ * dans `x-app-version`. Une paire par build permettrait de couper une version
+ * précise, mais demanderait d'en créer une à chaque publication, et de la
+ * porter dans la chaîne de compilation.
+ *
+ * CE QUE LA CLÉ VAUT, ET CE QU'ELLE NE VAUT PAS. Une clé livrée dans un binaire
+ * mobile ou un paquet web N'EST PAS UN SECRET : elle s'extrait d'un `.ipa` ou
+ * d'un `Ctrl-U`. Ce qu'elle apporte quand même : elle SE RÉVOQUE sans changer
+ * l'identifiant, donc les chiffres restent comparables dans le temps ; elle
+ * relève la barre ; et elle permet de couper un client sans couper les autres.
+ * Ce qu'elle n'apporte pas : ce n'est pas une frontière de sécurité, et la
+ * frontière reste le jeton de l'utilisateur.
+ *
+ * Voir `specs/plan-tracabilite-des-clients-2026-09-12.md` §3, qui le dit plus
+ * longuement — parce que quelqu'un s'y fiera un jour comme à une
+ * authentification si ce n'est écrit nulle part.
+ */
+model ApiClient {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Voyage en clair dans `x-client-id`. Il ne change JAMAIS pour un même
+  /// client : c'est lui qui rend les chiffres comparables d'un trimestre à
+  /// l'autre. La clé, elle, tourne.
+  clientId    String        @unique @map("client_id") @db.VarChar(64)
+  label       String        @db.VarChar(100)
+  clientType  ApiClientType @map("client_type")
+  /// L'environnement que ce client DIT servir. Un build de staging qui pointe
+  /// la production se voit en comparant avec `x-app-env`.
+  environment ApiClientEnv
+  /// SHA-256 de la clé, jamais la clé. Elle s'affiche UNE FOIS à la création et
+  /// ne se relit pas : une clé perdue se remplace, elle ne se récupère pas — et
+  /// une clé qu'on ne peut pas relire ne fuite pas par la base.
+  ///
+  /// SHA-256 nu et non bcrypt, contrairement à un mot de passe : une clé
+  /// engendrée fait trente-deux octets aléatoires, il n'y a rien à deviner par
+  /// force brute, et un hachage lent ajouterait des millisecondes à CHAQUE
+  /// requête sans rien acheter.
+  keyHash     String        @map("key_hash") @db.VarChar(64)
+  /// Coupe ce client sans le supprimer : les lignes déjà notées gardent leur
+  /// référence, et l'historique reste lisible.
+  isActive    Boolean       @default(true) @map("is_active")
+  rotatedAt   DateTime?     @map("rotated_at") @db.Timestamptz
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([isActive])
+  @@map("api_client")
+}
+
+enum ApiClientType {
+  mobile_ios
+  mobile_android
+  web
+
+  @@map("api_client_type")
+}
+
+enum ApiClientEnv {
+  dev
+  staging
+  prod
+
+  @@map("api_client_env")
+}
+
 model LoginActivity {
   id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId         String?      @map("user_id") @db.Uuid
@@ -399,6 +504,27 @@ model LoginActivity {
   userAgent      String?      @map("user_agent")
   geoApprox      String?      @map("geo_approx")
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * La règle, et elle vaut pour les six tables qui la portent : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   *
+   * NULLABLES POUR DE BON, et pas le temps d'une migration : les lignes d'avant
+   * ce lot n'ont pas cette information, et rien ne peut l'inventer. Leur poser
+   * une valeur courante serait pire qu'un trou — ce serait une donnée fausse,
+   * et une lecture la compterait.
+   *
+   * `osName` et `osVersion` SÉPARÉS, jamais la chaîne composée : `x-app-os`
+   * arrive en `ios:17.4` et se découpe une fois, au bord. Une lecture qui
+   * oublierait de découper compterait `ios:17.4` et `ios:17.5` comme deux
+   * systèmes différents.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -1377,6 +1503,27 @@ model AuditLog {
   targetId   String?    @map("target_id") @db.Uuid
   metadata   Json?
   createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * La règle, et elle vaut pour les six tables qui la portent : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   *
+   * NULLABLES POUR DE BON, et pas le temps d'une migration : les lignes d'avant
+   * ce lot n'ont pas cette information, et rien ne peut l'inventer. Leur poser
+   * une valeur courante serait pire qu'un trou — ce serait une donnée fausse,
+   * et une lecture la compterait.
+   *
+   * `osName` et `osVersion` SÉPARÉS, jamais la chaîne composée : `x-app-os`
+   * arrive en `ios:17.4` et se découpe une fois, au bord. Une lecture qui
+   * oublierait de découper compterait `ios:17.4` et `ios:17.5` comme deux
+   * systèmes différents.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+
 
   @@index([actorType, actorId])
   // La traçabilité d'un objet se lit depuis son détail (ux-admin §7) : sans cet
@@ -2000,6 +2147,19 @@ model ActionRun {
    */
   idempotencyKey    String?         @map("idempotency_key") @db.VarChar(128)
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * Même bloc que sur `login_activity`, et pour la même règle : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   * Nullables pour de bon — les lignes d'avant ce lot n'ont pas cette
+   * information, et rien ne peut l'inventer.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+
 
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   premiumAction    PremiumAction     @relation(fields: [premiumActionId], references: [id], onDelete: Restrict)
@@ -2080,6 +2240,19 @@ model AIUsage {
   errorCode String?  @map("error_code") @db.VarChar(80)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * Même bloc que sur `login_activity`, et pour la même règle : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   * Nullables pour de bon — les lignes d'avant ce lot n'ont pas cette
+   * information, et rien ne peut l'inventer.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+
 
   actionRun ActionRun? @relation(fields: [actionRunId], references: [id], onDelete: Cascade)
   model     AIModel?   @relation(fields: [modelId], references: [id], onDelete: SetNull)
@@ -2586,6 +2759,23 @@ model Payment {
   status              PaymentStatus    @default(pending)
   failureReason       String?          @map("failure_reason")
   createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  /* ── D'OÙ VIENT CETTE LIGNE ────────────────────────────────────────────────
+   *
+   * Même bloc que sur `login_activity`, et pour la même règle : une ligne qu'on
+   * relira un jour pour comprendre ce qui s'est passé DIT D'OÙ ELLE VIENT.
+   * Nullables pour de bon — les lignes d'avant ce lot n'ont pas cette
+   * information, et rien ne peut l'inventer.
+   */
+  clientId   String? @map("client_id")   @db.VarChar(64)
+  clientType String? @map("client_type") @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(20)
+  osName     String? @map("os_name")     @db.VarChar(20)
+  osVersion  String? @map("os_version")  @db.VarChar(20)
+  /* L'ORIGINE DE LA DÉCLARATION — écart assumé à la doctrine du dépôt, et le
+     même que sur `credit_transaction` : une transaction SE CONTESTE, et
+     l'origine ne se reconstitue pas après coup. `Inet`, jamais `VarChar`. */
+  ip         String? @db.Inet
+
 
   user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   paymentMethod     PaymentMethod?         @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)

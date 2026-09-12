@@ -26,8 +26,9 @@ export async function withDatabase(): Promise<TestDb> {
      lente sans que personne ne s'en aperçoive. Mieux vaut dire ce qui manque. */
   if (uri === undefined) {
     throw new Error(
-      `${VARIABLE} absente : le socle des épreuves n'a pas tourné. `
-      + "Lancez par `pnpm test` — `globalSetup` y lève le conteneur une fois pour toute la course.",
+      `${VARIABLE} absente : le socle des épreuves n'a pas de conteneur. `
+      + "Soit Docker n'est pas démarré, soit la course n'est pas passée par "
+      + "`pnpm test` — `globalSetup` y lève le conteneur une fois pour toutes.",
     );
   }
 

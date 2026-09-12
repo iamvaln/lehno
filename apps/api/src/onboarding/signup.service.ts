@@ -5,6 +5,7 @@ import { PrismaService } from "../prisma/prisma.service.js";
 import { LegalService } from "../public/legal.controller.js";
 import { AppError } from "../common/errors.js";
 import { canonicalEmail } from "../common/email.js";
+import { origine } from "../clients/origine.js";
 
 const MAX_TENTATIVES = 3;
 
@@ -158,6 +159,7 @@ export class SignupService {
           if (creditsOfferts > 0) {
             await tx.creditTransaction.create({
               data: {
+                ...origine(),
                 userId: user.id, type: "grant", source: "signup_grant",
                 amount: creditsOfferts,
               },
@@ -243,7 +245,7 @@ export class SignupService {
     const credits = await this.param(tx, "waitlist_bonus_credits", 0);
     if (credits > 0) {
       await tx.creditTransaction.create({
-        data: { userId, type: "grant", source: "waitlist_bonus", amount: credits },
+        data: { ...origine(), userId, type: "grant", source: "waitlist_bonus", amount: credits },
       });
     }
     return { credits };
@@ -280,6 +282,7 @@ export class SignupService {
     if (bonusParrain > 0) {
       await tx.creditTransaction.create({
         data: {
+          ...origine(),
           userId: parrain.id, type: "grant", source: "referral_bonus",
           amount: bonusParrain, referralId: referral.id,
         },
@@ -288,6 +291,7 @@ export class SignupService {
     if (bonusFilleul > 0) {
       await tx.creditTransaction.create({
         data: {
+          ...origine(),
           userId: filleulId, type: "grant", source: "referral_bonus",
           amount: bonusFilleul, referralId: referral.id,
         },

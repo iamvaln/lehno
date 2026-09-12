@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { SEUIL_PANNE, DUREE_PANNE_MS, type TacheIA } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
+import { origine } from "../clients/origine.js";
 
 /* Ce qu'un adaptateur de fournisseur doit savoir faire, et rien de plus.
  *
@@ -319,6 +320,7 @@ export class RouteurIAService {
     try {
       await this.prisma.aIUsage.create({
         data: {
+          ...origine(),
           purpose,
           origin: contexte.origine ?? "user_action",
           userId: contexte.userId ?? null,

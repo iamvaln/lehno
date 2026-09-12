@@ -14,6 +14,7 @@ import { AppError } from "../common/errors.js";
 import { RouteurIAService, RefusModele, type Adaptateur } from "../ia/routeur.service.js";
 import { FOURNISSEURS_IA } from "../ia/adaptateurs/index.js";
 import type { SelectionPortrait } from "../studio/selection.js";
+import { origine } from "../clients/origine.js";
 
 /* La génération d'un message.
  *
@@ -202,6 +203,7 @@ export class GenerationService {
            On laisse donc remonter, et on relit APRÈS le retour arrière. */
         const execution = await tx.actionRun.create({
           data: {
+            ...origine(),
             userId, premiumActionId: action.id, creditsSpent: action.creditCost,
             status: "pending",
             /* Nulle pour les idées : l'orientation est une notion du MESSAGE —
@@ -228,6 +230,7 @@ export class GenerationService {
         // une colonne. Aucune valeur ne peut donc diverger de son historique.
         await tx.creditTransaction.create({
           data: {
+            ...origine(),
             userId, type: "consumption", source: "consumption",
             amount: -action.creditCost,
           },
@@ -971,7 +974,7 @@ export class GenerationService {
           where: { id: actionRunId }, select: { creditsSpent: true },
         });
         await tx.creditTransaction.create({
-          data: { userId, type: "adjustment", source: "refund", amount: ligne.creditsSpent },
+          data: { ...origine(), userId, type: "adjustment", source: "refund", amount: ligne.creditsSpent },
         });
       });
     } catch (err: unknown) {

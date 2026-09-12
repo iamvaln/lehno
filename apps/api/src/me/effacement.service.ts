@@ -3,6 +3,7 @@ import { Cron } from "@nestjs/schedule";
 import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { delaiDeGraceEnJours } from "../common/delai-de-grace.js";
+import { origine } from "../clients/origine.js";
 
 /* L'effacement réel des comptes supprimés.
  *
@@ -288,6 +289,7 @@ export class EffacementService {
          `audit_log_motif_obligatoire` ne l'exige que de lui. */
       this.prisma.auditLog.create({
         data: {
+          ...origine(),
           actorType: "user",
           actorId: id,
           action: "account_erased",

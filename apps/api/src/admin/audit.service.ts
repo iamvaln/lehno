@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
+import { origine } from "../clients/origine.js";
 
 // Le plancher est celui de la contrainte posée en base (voir la migration
 // d'administration) et celui du contrat partagé avec le back-office. Les trois
@@ -60,6 +61,7 @@ export class AuditService {
     // que lorsqu'il y a quelque chose à poser.
     await client.auditLog.create({
       data: {
+        ...origine(),
         actorType: "admin",
         actorId: geste.auteurId,
         action: geste.action,

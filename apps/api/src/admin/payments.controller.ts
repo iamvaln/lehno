@@ -15,6 +15,7 @@ import { prixUnitaireDuJour } from "../payments/prix-unitaire.js";
 import { poserLAuteurEtLeMotif } from "./historisation.js";
 import { fraisDe } from "../payments/frais.js";
 import type { StockagePort } from "../stockage/stockage.port.js";
+import { origine } from "../clients/origine.js";
 
 /**
  * La saisie manuelle d'un paiement — voie `manual`.
@@ -75,6 +76,7 @@ export class AdminPaymentsService {
     return this.prisma.$transaction(async (tx) => {
       const paiement = await tx.payment.create({
         data: {
+          ...origine(),
           userId: client.id,
           mode: "manual",
           creditBundleId: palier.id,
@@ -219,6 +221,7 @@ export class AdminPaymentsService {
         if (confirme) {
           await tx.creditTransaction.create({
             data: {
+              ...origine(),
               userId: paiement.userId,
               type: "purchase",
               source: "purchase",
@@ -376,6 +379,7 @@ export class AdminPaymentsService {
            celui qui l'explique. */
         await tx.creditTransaction.create({
           data: {
+            ...origine(),
             userId: paiement.userId,
             type: "adjustment",
             source: "consumption",
@@ -421,6 +425,7 @@ export class AdminPaymentsService {
 
       await tx.creditTransaction.create({
         data: {
+          ...origine(),
           userId: utilisateurId,
           type: "adjustment",
           // Ce que le client lira. Le choisir plutôt que le deviner est tout

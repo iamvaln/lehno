@@ -8,6 +8,7 @@ import { TokenService } from "./token.service.js";
 import { refusDe, STATUTS_ADMIS } from "./auth.service.js";
 import { delaiDeGraceEnJours } from "../common/delai-de-grace.js";
 import { AppError } from "../common/errors.js";
+import { origine } from "../clients/origine.js";
 
 export interface IdentityVerifier {
   verify(idToken: string): Promise<{ providerUserId: string; email: string | null; emailVerified: boolean }>;
@@ -72,6 +73,7 @@ export class FederatedService {
   ): Promise<void> {
     await this.prisma.loginActivity.create({
       data: {
+        ...origine(),
         userId, attemptedEmail: email, result,
         // La voie, et non « externe » : c'est la distinction entre Google et
         // Apple qui permet de voir qu'un seul des deux est en cause.

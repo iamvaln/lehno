@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TYPES_CLIENT, ENVS_CLIENT } from "./tracking.js";
 
 // Les types de `/v1/admin` (spec technique §7). Le back-office n'a pas encore de
 // serveur : ces formes servent d'abord à valider des fixtures. Le jour où l'API
@@ -1188,3 +1189,74 @@ export const remboursementRegleSchema = z.object({
 }).strict();
 
 export type RemboursementRegle = z.infer<typeof remboursementRegleSchema>;
+
+// ── Les clients API ─────────────────────────────────────────────────────────
+
+/* SIX PAIRES, ET PAS UNE PAR BUILD : trois plateformes × deux environnements.
+ * La version n'entre pas dans l'identité — elle voyage dans `x-app-version`.
+ *
+ * CE QUE LA CLÉ VAUT. Une clé livrée dans un binaire mobile ou un paquet web
+ * N'EST PAS UN SECRET : elle s'extrait d'un `.ipa` ou d'un `Ctrl-U`. Ce panneau
+ * ne prétend donc pas distribuer des secrets — il distribue des IDENTIFIANTS
+ * RÉVOCABLES, et c'est déjà beaucoup : une clé se tourne sans changer
+ * l'identifiant, donc sans casser la comparaison des chiffres dans le temps.
+ *
+ * Voir `specs/plan-tracabilite-des-clients-2026-09-12.md` §3, qui le dit plus
+ * longuement — parce que quelqu'un s'y fiera un jour comme à une frontière de
+ * sécurité si ce n'est écrit nulle part.
+ */
+export const clientApiSchema = z.object({
+  id: z.string().uuid(),
+  clientId: z.string(),
+  label: z.string(),
+  clientType: z.enum(TYPES_CLIENT),
+  environment: z.enum(ENVS_CLIENT),
+  isActive: z.boolean(),
+  /** Nulle tant que la clé n'a jamais été tournée. */
+  rotatedAt: z.string().nullable(),
+  createdAt: z.string(),
+}).strict();
+
+export type ClientApi = z.infer<typeof clientApiSchema>;
+
+/* LA CLÉ NE PARAÎT QU'ICI, ET UNE SEULE FOIS.
+ *
+ * Elle est rendue en clair à la création et à la rotation, puis jamais plus :
+ * la base n'en garde que le haché. Une clé perdue se REMPLACE, elle ne se
+ * récupère pas — et une clé qu'on ne peut pas relire ne fuite pas par la base.
+ *
+ * L'écran doit le dire au moment où il l'affiche : c'est le seul instant où
+ * quelqu'un peut la copier. */
+export const clientApiAvecCleSchema = clientApiSchema.extend({
+  cle: z.string(),
+}).strict();
+
+export type ClientApiAvecCle = z.infer<typeof clientApiAvecCleSchema>;
+
+export const creerClientApiSchema = z.object({
+  label: z.string().trim().min(2).max(100),
+  clientType: z.enum(TYPES_CLIENT),
+  environment: z.enum(ENVS_CLIENT),
+  motif: motifSchema,
+  reasonCode: z.string().trim().max(48).optional(),
+}).strict();
+
+export type CreerClientApiInput = z.infer<typeof creerClientApiSchema>;
+
+/* Couper un client coupe UNE APPLICATION ENTIÈRE. Le motif n'est donc pas une
+   formalité : personne ne doit pouvoir le faire sans laisser son nom et sa
+   raison. */
+export const majClientApiSchema = z.object({
+  isActive: z.boolean(),
+  motif: motifSchema,
+  reasonCode: z.string().trim().max(48).optional(),
+}).strict();
+
+export type MajClientApiInput = z.infer<typeof majClientApiSchema>;
+
+export const rotationClientApiSchema = z.object({
+  motif: motifSchema,
+  reasonCode: z.string().trim().max(48).optional(),
+}).strict();
+
+export type RotationClientApiInput = z.infer<typeof rotationClientApiSchema>;
