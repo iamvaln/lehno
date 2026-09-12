@@ -429,17 +429,48 @@ describe("le portrait", () => {
         .rejects.toMatchObject({ code: "conflict" });
     });
 
-    /* ET RÉCIPROQUEMENT : l'image d'un portrait approuvé est fabriquée et payée
-       en appel de modèle. Le rejet aurait dû venir avant, et l'accepter après
-       laisserait croire qu'il défait quelque chose. */
-    it("ne s'applique plus à un portrait approuvé", async () => {
+    /* REJETER UN PORTRAIT APPROUVÉ EFFACE SON IMAGE — et c'est ce qui rend le
+       §7 applicable. Une première version le refusait ; le rejet ne libérait
+       alors jamais rien, puisqu'un portrait rejeté n'a jamais eu d'image. Or ce
+       qui s'accumule, ce sont les portraits APPROUVÉS qu'on refait. */
+    it("efface l'image quand le portrait était approuvé", async () => {
+      await publier();
+      const portrait = await unPortrait();
+      const service = portraits(repond(PNG_MINUSCULE));
+
+      const approuve = await service.approuver(awa, portrait.id);
+      const cle = (await db.prisma.portrait.findUniqueOrThrow({
+        where: { id: portrait.id }, select: { imageKey: true },
+      })).imageKey;
+      expect(approuve.imageUrl).not.toBeNull();
+      expect(stockage.contenuDe(cle!)).toBeDefined();
+
+      const rejete = await service.rejeter(awa, portrait.id);
+
+      expect(rejete.status).toBe("rejected");
+      expect(rejete.imageUrl).toBeNull();
+      /* LA CLÉ RÉELLEMENT ÉCRITE, et le fichier avec. Une clé littérale qui
+         n'existe jamais rendrait ce cas vert sans rien éprouver. */
+      expect(stockage.contenuDe(cle!)).toBeUndefined();
+      expect((await db.prisma.portrait.findUniqueOrThrow({
+        where: { id: portrait.id }, select: { imageKey: true },
+      })).imageKey).toBeNull();
+    });
+
+    /* LE TEXTE RESTE, et c'est le propos : on efface le fichier, jamais l'avis
+       ni ce qui a été payé. La ligne est ce qui permet de compter les rejets par
+       version — l'effacer reviendrait à détruire la mesure qu'on vient
+       chercher. */
+    it("garde le texte et la ligne", async () => {
       await publier();
       const portrait = await unPortrait();
       const service = portraits(repond(PNG_MINUSCULE));
 
       await service.approuver(awa, portrait.id);
-      await expect(service.rejeter(awa, portrait.id))
-        .rejects.toMatchObject({ code: "conflict" });
+      const rejete = await service.rejeter(awa, portrait.id);
+
+      expect(rejete.content).toContain("Celle qui plante");
+      expect(await db.prisma.portrait.count({ where: { id: portrait.id } })).toBe(1);
     });
 
     it("ne rejette pas le portrait d'un autre compte", async () => {
