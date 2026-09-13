@@ -4,3 +4,11 @@
 
 expo-env.d.ts
 # @end expo-cli
+# Les artefacts d'un build local. `eas build --local` les dépose ICI, à la
+# racine du paquet, sous un nom horodaté — et un .apk pèse une cinquantaine de
+# mégaoctets. Non ignorés, ils partent au premier `git add -A` d'une session
+# voisine, ce qui est déjà arrivé deux fois pour des fichiers bien plus légers.
+build-*.apk
+build-*.aab
+*.apk
+*.aab
