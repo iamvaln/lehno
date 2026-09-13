@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clientHeaders, clientType, osHeader, type BuildIdentity } from "../lib/client.js";
+import { clientHeaders, clientType, osHeader, textOrNull, type BuildIdentity } from "../lib/client.js";
 
 const identity = (over: Partial<BuildIdentity> = {}): BuildIdentity => ({
   clientId: "lehno-mobile",
@@ -63,5 +63,43 @@ describe("what the headers carry", () => {
       "x-app-os": "ios:17.4",
       "x-app-env": "prod",
     });
+  });
+});
+
+/* LE DÉFAUT QUI A CASSÉ TOUS LES APPELS, gardé par ce qui suit.
+ *
+ * `app.config.js` pose `null` quand la variable de build manque ; la
+ * configuration RÉSOLUE rend `{}`. `??` ne l'attrape pas — il ne capte que
+ * `null` et `undefined` — et l'en-tête partait avec un objet pour valeur.
+ * Expo's `fetch` refusait alors la requête ENTIÈRE, et l'écran disait « la
+ * connexion n'a pas abouti ». Trois heures pour le trouver.
+ */
+describe("what the resolved config actually returns", () => {
+  it("refuses the empty object Expo puts where a null was written", () => {
+    expect(textOrNull({})).toBeNull();
+  });
+
+  it("refuses anything that is not a string", () => {
+    expect(textOrNull(undefined)).toBeNull();
+    expect(textOrNull(null)).toBeNull();
+    expect(textOrNull(42)).toBeNull();
+    expect(textOrNull("")).toBeNull();
+  });
+
+  it("keeps a real string", () => {
+    expect(textOrNull("lehno-mobile")).toBe("lehno-mobile");
+  });
+
+  /* LA GARDE DE BOUT EN BOUT : même si un objet traverse le type, aucun
+     en-tête ne part avec autre chose qu'une chaîne. */
+  it("never lets a non-string reach the headers", () => {
+    const headers = clientHeaders({
+      clientId: {} as unknown as string, clientKey: {} as unknown as string,
+      version: {} as unknown as string, build: {} as unknown as string,
+      os: "ios", osVersion: "18.3", env: {} as unknown as string,
+    });
+    for (const valeur of Object.values(headers)) expect(typeof valeur).toBe("string");
+    expect(headers).not.toHaveProperty("x-client-id");
+    expect(headers["x-app-env"]).toBe("dev");
   });
 });
