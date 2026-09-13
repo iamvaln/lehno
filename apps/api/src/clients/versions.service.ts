@@ -17,8 +17,12 @@ import { PrismaService } from "../prisma/prisma.service.js";
 
 export type Exigence =
   | { etat: "servie" }
-  /** Un build plus récent existe, sans que celui-ci soit périmé. Non bloquant. */
-  | { etat: "suggeree"; version: string }
+  /* Un build plus récent existe, sans que celui-ci soit périmé. Non bloquant.
+     LE LIEN VOYAGE AVEC, comme sur le refus : une bannière qui annonce une
+     version sans dire où la prendre demande d'aller la chercher soi-même, et
+     c'est la même faute que « mettez à jour » sans lien — un mur, en plus
+     poli. */
+  | { etat: "suggeree"; version: string; storeUrl: string | null }
   | {
       etat: "a_mettre_a_jour";
       /** Pourquoi — pour le journal, jamais pour l'écran : le geste est le même. */
@@ -90,7 +94,7 @@ export class VersionsService {
     /* Une suggestion, pas une exigence : l'écran montre une bannière discrète et
        n'interrompt rien. Un build déclassé ne peut pas être la cible. */
     if (dernier.buildNumber > connu.buildNumber)
-      return { etat: "suggeree", version: dernier.version };
+      return { etat: "suggeree", version: dernier.version, storeUrl: dernier.storeUrl };
 
     return { etat: "servie" };
   }
