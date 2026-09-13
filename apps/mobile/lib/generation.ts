@@ -74,7 +74,19 @@ export type Phase = "chargement" | "attente" | "resultat" | "echec";
 export function phaseDuResultat(resultat: GenerationResult | null): Phase {
   if (!resultat) return "chargement";
   if (resultat.generation.status === "running") return "attente";
-  if (resultat.generation.status === "succeeded" && resultat.message) return "resultat";
+  /* UN JEU D'IDÉES EST UN RÉSULTAT, AU MÊME TITRE QU'UN MESSAGE.
+   *
+   * Cette ligne ne testait que `message`, et tout le reste tombait en « échec ».
+   * Un jeu d'idées produit — payé, réussi, en base — annonçait donc qu'il
+   * n'avait pas abouti. Le contrat porte `ideas` depuis un moment ; c'est
+   * l'écran qui n'avait pas suivi.
+   *
+   * ET UN JEU VIDE RESTE UN RÉSULTAT : la génération a tourné, le crédit est
+   * dépensé. Dire « échec » promettrait un remboursement qui ne viendra pas —
+   * `creditRendu` ne rend vrai que sur `failed`, et il a raison. */
+  if (resultat.generation.status === "succeeded" && (resultat.message || resultat.ideas)) {
+    return "resultat";
+  }
   return "echec";
 }
 

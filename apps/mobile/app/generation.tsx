@@ -24,6 +24,7 @@ import {
   correctionDuMessage, creditRendu, delaiAvantLaProchaine, doitInterroger,
   marquageEnvoye, offreDeRefaire, ouverture, phaseDuResultat, relanceDuMessage,
 } from "../lib/generation.js";
+import { keeping, priceLabel, producedIdeas, type Call } from "../lib/ideas.js";
 import { useActionsPayantes } from "../lib/MetadonneesProvider.js";
 import { coutDe } from "../lib/preparation.js";
 
@@ -44,10 +45,19 @@ import { coutDe } from "../lib/preparation.js";
  * ensuite par les reprises ou par l'occasion. Rien à déclarer dans `_layout` —
  * la présentation par défaut de la pile est exactement celle-là.
  *
- * LE MESSAGE, ET LUI SEUL. `generationResultSchema` ne porte qu'un `message` :
- * les idées n'ont pas encore de résultat au contrat, et le portrait est une
- * image qui vit en §3.22. Le kit dessine les trois ; on ne rend que celui dont
- * le contrat parle.
+ * LE MESSAGE ET LES IDÉES ; le portrait, lui, est une image qui vit en §3.22.
+ *
+ * Ce paragraphe disait « le message, et lui seul : les idées n'ont pas encore de
+ * résultat au contrat ». C'était vrai quand il a été écrit, et ça ne l'était
+ * plus : `generationResultSchema` porte `ideas` depuis un moment. La phase du
+ * résultat ne testait pourtant que `message`, si bien qu'un jeu d'idées produit
+ * — payé, réussi, en base — tombait en « échec » et annonçait à celui qui venait
+ * de payer que ça n'avait pas marché.
+ *
+ * C'est le même motif que l'approbation du portrait qui envoyait un `PATCH`
+ * inexistant : du code écrit contre une API prévue, jamais rejoué contre celle
+ * qui existe. Le drapeau `generation.ideas` étant éteint au lancement, personne
+ * ne l'avait vu.
  *
  * DEUX ÉCHECS, PAS UN. La LECTURE qui échoue prend tout l'écran, avec une
  * sortie : sans cela la roue tournerait pour toujours, ce qui nous est déjà
@@ -152,6 +162,32 @@ export default function Generation() {
   }, [ouvre.sorte, sors]);
 
   const message = resultat?.message ?? null;
+  const idees = producedIdeas(resultat);
+
+  /* RETENIR RELIT LE JEU ENTIER plutôt que de rapiécer la ligne touchée : le
+     serveur rend le souhait né de l'idée, et c'est lui qui fait disparaître le
+     bouton. Recopier l'état à la main ferait diverger l'écran de ce que le
+     serveur porte dès la première erreur. */
+  const agitSurLIdee = async (envoi: Call, accuse: string | null): Promise<void> => {
+    setEnCours(true);
+    try {
+      await appel<unknown>(envoi.path, {
+        method: envoi.method,
+        body: JSON.stringify(envoi.body),
+      });
+      /* On relit par le MÊME chemin que le sondage : c'est le serveur qui dit
+         quel souhait est né de quelle idée, et le recopier à la main ferait
+         diverger l'écran dès la première erreur. */
+      if (chemin) {
+        setResultat(generationResultSchema.parse(await appel<unknown>(chemin)));
+      }
+      if (accuse) setAccuse(accuse);
+    } catch (e) {
+      setEchecDuGeste(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
+    } finally {
+      setEnCours(false);
+    }
+  };
   const phase = phaseDuResultat(resultat);
 
   /* CE QU'IL FAUT POUR REDEMANDER : l'occasion visée. Elle vient de
@@ -447,6 +483,57 @@ export default function Generation() {
               />
             ) : null}
           </View>
+        ) : idees ? (
+          /* LE JEU D'IDÉES. Il tombait ici même, en « échec », parce que la
+             phase ne testait que `message` : quelqu'un qui venait de payer
+             lisait que ça n'avait pas marché. */
+          <View style={styles.bloc}>
+            <Text style={[styles.titre, { color: couleurs.textBody }]} accessibilityRole="header">
+              {t.ideesTitre(qui ?? t.prepIdeesTitre)}
+            </Text>
+
+            {/* UN JEU VIDE N'EST PAS UNE PANNE : la génération a tourné, le
+                crédit est dépensé. On le dit sans promettre de remboursement,
+                et on propose la seule chose qui aide — plus de matière. */}
+            {idees.length === 0 ? (
+              <Text style={[styles.aide, { color: couleurs.textSecondary }]}>
+                {t.ideesAucune}
+              </Text>
+            ) : idees.map((idee) => {
+              const retient = keeping(idee);
+              return (
+                <Card key={idee.id} surface="panel" padding={18} radius="lg">
+                  <Text style={[styles.ideeNom, { color: couleurs.textBody }]}>{idee.label}</Text>
+                  {/* CE QUI REND L'IDÉE RETENABLE plutôt que générique : « un
+                      carnet » ne vaut rien, « un carnet, parce qu'elle écrit
+                      dans le train » se retient. */}
+                  {idee.details ? (
+                    <Text style={[styles.aide, { color: couleurs.textSecondary }]}>
+                      {idee.details}
+                    </Text>
+                  ) : null}
+                  {priceLabel(idee, t) ? (
+                    <Text style={[styles.aide, { color: couleurs.textMention }]}>{priceLabel(idee, t)}</Text>
+                  ) : null}
+
+                  {/* DEUX GESTES, JAMAIS UN. Retenir engage l'objet — un souhait
+                      naît dans la liste ; le pouce dit seulement ce qu'on en
+                      pense. Les fondre détruirait le signal : on peut trouver
+                      une idée excellente et ne pas la retenir. */}
+                  <View style={styles.ideeGestes}>
+                    <Button
+                      variant={retient ? "outline" : "text"}
+                      icon={retient ? "plus" : "check"}
+                      disabled={enCours || retient === null}
+                      onPress={() => { if (retient) void agitSurLIdee(retient, t.ideesRetenueFait); }}
+                    >
+                      {retient ? t.ideesRetenir : t.ideesRetenue}
+                    </Button>
+                  </View>
+                </Card>
+              );
+            })}
+          </View>
         ) : null}
       </ScrollView>
 
@@ -491,6 +578,12 @@ export default function Generation() {
 }
 
 const styles = StyleSheet.create({
+  /* Le nom de l'idée porte le poids : c'est lui qu'on parcourt. Le pourquoi et
+     le prix viennent dessous, en mention, parce qu'on ne les lit qu'une fois
+     qu'une idée a retenu l'œil. */
+  ideeNom: { fontFamily: nativeFont.bodySemibold, fontSize: 16 },
+  aide: { fontFamily: nativeFont.bodyRegular, fontSize: 13, marginTop: nativeSpace[4] },
+  ideeGestes: { flexDirection: "row", gap: nativeSpace[8], marginTop: nativeSpace[12] },
   page: { flex: 1 },
   retour: {
     width: nativeTouchMin,
