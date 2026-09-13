@@ -54,6 +54,10 @@ type LigneExecution = {
     status: string; createdAt: Date; updatedAt: Date;
     feedback: string | null; feedbackReasonCode: string | null; feedbackNote: string | null;
   } | null;
+  /* Le portrait produit, quand l'exécution en est un. Il porte les deux seuls
+     champs que la projection lui demande : son identité, et le proche visé —
+     que l'exécution elle-même ne sait pas, n'ayant pas d'`eventOccurrenceId`. */
+  portrait: { id: string; personId: string } | null;
   ideaSet: {
     id: string; eventOccurrenceId: string | null; createdAt: Date;
     ideas: {
@@ -214,14 +218,20 @@ export class GenerationController {
   private rendre(l: LigneExecution): GenerationResult {
     const message = l.generatedMessage;
     const jeu = l.ideaSet;
+    const portrait = l.portrait;
     const generation: Generation = {
       id: l.id,
       kind: l.premiumAction.code as Generation["kind"],
       /* La cible, pour que l'écran d'attente ait un nom et un décompte à
          montrer. Un portrait vise un proche, un message une occasion — l'une
          des deux est donc toujours nulle, et le client affiche celle qui est
-         là plutôt que d'en déduire laquelle attendre. */
-      personId: null,
+         là plutôt que d'en déduire laquelle attendre.
+
+         CE CHAMP A ÉTÉ NUL EN DUR SOUS CE COMMENTAIRE. Le commentaire disait
+         vrai sur l'intention et rien sur le code, ce qui l'a rendu invisible en
+         relecture : on lit une règle juste, on passe. Un commentaire ne décrit
+         pas ce qu'on voulait faire. */
+      personId: portrait?.personId ?? null,
       occurrenceId: l.generatedMessage?.eventOccurrenceId ?? jeu?.eventOccurrenceId ?? l.eventOccurrenceId ?? null,
       status: GenerationService.ETAT[l.status] ?? "failed",
       creditsSpent: l.creditsSpent,
@@ -229,8 +239,10 @@ export class GenerationController {
          l'invite, donc les notes — les mots privés de quelqu'un sur un tiers
          n'ont rien à faire dans une réponse d'erreur. */
       failureReason: l.failureCode,
-      // Le message OU le jeu d'idées : une exécution n'en produit jamais deux.
-      resultId: message?.id ?? jeu?.id ?? null,
+      /* Le message, le jeu d'idées OU le portrait : une exécution n'en produit
+         jamais deux. Le portrait manquait, et le client a raison de traiter
+         « abouti sans résultat » comme un échec — il n'a rien à ouvrir. */
+      resultId: message?.id ?? jeu?.id ?? portrait?.id ?? null,
       createdAt: l.createdAt.toISOString(),
     };
     return {
