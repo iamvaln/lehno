@@ -1,6 +1,7 @@
 // Doit rester le premier import : il pose les variables d'environnement avant
 // que le moindre module ne les lise (voir env.ts).
 import "./env.js";
+import type { IncomingMessage } from "node:http";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { nombreDeRelaisDeConfiance } from "./common/trust-proxy.js";
@@ -27,6 +28,23 @@ async function bootstrap(): Promise<void> {
   // Le site public et l'API vivent sur deux domaines : chaque envoi de
   // formulaire depuis le navigateur passe par une requête préalable. Sans
   // cela elle répond 404, et aucun formulaire ne part (voir common/cors.ts).
+  /* LE CORPS BRUT, GARDÉ POUR LE SEUL CROCHET QUI EN A BESOIN.
+   *
+   * EAS signe les OCTETS qu'il envoie. Re-sérialiser le JSON déjà analysé pour
+   * vérifier la signature serait un pari : l'espacement, l'ordre des clés, un
+   * caractère échappé autrement suffisent à changer l'empreinte — et un crochet
+   * qui rejette une charge légitime fait réessayer EAS en boucle.
+   *
+   * Le `verify` d'`express.json` reçoit les octets AVANT l'analyse : on les
+   * range, et `EasController` les relit. Coût : une référence de plus par
+   * requête portant un corps JSON, libérée avec elle.
+   */
+  app.useBodyParser("json", {
+    verify: (req: IncomingMessage & { rawBody?: Buffer }, _res: unknown, buf: Buffer) => {
+      req.rawBody = buf;
+    },
+  });
+
   const origines = originsAutorisees(process.env["WEB_DOMAIN"]);
   app.enableCors({
     origin: origines,
