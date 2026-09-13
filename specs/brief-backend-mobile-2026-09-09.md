@@ -772,7 +772,37 @@ Le client ne peut pas le contourner sans mentir : relire `/me/portraits` et
 prendre le plus récent supposerait qu'aucune autre production n'a eu lieu entre
 les deux, ce que rien ne garantit.
 
-**Ce qu'il faut** : que `resultId` porte aussi le portrait. Une ligne, au même
-endroit — et le commentaire au-dessus, qui énumère deux natures sur trois, est
-ce qui a rendu l'oubli invisible.
+### Un second champ, trouvé en cherchant le premier
+
+**`personId` est codé en dur à `null`** — `generation.controller.ts:220` —, sous
+un commentaire qui affirme l'inverse :
+
+> « Un portrait vise un proche, un message une occasion — l'une des deux est donc
+> toujours nulle, et le client affiche celle qui est là plutôt que d'en déduire
+> laquelle attendre. »
+
+Le commentaire décrit une intention que le code ne tient pas. L'écran d'attente
+du portrait s'en sort parce qu'il tient le nom du proche par sa route ; toute
+surface qui lirait `generation.personId` recevrait `null`.
+
+### Ce qu'il faut, et ce n'est pas une ligne
+
+`LigneExecution` (`generation.controller.ts:44-62`) porte `generatedMessage` et
+`ideaSet`. **Elle ne porte aucune relation vers le portrait** — le contrôleur
+n'a donc rien à mettre dans ces deux champs, même en le voulant.
+
+Trois endroits :
+
+1. **La lecture de l'exécution** inclut le portrait, comme elle inclut déjà le
+   message et le jeu d'idées ;
+2. **Le type `LigneExecution`** le déclare ;
+3. **Les deux champs** s'en servent — `resultId: … ?? portrait?.id ?? null` et
+   `personId: portrait?.personId ?? null`.
+
+Et le commentaire au-dessus de `resultId`, qui énumère deux natures sur trois,
+est à reprendre : c'est lui qui a rendu l'oubli invisible, parce qu'il décrit
+exactement ce que le code fait — rien ne cloche à la relecture.
+
+*Corrigé le 13 septembre : ce paragraphe annonçait d'abord « une ligne ». C'était
+faux, et l'annoncer ainsi aurait fait sous-estimer le lot.*
 
