@@ -734,3 +734,45 @@ Une garde tient le constat côté mobile — `apps/mobile/test/avis-gouverne.tes
 **tombe le jour où le champ arrive**, ce qui est exactement quand on veut être
 prévenu. Éprouvée par la panne.
 
+---
+
+## 15. Un portrait produit ne dit pas lequel il est — 13 septembre
+
+**Trouvé à l'appareil, en éprouvant le chemin que #200 vient d'ouvrir. Quelqu'un
+qui compose un portrait paie son crédit et lit « L'écriture n'a pas abouti ».**
+
+Le portrait est bel et bien produit. Vérifié en base, sur le lancement de 16:06 :
+
+```
+action_run  status=success   credits_spent=1   app_version=57.0.9   os_name=ios
+portrait    status=generated image_key=null    (l'image vient à la composition)
+```
+
+`generation.controller.ts:233` compose pourtant :
+
+```ts
+// Le message OU le jeu d'idées : une exécution n'en produit jamais deux.
+resultId: message?.id ?? jeu?.id ?? null,
+```
+
+**Le portrait n'y figure pas**, et le commentaire dit lui-même « le message OU le
+jeu d'idées ». Il est donc **toujours `null`** pour un portrait.
+
+Or le contrat promet les trois — `me-generation.ts:166` :
+
+> « Le portrait, le message ou le jeu d'idées produit — nul tant que la
+> génération n'a pas abouti. »
+
+**Ce que ça donne à l'écran.** Le mobile sonde, reçoit `status: "succeeded"` avec
+`resultId: null`, et applique la seule lecture honnête que le contrat autorise :
+aboutir sans résultat n'est pas un résultat. Il le dit, garde ce qu'on avait
+sous les yeux, et le crédit est parti.
+
+Le client ne peut pas le contourner sans mentir : relire `/me/portraits` et
+prendre le plus récent supposerait qu'aucune autre production n'a eu lieu entre
+les deux, ce que rien ne garantit.
+
+**Ce qu'il faut** : que `resultId` porte aussi le portrait. Une ligne, au même
+endroit — et le commentaire au-dessus, qui énumère deux natures sur trois, est
+ce qui a rendu l'oubli invisible.
+
