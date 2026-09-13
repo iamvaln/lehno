@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DELAI_MINIMAL, delaiDAttente, estUnArret,
-  exigeDeRelireLesDrapeaux, exigeDeRelireLesMetadonnees, heureDeRetour,
+  exigeDeRelireLesDrapeaux, exigeDeRelireLesMetadonnees, heureDeRetour, laMiseAJourEstRequise, lienDuMagasin,
 } from "../lib/arret.js";
 
 describe("reconnaître un arrêt", () => {
@@ -111,5 +111,38 @@ describe("le filet des choix fermés", () => {
   // naissance manquante, un pseudo déjà pris.
   it("ne confond pas avec une saisie refusée", () => {
     expect(exigeDeRelireLesMetadonnees(422, "validation_failed")).toBe(false);
+  });
+});
+
+describe("la version qui n'est plus servie", () => {
+  it("se reconnaît au 426 et à son code", () => {
+    expect(laMiseAJourEstRequise(426, "upgrade_required")).toBe(true);
+  });
+
+  it("ne se confond pas avec un client refusé", () => {
+    expect(laMiseAJourEstRequise(403, "client_unknown")).toBe(false);
+  });
+});
+
+describe("l'adresse du magasin", () => {
+  it("se prend dans les détails du refus", () => {
+    expect(lienDuMagasin({ storeUrl: "https://apps.apple.com/app/id1" }))
+      .toBe("https://apps.apple.com/app/id1");
+  });
+
+  /* ELLE PEUT MANQUER, et alors on n'ouvre rien : le registre ne la connaît pas
+     toujours. L'écran dit quoi faire sans offrir un bouton mort. */
+  it("rend null quand le refus ne la porte pas", () => {
+    expect(lienDuMagasin({})).toBeNull();
+    expect(lienDuMagasin(undefined)).toBeNull();
+  });
+
+  /* ON N'OUVRE QUE DU `https`. Un lien reçu du réseau qui partirait dans
+     `Linking.openURL` peut ouvrir autre chose qu'une page — un schéma
+     d'application, voire un `javascript:`. Le refus vient du serveur, mais un
+     serveur compromis ne doit pas pouvoir faire ouvrir n'importe quoi. */
+  it("refuse ce qui n'est pas une adresse https", () => {
+    expect(lienDuMagasin({ storeUrl: "javascript:alert(1)" })).toBeNull();
+    expect(lienDuMagasin({ storeUrl: "itms-apps://x" })).toBeNull();
   });
 });

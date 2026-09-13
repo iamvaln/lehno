@@ -205,6 +205,21 @@ Le serveur ajoute un en-tête quand une version plus récente existe sans que la
 courante soit hors service. **Non bloquant**, et il ne doit surtout pas
 interrompre : une bannière discrète, une fois par session au plus.
 
+> **Pas encore câblable, constaté le 12 septembre en écrivant le 426.**
+>
+> `versions.service.ts:91-93` calcule bien l'état `suggeree` et rend la version
+> visée. Mais **`version.guard.ts` ne pose aucun en-tête** — vérifié : le fichier
+> ne contient ni `header`, ni `setHeader`. La suggestion ne quitte donc jamais le
+> serveur, et le mobile n'a rien à lire.
+>
+> **Ce qu'il faut** : que la garde pose l'en-tête sur la réponse quand l'état est
+> `suggeree`, et que ce document le NOMME — « un en-tête » ne suffit pas à
+> écrire un client. Tant que les deux manquent, la bannière n'est pas reportée :
+> elle est impossible.
+>
+> Le 426 et l'écran d'arrêt, eux, sont câblés — ils portent leur contenu dans
+> l'enveloppe, qui existe.
+
 ---
 
 ## 5. Ce qu'il ne faut pas faire

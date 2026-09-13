@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   nativeFont, nativeLetterSpacing, nativeSpace, nativeTouchMin, nativeTracking,
@@ -37,7 +37,10 @@ export default function Maintenance() {
   const { t, langue } = useLangue();
   const { theme, couleurs } = useTheme();
   const insets = useSafeAreaInsets();
-  const { refuse, until, reessaie } = useArret();
+  const { refuse, magasin, until, reessaie } = useArret();
+  /* `undefined` veut dire « ce n'est pas ce cas-là ». Nul veut dire « mise à
+     jour requise, mais le serveur n'a pas dit où aller ». */
+  const majRequise = magasin !== undefined;
   /* L'heure que le SERVEUR annonce, mise à l'heure du téléphone. Je la
      calculais depuis le rythme de réessai — deux choses distinctes, et les
      confondre annonçait un retour que personne n'avait promis. */
@@ -132,13 +135,13 @@ export default function Maintenance() {
           mise en page et le respect du mouvement réduit pour changer deux
           phrases. */}
       <Text style={[styles.titre, { color: couleurs.textBody }]}>
-        {refuse ? t.refusTitre : t.maintTitre}
+        {refuse ? t.refusTitre : majRequise ? t.majTitre : t.maintTitre}
       </Text>
       <Text style={[styles.texte, { color: couleurs.textSecondary }]}>
         {/* L'heure se CALCULE depuis le délai du serveur, et ne paraît qu'au-delà
             d'un quart d'heure. Sans elle, on dit seulement qu'une mise à jour est
             en cours : pas de « bientôt », pas d'estimation inventée. */}
-        {refuse ? t.refusTexte : heure ? t.maintHeure(heure) : t.maintTexte}
+        {refuse ? t.refusTexte : majRequise ? t.majTexte : heure ? t.maintHeure(heure) : t.maintTexte}
       </Text>
 
       {/* PAS DE « RÉESSAYER » SUR UN REFUS DE CLIENT. Une maintenance passe, et
@@ -146,7 +149,19 @@ export default function Maintenance() {
           tournerait à vide et laisserait croire qu'insister peut marcher. Ni
           lien vers l'état du service : ce n'est pas le service qui est en
           cause. */}
-      {refuse ? null : (
+      {/* UN SEUL GESTE, ET SEULEMENT S'IL PEUT ABOUTIR. Le serveur ne donne pas
+          toujours l'adresse du magasin — une version qu'il ne connaît pas, par
+          exemple. Sans elle, l'écran dit quoi faire sans offrir un bouton qui
+          n'ouvrirait rien. */}
+      {majRequise ? (
+        magasin === null ? null : (
+          <View style={styles.sorties}>
+            <Button variant="outline" full icon="download" onPress={() => void Linking.openURL(magasin)}>
+              {t.majBouton}
+            </Button>
+          </View>
+        )
+      ) : refuse ? null : (
         <View style={styles.sorties}>
           <Button variant="outline" full icon="refresh-cw" onPress={reessaie}>
             {t.maintReessayer}

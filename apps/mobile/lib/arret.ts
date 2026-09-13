@@ -12,6 +12,29 @@ import type { ErrorCode } from "@lehno/contracts";
  * qu'à la réinstallation.
  */
 
+/* LA VERSION N'EST PLUS SERVIE — 426, et un écran à part entière.
+ *
+ * TROIS CAUSES, UNE SEULE RÉPONSE : la version est déclassée, elle est sous une
+ * release qui force la mise à jour, ou elle est inconnue du registre. L'écran ne
+ * les distingue pas — le geste est le même, et il n'y a rien d'utile à dire de
+ * plus à quelqu'un qui attend d'ouvrir son application.
+ *
+ * NE PAS RETENTER, comme pour un client refusé : rien ne changera tant que le
+ * binaire est le même. */
+export function laMiseAJourEstRequise(statut: number, code: ErrorCode | null): boolean {
+  return statut === 426 && code === "upgrade_required";
+}
+
+/* L'ADRESSE DU MAGASIN VOYAGE AVEC LE REFUS, et elle peut manquer : le registre
+ * ne la connaît pas toujours — une version inconnue de lui, par exemple. Sans
+ * elle, l'écran dit quoi faire sans offrir un bouton qui n'ouvrirait rien. On ne
+ * la devine pas : composer une adresse d'App Store depuis l'identifiant du
+ * paquet marcherait jusqu'au jour où le produit change de magasin ou de pays. */
+export function lienDuMagasin(details: Record<string, unknown> | undefined): string | null {
+  const brut = details?.["storeUrl"];
+  return typeof brut === "string" && brut.startsWith("https://") ? brut : null;
+}
+
 export function estUnArret(statut: number, code: ErrorCode | null): boolean {
   // Un 503 sans ce code vient d'ailleurs — une passerelle, un répartiteur. On
   // ne montre pas l'écran d'attente pour une panne qu'on ne sait pas nommer.
