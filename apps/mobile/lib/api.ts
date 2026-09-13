@@ -5,7 +5,7 @@ import { errorEnvelopeSchema, type ErrorCode, type ErrorEnvelope, type Session }
 import { adresseDeLApi } from "./adresse-api.js";
 import { doitRenouveler, sortDeLaSession } from "./session.js";
 import { effaceLesJetons, litLesJetons, poseLesJetons } from "./jetons.js";
-import { clientHeaders, type BuildIdentity } from "./client.js";
+import { clientHeaders, textOrNull, type BuildIdentity } from "./client.js";
 import { unSeulALaFois } from "./verrou.js";
 import { estHorsConnexion } from "./reseau.js";
 import { estGarde } from "./cache.js";
@@ -128,10 +128,10 @@ async function litLEnveloppe(reponse: Response): Promise<ErrorEnvelope | null> {
    c'est-à-dire ce qui identifie vraiment ce build. Nul en développement, et le
    §`clientHeaders` ne l'envoie alors pas. */
 const IDENTITE: BuildIdentity = {
-  clientId: (Constants.expoConfig?.extra?.["clientId"] as string | undefined) ?? null,
-  clientKey: (Constants.expoConfig?.extra?.["clientKey"] as string | undefined) ?? null,
-  version: Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? null,
-  build: Application.nativeBuildVersion ?? null,
+  clientId: textOrNull(Constants.expoConfig?.extra?.["clientId"]),
+  clientKey: textOrNull(Constants.expoConfig?.extra?.["clientKey"]),
+  version: textOrNull(Application.nativeApplicationVersion) ?? textOrNull(Constants.expoConfig?.version),
+  build: textOrNull(Application.nativeBuildVersion),
   os: Platform.OS,
   osVersion: Platform.Version,
   /* IL VIENT DE LA CONFIGURATION DU BUILD, PAS D'`__DEV__`.
@@ -148,7 +148,7 @@ const IDENTITE: BuildIdentity = {
    *
    * `dev` quand la configuration ne dit rien : c'est le seul cas où l'on tourne
    * sans build, donc sans profil EAS. */
-  env: (Constants.expoConfig?.extra?.["appEnv"] as string | undefined) ?? "dev",
+  env: textOrNull(Constants.expoConfig?.extra?.["appEnv"]) ?? "dev",
 };
 
 async function envoie(chemin: string, options: RequestInit, jeton?: string): Promise<Response> {
