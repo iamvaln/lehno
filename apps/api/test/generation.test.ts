@@ -908,7 +908,7 @@ describe("la génération d'un message", () => {
       await crediter(5);
       const message = await lancer({ anthropic: repond() });
 
-      await service.noter(awa, message.id, "down");
+      await service.noter(awa, message.id, { feedback: "down", reasonCode: "wrong_tone" });
 
       const ligne = await db.prisma.generatedMessage.findUniqueOrThrow({ where: { id: message.id } });
       expect(ligne.feedback).toBe("down");
@@ -920,8 +920,8 @@ describe("la génération d'un message", () => {
       await crediter(5);
       const message = await lancer({ anthropic: repond() });
 
-      await service.noter(awa, message.id, "up");
-      await service.noter(awa, message.id, null);
+      await service.noter(awa, message.id, { feedback: "up" });
+      await service.noter(awa, message.id, { feedback: null });
 
       const ligne = await db.prisma.generatedMessage.findUniqueOrThrow({ where: { id: message.id } });
       expect(ligne.feedback).toBeNull();
@@ -940,7 +940,7 @@ describe("la génération d'un message", () => {
         select: { id: true },
       });
 
-      await expect(service.noter(autre.id, message.id, "down"))
+      await expect(service.noter(autre.id, message.id, { feedback: "down", reasonCode: "wrong_tone" }))
         .rejects.toThrow(/unknown message/);
     });
   });

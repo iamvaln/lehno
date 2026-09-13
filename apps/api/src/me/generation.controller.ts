@@ -52,13 +52,15 @@ type LigneExecution = {
   generatedMessage: {
     id: string; eventOccurrenceId: string; content: string; shortContent: string | null;
     status: string; createdAt: Date; updatedAt: Date;
+    feedback: string | null; feedbackReasonCode: string | null; feedbackNote: string | null;
   } | null;
   ideaSet: {
     id: string; eventOccurrenceId: string | null; createdAt: Date;
     ideas: {
       id: string; label: string; details: string | null;
       priceMin: unknown; priceMax: unknown; currency: string | null;
-      feedback: string | null; wishlistItemId: string | null;
+      feedback: string | null; feedbackReasonCode: string | null; feedbackNote: string | null;
+      wishlistItemId: string | null;
     }[];
   } | null;
 };
@@ -239,6 +241,9 @@ export class GenerationController {
         content: message.content,
         contentShort: message.shortContent,
         status: message.status as GeneratedMessage["status"],
+        feedback: message.feedback as GeneratedMessage["feedback"],
+        feedbackReasonCode: message.feedbackReasonCode,
+        feedbackNote: message.feedbackNote,
         createdAt: message.createdAt.toISOString(),
         updatedAt: message.updatedAt.toISOString(),
       },
@@ -256,6 +261,8 @@ export class GenerationController {
           priceMax: i.priceMax === null ? null : Number(i.priceMax),
           currency: i.currency,
           feedback: i.feedback as "up" | "down" | null,
+          feedbackReasonCode: i.feedbackReasonCode,
+          feedbackNote: i.feedbackNote,
           wishlistItemId: i.wishlistItemId,
         })),
         createdAt: jeu.createdAt.toISOString(),
@@ -288,6 +295,9 @@ export class MessagesController {
       content: m.content,
       contentShort: m.shortContent,
       status: m.status as GeneratedMessage["status"],
+      feedback: m.feedback,
+      feedbackReasonCode: m.feedbackReasonCode,
+      feedbackNote: m.feedbackNote,
       createdAt: m.createdAt.toISOString(),
       updatedAt: m.updatedAt.toISOString(),
     };
@@ -303,13 +313,16 @@ export class MessagesController {
     @Param("id", ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(avisSchema)) corps: AvisInput,
   ): Promise<GeneratedMessage> {
-    const m = await this.generation.noter(req.userId, id, corps.feedback);
+    const m = await this.generation.noter(req.userId, id, corps);
     return {
       id: m.id,
       occurrenceId: m.eventOccurrenceId,
       content: m.content,
       contentShort: m.shortContent,
       status: m.status as GeneratedMessage["status"],
+      feedback: m.feedback,
+      feedbackReasonCode: m.feedbackReasonCode,
+      feedbackNote: m.feedbackNote,
       createdAt: m.createdAt.toISOString(),
       updatedAt: m.updatedAt.toISOString(),
     };

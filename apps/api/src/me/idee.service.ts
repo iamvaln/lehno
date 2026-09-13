@@ -1,6 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
+import type { AvisInput } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
+import { feedbackWrite } from "./feedback.js";
 
 /**
  * Ce qu'on fait d'une idée une fois qu'elle est proposée.
@@ -48,11 +50,16 @@ export class IdeeService {
    * dans le temps — or c'est exactement la question qu'on posera : « la v3 de
    * l'invite plaît-elle plus que la v2 », qui se lit sur des avis datés.
    */
-  async noter(userId: string, ideaId: string, avis: "up" | "down" | null) {
+  /* LE MOTIF VIENT AVEC L'AVIS, et il passe par le même point que les deux
+     autres natures : `feedbackWrite` vérifie le code contre la liste ACTIVE et
+     contre la nature, puis compose les quatre colonnes. Les écrire ici aurait
+     fait trois écritures qui dérivent en silence — chacune verte sous ses
+     propres épreuves, chacune disant autre chose que les deux autres. */
+  async noter(userId: string, ideaId: string, avis: AvisInput) {
     await this.sienne(userId, ideaId);
     return this.prisma.generatedIdea.update({
       where: { id: ideaId },
-      data: { feedback: avis, feedbackAt: avis === null ? null : new Date() },
+      data: await feedbackWrite(this.prisma, "idees", avis),
     });
   }
 
