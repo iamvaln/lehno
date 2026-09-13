@@ -17,6 +17,30 @@
  * commodité : un poste qui n'a pas la variable doit construire et démarrer
  * normalement, sans elles.
  */
+/* LA PAIRE SUIT LA PLATEFORME, et les variables EAS ne le font pas toutes
+ * seules : elles valent par ENVIRONNEMENT — `production`, `preview`,
+ * `development` — jamais par plateforme. Une seule `LEHNO_CLIENT_ID` en
+ * production donnerait donc la paire Android à un build iOS, et le serveur
+ * verrait un `mobile_ios` présentant une paire enregistrée `mobile_android` :
+ * c'est exactement `type_discordant`, et tous les iPhone seraient refusés le
+ * jour où la garde s'allume.
+ *
+ * UNE PAIRE ABSENTE VAUT MIEUX QU'UNE PAIRE FAUSSE. Sans suffixe pour sa
+ * plateforme, un build part non identifié — ce que la phase 1 tolère et que le
+ * journal montre. Avec la paire de l'autre plateforme, il MENT sur ce qu'il
+ * est, et c'est l'incident que tout ce dispositif cherche à détecter.
+ *
+ * `EAS_BUILD_PLATFORM` est posé par EAS pendant la construction. Hors EAS il
+ * est absent, et on lit alors les noms nus — ceux du `.env.local` d'un poste
+ * de développement. Aucun repli des noms suffixés vers les noms nus : ce repli
+ * est précisément par où la paire de l'autre plateforme reviendrait. */
+const plateforme = process.env.EAS_BUILD_PLATFORM;
+
+const paire = (nom) =>
+  plateforme === undefined
+    ? process.env[nom] ?? null
+    : process.env[`${nom}_${plateforme.toUpperCase()}`] ?? null;
+
 module.exports = ({ config }) => ({
   ...config,
   plugins: [
@@ -51,8 +75,8 @@ module.exports = ({ config }) => ({
      * qui n'a pas les variables doit construire et démarrer normalement. En
      * phase 1 rien ne refuse ; le jour où la garde s'allume, un build sans paire
      * est un build mal configuré, et c'est au serveur de le dire. */
-    clientId: process.env.LEHNO_CLIENT_ID ?? null,
-    clientKey: process.env.LEHNO_CLIENT_KEY ?? null,
+    clientId: paire("LEHNO_CLIENT_ID"),
+    clientKey: paire("LEHNO_CLIENT_KEY"),
     appEnv: process.env.LEHNO_APP_ENV ?? null,
   },
 });
