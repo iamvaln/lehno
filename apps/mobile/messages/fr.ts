@@ -69,6 +69,15 @@ export const fr = {
   majTitre: "Une mise à jour est nécessaire",
   majTexte: "Cette version n'est plus servie. La dernière vous attend sur votre magasin d'applications.",
   majBouton: "Mettre à jour",
+
+  /* LA SUGGESTION, ET ELLE NE DIT PAS LA MÊME CHOSE QUE LE REFUS. Au-dessus,
+     « n'est plus servie » : c'est fini, il faut agir. Ici rien n'est cassé —
+     l'application marche, et on le dit en passant. Le numéro y est parce qu'il
+     rend le message vérifiable : sans lui, on annonce une nouveauté que rien ne
+     distingue de celle d'hier. */
+  majSuggestion: (version: string) => "La version " + version + " est disponible.",
+  majSuggestionAvecLien: (version: string) => "La version " + version + " est disponible. Touchez pour l'obtenir.",
+  majSuggestionFermer: "Ne plus afficher",
   refusTitre: "Cette version n'est plus reconnue",
   refusTexte: "Installez la dernière version depuis votre magasin d'applications. Votre compte, lui, n'a rien.",
   maintEtat: "Voir l'état du service",

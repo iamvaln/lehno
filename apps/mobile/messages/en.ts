@@ -49,6 +49,10 @@ export const en = {
   majTitre: "An update is needed",
   majTexte: "This version is no longer served. The latest one is waiting on your app store.",
   majBouton: "Update",
+
+  majSuggestion: (version: string) => "Version " + version + " is available.",
+  majSuggestionAvecLien: (version: string) => "Version " + version + " is available. Tap to get it.",
+  majSuggestionFermer: "Dismiss",
   refusTitre: "This version is no longer recognised",
   refusTexte: "Install the latest version from your app store. Your account is fine.",
   maintEtat: "Service status",
