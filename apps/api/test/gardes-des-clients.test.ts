@@ -42,7 +42,21 @@ describe("les gardes du client et de la version", () => {
       contexte: {
         switchToHttp: () => ({
           getRequest: () => ({ path: chemin }),
-          getResponse: () => ({ setHeader: (n: string, v: string) => { entetes.set(n, v); } }),
+          getResponse: () => ({
+          /* IL JETTE COMME CELUI DE NODE. Un faux qui accepterait tout
+             prouverait seulement que la garde ne pose pas l'en-tête, jamais
+             que le poser CASSERAIT — or c'est ce fait-là qui motive la
+             vérification, et un gabarit qui ne le modélise pas laisse croire
+             qu'on se protège d'un danger imaginaire. */
+          setHeader: (n: string, v: string) => {
+            if (/[^\x20-\x7e]/.test(v)) {
+              const e = new Error(`Invalid character in header content ["${n}"]`);
+              (e as { code?: string }).code = "ERR_INVALID_CHAR";
+              throw e;
+            }
+            entetes.set(n, v);
+          },
+        }),
         }),
       } as never,
     };
