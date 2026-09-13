@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { doitRenouveler, sortDeLaSession, messageDErreur } from "../lib/session.js";
+import { doitRenouveler, sortDeLaSession, leClientEstRefuse, messageDErreur } from "../lib/session.js";
 
 describe("le renouvellement silencieux", () => {
   /* Un jeton d'accès expire souvent — c'est sa raison d'être. Le client
@@ -54,5 +55,56 @@ describe("les messages d'erreur", () => {
     expect(messageDErreur(null, "fr")).toBeTruthy();
     expect(messageDErreur(null, "en")).toBeTruthy();
     expect(messageDErreur(null, "fr")).not.toBe(messageDErreur(null, "en"));
+  });
+});
+
+describe("le client refusé n'est pas le compte refusé", () => {
+  it("se reconnaît au 403 et à son code", () => {
+    expect(leClientEstRefuse(403, "client_unknown")).toBe(true);
+  });
+
+  /* `forbidden` est le refus ORDINAIRE, celui d'un compte. Les confondre
+     afficherait « votre compte est refusé » à quelqu'un dont le compte va très
+     bien — c'est exactement ce que le code distinct existe pour éviter. */
+  it("ne se confond pas avec un refus ordinaire", () => {
+    expect(leClientEstRefuse(403, "forbidden")).toBe(false);
+  });
+
+  it("ne se déclenche pas sur un autre statut", () => {
+    expect(leClientEstRefuse(401, "client_unknown")).toBe(false);
+  });
+
+  /* LES DEUX GARDES QUI DÉCONNECTERAIENT. Un `client_unknown` ne doit ni
+     renouveler le jeton — rien ne changerait — ni sortir de la session, ce qui
+     ferait perdre la sienne à quelqu'un dont le compte est sain. */
+  it("ne renouvelle pas, et ne sort pas de la session", () => {
+    expect(doitRenouveler(403, "client_unknown")).toBe(false);
+    expect(sortDeLaSession("client_unknown")).toBe(false);
+  });
+});
+
+/* L'ÉCRAN DE REFUS N'OFFRE PAS DE RÉESSAYER, et cette garde lit la source parce
+ * qu'aucun test d'unité ne verrait le bouton revenir.
+ *
+ * La spec le dit deux fois — « ne jamais retenter », « ni reconnexion, ni
+ * réessai » — et le piège est qu'il n'y a qu'UN écran pour deux arrêts : le
+ * bouton appartient à la maintenance, où il sert. Quelqu'un qui sortirait le
+ * bloc de sa condition le rendrait à un refus de client, où il tourne à vide
+ * et laisse croire qu'insister peut marcher.
+ */
+describe("l'écran d'arrêt ne propose rien à qui est refusé", () => {
+  const ecran = readFileSync(
+    new URL("../app/maintenance.tsx", import.meta.url),
+    "utf8",
+  );
+
+  it("garde le bouton de réessai sous la condition du refus", () => {
+    const bloc = ecran.slice(ecran.indexOf("{refuse ? null : ("));
+    expect(bloc).toContain("maintReessayer");
+  });
+
+  it("dit un autre titre et un autre texte quand le client est refusé", () => {
+    expect(ecran).toContain("refuse ? t.refusTitre : t.maintTitre");
+    expect(ecran).toContain("refuse ? t.refusTexte :");
   });
 });

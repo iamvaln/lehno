@@ -73,6 +73,8 @@ export const fr = {
     creditsSection: "Crédits",
     transactionManuelle: "Transaction manuelle",
     acces: "Accès administrateurs",
+    clientsApi: "Clients de l'API",
+    versions: "Versions de l'application",
     parametres: "Paramètres",
     fonctionnalites: "Fonctionnalités",
     motifs: "Motifs d'audit",
@@ -337,6 +339,118 @@ export const fr = {
           "Retour arrière après un essai non concluant",
         ],
       },
+    },
+  },
+  clientsApi: {
+    titre: "Clients de l'API",
+    sous: "Qui a le droit d'appeler, et sous quel nom.",
+    /* CE QUE LA CLÉ ACHÈTE, ET CE QU'ELLE N'ACHÈTE PAS — dit une fois, en
+       tête : quelqu'un s'y fierait un jour comme à une frontière de sécurité
+       si ce n'était écrit nulle part. */
+    portee: "Une application distribuée porte sa clé dans son paquet : qui la démonte l'obtient. Ce n'est donc pas une frontière de sécurité, c'est un identifiant RÉVOCABLE — et couper un client coupe une application entière, sans toucher aux autres.",
+    col: { libelle: "Client", identifiant: "Identifiant", type: "Plateforme", env: "Environnement", etat: "État", tournee: "Clé tournée le" },
+    types: { mobile_ios: "iOS", mobile_android: "Android", web: "Web" },
+    envs: { dev: "Développement", staging: "Recette", prod: "Production" },
+    etats: { ouvert: "Ouvert", coupe: "Coupé" },
+    // Une clé qui n'a jamais bougé depuis l'ouverture est une information,
+    // pas une case vide.
+    jamaisTournee: "Jamais",
+    ouvrir: "Ouvrir un client",
+    tourner: "Tourner la clé",
+    couper: "Couper",
+    rouvrir: "Rouvrir",
+    champs: { libelle: "Nom du client", type: "Plateforme", env: "Environnement" },
+    /* LA CLÉ NE PARAÎT QU'UNE FOIS, et l'écran le dit AVANT de la montrer :
+       lu après, l'avertissement arrive quand la fenêtre est déjà fermée dans
+       la tête de celui qui l'a copiée — ou pas copiée. */
+    cle: {
+      titre: "La clé de ce client",
+      unique: "Elle ne s'affichera plus jamais. Copiez-la maintenant.",
+      perdue: "Une clé perdue ne se récupère pas : elle se remplace en tournant celle du client, ce qui coupe l'ancienne.",
+      copiee: "Je l'ai copiée",
+    },
+    dialogueOuvrir: {
+      titre: "Ouvrir un client de l'API",
+      consequence: "Une clé sera engendrée et affichée UNE SEULE FOIS. L'identifiant, lui, se relit toujours.",
+      motifs: ["Nouveau contrat", "Environnement de recette", "Test de charge"],
+    },
+    dialogueTourner: {
+      titre: "Tourner la clé de {client}",
+      consequence: "L'ancienne clé cesse d'être acceptée immédiatement, et les appareils qui l'emploient encore seront refusés. L'identifiant ne bouge pas : les chiffres restent comparables dans le temps.",
+      motifs: ["Accès compromis", "Vérification de routine"],
+    },
+    dialogueCouper: {
+      titre: "Couper {client}",
+      consequence: "L'application entière cesse d'être servie, sur tous les appareils à la fois. Rien n'est supprimé : les lignes déjà notées gardent leur référence, et le client se rouvre.",
+      motifs: ["Accès compromis", "Correction d'une erreur"],
+    },
+    dialogueRouvrir: {
+      titre: "Rouvrir {client}",
+      consequence: "L'application est à nouveau servie, avec la même clé qu'avant la coupure.",
+      motifs: ["Correction d'une erreur", "Vérification de routine"],
+    },
+    vide: {
+      titre: "Aucun client",
+      texte: "Les paires ouvertes apparaissent ici, avec leur état et la date de leur dernière rotation.",
+    },
+  },
+  versions: {
+    titre: "Versions de l'application",
+    sous: "Ce qu'on accepte de servir, et ce qu'on refuse.",
+    /* CE QUE « FORCER » VEUT DIRE, dit une fois en tête. Le geste ne se voit
+       pas venir : personne ne l'a demandé, et l'application s'arrête. Sa
+       conséquence doit se lire AVANT qu'on atteigne le bouton. */
+    portee: "Forcer une mise à jour met hors service tous les appareils en dessous du build, d'un coup. On le fait pour une rupture de compatibilité ou un correctif de sécurité obligatoire — et alors tout le monde doit passer, dix appareils ou dix mille. Le nombre de comptes dit l'ampleur à préparer, jamais s'il faut le faire.",
+    col: {
+      plateforme: "Plateforme", version: "Version", build: "Build", etat: "État",
+      vus: "Comptes vus", publiee: "Publiée le",
+    },
+    plateformes: { mobile_ios: "iOS", mobile_android: "Android", web: "Web" },
+    etats: { servie: "Servie", forcee: "Mise à jour forcée", declassee: "Déclassée" },
+    toutes: "Toutes les plateformes",
+    // Compté sur les connexions des trente derniers jours : quelqu'un qui ne
+    // s'est pas reconnecté depuis un mois n'y figure pas. Le dire approché vaut
+    // mieux que le laisser croire exact.
+    vus: "{n} sur 30 j",
+    ampleur: "{n} comptes ont été vus sur ce build en trente jours : de quoi prévenir l'assistance et rédiger l'annonce.",
+    enregistrer: "Enregistrer une version",
+    forcer: "Forcer la mise à jour",
+    liberer: "Ne plus forcer",
+    declasser: "Déclasser",
+    champs: {
+      plateforme: "Plateforme",
+      version: "Numéro de version",
+      build: "Build",
+      // Le build est l'identité, pas le numéro de version : deux builds peuvent
+      // porter le même « 1.4.0 », et c'est le cas ordinaire d'un correctif
+      // recompilé.
+      buildAide: "C'est lui qui identifie la version, pas son numéro : deux builds peuvent porter le même.",
+      lien: "Lien du magasin (facultatif)",
+      lienInvalide: "Une adresse complète, commençant par https://",
+    },
+    dialogueEnregistrer: {
+      titre: "Enregistrer une version",
+      consequence: "La version devient servie. Elle ne force rien : forcer se décide ensuite, sur la ligne, avec son propre motif.",
+      motifs: ["Nouvelle publication", "Vérification de routine", "Correction d'une erreur"],
+    },
+    dialogueForcer: {
+      titre: "Forcer la mise à jour depuis {version} (build {build})",
+      consequence: "Tous les appareils en dessous de ce build ne pourront plus appeler tant qu'ils n'auront pas mis à jour.",
+      motifs: ["Alerte de sécurité", "Correction d'une erreur", "Accès compromis"],
+    },
+    dialogueLiberer: {
+      titre: "Ne plus forcer depuis {version} (build {build})",
+      consequence: "Les appareils en dessous de ce build sont à nouveau servis, sans avoir rien à faire.",
+      motifs: ["Correction d'une erreur", "Vérification de routine"],
+    },
+    dialogueDeclasser: {
+      titre: "Déclasser {version} (build {build})",
+      consequence: "La version cesse d'être proposée. Rien n'est supprimé : la ligne reste au registre, et l'historique se relit.",
+      motifs: ["Vérification de routine", "Correction d'une erreur"],
+    },
+    vide: {
+      titre: "Aucune version",
+      texte: "Les versions enregistrées apparaissent ici, du build le plus récent au plus ancien.",
     },
   },
   confirmation: {

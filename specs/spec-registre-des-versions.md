@@ -218,7 +218,7 @@ laisse casser en silence.
 *Deux surfaces : celle des clients, livrée en phase 1 et jamais décrite ici, et
 celle des versions, qui vient avec ce lot.*
 
-### 7.1 Les clients API — livré (#215), à dessiner
+### 7.1 Les clients API — livré (#215), écran livré depuis
 
 | route | ce qu'elle fait |
 | --- | --- |
@@ -241,6 +241,10 @@ celle des versions, qui vient avec ce lot.*
   c'est délibéré : les lignes déjà notées gardent leur référence, et
   l'historique reste lisible.
 
+**L'écran** : `apps/admin/src/pages/ClientsApi.tsx`. L'avertissement précède le
+secret dans le panneau de la clé — lu après, il arrive quand la fenêtre est déjà
+fermée dans la tête de celui qui l'a copiée, ou pas copiée.
+
 ### 7.2 Les versions — ce lot
 
 | route | ce qu'elle fait |
@@ -254,14 +258,32 @@ qu'ailleurs : **poser `forcesUpdate` met hors service tous les appareils en
 dessous**. C'est le geste le plus lourd du panneau — plus lourd que couper un
 client, parce qu'il ne se voit pas venir.
 
-**Ce que l'écran doit montrer avant de le poser** : combien d'appareils seraient
-concernés. La phase 1 ne le sait pas — elle journalise, elle ne compte pas. C'est
-l'argument qui ferait revenir l'agrégat écarté au §5.4 du plan, et il vaut mieux
-que celui d'origine : on ne veut pas « savoir quelles versions appellent », on
-veut **savoir qui l'on s'apprête à bloquer**.
+> **Tranché le 13 septembre.** Deux corrections, et la seconde est à ma charge.
+>
+> **1. Le compteur EXISTE** — contrairement à ce que ce paragraphe annonçait.
+> `versionAppSchema` porte `comptesVusRecemment`, calculé par un agrégat des
+> comptes distincts par build sur trente jours. L'agrégat « écarté » au §5.4 du
+> plan a été construit.
+>
+> **2. Mais il n'éclaire PAS la décision de forcer.** `forcesUpdate` ne se pose
+> pas quand le nombre le permet : il se pose quand il y a **rupture de
+> compatibilité** ou **correctif de sécurité obligatoire**. Dans ces deux cas il
+> faut que tout le monde passe — dix appareils ou dix mille, la décision est la
+> même.
+>
+> Le présenter comme un critère serait même trompeur à l'envers : plus il y a
+> d'appareils sur une version cassée ou vulnérable, plus il est **urgent** de
+> les faire passer, jamais moins.
 
-> **À trancher.** Sans ce compteur, `forcesUpdate` se pose à l'aveugle. Faut-il
-> le construire avec ce lot, ou poser le drapeau sans filet en attendant ?
+**À quoi il sert donc**, et c'est ce que l'écran doit en faire : dire l'**ampleur
+de ce qui suit**, pas s'il faut le faire. Combien de personnes devront mettre à
+jour se prépare — l'assistance en sera prévenue, une annonce se rédige — mais ce
+n'est pas ce qui décide.
+
+**Ce que l'écran doit garantir** : que la raison soit **consignée**, et que la
+confirmation dise ce que le geste SIGNIFIE — « tous les appareils en dessous ne
+pourront plus appeler tant qu'ils n'auront pas mis à jour ». Une phrase, et le
+chiffre à côté comme contexte, jamais comme question.
 
 ### 7.3 Ce que le panneau ne doit PAS offrir
 
@@ -269,12 +291,30 @@ veut **savoir qui l'on s'apprête à bloquer**.
 donc ses utilisateurs passent du « mettez à jour » à… « mettez à jour » — mais on
 perd la trace de ce qui a existé. `isRetired` dit la même chose et se relit.
 
+### 7.4 Où c'est
+
+`apps/admin/src/pages/Versions.tsx`, branché sur les trois routes de
+`admin/app-versions`. Ce que les épreuves de `apps/admin/test/app-versions.test.tsx`
+tiennent, et qui répond point par point au §7.2 :
+
+- la conséquence du geste est **dite**, et le compteur la **suit** — jamais à sa
+  place ;
+- une version déclassée n'offre **plus aucun geste** : elle n'est déjà plus
+  servie, et forcer depuis elle serait un geste sans effet ;
+- le filtre de plateforme part au **serveur**, pas au tableau déjà chargé ;
+- le **code** du motif part avec la phrase. Le registre range les siens sous
+  `app_version_register` et `app_version_update`, et le serveur refuse un geste
+  dont il connaît les motifs et ne reçoit pas le code.
+
 ---
 
 ## 8. Ce qui reste à trancher
 
-1. **Le compteur d'appareils avant de forcer** (§7.2). C'est le point qui décide
-   si ce lot embarque un agrégat.
+1. ~~**Le compteur d'appareils avant de forcer** (§7.2).~~ **Tranché le 13
+   septembre.** Le compteur existe et il est rendu avec chaque ligne, mais il
+   **n'informe pas la décision de forcer** : on force pour une rupture de
+   compatibilité ou un correctif de sécurité obligatoire, et alors tout le monde
+   doit passer. Il dit l'ampleur de ce qui suit. Le §7.2 porte le raisonnement.
 2. **Le web est-il concerné ?** Un site se recharge tout seul : le 426 n'y a de
    sens que pour une application installée. **Proposé** : le registre couvre le
    web pour la traçabilité, mais `forcesUpdate` n'y déclenche qu'un rechargement

@@ -46,6 +46,17 @@ describe("le contrat publié", () => {
     return trouvees;
   };
 
+  /* LES CROCHETS ENTRANTS SONT HORS PÉRIMÈTRE, comme l'administration et pour
+     la même raison : le contrat décrit ce qu'un CLIENT appelle. `/public/eas/`
+     est appelé par les serveurs d'Expo — jamais par le mobile, jamais par une
+     page. L'y déclarer annoncerait au mobile une route qu'il ne PEUT pas
+     appeler, puisqu'elle est gardée par une signature dont il n'a pas le
+     secret.
+     La liste est nommée et étroite : un crochet ajouté ailleurs fera tomber ce
+     cas, et c'est voulu — on veut que quelqu'un relise cette décision plutôt
+     que de l'hériter. */
+  const CROCHETS = ["/public/eas/"];
+
   it("déclare toutes les routes clientes", () => {
     const spec = JSON.parse(
       readFileSync(join(import.meta.dirname, "..", "..", "..", "docs", "api", "openapi.json"), "utf8"),
@@ -58,6 +69,7 @@ describe("le contrat publié", () => {
 
     const absentes = routesReelles()
       .filter((r) => !r.includes("/admin"))
+      .filter((r) => !CROCHETS.some((c) => r.includes(c)))
       .filter((r) => !publiees.has(r))
       .sort();
 
