@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View } from "react-native";
+import { Linking, Pressable, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  OfflineBanner, ThemeProvider, useCouleurs, type PreferenceDeTheme,
+  Banner, OfflineBanner, ThemeProvider, useCouleurs, type PreferenceDeTheme,
 } from "@lehno/ui-native";
 import { LangueProvider } from "../lib/langue.js";
 import { DrapeauxProvider } from "../lib/DrapeauxProvider.js";
@@ -14,6 +14,8 @@ import { ArretProvider, useArret } from "../lib/ArretProvider.js";
 import { PousseeProvider } from "../lib/PousseeProvider.js";
 import { ReseauProvider, useReseau } from "../lib/ReseauProvider.js";
 import { messageDuBandeau } from "../lib/file.js";
+import { surSuggestionDeMiseAJour } from "../lib/api.js";
+import { banner, type UpdateSuggestion } from "../lib/update.js";
 import { useLangue } from "../lib/langue.js";
 import Maintenance from "./maintenance.js";
 import { litLApparence } from "../lib/apparence.js";
@@ -67,12 +69,77 @@ function BandeauReseau() {
   );
 }
 
+/* LA SUGGESTION DE MISE À JOUR — §4, phase 3, et c'est le geste DOUX des deux.
+ *
+ * Le refus prend l'écran entier (voir `ArretProvider`). Celui-ci n'interrompt
+ * rien : l'application marche, une version plus récente existe, on le dit en
+ * passant. Il se pose donc avec le bandeau réseau, au-dessus de la pile — un
+ * écran ne peut pas le porter, puisqu'on ne sait pas lequel sera là quand le
+ * serveur le dira.
+ *
+ * UNE FOIS PAR SESSION AU PLUS, et l'en-tête, lui, revient sur CHAQUE appel :
+ * sans le drapeau de renvoi, fermer le bandeau le ferait revenir à la requête
+ * suivante, c'est-à-dire tout de suite. Le drapeau vit en mémoire et meurt avec
+ * le processus — sur le disque, quelqu'un qui a fermé le bandeau en mars
+ * n'entendrait plus jamais parler d'aucune version.
+ *
+ * Le lien peut manquer : le registre ne le connaît pas toujours. Le bandeau
+ * s'affiche quand même — « une nouvelle version existe » vaut d'être su — mais
+ * il ne se touche plus, et son texte cesse de promettre un geste qui n'ouvrirait
+ * rien. */
+function BandeauMiseAJour() {
+  const { t } = useLangue();
+  const insets = useSafeAreaInsets();
+  const couleurs = useCouleurs();
+  const [suggestion, setSuggestion] = useState<UpdateSuggestion | null>(null);
+  const [ecartee, setEcartee] = useState(false);
+
+  useEffect(() => surSuggestionDeMiseAJour((s) => { setSuggestion(s); }), []);
+
+  const montree = banner(suggestion, ecartee);
+  if (montree === null) return null;
+
+  const ecarte = () => {
+    setEcartee(true);
+    setSuggestion(null);
+  };
+  const lien = montree.url;
+  const texte = lien === null
+    ? t.majSuggestion(montree.version)
+    : t.majSuggestionAvecLien(montree.version);
+
+  const bandeau = (
+    <Banner intent="info" dismissLabel={t.majSuggestionFermer} onDismiss={ecarte}>
+      {texte}
+    </Banner>
+  );
+
+  /* Le fond peint sous l'encart pour la même raison que le bandeau réseau :
+     sans lui, la barre d'état resterait sur la couleur de la page. */
+  return (
+    <View style={{ paddingTop: insets.top, backgroundColor: couleurs.surfacePanel }}>
+      {lien === null ? bandeau : (
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel={texte}
+          /* On ferme en ouvrant : le geste est fait, et retrouver le bandeau au
+             retour du magasin serait dire deux fois la même chose. */
+          onPress={() => { void Linking.openURL(lien); ecarte(); }}
+        >
+          {bandeau}
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
 function Coquille() {
   const couleurs = useCouleurs();
   return (
     <>
       <StatusBar style="auto" />
       <BandeauReseau />
+      <BandeauMiseAJour />
       <Stack
         screenOptions={{
           headerShown: false,
