@@ -68,6 +68,9 @@ export default function Accueil() {
   const [aUneListe, setAUneListe] = useState<boolean | null>(null);
   const [remplissage, setRemplissage] = useState<Remplissage>(REMPLISSAGE_PLEIN);
   const [hauteur, setHauteur] = useState<number | null>(null);
+  /* LA HAUTEUR DU CONTENU EST UNE MESURE, PAS UN ÉVÉNEMENT — et c'est tout le
+     correctif. Voir l'effet plus bas. */
+  const [contenu, setContenu] = useState<number | null>(null);
 
   /* CE QUI ATTEND SE COMPTE AVEC LE MÊME PRÉDICAT QUE L'ÉCRAN QUI LE MONTRE.
      `composeLesReprises` décide de ce qui compte comme « en cours » — un
@@ -131,6 +134,28 @@ export default function Accueil() {
   }, [langue, compteLesReprises]);
 
   useEffect(() => { void charge(); }, [charge]);
+
+  /* LE RÉTRÉCISSEMENT SE DÉCIDE ICI, ET PLUS DANS LE RAPPEL DE MESURE.
+   *
+   * Il y vivait, et il ne s'y déclenchait jamais : `onContentSizeChange` arrive
+   * AVANT que `onLayout` ait posé la hauteur disponible. Le rappel lisait donc
+   * `hauteur === null` et passait son tour. La hauteur arrivait ensuite, mais le
+   * contenu, lui, n'avait pas changé — le rappel ne repassait plus. L'unique
+   * occasion était manquée, et l'écran gardait son remplissage maximal.
+   *
+   * Vu à l'appareil sur un iPhone SE : 466 points de contenu dans 337
+   * disponibles, `cartes: 3, rangs: 4` — le maximum, jamais réduit d'un cran.
+   * Le bas de la liste passait sous la barre d'onglets, et comme le défilement
+   * est coupé par construction, ce qui dépassait devenait INATTEIGNABLE.
+   *
+   * Les deux hauteurs sont maintenant des ÉTATS, et l'effet les rapproche quel
+   * que soit l'ordre d'arrivée. Il n'y a pas de boucle : chaque retrait change
+   * le contenu, donc remesure, et `retrecit` finit par rendre `null`. */
+  useEffect(() => {
+    if (hauteur === null || contenu === null || contenu <= hauteur) return;
+    const moins = retrecit(remplissage);
+    if (moins) setRemplissage(moins);
+  }, [hauteur, contenu, remplissage]);
   // Au retour d'un autre onglet : une date ajoutée ailleurs doit se voir ici.
   useFocusEffect(useCallback(() => { void charge(); }, [charge]));
 
@@ -317,12 +342,7 @@ export default function Accueil() {
               if (doitRepartirDuMaximum(h, hauteur)) setRemplissage(REMPLISSAGE_PLEIN);
               setHauteur(h);
             }}
-            onContentSizeChange={(_, hContenu) => {
-              if (hauteur !== null && hContenu > hauteur) {
-                const moins = retrecit(remplissage);
-                if (moins) setRemplissage(moins);
-              }
-            }}
+            onContentSizeChange={(_, hContenu) => { setContenu(hContenu); }}
             refreshControl={
               <RefreshControl
                 refreshing={rafraichit}

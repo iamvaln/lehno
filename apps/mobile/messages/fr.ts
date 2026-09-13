@@ -15,6 +15,8 @@ const NOMBRES_FR: Record<number, string> = {
   3: "Trois", 4: "Quatre", 5: "Cinq", 6: "Six",
 };
 
+import { endSentence } from "../lib/text.js";
+
 export const fr = {
   connexionTitre: "Soyez là le jour J",
   connexionTexte: "Les dates de vos proches, et ce que vous savez d'eux. Le moment venu, vous avez déjà tout pour bien faire.",
@@ -215,7 +217,7 @@ export const fr = {
   etatUnAujourdhuiEtSemaine: (n: number) => n === 1
     ? "Une date aujourd'hui, une autre cette semaine."
     : "Une date aujourd'hui, " + n + " autres cette semaine.",
-  etatLointain: (date: string) => "Rien avant le " + date + ".",
+  etatLointain: (date: string) => endSentence("Rien avant le " + date),
   ceQuiApproche: "Ce qui approche",
   preparer: "Préparer",
   marquerEnvoye: "Marquer envoyé",
