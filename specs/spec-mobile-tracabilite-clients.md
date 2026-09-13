@@ -205,20 +205,48 @@ Le serveur ajoute un en-tête quand une version plus récente existe sans que la
 courante soit hors service. **Non bloquant**, et il ne doit surtout pas
 interrompre : une bannière discrète, une fois par session au plus.
 
-> **Pas encore câblable, constaté le 12 septembre en écrivant le 426.**
+**Les deux en-têtes**, et ils voyagent ensemble :
+
+| en-tête | ce qu'il porte |
+| --- | --- |
+| `x-app-update-available` | le numéro de la version plus récente — `1.4.0` |
+| `x-app-update-url` | où la prendre. Absent quand le registre ne connaît pas de lien |
+
+**Le lien accompagne la version**, et ce n'est pas un confort : annoncer une
+version sans dire où la prendre demande d'aller la chercher soi-même, et c'est la
+même faute que « mettez à jour » sans lien — un mur, en plus poli.
+
+**Les deux sont facultatifs, séparément.** Une valeur qu'un en-tête ne peut pas
+porter — le registre est une saisie d'administration, et rien n'interdit un
+retour à la ligne dans un numéro de version — **n'est pas posée** plutôt que de
+faire tomber la requête. Node refuse une telle valeur, et la garde tourne sur
+CHAQUE appel : une frappe malheureuse aurait rendu 500 sur tout le trafic, sans
+que le lien avec le registre saute aux yeux. Le client doit donc traiter
+l'absence, y compris celle de `x-app-update-url` seule.
+
+**La bannière n'est pas bloquante** : discrète, une fois par session au plus, et
+elle n'interrompt rien.
+
+> **Câblé le 13 septembre**, et le paramètre a changé de portée en même temps.
 >
-> `versions.service.ts:91-93` calcule bien l'état `suggeree` et rend la version
-> visée. Mais **`version.guard.ts` ne pose aucun en-tête** — vérifié : le fichier
-> ne contient ni `header`, ni `setHeader`. La suggestion ne quitte donc jamais le
-> serveur, et le mobile n'a rien à lire.
+> `versions.service.ts` calculait l'état `suggeree` depuis toujours ; la garde ne
+> posait aucun en-tête, et la suggestion ne quittait jamais le serveur.
 >
-> **Ce qu'il faut** : que la garde pose l'en-tête sur la réponse quand l'état est
-> `suggeree`, et que ce document le NOMME — « un en-tête » ne suffit pas à
-> écrire un client. Tant que les deux manquent, la bannière n'est pas reportée :
-> elle est impossible.
+> **Ce qui bloquait vraiment** n'était pas l'en-tête manquant mais la place du
+> paramètre : `version_guard_enabled` était lu **en tête de garde** et coupait
+> celle-ci ENTIÈRE. La bannière n'aurait donc pu exister qu'une fois le refus
+> allumé — c'est-à-dire une fois qu'on accepte de mettre des gens dehors. Le plus
+> doux des deux gestes attendait le plus dur.
 >
-> Le 426 et l'écran d'arrêt, eux, sont câblés — ils portent leur contenu dans
-> l'enveloppe, qui existe.
+> **Le paramètre ne gouverne plus que le REFUS.** Éteint, un build périmé reçoit
+> la bannière au lieu du 426 : c'est la phase « on note, on ne bloque pas » que
+> le §8.3 du registre des versions proposait et qui n'existait nulle part. On
+> regarde le parc bouger, puis on allume.
+>
+> Les deux exemptions, elles, ne bougent pas : **sans client reconnu** on ne sait
+> ni quelle plateforme ni quel environnement, et **hors production** il n'y a pas
+> de numéro de build à comparer. Dans les deux cas il n'y a rien à suggérer non
+> plus.
 
 ---
 

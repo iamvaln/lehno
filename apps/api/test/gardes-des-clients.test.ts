@@ -31,6 +31,23 @@ describe("les gardes du client et de la version", () => {
     switchToHttp: () => ({ getRequest: () => ({ path: chemin }) }),
   }) as never;
 
+  /* LA MÊME CHOSE, AVEC UNE RÉPONSE QUI RETIENT SES EN-TÊTES. Le contexte nu
+     ci-dessus n'en porte pas — c'est voulu et ça vaut d'être éprouvé : la garde
+     tourne aussi là où rien ne recueille un en-tête, et elle ne doit pas tomber
+     pour autant. */
+  const requeteEtReponse = (chemin: string) => {
+    const entetes = new Map<string, string>();
+    return {
+      entetes,
+      contexte: {
+        switchToHttp: () => ({
+          getRequest: () => ({ path: chemin }),
+          getResponse: () => ({ setHeader: (n: string, v: string) => { entetes.set(n, v); } }),
+        }),
+      } as never,
+    };
+  };
+
   const allumer = async (cle: string): Promise<void> => {
     await db.prisma.systemParameter.upsert({
       where: { key: cle },
@@ -140,6 +157,85 @@ describe("les gardes du client et de la version", () => {
       await poserUneVersion(400);
       const g = garde();
       await dansLeContexte(enProduction(999), async () => {
+        expect(await g.canActivate(requete("/v1/me/persons"))).toBe(true);
+      });
+    });
+
+    /* ─── LA SUGGESTION ──────────────────────────────────────────────────────
+     *
+     * Elle se CALCULAIT depuis toujours et ne partait jamais : le paramètre
+     * était lu en tête de garde et coupait tout, suggestion comprise. La
+     * bannière n'aurait donc pu exister qu'une fois le refus allumé — le plus
+     * doux des deux gestes attendait le plus dur. */
+    it("annonce une version plus récente, avec le lien pour la prendre", async () => {
+      await poserUneVersion(400);
+      await poserUneVersion(401);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(enProduction(400), async () => {
+        expect(await g.canActivate(ctx)).toBe(true);
+      });
+      expect(entetes.get("x-app-update-available")).toBe("1.0.401");
+      /* LE LIEN VOYAGE AVEC LA VERSION. Annoncer une version sans dire où la
+         prendre est la même faute que « mettez à jour » sans lien, en plus
+         poli. */
+      expect(entetes.get("x-app-update-url")).toBe("https://apps.apple.com/lehno");
+    });
+
+    it("ne dit rien quand le build est déjà le dernier", async () => {
+      await poserUneVersion(400);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(enProduction(400), async () => {
+        expect(await g.canActivate(ctx)).toBe(true);
+      });
+      expect(entetes.size).toBe(0);
+    });
+
+    /* « ON NOTE, ON NE BLOQUE PAS » — la phase que le §8.3 du registre des
+       versions proposait et qui n'existait nulle part. Éteinte, la garde suggère
+       au lieu de fermer : les builds périmés reçoivent une bannière, on regarde
+       le parc bouger, puis on allume. */
+    it("éteinte, suggère à un build périmé au lieu de le refuser", async () => {
+      await poserUneVersion(400);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(enProduction(999), async () => {
+        expect(await g.canActivate(ctx)).toBe(true);
+      });
+      expect(entetes.get("x-app-update-available")).toBe("1.0.400");
+    });
+
+    /* UNE VALEUR QU'UN EN-TÊTE NE PEUT PAS PORTER NE LE FAIT PAS TOMBER.
+       `version` n'est contraint que par sa longueur : rien n'y interdit un
+       retour à la ligne, et Node refuse alors la valeur — sur CHAQUE requête,
+       puisque la garde tourne partout. Une bannière qui manque est un
+       désagrément ; une API qui tombe n'en est pas un. */
+    it("se tait plutôt que de poser un en-tête impossible", async () => {
+      await db.prisma.appVersion.create({
+        data: {
+          platform: "mobile_ios" as never, version: "1.0\n.500",
+          buildNumber: 500, storeUrl: "https://apps.apple.com/lehno",
+        },
+      });
+      await poserUneVersion(400);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(enProduction(400), async () => {
+        expect(await g.canActivate(ctx)).toBe(true);
+      });
+      expect(entetes.has("x-app-update-available")).toBe(false);
+      // Le lien, lui, est posable : on ne jette pas ce qui tient.
+      expect(entetes.get("x-app-update-url")).toBe("https://apps.apple.com/lehno");
+    });
+
+    /* LA GARDE TOURNE AUSSI LÀ OÙ RIEN NE RECUEILLE UN EN-TÊTE. Elle ne doit pas
+       tomber pour autant — c'est ce que le contexte nu éprouve. */
+    it("ne tombe pas quand la réponse ne sait pas porter d'en-tête", async () => {
+      await poserUneVersion(400);
+      await poserUneVersion(401);
+      const g = garde();
+      await dansLeContexte(enProduction(400), async () => {
         expect(await g.canActivate(requete("/v1/me/persons"))).toBe(true);
       });
     });
