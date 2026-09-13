@@ -280,12 +280,14 @@ export const en: typeof fr = {
       col: { version: "Version", quand: "Published on", parQui: "By", note: "What it changes", etat: "State",
       gestes: "What was done with it",
       avis: "What was thought of it",
+      motifs: "Why it fell flat",
       },
       axes: {
         gestes: { pour: "{n} sent", contre: "{n} set aside", sans: "{n} untouched" },
         avis: { pour: "{n} good", contre: "{n} poor", sans: "{n} unrated" },
       },
       rien: "Nothing produced",
+      motifsAutres: "+{n}",
       horsVersion: "Before the link: {n} productions, {ecartees} of them set aside. They belong to no version, and cannot be given one.",
       etats: { published: "In service", superseded: "Retired", draft: "Draft" },
       version: "Version {n}",
@@ -1476,6 +1478,7 @@ export const en: typeof fr = {
       note: "What it changes",
       gestes: "What was done with it",
       avis: "What was thought of it",
+      motifs: "Why it fell flat",
       etat: "State",
     },
     axes: {
@@ -1483,6 +1486,7 @@ export const en: typeof fr = {
       avis: { pour: "{n} good", contre: "{n} poor", sans: "{n} unrated" },
     },
     rien: "Nothing produced",
+    motifsAutres: "+{n}",
     horsVersion: "Before the link: {n} portraits, {ecartees} of them rejected. They belong to no version, and cannot be given one.",
     etats: {
       published: "Live",

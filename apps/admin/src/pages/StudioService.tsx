@@ -3,7 +3,9 @@ import { Breadcrumb, PageHeader } from "../composants/page/index.js";
 import { DataTable, EmptyState, StatusPill, type Colonne } from "../composants/donnees/index.js";
 import { ConfirmWithReason } from "../composants/actions/index.js";
 import { messages, type Langue } from "../i18n/index.js";
-import type { AdminRole, Axe, ConfigurationPortrait, EtatPortrait, Performance } from "@lehno/contracts";
+import type {
+  AdminRole, Axe, ConfigurationPortrait, EtatPortrait, MotifDAvis, Performance,
+} from "@lehno/contracts";
 
 /**
  * Réglages en service — un écran de LECTURE qui répond à deux questions, et à
@@ -75,6 +77,22 @@ export function StudioService(
     ].join(" · ");
   };
 
+  /* POURQUOI ÇA A DÉPLU, et c'est ce qui rend la colonne d'à côté ACTIONNABLE.
+     « Douze pouces en bas » dit qu'il faut régler quelque chose ; « hors sujet 8
+     · ton faux 3 » dit QUOI régler.
+
+     ON EN MONTRE TROIS AU PLUS. La liste est déjà triée du plus fréquent au plus
+     rare par le serveur, et une cellule de tableau qui en aligne huit ne se lit
+     plus — or ce qu'on vient y chercher est le motif qui domine. Le reste se
+     compte dans « +n ». */
+  const rendreMotifs = (motifs: MotifDAvis[] | undefined): string => {
+    if (motifs === undefined || motifs.length === 0) return d.rien;
+    const tete = motifs.slice(0, 3);
+    const reste = motifs.length - tete.length;
+    const dits = tete.map((m) => `${langue === "en" ? m.en : m.fr} ${m.n}`).join(" · ");
+    return reste === 0 ? dits : `${dits} · ${remplir(d.motifsAutres, { n: reste })}`;
+  };
+
   const colonnes: Colonne<ConfigurationPortrait & { id: string }>[] = [
     {
       cle: "version",
@@ -102,6 +120,15 @@ export function StudioService(
       cle: "avis",
       titre: d.col.avis,
       rendu: (c) => rendreAxe(mesureDe(c.id)?.avis, d.axes.avis, d.rien),
+    },
+    /* LA VENTILATION DU « CONTRE », à côté de lui et jamais à sa place : le
+       compte dit l'ampleur, les motifs disent quoi corriger, et les deux se
+       lisent ensemble. */
+    {
+      cle: "motifs",
+      titre: d.col.motifs,
+      discret: true,
+      rendu: (c) => rendreMotifs(mesureDe(c.id)?.motifs),
     },
     {
       cle: "etat",

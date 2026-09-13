@@ -1,6 +1,18 @@
 import type { AvisInput, NatureAvis } from "@lehno/contracts";
 import { AppError } from "../common/errors.js";
-import type { PrismaService } from "../prisma/prisma.service.js";
+
+/* ONLY WHAT THIS FUNCTION READS, not the whole service. Typing it as
+ * `PrismaService` would force every caller — including a test holding a bare
+ * `PrismaClient` — to cast, and a cast is exactly what stops the compiler from
+ * noticing the day this query changes shape. */
+type ReasonReader = {
+  feedbackReason: {
+    findFirst(args: {
+      where: { code: string; isActive: boolean; natures: { has: string } };
+      select: { id: true };
+    }): Promise<{ id: string } | null>;
+  };
+};
 
 /** From the contract, never redeclared here: two lists would drift, and the one
  *  that drifted would only show up as a count nobody can explain. */
@@ -29,7 +41,7 @@ export interface FeedbackWrite {
  * what keeps the API from ever hitting it.
  */
 export async function feedbackWrite(
-  prisma: PrismaService, nature: FeedbackNature, entry: AvisInput,
+  prisma: ReasonReader, nature: FeedbackNature, entry: AvisInput,
 ): Promise<FeedbackWrite> {
   if (entry.feedback === null)
     return { feedback: null, feedbackAt: null, feedbackReasonCode: null, feedbackNote: null };

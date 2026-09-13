@@ -85,16 +85,27 @@ const PERFORMANCE = {
     produites: 12,
     gestes: axe(7, 2, 3),
     avis: axe(1, 4, 7),
+    /* QUATRE REJETS, QUATRE MOTIFS COMPTÉS, et volontairement plus de trois
+       espèces : l'écran n'en montre que les trois premiers et compte le reste
+       — une cellule qui en aligne huit ne se lit plus. */
+    motifs: [
+      { code: "off_topic", fr: "Hors sujet", en: "Off topic", n: 2 },
+      { code: "wrong_tone", fr: "Le ton ne va pas", en: "Wrong tone", n: 1 },
+      { code: "bland", fr: "Fade, sans surprise", en: "Bland", n: 1 },
+      { code: "inaccurate", fr: "Inexact", en: "Inaccurate", n: 1 },
+    ],
   }],
   /* Produites par le gabarit du code, avant qu'une configuration ne soit
      publiée : comptées à part et jamais attribuées. */
-  horsVersion: { produites: 20, gestes: axe(10, 5, 5), avis: axe(0, 0, 20) },
+  horsVersion: {
+    produites: 20, gestes: axe(10, 5, 5), avis: axe(0, 0, 20), motifs: [],
+  },
 };
 
 const PERFORMANCE_VIDE = {
   unite: "idee",
   versions: [],
-  horsVersion: { produites: 0, gestes: axe(0, 0, 0), avis: axe(0, 0, 0) },
+  horsVersion: { produites: 0, gestes: axe(0, 0, 0), avis: axe(0, 0, 0), motifs: [] },
 };
 
 const PROFILS = {
@@ -595,6 +606,27 @@ describe("l'atelier des textes", () => {
        douze n'ont rien dit. */
     expect(ligne).toHaveTextContent("7 sans avis");
     expect(appels.mock.calls.some(([u]) => String(u).includes("/studio/message/performance"))).toBe(true);
+  });
+
+  /* CE QUI REND L'AXE DES AVIS ACTIONNABLE. « Quatre mauvais » dit qu'il faut
+     régler quelque chose ; « hors sujet 2 · ton faux 1 » dit QUOI régler — et
+     c'est la seule chose qu'on vient chercher en ouvrant cet écran. */
+  it("ventile les rejets par motif, du plus fréquent au plus rare", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+
+    const ligne = (await screen.findByText("Consigne resserrée après un signalement."))
+      .closest("tr") as HTMLElement;
+
+    expect(ligne).toHaveTextContent("Hors sujet 2");
+    expect(ligne).toHaveTextContent("Le ton ne va pas 1");
+    /* TROIS AU PLUS, ET LE RESTE SE COMPTE. Une cellule qui aligne huit motifs
+       ne se lit plus — or ce qu'on vient y chercher est celui qui domine. Le
+       quatrième ne disparaît pas pour autant : le taire ferait un total qui ne
+       tombe pas juste, et c'est le compte qu'on veut pouvoir croire. */
+    expect(ligne).not.toHaveTextContent("Inexact");
+    expect(ligne).toHaveTextContent("+1");
   });
 
   /* CE QUI N'A PAS DE VERSION SE DIT, jamais ne se tait : un total qui ne tombe
