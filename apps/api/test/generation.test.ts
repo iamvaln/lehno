@@ -958,9 +958,16 @@ describe("la génération d'un message", () => {
       return faits;
     };
 
+    /* UN REJET PORTE UN MOTIF, et la base le tient — cette aide l'a appris en
+       tombant, ce qui est le bon sens de la dépendance : une garde qu'aucun
+       gabarit ne heurte est une garde dont on ignore si elle mord. */
     const noter = (id: string, avis: "up" | "down") =>
       db.prisma.generatedMessage.update({
-        where: { id }, data: { feedback: avis, feedbackAt: new Date() },
+        where: { id },
+        data: {
+          feedback: avis, feedbackAt: new Date(),
+          ...(avis === "down" ? { feedbackReasonCode: "off_topic" } : {}),
+        },
       });
 
     /* LES DEUX AXES NE SE FONDENT PAS, et c'est ce que la première rédaction
