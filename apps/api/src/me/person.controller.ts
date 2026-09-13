@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Inject,
+  Logger,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -40,6 +41,8 @@ type AuthedRequest = { userId: string };
 // qu'une clé du socle y réapparaisse.
 @UseGuards(AuthGuard)
 export class PersonController {
+  private readonly logger = new Logger("me/persons");
+
   constructor(
     @Inject(PersonService) private readonly persons: PersonService,
     @Inject(TrackingService) private readonly mesure: TrackingService,
@@ -96,9 +99,23 @@ export class PersonController {
       // celui après lequel le total vaut un. Le déduire du carnet plutôt que
       // de tenir un drapeau sur le compte évite un état de plus à maintenir.
       if (proche.notesCount === 0) {
-        void this.persons.list(req.userId, { limit: 1 }).then((carnet) => {
-          if (carnet.total === 1) this.mesure.emettre(req.userId, "person.first_created", {});
-        });
+        void this.persons.list(req.userId, { limit: 1 })
+          .then((carnet) => {
+            if (carnet.total === 1) this.mesure.emettre(req.userId, "person.first_created", {});
+          })
+          /* LE `catch` N'EST PAS DE LA POLITESSE : sans lui, une panne
+             passagère de base sur ce comptage rejette une promesse que
+             PERSONNE n'attend — la réponse est déjà partie. Node termine alors
+             le processus, et l'API tombe pour une mesure.
+             Même arbitrage que `TrackingService.emettre` et
+             qu'`enArrierePlan` dans `generation.service` : une mesure ne fait
+             jamais échouer ce qu'elle mesure. On perd l'événement, on le dit
+             au journal, on ne perd pas le serveur. */
+          .catch((err: unknown) => {
+            this.logger.warn(
+              `person.first_created perdu : ${err instanceof Error ? err.message : "cause inconnue"}`,
+            );
+          });
       }
       return proche;
     });
