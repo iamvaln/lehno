@@ -483,7 +483,7 @@ describe("le portrait", () => {
     it("se pose, et laisse l'état tranquille", async () => {
       const portrait = await unPortrait();
 
-      await portraits(repond(PNG_MINUSCULE)).noter(awa, portrait.id, "down");
+      await portraits(repond(PNG_MINUSCULE)).noter(awa, portrait.id, { feedback: "down", reasonCode: "poor_likeness" });
 
       const ligne = await db.prisma.portrait.findUniqueOrThrow({ where: { id: portrait.id } });
       expect(ligne.feedback).toBe("down");
@@ -499,8 +499,8 @@ describe("le portrait", () => {
       const portrait = await unPortrait();
       const service = portraits(repond(PNG_MINUSCULE));
 
-      await service.noter(awa, portrait.id, "up");
-      await service.noter(awa, portrait.id, null);
+      await service.noter(awa, portrait.id, { feedback: "up" });
+      await service.noter(awa, portrait.id, { feedback: null });
 
       const ligne = await db.prisma.portrait.findUniqueOrThrow({ where: { id: portrait.id } });
       expect(ligne.feedback).toBeNull();
@@ -521,7 +521,7 @@ describe("le portrait", () => {
         select: { id: true },
       });
 
-      await expect(portraits(repond(PNG_MINUSCULE)).noter(autre.id, portrait.id, "down"))
+      await expect(portraits(repond(PNG_MINUSCULE)).noter(autre.id, portrait.id, { feedback: "down", reasonCode: "poor_likeness" }))
         .rejects.toThrow(/resource not found/);
     });
   });

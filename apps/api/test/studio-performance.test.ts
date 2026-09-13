@@ -82,6 +82,13 @@ describe("ce que les versions ont produit", () => {
     });
   };
 
+  /* UN REJET PORTE UN MOTIF, et la base le tient : ces gabarits l'apprennent en
+     tombant, ce qui est le bon sens de la dépendance. Le motif employé varie
+     pour que la ventilation ait quelque chose à ventiler — un jeu où tous les
+     rejets portent le même code ne distinguerait pas un tri correct d'un tri
+     absent. */
+  const MOTIF = { idees: "not_their_taste", autre: "off_topic" } as const;
+
   const jeu = async (configId: string | null, avis: (string | null)[]): Promise<void> => {
     await db.prisma.generatedIdeaSet.create({
       data: {
@@ -90,7 +97,10 @@ describe("ce que les versions ont produit", () => {
         ideas: {
           create: avis.map((a, rang) => ({
             label: `Idée ${rang}`, position: rang,
-            ...(a === null ? {} : { feedback: a as never, feedbackAt: new Date() }),
+            ...(a === null ? {} : {
+              feedback: a as never, feedbackAt: new Date(),
+              ...(a === "down" ? { feedbackReasonCode: MOTIF.idees } : {}),
+            }),
           })),
         },
       },
@@ -310,6 +320,10 @@ describe("ce que les versions ont produit", () => {
       produites: 0,
       gestes: { pour: 0, contre: 0, sans: 0 },
       avis: { pour: 0, contre: 0, sans: 0 },
+      /* UN TABLEAU VIDE, PAS UN CHAMP ABSENT. `toEqual` compare la forme entière,
+         et c'est voulu ici : un panneau qui reçoit `motifs: undefined` sur une
+         nature sans production planterait là où un tableau vide ne dit rien. */
+      motifs: [],
     });
   });
   /* ─── Les deux axes ne se fondent pas ────────────────────────────────────── */
@@ -334,7 +348,7 @@ describe("ce que les versions ont produit", () => {
         data: {
           actionRunId: await execution(), userId: awa, eventOccurrenceId: occurrence,
           content: "Un texte", status: "generated", studioConfigId: v1,
-          feedback: "down", feedbackAt: new Date(),
+          feedback: "down", feedbackAt: new Date(), feedbackReasonCode: MOTIF.autre,
         },
       });
 
@@ -344,6 +358,10 @@ describe("ce que les versions ont produit", () => {
         produites: 2,
         gestes: { pour: 1, contre: 0, sans: 1 },
         avis: { pour: 0, contre: 1, sans: 1 },
+        /* LA VENTILATION EXPLIQUE LE `contre`, et leur somme lui est égale — un
+           rejet porte toujours un motif, la base le tient. Un écart ne serait
+           pas un arrondi : ce serait une ligne écrite hors du service. */
+        motifs: [{ code: "off_topic", fr: "Hors sujet", en: "Off topic", n: 1 }],
       });
     });
 

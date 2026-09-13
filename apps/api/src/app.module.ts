@@ -29,6 +29,7 @@ import { PortraitService } from "./me/portrait.service.js";
 import { PhotoSourceService } from "./me/photo-source.service.js";
 import { PortraitController } from "./me/portrait.controller.js";
 import { IdeeController } from "./me/idee.controller.js";
+import { FeedbackReasonsController } from "./me/feedback-reasons.controller.js";
 import { MethodesService } from "./payments/methodes.service.js";
 import { MethodesController } from "./payments/methodes.controller.js";
 import {
@@ -178,7 +179,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     WaitlistController, ContactController,
     WallController, WishLinkController, CollectionLinksController, SubmissionsController, ReceivedWishesController,
     PublicWallController, PublicCollectController, PublicWishesController,
-    AdminAuthController, ParametersController, AdminFeatureFlagsController, ReasonsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, MethodesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, IdeeController, PortraitController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, PaymentStatsController, AdminMaintenanceController, PortraitStudioController, TexteStudioController, StudioPerformanceController, StudioOptionsController, MeController,
+    AdminAuthController, ParametersController, AdminFeatureFlagsController, ReasonsController, PaymentSettingsController, AdminPaymentsController, AdminCreditsController, PaymentListsController, ExportsController, QueuesController, AdminUsersController, DeletionsController, LecturesController, MethodesController, CreditBundlesController, PaymentChannelsController, CollectionAccountsController, PaymentsController, GenerationController, MessagesController, IdeeController, PortraitController, FeedbackReasonsController, AdminsController, AIModelsController, AIRoutesController, DashboardController, MetriquesController, PaymentStatsController, AdminMaintenanceController, PortraitStudioController, TexteStudioController, StudioPerformanceController, StudioOptionsController, MeController,
   ],
   providers: [
     PrismaService,

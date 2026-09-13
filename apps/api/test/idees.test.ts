@@ -253,13 +253,13 @@ describe("les idées de cadeaux", () => {
       const jeu = await unJeu();
       const id = jeu.ideas[0]!.id;
 
-      expect((await idees.noter(awa, id, "up")).feedback).toBe("up");
-      expect((await idees.noter(awa, id, "down")).feedback).toBe("down");
+      expect((await idees.noter(awa, id, { feedback: "up" })).feedback).toBe("up");
+      expect((await idees.noter(awa, id, { feedback: "down", reasonCode: "not_their_taste" })).feedback).toBe("down");
 
       /* `null` retire l'avis — un doigt qui glisse ne doit pas être définitif.
          La DATE suit toujours : la base refuse un avis sans date, et une date
          sans avis ne désigne rien. */
-      const repris = await idees.noter(awa, id, null);
+      const repris = await idees.noter(awa, id, { feedback: null });
       expect(repris.feedback).toBeNull();
       expect(repris.feedbackAt).toBeNull();
     });
@@ -276,7 +276,7 @@ describe("les idées de cadeaux", () => {
         },
         select: { id: true },
       });
-      await expect(idees.noter(bila.id, jeu.ideas[0]!.id, "up"))
+      await expect(idees.noter(bila.id, jeu.ideas[0]!.id, { feedback: "up" }))
         .rejects.toMatchObject({ code: "not_found" });
     });
 
@@ -330,7 +330,7 @@ describe("les idées de cadeaux", () => {
       expect(apresRetenue.wishlistItemId).not.toBeNull();
 
       const autre = jeu.ideas[1]!.id;
-      await idees.noter(awa, autre, "up");
+      await idees.noter(awa, autre, { feedback: "up" });
       const apresAvis = await db.prisma.generatedIdea.findUniqueOrThrow({ where: { id: autre } });
       expect(apresAvis.wishlistItemId).toBeNull();
     });
@@ -341,7 +341,7 @@ describe("les idées de cadeaux", () => {
     it("garde l'idée et son avis quand le souhait est retiré", async () => {
       const jeu = await unJeu();
       const id = jeu.ideas[0]!.id;
-      await idees.noter(awa, id, "up");
+      await idees.noter(awa, id, { feedback: "up" });
       const souhait = await idees.retenir(awa, id);
 
       await db.prisma.wishlistItem.delete({ where: { id: souhait.id } });
@@ -368,7 +368,7 @@ describe("les idées de cadeaux", () => {
   it("relie un avis à l'exécution et au modèle qui a produit l'idée", async () => {
     await crediter(5);
     const jeu = await fini(service.lancerIdees(awa, occurrence));
-    await idees.noter(awa, jeu.ideas[0]!.id, "up");
+    await idees.noter(awa, jeu.ideas[0]!.id, { feedback: "up" });
 
     const remontee = await db.prisma.generatedIdea.findUniqueOrThrow({
       where: { id: jeu.ideas[0]!.id },

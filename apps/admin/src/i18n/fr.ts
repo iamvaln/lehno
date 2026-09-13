@@ -310,6 +310,7 @@ export const fr = {
       col: { version: "Version", quand: "Publiée le", parQui: "Par", note: "Ce que ça change", etat: "État",
       gestes: "Ce qu'on en a fait",
       avis: "Ce qu'on en a pensé",
+      motifs: "Pourquoi ça a déplu",
       },
       /* LES TROIS SEAUX D'UN AXE. « Sans » figure TOUJOURS : c'est « personne
          n'a répondu », et le taire ferait lire deux chiffres comme un total —
@@ -319,6 +320,11 @@ export const fr = {
         avis: { pour: "{n} bons", contre: "{n} mauvais", sans: "{n} sans avis" },
       },
       rien: "Rien produit",
+      // « Douze pouces en bas » dit qu'il faut régler quelque chose ; « hors
+      // sujet 8 · ton faux 3 » dit QUOI régler. Trois motifs au plus dans la
+      // cellule : le reste se compte, parce qu'une cellule qui en aligne huit
+      // ne se lit plus.
+      motifsAutres: "+{n}",
       // Produit par le gabarit du code, avant qu'une configuration ne soit
       // publiée. Compté à part et jamais attribué à une version.
       horsVersion: "Avant le lien : {n} productions, dont {ecartees} écartées. Elles n'appartiennent à aucune version, et ne peuvent pas en recevoir une.",
@@ -1652,6 +1658,7 @@ export const fr = {
       etat: "État",
       gestes: "Ce qu'on en a fait",
       avis: "Ce qu'on en a pensé",
+      motifs: "Pourquoi ça a déplu",
     },
     /* LES TROIS SEAUX D'UN AXE. « Sans » figure toujours : c'est « personne n'a
        répondu », et le taire ferait lire deux chiffres comme un total. */
@@ -1660,6 +1667,11 @@ export const fr = {
       avis: { pour: "{n} bons", contre: "{n} mauvais", sans: "{n} sans avis" },
     },
     rien: "Rien produit",
+    /* « Douze pouces en bas » dit qu'il faut régler quelque chose ; « ne lui
+       ressemble pas 8 · image ratée 3 » dit QUOI régler. Trois motifs au plus
+       dans la cellule : le reste se compte, parce qu'une cellule qui en aligne
+       huit ne se lit plus. */
+    motifsAutres: "+{n}",
     horsVersion: "Avant le lien : {n} portraits, dont {ecartees} rejetés. Ils n'appartiennent à aucune version, et ne peuvent pas en recevoir une.",
     etats: {
       published: "En service",

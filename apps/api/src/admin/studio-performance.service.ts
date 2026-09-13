@@ -31,10 +31,16 @@ import { PrismaService } from "../prisma/prisma.service.js";
  * le seul des deux qui dise si le texte était BON et non seulement s'il a
  * servi. */
 type Axe = { pour: number; contre: number; sans: number };
-type Comptes = { produites: number; gestes: Axe; avis: Axe };
+/* LES MOTIFS S'ACCUMULENT EN COMPTEUR, pas en tableau : on les range par code au
+   fil des lignes, et on ne les met en forme — avec leurs libellés, triés —
+   qu'une fois tout compté. Bâtir le tableau au fur et à mesure imposerait de
+   chercher le code déjà présent à chaque ligne. */
+type Comptes = { produites: number; gestes: Axe; avis: Axe; motifs: Map<string, number> };
 
 const AXE_VIDE: Axe = { pour: 0, contre: 0, sans: 0 };
-const RIEN: Comptes = { produites: 0, gestes: { ...AXE_VIDE }, avis: { ...AXE_VIDE } };
+const rienDeCompte = (): Comptes => ({
+  produites: 0, gestes: { ...AXE_VIDE }, avis: { ...AXE_VIDE }, motifs: new Map(),
+});
 
 const UNITE: Record<NatureStudio, UniteProduite> = {
   message: "message",
@@ -49,6 +55,7 @@ export class StudioPerformanceService {
 
   async lire(nature: NatureStudio): Promise<Performance> {
     const parConfig = await this.compter(nature);
+    const libelles = await this.libellesDesMotifs();
 
     /* TOUTES LES VERSIONS PARAISSENT, y compris celles qui n'ont rien produit.
        Une version publiée puis remplacée le lendemain a zéro production, et
@@ -66,10 +73,44 @@ export class StudioPerformanceService {
         configId: v.id,
         version: v.version,
         publieeLe: v.publishedAt?.toISOString() ?? null,
-        ...(parConfig.get(v.id) ?? RIEN),
+        ...this.rendre(parConfig.get(v.id), libelles),
       })),
-      horsVersion: parConfig.get(null) ?? RIEN,
+      horsVersion: this.rendre(parConfig.get(null), libelles),
     };
+  }
+
+  /* DU PLUS FRÉQUENT AU PLUS RARE, et le code départage à égalité — sans ce
+     second critère, deux motifs à trois changeraient de place d'une lecture à
+     l'autre, et l'écran donnerait l'impression de bouger tout seul. */
+  private rendre(c: Comptes | undefined, libelles: Map<string, { fr: string; en: string }>) {
+    const compte = c ?? rienDeCompte();
+    return {
+      produites: compte.produites,
+      gestes: compte.gestes,
+      avis: compte.avis,
+      motifs: [...compte.motifs.entries()]
+        .map(([code, n]) => ({
+          code,
+          /* LE CODE EN REPLI, jamais un trou. Il n'y a pas de clé étrangère vers
+             le registre : un motif supprimé pour de bon laisse des comptes
+             orphelins. Les taire ferait un total qui ne tombe pas juste, et
+             c'est précisément le chiffre qu'on veut pouvoir croire. */
+          fr: libelles.get(code)?.fr ?? code,
+          en: libelles.get(code)?.en ?? code,
+          n,
+        }))
+        .sort((a, b) => b.n - a.n || a.code.localeCompare(b.code)),
+    };
+  }
+
+  /* LE REGISTRE ENTIER, RETIRÉS COMPRIS. Filtrer sur `is_active` perdrait le
+     libellé des motifs qu'on ne propose plus mais qui ont déjà justifié des
+     rejets — et c'est justement l'historique qu'on vient lire ici. */
+  private async libellesDesMotifs(): Promise<Map<string, { fr: string; en: string }>> {
+    const lignes = await this.prisma.feedbackReason.findMany({
+      select: { code: true, labelFr: true, labelEn: true },
+    });
+    return new Map(lignes.map((l) => [l.code, { fr: l.labelFr, en: l.labelEn }]));
   }
 
   /* La clé `null` porte ce qui a été produit SANS configuration publiée, par le
@@ -87,15 +128,21 @@ export class StudioPerformanceService {
       cle: string | null; nombre: number;
       geste: "pour" | "contre" | "sans";
       avis: "pour" | "contre" | "sans";
+      motif: string | null;
     }[],
   ): Map<string | null, Comptes> {
     const par = new Map<string | null, Comptes>();
     for (const l of lignes) {
-      const c = par.get(l.cle)
-        ?? { produites: 0, gestes: { ...AXE_VIDE }, avis: { ...AXE_VIDE } };
+      const c = par.get(l.cle) ?? rienDeCompte();
       c.produites += l.nombre;
       c.gestes[l.geste] += l.nombre;
       c.avis[l.avis] += l.nombre;
+      /* ON NE COMPTE LE MOTIF QUE SUR UN REJET. La base garantit qu'il n'y en a
+         pas ailleurs, mais s'y fier sans le dire ferait qu'une ligne écrite
+         hors du service — une reprise de données, une main dans psql — se
+         retrouverait dans une ventilation censée expliquer `avis.contre`. */
+      if (l.motif !== null && l.avis === "contre")
+        c.motifs.set(l.motif, (c.motifs.get(l.motif) ?? 0) + l.nombre);
       par.set(l.cle, c);
     }
     return par;
@@ -115,7 +162,7 @@ export class StudioPerformanceService {
        le seul statut perdrait l'avis, et c'est ce que faisait la première
        rédaction — le `feedback` posé sur le message n'était compté nulle part. */
     const lignes = await this.prisma.generatedMessage.groupBy({
-      by: ["studioConfigId", "status", "feedback"],
+      by: ["studioConfigId", "status", "feedback", "feedbackReasonCode"],
       _count: { _all: true },
     });
     return this.ranger(lignes.map((l) => ({
@@ -123,6 +170,7 @@ export class StudioPerformanceService {
       geste: l.status === "sent" ? "pour" as const
         : l.status === "rejected" ? "contre" as const : "sans" as const,
       avis: this.pouce(l.feedback),
+      motif: l.feedbackReasonCode,
       nombre: l._count._all,
     })));
   }
@@ -135,7 +183,7 @@ export class StudioPerformanceService {
        qu'on approuve ou rejette. */
     const colonne = nature === "portrait" ? "studioConfigId" : "briefStudioConfigId";
     const lignes = await this.prisma.portrait.groupBy({
-      by: [colonne, "status", "feedback"],
+      by: [colonne, "status", "feedback", "feedbackReasonCode"],
       _count: { _all: true },
     });
     /* `generated` ET `composed` TOMBENT DU CÔTÉ SANS AVIS, et c'est le cas le
@@ -148,6 +196,7 @@ export class StudioPerformanceService {
       geste: l.status === "approved" ? "pour" as const
         : l.status === "rejected" ? "contre" as const : "sans" as const,
       avis: this.pouce(l.feedback),
+      motif: l.feedbackReasonCode,
       nombre: l._count._all,
     })));
   }
@@ -159,7 +208,7 @@ export class StudioPerformanceService {
   private async compterIdees(): Promise<Map<string | null, Comptes>> {
     const lignes = await this.prisma.generatedIdea.findMany({
       select: {
-        feedback: true, wishlistItemId: true, acceptedAt: true,
+        feedback: true, feedbackReasonCode: true, wishlistItemId: true, acceptedAt: true,
         set: { select: { studioConfigId: true } },
       },
     });
@@ -175,6 +224,7 @@ export class StudioPerformanceService {
       cle: l.set.studioConfigId,
       geste: l.acceptedAt === null ? "sans" as const : "pour" as const,
       avis: this.pouce(l.feedback),
+      motif: l.feedbackReasonCode,
       nombre: 1,
     })));
   }

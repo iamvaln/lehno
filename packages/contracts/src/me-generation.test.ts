@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generationSchema, portraitSchema, startGenerationSchema } from "./me-generation.js";
+import { avisSchema, generationSchema, portraitSchema, startGenerationSchema } from "./me-generation.js";
 
 const CIBLE = "3f2504e0-4f89-11d3-9a0c-0305e82c3303";
 
@@ -105,6 +105,11 @@ describe("le portrait produit", () => {
     contentShort: null,
     senderNote: "Fait avec soin par Valentine",
     imageUrl: null,
+    // L'avis se relit avec la production : sans lui, rouvrir un portrait
+    // reposerait la question comme si personne n'y avait répondu.
+    feedback: null,
+    feedbackReasonCode: null,
+    feedbackNote: null,
     createdAt: "2026-08-25T03:00:00.000Z",
   };
 
@@ -171,5 +176,56 @@ describe("le budget d'une demande d'idées", () => {
     expect(() => startGenerationSchema.parse({
       kind: "gift_ideas", occurrenceId: OCCASION, budget: { max: 20_000, devise: "XAF" },
     })).toThrow();
+  });
+});
+
+/* LES TROIS RÈGLES DU CORPS D'UN AVIS.
+ *
+ * Elles vivent au contrat plutôt qu'au seul service parce que la base, qui les
+ * tient aussi, ne rend qu'une erreur de contrainte — illisible pour qui appelle.
+ * Ici elles rendent un 400 qui nomme ce qui manque. */
+describe("l'avis sur une production", () => {
+  it("exige un motif quand le pouce est en bas", () => {
+    // C'est TOUTE la raison d'être de ce lot : un « je n'aime pas » sans raison
+    // ne dit pas quoi corriger, et c'est pourtant la seule chose qu'on cherche.
+    expect(() => avisSchema.parse({ feedback: "down" })).toThrow();
+    expect(avisSchema.parse({ feedback: "down", reasonCode: "off_topic" }).reasonCode)
+      .toBe("off_topic");
+  });
+
+  /* LE MOTIF NE VAUT QUE POUR UN REJET. Accepté sur un pouce en haut, il se
+     compterait dans « pourquoi ça déplaît » une ligne qui plaisait — et le
+     réglage suivant corrigerait ce qui marchait. */
+  it("refuse un motif sur un avis positif", () => {
+    expect(() => avisSchema.parse({ feedback: "up", reasonCode: "off_topic" })).toThrow();
+    expect(avisSchema.parse({ feedback: "up" }).feedback).toBe("up");
+  });
+
+  /* RETIRER SON AVIS EMPORTE TOUT. Une note qui survivrait au pouce serait un
+     commentaire sur rien, et elle resterait lisible au panneau, attribuée à une
+     production que plus personne ne juge. */
+  it("n'accepte ni motif ni note quand on reprend son avis", () => {
+    expect(() => avisSchema.parse({ feedback: null, note: "finalement si" })).toThrow();
+    expect(() => avisSchema.parse({ feedback: null, reasonCode: "off_topic" })).toThrow();
+    expect(avisSchema.parse({ feedback: null }).feedback).toBeNull();
+  });
+
+  /* LA NOTE ACCOMPAGNE LES DEUX SENS. Quelqu'un qui aime peut dire pourquoi, et
+     ça vaut d'être lu — la réserver au rejet ferait perdre la moitié de ce que
+     les premiers mois ont à apprendre. */
+  it("accepte une note des deux côtés du pouce", () => {
+    expect(avisSchema.parse({ feedback: "up", note: "exactement elle" }).note)
+      .toBe("exactement elle");
+    expect(avisSchema.parse({
+      feedback: "down", reasonCode: "bland", note: "on dirait une carte de vœux",
+    }).note).toBe("on dirait une carte de vœux");
+  });
+
+  /* LE CODE EST CONTRAINT DE FORME, comme celui des motifs d'administration.
+     Sans cette règle, un libellé collé dans le champ du code ferait un texte
+     d'affichage en guise de clé de comptage — qu'une correction d'orthographe
+     coupe en deux. */
+  it("refuse un libellé en guise de code", () => {
+    expect(() => avisSchema.parse({ feedback: "down", reasonCode: "Hors sujet" })).toThrow();
   });
 });

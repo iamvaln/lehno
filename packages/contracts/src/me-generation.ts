@@ -206,6 +206,13 @@ export const portraitSchema = z.object({
      pas. Nulle plutôt qu'absente — l'écran est ainsi obligé de traiter
      l'attente au lieu de l'oublier. */
   imageUrl: z.string().url().nullable(),
+  /* L'AVIS RENDU AVEC LA PRODUCTION, sur les trois natures de la même façon.
+     Il ne l'était pas : poser un pouce rendait un corps qui ne disait pas ce
+     que le pouce valait désormais, et rouvrir un portrait reposait la question
+     comme si personne n'y avait répondu. */
+  feedback: z.enum(["up", "down"]).nullable(),
+  feedbackReasonCode: z.string().nullable(),
+  feedbackNote: z.string().nullable(),
   createdAt: z.string(),
 }).strict();
 
@@ -268,6 +275,13 @@ export const generatedMessageSchema = z.object({
   content: z.string(),
   contentShort: z.string().nullable(),
   status: z.enum(MESSAGE_STATUSES),
+  /* L'AVIS RENDU AVEC LA PRODUCTION, sur les trois natures de la même façon.
+     `status` est un GESTE — `sent` dit qu'on a envoyé —, l'avis est un
+     JUGEMENT : on envoie un message qu'on juge moyen faute de temps. Les
+     confondre ferait perdre les deux. */
+  feedback: z.enum(["up", "down"]).nullable(),
+  feedbackReasonCode: z.string().nullable(),
+  feedbackNote: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 }).strict();
@@ -331,6 +345,11 @@ export const generatedIdeaSchema = z.object({
   /** `null` = personne n'a répondu, ce qui n'est PAS « ni l'un ni l'autre » et
    *  ne se compte pas de la même façon dans une moyenne. */
   feedback: z.enum(["up", "down"]).nullable(),
+  /** Le motif du rejet, et ce qu'on a écrit à côté. Rendus parce qu'ils se
+   *  RELISENT : sans eux, rouvrir un jeu d'idées ne dirait plus ce qu'on avait
+   *  répondu, et la question se reposerait comme si on n'avait rien dit. */
+  feedbackReasonCode: z.string().nullable(),
+  feedbackNote: z.string().nullable(),
   /** Le souhait né de cette idée, s'il y en a un. Reste nul quand on l'a notée
    *  sans la retenir — et c'est le cas le plus fréquent. */
   wishlistItemId: z.string().uuid().nullable(),
@@ -362,9 +381,83 @@ export type GeneratedIdeaSet = z.infer<typeof generatedIdeaSetSchema>;
  * note qu'on ne peut pas corriger est une note qu'on cesse de donner. */
 export const avisSchema = z.object({
   feedback: z.enum(["up", "down"]).nullable(),
-}).strict();
+  /* LE MOTIF, EXIGÉ QUAND LE POUCE EST EN BAS.
+   *
+   * Un « je n'aime pas » sans raison ne dit pas quoi corriger, et c'est pourtant
+   * la seule chose qu'on vient chercher : savoir qu'une version déplaît sans
+   * savoir en quoi ne fait pas avancer la consigne suivante.
+   *
+   * Le code vient du registre servi par `GET me/feedback-reasons`. On ne le
+   * choisit pas dans une liste écrite ici : ajouter un motif ne doit pas
+   * demander une livraison — donc le contrat dit sa FORME, le registre dit ses
+   * valeurs. */
+  reasonCode: z.string().regex(/^[a-z][a-z0-9_]{2,47}$/).optional(),
+  /* Ce qu'aucune liste n'avait prévu. Facultatif, et il le reste : un champ
+   * libre obligatoire ferait taper « rien » à tout le monde. */
+  note: z.string().trim().min(1).max(500).optional(),
+}).strict()
+  /* LES TROIS RÈGLES DU CORPS, et pourquoi elles sont ici plutôt qu'au service.
+   *
+   * Elles ne se devinent pas d'un coup d'œil au schéma, alors elles se disent :
+   * un rejet PORTE un motif, un avis positif n'en porte pas, et retirer son avis
+   * emporte tout. La base tient les deux premières par contrainte — mais un
+   * refus de la base rend une erreur de contrainte, illisible pour qui appelle.
+   * Ici, il rend un 400 qui nomme ce qui manque. */
+  .refine((a) => a.feedback !== "down" || a.reasonCode !== undefined, {
+    message: "un rejet demande un motif", path: ["reasonCode"],
+  })
+  .refine((a) => a.feedback === "down" || a.reasonCode === undefined, {
+    message: "le motif ne vaut que pour un rejet", path: ["reasonCode"],
+  })
+  /* RETIRER SON AVIS EMPORTE LA NOTE. Une note qui survivrait au pouce serait un
+   * commentaire sur rien — et elle resterait lisible au panneau, attribuée à une
+   * production que personne ne juge plus. */
+  .refine((a) => a.feedback !== null || a.note === undefined, {
+    message: "retirer son avis n'accepte ni motif ni note", path: ["note"],
+  });
 
 export type AvisInput = z.infer<typeof avisSchema>;
+
+/* ── LE REGISTRE DES MOTIFS ──────────────────────────────────────────────────
+ *
+ * SERVI, JAMAIS ÉCRIT DANS L'APPLICATION. Les premiers mois sont exactement ceux
+ * où l'on ne sait pas quoi lister : il faut pouvoir ajouter un motif sans livrer
+ * une version — et depuis que le registre des versions existe, livrer n'est plus
+ * anodin. Un motif de plus ne vaut pas de demander à tout le monde de mettre à
+ * jour.
+ *
+ * LE LIBELLÉ EST DÉJÀ DANS LA LANGUE DE L'INTERFACE, comme le catalogue du
+ * studio : le serveur sait laquelle, et rendre les deux ferait choisir au client
+ * une chose qu'il n'a pas à décider. */
+/* LES TROIS NATURES QU'UN UTILISATEUR JUGE.
+ *
+ * PLUS ÉTROIT QUE `NATURES_STUDIO`, qui porte aussi `portrait_brief` : celui-là
+ * est une configuration d'atelier, pas une production — personne ne le voit, et
+ * offrir d'en dire du mal n'aurait aucun sens.
+ *
+ * MAIS LES MÊMES JETONS, `idees` compris. Le panneau lit la performance par
+ * nature sous ces noms-là ; en écrire `idea` ici imposerait une table de
+ * traduction entre deux listes qu'il faudrait tenir d'accord — et l'écart ne se
+ * verrait qu'en production, sur un comptage vide. */
+export const NATURES_AVIS = ["portrait", "message", "idees"] as const;
+export type NatureAvis = (typeof NATURES_AVIS)[number];
+
+export const feedbackReasonSchema = z.object({
+  code: z.string(),
+  label: z.string(),
+}).strict();
+
+export type FeedbackReason = z.infer<typeof feedbackReasonSchema>;
+
+/* LA LISTE EST PAR NATURE, et elle ne se filtre pas côté client : « ne lui
+ * ressemble pas » n'a aucun sens sous un message, et « hors budget » n'en a
+ * aucun sous un portrait. Proposer un motif que le serveur refusera ferait
+ * échouer l'avis après que la personne a répondu à la question. */
+export const feedbackReasonsSchema = z.object({
+  items: z.array(feedbackReasonSchema),
+}).strict();
+
+export type FeedbackReasons = z.infer<typeof feedbackReasonsSchema>;
 
 /** L'ancien nom, gardé : il est câblé au contrat publié et à la route des idées. */
 export const ideaFeedbackSchema = avisSchema;

@@ -14008,6 +14008,15 @@
                       "down"
                     ],
                     "nullable": true
+                  },
+                  "reasonCode": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]{2,47}$"
+                  },
+                  "note": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
                   }
                 },
                 "required": [
@@ -14057,6 +14066,14 @@
                       ],
                       "nullable": true
                     },
+                    "feedbackReasonCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "feedbackNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "wishlistItemId": {
                       "type": "string",
                       "format": "uuid",
@@ -14071,6 +14088,8 @@
                     "priceMax",
                     "currency",
                     "feedback",
+                    "feedbackReasonCode",
+                    "feedbackNote",
                     "wishlistItemId"
                   ],
                   "additionalProperties": false
@@ -14662,6 +14681,22 @@
                             "format": "uri",
                             "nullable": true
                           },
+                          "feedback": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "down"
+                            ],
+                            "nullable": true
+                          },
+                          "feedbackReasonCode": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "feedbackNote": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "createdAt": {
                             "type": "string"
                           }
@@ -14674,6 +14709,9 @@
                           "contentShort",
                           "senderNote",
                           "imageUrl",
+                          "feedback",
+                          "feedbackReasonCode",
+                          "feedbackNote",
                           "createdAt"
                         ],
                         "additionalProperties": false
@@ -15414,6 +15452,22 @@
                       "format": "uri",
                       "nullable": true
                     },
+                    "feedback": {
+                      "type": "string",
+                      "enum": [
+                        "up",
+                        "down"
+                      ],
+                      "nullable": true
+                    },
+                    "feedbackReasonCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "feedbackNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "createdAt": {
                       "type": "string"
                     }
@@ -15426,6 +15480,9 @@
                     "contentShort",
                     "senderNote",
                     "imageUrl",
+                    "feedback",
+                    "feedbackReasonCode",
+                    "feedbackNote",
                     "createdAt"
                   ],
                   "additionalProperties": false
@@ -15918,6 +15975,15 @@
                       "down"
                     ],
                     "nullable": true
+                  },
+                  "reasonCode": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]{2,47}$"
+                  },
+                  "note": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
                   }
                 },
                 "required": [
@@ -15969,6 +16035,22 @@
                       "format": "uri",
                       "nullable": true
                     },
+                    "feedback": {
+                      "type": "string",
+                      "enum": [
+                        "up",
+                        "down"
+                      ],
+                      "nullable": true
+                    },
+                    "feedbackReasonCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "feedbackNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "createdAt": {
                       "type": "string"
                     }
@@ -15981,7 +16063,274 @@
                     "contentShort",
                     "senderNote",
                     "imageUrl",
+                    "feedback",
+                    "feedbackReasonCode",
+                    "feedbackNote",
                     "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Défaillance du serveur — la requête n'y est pour rien, on peut réessayer sans la modifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "upgrade_required",
+                        "client_unknown",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Arrêt pour intervention — code `maintenance`, avec `details.retryAfterSeconds`. La ressource existe et revient : ne pas la masquer, réessayer après le délai annoncé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "upgrade_required",
+                        "client_unknown",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Refus — la requête ne satisfait pas le contrat (forme, valeur, droit) ; corriger avant de réessayer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "validation_failed",
+                        "not_found",
+                        "conflict",
+                        "rate_limited",
+                        "internal_error",
+                        "unauthorized",
+                        "forbidden",
+                        "session_expired",
+                        "refresh_reused",
+                        "otp_invalid",
+                        "otp_expired",
+                        "otp_too_many_attempts",
+                        "otp_rate_limited",
+                        "reason_required",
+                        "reason_code_unknown",
+                        "trial_required",
+                        "resource_inactive",
+                        "upgrade_required",
+                        "client_unknown",
+                        "insufficient_credits",
+                        "username_taken",
+                        "username_invalid",
+                        "device_limit_reached",
+                        "account_suspended",
+                        "account_pending_deletion",
+                        "federated_token_invalid",
+                        "federated_already_linked",
+                        "email_disposable",
+                        "waitlist_email_invalid",
+                        "waitlist_rejected",
+                        "maintenance",
+                        "generation_unavailable",
+                        "contact_invalid",
+                        "contact_rejected",
+                        "link_revoked",
+                        "wish_window_closed",
+                        "collect_rejected",
+                        "reservation_rejected"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/feedback-reasons": {
+      "get": {
+        "summary": "Pourquoi une production a déplu — la liste à proposer",
+        "description": "**Un « je n'aime pas » sans raison ne dit pas quoi corriger**, et c'est\npourtant la seule chose qu'on vient chercher : savoir qu'une version\ndéplaît sans savoir en quoi ne fait pas avancer la consigne suivante.\n\n**Servie, jamais écrite dans l'application.** Les premiers mois sont\nexactement ceux où l'on ne sait pas quoi lister : il faut pouvoir ajouter\nun motif sans livrer une version — et depuis que le registre des versions\nexiste, livrer n'est plus anodin. Un motif de plus ne vaut pas de demander\nà tout le monde de mettre à jour.\n\n**La liste est PAR NATURE, et elle ne se filtre pas côté client.** « Ne\nlui ressemble pas » n'a aucun sens sous un message, « hors budget » aucun\nsous un portrait. Proposer un motif que le serveur refusera ferait échouer\nl'avis après que la personne a répondu à la question.\n\n**Le libellé arrive dans la langue de l'interface**, comme le catalogue du\nstudio : le serveur sait laquelle, et rendre les deux ferait choisir au\nclient une chose qu'il n'a pas à décider.\n\nLes motifs **retirés** n'y figurent pas : le registre les garde pour que\nce qu'ils ont déjà justifié reste lisible, mais le serveur refuse un code\nretiré. Les proposer ferait échouer l'avis sur un motif qu'on venait\nd'offrir.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "nature",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "portrait",
+                "message",
+                "idees"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "label"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
                   ],
                   "additionalProperties": false
                 }
@@ -16253,6 +16602,22 @@
                       "format": "uri",
                       "nullable": true
                     },
+                    "feedback": {
+                      "type": "string",
+                      "enum": [
+                        "up",
+                        "down"
+                      ],
+                      "nullable": true
+                    },
+                    "feedbackReasonCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "feedbackNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "createdAt": {
                       "type": "string"
                     }
@@ -16265,6 +16630,9 @@
                     "contentShort",
                     "senderNote",
                     "imageUrl",
+                    "feedback",
+                    "feedbackReasonCode",
+                    "feedbackNote",
                     "createdAt"
                   ],
                   "additionalProperties": false
@@ -16537,6 +16905,22 @@
                       "format": "uri",
                       "nullable": true
                     },
+                    "feedback": {
+                      "type": "string",
+                      "enum": [
+                        "up",
+                        "down"
+                      ],
+                      "nullable": true
+                    },
+                    "feedbackReasonCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "feedbackNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "createdAt": {
                       "type": "string"
                     }
@@ -16549,6 +16933,9 @@
                     "contentShort",
                     "senderNote",
                     "imageUrl",
+                    "feedback",
+                    "feedbackReasonCode",
+                    "feedbackNote",
                     "createdAt"
                   ],
                   "additionalProperties": false
@@ -16821,6 +17208,22 @@
                       "format": "uri",
                       "nullable": true
                     },
+                    "feedback": {
+                      "type": "string",
+                      "enum": [
+                        "up",
+                        "down"
+                      ],
+                      "nullable": true
+                    },
+                    "feedbackReasonCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "feedbackNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "createdAt": {
                       "type": "string"
                     }
@@ -16833,6 +17236,9 @@
                     "contentShort",
                     "senderNote",
                     "imageUrl",
+                    "feedback",
+                    "feedbackReasonCode",
+                    "feedbackNote",
                     "createdAt"
                   ],
                   "additionalProperties": false
@@ -29185,6 +29591,22 @@
                             "rejected"
                           ]
                         },
+                        "feedback": {
+                          "type": "string",
+                          "enum": [
+                            "up",
+                            "down"
+                          ],
+                          "nullable": true
+                        },
+                        "feedbackReasonCode": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "feedbackNote": {
+                          "type": "string",
+                          "nullable": true
+                        },
                         "createdAt": {
                           "type": "string"
                         },
@@ -29198,6 +29620,9 @@
                         "content",
                         "contentShort",
                         "status",
+                        "feedback",
+                        "feedbackReasonCode",
+                        "feedbackNote",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -29252,6 +29677,14 @@
                                 ],
                                 "nullable": true
                               },
+                              "feedbackReasonCode": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "feedbackNote": {
+                                "type": "string",
+                                "nullable": true
+                              },
                               "wishlistItemId": {
                                 "type": "string",
                                 "format": "uuid",
@@ -29266,6 +29699,8 @@
                               "priceMax",
                               "currency",
                               "feedback",
+                              "feedbackReasonCode",
+                              "feedbackNote",
                               "wishlistItemId"
                             ],
                             "additionalProperties": false
@@ -29608,6 +30043,22 @@
                                   "rejected"
                                 ]
                               },
+                              "feedback": {
+                                "type": "string",
+                                "enum": [
+                                  "up",
+                                  "down"
+                                ],
+                                "nullable": true
+                              },
+                              "feedbackReasonCode": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "feedbackNote": {
+                                "type": "string",
+                                "nullable": true
+                              },
                               "createdAt": {
                                 "type": "string"
                               },
@@ -29621,6 +30072,9 @@
                               "content",
                               "contentShort",
                               "status",
+                              "feedback",
+                              "feedbackReasonCode",
+                              "feedbackNote",
                               "createdAt",
                               "updatedAt"
                             ],
@@ -29675,6 +30129,14 @@
                                       ],
                                       "nullable": true
                                     },
+                                    "feedbackReasonCode": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "feedbackNote": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
                                     "wishlistItemId": {
                                       "type": "string",
                                       "format": "uuid",
@@ -29689,6 +30151,8 @@
                                     "priceMax",
                                     "currency",
                                     "feedback",
+                                    "feedbackReasonCode",
+                                    "feedbackNote",
                                     "wishlistItemId"
                                   ],
                                   "additionalProperties": false
@@ -30036,6 +30500,22 @@
                             "rejected"
                           ]
                         },
+                        "feedback": {
+                          "type": "string",
+                          "enum": [
+                            "up",
+                            "down"
+                          ],
+                          "nullable": true
+                        },
+                        "feedbackReasonCode": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "feedbackNote": {
+                          "type": "string",
+                          "nullable": true
+                        },
                         "createdAt": {
                           "type": "string"
                         },
@@ -30049,6 +30529,9 @@
                         "content",
                         "contentShort",
                         "status",
+                        "feedback",
+                        "feedbackReasonCode",
+                        "feedbackNote",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -30103,6 +30586,14 @@
                                 ],
                                 "nullable": true
                               },
+                              "feedbackReasonCode": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "feedbackNote": {
+                                "type": "string",
+                                "nullable": true
+                              },
                               "wishlistItemId": {
                                 "type": "string",
                                 "format": "uuid",
@@ -30117,6 +30608,8 @@
                               "priceMax",
                               "currency",
                               "feedback",
+                              "feedbackReasonCode",
+                              "feedbackNote",
                               "wishlistItemId"
                             ],
                             "additionalProperties": false
@@ -30384,6 +30877,15 @@
                       "down"
                     ],
                     "nullable": true
+                  },
+                  "reasonCode": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]{2,47}$"
+                  },
+                  "note": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
                   }
                 },
                 "required": [
@@ -30426,6 +30928,22 @@
                         "rejected"
                       ]
                     },
+                    "feedback": {
+                      "type": "string",
+                      "enum": [
+                        "up",
+                        "down"
+                      ],
+                      "nullable": true
+                    },
+                    "feedbackReasonCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "feedbackNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -30439,6 +30957,9 @@
                     "content",
                     "contentShort",
                     "status",
+                    "feedback",
+                    "feedbackReasonCode",
+                    "feedbackNote",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -30716,6 +31237,22 @@
                         "rejected"
                       ]
                     },
+                    "feedback": {
+                      "type": "string",
+                      "enum": [
+                        "up",
+                        "down"
+                      ],
+                      "nullable": true
+                    },
+                    "feedbackReasonCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "feedbackNote": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -30729,6 +31266,9 @@
                     "content",
                     "contentShort",
                     "status",
+                    "feedback",
+                    "feedbackReasonCode",
+                    "feedbackNote",
                     "createdAt",
                     "updatedAt"
                   ],

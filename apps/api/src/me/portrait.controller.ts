@@ -116,7 +116,7 @@ export class PortraitController {
     @Param("id", ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(avisSchema)) corps: AvisInput,
   ) {
-    return this.portraits.noter(req.userId, id, corps.feedback);
+    return this.portraits.noter(req.userId, id, corps);
   }
 
   @Post(":id/approve")

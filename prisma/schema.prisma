@@ -1902,6 +1902,15 @@ model GeneratedMessage {
   /// faute de temps pour en refaire un.
   feedback          IdeaFeedback?
   feedbackAt        DateTime?              @map("feedback_at") @db.Timestamptz
+  /// LE MOTIF, EXIGÉ QUAND LE POUCE EST EN BAS et interdit autrement. Une
+  /// contrainte en base le tient, parce que c'est la seule garantie qui
+  /// survive à un appelant qui se trompe : un rejet sans motif ne se compte
+  /// pas, et un motif sans rejet ne désigne rien.
+  feedbackReasonCode String? @map("feedback_reason_code") @db.VarChar(48)
+  /// Ce qu'aucune liste n'avait prévu. Facultatif, et il le reste : un champ
+  /// libre obligatoire ferait taper « rien » à tout le monde.
+  feedbackNote       String? @map("feedback_note") @db.VarChar(500)
+
   status            GeneratedMessageStatus @default(generated)
   createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz
@@ -1925,6 +1934,51 @@ model GeneratedMessage {
 enum IdeaFeedback {
   up
   down
+}
+
+/// POURQUOI une production a déplu.
+///
+/// Un « je n'aime pas » sans raison ne dit pas quoi corriger, et c'est pourtant
+/// la seule chose qu'on vient chercher : savoir qu'une version déplaît sans
+/// savoir en quoi ne fait pas avancer la consigne suivante.
+///
+/// EN BASE ET NON DANS LE CODE, et ce n'est pas de l'abstraction gratuite. Les
+/// premiers mois sont exactement ceux où l'on ne sait pas quoi lister : il faut
+/// pouvoir ajouter un motif sans livrer une version. Et depuis que le registre
+/// des versions existe, livrer n'est plus anodin — un motif de plus ne vaut pas
+/// de demander à tout le monde de mettre à jour.
+///
+/// MÊME FORME QUE `audit_reason`, SANS SA GOUVERNANCE. Le code stable qui se
+/// compte, les deux libellés, le retrait qui n'efface rien. Mais pas son
+/// historique ni ses motifs-de-motifs : ceux-là existent parce qu'un geste
+/// d'administration engage quelqu'un. Un pouce en bas n'engage personne.
+model FeedbackReason {
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Ce qui se compte et se compare entre versions. Contraint de forme comme
+  /// `audit_reason.code` : un libellé collé ici et on serait revenu à un texte
+  /// d'affichage en guise de clé, qu'une correction d'orthographe coupe en deux.
+  code    String @unique @db.VarChar(48)
+  labelFr String @map("label_fr") @db.VarChar(120)
+  labelEn String @map("label_en") @db.VarChar(120)
+
+  /// Sur quelles natures il se propose — LES MÊMES JETONS QUE `NATURES_STUDIO`
+  /// (`portrait`, `message`, `idees`), et non un vocabulaire à part. Le panneau
+  /// lit la performance par nature sous ces noms-là ; en inventer d'autres
+  /// imposerait une table de traduction entre deux listes qu'il faudrait tenir
+  /// d'accord — et « idea » contre « idees » est exactement le genre d'écart
+  /// qu'on ne voit qu'en production.
+  natures String[] @db.VarChar(24)
+
+  /// L'ordre d'affichage. Une liste de motifs se lit du plus fréquent au plus
+  /// rare, et cet ordre est un réglage, pas une découverte.
+  position Int     @default(0) @db.SmallInt
+  /// Retiré de la liste proposée, sans effacer ce qu'il a déjà justifié.
+  isActive Boolean @default(true) @map("is_active")
+
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([isActive, position])
+  @@map("feedback_reason")
 }
 
 /**
@@ -1997,6 +2051,14 @@ model GeneratedIdea {
   /// rien. Retirer son avis remet les deux à nul.
   feedback   IdeaFeedback?
   feedbackAt DateTime?     @map("feedback_at") @db.Timestamptz
+  /// LE MOTIF, EXIGÉ QUAND LE POUCE EST EN BAS et interdit autrement. Une
+  /// contrainte en base le tient, parce que c'est la seule garantie qui
+  /// survive à un appelant qui se trompe : un rejet sans motif ne se compte
+  /// pas, et un motif sans rejet ne désigne rien.
+  feedbackReasonCode String? @map("feedback_reason_code") @db.VarChar(48)
+  /// Ce qu'aucune liste n'avait prévu. Facultatif, et il le reste : un champ
+  /// libre obligatoire ferait taper « rien » à tout le monde.
+  feedbackNote       String? @map("feedback_note") @db.VarChar(500)
 
   /// Le souhait né de cette idée, s'il y en a un. `SetNull` et non `Cascade` :
   /// retirer le souhait de la liste ne doit pas effacer l'idée ni son avis —
@@ -2138,6 +2200,14 @@ model Portrait {
   /// vont ensemble, et retirer son avis remet les deux à nul.
   feedback      IdeaFeedback?
   feedbackAt    DateTime?      @map("feedback_at") @db.Timestamptz
+  /// LE MOTIF, EXIGÉ QUAND LE POUCE EST EN BAS et interdit autrement. Une
+  /// contrainte en base le tient, parce que c'est la seule garantie qui
+  /// survive à un appelant qui se trompe : un rejet sans motif ne se compte
+  /// pas, et un motif sans rejet ne désigne rien.
+  feedbackReasonCode String? @map("feedback_reason_code") @db.VarChar(48)
+  /// Ce qu'aucune liste n'avait prévu. Facultatif, et il le reste : un champ
+  /// libre obligatoire ferait taper « rien » à tout le monde.
+  feedbackNote       String? @map("feedback_note") @db.VarChar(500)
   status        PortraitStatus @default(generated)
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
