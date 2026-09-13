@@ -248,6 +248,30 @@ elle n'interrompt rien.
 > de numéro de build à comparer. Dans les deux cas il n'y a rien à suggérer non
 > plus.
 
+> **Lu côté client le 13 septembre au soir** — #246, et la phase 3 est entière.
+>
+> La suggestion voyage sur les réponses qui **réussissent**, d'où un témoin à
+> elle : `surEchec` porte l'arrêt et le refus, qui arrivent en échec, et n'aurait
+> vu la suggestion que le jour où quelque chose casse. Elle s'observe au seul
+> `fetch` du paquet, au même endroit que les en-têtes de client et pour la même
+> raison — une réponse qui passerait à côté ne suggérerait jamais rien.
+>
+> **Les quatre absences sont traitées** : version seule (bandeau conservé, texte
+> qui cesse de promettre un geste), lien seul (rien — il ne nomme aucune
+> version), les deux absents, et l'en-tête présent mais vide qu'un relais a
+> vidé. Sans ce dernier cas, on annonce « La version  est disponible ».
+>
+> **Une fois par session**, et le drapeau de renvoi n'est pas un confort :
+> l'en-tête revient sur CHAQUE appel, donc fermer le bandeau le ferait revenir à
+> la requête suivante. Il vit en mémoire — sur le disque, quelqu'un qui a fermé
+> le bandeau en mars n'entendrait plus jamais parler d'aucune version.
+>
+> **Ce qui n'est pas éprouvé de bout en bout**, et il faut le dire : le
+> déclenchement. Les deux exemptions ci-dessus font qu'aucun build de
+> développement ne recevra jamais ces en-têtes. La lecture a ses cas, le rendu a
+> été vu à l'écran par une sonde, mais la jonction des deux ne se verra qu'en
+> production.
+
 ---
 
 ## 5. Ce qu'il ne faut pas faire
