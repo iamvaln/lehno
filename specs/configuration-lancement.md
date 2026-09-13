@@ -12,7 +12,7 @@ Ce document existe parce que la décision s'était prise **par morceaux, dans un
 |---|---|---|
 | `events.other` | **éteint** | Anniversaires seuls. Écarte toute la complexité de §3.6 — récurrences libres, jalons multiples, libellés. |
 | `generation.message` | **allumé** | La génération la plus proche de la promesse, et la moins chère à produire. **C'est ce que les crédits achètent.** |
-| `generation.ideas` | éteint | Dépend de `GiftGiven`, qui n'existe pas : sans elle, les idées reproposent le cadeau de l'an dernier. |
+| `generation.ideas` | éteint | Dépend de `GiftGiven`, qui n'existe pas : sans elle, les idées reproposent le cadeau de l'an dernier. **L'écran de résultat, lui, existe depuis le 13 septembre** — il annonçait un échec sur chaque succès, et personne ne l'avait vu puisque le drapeau est éteint. |
 | `generation.portrait` | éteint | L'UX était encore en peaufinage, et le traitement d'image coûte le plus cher. |
 | `topup.manual` | **allumé** | Verser sur un compte affiché, puis déposer son reçu. Le seul chemin de paiement au lancement. |
 | `topup.provider` | éteint | L'intégration opérateur attend. |
