@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { feedbackReasonsSchema, type FeedbackReason, type NatureAvis } from "@lehno/contracts";
 import { nativeBorder, nativeFont, nativeRadius, nativeSpace } from "@lehno/tokens";
 import { Button, TextField, chassisDeFeuille, useCouleurs } from "@lehno/ui-native";
@@ -86,7 +86,29 @@ export function Avis({ nature, id, valeur, surChangement }: {
       {demande ? (
         /* LE MÊME CHÂSSIS QUE LES DEUX AUTRES FEUILLES du kit — il n'y a pas
            de `Sheet` générique, seulement ce châssis, et le recopier à la main
-           ferait diverger une troisième feuille des deux premières. */
+           ferait diverger une troisième feuille des deux premières.
+
+           MAIS PAS LE MÊME MONTAGE, et c'est `Modal` qui rattrape l'écart.
+           `ConfirmSheet` et `PaidActionSheet` sont posées à la RACINE de leur
+           écran, dernier enfant : la scène en absolu y couvre bien l'écran
+           entier, et rien ne peint après elle. Ce composant-ci, lui, vit AU
+           MILIEU de la page — sous les verdicts d'un portrait, sous un message,
+           sous une idée. En absolu, sa scène ne couvrait donc que SA boîte, et
+           tout ce qui la suit dans l'arbre passait au-dessus.
+
+           Vu à l'appareil : la page n'était pas éteinte, et le « Refaire » de
+           l'écran tombait pile sur le bouton « Envoyer » de la feuille. Le
+           doigt qui envoyait son motif lançait une régénération — un crédit,
+           pour avoir répondu à une question. */
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          // La touche retour d'Android ferme la question, comme le voile : la
+          // refuser est une réponse, rester coincé n'en est pas une.
+          onRequestClose={() => setDemande(false)}
+        >
         <View style={c.scene}>
           {/* Le voile ferme aussi : une question qui monte doit pouvoir se
               refuser sans viser un bouton — et ici le refus a un sens, c'est
@@ -136,6 +158,7 @@ export function Avis({ nature, id, valeur, surChangement }: {
             </Button>
           </View>
         </View>
+        </Modal>
       ) : null}
     </>
   );
