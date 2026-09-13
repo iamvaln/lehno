@@ -267,24 +267,55 @@ Le §8 ci-dessus dit donc *presque* juste : ce qui débloque le ménage du stock
 est le **statut** — « je ne garde pas celle-ci » —, pas l'avis. Un pouce en bas
 sur une image qu'on garde n'autorise rien à effacer.
 
-### Ce qui manque : la raison d'un avis négatif
+### La raison d'un avis négatif — **TRANCHÉ le 13 septembre, et livré**
 
 **Un « je n'aime pas » sans raison ne dit pas quoi corriger.** C'est pourtant la
 seule chose qu'on vient chercher : savoir qu'une version déplaît sans savoir en
 quoi ne fait pas avancer la consigne suivante.
 
-**Le flux n'est pas dessiné**, et la colonne attend qu'il le soit — parce que sa
-forme dépend de lui, et se tromper coûte une migration :
+**La réponse est LES DEUX** : un motif fermé obligatoire, un texte libre
+facultatif. Les motifs seuls ne diraient jamais ce qui manque à la liste — or les
+premiers mois sont exactement ceux où l'on ne sait pas quoi lister. Le texte seul
+ne se compterait pas, et personne ne relit trois cents phrases. C'est la forme
+qu'a déjà le motif d'administration dans ce dépôt — `audit_reason` avec son
+commentaire —, et elle y a fait ses preuves.
 
-- **des motifs fermés** (« hors sujet », « ton faux », « inexact », « fade ») se
-  comptent, se comparent entre versions, et se lisent au panneau d'un coup
-  d'œil. C'est ce qui sert à régler ;
-- **un texte libre** dit ce qu'aucune liste n'avait prévu, et c'est précisément
-  ce qu'on veut les premiers mois — mais il ne se compte pas, et personne ne
-  relit trois cents phrases.
+**Le registre vit EN BASE, pas dans le code.** Il faut pouvoir ajouter un motif
+sans livrer une version — et depuis que le registre des versions existe, livrer
+n'est plus anodin : un motif de plus ne vaut pas de demander à tout le monde de
+mettre à jour.
 
-La réponse est probablement **les deux** : un motif obligatoire, un texte libre
-facultatif. C'est la forme qu'a déjà le motif d'administration dans ce dépôt —
-`audit_reason` avec son commentaire —, et elle y a fait ses preuves.
+| | |
+| --- | --- |
+| la table | `feedback_reason` — `code`, `label_fr`, `label_en`, `natures`, `position`, `is_active` |
+| les colonnes | `feedback_reason_code` et `feedback_note` sur les **trois** productions |
+| la lecture | `GET me/feedback-reasons?nature=` — liste active, par nature, dans la langue de l'interface |
+| l'écriture | le même `PATCH :id/feedback`, qui prend `reasonCode` et `note` |
 
-À trancher avant d'écrire la colonne.
+**Ce que la base tient, et pas seulement le service**, parce que c'est la seule
+garantie qui survive à un appelant qui se trompe :
+
+- le motif existe **exactement** quand le pouce est en bas ;
+- la note suit l'avis, et le retrait de l'avis l'emporte.
+
+> La contrainte emploie `IS NOT DISTINCT FROM` et non `=`. Sur un avis nul,
+> `feedback = 'down'` vaut NULL — et une contrainte qui vaut NULL est
+> **satisfaite**. Écrite naïvement, elle aurait laissé passer un motif sur une
+> production que personne ne juge, ce qu'elle existe précisément pour empêcher.
+
+**Pas de clé étrangère vers le registre**, délibérément : un motif retiré doit
+cesser d'être proposé sans rien casser de ce qu'il a déjà justifié. Ce qu'on veut
+vraiment garantir est que le code était **encore offert** au moment du clic —
+c'est le service qui le vérifie, contre la liste active **et** contre la nature.
+Une clé étrangère n'aurait attrapé ni l'un ni l'autre.
+
+**Les jetons de nature sont ceux du studio** (`portrait`, `message`, `idees`), et
+`NATURES_AVIS` est simplement plus étroite que `NATURES_STUDIO` —
+`portrait_brief` est une configuration d'atelier, pas une production. En écrire
+`idea` aurait imposé une table de traduction entre deux listes à tenir d'accord,
+dont l'écart ne se serait vu qu'en production, sur un comptage vide.
+
+**Au panneau** : la mesure par version ventile le `contre` de l'axe des avis par
+motif, du plus fréquent au plus rare. Les deux écrans de l'atelier la montrent à
+côté du compte, jamais à sa place — « quatre mauvais » dit qu'il faut régler
+quelque chose, « hors sujet 2 · ton faux 1 » dit **quoi** régler.
