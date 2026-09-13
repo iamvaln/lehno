@@ -913,6 +913,24 @@ export const fr = {
   resAjuster: "Ajuster le texte",
   resEnvoyer: "Envoyer",
   resRegenerer: "Refaire",
+  /* DEUX GESTES DISTINCTS, et les fondre détruirait le signal qu'on vient
+     chercher : on peut trouver une idée excellente et ne pas la retenir — trop
+     chère, déjà offerte l'an dernier, pas pour cette personne-là. */
+  /* LE NOM, PAS LE GENRE. J'avais d'abord écrit deux titres, « pour elle » et
+     « pour lui », et la garde `messages.test.ts` a refusé l'anglais — à raison :
+     on ne suppose pas le genre d'un tiers. Mais le français avait le même
+     défaut en plus discret, et le nom règle les deux : il est plus juste ET
+     plus chaleureux que n'importe quel pronom. */
+  ideesTitre: (qui: string) => "Des idées pour " + qui,
+  ideesRetenir: "Retenir",
+  ideesRetenue: "Dans la liste",
+  ideesRetenueFait: "Ajoutée à votre liste.",
+  /* Le jeu a tourné et n'a rien rendu. Ce n'est PAS un échec : le crédit est
+     dépensé, et annoncer une panne promettrait un remboursement qui ne viendra
+     pas. */
+  ideesAucune: "Rien n'est sorti cette fois. Quelques notes de plus, et on retente.",
+  ideesPrix: (min: string, max: string) => "Entre " + min + " et " + max,
+  ideesPrixMax: (max: string) => "Jusqu'à " + max,
   resJeter: "Jeter",
   resAjusteFini: "Garder ce texte",
   resAjusteAnnuler: "Revenir au texte écrit",
