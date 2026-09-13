@@ -6,7 +6,7 @@ const ID = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
 const idea = (over: Partial<GeneratedIdea> = {}): GeneratedIdea => ({
   id: ID, label: "Un carnet", details: null,
   priceMin: null, priceMax: null, currency: null,
-  feedback: null, wishlistItemId: null,
+  feedback: null, feedbackReasonCode: null, feedbackNote: null, wishlistItemId: null,
   ...over,
 });
 

@@ -923,6 +923,16 @@ export const fr = {
      plus chaleureux que n'importe quel pronom. */
   ideesTitre: (qui: string) => "Des idées pour " + qui,
   ideesRetenir: "Retenir",
+  /* DEUX QUESTIONS, PAS UNE. « Je garde » engage l'objet ; « j'aime » dit ce
+     qu'on en pense. On peut garder sans admirer, et cette réponse-là dit
+     quelque chose qu'aucune des deux ne dirait seule. */
+  avisJaime: "J'aime",
+  avisJaimePas: "Je n'aime pas",
+  /* LA QUESTION VIENT AVANT L'ENVOI. Un « je n'aime pas » sans raison ne dit pas
+     quoi corriger, et c'est pourtant la seule chose qu'on vient chercher. */
+  avisPourquoi: "Qu'est-ce qui ne va pas ?",
+  avisNote: "Autre chose ? (facultatif)",
+  avisEnvoyer: "Envoyer",
   ideesRetenue: "Dans la liste",
   ideesRetenueFait: "Ajoutée à votre liste.",
   /* Le jeu a tourné et n'a rien rendu. Ce n'est PAS un échec : le crédit est

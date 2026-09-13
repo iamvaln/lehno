@@ -29,6 +29,8 @@ import {
   ouverture, relanceDuPortrait, selectionParDefaut, signatureARemettre, type Plateforme,
 } from "../lib/portrait.js";
 import { Bascule } from "../composants/Bascule.js";
+import { Avis } from "../composants/Avis.js";
+import { type RatingCall } from "../lib/rating.js";
 import { Choix } from "../composants/Choix.js";
 import { ChoixEnVignettes } from "../composants/ChoixEnVignettes.js";
 
@@ -320,6 +322,12 @@ export default function PortraitEcran() {
      ceux-là engagent l'objet, celui-ci dit ce qu'on en pense. `verdict` rend
      `null` quand l'avis est déjà porté — redire la même chose n'appellerait
      rien —, et l'écran s'en sert pour éteindre le bouton déjà tenu. */
+  /* L'avis relit le portrait comme les verdicts : le motif et la note vivent au
+     serveur, et les recopier ici ferait diverger l'écran à la première erreur. */
+  const noteLeResultat = async (appelAFaire: RatingCall): Promise<void> => {
+    await patche({ chemin: appelAFaire.path, methode: "PATCH", corps: appelAFaire.body });
+  };
+
   const juge = async (avis: "approved" | "rejected"): Promise<void> => {
     if (!portrait) return;
     const envoi = verdict(portrait, avis);
@@ -705,6 +713,23 @@ export default function PortraitEcran() {
                   </Button>
                 ) : null}
               </View>
+            ) : null}
+
+            {/* L'AVIS EST L'AUTRE QUESTION, et il ne remplace pas les verdicts :
+                « je garde » engage l'objet, « j'aime » dit ce qu'on en pense. On
+                peut garder un portrait sans l'admirer — et c'est précisément la
+                réponse qu'aucun des deux ne donnerait seul.
+
+                Sur une image qu'on a vue, comme les verdicts : juger un brief
+                mesurerait la qualité du texte en laissant croire qu'il mesure
+                celle du portrait. */}
+            {etat === "pret" ? (
+              <Avis
+                nature="portrait"
+                id={portrait.id}
+                valeur={portrait.feedback}
+                surChangement={(appelAFaire) => noteLeResultat(appelAFaire)}
+              />
             ) : null}
 
             {/* « REFAIRE » JETTE CELUI-CI POUR EN REDEMANDER UN AUTRE, et le
