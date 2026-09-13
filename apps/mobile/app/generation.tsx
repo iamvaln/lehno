@@ -25,6 +25,8 @@ import {
   marquageEnvoye, offreDeRefaire, ouverture, phaseDuResultat, relanceDuMessage,
 } from "../lib/generation.js";
 import { keeping, priceLabel, producedIdeas, type Call } from "../lib/ideas.js";
+import { type RatingCall } from "../lib/rating.js";
+import { Avis } from "../composants/Avis.js";
 import { useActionsPayantes } from "../lib/MetadonneesProvider.js";
 import { coutDe } from "../lib/preparation.js";
 
@@ -168,6 +170,12 @@ export default function Generation() {
      serveur rend le souhait né de l'idée, et c'est lui qui fait disparaître le
      bouton. Recopier l'état à la main ferait diverger l'écran de ce que le
      serveur porte dès la première erreur. */
+  /* L'AVIS RELIT COMME LE RESTE : c'est le serveur qui porte le motif et la
+     note, et les recopier ici ferait diverger l'écran dès la première erreur. */
+  const agitSurLAvis = async (appelAFaire: RatingCall): Promise<void> => {
+    await agitSurLIdee({ path: appelAFaire.path, method: "PATCH", body: appelAFaire.body }, null);
+  };
+
   const agitSurLIdee = async (envoi: Call, accuse: string | null): Promise<void> => {
     setEnCours(true);
     try {
@@ -469,6 +477,18 @@ export default function Generation() {
               )}
             </View>
 
+            {/* L'AVIS, ET PAS PENDANT QU'ON ÉCRIT. Ajuster est un geste qui
+                engage le texte ; demander en même temps ce qu'on en pense
+                mélangerait les deux questions, et l'une des deux perdrait. */}
+            {!ajuste ? (
+              <Avis
+                nature="message"
+                id={message.id}
+                valeur={message.feedback}
+                surChangement={(appelAFaire) => agitSurLAvis(appelAFaire)}
+              />
+            ) : null}
+
             {!ajuste ? (
               <Text style={[styles.rappel, { color: couleurs.textMention }]}>{t.envoiRappel}</Text>
             ) : null}
@@ -529,6 +549,15 @@ export default function Generation() {
                     >
                       {retient ? t.ideesRetenir : t.ideesRetenue}
                     </Button>
+                    {/* L'AVIS EST L'AUTRE QUESTION, et il vit à côté du geste
+                        qui engage, jamais à sa place : retenir dit ce qu'on
+                        fait de l'idée, le pouce dit ce qu'on en pense. */}
+                    <Avis
+                      nature="idees"
+                      id={idee.id}
+                      valeur={idee.feedback}
+                      surChangement={(appelAFaire) => agitSurLAvis(appelAFaire)}
+                    />
                   </View>
                 </Card>
               );

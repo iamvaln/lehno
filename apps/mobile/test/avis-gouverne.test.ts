@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { NATURES_AVIS } from "@lehno/contracts";
 
 /* UN AVIS QUI NE SE RELIT PAS EST UN AVIS QU'ON CESSE DE DONNER.
  *
@@ -60,5 +61,33 @@ describe("le pouce, et ce que le contrat en relit", () => {
   it("le corps d'un avis exige un motif sur un rejet", () => {
     expect(champsDe("avisSchema")).toContain("reasonCode:");
     expect(contrat).toContain("un rejet demande un motif");
+  });
+});
+
+/* LES TROIS NATURES PORTENT L'AVIS À L'ÉCRAN, et cette garde lit la source.
+ *
+ * `NATURES_AVIS` est au contrat — c'est lui qui dit combien il y en a. Une
+ * quatrième qui arriverait sans que personne ne pose son pouce ne ferait rien
+ * tomber : l'écran marcherait, il ne demanderait simplement jamais l'avis, et
+ * le comptage sortirait vide sans qu'on sache pourquoi.
+ *
+ * On vérifie la NATURE PASSÉE au composant, pas sa présence : `<Avis` sans
+ * `nature="message"` ne prouve rien sur le message.
+ */
+describe("les trois natures demandent un avis", () => {
+  const sources = ["app/generation.tsx", "app/portrait.tsx"]
+    .map((n) => readFileSync(new URL(`../${n}`, import.meta.url), "utf8"))
+    .join("\n");
+
+  for (const nature of NATURES_AVIS) {
+    it(`la nature « ${nature} » pose son avis à l'écran`, () => {
+      expect(sources).toContain(`nature="${nature}"`);
+    });
+  }
+
+  /* LA SONDE : la garde doit distinguer une nature posée d'une simple mention. */
+  it("ne se contente pas du mot", () => {
+    expect('<Avis nature="portrait"').toContain('nature="portrait"');
+    expect("/* le portrait porte un avis */").not.toContain('nature="portrait"');
   });
 });
