@@ -736,7 +736,7 @@ prévenu. Éprouvée par la panne.
 
 ---
 
-## 15. Un portrait produit ne dit pas lequel il est — 13 septembre
+## 15. Un portrait produit ne dit pas lequel il est — CLOS le 13 septembre au soir
 
 **Trouvé à l'appareil, en éprouvant le chemin que #200 vient d'ouvrir. Quelqu'un
 qui compose un portrait paie son crédit et lit « L'écriture n'a pas abouti ».**
@@ -805,4 +805,32 @@ exactement ce que le code fait — rien ne cloche à la relecture.
 
 *Corrigé le 13 septembre : ce paragraphe annonçait d'abord « une ligne ». C'était
 faux, et l'annoncer ainsi aurait fait sous-estimer le lot.*
+
+### Clos le 13 septembre au soir — #244
+
+Les trois endroits, tels qu'annoncés. La relation entre en `select` restreint à
+`id` et `personId` : `portrait: true` ferait passer l'image et ses attributs
+sans que personne ne les lise. **`lister()` la charge aussi** — l'historique
+passe par la même projection, et l'y oublier aurait laissé les portraits muets
+dans la liste après les avoir réparés à l'unité.
+
+Les deux commentaires trompeurs sont réécrits.
+
+**L'épreuve passe par le CONTRÔLEUR**, et c'est là qu'était le trou : les cas de
+`portrait.test.ts` regardaient le portrait rendu par le service, qui a toujours
+été juste. Aucun ne lisait l'exécution. Éprouvé par la panne dans les deux sens
+— défaire la projection fait tomber le cas, la rétablir et retirer la relation
+de la requête le refait tomber.
+
+**Vérifié à l'appareil** : le lancement de 17:35 ouvre le portrait produit, et
+la relecture de l'exécution de 16:06 — celle qui avait annoncé l'échec — rend
+maintenant `resultId: 26faf774-…`, `personId` = Awa, sans que rien n'ait changé
+en base.
+
+> **Ce que ce §15 laisse comme leçon**, et elle ne porte pas sur le portrait :
+> les deux champs ont survécu à toutes les relectures parce qu'un commentaire
+> **vrai** décrivait le mauvais comportement. « Le message OU le jeu d'idées »
+> disait exactement ce que le code faisait ; « un portrait vise un proche »
+> disait exactement ce qu'on voulait. Dans les deux cas, rien ne cloche à la
+> lecture — et c'est précisément ce qui a désarmé la revue.
 
