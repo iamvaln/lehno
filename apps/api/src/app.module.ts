@@ -11,6 +11,7 @@ import { VersionGuard } from "./clients/version.guard.js";
 import { ClientGuard } from "./clients/client.guard.js";
 import { ClientsApiController } from "./admin/clients-api.controller.js";
 import { VersionsController } from "./admin/versions.controller.js";
+import { EasController } from "./clients/eas.controller.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthGuard } from "./auth/auth.guard.js";
 import { SignupService } from "./onboarding/signup.service.js";
@@ -165,6 +166,7 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
   controllers: [
     ClientsApiController,
     VersionsController,
+    EasController,
     AuthController, ProfileController, MediaController, PersonController, SelfPersonController, EventController, OccurrenceController, NoteController, NotesController, HomeController, MetadataController, NotificationPreferencesController, NotificationController, ConfigController, LegalController,
     SecurityController,
     AccountController, DeviceController, DataExportController, SupportController,
