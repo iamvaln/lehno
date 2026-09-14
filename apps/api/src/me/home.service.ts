@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Home } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
-import { OccurrenceService } from "./occurrence.service.js";
+import { OccurrenceService, HORIZON_JOURS } from "./occurrence.service.js";
 import { ajouterJours } from "./calendrier.js";
 import { nonLuesDuCentre } from "./notification.service.js";
 
@@ -26,7 +26,6 @@ const ECHEANCES = 7;
  * Douze mois : chaque date annuelle y paraît exactement une fois. Le nombre
  * redevient quelque chose qu'on peut lire — « quatorze autres dates cette
  * année ». */
-const HORIZON_JOURS = 365;
 
 @Injectable()
 export class HomeService {

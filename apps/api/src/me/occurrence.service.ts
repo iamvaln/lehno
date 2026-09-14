@@ -11,6 +11,26 @@ const FENETRE_APRES = 30;
 // que de rendre l'historique entier à un client qui n'en veut pas.
 const PLAFOND_DEFAUT = 50;
 
+/* DOUZE MOIS, ET C'EST LA MÊME BORNE QUE LE COMPTEUR DE L'ACCUEIL.
+ *
+ * L'ordonnanceur ouvre TROIS échéances d'avance par événement — un tampon
+ * interne, pour que les rappels aient de quoi travailler. Rendue sans borne, la
+ * liste le donnait à voir : deux anniversaires devenaient SIX lignes, la même
+ * date trois années de suite, jusqu'à J+786. Les rangs n'affichant ni l'année
+ * ni le décompte, les trois étaient indiscernables à l'œil.
+ *
+ * `spec-technique-lehno.md` §« /me/home » avait déjà tranché pour le compteur :
+ * sans borne, il « dirait la profondeur de déroulement, un détail interne,
+ * plutôt que ce qu'une personne reconnaît de son année ». On avait borné le
+ * compteur et oublié la liste — d'où le `Math.max(0, …)` de l'accueil, qui
+ * empêchait un « −2 restants » au lieu d'empêcher sa cause.
+ *
+ * ET NON « UNE PAR ÉVÉNEMENT », qui serait le mauvais remède : pour un
+ * événement MENSUEL, les trois échéances déroulées sont trois dates
+ * parfaitement légitimes. C'est l'horizon qui sépare les deux cas — un
+ * anniversaire n'en a qu'une dans l'année, un mensuel en a douze. */
+export const HORIZON_JOURS = 365;
+
 type LigneJointe = {
   id: string; eventId: string; occurrenceDate: Date; occurrenceYear: number | null;
   event: {
@@ -63,11 +83,15 @@ export class OccurrenceService {
     // proche. On la consulte d'abord — c'est elle qui garantit le
     // cloisonnement — puis on recharge les mêmes identifiants avec leurs
     // relations pour que le nom du proche voyage avec l'échéance.
+    /* UNE BORNE DE FIN TOUJOURS, explicite ou par défaut. `lt` sur l'horizon
+       plutôt que `lte` : c'est exactement la borne du compteur de l'accueil, et
+       les deux doivent dire la même chose ou le « n restants » redevient faux. */
+    const jusqua = query.to
+      ? { lte: new Date(`${query.to}T00:00:00Z`) }
+      : { lt: new Date(`${ajouterJours(depuis, HORIZON_JOURS)}T00:00:00Z`) };
+
     const lignes = await this.depot.occurrences(userId).findMany({
-      occurrenceDate: {
-        gte: new Date(`${depuis}T00:00:00Z`),
-        ...(query.to ? { lte: new Date(`${query.to}T00:00:00Z`) } : {}),
-      },
+      occurrenceDate: { gte: new Date(`${depuis}T00:00:00Z`), ...jusqua },
       // L'échéance ne porte pas le proche : elle passe par son événement.
       ...(query.personId !== undefined ? { event: { personId: query.personId } } : {}),
     });

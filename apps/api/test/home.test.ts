@@ -13,6 +13,7 @@ import { TenantRepository } from "../src/tenancy/tenant.repository.js";
 import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 import { ajouterJours } from "../src/me/calendrier.js";
+import { DeroulementService } from "../src/me/deroulement.service.js";
 import { FlagsService } from "../src/flags/flags.service.js";
 
 describe("l'accueil en un appel", () => {
@@ -60,6 +61,50 @@ describe("l'accueil en un appel", () => {
   // LE piège : la liste rendue est plafonnée, mais le décompte doit porter sur
   // TOUTE la table, pas sur cet extrait. Dix échéances aujourd'hui doivent
   // donner `counts.today = 10`, jamais le plafond.
+  /* LA PROFONDEUR DE DÉROULEMENT NE SE MONTRE PAS.
+   *
+   * L'ordonnanceur ouvre TROIS échéances d'avance par événement, pour que les
+   * rappels aient de quoi travailler. Rendue sans borne, la liste le donnait à
+   * voir : DEUX anniversaires devenaient SIX lignes — la même date trois années
+   * de suite, jusqu'à J+786. Les rangs n'affichant ni l'année ni le décompte,
+   * les trois étaient indiscernables à l'œil.
+   *
+   * La spec avait déjà tranché pour le compteur : douze mois, sinon il « dirait
+   * la profondeur de déroulement, un détail interne ». On avait borné le
+   * compteur et laissé la liste libre. */
+  it("ne montre pas les années déroulées d'avance d'un anniversaire", async () => {
+    for (const [nom, naissance] of [["Awa", "1990-05-20"], ["Bila", "1988-11-03"]]) {
+      const p = await persons.create(awa, {
+        gender: "female", displayName: nom, birthDate: naissance,
+      } as never);
+      await events.create(awa, { personId: p.id, kind: "birthday" } as never);
+    }
+
+    // Ce que fait l'ordonnanceur en production : trois échéances par événement.
+    await new DeroulementService(db.prisma as never).derouler();
+    expect(await db.prisma.eventOccurrence.count()).toBe(6);
+
+    const rendu = await home.get(awa);
+    expect(rendu.occurrences).toHaveLength(2);
+    expect(new Set(rendu.occurrences.map((o) => o.occurrenceDate)).size).toBe(2);
+  });
+
+  /* ET UN MENSUEL GARDE LES SIENNES. « Une par événement » aurait été le
+     mauvais remède : trois échéances d'un mensuel sont trois dates que la
+     personne attend de voir. C'est l'horizon qui sépare les deux cas. */
+  it("garde les échéances rapprochées d'un événement qui revient souvent", async () => {
+    const p = await persons.create(awa, { gender: "female", displayName: "Awa" });
+    await events.create(awa, {
+      personId: p.id, kind: "other", label: "Loyer", referenceDate: aujourdhui(),
+      schedules: [{ type: "recurrent", unit: "month", interval: 1 }],
+    } as never);
+
+    await new DeroulementService(db.prisma as never).derouler();
+
+    const rendu = await home.get(awa);
+    expect(rendu.occurrences.length).toBeGreaterThanOrEqual(3);
+  });
+
   it("compte séparément de la liste plafonnée", async () => {
     const jour = aujourdhui();
     for (let i = 0; i < 10; i++) {
