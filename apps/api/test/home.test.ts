@@ -224,6 +224,31 @@ describe("l'accueil en un appel", () => {
     expect(rempli.occurrences).toHaveLength(0);
   });
 
+  /* LA FICHE DE SOI NE REMPLIT PAS LE CARNET — et c'est tout le premier
+   * lancement qui en dépend.
+   *
+   * Elle naît À L'INSCRIPTION. Comptée comme un proche, `hasPersons` est vrai
+   * dès la première seconde : l'accueil se croit devant un carnet rempli, et
+   * l'écran « Ajoutez un premier proche et sa date » n'existe plus pour
+   * personne depuis que la fiche de soi a été livrée.
+   *
+   * Ce qu'un nouveau venu voyait : « Rien dans les semaines qui viennent », une
+   * seule action — « Laisser une note » — et une feuille où « Pour qui » est
+   * vide, refusée en rouge, sans offrir de créer un proche.
+   *
+   * Les fixtures d'ici ne créaient pas de fiche de soi : le défaut était donc
+   * invisible en épreuve alors qu'il touchait TOUS les comptes réels. */
+  it("ne prend pas la fiche de soi pour un carnet rempli", async () => {
+    await db.prisma.person.create({
+      data: { userId: awa, displayName: "Awa", gender: "female", isSelf: true },
+    });
+
+    expect((await home.get(awa)).hasPersons).toBe(false);
+
+    await persons.create(awa, { gender: "female", displayName: "Valery" });
+    expect((await home.get(awa)).hasPersons).toBe(true);
+  });
+
   /* MÊME RAISON que `hasPersons`, et le CLOISONNEMENT en plus : l'accueil
      invite à faire une liste tant qu'il n'y en a pas, et l'invitation doit
      disparaître une fois la première créée — sans quoi le client appelle
