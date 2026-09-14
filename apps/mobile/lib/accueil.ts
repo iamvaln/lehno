@@ -76,15 +76,24 @@ export function composeLAccueil(
      dirait « Voir tout » alors qu'il en manque vingt. */
   auDela = 0,
 ): Accueil {
-  const semaine = echeances.filter((e) => e.daysUntil >= 0 && e.daysUntil <= SEMAINE);
-  const source = semaine.length ? semaine : echeances.slice(0, MIN_CARTES);
+  /* CE QUI APPROCHE N'EST JAMAIS DERRIÈRE, et le filtre porte sur TOUT, pas sur
+     la seule semaine.
+     
+     Il ne le faisait que pour elle : une échéance passée était écartée de « cette
+     semaine », puis reprise par le repli `slice(0, MIN_CARTES)` — donc affichée
+     en carte quand même. Le décompte y rendait « J−−2 », puisque `daysUntil` est
+     signé. C'est la vue Dates qui montre le mois écoulé, pas l'accueil, et un
+     test l'affirmait déjà en commentaire tout en gelant l'inverse. */
+  const avenir = echeances.filter((e) => e.daysUntil >= 0);
+  const semaine = avenir.filter((e) => e.daysUntil <= SEMAINE);
+  const source = semaine.length ? semaine : avenir.slice(0, MIN_CARTES);
   const cartes = source.slice(0, nbCartes);
-  const apres = echeances.filter((e) => !cartes.includes(e));
+  const apres = avenir.filter((e) => !cartes.includes(e));
   const rangs = apres.slice(0, nbRangs);
   return {
     cartes: [...cartes],
     rangs: [...rangs],
-    reste: Math.max(0, echeances.length - cartes.length - rangs.length) + auDela,
+    reste: Math.max(0, avenir.length - cartes.length - rangs.length) + auDela,
   };
 }
 

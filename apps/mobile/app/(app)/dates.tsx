@@ -8,8 +8,9 @@ import {
   nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
 import {
-  Banner, Button, Countdown, EmptyState, Icon, LoadingState, SectionLabel, useCouleurs,
+  Banner, Button, Countdown, EmptyState, Icon, LoadingState, SectionLabel, Tag, useCouleurs,
 } from "@lehno/ui-native";
+import { countdownShape } from "../../lib/countdown.js";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
@@ -167,11 +168,21 @@ export default function Dates() {
                           {quoi(e)}
                         </Text>
                       </View>
-                      <Countdown
-                        size="s"
-                        today={e.daysUntil === 0}
-                        label={e.daysUntil === 0 ? t.aujourdhui : t.decompteBarre(e.daysUntil)}
-                      />
+                      {/* LA DATE PASSÉE NE SE COMPTE PAS, elle se nomme. Cet
+                          écran demande un mois EN ARRIÈRE au serveur — on
+                          revient voir ce qu'on a manqué —, et `daysUntil` y est
+                          donc négatif. « J− » suivi de « −4 » donnait « J−−4 ».
+                          Le jeton est celui de l'écran d'occasion, qui tranchait
+                          déjà ainsi. */}
+                      {countdownShape(e.daysUntil) === "past" ? (
+                        <Tag tone="quiet">{t.occPassee}</Tag>
+                      ) : (
+                        <Countdown
+                          size="s"
+                          today={e.daysUntil === 0}
+                          label={e.daysUntil === 0 ? t.aujourdhui : t.decompteBarre(e.daysUntil)}
+                        />
+                      )}
                     </Pressable>
                   ))}
                 </View>
