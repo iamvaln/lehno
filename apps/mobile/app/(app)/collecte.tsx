@@ -177,6 +177,16 @@ export default function Collecte() {
     <ScreenHeader titre={t.enteteCollecte} retour={t.retour} onRetour={() => routeur.back()} />
   );
 
+  /* CETTE GARDE PASSE AVANT TOUT AUTRE RENDU, et ce n'est pas cosmétique :
+     elle était posée APRÈS la condition du squelette, donc elle ne tirait
+     jamais. Drapeau éteint, `charge()` n'est pas appelé ; identifiant absent,
+     il renonce — dans les deux cas les données restent nulles, le squelette
+     gagne, et l'écran tourne à vide INDÉFINIMENT. Vu à l'appareil.
+
+     Une route d'expo-router s'atteint par lien profond : elle se garde donc
+     elle-même. Encore faut-il que la garde soit atteignable. */
+  if (eteint || !id) return <EcranFerme />;
+
   if (echec && liens === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
@@ -209,17 +219,6 @@ export default function Collecte() {
     setMotEnregistre(motDeCollecte(mot));
   };
 
-  /* SANS SON IDENTIFIANT, CETTE ROUTE NE DÉSIGNE RIEN — et la même réponse que
-     pour le drapeau éteint est la bonne : « cette page n'est pas là » est la
-     vérité du point de vue de celui qui l'ouvre.
-     
-     Le chargement commence par `if (!id) return`, donc il ne partait pas et ne
-     le disait pas : l'écran restait sur son squelette INDÉFINIMENT, sans
-     contenu, sans état vide et sans erreur. Vu à l'appareil, vingt-cinq
-     secondes durant. Le commentaire de cet écran posait déjà la règle — une
-     route s'atteint par lien profond, donc elle se garde elle-même — mais elle
-     ne valait que pour le drapeau. */
-  if (eteint || !id) return <EcranFerme />;
 
   const etat = etatDeLaCollecte(liens, proche.id);
   const vivant = lienVivantPour(liens, proche.id);

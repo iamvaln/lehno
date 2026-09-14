@@ -92,6 +92,14 @@ export default function Apercu() {
     </Pressable>
   );
 
+  /* LA GARDE PASSE AVANT TOUT AUTRE RENDU, et ce n'est pas cosmétique : posée
+     plus bas, elle ne tirait jamais. Drapeau éteint, l'effet n'appelle pas
+     `charge()`, les données restent nulles, le squelette l'emporte — et
+     l'écran tourne à vide indéfiniment au lieu de se fermer. Une route
+     s'atteint par lien profond : encore faut-il que sa garde soit
+     atteignable. */
+  if (eteint) return <EcranFerme />;
+
   if (echec && !mur) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
@@ -117,7 +125,6 @@ export default function Apercu() {
 
   const anniversaire = mur.birthday ? anniversaireSansAnnee(mur.birthday, langue) : null;
 
-  if (eteint) return <EcranFerme />;
 
   return (
     <ScrollView

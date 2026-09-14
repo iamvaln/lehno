@@ -106,8 +106,26 @@ describe("les écrans gouvernés se gardent eux-mêmes", () => {
       expect(parEffet || parLaFonction).toBe(true);
     });
 
-    it(`${ecran} refuse de se rendre tant qu'il est éteint`, () => {
-      expect(source(ecran)).toContain("if (eteint) return <EcranFerme />;");
+    /* ET LA GARDE DOIT ÊTRE ATTEIGNABLE — ce cas ne le vérifiait pas.
+     *
+     * Il cherchait la ligne, et la ligne était là. Dans `collecte` et
+     * `souhaits`, elle était pourtant posée APRÈS la condition du squelette :
+     * drapeau éteint, `charge()` n'est pas appelé, les données restent nulles,
+     * le squelette l'emporte et la garde n'est jamais atteinte. L'écran tournait
+     * à vide indéfiniment au lieu de se fermer — vu à l'appareil, et ce test
+     * était vert pendant ce temps.
+     *
+     * La forme accepte `|| !id` : une route sans son paramètre ne désigne rien
+     * non plus, et se ferme de la même façon. */
+    it(`${ecran} refuse de se rendre tant qu'il est éteint, et avant tout autre rendu`, () => {
+      const s = source(ecran);
+      const garde = s.search(/if \(eteint(?: \|\| ![A-Za-z]+)?\) return <EcranFerme \/>;/);
+      expect(garde, `${ecran} ne porte pas de garde de rendu`).toBeGreaterThan(-1);
+      const squelette = s.indexOf("<LoadingState");
+      expect(
+        squelette === -1 || garde < squelette,
+        `${ecran} se ferme APRÈS son squelette : le squelette gagne, et il ne partira jamais`,
+      ).toBe(true);
     });
   }
 });

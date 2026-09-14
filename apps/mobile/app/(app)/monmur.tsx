@@ -143,6 +143,14 @@ export default function MonMur() {
     <ScreenHeader titre={t.enteteMonMur} retour={t.retour} onRetour={() => routeur.back()} />
   );
 
+  /* LA GARDE PASSE AVANT TOUT AUTRE RENDU, et ce n'est pas cosmétique : posée
+     plus bas, elle ne tirait jamais. Drapeau éteint, l'effet n'appelle pas
+     `charge()`, les données restent nulles, le squelette l'emporte — et
+     l'écran tourne à vide indéfiniment au lieu de se fermer. Une route
+     s'atteint par lien profond : encore faut-il que sa garde soit
+     atteignable. */
+  if (eteint) return <EcranFerme />;
+
   if (echec && !mur) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
@@ -166,7 +174,6 @@ export default function MonMur() {
     );
   }
 
-  if (eteint) return <EcranFerme />;
 
   const listeDesMots = mots === null ? null : motsRecus(mots);
 

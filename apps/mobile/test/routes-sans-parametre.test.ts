@@ -40,9 +40,19 @@ const fichiers = (racine: string): string[] =>
 
 // Un chargement qui renonce faute de paramètre.
 const renonce = (texte: string): boolean => /if \(!(id|listeId|personId)\) return;/.test(texte);
-// Il se ferme quand le paramètre manque.
-const seFerme = (texte: string): boolean =>
-  /\|\| !(id|listeId|personId)\) return <EcranFerme/.test(texte);
+/* Il se ferme quand le paramètre manque — ET AVANT TOUT AUTRE RENDU.
+ *
+ * LA PRÉSENCE NE SUFFIT PAS, et c'est la leçon de ce lot : la garde existait
+ * déjà dans deux de ces fichiers, pour le drapeau éteint. Elle était posée
+ * APRÈS la condition du squelette, donc elle ne tirait jamais — du code mort
+ * sous un commentaire qui affirmait le contraire. Un test qui n'aurait cherché
+ * que la ligne l'aurait déclarée verte. */
+const seFerme = (texte: string): boolean => {
+  const garde = texte.search(/\|\| !(id|listeId|personId)\) return <EcranFerme/);
+  if (garde === -1) return false;
+  const squelette = texte.indexOf("<LoadingState");
+  return squelette === -1 || garde < squelette;
+};
 
 describe("une route atteinte sans son paramètre", () => {
   const sources = fichiers("app").map((chemin) => ({
@@ -62,7 +72,7 @@ describe("une route atteinte sans son paramètre", () => {
         expect(texte.includes(dispense), `${chemin} est dispensé mais ne porte plus « ${dispense} »`).toBe(true);
         continue;
       }
-      expect(seFerme(texte), `${chemin} renonce à charger sans le dire : son squelette ne partira jamais`)
+      expect(seFerme(texte), `${chemin} renonce à charger sans le dire, ou se ferme APRÈS son squelette — qui gagne, et ne partira jamais`)
         .toBe(true);
     }
   });
