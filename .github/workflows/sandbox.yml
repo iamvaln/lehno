@@ -1,0 +1,185 @@
+name: Sandbox
+
+# Le bac à sable, déployé à chaque fusion sur `develop`.
+#
+# À QUOI IL SERT, et pourquoi il ne suit pas `main` : le mobile doit pouvoir
+# éprouver ce qui n'est PAS encore en production. Une sandbox alimentée par
+# `main` serait une copie de la prod — elle ne dirait rien de plus qu'elle, et
+# il faudrait continuer à faire tourner l'API en local pour tester une
+# correction. C'est exactement ce qu'on cherche à éviter.
+#
+# IL N'Y A PAS DE BARRIÈRE DE VÉRIFICATION ICI, contrairement à `release.yml`,
+# et c'est délibéré. La release en a une parce qu'une version cassée en
+# production coûte des utilisateurs ; une sandbox cassée coûte une fusion de
+# plus, et c'est PRÉCISÉMENT là qu'on veut que ça casse. Y remettre la barrière
+# ajouterait quinze minutes à chaque fusion sur `develop` pour protéger un
+# environnement dont la raison d'être est d'encaisser les coups.
+#
+# La production reste déclenchée par un tag, elle, et garde sa barrière.
+on:
+  push:
+    branches: [develop]
+  # De quoi redéployer sans pousser un commit — remettre la pile d'aplomb après
+  # une panne du VPS, par exemple.
+  workflow_dispatch:
+
+# Une seule course à la fois : deux fusions rapprochées sur `develop` lanceraient
+# deux déploiements concurrents sur la MÊME pile, et le second écraserait le
+# premier en plein `up -d`. La plus récente gagne, celle en vol est annulée.
+concurrency:
+  group: sandbox
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io/iamvaln
+  # Voir le commentaire équivalent dans ci.yml — même échéance.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  build-api:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Connexion à GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construit et pousse api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/lehno-api:develop
+          cache-from: type=gha,scope=sandbox-api
+          cache-to: type=gha,scope=sandbox-api,mode=max
+
+  # ── Construit et pousse l'image web (Next.js) ───────────────────────────────
+
+  build-web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Connexion à GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construit et pousse web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          # NEXT_PUBLIC_* sont gravées dans le bundle client au build — voir
+          # apps/web/Dockerfile. Variables publiques (Settings ▸ Secrets and
+          # variables ▸ Actions ▸ Variables), pas des secrets.
+          build-args: |
+            # PAS `vars.NEXT_PUBLIC_API_URL` : cette variable porte l'adresse de
+            # la PRODUCTION, et l'URL est gravée dans le paquet client au build.
+            # Le site du bac à sable aurait alors parlé à la vraie API.
+            NEXT_PUBLIC_API_URL=https://api.sandbox.lehno.io
+          tags: |
+            ${{ env.REGISTRY }}/lehno-web:develop
+          cache-from: type=gha,scope=sandbox-web
+          cache-to: type=gha,scope=sandbox-web,mode=max
+
+
+  build-admin:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Connexion à GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construit et pousse admin
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/admin/Dockerfile
+          push: true
+          # VITE_API_URL est gravée dans le paquet au build, comme les
+          # NEXT_PUBLIC_* du site — voir apps/admin/Dockerfile. Une image
+          # construite pour la recette ne peut donc pas servir la production.
+          #
+          # Le « /v1 » fait partie de la base ici, contrairement au mobile où le
+          # client l'ajoute : c'est la forme que porte le repli de session.ts.
+          build-args: |
+            # Même piège que pour le site, et plus grave ici : un panneau
+            # d'administration pointé sur la production modifierait les vraies
+            # données en se croyant dans un bac à sable. Le « /v1 » fait partie
+            # de la base pour l'admin, contrairement au mobile.
+            VITE_API_URL=https://api.sandbox.lehno.io/v1
+          tags: |
+            ${{ env.REGISTRY }}/lehno-admin:develop
+          cache-from: type=gha,scope=sandbox-admin
+          cache-to: type=gha,scope=sandbox-admin,mode=max
+
+  # ── Déploie la pile du bac à sable ──────────────────────────────────────────
+  deployer:
+    needs: [build-api, build-web, build-admin]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déploie par SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          envs: GHCR_USER,GHCR_TOKEN
+          script: |
+            set -euo pipefail
+            cd "$HOME/lehno-sandbox"
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            export IMAGE_TAG=develop
+            # Le fetch s'authentifie pour la même raison que dans release.yml :
+            # GitHub plafonne les accès git ANONYMES par adresse IP, et ce VPS
+            # est partagé avec deux autres projets.
+            git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GHCR_TOKEN" | base64 -w0)" \
+              fetch origin develop
+            # `reset --hard` et non `pull` : `develop` avance par fusions, et un
+            # dépôt de déploiement n'a rien à préserver localement. Un `pull` qui
+            # tomberait sur un conflit laisserait la pile à moitié à jour sans
+            # que personne ne le voie.
+            git reset --hard origin/develop
+            n=0
+            # LES SERVICES SONT NOMMÉS DÈS LE PULL : sans ça, compose réclame
+            # aussi `lehno-backup:develop`, que rien ne construit ici — et son
+            # absence ferait tomber le déploiement entier, api comprise.
+            until docker compose --env-file .env.sandbox pull db api web admin; do
+              n=$((n+1))
+              if [ "$n" -ge 3 ]; then echo "échec du pull après $n tentatives"; exit 1; fi
+              echo "extraction interrompue — nouvel essai dans 10s…"
+              sleep 10
+            done
+            # LES SERVICES SONT NOMMÉS, et `backup` n'en est pas. Le bac à sable
+            # n'a rien à sauvegarder : ses données sont jetables par définition,
+            # et le service réclamerait des identifiants R2 — donc un bucket de
+            # plus à tenir pour des dumps que personne ne relira jamais.
+            docker compose --env-file .env.sandbox up -d db migrate api web admin
+            docker logout ghcr.io
+            # Les images :develop se remplacent l'une l'autre sous le même tag ;
+            # seules les pendantes s'accumulent.
+            docker image prune -f
+      - name: Dit où c'est
+        run: echo "Bac à sable déployé — https://api.sandbox.lehno.io/v1/public/maintenance"

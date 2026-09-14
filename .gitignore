@@ -7,6 +7,12 @@ dist/
 .turbo/
 .env
 .env.*
+# Les GABARITS se commitent — ils ne portent aucun secret, et c'est par eux
+# qu'on apprend quelles variables un environnement réclame. L'exception vaut
+# pour tous (`.env.sandbox.example` et ceux qui suivront), pas pour le seul
+# `.env.example` : un gabarit ajouté hors de la liste disparaîtrait en silence,
+# et personne ne saurait qu'il a existé.
+!.env.*.example
 !.env.example
 *.tsbuildinfo
 
