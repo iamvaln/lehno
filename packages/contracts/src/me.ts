@@ -371,6 +371,28 @@ export const createNoteSchema = z.object({
 
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 
+/* CORRIGER UNE NOTE, ET POUVOIR L'EFFACER.
+ *
+ * Une note, ce sont les mots privés de quelqu'un sur un proche, et ce sont eux
+ * qui nourrissent les invites du modèle. Une faute de frappe, un prénom mal
+ * orthographié, une phrase écrite sur la mauvaise personne : sans ces deux
+ * gestes, tout cela est définitif ET continue d'alimenter chaque portrait et
+ * chaque message. L'API n'exposait que la lecture et l'écriture.
+ *
+ * LE CONTENU SEUL SE CORRIGE. Déplacer une note d'un proche vers un autre n'est
+ * pas une correction : c'est l'effacer ici et l'écrire là-bas. Le rattachement
+ * décide de qui la note parle, et un champ qu'on modifie en croyant corriger
+ * une frappe changerait le sujet sans le dire.
+ *
+ * L'occasion ne bouge pas non plus : elle distingue une note de circonstance
+ * d'une note durable, et la faire glisser changerait la NATURE de la note, pas
+ * son texte. */
+export const updateNoteSchema = z.object({
+  content: z.string().trim().min(1).max(4000),
+}).strict();
+
+export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
+
 // Une même note, écrite pour plusieurs proches à la fois. Elle se DUPLIQUE :
 // chaque proche reçoit la sienne, indépendante ensuite — corriger le
 // classement de l'une ne touche pas les autres, et supprimer un proche
