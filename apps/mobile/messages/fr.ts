@@ -965,6 +965,13 @@ export const fr = {
   noteSecondeCat: "Ajouter une catégorie",
   noteDeuxMax: "Deux catégories au plus.",
   noteRangement: "Rangement",
+
+  /* LA CORRECTION. Le texte seul se reprend — ni le proche ni l'occasion, que
+     le serveur refuse de bouger : changer l'un changerait le sujet, l'autre la
+     nature de la note. L'écran ne les montre donc pas du tout. */
+  noteSupprimerTitre: "Supprimer cette note ?",
+  noteSupprimerTexte: "Elle ne servira plus à rien de ce qui s'écrit à propos de ce proche. C'est sans retour.",
+  noteIntrouvable: "Cette note n'existe plus.",
   notePourQui: "Pour qui",
   noteAjouterProche: "Ajouter",
   noteSansProche: "Désignez au moins un proche pour enregistrer.",

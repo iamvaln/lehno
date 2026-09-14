@@ -823,6 +823,10 @@ export const en = {
   noteSecondeCat: "Add a category",
   noteDeuxMax: "Two categories at most.",
   noteRangement: "Filing",
+
+  noteSupprimerTitre: "Delete this note?",
+  noteSupprimerTexte: "It will no longer feed anything written about this person. This cannot be undone.",
+  noteIntrouvable: "This note no longer exists.",
   notePourQui: "About whom",
   noteAjouterProche: "Add",
   noteSansProche: "Name at least one person to save this.",
