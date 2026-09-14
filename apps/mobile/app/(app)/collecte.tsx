@@ -177,6 +177,16 @@ export default function Collecte() {
     <ScreenHeader titre={t.enteteCollecte} retour={t.retour} onRetour={() => routeur.back()} />
   );
 
+  /* CETTE GARDE PASSE AVANT TOUT AUTRE RENDU, et ce n'est pas cosmétique :
+     elle était posée APRÈS la condition du squelette, donc elle ne tirait
+     jamais. Drapeau éteint, `charge()` n'est pas appelé ; identifiant absent,
+     il renonce — dans les deux cas les données restent nulles, le squelette
+     gagne, et l'écran tourne à vide INDÉFINIMENT. Vu à l'appareil.
+
+     Une route d'expo-router s'atteint par lien profond : elle se garde donc
+     elle-même. Encore faut-il que la garde soit atteignable. */
+  if (eteint || !id) return <EcranFerme />;
+
   if (echec && liens === null) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
@@ -209,7 +219,6 @@ export default function Collecte() {
     setMotEnregistre(motDeCollecte(mot));
   };
 
-  if (eteint) return <EcranFerme />;
 
   const etat = etatDeLaCollecte(liens, proche.id);
   const vivant = lienVivantPour(liens, proche.id);

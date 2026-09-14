@@ -82,6 +82,14 @@ export default function Parrainage() {
     </Pressable>
   );
 
+  /* LA GARDE PASSE AVANT TOUT AUTRE RENDU, et ce n'est pas cosmétique : posée
+     plus bas, elle ne tirait jamais. Drapeau éteint, l'effet n'appelle pas
+     `charge()`, les données restent nulles, le squelette l'emporte — et
+     l'écran tourne à vide indéfiniment au lieu de se fermer. Une route
+     s'atteint par lien profond : encore faut-il que sa garde soit
+     atteignable. */
+  if (eteint) return <EcranFerme />;
+
   if (echec && !resume) {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
@@ -112,7 +120,6 @@ export default function Parrainage() {
      parrainage sans promesse plutôt qu'avec une moitié de promesse. */
   const chiffre = annonceUnGain(resume) && pourEux !== null;
 
-  if (eteint) return <EcranFerme />;
 
   return (
     <ScrollView
