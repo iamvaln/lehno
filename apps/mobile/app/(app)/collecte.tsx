@@ -209,7 +209,17 @@ export default function Collecte() {
     setMotEnregistre(motDeCollecte(mot));
   };
 
-  if (eteint) return <EcranFerme />;
+  /* SANS SON IDENTIFIANT, CETTE ROUTE NE DÉSIGNE RIEN — et la même réponse que
+     pour le drapeau éteint est la bonne : « cette page n'est pas là » est la
+     vérité du point de vue de celui qui l'ouvre.
+     
+     Le chargement commence par `if (!id) return`, donc il ne partait pas et ne
+     le disait pas : l'écran restait sur son squelette INDÉFINIMENT, sans
+     contenu, sans état vide et sans erreur. Vu à l'appareil, vingt-cinq
+     secondes durant. Le commentaire de cet écran posait déjà la règle — une
+     route s'atteint par lien profond, donc elle se garde elle-même — mais elle
+     ne valait que pour le drapeau. */
+  if (eteint || !id) return <EcranFerme />;
 
   const etat = etatDeLaCollecte(liens, proche.id);
   const vivant = lienVivantPour(liens, proche.id);
