@@ -29,7 +29,7 @@ import { errorEnvelopeSchema } from "./errors.js";
 import {
   personSchema, createPersonSchema, updatePersonSchema, personListSchema, listPersonsQuerySchema,
   selfPersonSchema, selfPersonPatchSchema,
-  noteSchema, createNoteSchema, createNotesSchema, personAttributesSchema,
+  noteSchema, createNoteSchema, createNotesSchema, updateNoteSchema, personAttributesSchema,
 } from "./me.js";
 import {
   eventSchema, createEventSchema, updateEventSchema,
@@ -759,6 +759,31 @@ const CHEMINS: Chemin[] = [
     reponse: noteSchema,
     // Une ressource neuve, dont le client apprend l'identifiant.
     statut: 201,
+  },
+  {
+    chemin: "/me/persons/{personId}/notes/{id}",
+    methode: "patch",
+    resume: "Corriger le texte d'une note",
+    authentifie: true,
+    parametres: [
+      { nom: "personId", dans: "path", schema: z.string().uuid(), requis: true },
+      { nom: "id", dans: "path", schema: z.string().uuid(), requis: true },
+    ],
+    corps: updateNoteSchema,
+    reponse: noteSchema,
+  },
+  {
+    chemin: "/me/persons/{personId}/notes/{id}",
+    methode: "delete",
+    resume: "Effacer une note",
+    authentifie: true,
+    parametres: [
+      { nom: "personId", dans: "path", schema: z.string().uuid(), requis: true },
+      { nom: "id", dans: "path", schema: z.string().uuid(), requis: true },
+    ],
+    // 204 : rien à rendre d'une note qui n'existe plus.
+    sansContenu: true,
+    statut: 204,
   },
   {
     chemin: "/me/persons/{id}",

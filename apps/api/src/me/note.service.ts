@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { CreateNoteInput, CreateNotesInput, Note } from "@lehno/contracts";
+import type { CreateNoteInput, CreateNotesInput, Note, UpdateNoteInput } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
 import { classer } from "./note-classifier.js";
@@ -99,6 +99,78 @@ export class NoteService {
       include: { categories: { include: { category: true } } },
     });
     return rendre(ligne);
+  }
+
+  /* CORRIGER LE TEXTE, ET RECLASSER AVEC LUI.
+   *
+   * Le classement est DÉRIVÉ du contenu. Corriger le texte sans rejouer
+   * `classer()` laisserait les catégories décrire la phrase d'avant — une note
+   * qui parle désormais de santé rangée dans « goûts », sans que rien ne le
+   * signale. On remplace donc l'ensemble des rattachements, on n'y ajoute pas :
+   * une catégorie que le texte corrigé ne justifie plus doit partir.
+   *
+   * LES TRAITS, EUX, NE SE REJOUENT PAS, et ce n'est pas un oubli. Un trait
+   * n'est pas « un par note » : `attributs.service` tient une valeur COURANTE
+   * par nature, avec un pointeur vers la note qui l'a posée en dernier — « le
+   * plus récent l'emporte », comme la spec le dit. Les re-dériver ici
+   * demanderait de rejouer toutes les notes restantes du proche pour savoir ce
+   * qui redevient vrai. Ce qui vaut pour la correction vaut pour la saisie : on
+   * corrige un trait en écrivant une note neuve. */
+  async updateForPerson(
+    userId: string, personId: string, noteId: string, input: UpdateNoteInput,
+  ): Promise<Note> {
+    await this.depot.persons(userId).findOrThrow(personId);
+    await this.trouver(personId, noteId);
+
+    const codes = classer(input.content);
+    const categories = codes.length
+      ? await this.prisma.category.findMany({ where: { code: { in: codes } } })
+      : [];
+
+    const ligne = await this.prisma.note.update({
+      where: { id: noteId },
+      data: {
+        content: input.content,
+        categories: {
+          deleteMany: {},
+          create: categories.map((c) => ({ categoryId: c.id })),
+        },
+      },
+      include: { categories: { include: { category: true } } },
+    });
+    return rendre(ligne);
+  }
+
+  /* EFFACER POUR DE BON, et pas marquer comme effacée.
+   *
+   * Quelqu'un qui retire ce qu'il a écrit sur un proche veut que ce soit parti,
+   * pas caché : une note conservée en douce continuerait de pouvoir être lue,
+   * exportée, et surtout de nourrir les invites — ce qui est exactement la
+   * raison de l'effacer.
+   *
+   * Ce que la base fait autour, et qui est déjà juste : les rattachements de
+   * catégorie tombent avec elle (`Cascade`), et les TRAITS survivent en perdant
+   * leur provenance (`SetNull`). Le second surprend et c'est le bon choix — un
+   * trait est une valeur courante que la note a posée en dernier, pas une
+   * possession ; l'emporter reviendrait à annuler une déduction sans savoir ce
+   * qui la remplace. Le texte, lui, ne nourrit plus rien. */
+  async deleteForPerson(userId: string, personId: string, noteId: string): Promise<void> {
+    await this.depot.persons(userId).findOrThrow(personId);
+    await this.trouver(personId, noteId);
+    await this.prisma.note.delete({ where: { id: noteId } });
+  }
+
+  /* 404 SUR LA NOTE D'UN AUTRE PROCHE, même si elle appartient au demandeur.
+   *
+   * Le proche est déjà vérifié au-dessus ; ce qui reste à refuser est une note
+   * qui n'est pas SOUS CE PROCHE-LÀ. Sans ce contrôle, corriger une note en se
+   * trompant de chemin toucherait la fiche d'un autre, et le rendu dirait que
+   * tout s'est bien passé. */
+  private async trouver(personId: string, noteId: string): Promise<void> {
+    const ligne = await this.prisma.note.findFirst({
+      where: { id: noteId, personId }, select: { id: true },
+    });
+    if (ligne === null) throw new AppError("not_found", "note not found");
   }
 
   // Une même note pour plusieurs proches. Elle se DUPLIQUE : chacun reçoit la
