@@ -28,10 +28,27 @@ déjà sur cette machine avec `gabee-staging` et `celva-preprod`.
 | panneau | `admin.lehno.io` | `admin.sandbox.lehno.io` |
 | sauvegarde | oui | **non** |
 
-`docker-compose.yml` n'est pas touché : il était déjà variabilisé
-(`${STACK}`, `${API_DOMAIN}`, `${IMAGE_TAG}`). Compose préfixe volumes et
-conteneurs par le nom du projet, donc les deux piles s'ignorent. Seul le réseau
-`web` est partagé — c'est par lui que Traefik route les deux.
+`docker-compose.yml` était déjà variabilisé (`${STACK}`, `${API_DOMAIN}`,
+`${IMAGE_TAG}`), à UNE ligne près — et cette ligne a coûté une panne de
+production.
+
+**Le nom du projet était figé : `name: lehno`.** Le préfixe par nom de
+répertoire, qu'on croit acquis, ne s'applique QUE si ce champ est absent ; il
+l'emporte sur tout. Les deux répertoires pilotaient donc le MÊME projet Compose.
+Un `up` lancé depuis `lehno-sandbox` a recréé les conteneurs de la
+**production** avec l'environnement d'ici : `migrate` a échoué sur des
+identifiants de base inexistants, la séquence s'est interrompue avant `api` et
+`web`, et `lehno.io` a rendu 404 le temps qu'on la relance. Les données n'ont
+rien eu — Postgres n'applique `POSTGRES_*` que sur un volume vierge.
+
+Le nom suit désormais `STACK` (`name: ${STACK:-lehno}`, et `STACK` vaut déjà
+`lehno` en production, donc rien n'est rebaptisé). Et le déploiement ne s'en
+remet pas à la configuration : il **demande** son nom de projet à Compose et
+s'arrête si ce n'est pas `lehno-sandbox`.
+
+Le reste s'isole bien : volumes, conteneurs et réseau interne sont propres à
+chaque projet. Seul le réseau `web` est partagé — c'est par lui que Traefik
+route les deux.
 
 ## Trois décisions
 

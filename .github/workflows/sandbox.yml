@@ -163,6 +163,24 @@ jobs:
             # que personne ne le voie.
             git reset --hard origin/develop
             n=0
+            # ── LA GARDE QUI REND L'INCIDENT DU 14 SEPTEMBRE IMPOSSIBLE ──────
+            #
+            # `docker-compose.yml` figeait `name: lehno`, si bien que les DEUX
+            # répertoires pilotaient le MÊME projet Compose : un `up` lancé
+            # depuis le bac à sable a recréé les conteneurs de PRODUCTION avec
+            # l'environnement d'ici, et la production a rendu 404.
+            #
+            # Le nom suit désormais `STACK`, mais on ne se contente pas de le
+            # croire : on le DEMANDE à Compose, avant de toucher à quoi que ce
+            # soit. `config` ne démarre rien — c'est une lecture.
+            PROJET=$(docker compose --env-file .env.sandbox config --format json | sed -n 's/.*"name": *"\([^"]*\)".*/\1/p' | head -1)
+            if [ "$PROJET" != "lehno-sandbox" ]; then
+              echo "ARRÊT : Compose annonce le projet « $PROJET » au lieu de « lehno-sandbox »."
+              echo "Continuer reviendrait à déployer sur une autre pile — la production, très probablement."
+              exit 1
+            fi
+            echo "projet Compose confirmé : $PROJET"
+
             # LES SERVICES SONT NOMMÉS DÈS LE PULL : sans ça, compose réclame
             # aussi `lehno-backup:develop`, que rien ne construit ici — et son
             # absence ferait tomber le déploiement entier, api comprise.

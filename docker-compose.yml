@@ -10,7 +10,20 @@
 #
 # Ne pas confondre avec infra/docker/compose.yml : celui-ci sert le
 # développement local (base sur le port 5433, pas d'images publiées).
-name: lehno
+# LE NOM DU PROJET SUIT LA PILE, et ce n'est pas cosmétique.
+#
+# Figé à `lehno`, ce nom faisait que DEUX RÉPERTOIRES pilotaient le MÊME projet
+# Compose : un `up` lancé depuis `lehno-sandbox` recréait les conteneurs de la
+# PRODUCTION, avec l'environnement et les images du bac à sable. C'est arrivé le
+# 14 septembre — `migrate` a échoué sur des identifiants de base qui
+# n'existaient pas, la séquence s'est interrompue avant `api` et `web`, et la
+# production a rendu 404 le temps qu'on la relance.
+#
+# Le préfixe par nom de répertoire, qu'on croit acquis, ne s'applique QUE si ce
+# champ est absent. Il l'emporte sur tout.
+#
+# `STACK` vaut déjà `lehno` en production : le défaut ne rebaptise donc rien.
+name: ${STACK:-lehno}
 
 # CERT_RESOLVER — quel résolveur ACME demande les certificats.
 #
