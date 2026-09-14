@@ -69,7 +69,21 @@ export class HomeService {
       // une seule colonne sélectionnée s'arrête à la première ligne trouvée,
       // ce que count() ne ferait pas sur une fiche bien remplie. count()
       // n'accepte d'ailleurs pas `take`.
-      this.prisma.person.findFirst({ where: { userId }, select: { id: true } }),
+      /* `isSelf: false` — ET C'EST TOUT LE PREMIER LANCEMENT QUI EN DÉPEND.
+         La fiche de soi naît À L'INSCRIPTION. Sans cette condition, `hasPersons`
+         est vrai dès la première seconde, l'accueil se croit devant un carnet
+         rempli, et l'écran « Ajoutez un premier proche et sa date » n'existe
+         plus pour personne depuis que la fiche de soi a été livrée.
+         Ce qu'un nouveau venu voyait à la place : « Rien dans les semaines qui
+         viennent », une seule action — « Laisser une note » — et une feuille où
+         « Pour qui » est vide, qui refuse en rouge « Désignez au moins un
+         proche », sans offrir d'en créer un.
+         Deux écrans se contredisaient : l'onglet Proches disait « Personne dans
+         le carnet » (il filtre, lui — `includeSelf`) pendant que l'accueil
+         croyait le carnet plein. */
+      this.prisma.person.findFirst({
+        where: { userId, isSelf: false }, select: { id: true },
+      }),
       /* Même forme que ci-dessus, et pour la même raison : on veut savoir S'IL
          Y EN A, pas combien. La liste appartient à une occasion, qui appartient
          au compte — d'où le passage par `occurrence`. */
