@@ -133,6 +133,42 @@ Personne n'a décidé ça.
 
 ---
 
+## 3 bis. Décidé : le portrait passe à deux crédits
+
+Bornes aux tarifs publics affichés (Opus 15/75, Sonnet 3/15, DeepSeek-R
+0,55/2,19, DeepSeek-chat 0,27/1,10, Grok-4.6 3/15 $/M ; images 0,02 et 0,04 $),
+sur les jetons mesurés. **Coût max** = trois essais épuisés dans la politique la
+plus coûteuse ; **facturé min** = palier 120 crédits. XAF par opération.
+
+| opération | coût min | coût max | facturé | marge min | marge max |
+|---|---:|---:|---:|---:|---:|
+| Message | 0,4 | 41,1 | 83–100 | **+42,2** | 99,6 |
+| Idées cadeaux | 0,3 | 10,9 | 83–100 | **+72,4** | 99,7 |
+| Portrait — 1 crédit | 12,0 | 94,8 | 83–100 | **−11,5** | 88,0 |
+| **Portrait — 2 crédits** | 12,0 | 94,8 | 167–200 | **+71,8** | 188,0 |
+
+**Le portrait était le seul à passer sous zéro.** Il cumulait deux causes : il
+part sur `claude-opus-5` — six fois le premier appel des idées — et il ajoute
+une image, le poste le plus cher partout. Les deux se multiplient, pour un
+crédit unique, le même qu'un appel de texte seul.
+
+**Deux crédits le mettent hors de portée d'une perte**, quelle que soit la
+chaîne, et sans toucher à aucun modèle.
+
+**C'est un changement de DONNÉE, pas de code** — vérifié de bout en bout : le
+serveur lit `action.creditCost` pour contrôler le solde, débiter et annoncer ;
+le mobile ne l'écrit nulle part en dur. Le commentaire de `listes.tsx` porte la
+règle : « rien ne se paie en silence ne vaut que si le montant montré est le
+montant prélevé ».
+
+**Un défaut d'ordonnancement trouvé au passage** : sur `gift_ideas`, le
+troisième repli — `grok-4.6`, 3,6 XAF — coûte autant que le premier appel et
+douze fois le deuxième (`deepseek-chat`, 0,3 XAF). La chaîne n'est pas rangée
+par coût croissant : replier peut y coûter plus cher que réussir. Sur `message`
+l'ordre est bon (13,7 → 2,7 → 0,4).
+
+---
+
 ## 4. Six routes sur dix-neuf ne servent à rien
 
 `ai_task_route` déclare dix-neuf routes. Deux tâches — **six routes** — n'ont
