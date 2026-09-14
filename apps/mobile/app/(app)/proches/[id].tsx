@@ -312,12 +312,22 @@ export default function Proche() {
               return (
                 /* « À éviter » se dessine autrement — en pointillé, sans fond :
                    c'est un garde-fou, pas une suggestion. */
-                <View
+                /* ELLE SE TOUCHE POUR SE CORRIGER. Une note, ce sont les mots
+                   privés de quelqu'un sur un proche, et ils nourrissent les
+                   invites du modèle : une faute de frappe ou un prénom mal
+                   orthographié alimentait chaque portrait et chaque message,
+                   sans recours. Le serveur sait corriger et effacer depuis le
+                   14 ; rien ne savait le lui demander. */
+                <Pressable
                   key={n.id}
-                  style={[styles.carte, {
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t.noteTitreModifier} — ${n.content}`}
+                  onPress={() => routeur.push(`/note?personId=${id}&noteId=${n.id}`)}
+                  style={({ pressed }) => [styles.carte, {
                     borderColor: couleurs.borderObject,
                     borderStyle: eviter ? "dashed" : "solid",
                     backgroundColor: eviter ? "transparent" : couleurs.surfaceCard,
+                    opacity: pressed ? 0.72 : 1,
                   }]}
                 >
                   {/* La note dit SES catégories, toutes. Elle en porte parfois
@@ -346,7 +356,7 @@ export default function Proche() {
                       dit pas qui a écrit la note ni quand, on n'affiche que la
                       date de saisie. */}
                   <Provenance origin={null} date={dateCourte(n.createdAt.slice(0, 10), langue)} />
-                </View>
+                </Pressable>
               );
             })}
           </View>

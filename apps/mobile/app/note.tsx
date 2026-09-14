@@ -6,16 +6,19 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  occurrenceSchema, personListSchema, type Occurrence, type Person,
+  noteListSchema, occurrenceSchema, personListSchema, type Occurrence, type Person,
 } from "@lehno/contracts";
 import { nativeBorder, nativeFont, nativeRadius, nativeSpace, nativeTouchMin } from "@lehno/tokens";
 import {
-  Avatar, Banner, Button, Icon, LoadingState, SectionLabel, TextField,
+  Avatar, Banner, Button, ConfirmSheet, Icon, LoadingState, SectionLabel, TextField,
   chassisDeFeuille, useCouleurs,
 } from "@lehno/ui-native";
 import { Pastille } from "../composants/Pastille.js";
 import { useLangue } from "../lib/langue.js";
 import { appel, ErreurDApi } from "../lib/api.js";
+import {
+  correctionCall, correctionWorthSending, noteBeingEdited, removalCall,
+} from "../lib/noteEdit.js";
 import { messageDErreur } from "../lib/session.js";
 import { dateCourte } from "../lib/carnet.js";
 import { libelleDeLEcheance } from "../lib/libelles.js";
@@ -73,10 +76,17 @@ export default function Note() {
   const routeur = useRouter();
   /* D'où l'on vient. La fiche passe son proche ; la carte d'échéance passe les
      deux — `occurrenceSchema` porte déjà `personId`, donc rien à redemander. */
-  const { personId, occurrenceId } = useLocalSearchParams<{
+  const { personId, occurrenceId, noteId } = useLocalSearchParams<{
     personId?: string;
     occurrenceId?: string;
+    /* CORRIGER PLUTÔT QU'ÉCRIRE. Le même écran sert les deux : c'est le même
+       geste — une saisie qui revient d'où elle vient — et la même feuille.
+       Ce qui change est ce qu'on montre, et le serveur le dicte : il n'accepte
+       que le TEXTE en correction. */
+    noteId?: string;
   }>();
+  // Une correction quand une note est nommée, et elle vit sous SON proche.
+  const correction = noteId !== undefined && personId !== undefined;
 
   const [texte, setTexte] = useState("");
   const [choisis, setChoisis] = useState<readonly string[]>(personId ? [personId] : []);
@@ -94,6 +104,11 @@ export default function Note() {
   const [echecEcheances, setEchecEcheances] = useState<string | null>(null);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  /* LE TEXTE D'ORIGINE, pour savoir si quelque chose a bougé. `null` tant qu'on
+     ne l'a pas lu : le champ reste vide et l'enregistrement fermé, plutôt que
+     d'écraser une note par le vide qu'on n'a pas encore remplacé. */
+  const [origine, setOrigine] = useState<string | null>(null);
+  const [effacement, setEffacement] = useState(false);
 
   const c = chassisDeFeuille({ couleurs, insetBas: insets.bottom });
 
@@ -123,7 +138,32 @@ export default function Note() {
     }
   }, [langue]);
 
-  useEffect(() => { void chargeLeCarnet(); }, [chargeLeCarnet]);
+  /* NI LE CARNET NI LES ÉCHÉANCES EN CORRECTION. Ni l'un ni l'autre ne peut
+     changer — le serveur ne prend que le texte —, et le carnet coûte autant
+     d'appels qu'il a de pages. Les charger pour les cacher serait payer deux
+     fois pour rien. */
+  useEffect(() => {
+    if (correction) return;
+    void chargeLeCarnet();
+  }, [chargeLeCarnet, correction]);
+
+  /* LA NOTE QU'ON CORRIGE, relue depuis sa fiche. Elle ne voyage pas par la
+     navigation : jusqu'à quatre mille caractères n'ont rien à faire dans un
+     paramètre de route, et l'écran doit pouvoir s'ouvrir depuis n'importe où. */
+  useEffect(() => {
+    if (!correction) return;
+    void (async () => {
+      try {
+        const liste = noteListSchema.parse(await appel<unknown>(`/me/persons/${personId}/notes`));
+        const sienne = noteBeingEdited(liste, noteId);
+        if (sienne === null) { setErreur(t.noteIntrouvable); return; }
+        setOrigine(sienne.content);
+        setTexte(sienne.content);
+      } catch (e) {
+        setErreur(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
+      }
+    })();
+  }, [correction, personId, noteId, langue, t.noteIntrouvable]);
 
   /* Les occasions n'ont de sens qu'avec UN proche désigné : une échéance
      appartient à une personne. À deux, la section n'existe pas — et l'occasion
@@ -143,7 +183,10 @@ export default function Note() {
     }
   }, [seul, langue]);
 
-  useEffect(() => { void chargeLesEcheances(); }, [chargeLesEcheances]);
+  useEffect(() => {
+    if (correction) return;
+    void chargeLesEcheances();
+  }, [chargeLesEcheances, correction]);
 
   const nomDe = useCallback((id: string): string => {
     return carnet?.find((p) => p.id === id)?.displayName ?? "";
@@ -160,22 +203,43 @@ export default function Note() {
   );
 
   const retenue = occasionRetenue(occasion, choisis);
-  const pret = peutEnregistrer(texte, choisis) && !envoiEnCours;
+  /* DEUX CONDITIONS SELON LE GESTE. Écrire demande un texte ET un destinataire ;
+     corriger demande que le texte ait CHANGÉ — enregistrer à l'identique
+     reclasserait les catégories côté serveur, donc ce n'est pas sans effet. */
+  const pret = envoiEnCours ? false : correction
+    ? origine !== null && correctionWorthSending(origine, texte)
+    : peutEnregistrer(texte, choisis);
 
-  const enregistre = async () => {
-    const envoi = envoiDeLaNote(texte, choisis, occasion);
-    if (!envoi) return;
+  /* Le retour est le même dans les trois cas : la note est rangée, corrigée ou
+     effacée, et l'écran de derrière — fiche ou accueil — se relit en reprenant
+     la main. */
+  const envoie = async (faire: () => Promise<unknown>) => {
     setErreur(null);
     setEnvoiEnCours(true);
     try {
-      await appel<unknown>(envoi.chemin, { method: "POST", body: JSON.stringify(envoi.corps) });
-      // La note est rangée : on retourne d'où l'on vient, et l'écran de
-      // derrière — fiche ou accueil — se relit en reprenant la main.
+      await faire();
       routeur.back();
     } catch (e) {
       setErreur(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
       setEnvoiEnCours(false);
     }
+  };
+
+  const enregistre = async () => {
+    if (correction) {
+      const { path, body } = correctionCall(personId, noteId, texte);
+      await envoie(() => appel<unknown>(path, { method: "PATCH", body: JSON.stringify(body) }));
+      return;
+    }
+    const envoi = envoiDeLaNote(texte, choisis, occasion);
+    if (!envoi) return;
+    await envoie(() => appel<unknown>(envoi.chemin, { method: "POST", body: JSON.stringify(envoi.corps) }));
+  };
+
+  const efface = async () => {
+    if (!correction) return;
+    setEffacement(false);
+    await envoie(() => appel<unknown>(removalCall(personId, noteId).path, { method: "DELETE" }));
   };
 
   return (
@@ -204,7 +268,7 @@ export default function Note() {
         <View
           style={[c.feuille, { maxHeight: height - insets.top - RESPIRATION_DU_HAUT }]}
           accessibilityViewIsModal
-          accessibilityLabel={t.laisserNote}
+          accessibilityLabel={correction ? t.noteTitreModifier : t.laisserNote}
         >
           <View style={c.poignee} accessibilityElementsHidden importantForAccessibility="no" />
 
@@ -224,6 +288,14 @@ export default function Note() {
               autoFocus
             />
 
+            {/* NI « POUR QUI » NI « À QUELLE OCCASION » EN CORRECTION, et ce
+                n'est pas de la simplification : le serveur REFUSE de les
+                changer. Le contrat le dit — déplacer le proche « changerait le
+                sujet sans le dire », déplacer l'occasion changerait la NATURE
+                de la note, pas son texte. Les montrer en lecture seule
+                inviterait à essayer ; les montrer modifiables mentirait. */}
+            {correction ? null : (
+            <>
             <View style={styles.bloc}>
               <SectionLabel>{t.notePourQui}</SectionLabel>
               {/* Les puces attendent le carnet : un identifiant de route ne
@@ -412,7 +484,13 @@ export default function Note() {
                 </Button>
               </View>
             ) : null}
+            </>
+            )}
 
+            {/* L'ERREUR RESTE VISIBLE DANS LES DEUX GESTES — elle était tombée
+                dans le bloc masqué. En correction, c'est elle qui dit que la
+                note n'existe plus : muette, l'écran aurait offert un champ vide
+                qui enregistre par-dessus rien. */}
             {erreur ? (
               <Text style={[styles.faute, { color: couleurs.feedbackError, marginTop: nativeSpace[12] }]}>
                 {erreur}
@@ -427,13 +505,39 @@ export default function Note() {
             {envoiEnCours ? (
               <LoadingState variant="envoi" title={t.noteRangement} />
             ) : (
-              <Button full disabled={!pret} onPress={() => void enregistre()}>
-                {t.enregistrer}
-              </Button>
+              <>
+                <Button full disabled={!pret} onPress={() => void enregistre()}>
+                  {t.enregistrer}
+                </Button>
+                {/* L'EFFACEMENT EST UN SECOND GESTE, jamais un champ vidé. Une
+                    note réduite à rien serait un enregistrement qui détruit
+                    sans le dire ; celui-ci se nomme, et il se confirme. */}
+                {correction ? (
+                  <Button variant="text" full onPress={() => setEffacement(true)}>
+                    {t.noteSupprimer}
+                  </Button>
+                ) : null}
+              </>
             )}
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* EN DERNIER ENFANT DE LA SCÈNE, comme partout ailleurs : la scène est en
+          absolu, et ce qui vient après elle peint par-dessus. Posée plus haut,
+          la question se serait retrouvée SOUS la feuille qu'elle interroge. */}
+      {effacement ? (
+        <ConfirmSheet
+          titre={t.noteSupprimerTitre}
+          texte={t.noteSupprimerTexte}
+          confirmer={t.noteSupprimer}
+          annuler={t.annuler}
+          destructif
+          insetBas={insets.bottom}
+          onConfirmer={() => { void efface(); }}
+          onAnnuler={() => setEffacement(false)}
+        />
+      ) : null}
     </View>
   );
 }
