@@ -263,7 +263,7 @@ describe("les gardes du client et de la version", () => {
      * envoyer — et sans exemption, allumer cette garde mettrait dehors toute
      * l'équipe et tous les testeurs, avec un « mettez à jour » qu'aucun magasin
      * ne peut satisfaire. */
-    it("ne juge pas un client hors production, même sans numéro de build", async () => {
+    it("ne juge pas un build hors production qui n'a aucun numéro", async () => {
       await allumer("version_guard_enabled");
       await poserUneVersion(400);
       const g = garde();
@@ -273,6 +273,66 @@ describe("les gardes du client et de la version", () => {
           async () => { expect(await g.canActivate(requete("/v1/me/persons"))).toBe(true); },
         );
       }
+    });
+
+    /* MAIS EN PRODUCTION, L'ABSENCE DE NUMÉRO NE DISPENSE DE RIEN.
+       L'exemption tient aux DEUX conditions réunies. Si elle portait sur le seul
+       numéro manquant, retirer l'en-tête `x-app-build` deviendrait le moyen de
+       contourner la garde — un trou qu'on ne remarque qu'en le cherchant. */
+    it("juge quand même un client de production sans numéro de build", async () => {
+      await allumer("version_guard_enabled");
+      await poserUneVersion(400);
+      const g = garde();
+      await dansLeContexte(enProduction(null), async () => {
+        await expect(g.canActivate(requete("/v1/me/persons")))
+          .rejects.toMatchObject({ code: "upgrade_required" });
+      });
+    });
+
+    /* ─── LA BANNIÈRE EST ÉPROUVABLE HORS PRODUCTION ─────────────────────────
+     *
+     * Signalé par le mobile : « le déclenchement de la bannière reste hors de
+     * portée d'un build de dev, par construction ». C'était vrai, et pour deux
+     * raisons superposées — un build de dev n'a pas de numéro, ET
+     * l'environnement coupait la garde entière, suggestion comprise.
+     *
+     * La seconde n'avait pas lieu d'être : une suggestion ne met personne
+     * dehors. Un build de recette produit par EAS PORTE son numéro ; il peut
+     * donc recevoir la bannière, et c'est sur lui qu'on veut l'éprouver. */
+    it("suggère à un build de recette périmé, sur le bac à sable comme ailleurs", async () => {
+      await allumer("version_guard_enabled");
+      await poserUneVersion(400);
+      await poserUneVersion(401);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(
+        contexte({
+          clientType: "mobile_ios", appBuild: 400,
+          clientVerdict: "reconnu", clientEnv: "staging",
+        }),
+        async () => { expect(await g.canActivate(ctx)).toBe(true); },
+      );
+      expect(entetes.get("x-app-update-available")).toBe("1.0.401");
+      expect(entetes.get("x-app-update-url")).toBe("https://apps.apple.com/lehno");
+    });
+
+    /* ET IL N'EST JAMAIS REFUSÉ, quoi qu'en dise le registre. C'est ce que
+       l'ancienne exemption protégeait, et rien n'en est perdu : un build inconnu
+       du registre vaudrait 426 en production ; hors production il ne vaut qu'une
+       bannière. Mettre l'équipe dehors reste impossible. */
+    it("ne refuse jamais un build hors production, même inconnu du registre", async () => {
+      await allumer("version_guard_enabled");
+      await poserUneVersion(400);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(
+        contexte({
+          clientType: "mobile_ios", appBuild: 12, // aucun build 12 au registre
+          clientVerdict: "reconnu", clientEnv: "staging",
+        }),
+        async () => { expect(await g.canActivate(ctx)).toBe(true); },
+      );
+      expect(entetes.get("x-app-update-available")).toBe("1.0.400");
     });
 
     /* ELLE SE DÉCIDE SUR L'ENVIRONNEMENT ENREGISTRÉ, JAMAIS SUR L'EN-TÊTE.

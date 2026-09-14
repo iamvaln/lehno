@@ -72,29 +72,33 @@ export class VersionGuard implements CanActivate {
 
     const c = contexteCourant();
 
-    /* ── DEUX EXEMPTIONS, ET ELLES SONT LE CŒUR DE CETTE GARDE ─────────────────
-     *
-     * SANS CLIENT RECONNU, ON NE JUGE PAS. Le type et l'environnement viennent
+    /* SANS CLIENT RECONNU, ON NE JUGE PAS. Le type et l'environnement viennent
      * de la paire présentée, pas des en-têtes — ceux-là sont déclaratifs. Sans
      * paire reconnue, on ne sait ni quelle plateforme ni quel environnement, et
      * décider « ce build est trop vieux » sur une déclaration reviendrait à
      * laisser le client choisir s'il veut être jugé.
      *
-     * HORS PRODUCTION, ON NE JUGE PAS NON PLUS — et c'est ce qui débloque le
-     * développement. Un build de développement, Expo Go, une diffusion interne
-     * n'ont AUCUN numéro de build : `eas.json` porte `appVersionSource:
-     * "remote"`, donc le numéro n'existe que dans les binaires qu'EAS produit.
-     * Sans cette exemption, allumer cette garde mettrait dehors toute l'équipe
-     * et tous les testeurs internes, avec un « mettez à jour » qu'aucun magasin
-     * ne peut satisfaire.
-     *
-     * L'EXEMPTION SE DÉCIDE SUR L'ENVIRONNEMENT ENREGISTRÉ, jamais sur
+     * TOUT CE QUI SUIT SE DÉCIDE SUR L'ENVIRONNEMENT ENREGISTRÉ, jamais sur
      * `x-app-env`. Un build de production qui déclarerait `dev` ne s'exempterait
      * de rien : c'est la paire présentée qui tranche, et elle est en base. C'est
      * aussi pourquoi il existe SIX paires et non trois — l'environnement fait
      * partie de l'identité du client, pas de ce qu'il raconte. */
     if (c.clientVerdict !== "reconnu") return true;
-    if (c.clientEnv !== ENVIRONNEMENT_JUGE) return true;
+
+    /* HORS PRODUCTION ET SANS NUMÉRO, IL N'Y A RIEN À COMPARER — et c'est CE
+     * test-là qui débloque le développement, pas l'environnement seul.
+     *
+     * `eas.json` porte `appVersionSource: "remote"` : le numéro n'existe que
+     * dans les binaires qu'EAS produit. Expo Go, un build local, une diffusion
+     * lancée à la main n'en ont aucun, et le client ne l'invente pas — « ce qui
+     * est inconnu ne se transmet pas ».
+     *
+     * LES DEUX CONDITIONS ENSEMBLE, jamais l'absence de numéro seule : en
+     * production, un appel SANS numéro reste jugé, comme avant. Sans ça,
+     * retirer un en-tête deviendrait le moyen de contourner la garde — et c'est
+     * le genre de trou qu'on ne remarque qu'en le cherchant. */
+    const horsProduction = c.clientEnv !== ENVIRONNEMENT_JUGE;
+    if (horsProduction && c.appBuild === null) return true;
 
     const exigence = await this.versions.exiger(c.clientType, c.appBuild);
     if (exigence.etat === "servie") return true;
@@ -116,7 +120,18 @@ export class VersionGuard implements CanActivate {
      *
      * La lecture de base ne peut pas nous faire tomber ici : `registre()` avale
      * déjà sa propre panne et rend une liste vide, donc « servie ». */
-    if (exigence.etat === "suggeree" || !(await this.actif())) {
+    /* ── HORS PRODUCTION, ON SUGGÈRE MAIS ON NE REFUSE JAMAIS ─────────────────
+     *
+     * L'environnement gouverne le REFUS, comme le paramètre juste en dessous —
+     * il ne gouvernait rien de moins que la garde entière, et la bannière était
+     * donc hors de portée d'un build de recette « par construction ». Le mobile
+     * ne pouvait l'éprouver nulle part : ni en dev, faute de numéro, ni en
+     * recette, à cause de cette ligne.
+     *
+     * Ce que l'exemption protégeait — ne pas mettre l'équipe dehors — reste
+     * entier : un build hors production ne peut PLUS être refusé, quoi qu'il
+     * arrive. Il reçoit seulement l'en-tête, qui ne bloque rien. */
+    if (exigence.etat === "suggeree" || horsProduction || !(await this.actif())) {
       this.suggerer(context, exigence.version, exigence.storeUrl);
       return true;
     }
