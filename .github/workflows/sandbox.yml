@@ -1,6 +1,6 @@
 name: Sandbox
 
-# Le bac à sable, déployé à chaque fusion sur `develop`.
+# La sandbox, déployé à chaque fusion sur `develop`.
 #
 # À QUOI IL SERT, et pourquoi il ne suit pas `main` : le mobile doit pouvoir
 # éprouver ce qui n'est PAS encore en production. Une sandbox alimentée par
@@ -89,7 +89,7 @@ jobs:
           build-args: |
             # PAS `vars.NEXT_PUBLIC_API_URL` : cette variable porte l'adresse de
             # la PRODUCTION, et l'URL est gravée dans le paquet client au build.
-            # Le site du bac à sable aurait alors parlé à la vraie API.
+            # Le site de la sandbox aurait alors parlé à la vraie API.
             NEXT_PUBLIC_API_URL=https://api.sandbox.lehno.io
           tags: |
             ${{ env.REGISTRY }}/lehno-web:develop
@@ -126,7 +126,7 @@ jobs:
           build-args: |
             # Même piège que pour le site, et plus grave ici : un panneau
             # d'administration pointé sur la production modifierait les vraies
-            # données en se croyant dans un bac à sable. Le « /v1 » fait partie
+            # données en se croyant dans une sandbox. Le « /v1 » fait partie
             # de la base pour l'admin, contrairement au mobile.
             VITE_API_URL=https://api.sandbox.lehno.io/v1
           tags: |
@@ -134,7 +134,7 @@ jobs:
           cache-from: type=gha,scope=sandbox-admin
           cache-to: type=gha,scope=sandbox-admin,mode=max
 
-  # ── Déploie la pile du bac à sable ──────────────────────────────────────────
+  # ── Déploie la pile de la sandbox ──────────────────────────────────────────
   deployer:
     needs: [build-api, build-web, build-admin]
     runs-on: ubuntu-latest
@@ -167,7 +167,7 @@ jobs:
             #
             # `docker-compose.yml` figeait `name: lehno`, si bien que les DEUX
             # répertoires pilotaient le MÊME projet Compose : un `up` lancé
-            # depuis le bac à sable a recréé les conteneurs de PRODUCTION avec
+            # depuis la sandbox a recréé les conteneurs de PRODUCTION avec
             # l'environnement d'ici, et la production a rendu 404.
             #
             # Le nom suit désormais `STACK`, mais on ne se contente pas de le
@@ -190,7 +190,7 @@ jobs:
               echo "extraction interrompue — nouvel essai dans 10s…"
               sleep 10
             done
-            # LES SERVICES SONT NOMMÉS, et `backup` n'en est pas. Le bac à sable
+            # LES SERVICES SONT NOMMÉS, et `backup` n'en est pas. La sandbox
             # n'a rien à sauvegarder : ses données sont jetables par définition,
             # et le service réclamerait des identifiants R2 — donc un bucket de
             # plus à tenir pour des dumps que personne ne relira jamais.
@@ -210,4 +210,4 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Dit où c'est
-        run: echo "Bac à sable déployé — https://api.sandbox.lehno.io/v1/public/maintenance"
+        run: echo "Sandbox déployée — https://api.sandbox.lehno.io/v1/public/maintenance"

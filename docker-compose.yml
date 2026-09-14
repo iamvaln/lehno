@@ -14,7 +14,7 @@
 #
 # Figé à `lehno`, ce nom faisait que DEUX RÉPERTOIRES pilotaient le MÊME projet
 # Compose : un `up` lancé depuis `lehno-sandbox` recréait les conteneurs de la
-# PRODUCTION, avec l'environnement et les images du bac à sable. C'est arrivé le
+# PRODUCTION, avec l'environnement et les images de la sandbox. C'est arrivé le
 # 14 septembre — `migrate` a échoué sur des identifiants de base qui
 # n'existaient pas, la séquence s'est interrompue avant `api` et `web`, et la
 # production a rendu 404 le temps qu'on la relance.
