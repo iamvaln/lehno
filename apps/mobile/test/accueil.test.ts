@@ -41,11 +41,19 @@ describe("la semaine en cartes, la suite en rangs", () => {
     expect(a.rangs.map((e) => e.daysUntil)).toEqual([60]);
   });
 
-  // Une échéance passée n'est pas « cette semaine ». `daysUntil` est signé, et
-  // la vue Dates montre le mois écoulé — pas l'accueil.
-  it("ne prend pas une échéance passée pour la semaine", () => {
+  /* UNE ÉCHÉANCE PASSÉE NE PARAÎT PAS DU TOUT. `daysUntil` est signé, et la vue
+     Dates montre le mois écoulé — pas l'accueil.
+     
+     Ce cas disait exactement cela en commentaire, et affirmait pourtant
+     `[-2, 40]` : le passé était bien écarté de « cette semaine », puis repris
+     par le repli. Il entrait donc en carte, et le décompte y rendait « J−−2 ».
+     Le commentaire décrivait l'intention, l'assertion gelait le contraire. */
+  it("n'affiche pas du tout une échéance passée", () => {
     const a = composeLAccueil([echeance(-2), echeance(40)], REMPLISSAGE_PLEIN);
-    expect(a.cartes.map((e) => e.daysUntil)).toEqual([-2, 40]);
+    expect(a.cartes.map((e) => e.daysUntil)).toEqual([40]);
+    expect(a.rangs).toHaveLength(0);
+    // Elle ne se compte pas non plus dans « le reste est ailleurs ».
+    expect(a.reste).toBe(0);
   });
 });
 
