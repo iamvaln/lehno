@@ -50,6 +50,7 @@ function execution(
     id: uuid(700 + n),
     occurrenceId: uuid(vise),
     content: texte, contentShort: null, status: "generated",
+    feedback: null, feedbackReasonCode: null, feedbackNote: null,
     createdAt: "2026-08-01T10:00:00.000Z", updatedAt: "2026-08-01T10:00:00.000Z",
   };
   return {

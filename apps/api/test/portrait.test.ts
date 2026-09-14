@@ -4,6 +4,8 @@ import sharp from "sharp";
 import { reglagesPortraitDeDepart, reglagesBriefPortraitDeDepart } from "@lehno/contracts";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { GenerationService } from "../src/me/generation.service.js";
+import { GenerationController } from "../src/me/generation.controller.js";
+import type { FlagsService } from "../src/flags/flags.service.js";
 import { PortraitService } from "../src/me/portrait.service.js";
 import { PhotoSourceService } from "../src/me/photo-source.service.js";
 import { TenantRepository } from "../src/tenancy/tenant.repository.js";
@@ -142,6 +144,40 @@ describe("le portrait", () => {
       expect(portrait.status).toBe("generated");
       expect(portrait.imageKey).toBeNull();
       expect(await solde()).toBe(4);
+    });
+
+    /* CE QUE LE CLIENT LIT APRÈS AVOIR LANCÉ, et ce cas passe par le CONTRÔLEUR
+       plutôt que par le service : le défaut était entièrement dans la
+       projection.
+
+       L'exécution aboutissait, le portrait existait en base, et le suivi rendait
+       `resultId: null, personId: null` — la lecture ne chargeait pas la relation
+       et `personId` était nul en dur. Le client appliquait alors la seule règle
+       honnête qui lui reste, « abouti sans résultat n'est pas un résultat », et
+       annonçait que l'écriture n'avait pas abouti à quelqu'un dont le crédit
+       était bien parti et le portrait bien écrit.
+
+       Aucun test ne le voyait parce qu'aucun ne lisait l'exécution : ceux d'ici
+       regardent le portrait rendu par le service, qui a toujours été juste. */
+    it("se retrouve par le suivi de l'exécution, avec son identité et sa cible", async () => {
+      await crediter(5);
+      const service = generation(repond(BRIEF));
+      const portrait = await fini(service.lancerPortrait(awa, proche, selection(), config));
+
+      // `suivre` ne consulte aucun drapeau — la lecture n'est pas gardée, seul
+      // le lancement l'est. Le double crie donc s'il est appelé.
+      const controleur = new GenerationController(
+        service,
+        { estActif: () => { throw new Error("le suivi ne consulte pas les drapeaux"); } } as unknown as FlagsService,
+        configs(),
+      );
+      const { generation: suivi } = await controleur.suivre({ userId: awa }, portrait.actionRunId);
+
+      expect(suivi.status).toBe("succeeded");
+      expect(suivi.resultId).toBe(portrait.id);
+      expect(suivi.personId).toBe(proche);
+      // L'occasion reste nulle : un portrait vise quelqu'un, pas une date.
+      expect(suivi.occurrenceId).toBeNull();
     });
 
     /* LA PROMESSE DU BRIEF. Les notes privées ne doivent pas traverser — c'est
@@ -483,7 +519,7 @@ describe("le portrait", () => {
     it("se pose, et laisse l'état tranquille", async () => {
       const portrait = await unPortrait();
 
-      await portraits(repond(PNG_MINUSCULE)).noter(awa, portrait.id, "down");
+      await portraits(repond(PNG_MINUSCULE)).noter(awa, portrait.id, { feedback: "down", reasonCode: "poor_likeness" });
 
       const ligne = await db.prisma.portrait.findUniqueOrThrow({ where: { id: portrait.id } });
       expect(ligne.feedback).toBe("down");
@@ -499,8 +535,8 @@ describe("le portrait", () => {
       const portrait = await unPortrait();
       const service = portraits(repond(PNG_MINUSCULE));
 
-      await service.noter(awa, portrait.id, "up");
-      await service.noter(awa, portrait.id, null);
+      await service.noter(awa, portrait.id, { feedback: "up" });
+      await service.noter(awa, portrait.id, { feedback: null });
 
       const ligne = await db.prisma.portrait.findUniqueOrThrow({ where: { id: portrait.id } });
       expect(ligne.feedback).toBeNull();
@@ -521,7 +557,7 @@ describe("le portrait", () => {
         select: { id: true },
       });
 
-      await expect(portraits(repond(PNG_MINUSCULE)).noter(autre.id, portrait.id, "down"))
+      await expect(portraits(repond(PNG_MINUSCULE)).noter(autre.id, portrait.id, { feedback: "down", reasonCode: "poor_likeness" }))
         .rejects.toThrow(/resource not found/);
     });
   });

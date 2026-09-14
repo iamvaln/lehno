@@ -42,11 +42,24 @@ export function EventCard({
       </Pressable>
 
       {/* Deux actions visibles sur la plus imminente, un seul bouton plein :
-          celui qui fait avancer. */}
-      {s.actions && prepareLabel && markSentLabel ? (
+          celui qui fait avancer.
+
+          LE SECOND EST FACULTATIF, ET LE PREMIER SUFFIT. La condition exigeait
+          les DEUX libellés : une carte qui n'avait qu'un geste à offrir perdait
+          donc aussi celui-là. Vu à l'appareil sur sa propre date — « Ma
+          wishlist » sans « Marquer envoyé », puisqu'il n'y a rien à envoyer :
+          la carte s'affichait muette.
+
+          Le même défaut valait quand la génération est éteinte, où l'action
+          « change d'identité » pour devenir « Noter une idée » : elle
+          disparaissait au lieu de changer. Aucun test ne le voyait — ils
+          passent toujours les deux. */}
+      {s.actions && prepareLabel ? (
         <View style={s.actions}>
           <Button variant="primary" full onPress={onPrepare}>{prepareLabel}</Button>
-          <Button variant="text" full onPress={onMarkSent}>{markSentLabel}</Button>
+          {markSentLabel ? (
+            <Button variant="text" full onPress={onMarkSent}>{markSentLabel}</Button>
+          ) : null}
         </View>
       ) : null}
     </View>

@@ -31,6 +31,37 @@ describe("les gardes du client et de la version", () => {
     switchToHttp: () => ({ getRequest: () => ({ path: chemin }) }),
   }) as never;
 
+  /* LA MÊME CHOSE, AVEC UNE RÉPONSE QUI RETIENT SES EN-TÊTES. Le contexte nu
+     ci-dessus n'en porte pas — c'est voulu et ça vaut d'être éprouvé : la garde
+     tourne aussi là où rien ne recueille un en-tête, et elle ne doit pas tomber
+     pour autant. */
+  const requeteEtReponse = (chemin: string) => {
+    const entetes = new Map<string, string>();
+    return {
+      entetes,
+      contexte: {
+        switchToHttp: () => ({
+          getRequest: () => ({ path: chemin }),
+          getResponse: () => ({
+          /* IL JETTE COMME CELUI DE NODE. Un faux qui accepterait tout
+             prouverait seulement que la garde ne pose pas l'en-tête, jamais
+             que le poser CASSERAIT — or c'est ce fait-là qui motive la
+             vérification, et un gabarit qui ne le modélise pas laisse croire
+             qu'on se protège d'un danger imaginaire. */
+          setHeader: (n: string, v: string) => {
+            if (/[^\x20-\x7e]/.test(v)) {
+              const e = new Error(`Invalid character in header content ["${n}"]`);
+              (e as { code?: string }).code = "ERR_INVALID_CHAR";
+              throw e;
+            }
+            entetes.set(n, v);
+          },
+        }),
+        }),
+      } as never,
+    };
+  };
+
   const allumer = async (cle: string): Promise<void> => {
     await db.prisma.systemParameter.upsert({
       where: { key: cle },
@@ -144,6 +175,85 @@ describe("les gardes du client et de la version", () => {
       });
     });
 
+    /* ─── LA SUGGESTION ──────────────────────────────────────────────────────
+     *
+     * Elle se CALCULAIT depuis toujours et ne partait jamais : le paramètre
+     * était lu en tête de garde et coupait tout, suggestion comprise. La
+     * bannière n'aurait donc pu exister qu'une fois le refus allumé — le plus
+     * doux des deux gestes attendait le plus dur. */
+    it("annonce une version plus récente, avec le lien pour la prendre", async () => {
+      await poserUneVersion(400);
+      await poserUneVersion(401);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(enProduction(400), async () => {
+        expect(await g.canActivate(ctx)).toBe(true);
+      });
+      expect(entetes.get("x-app-update-available")).toBe("1.0.401");
+      /* LE LIEN VOYAGE AVEC LA VERSION. Annoncer une version sans dire où la
+         prendre est la même faute que « mettez à jour » sans lien, en plus
+         poli. */
+      expect(entetes.get("x-app-update-url")).toBe("https://apps.apple.com/lehno");
+    });
+
+    it("ne dit rien quand le build est déjà le dernier", async () => {
+      await poserUneVersion(400);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(enProduction(400), async () => {
+        expect(await g.canActivate(ctx)).toBe(true);
+      });
+      expect(entetes.size).toBe(0);
+    });
+
+    /* « ON NOTE, ON NE BLOQUE PAS » — la phase que le §8.3 du registre des
+       versions proposait et qui n'existait nulle part. Éteinte, la garde suggère
+       au lieu de fermer : les builds périmés reçoivent une bannière, on regarde
+       le parc bouger, puis on allume. */
+    it("éteinte, suggère à un build périmé au lieu de le refuser", async () => {
+      await poserUneVersion(400);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(enProduction(999), async () => {
+        expect(await g.canActivate(ctx)).toBe(true);
+      });
+      expect(entetes.get("x-app-update-available")).toBe("1.0.400");
+    });
+
+    /* UNE VALEUR QU'UN EN-TÊTE NE PEUT PAS PORTER NE LE FAIT PAS TOMBER.
+       `version` n'est contraint que par sa longueur : rien n'y interdit un
+       retour à la ligne, et Node refuse alors la valeur — sur CHAQUE requête,
+       puisque la garde tourne partout. Une bannière qui manque est un
+       désagrément ; une API qui tombe n'en est pas un. */
+    it("se tait plutôt que de poser un en-tête impossible", async () => {
+      await db.prisma.appVersion.create({
+        data: {
+          platform: "mobile_ios" as never, version: "1.0\n.500",
+          buildNumber: 500, storeUrl: "https://apps.apple.com/lehno",
+        },
+      });
+      await poserUneVersion(400);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(enProduction(400), async () => {
+        expect(await g.canActivate(ctx)).toBe(true);
+      });
+      expect(entetes.has("x-app-update-available")).toBe(false);
+      // Le lien, lui, est posable : on ne jette pas ce qui tient.
+      expect(entetes.get("x-app-update-url")).toBe("https://apps.apple.com/lehno");
+    });
+
+    /* LA GARDE TOURNE AUSSI LÀ OÙ RIEN NE RECUEILLE UN EN-TÊTE. Elle ne doit pas
+       tomber pour autant — c'est ce que le contexte nu éprouve. */
+    it("ne tombe pas quand la réponse ne sait pas porter d'en-tête", async () => {
+      await poserUneVersion(400);
+      await poserUneVersion(401);
+      const g = garde();
+      await dansLeContexte(enProduction(400), async () => {
+        expect(await g.canActivate(requete("/v1/me/persons"))).toBe(true);
+      });
+    });
+
     /* ─── LES DEUX EXEMPTIONS ────────────────────────────────────────────────
      *
      * LE BLOCAGE QU'ELLES EMPÊCHENT, signalé par la session mobile le
@@ -153,7 +263,7 @@ describe("les gardes du client et de la version", () => {
      * envoyer — et sans exemption, allumer cette garde mettrait dehors toute
      * l'équipe et tous les testeurs, avec un « mettez à jour » qu'aucun magasin
      * ne peut satisfaire. */
-    it("ne juge pas un client hors production, même sans numéro de build", async () => {
+    it("ne juge pas un build hors production qui n'a aucun numéro", async () => {
       await allumer("version_guard_enabled");
       await poserUneVersion(400);
       const g = garde();
@@ -163,6 +273,66 @@ describe("les gardes du client et de la version", () => {
           async () => { expect(await g.canActivate(requete("/v1/me/persons"))).toBe(true); },
         );
       }
+    });
+
+    /* MAIS EN PRODUCTION, L'ABSENCE DE NUMÉRO NE DISPENSE DE RIEN.
+       L'exemption tient aux DEUX conditions réunies. Si elle portait sur le seul
+       numéro manquant, retirer l'en-tête `x-app-build` deviendrait le moyen de
+       contourner la garde — un trou qu'on ne remarque qu'en le cherchant. */
+    it("juge quand même un client de production sans numéro de build", async () => {
+      await allumer("version_guard_enabled");
+      await poserUneVersion(400);
+      const g = garde();
+      await dansLeContexte(enProduction(null), async () => {
+        await expect(g.canActivate(requete("/v1/me/persons")))
+          .rejects.toMatchObject({ code: "upgrade_required" });
+      });
+    });
+
+    /* ─── LA BANNIÈRE EST ÉPROUVABLE HORS PRODUCTION ─────────────────────────
+     *
+     * Signalé par le mobile : « le déclenchement de la bannière reste hors de
+     * portée d'un build de dev, par construction ». C'était vrai, et pour deux
+     * raisons superposées — un build de dev n'a pas de numéro, ET
+     * l'environnement coupait la garde entière, suggestion comprise.
+     *
+     * La seconde n'avait pas lieu d'être : une suggestion ne met personne
+     * dehors. Un build de recette produit par EAS PORTE son numéro ; il peut
+     * donc recevoir la bannière, et c'est sur lui qu'on veut l'éprouver. */
+    it("suggère à un build de recette périmé, sur le bac à sable comme ailleurs", async () => {
+      await allumer("version_guard_enabled");
+      await poserUneVersion(400);
+      await poserUneVersion(401);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(
+        contexte({
+          clientType: "mobile_ios", appBuild: 400,
+          clientVerdict: "reconnu", clientEnv: "staging",
+        }),
+        async () => { expect(await g.canActivate(ctx)).toBe(true); },
+      );
+      expect(entetes.get("x-app-update-available")).toBe("1.0.401");
+      expect(entetes.get("x-app-update-url")).toBe("https://apps.apple.com/lehno");
+    });
+
+    /* ET IL N'EST JAMAIS REFUSÉ, quoi qu'en dise le registre. C'est ce que
+       l'ancienne exemption protégeait, et rien n'en est perdu : un build inconnu
+       du registre vaudrait 426 en production ; hors production il ne vaut qu'une
+       bannière. Mettre l'équipe dehors reste impossible. */
+    it("ne refuse jamais un build hors production, même inconnu du registre", async () => {
+      await allumer("version_guard_enabled");
+      await poserUneVersion(400);
+      const g = garde();
+      const { contexte: ctx, entetes } = requeteEtReponse("/v1/me/persons");
+      await dansLeContexte(
+        contexte({
+          clientType: "mobile_ios", appBuild: 12, // aucun build 12 au registre
+          clientVerdict: "reconnu", clientEnv: "staging",
+        }),
+        async () => { expect(await g.canActivate(ctx)).toBe(true); },
+      );
+      expect(entetes.get("x-app-update-available")).toBe("1.0.400");
     });
 
     /* ELLE SE DÉCIDE SUR L'ENVIRONNEMENT ENREGISTRÉ, JAMAIS SUR L'EN-TÊTE.

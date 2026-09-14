@@ -15,6 +15,8 @@ const NOMBRES_FR: Record<number, string> = {
   3: "Trois", 4: "Quatre", 5: "Cinq", 6: "Six",
 };
 
+import { endSentence } from "../lib/text.js";
+
 export const fr = {
   connexionTitre: "Soyez là le jour J",
   connexionTexte: "Les dates de vos proches, et ce que vous savez d'eux. Le moment venu, vous avez déjà tout pour bien faire.",
@@ -62,6 +64,22 @@ export const fr = {
      ON NE PARLE PAS DU COMPTE. Celui de la personne va très bien ; lui annoncer
      qu'il est refusé serait faux, et l'enverrait chercher une réparation qui
      n'existe pas. */
+  /* TROIS CAUSES, UNE SEULE RÉPONSE — déclassée, sous une release qui force la
+     mise à jour, ou inconnue du registre. L'écran ne les distingue pas : le
+     geste est le même, et il n'y a rien d'utile à dire de plus à quelqu'un qui
+     attend d'ouvrir son application. */
+  majTitre: "Une mise à jour est nécessaire",
+  majTexte: "Cette version n'est plus servie. La dernière vous attend sur votre magasin d'applications.",
+  majBouton: "Mettre à jour",
+
+  /* LA SUGGESTION, ET ELLE NE DIT PAS LA MÊME CHOSE QUE LE REFUS. Au-dessus,
+     « n'est plus servie » : c'est fini, il faut agir. Ici rien n'est cassé —
+     l'application marche, et on le dit en passant. Le numéro y est parce qu'il
+     rend le message vérifiable : sans lui, on annonce une nouveauté que rien ne
+     distingue de celle d'hier. */
+  majSuggestion: (version: string) => "La version " + version + " est disponible.",
+  majSuggestionAvecLien: (version: string) => "La version " + version + " est disponible. Touchez pour l'obtenir.",
+  majSuggestionFermer: "Ne plus afficher",
   refusTitre: "Cette version n'est plus reconnue",
   refusTexte: "Installez la dernière version depuis votre magasin d'applications. Votre compte, lui, n'a rien.",
   maintEtat: "Voir l'état du service",
@@ -199,7 +217,7 @@ export const fr = {
   etatUnAujourdhuiEtSemaine: (n: number) => n === 1
     ? "Une date aujourd'hui, une autre cette semaine."
     : "Une date aujourd'hui, " + n + " autres cette semaine.",
-  etatLointain: (date: string) => "Rien avant le " + date + ".",
+  etatLointain: (date: string) => endSentence("Rien avant le " + date),
   ceQuiApproche: "Ce qui approche",
   preparer: "Préparer",
   marquerEnvoye: "Marquer envoyé",
@@ -906,6 +924,34 @@ export const fr = {
   resAjuster: "Ajuster le texte",
   resEnvoyer: "Envoyer",
   resRegenerer: "Refaire",
+  /* DEUX GESTES DISTINCTS, et les fondre détruirait le signal qu'on vient
+     chercher : on peut trouver une idée excellente et ne pas la retenir — trop
+     chère, déjà offerte l'an dernier, pas pour cette personne-là. */
+  /* LE NOM, PAS LE GENRE. J'avais d'abord écrit deux titres, « pour elle » et
+     « pour lui », et la garde `messages.test.ts` a refusé l'anglais — à raison :
+     on ne suppose pas le genre d'un tiers. Mais le français avait le même
+     défaut en plus discret, et le nom règle les deux : il est plus juste ET
+     plus chaleureux que n'importe quel pronom. */
+  ideesTitre: (qui: string) => "Des idées pour " + qui,
+  ideesRetenir: "Retenir",
+  /* DEUX QUESTIONS, PAS UNE. « Je garde » engage l'objet ; « j'aime » dit ce
+     qu'on en pense. On peut garder sans admirer, et cette réponse-là dit
+     quelque chose qu'aucune des deux ne dirait seule. */
+  avisJaime: "J'aime",
+  avisJaimePas: "Je n'aime pas",
+  /* LA QUESTION VIENT AVANT L'ENVOI. Un « je n'aime pas » sans raison ne dit pas
+     quoi corriger, et c'est pourtant la seule chose qu'on vient chercher. */
+  avisPourquoi: "Qu'est-ce qui ne va pas ?",
+  avisNote: "Autre chose ? (facultatif)",
+  avisEnvoyer: "Envoyer",
+  ideesRetenue: "Dans la liste",
+  ideesRetenueFait: "Ajoutée à votre liste.",
+  /* Le jeu a tourné et n'a rien rendu. Ce n'est PAS un échec : le crédit est
+     dépensé, et annoncer une panne promettrait un remboursement qui ne viendra
+     pas. */
+  ideesAucune: "Rien n'est sorti cette fois. Quelques notes de plus, et on retente.",
+  ideesPrix: (min: string, max: string) => "Entre " + min + " et " + max,
+  ideesPrixMax: (max: string) => "Jusqu'à " + max,
   resJeter: "Jeter",
   resAjusteFini: "Garder ce texte",
   resAjusteAnnuler: "Revenir au texte écrit",
@@ -919,6 +965,13 @@ export const fr = {
   noteSecondeCat: "Ajouter une catégorie",
   noteDeuxMax: "Deux catégories au plus.",
   noteRangement: "Rangement",
+
+  /* LA CORRECTION. Le texte seul se reprend — ni le proche ni l'occasion, que
+     le serveur refuse de bouger : changer l'un changerait le sujet, l'autre la
+     nature de la note. L'écran ne les montre donc pas du tout. */
+  noteSupprimerTitre: "Supprimer cette note ?",
+  noteSupprimerTexte: "Elle ne servira plus à rien de ce qui s'écrit à propos de ce proche. C'est sans retour.",
+  noteIntrouvable: "Cette note n'existe plus.",
   notePourQui: "Pour qui",
   noteAjouterProche: "Ajouter",
   noteSansProche: "Désignez au moins un proche pour enregistrer.",

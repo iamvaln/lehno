@@ -205,6 +205,73 @@ Le serveur ajoute un en-tête quand une version plus récente existe sans que la
 courante soit hors service. **Non bloquant**, et il ne doit surtout pas
 interrompre : une bannière discrète, une fois par session au plus.
 
+**Les deux en-têtes**, et ils voyagent ensemble :
+
+| en-tête | ce qu'il porte |
+| --- | --- |
+| `x-app-update-available` | le numéro de la version plus récente — `1.4.0` |
+| `x-app-update-url` | où la prendre. Absent quand le registre ne connaît pas de lien |
+
+**Le lien accompagne la version**, et ce n'est pas un confort : annoncer une
+version sans dire où la prendre demande d'aller la chercher soi-même, et c'est la
+même faute que « mettez à jour » sans lien — un mur, en plus poli.
+
+**Les deux sont facultatifs, séparément.** Une valeur qu'un en-tête ne peut pas
+porter — le registre est une saisie d'administration, et rien n'interdit un
+retour à la ligne dans un numéro de version — **n'est pas posée** plutôt que de
+faire tomber la requête. Node refuse une telle valeur, et la garde tourne sur
+CHAQUE appel : une frappe malheureuse aurait rendu 500 sur tout le trafic, sans
+que le lien avec le registre saute aux yeux. Le client doit donc traiter
+l'absence, y compris celle de `x-app-update-url` seule.
+
+**La bannière n'est pas bloquante** : discrète, une fois par session au plus, et
+elle n'interrompt rien.
+
+> **Câblé le 13 septembre**, et le paramètre a changé de portée en même temps.
+>
+> `versions.service.ts` calculait l'état `suggeree` depuis toujours ; la garde ne
+> posait aucun en-tête, et la suggestion ne quittait jamais le serveur.
+>
+> **Ce qui bloquait vraiment** n'était pas l'en-tête manquant mais la place du
+> paramètre : `version_guard_enabled` était lu **en tête de garde** et coupait
+> celle-ci ENTIÈRE. La bannière n'aurait donc pu exister qu'une fois le refus
+> allumé — c'est-à-dire une fois qu'on accepte de mettre des gens dehors. Le plus
+> doux des deux gestes attendait le plus dur.
+>
+> **Le paramètre ne gouverne plus que le REFUS.** Éteint, un build périmé reçoit
+> la bannière au lieu du 426 : c'est la phase « on note, on ne bloque pas » que
+> le §8.3 du registre des versions proposait et qui n'existait nulle part. On
+> regarde le parc bouger, puis on allume.
+>
+> Les deux exemptions, elles, ne bougent pas : **sans client reconnu** on ne sait
+> ni quelle plateforme ni quel environnement, et **hors production** il n'y a pas
+> de numéro de build à comparer. Dans les deux cas il n'y a rien à suggérer non
+> plus.
+
+> **Lu côté client le 13 septembre au soir** — #246, et la phase 3 est entière.
+>
+> La suggestion voyage sur les réponses qui **réussissent**, d'où un témoin à
+> elle : `surEchec` porte l'arrêt et le refus, qui arrivent en échec, et n'aurait
+> vu la suggestion que le jour où quelque chose casse. Elle s'observe au seul
+> `fetch` du paquet, au même endroit que les en-têtes de client et pour la même
+> raison — une réponse qui passerait à côté ne suggérerait jamais rien.
+>
+> **Les quatre absences sont traitées** : version seule (bandeau conservé, texte
+> qui cesse de promettre un geste), lien seul (rien — il ne nomme aucune
+> version), les deux absents, et l'en-tête présent mais vide qu'un relais a
+> vidé. Sans ce dernier cas, on annonce « La version  est disponible ».
+>
+> **Une fois par session**, et le drapeau de renvoi n'est pas un confort :
+> l'en-tête revient sur CHAQUE appel, donc fermer le bandeau le ferait revenir à
+> la requête suivante. Il vit en mémoire — sur le disque, quelqu'un qui a fermé
+> le bandeau en mars n'entendrait plus jamais parler d'aucune version.
+>
+> **Ce qui n'est pas éprouvé de bout en bout**, et il faut le dire : le
+> déclenchement. Les deux exemptions ci-dessus font qu'aucun build de
+> développement ne recevra jamais ces en-têtes. La lecture a ses cas, le rendu a
+> été vu à l'écran par une sonde, mais la jonction des deux ne se verra qu'en
+> production.
+
 ---
 
 ## 5. Ce qu'il ne faut pas faire

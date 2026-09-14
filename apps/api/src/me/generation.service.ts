@@ -5,9 +5,10 @@ import {
   consigneSystemePortrait, invitePortrait, MOTS_DU_PORTRAIT,
   MOTS_MESSAGE, MOTS_MESSAGE_COURT, ORIENTATIONS_SENSIBLES,
   type ContexteMessage, type ContexteIdees, type ContextePortrait, type Orientation,
-  type ReglagesIdees, type ReglagesBriefPortrait,
+  type ReglagesIdees, type ReglagesBriefPortrait, type AvisInput,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { feedbackWrite } from "./feedback.js";
 import { StudioConfigurationService } from "../studio/configuration.service.js";
 import { TenantRepository } from "../tenancy/tenant.repository.js";
 import { AppError } from "../common/errors.js";
@@ -870,6 +871,16 @@ export class GenerationService {
          l'autre pas. */
       include: {
         premiumAction: true, generatedMessage: true,
+        /* LE PORTRAIT AUSSI, et il manquait : sans lui, une exécution de
+           portrait aboutissait avec `resultId` et `personId` nuls, et le client
+           appliquait la seule lecture honnête — « abouti sans résultat n'est pas
+           un résultat ». Quelqu'un payait son crédit et lisait que ça n'avait
+           pas marché.
+
+           `select` plutôt que `true` : la projection n'a besoin que de ces deux
+           champs, et le portrait entier passerait ici l'image et ses attributs
+           sans que personne ne les lise. */
+        portrait: { select: { id: true, personId: true } },
         ideaSet: { include: { ideas: { orderBy: { position: "asc" } } } },
       },
     });
@@ -884,6 +895,8 @@ export class GenerationService {
       take: 50,
       include: {
         premiumAction: true, generatedMessage: true,
+        // Même raison qu'en lecture : l'historique passe par la même projection.
+        portrait: { select: { id: true, personId: true } },
         ideaSet: { include: { ideas: { orderBy: { position: "asc" } } } },
       },
     });
@@ -934,13 +947,15 @@ export class GenerationService {
    *
    * `null` retire l'avis, et remet sa date à nul avec lui — la contrainte en
    * base l'exige, et c'est elle qui garde les deux d'accord. */
-  async noter(userId: string, id: string, avis: "up" | "down" | null) {
+  async noter(userId: string, id: string, avis: AvisInput) {
     const brouillon = await this.prisma.generatedMessage.findFirst({ where: { id, userId } });
     if (!brouillon) throw new AppError("not_found", "unknown message");
 
+    /* LE MÊME POINT QUE LES DEUX AUTRES NATURES. Voir `feedback.ts` : trois
+       écritures séparées dériveraient en silence. */
     return this.prisma.generatedMessage.update({
       where: { id },
-      data: { feedback: avis, feedbackAt: avis === null ? null : new Date() },
+      data: await feedbackWrite(this.prisma, "message", avis),
     });
   }
 

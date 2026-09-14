@@ -124,6 +124,28 @@ const troisSeaux = {
 
 export const axeSchema = z.object(troisSeaux).strict();
 
+/* POURQUOI ÇA A DÉPLU, par motif — et c'est ce qui rend l'axe des avis
+ * ACTIONNABLE. « Douze pouces en bas » dit qu'il faut régler quelque chose ;
+ * « hors sujet 8, ton faux 3, fade 1 » dit QUOI régler.
+ *
+ * LES DEUX LIBELLÉS, comme le registre des motifs d'administration : le panneau
+ * se lit dans les deux langues, et un libellé choisi côté serveur figerait
+ * l'écran dans celle de la requête.
+ *
+ * LE LIBELLÉ PEUT RETOMBER SUR LE CODE, et c'est voulu : il n'y a pas de clé
+ * étrangère vers le registre — un motif retiré doit cesser d'être proposé sans
+ * rien casser de ce qu'il a déjà justifié. Un motif supprimé pour de bon laisse
+ * donc des comptes orphelins, qu'on montre sous leur code plutôt que de les
+ * taire. Les taire ferait un total qui ne tombe pas juste. */
+export const motifDAvisSchema = z.object({
+  code: z.string(),
+  fr: z.string(),
+  en: z.string(),
+  n: z.number().int().min(1),
+}).strict();
+
+export type MotifDAvis = z.infer<typeof motifDAvisSchema>;
+
 export const performanceVersionSchema = z.object({
   configId: z.string().uuid(),
   /** Nul pour un brouillon jamais publié — qui n'a donc rien produit. */
@@ -140,6 +162,11 @@ export const performanceVersionSchema = z.object({
      faible : c'est le seul des deux qui dise si le texte était BON, et non
      seulement s'il a servi. */
   avis: axeSchema,
+  /* LA VENTILATION DU `contre` DE L'AXE DES AVIS, du plus fréquent au plus rare.
+     Leur somme égale `avis.contre` — un rejet porte toujours un motif, la base
+     le tient. Un écart entre les deux ne serait donc pas un arrondi : ce serait
+     une ligne écrite hors du service, et le panneau doit pouvoir le montrer. */
+  motifs: z.array(motifDAvisSchema),
 }).strict();
 
 export type Axe = z.infer<typeof axeSchema>;

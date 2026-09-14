@@ -34,7 +34,7 @@ export class IdeeController {
     @Param("id", ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(ideaFeedbackSchema)) corps: IdeaFeedbackInput,
   ): Promise<GeneratedIdea> {
-    const i = await this.idees.noter(req.userId, id, corps.feedback);
+    const i = await this.idees.noter(req.userId, id, corps);
     return {
       id: i.id,
       label: i.label,
@@ -45,6 +45,11 @@ export class IdeeController {
       priceMax: i.priceMax === null ? null : Number(i.priceMax),
       currency: i.currency,
       feedback: i.feedback,
+      /* RENDUS PARCE QU'ILS SE RELISENT : sans eux, rouvrir un jeu d'idées ne
+         dirait plus ce qu'on avait répondu, et la question se reposerait comme
+         si on n'avait rien dit. */
+      feedbackReasonCode: i.feedbackReasonCode,
+      feedbackNote: i.feedbackNote,
       wishlistItemId: i.wishlistItemId,
     };
   }

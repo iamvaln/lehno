@@ -183,6 +183,69 @@ describe("the EAS webhook", () => {
     });
   });
 
+  /* THE SHAPE EAS ACTUALLY SENDS — and it is not the one the first version
+     read. Its root carries `id`, `platform`, `status`, `artifacts`, `metadata`,
+     `metrics`; everything describing the version sits inside `metadata`. A real
+     production build went through on 2026-09-13, registered nothing, and left
+     only `unreadable payload` in the log. These cases are that payload. */
+  describe("the payload EAS really sends", () => {
+    const real = (fields: Record<string, unknown> = {}): Record<string, unknown> => ({
+      id: "3b97408a-de89-452e-b7f1-a61f40915ed8",
+      appId: "fdd049d8-8fd6-48a7-b366-56f580e8d39e",
+      platform: "android",
+      status: "finished",
+      artifacts: { buildUrl: "https://expo.dev/artifacts/eas/abc.aab" },
+      metadata: {
+        appName: "Lehno",
+        appVersion: "0.1.0",
+        appBuildVersion: "3",
+        buildProfile: "production",
+        appIdentifier: "com.lehno.app",
+        distribution: "store",
+      },
+      metrics: {},
+      error: null,
+      createdAt: "2026-09-13T11:10:44.028Z",
+      ...fields,
+    });
+
+    it("registers the build it announces", async () => {
+      await call(real());
+
+      expect((await registered())[0]).toMatchObject({
+        platform: "mobile_android", version: "0.1.0", buildNumber: 3, forcesUpdate: false,
+      });
+    });
+
+    it("keeps where the build can be found again", async () => {
+      await call(real());
+      expect((await registered())[0]?.notes).toBe("https://expo.dev/artifacts/eas/abc.aab");
+    });
+
+    /* THE PROFILE IS IN `metadata` TOO. Read at the root only, it would come
+       back null — and a null profile registers nothing, so every release would
+       silently stop appearing. */
+    it("still refuses a development build", async () => {
+      await call(real({
+        metadata: { appVersion: "0.1.0", appBuildVersion: "4", buildProfile: "development" },
+      }));
+      expect(await registered()).toHaveLength(0);
+    });
+
+    /* THE CLI SHOUTS, THE WEBHOOK WHISPERS: `FINISHED` against `finished`.
+       Comparing raw would hinge the registry on which one Expo sends. */
+    it("reads a status whatever its case", async () => {
+      await call(real({ status: "FINISHED", platform: "ANDROID" }));
+      expect((await registered())[0]).toMatchObject({ platform: "mobile_android", buildNumber: 3 });
+    });
+
+    it("falls back to the build id when no artifact link is given", async () => {
+      await call(real({ artifacts: {} }));
+      expect((await registered())[0]?.notes)
+        .toBe("https://expo.dev/builds/3b97408a-de89-452e-b7f1-a61f40915ed8");
+    });
+  });
+
   /* REPLAYABLE: EAS may repeat a call, and a pipeline may rerun a step. A
      duplicate must neither fail nor create a second row. */
   it("replays without creating a duplicate", async () => {

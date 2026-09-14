@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {
   inviteImagePortrait,
-  type Portrait as PortraitRendu, type ReglagesPortrait, type VoieImage,
+  type AvisInput, type Portrait as PortraitRendu, type ReglagesPortrait, type VoieImage,
 } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
@@ -11,6 +11,7 @@ import { StudioConfigurationService } from "../studio/configuration.service.js";
 import type { StockagePort } from "../stockage/stockage.port.js";
 import { PhotoSourceService } from "./photo-source.service.js";
 import { composerLePortrait } from "./composition.js";
+import { feedbackWrite } from "./feedback.js";
 
 /* Dix minutes pour une lecture : le temps de télécharger sur un réseau lent,
    sans qu'un lien recopié survive à la séance. Même durée que l'avatar et le
@@ -62,11 +63,11 @@ export class PortraitService {
    * de « jugé mauvais ».
    *
    * `null` retire l'avis et sa date avec lui — la contrainte en base l'exige. */
-  async noter(userId: string, id: string, avis: "up" | "down" | null): Promise<PortraitRendu> {
+  async noter(userId: string, id: string, avis: AvisInput): Promise<PortraitRendu> {
     await this.sien(userId, id);
     return this.rendre(await this.prisma.portrait.update({
       where: { id },
-      data: { feedback: avis, feedbackAt: avis === null ? null : new Date() },
+      data: await feedbackWrite(this.prisma, "portrait", avis),
     }));
   }
 
@@ -372,6 +373,7 @@ export class PortraitService {
   private async rendre(l: {
     id: string; personId: string; status: string; content: string;
     shortContent: string | null; senderNote: string | null; imageKey: string | null; createdAt: Date;
+    feedback: string | null; feedbackReasonCode: string | null; feedbackNote: string | null;
   }): Promise<PortraitRendu> {
     const { phrase } = this.motsDe(l.content);
     return {
@@ -381,6 +383,12 @@ export class PortraitService {
       content: phrase,
       contentShort: l.shortContent,
       senderNote: l.senderNote,
+      /* L'AVIS SE RELIT. Sans lui, rouvrir un portrait reposerait la question
+         comme si personne n'y avait répondu — et le motif déjà choisi serait
+         perdu pour celui qui vient le corriger. */
+      feedback: l.feedback as PortraitRendu["feedback"],
+      feedbackReasonCode: l.feedbackReasonCode,
+      feedbackNote: l.feedbackNote,
       /* UNE URL SIGNÉE, refaite à chaque lecture. La ranger donnerait des liens
          morts : celles des fournisseurs expirent, et les nôtres aussi — c'est
          le propos. */

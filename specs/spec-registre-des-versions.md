@@ -323,5 +323,16 @@ tiennent, et qui répond point par point au §7.2 :
    paramètre**, `version_guard_enabled`, distinct de celui des clients. Les deux
    s'allument séparément, et le §5 bis retire le risque qui rendait cette
    question urgente : hors production, rien n'est jugé.
+
+   **Et « on note, on ne bloque pas » existe désormais pour de bon**, ce que ce
+   point proposait sans que rien ne le porte. Le paramètre ne gouverne plus que
+   le REFUS : éteint, un build périmé reçoit les en-têtes de suggestion
+   (`x-app-update-available`, `x-app-update-url`) au lieu du 426. On regarde le
+   parc bouger, puis on allume.
+
+   Il était lu **en tête de garde** et coupait celle-ci entière : la suggestion
+   se calculait depuis toujours et ne partait jamais, si bien que la bannière
+   n'aurait pu exister qu'une fois le refus allumé. Le plus doux des deux gestes
+   attendait le plus dur.
 4. **L'entier de compilation du web.** Un compteur de CI, ou le nombre de commits
    sur `main` ? Le second ne demande rien à personne et est monotone.

@@ -101,10 +101,16 @@ export async function withDatabase(): Promise<TestDb> {
    l'historique en gardant les entités laisserait des lignes de configuration
    sans version en vigueur — un état que la base n'accepte de nulle part
    ailleurs, et qu'on n'a aucune raison de fabriquer dans les tests. */
+/* `feedback_reason` suit la même règle, et pour la même raison : les huit motifs
+   sont semés une fois par la migration du lot et jamais rejoués. Les vider
+   laisserait chaque pouce en bas sans motif à proposer — et comme le serveur
+   EXIGE un motif sur un rejet, ce n'est pas une liste vide qu'on obtiendrait
+   mais un `validation_failed` sur tout rejet, dans tous les fichiers. */
 const REFERENCE_TABLES = new Set([
   "category", "system_parameter", "credit_bundle",
   "audit_reason", "audit_reason_scope",
   "audit_reason_history", "audit_reason_scope_history",
+  "feedback_reason",
 ]);
 
 /* L'ÉTREINTE, ET POURQUOI ON RÉESSAIE.

@@ -119,20 +119,69 @@ Le schéma le dit depuis le début, et ça vaut pour les trois surfaces :
 
 ---
 
-## 5. Ce qui manque au pouce, et qui n'est pas de votre côté
+## 5. La raison du pouce en bas — **TRANCHÉ le 13, et le serveur est prêt**
 
 **Un « je n'aime pas » sans raison ne dit pas quoi corriger.** C'est pourtant la
 seule chose qu'on vient chercher.
 
-Le flux n'est pas dessiné et la colonne n'existe pas encore — sa forme dépend de
-lui, et se tromper coûte une migration. Le §10 de
-`specs/avis-des-productions-2026-09-12.md` porte l'arbitrage à rendre : motifs
-fermés, qui se comptent et se comparent entre versions, contre texte libre, qui
-dit ce qu'aucune liste n'avait prévu mais que personne ne relit.
+L'arbitrage du §10 de `specs/avis-des-productions-2026-09-12.md` est rendu :
+**les deux**. Un motif fermé **obligatoire**, un texte libre **facultatif**. Et
+comme annoncé ici, la raison s'ajoute au corps du **même `PATCH`** — le geste ne
+se redessine pas, il s'enchaîne.
 
-**À savoir pour le dessin** : le jour où la raison arrive, elle s'ajoutera au
-corps du même `PATCH`. Prévoir que le pouce en bas puisse enchaîner sur une
-question évite d'avoir à redessiner le geste.
+### Ce que ça change dans les appels
+
+**Le pouce en bas doit maintenant enchaîner sur une question**, parce que le
+serveur refuse un rejet sans motif :
+
+```
+PATCH me/portraits/{id}/feedback   { feedback: "down", reasonCode: "poor_likeness" }
+PATCH me/messages/{id}/feedback    { feedback: "down", reasonCode: "wrong_tone", note: "…" }
+PATCH me/ideas/{id}/feedback       { feedback: "down", reasonCode: "out_of_budget" }
+```
+
+Trois règles, refusées en **400** et non en 422 :
+
+| corps | réponse |
+| --- | --- |
+| `{ feedback: "down" }` sans `reasonCode` | refusé — un rejet porte un motif |
+| `{ feedback: "up", reasonCode: … }` | refusé — le motif ne vaut que pour un rejet |
+| `{ feedback: null, note: … }` | refusé — reprendre son avis emporte tout |
+
+**Le pouce en haut ne change pas** : `{ feedback: "up" }` suffit, et `note` y
+reste acceptée si quelqu'un veut dire pourquoi il a aimé.
+
+### La liste des motifs vient du serveur
+
+```
+GET me/feedback-reasons?nature=portrait   →   { items: [{ code, label }] }
+```
+
+`nature` vaut `portrait`, `message` ou `idees` — les jetons du studio, pas un
+vocabulaire à part.
+
+**Ne l'écrivez pas dans l'application**, et ce n'est pas du zèle : les premiers
+mois sont exactement ceux où l'on ne sait pas quoi lister, et un motif de plus ne
+vaut pas de demander à tout le monde de mettre à jour — la garde de version rend
+maintenant une livraison coûteuse.
+
+**Le libellé arrive déjà dans la langue de l'interface.** Rien à traduire chez
+vous, et rien à choisir : le serveur lit `uiLanguage` du compte.
+
+**La liste est par nature, et elle ne se filtre pas chez vous.** « Ne lui
+ressemble pas » n'a aucun sens sous un message, « hors budget » aucun sous un
+portrait — et le serveur refuse un motif hors de sa nature. Proposer celui qu'il
+refusera ferait échouer l'avis **après** que la personne a répondu à la question.
+
+### Deux choses réparées que vous n'avez pas à demander
+
+**Le portrait et le message RENDENT enfin leur avis.** Ils ne le faisaient pas :
+poser un pouce rendait un corps qui ne disait pas ce que le pouce valait
+désormais, et rouvrir une production reposait la question comme si personne n'y
+avait répondu. Les trois natures portent maintenant `feedback`,
+`feedbackReasonCode` et `feedbackNote` dans ce qu'elles rendent — de quoi
+rouvrir un écran déjà réglé, et de quoi laisser corriger un motif choisi trop
+vite.
 
 ---
 

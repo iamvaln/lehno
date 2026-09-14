@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Inject, Param, ParseUUIDPipe, Post, Req, UseGuards } from "@nestjs/common";
 import {
-  createNoteSchema, createNotesSchema,
-  type CreateNoteInput, type CreateNotesInput, type Note,
+  Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards,
+} from "@nestjs/common";
+import {
+  createNoteSchema, createNotesSchema, updateNoteSchema,
+  type CreateNoteInput, type CreateNotesInput, type Note, type UpdateNoteInput,
 } from "@lehno/contracts";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { AuthGuard } from "../auth/auth.guard.js";
@@ -46,6 +48,39 @@ export class NoteController {
       });
       return note;
     });
+  }
+
+  /* CORRIGER. Une note, ce sont les mots privés de quelqu'un sur un proche, et
+     ce sont eux qui nourrissent les invites du modèle : une faute de frappe ou
+     un prénom mal orthographié alimentait chaque portrait et chaque message,
+     sans recours. */
+  @Patch(":id")
+  update(
+    @Req() req: AuthedRequest,
+    @Param("personId", ParseUUIDPipe) personId: string,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(updateNoteSchema)) body: UpdateNoteInput,
+  ): Promise<Note> {
+    /* AUCUNE MESURE ÉMISE ICI, et c'est délibéré : le registre d'événements est
+       ancré sur la spec §16.3, qui énumère ce qui se mesure. Inventer
+       `note.updated` au point d'appel est exactement ce que ce registre
+       interdit. La correction et l'effacement méritent probablement d'y entrer
+       — c'est une décision du plan de mesure, pas du contrôleur. */
+    return this.notes.updateForPerson(req.userId, personId, id, body);
+  }
+
+  /* 204 : il n'y a rien à rendre d'une note qui n'existe plus. Rendre la note
+     effacée inviterait à la relire, et c'est le contraire de ce qui est
+     demandé. */
+  @Delete(":id")
+  @HttpCode(204)
+  remove(
+    @Req() req: AuthedRequest,
+    @Param("personId", ParseUUIDPipe) personId: string,
+    @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    // Pas de mesure non plus — voir la correction, juste au-dessus.
+    return this.notes.deleteForPerson(req.userId, personId, id);
   }
 }
 

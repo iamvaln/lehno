@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { maintenanceStatusSchema, type MaintenanceStatus } from "@lehno/contracts";
 import { appelPublic, ErreurDApi, surEchec } from "./api.js";
-import { delaiDAttente, estUnArret } from "./arret.js";
+import { delaiDAttente, estUnArret, laMiseAJourEstRequise, lienDuMagasin } from "./arret.js";
 import { leClientEstRefuse } from "./session.js";
 
 /* L'arrêt pour intervention — l'écran qui remplace l'application entière.
@@ -25,6 +25,11 @@ interface Arret {
      deux prennent l'écran, et c'est la seule chose qu'ils ont en commun : une
      maintenance passe et se décompte, un client non reconnu ne passera pas. */
   refuse: boolean;
+  /* L'ADRESSE DU MAGASIN quand la version n'est plus servie, ou `null` si le
+     refus ne la portait pas. `undefined` veut dire « ce n'est pas ce cas-là » —
+     trois états, parce que « pas de mise à jour requise » et « mise à jour
+     requise sans adresse » n'appellent pas le même écran. */
+  magasin: string | null | undefined;
   /* Le délai que le serveur annonce, décompté sur place. L'écran l'affiche ;
      il ne l'invente pas, sans quoi deux versions du parc appliqueraient deux
      règles — et mille téléphones reviendraient à la même seconde. */
@@ -47,6 +52,7 @@ export function ArretProvider({ children }: { children: ReactNode }) {
      Le seul retour possible passe par une mise à jour ou une reconfiguration du
      build, donc par un redémarrage. */
   const [refuse, setRefuse] = useState(false);
+  const [magasin, setMagasin] = useState<string | null | undefined>(undefined);
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const interroge = useCallback(async () => {
@@ -84,6 +90,14 @@ export function ArretProvider({ children }: { children: ReactNode }) {
       setEnCours(true);
       return;
     }
+    /* MÊME FAMILLE QUE LE REFUS : ça ne passera pas tout seul, donc pas de
+       décompte et pas de réessai. Ce qui change est qu'il y a un geste — ouvrir
+       le magasin — quand le serveur a donné où aller. */
+    if (laMiseAJourEstRequise(erreur.statut, erreur.code)) {
+      setMagasin(lienDuMagasin(erreur.enveloppe?.details));
+      setEnCours(true);
+      return;
+    }
     if (!estUnArret(erreur.statut, erreur.code)) return;
     /* Les deux voyagent AVEC le refus : sans elles, il faudrait un second
        appel juste pour savoir quoi afficher, au moment précis où l'on cherche
@@ -102,14 +116,14 @@ export function ArretProvider({ children }: { children: ReactNode }) {
   // Le décompte, puis une interrogation quand il tombe à zéro. Pas de rappel
   // avant : le serveur a dit combien attendre, on attend.
   useEffect(() => {
-    if (refuse || !enCours || secondes === null) return;
+    if (refuse || magasin !== undefined || !enCours || secondes === null) return;
     if (secondes <= 0) { void interroge(); return; }
     minuteur.current = setTimeout(() => setSecondes((s) => (s === null ? null : s - 1)), 1000);
     return () => { if (minuteur.current) clearTimeout(minuteur.current); };
-  }, [refuse, enCours, secondes, interroge]);
+  }, [refuse, magasin, enCours, secondes, interroge]);
 
   return (
-    <Contexte.Provider value={{ enCours, refuse, secondes, until, signale, reessaie: () => void interroge() }}>
+    <Contexte.Provider value={{ enCours, refuse, magasin, secondes, until, signale, reessaie: () => void interroge() }}>
       {children}
     </Contexte.Provider>
   );

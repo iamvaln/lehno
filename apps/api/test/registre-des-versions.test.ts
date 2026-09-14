@@ -132,7 +132,12 @@ describe("le registre des versions", () => {
   it("suggère sans bloquer quand une version plus récente existe", async () => {
     await poser(400);
     await poser(401, { version: "1.5.0" });
-    expect(await service.exiger("mobile_ios", 400)).toEqual({ etat: "suggeree", version: "1.5.0" });
+    /* LE LIEN VOYAGE AVEC LA VERSION, comme sur le refus : une bannière qui
+       annonce une version sans dire où la prendre demande d'aller la chercher
+       soi-même — la même faute que « mettez à jour » sans lien, en plus poli. */
+    expect(await service.exiger("mobile_ios", 400)).toEqual({
+      etat: "suggeree", version: "1.5.0", storeUrl: "https://apps.apple.com/lehno",
+    });
   });
 
   /* LES PLATEFORMES NE SE MÊLENT PAS. Sans ce cas, un `forcesUpdate` posé sur

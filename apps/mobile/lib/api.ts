@@ -5,7 +5,8 @@ import { errorEnvelopeSchema, type ErrorCode, type ErrorEnvelope, type Session }
 import { adresseDeLApi } from "./adresse-api.js";
 import { doitRenouveler, sortDeLaSession } from "./session.js";
 import { effaceLesJetons, litLesJetons, poseLesJetons } from "./jetons.js";
-import { clientHeaders, type BuildIdentity } from "./client.js";
+import { clientHeaders, textOrNull, type BuildIdentity } from "./client.js";
+import { updateSuggestion, type UpdateSuggestion } from "./update.js";
 import { unSeulALaFois } from "./verrou.js";
 import { estHorsConnexion } from "./reseau.js";
 import { estGarde } from "./cache.js";
@@ -59,6 +60,31 @@ export function surEchec(observateur: Temoin): () => void {
 function signaleLEchec(erreur: unknown): never {
   for (const temoin of temoins) temoin(erreur);
   throw erreur;
+}
+
+/* LA SUGGESTION VOYAGE SUR LES RÉPONSES QUI RÉUSSISSENT, et c'est pour ça
+   qu'elle a son propre témoin.
+ *
+ * L'arrêt et le refus de client arrivent en ÉCHEC : `surEchec` suffit à les
+ * découvrir. La suggestion, elle, n'interrompt rien — l'appel aboutit, et les
+ * deux en-têtes accompagnent sa réponse. Les guetter dans `surEchec` ne les
+ * aurait vus que le jour où quelque chose casse.
+ *
+ * Ici, et pas dans `appel` : un appel public en porte autant qu'un appel
+ * authentifié, et l'écran de connexion est justement le moment où l'on
+ * découvre qu'on ouvre un vieux build. */
+type TemoinDeSuggestion = (suggestion: UpdateSuggestion) => void;
+const temoinsDeSuggestion = new Set<TemoinDeSuggestion>();
+
+export function surSuggestionDeMiseAJour(observateur: TemoinDeSuggestion): () => void {
+  temoinsDeSuggestion.add(observateur);
+  return () => { temoinsDeSuggestion.delete(observateur); };
+}
+
+function guetteLaSuggestion(reponse: Response): void {
+  const suggestion = updateSuggestion((nom) => reponse.headers.get(nom));
+  if (suggestion === null) return;
+  for (const temoin of temoinsDeSuggestion) temoin(suggestion);
 }
 
 export class SansAdresseDApi extends Error {
@@ -128,10 +154,10 @@ async function litLEnveloppe(reponse: Response): Promise<ErrorEnvelope | null> {
    c'est-à-dire ce qui identifie vraiment ce build. Nul en développement, et le
    §`clientHeaders` ne l'envoie alors pas. */
 const IDENTITE: BuildIdentity = {
-  clientId: (Constants.expoConfig?.extra?.["clientId"] as string | undefined) ?? null,
-  clientKey: (Constants.expoConfig?.extra?.["clientKey"] as string | undefined) ?? null,
-  version: Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? null,
-  build: Application.nativeBuildVersion ?? null,
+  clientId: textOrNull(Constants.expoConfig?.extra?.["clientId"]),
+  clientKey: textOrNull(Constants.expoConfig?.extra?.["clientKey"]),
+  version: textOrNull(Application.nativeApplicationVersion) ?? textOrNull(Constants.expoConfig?.version),
+  build: textOrNull(Application.nativeBuildVersion),
   os: Platform.OS,
   osVersion: Platform.Version,
   /* IL VIENT DE LA CONFIGURATION DU BUILD, PAS D'`__DEV__`.
@@ -148,7 +174,7 @@ const IDENTITE: BuildIdentity = {
    *
    * `dev` quand la configuration ne dit rien : c'est le seul cas où l'on tourne
    * sans build, donc sans profil EAS. */
-  env: (Constants.expoConfig?.extra?.["appEnv"] as string | undefined) ?? "dev",
+  env: textOrNull(Constants.expoConfig?.extra?.["appEnv"]) ?? "dev",
 };
 
 async function envoie(chemin: string, options: RequestInit, jeton?: string): Promise<Response> {
@@ -157,7 +183,7 @@ async function envoie(chemin: string, options: RequestInit, jeton?: string): Pro
   /* LE SEUL `fetch` DU PAQUET, et c'est ce qui rend les en-têtes de client
      fiables : les poser appel par appel garantirait qu'un appel écrit dans six
      mois les oublie. `api-un-seul-fetch.test.ts` garde cette unicité. */
-  return fetch(`${base}/v1${chemin}`, {
+  const reponse = await fetch(`${base}/v1${chemin}`, {
     ...options,
     headers: {
       "content-type": "application/json",
@@ -166,6 +192,10 @@ async function envoie(chemin: string, options: RequestInit, jeton?: string): Pro
       ...options.headers,
     },
   });
+  /* Au même endroit que les en-têtes de client, et pour la même raison : une
+     réponse qui passerait à côté d'ici ne suggérerait jamais rien. */
+  guetteLaSuggestion(reponse);
+  return reponse;
 }
 
 /* Appelle une surface publique — pas de jeton, pas de renouvellement. */

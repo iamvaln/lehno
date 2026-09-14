@@ -12,6 +12,8 @@ const NOMBRES_EN: Record<number, string> = {
   3: "Three", 4: "Four", 5: "Five", 6: "Six",
 };
 
+import { endSentence } from "../lib/text.js";
+
 export const en = {
   connexionTitre: "Be there on the day",
   connexionTexte: "The dates of the people you love, and what you know about them. When the day comes, you already have what you need.",
@@ -46,6 +48,13 @@ export const en = {
   maintTexte: "An update is under way.",
   maintHeure: (h: string) => "Back around " + h + ".",
   maintReessayer: "Try again",
+  majTitre: "An update is needed",
+  majTexte: "This version is no longer served. The latest one is waiting on your app store.",
+  majBouton: "Update",
+
+  majSuggestion: (version: string) => "Version " + version + " is available.",
+  majSuggestionAvecLien: (version: string) => "Version " + version + " is available. Tap to get it.",
+  majSuggestionFermer: "Dismiss",
   refusTitre: "This version is no longer recognised",
   refusTexte: "Install the latest version from your app store. Your account is fine.",
   maintEtat: "Service status",
@@ -178,7 +187,7 @@ export const en = {
   etatUnAujourdhuiEtSemaine: (n: number) => n === 1
     ? "One date today, another this week."
     : "One date today, " + n + " more this week.",
-  etatLointain: (date: string) => "Nothing until " + date + ".",
+  etatLointain: (date: string) => endSentence("Nothing until " + date),
   ceQuiApproche: "Coming up",
   preparer: "Prepare",
   marquerEnvoye: "Mark as sent",
@@ -791,6 +800,18 @@ export const en = {
   resAjuster: "Adjust the text",
   resEnvoyer: "Send",
   resRegenerer: "Redo",
+  ideesTitre: (qui: string) => "Ideas for " + qui,
+  ideesRetenir: "Keep",
+  avisJaime: "I like it",
+  avisJaimePas: "I don't",
+  avisPourquoi: "What's wrong with it?",
+  avisNote: "Anything else? (optional)",
+  avisEnvoyer: "Send",
+  ideesRetenue: "In the list",
+  ideesRetenueFait: "Added to your list.",
+  ideesAucune: "Nothing came out this time. A few more notes, and we'll try again.",
+  ideesPrix: (min: string, max: string) => "Between " + min + " and " + max,
+  ideesPrixMax: (max: string) => "Up to " + max,
   resJeter: "Discard",
   resAjusteFini: "Keep this text",
   resAjusteAnnuler: "Back to the written text",
@@ -802,6 +823,10 @@ export const en = {
   noteSecondeCat: "Add a category",
   noteDeuxMax: "Two categories at most.",
   noteRangement: "Filing",
+
+  noteSupprimerTitre: "Delete this note?",
+  noteSupprimerTexte: "It will no longer feed anything written about this person. This cannot be undone.",
+  noteIntrouvable: "This note no longer exists.",
   notePourQui: "About whom",
   noteAjouterProche: "Add",
   noteSansProche: "Name at least one person to save this.",

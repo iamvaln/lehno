@@ -14,6 +14,24 @@ import type { Platform as PlatformType } from "react-native";
  * the other, never a mixture.
  */
 
+/* WHAT EXPO PUTS IN `extra` IS NOT WHAT YOU WROTE THERE.
+ *
+ * `app.config.js` sets these to `null` when the build variable is absent. The
+ * resolved config turns that `null` into `{}` — an EMPTY OBJECT — and `??` does
+ * not catch it, because `??` only catches `null` and `undefined`.
+ *
+ * The header then travelled with an object for a value, and Expo's `fetch`
+ * refused the WHOLE request: "Cannot cast … for field 'headers' of type
+ * Array<Array<String>>". Not the header — the request. Every call in the app
+ * failed, and the screen said "the connection did not go through", which sent
+ * everyone looking at the network.
+ *
+ * So we never trust the shape of what comes back from the config: a value is a
+ * string or it does not exist. A cast would have been a lie, and it was. */
+export function textOrNull(value: unknown): string | null {
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
 /** What the build knows about itself. Every field may be missing in development. */
 export interface BuildIdentity {
   /** The client credentials, baked in at build time. Absent in a local run. */
@@ -59,13 +77,22 @@ export function osHeader(os: PlatformType["OS"], version: string | number): stri
  * produced. Expo Go and internal builds have none.
  */
 export function clientHeaders(identity: BuildIdentity): Record<string, string> {
+  /* LA DERNIÈRE GARDE, et elle a déjà servi. Même avec `textOrNull` en amont,
+   * cette fonction refuse ce qui n'est pas une chaîne : elle construit les
+   * en-têtes, donc c'est ici que le coût d'une valeur mal typée se paie — et il
+   * se paie sur la requête ENTIÈRE, pas sur l'en-tête fautif. */
+  const texte = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
+  const id = texte(identity.clientId);
+  const key = texte(identity.clientKey);
+  const version = texte(identity.version);
+  const build = texte(identity.build);
   return {
-    ...(identity.clientId === null ? {} : { "x-client-id": identity.clientId }),
-    ...(identity.clientKey === null ? {} : { "x-client-key": identity.clientKey }),
+    ...(id === null ? {} : { "x-client-id": id }),
+    ...(key === null ? {} : { "x-client-key": key }),
     "x-client-type": clientType(identity.os),
-    ...(identity.version === null ? {} : { "x-app-version": identity.version }),
-    ...(identity.build === null ? {} : { "x-app-build": identity.build }),
+    ...(version === null ? {} : { "x-app-version": version }),
+    ...(build === null ? {} : { "x-app-build": build }),
     "x-app-os": osHeader(identity.os, identity.osVersion),
-    "x-app-env": identity.env,
+    "x-app-env": texte(identity.env) ?? "dev",
   };
 }

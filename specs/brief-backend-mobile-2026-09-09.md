@@ -734,3 +734,103 @@ Une garde tient le constat côté mobile — `apps/mobile/test/avis-gouverne.tes
 **tombe le jour où le champ arrive**, ce qui est exactement quand on veut être
 prévenu. Éprouvée par la panne.
 
+---
+
+## 15. Un portrait produit ne dit pas lequel il est — CLOS le 13 septembre au soir
+
+**Trouvé à l'appareil, en éprouvant le chemin que #200 vient d'ouvrir. Quelqu'un
+qui compose un portrait paie son crédit et lit « L'écriture n'a pas abouti ».**
+
+Le portrait est bel et bien produit. Vérifié en base, sur le lancement de 16:06 :
+
+```
+action_run  status=success   credits_spent=1   app_version=57.0.9   os_name=ios
+portrait    status=generated image_key=null    (l'image vient à la composition)
+```
+
+`generation.controller.ts:233` compose pourtant :
+
+```ts
+// Le message OU le jeu d'idées : une exécution n'en produit jamais deux.
+resultId: message?.id ?? jeu?.id ?? null,
+```
+
+**Le portrait n'y figure pas**, et le commentaire dit lui-même « le message OU le
+jeu d'idées ». Il est donc **toujours `null`** pour un portrait.
+
+Or le contrat promet les trois — `me-generation.ts:166` :
+
+> « Le portrait, le message ou le jeu d'idées produit — nul tant que la
+> génération n'a pas abouti. »
+
+**Ce que ça donne à l'écran.** Le mobile sonde, reçoit `status: "succeeded"` avec
+`resultId: null`, et applique la seule lecture honnête que le contrat autorise :
+aboutir sans résultat n'est pas un résultat. Il le dit, garde ce qu'on avait
+sous les yeux, et le crédit est parti.
+
+Le client ne peut pas le contourner sans mentir : relire `/me/portraits` et
+prendre le plus récent supposerait qu'aucune autre production n'a eu lieu entre
+les deux, ce que rien ne garantit.
+
+### Un second champ, trouvé en cherchant le premier
+
+**`personId` est codé en dur à `null`** — `generation.controller.ts:220` —, sous
+un commentaire qui affirme l'inverse :
+
+> « Un portrait vise un proche, un message une occasion — l'une des deux est donc
+> toujours nulle, et le client affiche celle qui est là plutôt que d'en déduire
+> laquelle attendre. »
+
+Le commentaire décrit une intention que le code ne tient pas. L'écran d'attente
+du portrait s'en sort parce qu'il tient le nom du proche par sa route ; toute
+surface qui lirait `generation.personId` recevrait `null`.
+
+### Ce qu'il faut, et ce n'est pas une ligne
+
+`LigneExecution` (`generation.controller.ts:44-62`) porte `generatedMessage` et
+`ideaSet`. **Elle ne porte aucune relation vers le portrait** — le contrôleur
+n'a donc rien à mettre dans ces deux champs, même en le voulant.
+
+Trois endroits :
+
+1. **La lecture de l'exécution** inclut le portrait, comme elle inclut déjà le
+   message et le jeu d'idées ;
+2. **Le type `LigneExecution`** le déclare ;
+3. **Les deux champs** s'en servent — `resultId: … ?? portrait?.id ?? null` et
+   `personId: portrait?.personId ?? null`.
+
+Et le commentaire au-dessus de `resultId`, qui énumère deux natures sur trois,
+est à reprendre : c'est lui qui a rendu l'oubli invisible, parce qu'il décrit
+exactement ce que le code fait — rien ne cloche à la relecture.
+
+*Corrigé le 13 septembre : ce paragraphe annonçait d'abord « une ligne ». C'était
+faux, et l'annoncer ainsi aurait fait sous-estimer le lot.*
+
+### Clos le 13 septembre au soir — #244
+
+Les trois endroits, tels qu'annoncés. La relation entre en `select` restreint à
+`id` et `personId` : `portrait: true` ferait passer l'image et ses attributs
+sans que personne ne les lise. **`lister()` la charge aussi** — l'historique
+passe par la même projection, et l'y oublier aurait laissé les portraits muets
+dans la liste après les avoir réparés à l'unité.
+
+Les deux commentaires trompeurs sont réécrits.
+
+**L'épreuve passe par le CONTRÔLEUR**, et c'est là qu'était le trou : les cas de
+`portrait.test.ts` regardaient le portrait rendu par le service, qui a toujours
+été juste. Aucun ne lisait l'exécution. Éprouvé par la panne dans les deux sens
+— défaire la projection fait tomber le cas, la rétablir et retirer la relation
+de la requête le refait tomber.
+
+**Vérifié à l'appareil** : le lancement de 17:35 ouvre le portrait produit, et
+la relecture de l'exécution de 16:06 — celle qui avait annoncé l'échec — rend
+maintenant `resultId: 26faf774-…`, `personId` = Awa, sans que rien n'ait changé
+en base.
+
+> **Ce que ce §15 laisse comme leçon**, et elle ne porte pas sur le portrait :
+> les deux champs ont survécu à toutes les relectures parce qu'un commentaire
+> **vrai** décrivait le mauvais comportement. « Le message OU le jeu d'idées »
+> disait exactement ce que le code faisait ; « un portrait vise un proche »
+> disait exactement ce qu'on voulait. Dans les deux cas, rien ne cloche à la
+> lecture — et c'est précisément ce qui a désarmé la revue.
+

@@ -21,6 +21,9 @@ const brouillon = (statut: MessageStatus = "generated"): GeneratedMessage => ({
   occurrenceId: OCCASION,
   content: "Valery, 36 ans et toujours cette manie de refaire le monde à minuit.",
   contentShort: null,
+  feedback: null,
+  feedbackReasonCode: null,
+  feedbackNote: null,
   status: statut,
   createdAt: "2026-08-26T10:00:00Z",
   updatedAt: "2026-08-26T10:00:00Z",
@@ -297,5 +300,26 @@ describe("ce que l'attente dit", () => {
   it("n'écrit pas de phrase à trou quand le nom manque", () => {
     expect(phraseDeLAttente(9, null, T)).toBe("On rassemble ce qu'on sait.");
     expect(phraseDeLAttente(9, "", T)).toBe("On rassemble ce qu'on sait.");
+  });
+});
+
+describe("un jeu d'idées est un résultat", () => {
+  const abouti = (quoi: Record<string, unknown>) =>
+    ({ generation: { status: "succeeded" }, message: null, ideas: null, ...quoi }) as never;
+
+  /* LA RÉGRESSION QUE CE CAS GARDE : la phase ne testait que `message`, donc un
+     jeu d'idées réussi tombait en « échec ». Quelqu'un qui venait de payer
+     lisait que ça n'avait pas marché. */
+  it("ne tombe plus en échec quand c'étaient des idées", () => {
+    expect(phaseDuResultat(abouti({ ideas: { ideas: [] } }))).toBe("resultat");
+  });
+
+  it("reste un résultat pour un message", () => {
+    expect(phaseDuResultat(abouti({ message: { id: "x" } }))).toBe("resultat");
+  });
+
+  /* Rien des deux ET abouti : c'est un vrai échec sans contenu, et il se dit. */
+  it("échoue encore quand il n'y a ni l'un ni l'autre", () => {
+    expect(phaseDuResultat(abouti({}))).toBe("echec");
   });
 });

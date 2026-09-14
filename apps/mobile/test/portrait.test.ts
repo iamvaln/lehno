@@ -23,6 +23,9 @@ const portrait = (sur: Partial<Portrait> = {}): Portrait => ({
   contentShort: null,
   senderNote: "Fait avec soin par Valentine",
   imageUrl: null,
+  feedback: null,
+  feedbackReasonCode: null,
+  feedbackNote: null,
   createdAt: "2026-08-22T09:00:00.000Z",
   ...sur,
 });

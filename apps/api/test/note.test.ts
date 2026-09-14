@@ -4,7 +4,7 @@ import { NestFactory } from "@nestjs/core";
 import jwt from "jsonwebtoken";
 import { randomBytes } from "node:crypto";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
-import { noteSchema } from "@lehno/contracts";
+import { noteSchema, updateNoteSchema } from "@lehno/contracts";
 import { NoteService } from "../src/me/note.service.js";
 import { PersonService } from "../src/me/person.service.js";
 import { EventService } from "../src/me/event.service.js";
@@ -298,6 +298,129 @@ describe("les notes d'un proche", () => {
         headers: { authorization: `Bearer ${jeton(awa)}` },
       });
       expect(r.status).toBe(400);
+    });
+  });
+
+  /* CORRIGER ET EFFACER — l'absence signalée depuis le mobile.
+   *
+   * `note.controller` n'exposait que @Get et @Post : une note ne pouvait ni se
+   * corriger ni s'effacer, par aucun chemin. Ce sont les mots privés de
+   * quelqu'un sur un proche, et ce sont eux qui nourrissent les invites du
+   * modèle — une faute de frappe, un prénom mal orthographié, une phrase écrite
+   * sur la mauvaise personne étaient DÉFINITIFS et continuaient d'alimenter
+   * chaque portrait et chaque message. */
+  describe("corriger et effacer", () => {
+    const poser = async (contenu: string): Promise<{ personId: string; noteId: string }> => {
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery" });
+      const n = await notes.createForPerson(awa, p.id, { content: contenu });
+      return { personId: p.id, noteId: n.id };
+    };
+
+    it("corrige le texte d'une note", async () => {
+      const { personId, noteId } = await poser("Il a parlé d'un vélo à Valéry");
+
+      const corrigee = await notes.updateForPerson(awa, personId, noteId, {
+        content: "Il a parlé d'un vélo à Valérie",
+      });
+
+      expect(corrigee.content).toBe("Il a parlé d'un vélo à Valérie");
+      expect(corrigee.id).toBe(noteId);
+    });
+
+    /* LE CLASSEMENT SUIT LE TEXTE. Il en est DÉRIVÉ : corriger la phrase sans
+       rejouer le classement laisserait les catégories décrire celle d'avant. Et
+       on REMPLACE les rattachements — une catégorie que le texte corrigé ne
+       justifie plus doit partir, pas s'ajouter aux nouvelles. */
+    it("reclasse la note sur son nouveau texte", async () => {
+      const { personId, noteId } = await poser("Il rêve d'un vélo de course");
+      const avant = (await notes.listForPerson(awa, personId))[0]?.categories ?? [];
+
+      await notes.updateForPerson(awa, personId, noteId, {
+        content: "Elle est allergique aux arachides",
+      });
+
+      const apres = (await notes.listForPerson(awa, personId))[0]?.categories ?? [];
+      expect(apres).not.toEqual(avant);
+      expect(await db.prisma.noteCategory.count({ where: { noteId } })).toBe(apres.length);
+    });
+
+    it("efface une note, et elle ne se relit plus", async () => {
+      const { personId, noteId } = await poser("Sonde du 14 septembre");
+
+      await notes.deleteForPerson(awa, personId, noteId);
+
+      expect(await notes.listForPerson(awa, personId)).toHaveLength(0);
+      expect(await db.prisma.note.findUnique({ where: { id: noteId } })).toBeNull();
+    });
+
+    /* EFFACÉE POUR DE BON, pas marquée comme telle : quelqu'un qui retire ce
+       qu'il a écrit veut que ce soit parti, pas caché — une note conservée en
+       douce continuerait de nourrir les invites, ce qui est exactement la
+       raison de l'effacer. Les rattachements de catégorie tombent avec elle. */
+    it("emporte les rattachements de catégorie", async () => {
+      const { personId, noteId } = await poser("Elle est allergique aux arachides");
+      expect(await db.prisma.noteCategory.count({ where: { noteId } })).toBeGreaterThan(0);
+
+      await notes.deleteForPerson(awa, personId, noteId);
+
+      expect(await db.prisma.noteCategory.count({ where: { noteId } })).toBe(0);
+    });
+
+    /* 404 SUR LA NOTE D'UN AUTRE COMPTE — et rien d'écrit. Sans ce refus, le
+       chemin deviendrait un oracle : « cette note existe » se lirait dans la
+       différence entre deux codes. */
+    it("refuse la note d'un autre compte, et n'y touche pas", async () => {
+      const { personId, noteId } = await poser("Mot privé");
+
+      await expect(notes.updateForPerson(bila, personId, noteId, { content: "détourné" }))
+        .rejects.toMatchObject({ code: "not_found" });
+      await expect(notes.deleteForPerson(bila, personId, noteId))
+        .rejects.toMatchObject({ code: "not_found" });
+
+      const intacte = await db.prisma.note.findUnique({ where: { id: noteId } });
+      expect(intacte?.content).toBe("Mot privé");
+    });
+
+    /* ET LA NOTE D'UN AUTRE PROCHE DU MÊME COMPTE. Le proche est vérifié, mais
+       rien ne disait que la note était SOUS CE PROCHE-LÀ : se tromper de chemin
+       aurait touché une autre fiche en annonçant que tout allait bien. */
+    it("refuse une note qui n'est pas sous ce proche", async () => {
+      const { noteId } = await poser("Mot sur Valery");
+      const autre = await persons.create(awa, { gender: "male", displayName: "Bila" });
+
+      await expect(notes.updateForPerson(awa, autre.id, noteId, { content: "détourné" }))
+        .rejects.toMatchObject({ code: "not_found" });
+      await expect(notes.deleteForPerson(awa, autre.id, noteId))
+        .rejects.toMatchObject({ code: "not_found" });
+    });
+
+    /* LES TRAITS SURVIVENT, en perdant leur provenance. Ça surprend et c'est le
+       bon choix : un trait est une valeur COURANTE que la note a posée en
+       dernier, pas une possession. L'emporter annulerait une déduction sans
+       savoir ce qui la remplace — il faudrait rejouer toutes les notes
+       restantes. On corrige un trait en écrivant une note neuve. */
+    it("laisse le trait extrait, sans sa note", async () => {
+      const { personId, noteId } = await poser("Elle aime le jazz");
+      await db.prisma.personAttribute.create({
+        data: { personId, kind: "hobby" as never, value: "jazz", noteId, observedAt: new Date() },
+      });
+
+      await notes.deleteForPerson(awa, personId, noteId);
+
+      const trait = await db.prisma.personAttribute.findFirst({ where: { personId } });
+      expect(trait).not.toBeNull();
+      expect(trait?.noteId).toBeNull();
+    });
+
+    /* LA VALIDATION VIT DANS LE CONTRAT, pas dans le service : c'est le tuyau
+       Zod du contrôleur qui refuse. L'éprouver sur le service testerait le
+       mauvais étage et rendrait vert un jour où le schéma aurait changé. */
+    it("le contrat refuse un texte vide et borne la longueur", () => {
+      expect(updateNoteSchema.safeParse({ content: "   " }).success).toBe(false);
+      expect(updateNoteSchema.safeParse({ content: "x".repeat(4001) }).success).toBe(false);
+      expect(updateNoteSchema.safeParse({ content: "Un mot" }).success).toBe(true);
+      // `.strict()` : on ne déplace pas une note en croyant corriger une frappe.
+      expect(updateNoteSchema.safeParse({ content: "ok", personId: "x" }).success).toBe(false);
     });
   });
 });

@@ -908,7 +908,7 @@ describe("la génération d'un message", () => {
       await crediter(5);
       const message = await lancer({ anthropic: repond() });
 
-      await service.noter(awa, message.id, "down");
+      await service.noter(awa, message.id, { feedback: "down", reasonCode: "wrong_tone" });
 
       const ligne = await db.prisma.generatedMessage.findUniqueOrThrow({ where: { id: message.id } });
       expect(ligne.feedback).toBe("down");
@@ -920,8 +920,8 @@ describe("la génération d'un message", () => {
       await crediter(5);
       const message = await lancer({ anthropic: repond() });
 
-      await service.noter(awa, message.id, "up");
-      await service.noter(awa, message.id, null);
+      await service.noter(awa, message.id, { feedback: "up" });
+      await service.noter(awa, message.id, { feedback: null });
 
       const ligne = await db.prisma.generatedMessage.findUniqueOrThrow({ where: { id: message.id } });
       expect(ligne.feedback).toBeNull();
@@ -940,7 +940,7 @@ describe("la génération d'un message", () => {
         select: { id: true },
       });
 
-      await expect(service.noter(autre.id, message.id, "down"))
+      await expect(service.noter(autre.id, message.id, { feedback: "down", reasonCode: "wrong_tone" }))
         .rejects.toThrow(/unknown message/);
     });
   });
@@ -958,9 +958,16 @@ describe("la génération d'un message", () => {
       return faits;
     };
 
+    /* UN REJET PORTE UN MOTIF, et la base le tient — cette aide l'a appris en
+       tombant, ce qui est le bon sens de la dépendance : une garde qu'aucun
+       gabarit ne heurte est une garde dont on ignore si elle mord. */
     const noter = (id: string, avis: "up" | "down") =>
       db.prisma.generatedMessage.update({
-        where: { id }, data: { feedback: avis, feedbackAt: new Date() },
+        where: { id },
+        data: {
+          feedback: avis, feedbackAt: new Date(),
+          ...(avis === "down" ? { feedbackReasonCode: "off_topic" } : {}),
+        },
       });
 
     /* LES DEUX AXES NE SE FONDENT PAS, et c'est ce que la première rédaction

@@ -90,8 +90,14 @@ const PERFORMANCE = {
     produites: 9,
     gestes: axe(6, 1, 2),
     avis: axe(2, 1, 6),
+    /* LA VENTILATION DU « CONTRE ». Un seul rejet ici, donc un seul motif :
+       leur somme égale `avis.contre`, et c'est ce qui rend le chiffre croyable
+       — un écart voudrait dire qu'une ligne a été écrite hors du service. */
+    motifs: [{ code: "poor_likeness", fr: "Ne lui ressemble pas", en: "Poor likeness", n: 1 }],
   }],
-  horsVersion: { produites: 14, gestes: axe(9, 3, 2), avis: axe(0, 0, 14) },
+  horsVersion: {
+    produites: 14, gestes: axe(9, 3, 2), avis: axe(0, 0, 14), motifs: [],
+  },
 };
 
 function serveur(sur: Record<string, (u: string, i?: RequestInit) => Response> = {}) {

@@ -74,6 +74,11 @@ export class EasController {
     if (announcement === null) {
       /* We still acknowledge: otherwise EAS would retry forever over a payload
          we will never learn to read. It is logged so the reader can be fixed. */
+      /* THE WHOLE PAYLOAD, not just its keys. The first miss cost a build: the
+         key list said WHERE to look but not WHAT was there, so the fix was a
+         second guess. A build webhook carries no secret — it is signed, not
+         confidential — and one complete line here turns the next miss into a
+         five-minute correction. */
       this.log.warn(`EAS webhook: unreadable payload — ${outline(body)}`);
       return;
     }
@@ -175,30 +180,55 @@ function readAnnouncement(body: unknown): Announcement | null {
   if (typeof body !== "object" || body === null) return null;
   const b = body as Record<string, unknown>;
 
-  const platform = toPlatform(b["platform"]);
-  const version = text(b["appVersion"]);
-  const build = positiveInteger(b["appBuildVersion"]);
-  const status = text(b["status"]);
-  if (platform === null || version === null || build === null || status === null) return null;
-
-  /* THE PROFILE DECIDES WHETHER WE REGISTER AT ALL — see the guard in the
-     handler. Expo carries it under `metadata`; the top-level read is there
-     because a null profile means "register nothing", so a field that merely
-     moved would silently freeze the registry. */
+  /* THE FIELDS LIVE UNDER `metadata`, AND THIS COST A BUILD.
+   *
+   * The first version read `appVersion` and `appBuildVersion` at the root,
+   * because that is where `eas build:view --json` shows them. The WEBHOOK does
+   * not have that shape: its root carries `id`, `platform`, `status`,
+   * `artifacts`, `metadata`, `metrics` — and everything describing the version
+   * sits inside `metadata`. A real build went through, registered nothing, and
+   * left only a line in the log.
+   *
+   * We now read BOTH PLACES, `metadata` first. Not indecision: the two shapes
+   * exist for real, side by side, and a reader that knows only one of them is
+   * one Expo release away from freezing the registry again. */
   const metadata = (typeof b["metadata"] === "object" && b["metadata"] !== null
     ? b["metadata"]
     : {}) as Record<string, unknown>;
+
+  const champ = (nom: string): unknown => metadata[nom] ?? b[nom];
+
+  const platform = toPlatform(champ("platform"));
+  const version = text(champ("appVersion"));
+  const build = positiveInteger(champ("appBuildVersion"));
+  /* LOWERCASED: the webhook says `finished`, the CLI says `FINISHED`. Comparing
+     raw would make the whole registry hinge on which one Expo happens to send. */
+  const status = text(champ("status"))?.toLowerCase() ?? null;
+  if (platform === null || version === null || build === null || status === null) return null;
 
   return {
     platform,
     version,
     build,
     status,
-    profile: text(metadata["buildProfile"]) ?? text(b["buildProfile"]),
-    /* Enough to find the build again in Expo's dashboard the day someone asks
-       where a version came from. */
-    notes: text(b["buildDetailsPageUrl"]),
+    profile: text(champ("buildProfile")),
+    notes: buildLink(b, champ),
   };
+}
+
+/* WHERE THE BUILD CAN BE FOUND AGAIN, the day someone asks where a version came
+   from. The webhook has no `buildDetailsPageUrl` — that was a guess too. What it
+   does carry is `artifacts.buildUrl`, and failing that its own `id`, which is
+   enough to rebuild the dashboard address. */
+function buildLink(b: Record<string, unknown>, champ: (nom: string) => unknown): string | null {
+  const artifacts = (typeof b["artifacts"] === "object" && b["artifacts"] !== null
+    ? b["artifacts"]
+    : {}) as Record<string, unknown>;
+
+  const id = text(champ("id"));
+  return text(artifacts["buildUrl"])
+    ?? text(b["buildDetailsPageUrl"])
+    ?? (id === null ? null : `https://expo.dev/builds/${id}`);
 }
 
 /* `ios` and `android` on Expo's side; `mobile_ios` and `mobile_android` on
@@ -221,12 +251,12 @@ function positiveInteger(v: unknown): number | null {
   return n > 0 ? n : null;
 }
 
-/* Enough to diagnose a format change, not enough to copy a whole payload into
-   the log. */
+/* Bounded, because a log line is not a dumping ground — but WHOLE, because the
+   key list alone is what made the first correction a guess. */
 function outline(body: unknown): string {
   try {
     if (typeof body !== "object" || body === null) return typeof body;
-    return `keys: ${Object.keys(body as object).slice(0, 12).join(", ")}`;
+    return JSON.stringify(body).slice(0, 4000);
   } catch {
     return "unreadable";
   }

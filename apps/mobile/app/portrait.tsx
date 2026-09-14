@@ -29,6 +29,8 @@ import {
   ouverture, relanceDuPortrait, selectionParDefaut, signatureARemettre, type Plateforme,
 } from "../lib/portrait.js";
 import { Bascule } from "../composants/Bascule.js";
+import { Avis } from "../composants/Avis.js";
+import { type RatingCall } from "../lib/rating.js";
 import { Choix } from "../composants/Choix.js";
 import { ChoixEnVignettes } from "../composants/ChoixEnVignettes.js";
 
@@ -320,6 +322,12 @@ export default function PortraitEcran() {
      ceux-là engagent l'objet, celui-ci dit ce qu'on en pense. `verdict` rend
      `null` quand l'avis est déjà porté — redire la même chose n'appellerait
      rien —, et l'écran s'en sert pour éteindre le bouton déjà tenu. */
+  /* L'avis relit le portrait comme les verdicts : le motif et la note vivent au
+     serveur, et les recopier ici ferait diverger l'écran à la première erreur. */
+  const noteLeResultat = async (appelAFaire: RatingCall): Promise<void> => {
+    await patche({ chemin: appelAFaire.path, methode: "PATCH", corps: appelAFaire.body });
+  };
+
   const juge = async (avis: "approved" | "rejected"): Promise<void> => {
     if (!portrait) return;
     const envoi = verdict(portrait, avis);
@@ -707,6 +715,23 @@ export default function PortraitEcran() {
               </View>
             ) : null}
 
+            {/* L'AVIS EST L'AUTRE QUESTION, et il ne remplace pas les verdicts :
+                « je garde » engage l'objet, « j'aime » dit ce qu'on en pense. On
+                peut garder un portrait sans l'admirer — et c'est précisément la
+                réponse qu'aucun des deux ne donnerait seul.
+
+                Sur une image qu'on a vue, comme les verdicts : juger un brief
+                mesurerait la qualité du texte en laissant croire qu'il mesure
+                celle du portrait. */}
+            {etat === "pret" ? (
+              <Avis
+                nature="portrait"
+                id={portrait.id}
+                valeur={portrait.feedback}
+                surChangement={(appelAFaire) => noteLeResultat(appelAFaire)}
+              />
+            ) : null}
+
             {/* « REFAIRE » JETTE CELUI-CI POUR EN REDEMANDER UN AUTRE, et le
                 paie. Il vient donc en dernier, après les gestes gratuits, et
                 s'annonce par une feuille : rien ne se paie en silence. */}
@@ -815,7 +840,16 @@ const styles = StyleSheet.create({
   gestes: { gap: nativeSpace[8], marginTop: nativeSpace[20] },
   /* Côte à côte, et non l'un sous l'autre : ce sont deux réponses à la même
      question, et les empiler ferait lire la seconde comme un repli. */
-  verdicts: { flexDirection: "row", gap: nativeSpace[8], marginTop: nativeSpace[12] },
+  /* ELLE SE REPLIE, et ce n'est pas un ornement : sur un iPhone SE — 375 points,
+     le plus étroit du parc — « Je garde celui-ci » et « Celui-ci ne va pas »
+     côte à côte débordent, et le second se faisait couper à droite. Vu à
+     l'écran, dans le seul état où les deux paraissent : celui où personne ne
+     s'est encore prononcé. Sans repli, une rangée ne rétrécit pas ses enfants,
+     elle les laisse sortir du cadre. */
+  verdicts: {
+    flexDirection: "row", flexWrap: "wrap",
+    gap: nativeSpace[8], marginTop: nativeSpace[12],
+  },
   pied: { marginTop: nativeSpace[24], paddingTop: nativeSpace[16], borderTopWidth: 1 },
   aide: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, lineHeight: 19 },
 });

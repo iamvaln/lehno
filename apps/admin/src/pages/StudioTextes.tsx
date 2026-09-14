@@ -296,6 +296,23 @@ export function StudioTextes({
       titre: h.col.avis,
       rendu: (c) => rendreAxe(mesureDe(c.id)?.avis, h.axes.avis, h.rien),
     },
+    /* LA VENTILATION DU « CONTRE », à côté de lui et jamais à sa place : le
+       compte dit l'ampleur, les motifs disent quoi corriger. Trois au plus — la
+       liste arrive déjà triée du plus fréquent au plus rare, et une cellule qui
+       en aligne huit ne se lit plus. */
+    {
+      cle: "motifs",
+      titre: h.col.motifs,
+      discret: true,
+      rendu: (c) => {
+        const motifs = mesureDe(c.id)?.motifs ?? [];
+        if (motifs.length === 0) return h.rien;
+        const tete = motifs.slice(0, 3);
+        const dits = tete.map((m) => `${langue === "en" ? m.en : m.fr} ${m.n}`).join(" · ");
+        const reste = motifs.length - tete.length;
+        return reste === 0 ? dits : `${dits} · ${h.motifsAutres.replace("{n}", String(reste))}`;
+      },
+    },
     {
       cle: "etat",
       titre: h.col.etat,
