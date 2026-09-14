@@ -181,5 +181,15 @@ jobs:
             # Les images :develop se remplacent l'une l'autre sous le même tag ;
             # seules les pendantes s'accumulent.
             docker image prune -f
+        env:
+          # DÉCLARER `envs:` NE SUFFIT PAS — il dit QUOI transmettre, pas d'où
+          # ça vient. Sans ce bloc, le script distant meurt sur
+          # « GHCR_TOKEN: unbound variable », et l'action ne le dit qu'au
+          # troisième écran de journal.
+          GHCR_USER: ${{ github.actor }}
+          # Le GITHUB_TOKEN de l'exécution : il expire avec elle, et rien de
+          # durable ne reste sur le serveur.
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Dit où c'est
         run: echo "Bac à sable déployé — https://api.sandbox.lehno.io/v1/public/maintenance"
