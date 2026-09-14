@@ -27,19 +27,24 @@ elle est au §3.
 Les cinq paliers, tels qu'ils sont en base. **Une opération coûte un crédit** —
 les trois, sans distinction (`premium_action.credit_cost = 1`).
 
-| crédits | prix | par crédit | en euros¹ |
-|---|---|---|---|
-| 5 | 500 XAF | 100,0 XAF | 0,1524 € |
-| 10 | 1 000 XAF | 100,0 XAF | 0,1524 € |
-| 22 | 2 000 XAF | 90,9 XAF | 0,1386 € |
-| 57 | 5 000 XAF | 87,7 XAF | 0,1337 € |
-| 120 | 10 000 XAF | 83,3 XAF | 0,1270 € |
+**En dollars autant qu'en francs** : les fournisseurs facturent en USD, et une
+marge ne se lit que si les deux côtés sont dans la même monnaie.
 
-¹ parité fixe 655,957 XAF = 1 €.
+| crédits | prix XAF | prix USD | XAF/crédit | **USD/crédit** |
+|---:|---:|---:|---:|---:|
+| 5 | 500 | 0,88 | 100,0 | **0,1768** |
+| 10 | 1 000 | 1,77 | 100,0 | **0,1768** |
+| 22 | 2 000 | 3,54 | 90,9 | **0,1607** |
+| 57 | 5 000 | 8,84 | 87,7 | **0,1551** |
+| 120 | 10 000 | 17,68 | 83,3 | **0,1473** |
 
-**Une opération rapporte donc entre 0,127 € et 0,152 €**, selon le palier
-acheté. Le plancher — 0,127 € — est le seul chiffre à retenir pour dimensionner :
-c'est ce que rapporte l'acheteur le plus engagé, donc celui qui consomme le plus.
+*Parité fixe 655,957 XAF = 1 € ; 1 € = 1,159763 USD (relevé du 14/09/2026),
+soit 1 USD = 565,60 XAF. Le franc CFA étant arrimé à l'euro, seul le second
+taux bouge — et il déplace la marge sans que personne ne touche à un prix.*
+
+**Une opération rapporte entre 0,1473 et 0,1768 USD.** Le plancher est le seul
+chiffre à retenir pour dimensionner : c'est ce que rapporte l'acheteur le plus
+engagé, donc celui qui consomme le plus.
 
 ---
 
@@ -62,6 +67,37 @@ Deux choses s'y lisent déjà :
 - **L'image ne compte pas en jetons.** Elle se facture à l'unité, et sa latence
   — 18 secondes, soit quatre fois le brief — dit assez qu'elle n'est pas du même
   ordre.
+
+---
+
+## 2 bis. Ce qu'on a le droit de dépenser
+
+À partir du revenu plancher (0,1473 USD) et des jetons **réellement mesurés**.
+Ces seuils se comparent directement aux grilles publiées des fournisseurs.
+
+| opération | jetons | 20 % du revenu | 30 % | 50 % |
+|---|---:|---:|---:|---:|
+| message — texte seul | 943 | 31,25 $/M | **46,87 $/M** | 78,12 $/M |
+| portrait — brief Opus | 1 216 | 24,23 $/M | **36,35 $/M** | 60,58 $/M |
+| portrait — brief Sonnet | 1 050 | 28,06 $/M | **42,10 $/M** | 70,16 $/M |
+
+*$/M = dollars par million de jetons, entrée et sortie mélangées.*
+
+**Pour le texte seul, c'est confortable** : aucun modèle de cette gamme
+n'approche 46 $ par million.
+
+**En valeur absolue, à 30 % visés : 0,0442 USD — soit 25,0 XAF par opération.**
+Et pour le portrait, ce budget doit couvrir **le brief ET l'image** :
+
+```
+brief à 0,010 USD  →  il reste 0,0342 USD pour l'image   (19,3 XAF)
+brief à 0,035 USD  →  il reste 0,0092 USD pour l'image   ( 5,2 XAF)
+```
+
+Une génération d'image descend rarement sous 0,01 USD et monte couramment à
+0,04–0,19. **Le portrait à un crédit est donc très probablement sous l'eau au
+palier le plus bas.** Et le modèle choisi pour le brief décide de ce qui reste
+pour l'image — un arbitrage que personne n'a posé en ces termes.
 
 ---
 
