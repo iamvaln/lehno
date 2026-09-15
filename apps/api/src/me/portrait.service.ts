@@ -343,7 +343,13 @@ export class PortraitService {
     const modele = provider && modelKey
       ? await this.prisma.aIModel.findUnique({
         where: { provider_modelKey: { provider, modelKey } },
-        select: { id: true, provider: true, modelKey: true, costInput: true, costOutput: true },
+        select: {
+          id: true, provider: true, modelKey: true,
+          /* `costPerImage` COMPRIS, et c'est ici qu'il compte le plus : ce
+             chemin produit des IMAGES, qui ne se facturent pas au jeton.
+             L'omettre laissait `cost` nul sur l'appel le plus cher. */
+          costInput: true, costOutput: true, costPerImage: true,
+        },
       })
       : null;
     if (!modele) throw new AppError("resource_inactive", `no model named "${cle}" in the catalogue`);

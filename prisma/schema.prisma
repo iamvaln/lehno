@@ -1744,6 +1744,16 @@ model AIModel {
   capability AICapability @default(text)
   costInput  Decimal?     @map("cost_input") @db.Decimal(12, 6)
   costOutput Decimal?     @map("cost_output") @db.Decimal(12, 6)
+  /// LE PRIX À L'UNITÉ, pour ce qui ne se facture pas au jeton.
+  ///
+  /// Une génération d'image se paie PAR IMAGE, pas par millier de jetons —
+  /// `grok-imagine-image` est à deux cents pièce. Sans ce champ, `cout` restait
+  /// nul sur toute la voie visuelle, et la marge d'un portrait était donc
+  /// incalculable : c'est pourtant l'appel le plus cher de tout le dispositif.
+  ///
+  /// NUL ET NON ZÉRO quand il n'est pas renseigné : « on ne sait pas », jamais
+  /// « gratuit ». La même règle que les deux tarifs au-dessus.
+  costPerImage Decimal?   @map("cost_per_image") @db.Decimal(12, 6)
 
   /**
    * DEUX interrupteurs, et surtout pas un seul.

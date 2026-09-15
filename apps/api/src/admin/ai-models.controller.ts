@@ -18,6 +18,9 @@ const modeleSchema = z.object({
   enabled: z.boolean().optional(),
   costInput: z.number().nonnegative().optional(),
   costOutput: z.number().nonnegative().optional(),
+  /* POUR CE QUI NE SE FACTURE PAS AU JETON. Une image se paie à l'unité ; sans
+     ce tarif, `ai_usage.cost` reste nul sur toute la voie visuelle. */
+  costPerImage: z.number().nonnegative().optional(),
   /* Lever une panne à la main, quand on sait que le fournisseur est revenu et
      qu'on ne veut pas attendre l'expiration. C'est le SEUL geste humain sur
      l'état de panne, et il ne fait que l'effacer : il ne le pose jamais. Poser
@@ -77,6 +80,7 @@ export class AIModelsService {
         // « gratuit », c'est « on ne sait pas ce qu'il coûte ».
         coutEntree: m.costInput === null ? null : Number(m.costInput),
         coutSortie: m.costOutput === null ? null : Number(m.costOutput),
+        coutParImage: m.costPerImage === null ? null : Number(m.costPerImage),
         // Où ce modèle sert, pour qu'on voie ce qu'on casse en le coupant.
         emplois: m.routes.map((r) => ({ tache: r.task, rang: r.rank }))
           .sort((a, b) => a.tache.localeCompare(b.tache)),
@@ -138,6 +142,7 @@ export class AIModelsService {
       details["enabled"] = { from: avant.enabled, to: entree.enabled };
     if (entree.costInput !== undefined) details["costInput"] = { from: avant.costInput, to: entree.costInput };
     if (entree.costOutput !== undefined) details["costOutput"] = { from: avant.costOutput, to: entree.costOutput };
+    if (entree.costPerImage !== undefined) details["costPerImage"] = { from: avant.costPerImage, to: entree.costPerImage };
     if (entree.clearOutage === true) details["outageUntil"] = { from: avant.outageUntil, to: null };
 
     return this.prisma.$transaction(async (tx) => {
@@ -160,6 +165,7 @@ export class AIModelsService {
           ...(entree.enabled === undefined ? {} : { enabled: entree.enabled }),
           ...(entree.costInput === undefined ? {} : { costInput: entree.costInput }),
           ...(entree.costOutput === undefined ? {} : { costOutput: entree.costOutput }),
+          ...(entree.costPerImage === undefined ? {} : { costPerImage: entree.costPerImage }),
           // Le compteur repart de zéro avec la panne : le laisser à trois
           // ferait rebasculer en panne au premier échec suivant, et la levée
           // manuelle n'aurait servi qu'une requête.

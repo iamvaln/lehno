@@ -70,7 +70,7 @@ export class RefusModele extends Error {
 
 type Candidat = {
   id: string; provider: string; modelKey: string; rank: number;
-  costInput: unknown; costOutput: unknown;
+  costInput: unknown; costOutput: unknown; costPerImage: unknown;
 };
 
 /* Le coût d'un appel, au tarif du catalogue AU MOMENT de l'appel.
@@ -84,10 +84,18 @@ type Candidat = {
  * Nul quand le modèle n'est pas tarifé, ou quand on ne connaît pas les jetons :
  * « on ne sait pas », jamais « gratuit ». */
 export function coutDeLAppel(
-  tarifs: { costInput: unknown; costOutput: unknown },
+  tarifs: { costInput: unknown; costOutput: unknown; costPerImage?: unknown },
   jetonsEntree: number | null,
   jetonsSortie: number | null,
 ): number | null {
+  /* LE PRIX À L'UNITÉ PASSE EN PREMIER, parce qu'un modèle d'image ne rend
+     AUCUN jeton : la formule au million lui donnerait nul, et la voie visuelle
+     resterait sans coût — celle qui, justement, coûte le plus cher. */
+  const tarifImage = tarifs.costPerImage === null || tarifs.costPerImage === undefined
+    ? null
+    : Number(tarifs.costPerImage);
+  if (tarifImage !== null) return tarifImage;
+
   const tarifEntree = tarifs.costInput === null || tarifs.costInput === undefined ? null : Number(tarifs.costInput);
   const tarifSortie = tarifs.costOutput === null || tarifs.costOutput === undefined ? null : Number(tarifs.costOutput);
   if (tarifEntree === null && tarifSortie === null) return null;
@@ -133,6 +141,7 @@ export class RouteurIAService {
     return routes.map((r) => ({
       id: r.model.id, provider: r.model.provider, modelKey: r.model.modelKey,
       rank: r.rank, costInput: r.model.costInput, costOutput: r.model.costOutput,
+      costPerImage: r.model.costPerImage,
     }));
   }
 
@@ -174,6 +183,7 @@ export class RouteurIAService {
            par la configuration » de « servi par le rang 1 de la chaîne », et
            l'écart entre l'essai et la production se lit sans enquête. */
         rank: 0, costInput: modele.costInput, costOutput: modele.costOutput,
+        costPerImage: modele.costPerImage,
       },
       ...chaine,
     ];
@@ -363,7 +373,10 @@ export class RouteurIAService {
     tache: TacheIA,
     demande: DemandeIA,
     adaptateur: Adaptateur,
-    modele: { id: string; provider: string; modelKey: string; costInput: unknown; costOutput: unknown },
+    modele: {
+      id: string; provider: string; modelKey: string;
+      costInput: unknown; costOutput: unknown; costPerImage: unknown;
+    },
     contexte: ContexteAppel = {},
   ): Promise<ResultatDirect> {
     /* `attempt: 1` : c'est le premier essai, et il n'y en aura pas d'autre.

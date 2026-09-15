@@ -1,0 +1,12 @@
+-- LE PRIX À L'UNITÉ, pour ce qui ne se facture pas au jeton.
+--
+-- Une génération d'image se paie PAR IMAGE — `grok-imagine-image` est à deux
+-- cents pièce, `gpt-image-1` se calcule depuis ses jetons de sortie mais
+-- s'annonce à l'unité. Sans ce champ, `ai_usage.cost` restait NUL sur toute la
+-- voie visuelle : la marge d'un portrait était incalculable, alors que l'image
+-- est l'appel le plus cher de tout le dispositif.
+--
+-- NULLABLE, et c'est délibéré : nul veut dire « on ne sait pas », jamais
+-- « gratuit ». Un défaut à zéro ferait apparaître une marge parfaite sur un
+-- modèle qu'on a simplement oublié de tarifer.
+ALTER TABLE "ai_model" ADD COLUMN "cost_per_image" DECIMAL(12,6);
