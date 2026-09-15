@@ -1,0 +1,22 @@
+-- QUE LE CATALOGUE NOMME CE QU'IL OBTIENT.
+--
+-- `deepseek-chat` et `deepseek-reasoner` répondent encore — ce sont des alias
+-- que DeepSeek continue de servir — mais ils résolvent TOUS LES DEUX vers
+-- `deepseek-flash`. Vérifié par appel réel le 15/09/2026 : le champ `model` de
+-- la réponse le dit.
+--
+-- `deepseek-reasoner` était le repli de rang 3 de `message` et de
+-- `portrait_brief`, choisi parce qu'il RAISONNE. Il ne raisonnait pas. Un
+-- catalogue qui nomme autre chose que ce qu'il obtient ne se corrige jamais,
+-- puisque rien ne le signale : la génération réussit, simplement moins bien.
+--
+-- ON RENOMME EN PLACE plutôt que d'insérer et re-router : les lignes de
+-- `ai_task_route` désignent le modèle par son identifiant, donc elles suivent
+-- sans être réécrites — et l'historique d'`ai_usage` reste rattaché.
+--
+-- ATTENTION, LE SECOND CHANGE CE QUI TOURNE : `deepseek-chat` → `deepseek-flash`
+-- est fidèle (c'était déjà lui) ; `deepseek-reasoner` → `deepseek-v4-pro` fait
+-- passer le repli du modèle rapide au modèle profond. C'est l'intention
+-- d'origine, rétablie — et v4-pro coûte davantage, ce que le tarif dira.
+UPDATE "ai_model" SET "model_key" = 'deepseek-flash'  WHERE "model_key" = 'deepseek-chat';
+UPDATE "ai_model" SET "model_key" = 'deepseek-v4-pro' WHERE "model_key" = 'deepseek-reasoner';
