@@ -330,9 +330,23 @@ export default function Evenement() {
                   </Text>
                 </Pressable>
               )) : (
-                <Text style={[styles.vide, { color: couleurs.textMention }]}>
-                  {t.videRechercheTitre}
-                </Text>
+                /* RIEN SOUS CE NOM, MAIS UNE SORTIE. Le sélecteur disait « Rien
+                   sous ce nom » en texte nu : sur un carnet vide — le cas du
+                   premier lancement, justement — la feuille demandait POUR QUI
+                   sans offrir aucun moyen de répondre.
+                   
+                   C'est le flux voulu : la date est l'acte concret, et c'est
+                   elle qui amène le proche. L'écran de recherche du carnet
+                   tranchait déjà ainsi, avec le même libellé et le même geste ;
+                   ici la phrase manquait son bouton. */
+                <View style={styles.videAvecIssue}>
+                  <Text style={[styles.vide, { color: couleurs.textMention }]}>
+                    {t.videRechercheTitre}
+                  </Text>
+                  <Button variant="text" onPress={() => routeur.push("/(app)/proches/identite")}>
+                    {t.ajouterCeProche}
+                  </Button>
+                </View>
               )}
             </View>
           ) : null}
@@ -555,6 +569,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: nativeSpace[12], minHeight: nativeTouchMin,
   },
   ligneTexte: { fontFamily: nativeFont.bodyRegular, fontSize: 14.5 },
+  videAvecIssue: { alignItems: "center", paddingVertical: nativeSpace[8] },
   vide: { fontFamily: nativeFont.bodyRegular, fontSize: 13.5, padding: nativeSpace[14] },
   enLettres: {
     flexDirection: "row", alignItems: "baseline", flexWrap: "wrap",
