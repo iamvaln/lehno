@@ -11,8 +11,14 @@ import { origine } from "../clients/origine.js";
  * l'éprouver sans réseau ni clé d'API — sinon aucun de ces cas ne tournerait en
  * intégration continue, et le repli ne serait vérifié qu'en production. */
 export type Adaptateur = {
-  appeler(modele: string, demande: DemandeIA): Promise<ReponseIA>;
+  /* `reglages` PORTE CE QUI VIENT DU CATALOGUE, jamais de l'appelant : la
+     qualité d'image se règle en administration, et l'écran qui demande un
+     portrait n'a pas à la connaître. Optionnel — les adaptateurs de texte
+     l'ignorent. */
+  appeler(modele: string, demande: DemandeIA, reglages?: ReglagesModele): Promise<ReponseIA>;
 };
+
+export type ReglagesModele = { readonly qualiteImage?: string | null };
 
 /* À quoi rattacher la dépense d'un appel.
  *
@@ -70,7 +76,7 @@ export class RefusModele extends Error {
 
 type Candidat = {
   id: string; provider: string; modelKey: string; rank: number;
-  costInput: unknown; costOutput: unknown;
+  costInput: unknown; costOutput: unknown; costPerImage: unknown; imageQuality: unknown;
 };
 
 /* Le coût d'un appel, au tarif du catalogue AU MOMENT de l'appel.
@@ -84,10 +90,18 @@ type Candidat = {
  * Nul quand le modèle n'est pas tarifé, ou quand on ne connaît pas les jetons :
  * « on ne sait pas », jamais « gratuit ». */
 export function coutDeLAppel(
-  tarifs: { costInput: unknown; costOutput: unknown },
+  tarifs: { costInput: unknown; costOutput: unknown; costPerImage?: unknown },
   jetonsEntree: number | null,
   jetonsSortie: number | null,
 ): number | null {
+  /* LE PRIX À L'UNITÉ PASSE EN PREMIER, parce qu'un modèle d'image ne rend
+     AUCUN jeton : la formule au million lui donnerait nul, et la voie visuelle
+     resterait sans coût — celle qui, justement, coûte le plus cher. */
+  const tarifImage = tarifs.costPerImage === null || tarifs.costPerImage === undefined
+    ? null
+    : Number(tarifs.costPerImage);
+  if (tarifImage !== null) return tarifImage;
+
   const tarifEntree = tarifs.costInput === null || tarifs.costInput === undefined ? null : Number(tarifs.costInput);
   const tarifSortie = tarifs.costOutput === null || tarifs.costOutput === undefined ? null : Number(tarifs.costOutput);
   if (tarifEntree === null && tarifSortie === null) return null;
@@ -133,6 +147,7 @@ export class RouteurIAService {
     return routes.map((r) => ({
       id: r.model.id, provider: r.model.provider, modelKey: r.model.modelKey,
       rank: r.rank, costInput: r.model.costInput, costOutput: r.model.costOutput,
+      costPerImage: r.model.costPerImage, imageQuality: r.model.imageQuality,
     }));
   }
 
@@ -174,6 +189,7 @@ export class RouteurIAService {
            par la configuration » de « servi par le rang 1 de la chaîne », et
            l'écart entre l'essai et la production se lit sans enquête. */
         rank: 0, costInput: modele.costInput, costOutput: modele.costOutput,
+        costPerImage: modele.costPerImage, imageQuality: modele.imageQuality,
       },
       ...chaine,
     ];
@@ -239,7 +255,9 @@ export class RouteurIAService {
 
       const debut = Date.now();
       try {
-        const reponse = await adaptateur.appeler(c.modelKey, demande);
+        const reponse = await adaptateur.appeler(c.modelKey, demande, {
+          qualiteImage: c.imageQuality as string | null,
+        });
         const latence = Date.now() - debut;
         await this.consigner(c, tache, contexte, "success", reponse, latence, null);
         await this.succes(c.id);
@@ -363,7 +381,10 @@ export class RouteurIAService {
     tache: TacheIA,
     demande: DemandeIA,
     adaptateur: Adaptateur,
-    modele: { id: string; provider: string; modelKey: string; costInput: unknown; costOutput: unknown },
+    modele: {
+      id: string; provider: string; modelKey: string;
+      costInput: unknown; costOutput: unknown; costPerImage: unknown; imageQuality: unknown;
+    },
     contexte: ContexteAppel = {},
   ): Promise<ResultatDirect> {
     /* `attempt: 1` : c'est le premier essai, et il n'y en aura pas d'autre.

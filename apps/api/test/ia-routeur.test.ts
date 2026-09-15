@@ -41,7 +41,10 @@ describe("le routeur d'IA", () => {
 
   const modele = async (
     provider: string,
-    opts: { enabled?: boolean; outageUntil?: Date | null; coutEntree?: string; coutSortie?: string } = {},
+    opts: {
+      enabled?: boolean; outageUntil?: Date | null; coutEntree?: string;
+      coutSortie?: string; coutParImage?: string; qualiteImage?: string;
+    } = {},
   ) =>
     db.prisma.aIModel.create({
       data: {
@@ -50,6 +53,8 @@ describe("le routeur d'IA", () => {
         ...(opts.outageUntil === undefined ? {} : { outageUntil: opts.outageUntil }),
         ...(opts.coutEntree === undefined ? {} : { costInput: opts.coutEntree }),
         ...(opts.coutSortie === undefined ? {} : { costOutput: opts.coutSortie }),
+        ...(opts.coutParImage === undefined ? {} : { costPerImage: opts.coutParImage }),
+        ...(opts.qualiteImage === undefined ? {} : { imageQuality: opts.qualiteImage }),
       },
     });
 
@@ -335,6 +340,76 @@ describe("le routeur d'IA", () => {
       const l = (await usages())[0]!;
       // 1 M × 3 + 0,1 M × 15 = 4,5
       expect(Number(l.cost)).toBeCloseTo(4.5, 6);
+    });
+
+    /* LA QUALITÉ VIENT DU CATALOGUE, ET ELLE PART VRAIMENT.
+     *
+     * L'adaptateur n'envoyait NI qualité NI taille : le fournisseur choisissait.
+     * Deux portraits successifs pouvaient donc sortir différents sans que
+     * personne l'ait demandé, et le prix par image variait du simple au
+     * quinzuple — ce qui rendait tout calcul de marge illusoire. */
+    it("transmet la qualité d'image réglée en administration", async () => {
+      const a = await modele("anthropic", { coutParImage: "0.1664", qualiteImage: "high" });
+      await ranger([a.id]);
+
+      let recu: unknown;
+      await routeur.executer("message", DEMANDE, {
+        anthropic: {
+          appeler: (_m: string, _d: unknown, reglages?: unknown) => {
+            recu = reglages;
+            return Promise.resolve({ contenu: "ok", jetonsEntree: null, jetonsSortie: null });
+          },
+        } as never,
+      });
+
+      expect(recu).toMatchObject({ qualiteImage: "high" });
+    });
+
+    /* ET RIEN N'EST DEVINÉ quand elle n'est pas réglée : on ne choisit pas à la
+       place de l'administration, on laisse le fournisseur faire comme avant. */
+    it("ne transmet aucune qualité quand elle n'est pas réglée", async () => {
+      const a = await modele("anthropic", { coutEntree: "3", coutSortie: "15" });
+      await ranger([a.id]);
+
+      let recu: { qualiteImage?: string | null } | undefined;
+      await routeur.executer("message", DEMANDE, {
+        anthropic: {
+          appeler: (_m: string, _d: unknown, reglages?: unknown) => {
+            recu = reglages as { qualiteImage?: string | null };
+            return Promise.resolve({ contenu: "ok", jetonsEntree: 10, jetonsSortie: 5 });
+          },
+        } as never,
+      });
+
+      expect(recu?.qualiteImage ?? null).toBeNull();
+    });
+
+    /* CE QUI NE SE FACTURE PAS AU JETON.
+     *
+     * Une image se paie À L'UNITÉ — `grok-imagine-image` est à deux cents
+     * pièce. Un modèle d'image ne rend AUCUN jeton : la formule au million lui
+     * donnait donc nul, et `cost` restait vide sur toute la voie visuelle,
+     * celle qui coûte pourtant le plus cher. La marge d'un portrait était
+     * incalculable. */
+    it("facture à l'unité ce qui n'a pas de jetons", async () => {
+      const a = await modele("anthropic", { coutParImage: "0.02" });
+      await ranger([a.id]);
+
+      await routeur.executer("message", DEMANDE, { anthropic: repond("ok") });
+
+      expect(Number((await usages())[0]!.cost)).toBeCloseTo(0.02, 6);
+    });
+
+    /* ET LE PRIX À L'UNITÉ L'EMPORTE sur les tarifs au jeton quand les deux
+       sont posés : un modèle facturé à l'image ne se paie pas deux fois. */
+    it("ignore les tarifs au jeton quand un prix à l'unité est posé", async () => {
+      const a = await modele("anthropic", { coutEntree: "3", coutSortie: "15", coutParImage: "0.04" });
+      await ranger([a.id]);
+
+      await routeur.executer("message", DEMANDE, { anthropic: repond("ok", 1_000_000, 100_000) });
+
+      // sans le prix à l'unité, la formule au million aurait donné 4,5
+      expect(Number((await usages())[0]!.cost)).toBeCloseTo(0.04, 6);
     });
 
     /* Non tarifé veut dire « on ne sait pas », jamais « gratuit ». Écrire zéro
