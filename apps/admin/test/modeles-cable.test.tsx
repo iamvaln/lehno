@@ -13,7 +13,12 @@ const modele = (
 ) => ({
   id, fournisseur, modele, capacite: "text", actif: true,
   enPanneJusquA: null, motifDePanne: null, echecsConsecutifs: 0,
-  coutEntree: null, coutSortie: null, emplois: [],
+  coutEntree: null, coutSortie: null,
+  /* `coutParImage` et `qualiteImage` : le schéma du catalogue est STRICT, donc
+     une fixture incomplète ne fait pas échouer une assertion — elle empêche la
+     page de rendre, et l'épreuve se plaint de ne pas trouver le tableau. Le
+     message envoie chercher au mauvais endroit, d'où ce rappel ici. */
+  coutParImage: null, qualiteImage: null, emplois: [],
   misAJourLe: "2026-08-20T09:00:00.000Z", ...extra,
 });
 
