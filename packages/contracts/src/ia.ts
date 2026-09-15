@@ -65,8 +65,22 @@ export const MODELES_IA: Record<string, EntreeModele> = {
   "anthropic:claude-opus-5": { fournisseur: "anthropic", modele: "claude-opus-5", capacite: "text" },
   "anthropic:claude-sonnet-5": { fournisseur: "anthropic", modele: "claude-sonnet-5", capacite: "text" },
   "anthropic:claude-haiku-4-5-20251001": { fournisseur: "anthropic", modele: "claude-haiku-4-5-20251001", capacite: "text" },
-  "deepseek:deepseek-chat": { fournisseur: "deepseek", modele: "deepseek-chat", capacite: "text" },
-  "deepseek:deepseek-reasoner": { fournisseur: "deepseek", modele: "deepseek-reasoner", capacite: "text" },
+  /* LES NOMS EXPLICITES, ET C'EST TOUT L'ENJEU.
+   *
+   * `deepseek-chat` et `deepseek-reasoner` répondent encore — ce sont des alias
+   * que DeepSeek continue de servir — mais ils résolvent TOUS LES DEUX vers
+   * `deepseek-flash`. Vérifié par appel réel le 15/09/2026 : le champ `model`
+   * de la réponse le dit.
+   *
+   * Le second était le repli de rang 3 de `message` et de `portrait_brief`,
+   * choisi parce qu'il RAISONNE. Il ne raisonnait pas. Un catalogue qui nomme
+   * autre chose que ce qu'il obtient ne se corrige pas, puisque rien ne le
+   * signale : la génération réussit, simplement moins bien.
+   *
+   * On nomme donc ce qui répond. `deepseek-v4-pro` prend la place du prétendu
+   * raisonneur — c'est le modèle profond de la maison, et il porte son prix. */
+  "deepseek:deepseek-flash": { fournisseur: "deepseek", modele: "deepseek-flash", capacite: "text" },
+  "deepseek:deepseek-v4-pro": { fournisseur: "deepseek", modele: "deepseek-v4-pro", capacite: "text" },
   "xai:grok-4.6": { fournisseur: "xai", modele: "grok-4.6", capacite: "text" },
   "xai:grok-imagine-image": { fournisseur: "xai", modele: "grok-imagine-image", capacite: "image" },
   /* `gpt-image-2` en tête des chaînes d'image, et voici ce qui l'y met — trois
@@ -121,22 +135,22 @@ export const CLES_MODELES = Object.keys(MODELES_IA);
 export const CHAINES_PAR_DEFAUT: Record<TacheIA, readonly string[]> = {
   note_classification: [
     "anthropic:claude-haiku-4-5-20251001",
-    "deepseek:deepseek-chat",
+    "deepseek:deepseek-flash",
     "xai:grok-4.6",
   ],
   sensitive_detection: [
     "anthropic:claude-sonnet-5",
     "anthropic:claude-haiku-4-5-20251001",
-    "deepseek:deepseek-chat",
+    "deepseek:deepseek-flash",
   ],
   message: [
     "anthropic:claude-opus-5",
     "anthropic:claude-sonnet-5",
-    "deepseek:deepseek-reasoner",
+    "deepseek:deepseek-v4-pro",
   ],
   gift_ideas: [
     "anthropic:claude-sonnet-5",
-    "deepseek:deepseek-chat",
+    "deepseek:deepseek-flash",
     "xai:grok-4.6",
   ],
   /* Le brief prend le MEILLEUR modèle de texte, pas le moins cher. Il décide de
@@ -146,7 +160,7 @@ export const CHAINES_PAR_DEFAUT: Record<TacheIA, readonly string[]> = {
   portrait_brief: [
     "anthropic:claude-opus-5",
     "anthropic:claude-sonnet-5",
-    "deepseek:deepseek-reasoner",
+    "deepseek:deepseek-v4-pro",
   ],
   illustration: ["openai:gpt-image-2", "xai:grok-imagine-image", "openai:gpt-image-1"],
   photo_style: ["openai:gpt-image-2", "xai:grok-imagine-image", "openai:gpt-image-1"],

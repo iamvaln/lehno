@@ -418,6 +418,15 @@ export const modeleIaSchema = z.object({
   echecsConsecutifs: z.number().int(),
   coutEntree: z.number().nullable(),
   coutSortie: z.number().nullable(),
+  /* POUR CE QUI NE SE FACTURE PAS AU JETON. Une image se paie à l'unité, et un
+     modèle d'image ne rend aucun jeton : sans ce champ, le coût restait nul sur
+     toute la voie visuelle — l'appel le plus cher du dispositif. Nul veut dire
+     « pas tarifé », jamais « gratuit ». */
+  coutParImage: z.number().nullable(),
+  /* La qualité demandée au fournisseur, pour les modèles d'image. Sans elle il
+     choisit, donc deux rendus successifs peuvent différer — et le prix par
+     image varie du simple au quinzuple. */
+  qualiteImage: z.enum(["low", "medium", "high"]).nullable(),
   /** Où ce modèle sert, pour qu'on voie ce qu'on casse en le coupant. */
   emplois: z.array(z.object({ tache: z.string(), rang: z.number().int() }).strict()),
   misAJourLe: z.string(),
