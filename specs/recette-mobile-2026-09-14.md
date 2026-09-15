@@ -14,7 +14,10 @@ lesquels avaient été ouverts.
   et les états vides. Cela n'attrape aucun geste.
 - **Jamais ouvert** — rien.
 
-## Éprouvé — 16 écrans
+**Le compte au 15 septembre : 18 éprouvés, 10 vus, 16 jamais ouverts.** Le
+quarante-cinquième est `index`, la route d'entrée, qu'on traverse sans la voir.
+
+## Éprouvé — 18 écrans
 
 | écran | ce qui a été fait |
 | --- | --- |
@@ -24,8 +27,7 @@ lesquels avaient été ouverts.
 | `proches/[id]` | lecture de la fiche, ouverture d'une note en correction |
 | `proches/recherche` | recherche à vide, geste « Ajouter ce proche » |
 | `dates` | état vide, « Ajouter une date » suivi jusqu'au formulaire |
-| `evenement` | formulaire ouvert, liste « pour qui » dépliée — **rien enregistré** |
-| `(connexion)/*` | inscription complète sur la sandbox : adresse, code, pseudo, bienvenue |
+| `(connexion)/*` | inscription complète sur la sandbox — **quatre écrans** : adresse, code, pseudo, bienvenue |
 | `collecte` | le squelette sans fin, puis sa fermeture après correctif |
 | `proches/identite` | **création** d'Awa puis **modification** — sa date de naissance ; les deux enregistrées |
 | `evenement` | un anniversaire posé pour de bon, repris depuis la date de naissance |
@@ -35,7 +37,7 @@ lesquels avaient été ouverts.
 | `parrainage` | drapeau éteint par l'API d'administration : l'écran se ferme |
 | `accueil` | les deux états vides, puis le régime nominal après la création |
 
-## Vu — 8 écrans
+## Vu — 10 écrans
 
 `proches/index`, `notifications`, `mouvements`, `monmur` (deux onglets),
 `reservations`, `valider`, `reprises`, `paiement`, `occasion` (une occasion
@@ -45,7 +47,7 @@ Leurs états vides sont lus et jugés corrects. **Aucun de leurs gestes n'est
 éprouvé** — ni « Nouvelle wishlist », ni « Aperçu de ma page », ni la
 préparation d'un message depuis une occasion.
 
-## Jamais ouvert — 15 écrans
+## Jamais ouvert — 16 écrans
 
 `aide`, `apercu`, `apercu-liste`, `cadrage`, `donnees`, `fermeture`, `moi`,
 `preparation`, `profil`, `rappels`, `recharge`, `reglages`, `securite`,
@@ -75,7 +77,7 @@ sonde ; la jonction ne se verra qu'en production.
 
 ## Ce que ces passages ont trouvé
 
-Sept défauts, tous invisibles aux 1283 cas de la suite mobile :
+Huit défauts, tous invisibles aux cas de la suite mobile :
 
 1. **La feuille d'avis se montait dans la page** — son voile ne couvrait que sa
    propre boîte, et le « Refaire » de l'écran tombait sur son « Envoyer ». Un
@@ -90,7 +92,6 @@ Sept défauts, tous invisibles aux 1283 cas de la suite mobile :
 7. **La garde de fermeture était posée sous le squelette** dans huit écrans :
    elle ne tirait jamais, et le test qui la vérifiait cherchait la ligne sans
    vérifier qu'elle était atteignable. (#262)
-
 8. **Aucune élision devant les prénoms** — « La wishlist de Awa », « Le Mur de
    Awa », sur les deux pages qu'on envoie à ses proches. Six libellés, et la
    garde écrite pour les tenir ne détectait rien tant qu'elle n'a pas été
