@@ -1754,6 +1754,16 @@ model AIModel {
   /// NUL ET NON ZÉRO quand il n'est pas renseigné : « on ne sait pas », jamais
   /// « gratuit ». La même règle que les deux tarifs au-dessus.
   costPerImage Decimal?   @map("cost_per_image") @db.Decimal(12, 6)
+  /// LA QUALITÉ DEMANDÉE, pour les modèles d'image.
+  ///
+  /// L'adaptateur n'envoyait NI qualité NI taille : le fournisseur choisissait,
+  /// donc deux portraits successifs pouvaient sortir différents sans que
+  /// personne l'ait demandé — et le prix par image variait du simple au
+  /// quinzuple sans qu'on le sache.
+  ///
+  /// EN BASE ET NON EN DUR, comme le tarif juste au-dessus : la qualité est
+  /// précisément ce qu'on veut pouvoir baisser un jour de pic, sans livrer.
+  imageQuality String?    @map("image_quality") @db.VarChar(16)
 
   /**
    * DEUX interrupteurs, et surtout pas un seul.

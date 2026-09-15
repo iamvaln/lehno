@@ -11,8 +11,14 @@ import { origine } from "../clients/origine.js";
  * l'éprouver sans réseau ni clé d'API — sinon aucun de ces cas ne tournerait en
  * intégration continue, et le repli ne serait vérifié qu'en production. */
 export type Adaptateur = {
-  appeler(modele: string, demande: DemandeIA): Promise<ReponseIA>;
+  /* `reglages` PORTE CE QUI VIENT DU CATALOGUE, jamais de l'appelant : la
+     qualité d'image se règle en administration, et l'écran qui demande un
+     portrait n'a pas à la connaître. Optionnel — les adaptateurs de texte
+     l'ignorent. */
+  appeler(modele: string, demande: DemandeIA, reglages?: ReglagesModele): Promise<ReponseIA>;
 };
+
+export type ReglagesModele = { readonly qualiteImage?: string | null };
 
 /* À quoi rattacher la dépense d'un appel.
  *
@@ -70,7 +76,7 @@ export class RefusModele extends Error {
 
 type Candidat = {
   id: string; provider: string; modelKey: string; rank: number;
-  costInput: unknown; costOutput: unknown; costPerImage: unknown;
+  costInput: unknown; costOutput: unknown; costPerImage: unknown; imageQuality: unknown;
 };
 
 /* Le coût d'un appel, au tarif du catalogue AU MOMENT de l'appel.
@@ -141,7 +147,7 @@ export class RouteurIAService {
     return routes.map((r) => ({
       id: r.model.id, provider: r.model.provider, modelKey: r.model.modelKey,
       rank: r.rank, costInput: r.model.costInput, costOutput: r.model.costOutput,
-      costPerImage: r.model.costPerImage,
+      costPerImage: r.model.costPerImage, imageQuality: r.model.imageQuality,
     }));
   }
 
@@ -183,7 +189,7 @@ export class RouteurIAService {
            par la configuration » de « servi par le rang 1 de la chaîne », et
            l'écart entre l'essai et la production se lit sans enquête. */
         rank: 0, costInput: modele.costInput, costOutput: modele.costOutput,
-        costPerImage: modele.costPerImage,
+        costPerImage: modele.costPerImage, imageQuality: modele.imageQuality,
       },
       ...chaine,
     ];
@@ -249,7 +255,9 @@ export class RouteurIAService {
 
       const debut = Date.now();
       try {
-        const reponse = await adaptateur.appeler(c.modelKey, demande);
+        const reponse = await adaptateur.appeler(c.modelKey, demande, {
+          qualiteImage: c.imageQuality as string | null,
+        });
         const latence = Date.now() - debut;
         await this.consigner(c, tache, contexte, "success", reponse, latence, null);
         await this.succes(c.id);
@@ -375,7 +383,7 @@ export class RouteurIAService {
     adaptateur: Adaptateur,
     modele: {
       id: string; provider: string; modelKey: string;
-      costInput: unknown; costOutput: unknown; costPerImage: unknown;
+      costInput: unknown; costOutput: unknown; costPerImage: unknown; imageQuality: unknown;
     },
     contexte: ContexteAppel = {},
   ): Promise<ResultatDirect> {

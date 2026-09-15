@@ -348,7 +348,7 @@ export class PortraitService {
           /* `costPerImage` COMPRIS, et c'est ici qu'il compte le plus : ce
              chemin produit des IMAGES, qui ne se facturent pas au jeton.
              L'omettre laissait `cost` nul sur l'appel le plus cher. */
-          costInput: true, costOutput: true, costPerImage: true,
+          costInput: true, costOutput: true, costPerImage: true, imageQuality: true,
         },
       })
       : null;

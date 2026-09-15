@@ -56,9 +56,14 @@ export class ImageAdaptateur implements Adaptateur {
    * les deux fournisseurs. Le drapeau qui départage `generations` n'a donc pas
    * d'équivalent — vérifié plutôt que supposé, comme pour l'autre chemin.
    */
-  private async editer(modele: string, demande: DemandeIA, image: Buffer): Promise<Response> {
+  private async editer(
+    modele: string, demande: DemandeIA, image: Buffer,
+    reglages?: { qualiteImage?: string | null },
+  ): Promise<Response> {
     const corps = new FormData();
     corps.append("model", modele);
+    // La retouche suit la même qualité que la création — voir `appeler`.
+    if (reglages?.qualiteImage) corps.append("quality", reglages.qualiteImage);
     corps.append("prompt", demande.invite);
     corps.append("n", "1");
     /* `Blob` plutôt qu'un flux : la photo est déjà en mémoire — elle vient du
@@ -79,11 +84,13 @@ export class ImageAdaptateur implements Adaptateur {
     });
   }
 
-  async appeler(modele: string, demande: DemandeIA): Promise<ReponseIA> {
+  async appeler(
+    modele: string, demande: DemandeIA, reglages?: { qualiteImage?: string | null },
+  ): Promise<ReponseIA> {
     let res: Response;
     try {
       res = demande.image !== undefined
-        ? await this.editer(modele, demande, demande.image)
+        ? await this.editer(modele, demande, demande.image, reglages)
         : await fetch(`${this.base}/images/generations`, {
           method: "POST",
           headers: { authorization: `Bearer ${this.cle}`, "content-type": "application/json" },
@@ -91,6 +98,14 @@ export class ImageAdaptateur implements Adaptateur {
             model: modele,
             prompt: demande.invite,
             n: 1,
+            /* LA QUALITÉ VIENT DU CATALOGUE, et l'omettre n'était pas neutre :
+               sans elle le fournisseur choisit, donc deux portraits successifs
+               pouvaient sortir différents sans que personne l'ait demandé — et
+               le prix par image variait du simple au quinzuple, ce qui rendait
+               toute marge incalculable.
+               Omise quand elle n'est pas réglée : on ne devine pas à la place
+               de l'administration. */
+            ...(reglages?.qualiteImage ? { quality: reglages.qualiteImage } : {}),
             ...(this.demandeLeFormat ? { response_format: "b64_json" } : {}),
           }),
           signal: AbortSignal.timeout(DELAI_MS),

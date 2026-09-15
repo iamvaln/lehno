@@ -41,7 +41,10 @@ describe("le routeur d'IA", () => {
 
   const modele = async (
     provider: string,
-    opts: { enabled?: boolean; outageUntil?: Date | null; coutEntree?: string; coutSortie?: string; coutParImage?: string } = {},
+    opts: {
+      enabled?: boolean; outageUntil?: Date | null; coutEntree?: string;
+      coutSortie?: string; coutParImage?: string; qualiteImage?: string;
+    } = {},
   ) =>
     db.prisma.aIModel.create({
       data: {
@@ -51,6 +54,7 @@ describe("le routeur d'IA", () => {
         ...(opts.coutEntree === undefined ? {} : { costInput: opts.coutEntree }),
         ...(opts.coutSortie === undefined ? {} : { costOutput: opts.coutSortie }),
         ...(opts.coutParImage === undefined ? {} : { costPerImage: opts.coutParImage }),
+        ...(opts.qualiteImage === undefined ? {} : { imageQuality: opts.qualiteImage }),
       },
     });
 
@@ -336,6 +340,48 @@ describe("le routeur d'IA", () => {
       const l = (await usages())[0]!;
       // 1 M × 3 + 0,1 M × 15 = 4,5
       expect(Number(l.cost)).toBeCloseTo(4.5, 6);
+    });
+
+    /* LA QUALITÉ VIENT DU CATALOGUE, ET ELLE PART VRAIMENT.
+     *
+     * L'adaptateur n'envoyait NI qualité NI taille : le fournisseur choisissait.
+     * Deux portraits successifs pouvaient donc sortir différents sans que
+     * personne l'ait demandé, et le prix par image variait du simple au
+     * quinzuple — ce qui rendait tout calcul de marge illusoire. */
+    it("transmet la qualité d'image réglée en administration", async () => {
+      const a = await modele("anthropic", { coutParImage: "0.1664", qualiteImage: "high" });
+      await ranger([a.id]);
+
+      let recu: unknown;
+      await routeur.executer("message", DEMANDE, {
+        anthropic: {
+          appeler: (_m: string, _d: unknown, reglages?: unknown) => {
+            recu = reglages;
+            return Promise.resolve({ contenu: "ok", jetonsEntree: null, jetonsSortie: null });
+          },
+        } as never,
+      });
+
+      expect(recu).toMatchObject({ qualiteImage: "high" });
+    });
+
+    /* ET RIEN N'EST DEVINÉ quand elle n'est pas réglée : on ne choisit pas à la
+       place de l'administration, on laisse le fournisseur faire comme avant. */
+    it("ne transmet aucune qualité quand elle n'est pas réglée", async () => {
+      const a = await modele("anthropic", { coutEntree: "3", coutSortie: "15" });
+      await ranger([a.id]);
+
+      let recu: { qualiteImage?: string | null } | undefined;
+      await routeur.executer("message", DEMANDE, {
+        anthropic: {
+          appeler: (_m: string, _d: unknown, reglages?: unknown) => {
+            recu = reglages as { qualiteImage?: string | null };
+            return Promise.resolve({ contenu: "ok", jetonsEntree: 10, jetonsSortie: 5 });
+          },
+        } as never,
+      });
+
+      expect(recu?.qualiteImage ?? null).toBeNull();
     });
 
     /* CE QUI NE SE FACTURE PAS AU JETON.
