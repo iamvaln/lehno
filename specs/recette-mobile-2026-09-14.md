@@ -14,7 +14,10 @@ lesquels avaient été ouverts.
   et les états vides. Cela n'attrape aucun geste.
 - **Jamais ouvert** — rien.
 
-## Éprouvé — 9 écrans
+**Le compte au 15 septembre : 18 éprouvés, 10 vus, 16 jamais ouverts.** Le
+quarante-cinquième est `index`, la route d'entrée, qu'on traverse sans la voir.
+
+## Éprouvé — 18 écrans
 
 | écran | ce qui a été fait |
 | --- | --- |
@@ -24,30 +27,34 @@ lesquels avaient été ouverts.
 | `proches/[id]` | lecture de la fiche, ouverture d'une note en correction |
 | `proches/recherche` | recherche à vide, geste « Ajouter ce proche » |
 | `dates` | état vide, « Ajouter une date » suivi jusqu'au formulaire |
-| `evenement` | formulaire ouvert, liste « pour qui » dépliée — **rien enregistré** |
-| `(connexion)/*` | inscription complète sur la sandbox : adresse, code, pseudo, bienvenue |
+| `(connexion)/*` | inscription complète sur la sandbox — **quatre écrans** : adresse, code, pseudo, bienvenue |
 | `collecte` | le squelette sans fin, puis sa fermeture après correctif |
+| `proches/identite` | **création** d'Awa puis **modification** — sa date de naissance ; les deux enregistrées |
+| `evenement` | un anniversaire posé pour de bon, repris depuis la date de naissance |
+| `listes` | une wishlist créée |
+| `souhaits` | un souhait ajouté, et les gestes de sa carte |
+| `souhait` | le détail : état, visibilité, modification, retrait |
+| `parrainage` | drapeau éteint par l'API d'administration : l'écran se ferme |
+| `accueil` | les deux états vides, puis le régime nominal après la création |
 
-## Vu — 12 écrans
+## Vu — 10 écrans
 
-`accueil` (deux états), `proches/index`, `notifications`, `mouvements`,
-`listes`, `monmur` (deux onglets), `reservations`, `valider`, `reprises`,
-`paiement`, `occasion` (une occasion passée), `legal`.
+`proches/index`, `notifications`, `mouvements`, `monmur` (deux onglets),
+`reservations`, `valider`, `reprises`, `paiement`, `occasion` (une occasion
+passée), `legal`.
 
 Leurs états vides sont lus et jugés corrects. **Aucun de leurs gestes n'est
 éprouvé** — ni « Nouvelle wishlist », ni « Aperçu de ma page », ni la
 préparation d'un message depuis une occasion.
 
-## Jamais ouvert — 17 écrans
+## Jamais ouvert — 16 écrans
 
-`aide`, `apercu`, `cadrage`, `donnees`, `fermeture`, `moi`, `preparation`,
-`proches/identite`, `profil`, `rappels`, `recharge`, `reglages`, `securite`,
-`souhait`, `(connexion)/ouverture`, `controle`, `maintenance`.
+`aide`, `apercu`, `apercu-liste`, `cadrage`, `donnees`, `fermeture`, `moi`,
+`preparation`, `profil`, `rappels`, `recharge`, `reglages`, `securite`,
+`(connexion)/ouverture`, `controle`, `maintenance`.
 
-Parmi eux, trois pèsent plus que les autres :
+Parmi eux, deux pèsent plus que les autres :
 
-- **`proches/identite`** — c'est par là que se crée un proche, donc le premier
-  geste réel de quelqu'un qui arrive. Jamais ouvert.
 - **`moi` et `profil`** — la fiche de soi, dont un lot entier est sorti le
   11 septembre.
 - **`recharge`** — l'achat de crédits. Rien de ce qui touche à l'argent n'a été
@@ -55,9 +62,10 @@ Parmi eux, trois pèsent plus que les autres :
 
 ## Ce qui empêche d'avancer
 
-**Il faut des données.** Le compte de la sandbox est neuf : pas de proche, pas
-de date, donc ni occasion, ni préparation, ni souhait, ni portrait. Créer un
-proche et une date débloque à lui seul une dizaine d'écrans.
+~~**Il faut des données.**~~ **Fait le 15 septembre** : Awa existe sur la
+sandbox, avec sa date de naissance et son anniversaire au 4 mars, plus une
+wishlist et un souhait. `preparation`, `occasion` et le portrait sont désormais
+atteignables — ils restent à éprouver.
 
 **Les idées restent hors de portée** : `generation.ideas` dépend de `GiftGiven`,
 et rien ne le produit sur un compte neuf.
@@ -69,7 +77,7 @@ sonde ; la jonction ne se verra qu'en production.
 
 ## Ce que ces passages ont trouvé
 
-Sept défauts, tous invisibles aux 1283 cas de la suite mobile :
+Huit défauts, tous invisibles aux cas de la suite mobile :
 
 1. **La feuille d'avis se montait dans la page** — son voile ne couvrait que sa
    propre boîte, et le « Refaire » de l'écran tombait sur son « Envoyer ». Un
@@ -84,6 +92,10 @@ Sept défauts, tous invisibles aux 1283 cas de la suite mobile :
 7. **La garde de fermeture était posée sous le squelette** dans huit écrans :
    elle ne tirait jamais, et le test qui la vérifiait cherchait la ligne sans
    vérifier qu'elle était atteignable. (#262)
+8. **Aucune élision devant les prénoms** — « La wishlist de Awa », « Le Mur de
+   Awa », sur les deux pages qu'on envoie à ses proches. Six libellés, et la
+   garde écrite pour les tenir ne détectait rien tant qu'elle n'a pas été
+   éprouvée sur un échantillon. (#265)
 
 Deux autres sont partis au serveur : le `resultId` du portrait (#244, corrigé),
 et `hasPersons` qui compte la fiche de soi — donc l'écran de premier lancement
