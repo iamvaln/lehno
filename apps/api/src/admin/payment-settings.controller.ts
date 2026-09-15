@@ -40,6 +40,27 @@ const palierSchema = z.object({
   reason: motifSchema,
 }).strict();
 
+/* LE PRIX D'UNE ACTION PAYANTE.
+ *
+ * Il vivait en base sans aucun moyen de l'y changer : le registre du contrat
+ * (`ACTIONS_PAYANTES`) dit « le prix se règle en administration sans
+ * livraison », et c'était faux — il n'existait ni route ni écran. Le seul
+ * moyen de passer un portrait à deux crédits était une requête SQL sur la
+ * production.
+ *
+ * `cout` SEUL, jamais le libellé ni le code : le code est la clé que le
+ * registre et `ActionRun` partagent, et le libellé vient du même registre.
+ * Les laisser modifiables ferait diverger le panneau du contrat, sans que rien
+ * ne le signale. */
+const actionPayanteSchema = z.object({
+  cout: z.number().int().positive().max(100).optional(),
+  actif: z.boolean().optional(),
+  reason: motifSchema,
+}).strict().refine(
+  (v) => v.cout !== undefined || v.actif !== undefined,
+  { message: "rien à modifier : donnez au moins `cout` ou `actif`" },
+);
+
 const canalCreationSchema = z.object({
   nature: z.enum(["mobile_money", "card"]),
   operateur: z.string().min(1).max(40),
@@ -182,6 +203,42 @@ export class PaymentSettingsService {
           },
         });
         return { id };
+      },
+    );
+  }
+
+  // ─── Les actions payantes ────────────────────────────────────────────────
+
+  async actionsPayantes() {
+    const lignes = await this.prisma.premiumAction.findMany({ orderBy: { code: "asc" } });
+    return {
+      items: lignes.map((a) => ({
+        code: a.code, libelle: a.label, cout: a.creditCost, actif: a.enabled,
+      })),
+    };
+  }
+
+  /* PAR LE CODE, PAS PAR L'IDENTIFIANT. Le code est ce que le registre du
+     contrat, `ActionRun` et le panneau nomment tous les trois ; l'identifiant
+     est un détail de stockage que personne d'autre ne connaît. */
+  async modifierActionPayante(
+    auteurId: string, code: string, entree: z.infer<typeof actionPayanteSchema>,
+  ) {
+    const avant = await this.prisma.premiumAction.findUnique({ where: { code } });
+    if (!avant) throw new AppError("not_found", "unknown premium action");
+
+    return this.ecrire(
+      auteurId, "premium_action_update", entree.reason, "premium_action", avant.id,
+      { code, from: { cout: avant.creditCost, actif: avant.enabled }, to: entree },
+      async (tx) => {
+        await tx.premiumAction.update({
+          where: { code },
+          data: {
+            ...(entree.cout !== undefined ? { creditCost: entree.cout } : {}),
+            ...(entree.actif !== undefined ? { enabled: entree.actif } : {}),
+          },
+        });
+        return { code };
       },
     );
   }
@@ -362,6 +419,23 @@ export class PaymentSettingsController {
     @Req() requete: { admin?: { id: string } },
   ) {
     return this.service.modifierPalier(this.auteur(requete), id, corps);
+  }
+
+  /* LECTURE OUVERTE AU MÊME RÔLE QUE L'ÉCRITURE. Toute la famille Économie est
+     fermée au support, lecture comprise (ux-admin §6) : ce sont les leviers qui
+     engagent le service et ses coûts. */
+  @Get("premium-actions")
+  actionsPayantes() {
+    return this.service.actionsPayantes();
+  }
+
+  @Patch("premium-actions/:code")
+  modifierActionPayante(
+    @Param("code") code: string,
+    @Body(new ZodValidationPipe(actionPayanteSchema)) corps: z.infer<typeof actionPayanteSchema>,
+    @Req() requete: { admin?: { id: string } },
+  ) {
+    return this.service.modifierActionPayante(this.auteur(requete), code, corps);
   }
 
   @Get("payment-channels")

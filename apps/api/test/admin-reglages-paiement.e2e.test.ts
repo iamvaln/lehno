@@ -263,4 +263,118 @@ describe("administration — les réglages du paiement", () => {
       expect((await appeler(chemin, {})).status, chemin).toBe(401);
     }
   });
+
+  /* LE PRIX D'UNE ACTION PAYANTE SE RÈGLE ENFIN.
+   *
+   * Il vivait en base sans aucun moyen de l'y changer. Le registre du contrat
+   * affirme pourtant « le prix se règle en administration sans livraison » —
+   * c'était faux : ni route ni écran. Le seul moyen de passer un portrait à
+   * deux crédits était une requête SQL sur la production.
+   *
+   * Ce n'est pas un confort : le prix décide de la marge, et la marge d'une
+   * génération dépend de tarifs de modèles qui bougent sans prévenir. */
+  describe("les actions payantes", () => {
+    const ACTIONS = ["gift_ideas", "portrait", "wish_message"] as const;
+
+    const semer = async (): Promise<void> => {
+      await db.prisma.premiumAction.createMany({
+        data: [
+          { code: "gift_ideas", label: "Des idées de cadeaux", creditCost: 1 },
+          { code: "portrait", label: "Un portrait", creditCost: 1 },
+          { code: "wish_message", label: "Un message", creditCost: 1 },
+        ],
+        skipDuplicates: true,
+      });
+    };
+
+    it("liste les trois actions et leur prix", async () => {
+      await semer();
+      const { entete } = await session("admin");
+      const r = await appeler("premium-actions", entete);
+      expect(r.status).toBe(200);
+      const corps = (await r.json()) as { items: { code: string; cout: number }[] };
+      expect(corps.items.map((a) => a.code).sort()).toEqual([...ACTIONS]);
+      expect(corps.items.every((a) => a.cout === 1)).toBe(true);
+    });
+
+    it("change le prix, et le changement se relit", async () => {
+      await semer();
+      const { entete } = await session("admin");
+      const r = await appeler("premium-actions/portrait", entete, "PATCH", {
+        cout: 2, reason: "Le portrait consomme un brief ET une image",
+      });
+      expect(r.status).toBe(200);
+
+      const apres = await db.prisma.premiumAction.findUnique({ where: { code: "portrait" } });
+      expect(apres?.creditCost).toBe(2);
+      /* Et les autres n'ont pas bougé : le geste porte sur UNE action. */
+      const autre = await db.prisma.premiumAction.findUnique({ where: { code: "wish_message" } });
+      expect(autre?.creditCost).toBe(1);
+    });
+
+    /* LE MOTIF EST OBLIGATOIRE, comme pour tout geste d'administration : un
+       prix qui change sans raison consignée est un prix que personne ne peut
+       expliquer trois mois plus tard. */
+    it("refuse un changement sans motif", async () => {
+      await semer();
+      const { entete } = await session("admin");
+      const r = await appeler("premium-actions/portrait", entete, "PATCH", { cout: 2 });
+      expect(r.status).toBe(400);
+      expect((await db.prisma.premiumAction.findUnique({ where: { code: "portrait" } }))?.creditCost).toBe(1);
+    });
+
+    /* ET UN CORPS QUI NE DEMANDE RIEN EST REFUSÉ. Sans ce refus, un appel vide
+       mais bien formé consignerait un motif au journal sans rien changer — une
+       ligne d'audit qui ment sur ce qui s'est passé. */
+    it("refuse un appel qui ne modifie rien", async () => {
+      await semer();
+      const { entete } = await session("admin");
+      const r = await appeler("premium-actions/portrait", entete, "PATCH", {
+        reason: "Je ne change rien du tout",
+      });
+      expect(r.status).toBe(400);
+    });
+
+    it("rend 404 sur une action inconnue", async () => {
+      await semer();
+      const { entete } = await session("admin");
+      const r = await appeler("premium-actions/inexistante", entete, "PATCH", {
+        cout: 2, reason: "Action qui n'existe pas",
+      });
+      expect(r.status).toBe(404);
+    });
+
+    /* LE GESTE EST CONSIGNÉ, avec l'avant et l'après. C'est ce qui permet de
+       répondre à « pourquoi le portrait est passé à deux crédits le 15 ». */
+    it("consigne le geste au journal, avec l'avant et l'après", async () => {
+      await semer();
+      const { compte, entete } = await session("admin");
+      await appeler("premium-actions/portrait", entete, "PATCH", {
+        cout: 2, reason: "Le portrait consomme un brief ET une image",
+      });
+
+      const ligne = await db.prisma.auditLog.findFirst({
+        where: { action: "premium_action_update" }, orderBy: { createdAt: "desc" },
+      });
+      expect(ligne).not.toBeNull();
+      expect(ligne?.actorId).toBe(compte.id);
+      expect(ligne?.reason).toBe("Le portrait consomme un brief ET une image");
+      /* L'AVANT ET L'APRÈS, tous les deux : un journal qui ne porte que la
+         valeur d'arrivée ne dit pas ce qu'on a quitté. */
+      const details = JSON.stringify(ligne?.metadata);
+      expect(details).toContain("\"cout\":1");
+      expect(details).toContain("\"cout\":2");
+    });
+
+    /* FERMÉ AU SUPPORT, LECTURE COMPRISE. Toute la famille Économie l'est
+       (ux-admin §6) : ce sont les leviers qui engagent le service et ses coûts. */
+    it("est fermée au support, y compris en lecture", async () => {
+      await semer();
+      const { entete } = await session("support");
+      expect((await appeler("premium-actions", entete)).status).toBe(403);
+      expect((await appeler("premium-actions/portrait", entete, "PATCH", {
+        cout: 2, reason: "Tentative depuis le support",
+      })).status).toBe(403);
+    });
+  });
 });
