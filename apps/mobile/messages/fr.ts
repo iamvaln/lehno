@@ -15,7 +15,7 @@ const NOMBRES_FR: Record<number, string> = {
   3: "Trois", 4: "Quatre", 5: "Cinq", 6: "Six",
 };
 
-import { endSentence } from "../lib/text.js";
+import { elideBefore, endSentence } from "../lib/text.js";
 
 export const fr = {
   connexionTitre: "Soyez là le jour J",
@@ -467,7 +467,7 @@ export const fr = {
   moiMotsN: (n: number) => n + " mots",
   moiCreerListe: "Créer une liste",
   listeApercu: "Voir et partager",
-  pubListeTitre: (qui: string) => "La wishlist de " + qui,
+  pubListeTitre: (qui: string) => "La wishlist " + elideBefore("de", qui),
   pubListeQuand: (date: string) => "Pour le " + date,
   pubListeReserver: "Réserver",
   pubListeReserve: "Réservé",
@@ -645,7 +645,7 @@ export const fr = {
      la promesse du produit, rendue au moment où elle coûte le plus cher à tenir. */
   portraitAttenteNotes: (n: number, qui: string) =>
     "On relit vos " + n + " notes sur " + qui + ".",
-  portraitAttenteSansNote: (qui: string) => "On rassemble ce qu'on sait de " + qui + ".",
+  portraitAttenteSansNote: (qui: string) => "On rassemble ce qu'on sait " + elideBefore("de", qui) + ".",
   /* Sans nom — un lien profond n'en porte pas —, on n'écrit pas une phrase à
      trou : « on relit vos 9 notes sur . » est pire que de ne pas nommer. */
   portraitAttenteSansNom: "On rassemble ce qu'on sait.",
@@ -683,7 +683,7 @@ export const fr = {
   collecteRevoqueTexte: "Ce lien ne mène plus à rien. Vous pouvez en créer un autre.",
   collecteRevenu: "Ce qui est revenu",
   collecteApercuTitre: "La page qui s'ouvrira",
-  collecteApercuInvite: (qui: string) => "L'invitation vient de " + qui + ".",
+  collecteApercuInvite: (qui: string) => "L'invitation vient " + elideBefore("de", qui) + ".",
   collecteApercuDate: "La date de naissance y est déjà proposée, à confirmer.",
   collecteApercuDateAbsente: "La date de naissance y est demandée.",
   collecteApercuMur: "Un lien discret y mène à votre Mur.",
@@ -720,7 +720,7 @@ export const fr = {
   /* ─── Surfaces publiques dans l'app (3.12) ─── */
   pubRevoqueTexte: "Demandez un nouveau lien à qui vous l'a envoyé.",
   pubCollectePlaceholder: "ex. son anniversaire est le 22 mars, et la céramique est une passion",
-  murGoutsLabel: (qui: string) => "Ce que " + qui + " aime",
+  murGoutsLabel: (qui: string) => "Ce " + elideBefore("que", qui) + " aime",
   murSouhaitsLabel: "Ce qui lui ferait plaisir",
   murListeCta: "Voir sa wishlist",
   murMotLabel: "Les mots reçus",
@@ -741,7 +741,7 @@ export const fr = {
   pubReconnu: (qui: string) => "Vous êtes connecté comme " + qui + ".",
   pubSansCompte: "Répondre ne demande aucun compte.",
   pubMurSansCompte: "Laisser un mot ne demande aucun compte.",
-  pubMurTitre: (qui: string) => "Le Mur de " + qui,
+  pubMurTitre: (qui: string) => "Le Mur " + elideBefore("de", qui),
   pubCollecteTitre: (qui: string) => qui + " vous invite à remplir ce qui l'aidera",
   pubVoeuTitre: (qui: string) => "Laissez un mot à " + qui,
   pubVoeuChamp: "Votre message",
@@ -984,7 +984,7 @@ export const fr = {
   evtAutreType: "Un autre type d'événement",
   evtPourQui: "Pour qui",
   evtDate: "La date",
-  evtSansNaissance: (qui: string) => "Nous ne connaissons pas la date de naissance de " + qui + ".",
+  evtSansNaissance: (qui: string) => "Nous ne connaissons pas la date de naissance " + elideBefore("de", qui) + ".",
   evtSansNaissanceAide: "Un anniversaire se compte depuis elle. Ajoutez-la à sa fiche.",
   evtOuvrirLaFiche: "Ouvrir sa fiche",
   evtJour: "Jour",
