@@ -12,6 +12,7 @@ import { AppModule } from "../src/app.module.js";
 import { AppExceptionFilter } from "../src/common/errors.js";
 
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
+const SECRET_ADMIN = "Y2xlLWFkbWluLWRlLXRlc3QtMzItb2N0ZXRzLWljaSEh";
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
 
 const JOUR = 86_400_000;
@@ -381,6 +382,13 @@ describe("le centre de notifications — HTTP de bout en bout", () => {
     process.env.OTP_PEPPER = PEPPER;
     process.env.JWT_SECRET = SECRET;
     process.env.LEHNO_MAIL_CONSOLE = "1";
+    /* L'`AppModule` fusionné porte aussi l'administration, qui REFUSE de
+       démarrer sans sa propre clé. Ce fichier ne la posait pas : il ne passait
+       que par contagion, un autre fichier l'ayant posée avant lui dans la
+       course complète. Lancé seul — ce qu'on fait justement pour distinguer un
+       vrai défaut d'une machine saturée — il tombait sur « ADMIN_JWT_SECRET
+       manquant », et le message envoyait chercher ailleurs. */
+    process.env.ADMIN_JWT_SECRET = SECRET_ADMIN;
 
     app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
     app.setGlobalPrefix("v1");
