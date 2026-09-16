@@ -14,7 +14,7 @@ import {
 } from "@lehno/tokens";
 import {
   Banner, Button, EmptyState, EventCard, Icon, LoadingState, NotificationBell,
-  SectionLabel, Toast, useCouleurs,
+  SectionLabel, Toast, Wordmark, useCouleurs, useTheme,
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
 import { appel, ErreurDApi } from "../../lib/api.js";
@@ -48,6 +48,7 @@ import { libelleDeLEcheance } from "../../lib/libelles.js";
 export default function Accueil() {
   const { t, langue } = useLangue();
   const couleurs = useCouleurs();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { actives } = useDrapeaux();
   const routeur = useRouter();
@@ -189,9 +190,30 @@ export default function Accueil() {
   /* Le carnet neuf ne poursuit qu'UN BUT : conduire au premier ajout.
      « Laisser une note » céderait la place — il n'y a personne à propos de qui
      écrire. C'est `hasPersons` qui distingue les deux vides. */
+  /* LE BANDEAU DES PLANCHES : le logotype à gauche, la cloche à droite. Il est
+     le même dans les trois états — premier lancement, vide, nominal — et c'est
+     pourquoi il se compose ici plutôt que trois fois.
+
+     IL MANQUAIT EN ENTIER AU PREMIER LANCEMENT. Cette branche ne rendait que
+     l'état vide, sans logotype NI cloche — et `/notifications` n'est atteignable
+     que par cette cloche, elle n'est poussée nulle part ailleurs. Sur un compte
+     neuf, les notifications étaient donc hors d'atteinte, alors que la planche
+     montre justement une pastille. */
+  const bandeau = (
+    <View style={styles.bandeau}>
+      <Wordmark variant={theme === "dark" ? "blanc" : "couleur"} height={22} />
+      <NotificationBell
+        unread={home.unreadNotifications}
+        label={t.notifsCloche(home.unreadNotifications)}
+        onPress={() => routeur.push("/(app)/notifications")}
+      />
+    </View>
+  );
+
   if (etat === "premier") {
     return (
       <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
+        {bandeau}
         <EmptyState
           illustration="carnet-neuf"
           title={t.videCarnetTitre}
@@ -251,23 +273,13 @@ export default function Accueil() {
 
   return (
     <View style={[styles.page, { paddingTop: insets.top + nativeSpace[20] }]}>
+      {bandeau}
       <View style={styles.salutation}>
         <Text style={[styles.titre, { color: couleurs.textBody }]}>{t.salut(home.firstName)}</Text>
         {/* LE DÉCOMPTE VIENT DE `/me/home`, jamais d'un second appel : le
             contrat le sert là exprès, et « les deux passent par le même
             prédicat côté serveur, donc ils ne peuvent pas se contredire ».
             Deux `where` recopiés, eux, auraient divergé au premier ajout. */}
-        {/* LA CLOCHE VIENT DU KIT. J'en avais dessiné une seconde ici — une
-            pastille sans nombre —, et deux cloches auraient divergé à la
-            première retouche du design system, celle de l'accueil restant en
-            arrière sans que rien ne le signale. Celle du kit porte le NOMBRE,
-            et c'est mieux : « trois choses vous attendent » décide d'ouvrir,
-            « il y a quelque chose » fait seulement hésiter. */}
-        <NotificationBell
-          unread={home.unreadNotifications}
-          label={t.notifsCloche(home.unreadNotifications)}
-          onPress={() => routeur.push("/(app)/notifications")}
-        />
       </View>
 
       {/* CE QUI ATTEND PASSE AVANT CE QUI VIENT. Un brouillon commencé et
@@ -464,6 +476,11 @@ const styles = StyleSheet.create({
   resume: {
     fontFamily: nativeFont.bodyRegular, fontSize: 14,
     marginTop: nativeSpace[4], marginBottom: nativeSpace[16],
+  },
+  /* Le bandeau des planches : logotype et cloche aux deux bouts. */
+  bandeau: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    marginBottom: nativeSpace[12],
   },
   salutation: { flexDirection: "row", alignItems: "center", gap: nativeSpace[8] },
   titre: {
