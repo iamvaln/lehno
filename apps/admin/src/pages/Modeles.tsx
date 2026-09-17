@@ -2,6 +2,9 @@ import { useState, type ReactNode } from "react";
 import { Breadcrumb, PageHeader } from "../composants/page/index.js";
 import { DataTable, EmptyState, StatusPill, type Colonne } from "../composants/donnees/index.js";
 import { ConfirmWithReason } from "../composants/actions/index.js";
+import {
+  FormulaireReglage, cequiAChange, valeursInitiales, incomplet, type Champ, type Saisie,
+} from "./ReglagesPaiement.js";
 import { messages, type Langue } from "../i18n/index.js";
 import type { AdminRole, ChaineIa, MesureModele, ModeleIa } from "@lehno/contracts";
 
@@ -36,6 +39,11 @@ export interface ModelesProps {
   modeles: ModeleIa[];
   chaines?: ChaineIa[];
   onBasculer?: (modele: ModeleIa, actif: boolean, motif: string, code?: string) => void;
+  /* LES TARIFS, et c'est le seul endroit où ils se règlent. Ils vivaient en base
+     avec une route pour les écrire et aucun écran pour l'atteindre : un modèle
+     d'image non tarifé laissait `ai_usage.cost` à zéro sur toute la voie
+     visuelle — l'appel le plus cher du dispositif, compté pour rien. */
+  onTarifer?: (modele: ModeleIa, valeurs: Saisie, motif: string, code?: string) => void;
   /** Les motifs du registre, par geste — allumer et éteindre n'ont pas les mêmes. */
   motifsDuGeste?: (geste: string) => readonly { code: string; libelle: string }[];
   onReordonner?: (tache: string, modeleIds: string[], motif: string) => void;
@@ -48,11 +56,13 @@ const remplir = (gabarit: string, valeurs: Record<string, string | number>): str
 
 export function Modeles({
   role, langue = "fr", modeles, chaines = [], mesures = [], seuil = 0,
-  onBasculer, onReordonner, onRetour,
+  onBasculer, onTarifer, onReordonner, onRetour,
   motifsDuGeste = () => [],
 }: ModelesProps): ReactNode {
   const t = messages(langue);
   const [geste, setGeste] = useState<ModeleIa | null>(null);
+  const [tarif, setTarif] = useState<{ modele: ModeleIa; champs: Champ[] } | null>(null);
+  const [saisie, setSaisie] = useState<Saisie>({});
   const [deplacement, setDeplacement] = useState<{ tache: string; ids: string[]; sens: "haut" | "bas" } | null>(null);
 
   // Un coût absent n'est pas un coût nul : c'est un modèle qu'on n'a pas encore
@@ -126,6 +136,59 @@ export function Modeles({
     },
     { cle: "coutEntree", titre: t.modeles.col.entree, discret: true, aligne: "right", rendu: (m) => cout(m.coutEntree) },
     { cle: "coutSortie", titre: t.modeles.col.sortie, discret: true, aligne: "right", rendu: (m) => cout(m.coutSortie) },
+    /* UNE IMAGE NE SE FACTURE PAS AU JETON — elle n'en rend aucun. Sans ce
+       tarif, la dépense de toute la voie visuelle restait à zéro, et un zéro
+       dans un calcul de marge se prend pour un fait. */
+    {
+      cle: "coutParImage",
+      titre: t.modeles.col.parImage,
+      discret: true,
+      aligne: "right",
+      /* LE TIRET PLUTÔT QUE « NON TARIFÉ » SUR UN MODÈLE DE TEXTE : là, le champ
+         n'a pas de sens, il ne MANQUE pas. Les confondre ferait chercher un
+         réglage qui n'existe pas. */
+      rendu: (m) => (m.capacite === "image" ? cout(m.coutParImage) : t.modeles.sansObjet),
+    },
+    /* LA QUALITÉ FAIT VARIER LE PRIX DU SIMPLE AU QUINZUPLE, et sans elle le
+       fournisseur choisit — donc deux rendus successifs peuvent différer, en
+       apparence comme en facture. Elle se lit à côté du tarif parce que l'un
+       sans l'autre ne veut rien dire. */
+    {
+      cle: "qualiteImage",
+      titre: t.modeles.col.qualite,
+      discret: true,
+      rendu: (m) => (m.capacite !== "image"
+        ? t.modeles.sansObjet
+        : m.qualiteImage === null
+          ? t.modeles.qualiteAuFournisseur
+          : t.modeles.qualites[m.qualiteImage]),
+    },
+  ];
+
+  /* CE QUE LE SERVEUR ACCEPTE, ET RIEN DE PLUS. Les deux champs d'image ne
+     paraissent que sur un modèle d'image : les offrir sur un modèle de texte
+     ferait saisir un réglage que le fournisseur ignore, et qui n'apparaîtrait
+     jamais nulle part. */
+  const champsTarif = (m: ModeleIa): Champ[] => [
+    { cle: "costInput", libelle: t.modeles.col.entree, genre: "nombre", valeur: m.coutEntree },
+    { cle: "costOutput", libelle: t.modeles.col.sortie, genre: "nombre", valeur: m.coutSortie },
+    ...(m.capacite === "image"
+      ? [
+        { cle: "costPerImage", libelle: t.modeles.col.parImage, genre: "nombre" as const, valeur: m.coutParImage },
+        {
+          cle: "imageQuality", libelle: t.modeles.col.qualite, genre: "choix" as const,
+          valeur: m.qualiteImage ?? "",
+          options: [
+            /* LAISSER CHOISIR LE FOURNISSEUR EST UNE OPTION, pas une absence de
+               réglage : c'est l'état de départ, et il faut pouvoir y revenir. */
+            { valeur: "", libelle: t.modeles.qualiteAuFournisseur },
+            { valeur: "low", libelle: t.modeles.qualites.low },
+            { valeur: "medium", libelle: t.modeles.qualites.medium },
+            { valeur: "high", libelle: t.modeles.qualites.high },
+          ],
+        },
+      ]
+      : []),
   ];
 
   const dialogue = geste?.actif === true ? t.modeles.dialogueEteindre : t.modeles.dialogueRallumer;
@@ -158,9 +221,15 @@ export function Modeles({
         {...(role === "admin"
           ? {
             actions: (m: ModeleIa) => [
+              { id: "tarifer", label: t.modeles.tarifer },
               { id: "basculer", label: m.actif ? t.modeles.eteindre : t.modeles.rallumer, danger: m.actif },
             ],
-            onAction: (_id: string, m: ModeleIa) => setGeste(m),
+            onAction: (id: string, m: ModeleIa) => {
+              if (id !== "tarifer") { setGeste(m); return; }
+              const champs = champsTarif(m);
+              setTarif({ modele: m, champs });
+              setSaisie(valeursInitiales(champs));
+            },
           }
           : {})}
         vide={<EmptyState titre={t.modeles.titre} texte={t.modeles.sous} />}
@@ -248,6 +317,46 @@ export function Modeles({
             setGeste(null);
           }}
         />
+      ) : null}
+
+      {/* LE TARIF ET SON MOTIF DANS LE MÊME DIALOGUE, comme les réglages du
+          paiement. Les séparer ferait enregistrer d'abord et justifier ensuite
+          — donc parfois pas du tout. */}
+      {tarif ? (
+        <ConfirmWithReason
+          titre={t.modeles.dialogueTarif.titre.replace("{modele}", tarif.modele.modele)}
+          consequence={t.modeles.dialogueTarif.consequence}
+          motifs={motifsDuGeste("ai_model_update").length > 0
+            ? motifsDuGeste("ai_model_update")
+            : [...t.modeles.dialogueTarif.motifs]}
+          libelles={{
+            motif: t.confirmation.motif,
+            choisir: t.confirmation.motifManquant,
+            autre: t.confirmation.autre,
+            precision: t.confirmation.autrePlaceholder,
+            journal: t.confirmation.motifAide,
+            annuler: t.confirmation.annuler,
+            confirmer: t.confirmation.confirmer,
+          }}
+          incomplet={incomplet(tarif.champs, saisie)}
+          onAnnuler={() => setTarif(null)}
+          onConfirmer={(motif, code) => {
+            /* ON N'ENVOIE QUE CE QUI A BOUGÉ. Un PATCH complet réécrirait des
+               tarifs qu'on n'a pas touchés, et le journal d'audit dirait qu'on a
+               changé le prix le jour où l'on a réglé la qualité. */
+            onTarifer?.(tarif.modele, cequiAChange(tarif.champs, saisie), motif, code);
+            setTarif(null);
+          }}
+        >
+          <FormulaireReglage
+            champs={tarif.champs}
+            valeurs={saisie}
+            onChanger={(cle, valeur) => setSaisie((etat) => ({ ...etat, [cle]: valeur }))}
+            libellePrecedente={t.credits.reglages.formulaire.precedente}
+            oui={t.credits.reglages.formulaire.oui}
+            non={t.credits.reglages.formulaire.non}
+          />
+        </ConfirmWithReason>
       ) : null}
 
       {deplacement ? (

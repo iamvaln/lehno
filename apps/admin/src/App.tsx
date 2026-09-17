@@ -50,7 +50,7 @@ const ETAT_SERVEUR: Record<string, string> = {
 };
 import { useRessource } from "./api/hooks.js";
 import {
-  canauxSchema, catalogueIaSchema, mesuresDesModelesSchema, chainesIaSchema, comptesAdminSchema, clientsApiSchema, clientApiAvecCleSchema, versionsAppSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
+  canauxSchema, tarifsActionsSchema, catalogueIaSchema, mesuresDesModelesSchema, chainesIaSchema, comptesAdminSchema, clientsApiSchema, clientApiAvecCleSchema, versionsAppSchema, metriquesSchema, comptesCollecteSchema, compteDetailSchema, dashboardSchema,
   urlMediaRenduSchema, motifsAdminSchema,
   pageAssistanceSchema, pageContactSchema, pageAttenteSchema, pageRetoursSchema,
   drapeauxAdminSchema, pageAuditSchema, pageComptesSchema, pageMouvementsSchema, pagePaiementsSchema,
@@ -678,14 +678,18 @@ export function App(): ReactNode {
     [surCredits, ongletCredits, tourCredits],
   );
 
-  // Les trois tables se lisent ensemble : l'onglet des réglages les montre
-  // côte à côte, et les séparer ferait trois états d'attente sur un seul écran.
+  /* Les QUATRE tables se lisent ensemble : l'onglet des réglages les montre
+     côte à côte, et les séparer ferait quatre états d'attente sur un seul
+     écran. Les prix des actions rejoignent les trois autres parce qu'ils se
+     lisent AVEC eux — un palier dit ce qu'un crédit coûte en argent, une action
+     dit ce qu'il achète. */
   const etatReglages = useRessource(
     async () => (surCredits && ongletCredits === "reglages"
       ? {
         paliers: await api.appeler("/admin/credit-bundles", { schema: paliersSchema }),
         canaux: await api.appeler("/admin/payment-channels", { schema: canauxSchema }),
         comptes: await api.appeler("/admin/collection-accounts", { schema: comptesCollecteSchema }),
+        tarifs: await api.appeler("/admin/premium-actions", { schema: tarifsActionsSchema }),
       }
       : null),
     [surCredits, ongletCredits, tourCredits],
@@ -1075,7 +1079,7 @@ export function App(): ReactNode {
       motifsConfirmer: motifsDe("payment_confirm"),
       motifsRejeter: motifsDe("payment_reject"),
       onEnregistrerReglage: (
-        cible: "palier" | "canal" | "compte",
+        cible: "palier" | "canal" | "compte" | "action",
         id: string | null,
         valeurs: Record<string, unknown>,
         motif: string,
@@ -1088,6 +1092,11 @@ export function App(): ReactNode {
           palier: "/admin/credit-bundles",
           canal: "/admin/payment-channels",
           compte: "/admin/collection-accounts",
+          /* PAR LE CODE, pas par un identifiant : la route est
+             `premium-actions/{code}`, et le code est ce que le registre du
+             contrat, `ActionRun` et le panneau nomment tous les trois. C'est
+             l'écran qui remonte le code en guise d'`id`. */
+          action: "/admin/premium-actions",
         } as const;
         void (async () => {
           try {
@@ -1151,6 +1160,7 @@ export function App(): ReactNode {
               paliers={tables?.paliers.items ?? []}
               canaux={tables?.canaux.items ?? []}
               comptes={tables?.comptes.items ?? []}
+              tarifs={tables?.tarifs.items ?? []}
             />
           )}
         />
@@ -1813,6 +1823,35 @@ export function App(): ReactNode {
               })();
             }}
             motifsDuGeste={motifsDe}
+            /* LES TARIFS, par le même PATCH que la bascule. Ils vivaient en
+               base avec une route pour les écrire et aucun écran pour
+               l'atteindre : un modèle d'image non tarifé laissait la dépense de
+               toute la voie visuelle à zéro — l'appel le plus cher du
+               dispositif, compté pour rien. */
+            onTarifer={(modele, valeurs, motif, code) => {
+              void (async () => {
+                try {
+                  await api.appeler("/admin/ai-models", {
+                    methode: "PATCH",
+                    corps: {
+                      id: modele.id,
+                      ...valeurs,
+                      /* « AU FOURNISSEUR » SE DIT `null`, PAS CHAÎNE VIDE : le
+                         serveur n'accepte que les trois valeurs ou le nul, et
+                         une chaîne vide serait refusée en 400 sur un réglage
+                         qu'on vient d'offrir. */
+                      ...(valeurs["imageQuality"] === "" ? { imageQuality: null } : {}),
+                      reason: motif,
+                      ...(code !== undefined ? { reasonCode: code } : {}),
+                    },
+                  });
+                } catch (echec) {
+                  if (echec instanceof ErreurApi) setAvis(codeConnu(echec.code));
+                } finally {
+                  setTourModeles((n) => n + 1);
+                }
+              })();
+            }}
             onBasculer={(modele, actif, motif, code) => {
               void (async () => {
                 try {

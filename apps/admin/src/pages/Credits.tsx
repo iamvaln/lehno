@@ -5,7 +5,10 @@ import { ConfirmWithReason, ExportButton, RoleGate } from "../composants/actions
 import { Button } from "../composants/base/index.js";
 import { FormulaireReglage, cequiAChange, valeursInitiales, incomplet, type Champ, type Saisie } from "./ReglagesPaiement.js";
 import { messages, type Langue } from "../i18n/index.js";
-import type { AdminRole, PaiementLigne, PaiementDetail, MouvementCredit, Palier, Canal, CompteCollecte } from "@lehno/contracts";
+import type {
+  AdminRole, PaiementLigne, PaiementDetail, MouvementCredit,
+  Palier, Canal, CompteCollecte, TarifAction,
+} from "@lehno/contracts";
 
 /**
  * Crédits et paiements — ux-admin §5.4.
@@ -22,6 +25,12 @@ import type { AdminRole, PaiementLigne, PaiementDetail, MouvementCredit, Palier,
 
 type Onglet = "paiements" | "mouvements" | "reglages";
 
+/* LES QUATRE LEVIERS DE L'ÉCONOMIE, sous un seul rappel. Le prix d'une action
+   rejoint les trois autres parce qu'il se lit AVEC eux : un palier dit ce qu'un
+   crédit coûte en argent, une action dit ce qu'il achète. Les séparer ferait
+   régler l'un sans jamais voir l'autre. */
+type Cible = "palier" | "canal" | "compte" | "action";
+
 export interface CreditsProps {
   role: AdminRole;
   langue?: Langue;
@@ -32,6 +41,9 @@ export interface CreditsProps {
   paiement?: PaiementDetail | null;
   mouvements?: MouvementCredit[];
   paliers?: Palier[];
+  /* Les prix des actions payantes. Absents, le groupe ne paraît pas — même
+     règle que les trois autres réglages. */
+  tarifs?: TarifAction[];
   canaux?: Canal[];
   comptes?: CompteCollecte[];
 
@@ -68,7 +80,7 @@ export interface CreditsProps {
      façons, et c'est le même geste — écrire une valeur qui décide de ce qu'un
      client paie, avec son motif. */
   onEnregistrerReglage?: (
-    cible: "palier" | "canal" | "compte",
+    cible: Cible,
     id: string | null,
     valeurs: Saisie,
     motif: string,
@@ -95,7 +107,7 @@ function duree(secondes: number): string {
 
 export function Credits({
   role, langue = "fr", onglet = "paiements", onOnglet,
-  paiements = [], paiement = null, mouvements = [], paliers = [], canaux = [], comptes = [],
+  paiements = [], paiement = null, mouvements = [], paliers = [], canaux = [], comptes = [], tarifs = [],
   filtreEtat = "tous", filtreMode = "tous", onFiltre, onOuvrir, onRetour, onSaisir, onDecider, onOuvrirLeRecu,
   onEnregistrerReglage,
   motifsConfirmer = [], motifsRejeter = [],
@@ -110,7 +122,7 @@ export function Credits({
      portent la valeur précédente, et c'est contre eux qu'on calcule ce qui a
      changé. */
   const [reglage, setReglage] = useState<
-    { cible: "palier" | "canal" | "compte"; id: string | null; titre: string; champs: Champ[] } | null
+    { cible: Cible; id: string | null; titre: string; champs: Champ[] } | null
   >(null);
   const [saisie, setSaisie] = useState<Saisie>({});
 
@@ -158,6 +170,15 @@ export function Credits({
     ...(c ? [{ cle: "actif", libelle: f.champs.actif, genre: "booleen" as const, valeur: c.actif }] : []),
   ];
 
+  /* `cout` ET `actif`, RIEN D'AUTRE — c'est exactement ce que le serveur
+     accepte. Le code est la clé que le registre du contrat et `ActionRun`
+     partagent, le libellé vient du même registre : les offrir ferait diverger le
+     panneau du contrat sans que rien ne le signale. */
+  const champsTarif = (a: TarifAction): Champ[] => [
+    { cle: "cout", libelle: t.credits.reglages.tarifs.col.cout, genre: "nombre", valeur: a.cout, requis: true },
+    { cle: "actif", libelle: f.champs.actif, genre: "booleen", valeur: a.actif },
+  ];
+
   const champsCompte = (c?: CompteCollecte & { id: string }): Champ[] => [
     { cle: "libelle", libelle: t.credits.reglages.comptes.col.libelle, genre: "texte", valeur: c?.libelle ?? "", requis: true },
     { cle: "operateur", libelle: t.credits.reglages.comptes.col.operateur, genre: "texte", valeur: c?.operateur ?? "", requis: true },
@@ -168,7 +189,7 @@ export function Credits({
   ];
 
   const ouvrirReglage = (
-    cible: "palier" | "canal" | "compte", id: string | null, titre: string, champs: Champ[],
+    cible: Cible, id: string | null, titre: string, champs: Champ[],
   ): void => {
     setReglage({ cible, id, titre, champs });
     setSaisie(valeursInitiales(champs));
@@ -608,6 +629,47 @@ export function Credits({
               onAction: (_id: string, ligne: CompteCollecte & { id: string }) => ouvrirReglage("compte", ligne.id, f.titreCompte, champsCompte(ligne)),
             } : {})}
             vide={<EmptyState titre={t.credits.reglages.comptes.vide.titre} texte={t.credits.reglages.comptes.vide.texte} />}
+          />
+
+          {/* CE QU'UN CRÉDIT ACHÈTE, en face de ce qu'il coûte. Les paliers
+              disent le prix d'un crédit en argent ; ce groupe dit combien de
+              crédits part à chaque geste. Les deux se règlent ensemble ou pas du
+              tout — changer l'un sans voir l'autre, c'est déplacer la marge sans
+              le savoir.
+
+              AUCUN BOUTON « AJOUTER » : la liste des actions vient du registre
+              du contrat, pas du panneau. En ouvrir une ici créerait un code que
+              rien ne sait exécuter. */}
+          <h2 className="gabarit-groupe-titre">{t.credits.reglages.tarifs.titre}</h2>
+          <p className="gabarit-note">{t.credits.reglages.tarifs.sous}</p>
+          <DataTable
+            colonnes={[
+              { cle: "libelle", titre: t.credits.reglages.tarifs.col.libelle },
+              /* LE CODE SE LIT, et il n'est pas décoratif : c'est lui qu'on
+                 retrouve dans le journal d'audit et dans `ActionRun`, donc lui
+                 qu'on vient chercher ici pour rapprocher un chiffre d'un
+                 réglage. */
+              { cle: "code", titre: t.credits.reglages.tarifs.col.code, discret: true },
+              {
+                cle: "cout", titre: t.credits.reglages.tarifs.col.cout, aligne: "right",
+                /* ZÉRO SE DIT EN TOUTES LETTRES. Un « 0 » dans une colonne de
+                   prix se lit comme une donnée manquante ; « gratuit » est une
+                   décision, et elle doit se voir comme telle. */
+                rendu: (a) => (a.cout === 0 ? t.credits.reglages.tarifs.gratuit : nombre.format(a.cout)),
+              },
+              { cle: "actif", titre: t.credits.reglages.tarifs.col.etat, rendu: (a) => etat(a.actif) },
+            ] as Colonne<TarifAction & { id: string }>[]}
+            lignes={tarifs.map((a) => ({ ...a, id: a.code }))}
+            {...(role === "admin" ? {
+              libelles: { actions: t.table.actions },
+              actions: () => [{ id: "modifier", label: f.modifier }],
+              /* PAR LE CODE, PAS PAR UN IDENTIFIANT. La route est
+                 `premium-actions/{code}` : le code est ce que le registre du
+                 contrat, `ActionRun` et le panneau nomment tous les trois. */
+              onAction: (_id: string, ligne: TarifAction & { id: string }) =>
+                ouvrirReglage("action", ligne.code, f.titreTarif, champsTarif(ligne)),
+            } : {})}
+            vide={<EmptyState titre={t.credits.reglages.tarifs.vide.titre} texte={t.credits.reglages.tarifs.vide.texte} />}
           />
         </>
       ) : null}
