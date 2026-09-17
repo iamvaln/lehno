@@ -582,7 +582,7 @@ export const fr = {
   modeles: {
     titre: "Modèles d'IA",
     sous: "Ce qu'on appelle pour chaque tâche, dans quel ordre, et ce que ça coûte au fournisseur.",
-    col: { fournisseur: "Fournisseur", modele: "Modèle", capacite: "Sait faire", etat: "État", emplois: "Où il sert", rejets: "Rejetés", entree: "Coût entrée", sortie: "Coût sortie" },
+    col: { fournisseur: "Fournisseur", modele: "Modèle", capacite: "Sait faire", etat: "État", emplois: "Où il sert", rejets: "Rejetés", entree: "Coût entrée", sortie: "Coût sortie", parImage: "Coût par image", qualite: "Qualité" },
     capacites: { texte: "Texte", image: "Image" },
     /* Trois états, et surtout pas deux. « Éteint » est la décision d'un humain,
        « momentanément injoignable » le constat du disjoncteur. Ils se réparent
@@ -592,6 +592,23 @@ export const fr = {
     // Un coût absent n'est pas un coût nul : c'est un modèle qu'on n'a pas
     // encore tarifé. « 0 » le ferait passer pour gratuit dans un calcul de marge.
     sansCout: "Non tarifé",
+    /* LE TIRET PLUTÔT QUE « NON TARIFÉ » sur un modèle de texte : là, le champ
+       n'a pas de sens, il ne MANQUE pas. Les confondre ferait chercher un
+       réglage qui n'existe pas. */
+    sansObjet: "—",
+    // Laisser choisir le fournisseur est un RÉGLAGE, pas une absence : c'est
+    // l'état de départ, et il faut pouvoir y revenir.
+    qualiteAuFournisseur: "Au fournisseur",
+    qualites: { low: "Basse", medium: "Moyenne", high: "Haute" },
+    tarifer: "Régler les tarifs",
+    dialogueTarif: {
+      titre: "Régler les tarifs de {modele}",
+      /* LA QUALITÉ FAIT VARIER LE PRIX DU SIMPLE AU QUINZUPLE, et sans elle le
+         fournisseur choisit — donc deux rendus successifs peuvent différer, en
+         apparence comme en facture. */
+      consequence: "Les tarifs servent à calculer la dépense de chaque appel. Un modèle non tarifé la laisse à zéro, et un zéro dans un calcul de marge se prend pour un fait. La qualité, elle, change ce que le fournisseur produit ET ce qu'il facture.",
+      motifs: ["Tarif du fournisseur mis à jour", "Correction d'une erreur", "Changement de qualité"],
+    },
     /* CE QUE SES PRODUCTIONS ONT VALU. Le dénominateur est le nombre d'AVIS,
        jamais celui des productions : les non-jugés ne sont pas des satisfaits.
        Les deux chiffres se lisent ensemble — le taux dit ce qu'en pensent ceux
@@ -824,6 +841,7 @@ export const fr = {
         titreCanal: "Modifier le canal",
         titreCompteNeuf: "Ajouter un compte de collecte",
         titreCompte: "Modifier le compte de collecte",
+        titreTarif: "Modifier le prix de cette action",
         consequence: "Prend effet dès l'enregistrement, pour tous les clients. Le journal d'audit garde ce geste et son motif.",
         precedente: "Avant",
         oui: "Oui",
@@ -858,6 +876,20 @@ export const fr = {
         vide: { titre: "Aucun compte de collecte", texte: "Les comptes sur lesquels les clients versent apparaissent ici. Sans compte, le versement manuel n'a pas de destination." },
         col: { libelle: "Compte", operateur: "Opérateur", numero: "Numéro", visible: "Dans l'application", etat: "État" },
         visible: "Proposé", masque: "Masqué",
+      },
+      /* CE QU'UN CRÉDIT ACHÈTE, en face de ce qu'il coûte. Les paliers disent
+         le prix d'un crédit en argent ; ce groupe dit combien de crédits part à
+         chaque geste. Changer l'un sans voir l'autre, c'est déplacer la marge
+         sans le savoir. */
+      tarifs: {
+        titre: "Prix des actions",
+        sous: "Ce qu'un geste coûte à celui qui le fait, en crédits. La liste vient du registre du contrat : on en règle le prix, on n'en ouvre pas de nouvelle.",
+        vide: { titre: "Aucune action payante", texte: "Les actions que le registre du contrat déclare apparaissent ici, avec leur prix en crédits." },
+        col: { libelle: "Action", code: "Code", cout: "Crédits", etat: "État" },
+        // Zéro se dit en toutes lettres : un « 0 » dans une colonne de prix se
+        // lit comme une donnée manquante, alors que la gratuité est une
+        // décision — et elle doit se voir comme telle.
+        gratuit: "Gratuite",
       },
       actif: "En service",
       inactif: "Retiré",

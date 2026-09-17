@@ -589,6 +589,36 @@ export const compteCollecteSchema = z.object({
   position: z.number().int().nullable(),
 }).strict();
 
+/* LE PRIX D'UNE ACTION PAYANTE, en crédits.
+ *
+ * Le registre du contrat (`ACTIONS_PAYANTES`) dit depuis toujours que « le prix
+ * se règle en administration sans livraison ». C'était faux : il vivait en base
+ * sans aucun moyen de l'y changer, et passer un portrait à deux crédits
+ * demandait une requête SQL sur la production.
+ *
+ * LE CODE EST LA CLÉ, jamais l'identifiant. C'est lui que le registre du
+ * contrat, `ActionRun` et le panneau nomment tous les trois ; l'identifiant est
+ * un détail de stockage que personne d'autre ne connaît.
+ *
+ * NI LE CODE NI LE LIBELLÉ NE SE MODIFIENT — le serveur n'accepte que `cout` et
+ * `actif`. Les offrir ferait diverger le panneau du contrat sans que rien ne le
+ * signale, et un champ offert puis refusé est pire qu'absent.
+ *
+ * Le nom évite `actionPayanteSchema`, qui existe déjà pour les MÉTRIQUES : deux
+ * formes différentes sous un même nom se confondraient au premier import. */
+export const tarifActionSchema = z.object({
+  code: z.string(),
+  libelle: z.string(),
+  /** En crédits. Le serveur borne à 100 : au-delà, c'est une faute de frappe. */
+  cout: z.number().int().nonnegative(),
+  actif: z.boolean(),
+}).strict();
+
+export const tarifsActionsSchema = z.object({ items: z.array(tarifActionSchema) }).strict();
+
+export type TarifAction = z.infer<typeof tarifActionSchema>;
+export type TarifsActions = z.infer<typeof tarifsActionsSchema>;
+
 export const paliersSchema = z.object({ items: z.array(palierSchema) }).strict();
 export const canauxSchema = z.object({ items: z.array(canalSchema) }).strict();
 export const comptesCollecteSchema = z.object({ items: z.array(compteCollecteSchema) }).strict();

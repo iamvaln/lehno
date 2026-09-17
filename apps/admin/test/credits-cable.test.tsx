@@ -53,6 +53,17 @@ const reponse = (statut: number, corps?: unknown): Response =>
     headers: corps === undefined ? {} : { "content-type": "application/json" },
   });
 
+/* LE REGISTRE DES ACTIONS PAYANTES. Une gratuite parmi elles : c'est le cas qui
+   distingue « pas de prix » de « prix nul », et l'écran doit les dire
+   autrement. */
+const TARIFS = {
+  items: [
+    { code: "portrait", libelle: "Portrait", cout: 2, actif: true },
+    { code: "wish_message", libelle: "Message de vœux", cout: 0, actif: true },
+    { code: "gift_ideas", libelle: "Idées de cadeaux", cout: 1, actif: false },
+  ],
+};
+
 function serveur(routes: Record<string, (url: string, init?: RequestInit) => Response> = {}) {
   const parDefaut: Record<string, (url: string, init?: RequestInit) => Response> = {
     "/admin/payments/p-1": () => reponse(200, DETAIL),
@@ -61,6 +72,7 @@ function serveur(routes: Record<string, (url: string, init?: RequestInit) => Res
     "/admin/credit-bundles": () => reponse(200, PALIERS),
     "/admin/payment-channels": () => reponse(200, CANAUX),
     "/admin/collection-accounts": () => reponse(200, COMPTES),
+    "/admin/premium-actions": () => reponse(200, TARIFS),
   };
   const table = { ...parDefaut, ...routes };
   const appels = vi.fn((url: string, init?: RequestInit) => {
@@ -358,7 +370,7 @@ describe("les crédits et paiements", () => {
 
   // ─── Les réglages ──────────────────────────────────────────────────────────
 
-  it("l'onglet des réglages porte les trois tables", async () => {
+  it("l'onglet des réglages porte les quatre tables", async () => {
     const utilisateur = userEvent.setup({ delay: null });
     serveur();
     await ouvrir(utilisateur);
@@ -374,6 +386,63 @@ describe("les crédits et paiements", () => {
     expect(await within(contenu).findByText(t.credits.reglages.paliers.titre)).toBeInTheDocument();
     expect(within(contenu).getByText(t.credits.reglages.canaux.titre)).toBeInTheDocument();
     expect(within(contenu).getByText(t.credits.reglages.comptes.titre)).toBeInTheDocument();
+    /* LE QUATRIÈME LEVIER. Un palier dit ce qu'un crédit coûte en argent, une
+       action dit ce qu'il achète : les lire côte à côte est tout l'intérêt, et
+       les séparer ferait régler l'un sans jamais voir l'autre. */
+    expect(within(contenu).getByText(t.credits.reglages.tarifs.titre)).toBeInTheDocument();
+  });
+
+  /* LE PRIX D'UNE ACTION SE RÉGLAIT PAR REQUÊTE SQL. Le registre du contrat dit
+     depuis toujours qu'il « se règle en administration sans livraison » : il
+     n'existait ni route ni écran. */
+  it("règle le prix d'une action, par son code et non par un identifiant", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur();
+    await ouvrir(utilisateur);
+    await screen.findByText("awa");
+    await utilisateur.click(screen.getByRole("tab", { name: new RegExp(t.credits.onglets.reglages) }));
+
+    const ligne = (await screen.findByText("Portrait")).closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: t.credits.reglages.formulaire.modifier }));
+
+    const cout = screen.getByLabelText(t.credits.reglages.tarifs.col.cout);
+    await utilisateur.clear(cout);
+    await utilisateur.type(cout, "3");
+    await utilisateur.selectOptions(
+      screen.getByLabelText(t.confirmation.motif), t.credits.decision.dialogueConfirmer.motifs[0]!,
+    );
+    await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
+
+    await waitFor(() => {
+      /* L'ADRESSE SE VÉRIFIE EN ENTIER, pas par `includes`. Une sonde l'a
+         montré : avec « contient portrait », l'épreuve restait verte alors que
+         le geste visait « portrait-x » — elle n'épinglait rien de ce qu'elle
+         prétendait tenir. */
+      const envoi = appels.mock.calls.find(
+        ([u, i]) => new URL(String(u), "http://x").pathname.endsWith("/admin/premium-actions/portrait")
+          && (i as RequestInit)?.method === "PATCH",
+      );
+      expect(envoi).toBeDefined();
+      /* ON N'ENVOIE QUE CE QUI A CHANGÉ : `actif` n'a pas bougé, il ne part
+         pas. Et l'adresse porte le CODE — un identifiant y serait inconnu du
+         serveur. */
+      expect(JSON.parse((envoi?.[1] as RequestInit).body as string)).toMatchObject({ cout: 3 });
+    });
+  });
+
+  /* ZÉRO SE DIT EN TOUTES LETTRES. Un « 0 » dans une colonne de prix se lit
+     comme une donnée manquante, alors que la gratuité est une décision. */
+  it("dit « gratuite » plutôt que zéro", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    serveur();
+    await ouvrir(utilisateur);
+    await screen.findByText("awa");
+    await utilisateur.click(screen.getByRole("tab", { name: new RegExp(t.credits.onglets.reglages) }));
+
+    const ligne = (await screen.findByText("Message de vœux")).closest("tr") as HTMLElement;
+    expect(within(ligne)).toBeTruthy();
+    expect(ligne.textContent).toContain(t.credits.reglages.tarifs.gratuit);
   });
 
   // Le numéro d'un compte de collecte est un compte du SERVICE : il se dicte à
