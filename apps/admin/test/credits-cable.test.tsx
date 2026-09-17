@@ -415,8 +415,13 @@ describe("les crédits et paiements", () => {
     await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
 
     await waitFor(() => {
+      /* L'ADRESSE SE VÉRIFIE EN ENTIER, pas par `includes`. Une sonde l'a
+         montré : avec « contient portrait », l'épreuve restait verte alors que
+         le geste visait « portrait-x » — elle n'épinglait rien de ce qu'elle
+         prétendait tenir. */
       const envoi = appels.mock.calls.find(
-        ([u, i]) => String(u).includes("/admin/premium-actions/portrait") && (i as RequestInit)?.method === "PATCH",
+        ([u, i]) => new URL(String(u), "http://x").pathname.endsWith("/admin/premium-actions/portrait")
+          && (i as RequestInit)?.method === "PATCH",
       );
       expect(envoi).toBeDefined();
       /* ON N'ENVOIE QUE CE QUI A CHANGÉ : `actif` n'a pas bougé, il ne part
