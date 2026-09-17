@@ -613,13 +613,18 @@
                     "referralBonusInvited": {
                       "type": "number",
                       "minimum": 0
+                    },
+                    "siteUrl": {
+                      "type": "string",
+                      "format": "uri"
                     }
                   },
                   "required": [
                     "signupFreeCredits",
                     "creditUnitPrice",
                     "currency",
-                    "referralBonusInvited"
+                    "referralBonusInvited",
+                    "siteUrl"
                   ],
                   "additionalProperties": false
                 }
