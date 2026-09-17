@@ -7,6 +7,18 @@ export const publicConfigSchema = z.object({
   creditUnitPrice: z.number().nonnegative(),
   currency: z.string().length(3),
   referralBonusInvited: z.number().nonnegative(),
+  /* L'ADRESSE DU SITE, SERVIE PLUTÔT QUE DEVINÉE.
+   *
+   * Le mobile compose des liens qui sortent de lui — une liste partagée, un
+   * mur, une invitation — et il n'avait aucune source pour la racine. La
+   * déduire de l'URL de l'API marcherait aujourd'hui et casserait le jour où
+   * les deux domaines divergent ; l'écrire en dur casserait sur la sandbox, où
+   * ils diffèrent DÉJÀ.
+   *
+   * Sans barre finale : le client concatène, et `//liste` n'est pas `/liste`
+   * pour tout le monde. Le serveur normalise une fois, à l'endroit où la
+   * valeur entre. */
+  siteUrl: z.string().url(),
 }).strict();
 
 export type PublicConfig = z.infer<typeof publicConfigSchema>;
