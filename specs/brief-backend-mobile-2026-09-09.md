@@ -834,3 +834,61 @@ en base.
 > disait exactement ce qu'on voulait. Dans les deux cas, rien ne cloche à la
 > lecture — et c'est précisément ce qui a désarmé la revue.
 
+
+## 16. L'adresse publique d'un compte est écrite en dur dans le mobile — 17 septembre
+
+**Le mobile affiche `lehno.io/<pseudo>` à trois endroits** — sous le champ du
+pseudo à l'inscription, sur l'écran « Moi », et dans le profil. La chaîne vient
+du dictionnaire :
+
+```ts
+pseudoAdresse: (pseudo: string) => "lehno.io/" + pseudo,
+```
+
+Elle est fausse deux fois.
+
+**Elle nomme la production quel que soit l'environnement.** Sur la sandbox, un
+compte neuf lit « lehno.io/premiere » — une adresse qui, si elle existe, désigne
+quelqu'un d'autre. Vu à l'écran le 17 septembre.
+
+**Il lui manque le segment `/m/`.** Le mur vit à `apps/web/app/[locale]/m/[pseudo]`,
+et le serveur compose déjà correctement :
+
+```ts
+publicUrl: `${this.siteUrl}/m/${compte.username}`,   // mur.service.ts:183
+```
+
+Vérifié : `https://sandbox.lehno.io/m/valentine` répond `307`, le middleware
+ajoute la langue. L'adresse du serveur marche ; celle du mobile ne pointe sur
+rien.
+
+**LA MÊME ADRESSE EST DONC RENDUE DE DEUX FAÇONS DANS LA MÊME APPLICATION** :
+l'écran « Mon Mur » affiche `publicUrl`, reçu du serveur, et affichait bien
+`https://sandbox.lehno.io/m/valentine`. L'écran « Moi », deux onglets plus loin,
+affiche la chaîne en dur. Le lien public sert à ce qu'un invité voie le mur d'un
+autre : il doit suivre l'environnement.
+
+### Ce qui est demandé
+
+**`/public/config` rend l'adresse de base du site.** Tout est déjà là : le
+fournisseur `PUBLIC_WEB_URL` existe (`app.module.ts:379`, avec son repli sur
+`https://lehno.io` et le retrait des barres finales), et il est déjà injecté
+dans trois services — `mur`, `collecte`, `wishlist`. Il ne sort simplement
+jamais vers le client.
+
+`/public/config` est le bon porteur : il est **public**, donc lisible à
+l'inscription, quand aucun compte n'existe encore et qu'aucune route `/me/*`
+n'est ouverte. C'est précisément le cas qui bloque — sur l'écran « Moi », le
+mobile a déjà `publicUrl` sous la main puisqu'il charge `/me/wall`.
+
+### Ce que le mobile en fera
+
+Composer `<base>/m/<pseudo>` aux trois endroits, et cesser d'écrire un domaine
+dans le dictionnaire. Le `/m/` reste côté mobile : c'est une route du site, pas
+une donnée de configuration, et la dupliquer en base la ferait diverger de
+`mur.service.ts` sans que rien ne le signale.
+
+### Ce que ça ne demande pas
+
+Aucune migration, aucun changement de contrat sur `/me/*`, et rien sur les trois
+services qui composent déjà leurs liens correctement.
