@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
-  PERSON_GENDERS, personSchema, profileSchema, usernameAvailabilitySchema,
+  PERSON_GENDERS, personSchema, profileSchema, publicConfigSchema,
+  usernameAvailabilitySchema,
   type Person, type Profile,
 } from "@lehno/contracts";
 import { nativeFont, nativeSpace } from "@lehno/tokens";
@@ -15,8 +16,9 @@ import { Bascule } from "../../composants/Bascule.js";
 import { Choix } from "../../composants/Choix.js";
 import { Pastille } from "../../composants/Pastille.js";
 import { RangeeDeJours } from "../../composants/RangeeDeJours.js";
+import { wallAddressHint } from "../../lib/wallAddress.js";
 import { useLangue } from "../../lib/langue.js";
-import { appel, ErreurDApi } from "../../lib/api.js";
+import { appel, ErreurDApi , appelPublic} from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { CLES_DE_GENRE, CLES_DE_THEME, THEMES_ORDONNES } from "../../lib/libelles.js";
 import { poseLApparence } from "../../lib/apparence.js";
@@ -66,6 +68,19 @@ export default function Profil() {
   const [libre, setLibre] = useState<boolean | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [echec, setEchec] = useState<string | null>(null);
+  /* L'ADRESSE DU SITE VIENT DU SERVEUR. Écrite en dur, elle nommait la
+     production quel que soit le build, et sans le segment `/m/`. */
+  const [siteUrl, setSiteUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setSiteUrl(publicConfigSchema.parse(await appelPublic<unknown>("/public/config")).siteUrl);
+      } catch {
+        // Sans la base, l'indice ne s'affiche pas : mieux vaut rien qu'une adresse fausse.
+      }
+    })();
+  }, []);
   const [photoEnCours, setPhotoEnCours] = useState(false);
   /* Le fichier LOCAL, pas l'URL du serveur : une photo de profil ne change pas
      trois fois par jour, et la retélécharger à chaque écran coûte du forfait
@@ -358,7 +373,7 @@ export default function Profil() {
           value={saisie.pseudo}
           nature="pseudo"
           invalid={pris || malForme}
-          hint={pris ? t.pseudoPris : t.pseudoAdresse(saisie.pseudo.trim())}
+          hint={pris ? t.pseudoPris : wallAddressHint(siteUrl, saisie.pseudo)}
           onChangeText={(v) => setSaisie({ ...saisie, pseudo: v })}
         />
 

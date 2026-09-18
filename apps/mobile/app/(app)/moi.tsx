@@ -3,8 +3,8 @@ import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
-  creditBalanceSchema, personSchema, profileSchema, receivedWishListSchema, wallSchema,
-  wishlistListSchema, wishLinkSchema,
+  creditBalanceSchema, personSchema, profileSchema, publicConfigSchema,
+  receivedWishListSchema, wallSchema, wishlistListSchema, wishLinkSchema,
   type Person, type Profile, type Wall, type WishLink,
 } from "@lehno/contracts";
 import {
@@ -15,8 +15,9 @@ import {
   Avatar, Banner, Button, Card, CreditIndicator, Icon, LoadingState, SectionLabel,
   useCouleurs,
 } from "@lehno/ui-native";
+import { wallAddress } from "../../lib/wallAddress.js";
 import { useLangue } from "../../lib/langue.js";
-import { appel, ErreurDApi } from "../../lib/api.js";
+import { appel, ErreurDApi , appelPublic} from "../../lib/api.js";
 import { messageDErreur } from "../../lib/session.js";
 import { estActive } from "@lehno/contracts";
 import { useDrapeaux } from "../../lib/DrapeauxProvider.js";
@@ -53,13 +54,18 @@ export default function Moi() {
   const [listes, setListes] = useState<number | null>(null);
   const [mots, setMots] = useState<number | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
+  const [siteUrl, setSiteUrl] = useState<string | null>(null);
 
   const charge = useCallback(async () => {
     try {
-      const [brutProfil, brutCredits] = await Promise.all([
+      const [brutProfil, brutCredits, brutConfig] = await Promise.all([
         appel<unknown>("/me/profile"),
         appel<unknown>("/me/credits"),
+        /* L'ADRESSE DU SITE VIENT DU SERVEUR. Elle était écrite en dur — donc
+           la production quel que soit le build, et sans le segment `/m/`. */
+        appelPublic<unknown>("/public/config"),
       ]);
+      setSiteUrl(publicConfigSchema.parse(brutConfig).siteUrl);
       setProfil(profileSchema.parse(brutProfil));
       setSolde(creditBalanceSchema.parse(brutCredits).balance);
 
@@ -158,7 +164,7 @@ export default function Moi() {
             {fiche?.displayName ?? profil.username}
           </Text>
           <Text style={[styles.adresse, { color: couleurs.textSecondary }]} numberOfLines={1}>
-            {t.pseudoAdresse(profil.username)}
+            {wallAddress(siteUrl, profil.username)}
           </Text>
         </View>
         <Icon name="chevron-right" size={16} color={couleurs.textMention} />
