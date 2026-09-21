@@ -1236,6 +1236,102 @@ pas été compris.
 
 ---
 
+## 17 — « Aucun moyen enregistré », et aucun moyen d'en enregistrer un
+
+**Statut :** cause identifiée. **Même défaut de conduite que le retour 15B**, et
+c'est le troisième écran à faire ça — voir la synthèse en fin d'entrée.
+
+### Ce qui a été vu
+
+L'écran **Payment** annonce « No method saved — One will save itself on your
+first purchase. » Et rien d'autre : **aucun bouton pour en ajouter un.**
+
+### Le bouton existe, il est retiré
+
+`apps/mobile/app/(app)/paiement.tsx:224` :
+
+```tsx
+{lu && proposables.length > 0 ? (
+  ajoute ? ( …le formulaire… ) : (
+    <Button variant="outline" onPress={() => setAjoute(true)}>{t.paiementAjouter}</Button>
+  )
+) : null}
+```
+
+`proposables` est `canauxProposables(canaux)`, c'est-à-dire les canaux de sorte
+`mobile_money` servis par la plateforme (`apps/mobile/lib/paiement.ts:61`).
+**Aucun canal servi ⇒ pas de bouton.**
+
+Et c'est délibéré, avec sa justification écrite au-dessus :
+
+> ON N'AJOUTE QUE CE QU'ON SAIT AJOUTER, et rien ne le dit mieux que l'absence
+> du bouton. Sans opérateur servi, la plateforme n'a aucun canal mobile money :
+> ouvrir le formulaire ferait choisir dans une liste vide, puis échouer à
+> l'envoi.
+
+**Le raisonnement est juste. La conclusion ne l'est pas.** « Rien ne le dit
+mieux que l'absence du bouton » — sauf que l'absence d'un bouton ne dit rien du
+tout. Elle se lit comme un écran inachevé, et c'est exactement ainsi qu'elle a
+été lue.
+
+### Et la phrase promet une porte qui n'existe pas
+
+« One will save itself on your first purchase. »
+
+Or **le premier achat est impossible** : le retour 15B établit que l'écran de
+recharge ne propose rien tant que `achetable` est faux. On renvoie donc vers un
+geste inatteignable.
+
+**La boucle est fermée :** pas de moyen de paiement parce qu'il faut un premier
+achat ; pas de premier achat parce que la voie d'achat est fermée. Et les deux
+écrans se taisent.
+
+### La cause commune, probablement unique
+
+Les deux gardes lisent la même chose sous deux noms :
+
+| Écran | Garde | Ce qu'elle exige |
+|---|---|---|
+| Recharge | `achetable = manuel && compte !== null` | drapeau `topup.manual` **et** un compte de collecte |
+| Paiement | `proposables.length > 0` | au moins un canal `mobile_money` servi |
+
+**Il est très probable que ce soit une seule configuration manquante sur la
+sandbox** — les canaux de paiement et les comptes de collecte se règlent en
+back-office. À vérifier avant d'écrire la moindre ligne : si la sandbox devait
+être configurée, le défaut est là, et les deux écrans redeviennent normaux.
+
+### Le motif qui se répète — trois écrans, la même conduite
+
+C'est la troisième fois dans cette liste :
+
+| Retour | Écran | Ce qui est caché | Justification écrite dans le code |
+|---|---|---|---|
+| 14 | En cours | les générations en échec | — |
+| 15B | Recharge | tout le bloc d'achat | « ferait croire à une panne » |
+| 17 | Paiement | le bouton d'ajout | « rien ne le dit mieux que l'absence du bouton » |
+
+**Chacun a sa raison, et chacune se défend seule.** Mises bout à bout, elles
+font une application qui retire ses fonctions sans jamais dire pourquoi — et
+l'utilisateur, lui, ne lit pas trois justifications : il lit trois écrans
+cassés.
+
+**La règle à poser, et elle vaut au-delà de ces trois écrans :** une voie fermée
+se DIT. Un écran qui retire son action doit expliquer ce qui manque, ou ne pas
+être atteignable du tout. Le silence n'est jamais la troisième option — c'est
+d'ailleurs déjà la règle que `_layout.tsx` applique aux onglets : « un onglet
+qui mène à une page vide est pire qu'un onglet absent ».
+
+### Ce qu'il y a à trancher
+
+- **Vérifier la configuration sandbox d'abord** — canaux de paiement, comptes
+  de collecte, drapeau `topup.manual`.
+- **Si la voie est fermée à dessein** : les deux écrans doivent le dire, et
+  « Recharger » comme « Paiement » ne devraient pas être proposés depuis « Moi ».
+- **Si elle devait être ouverte** : rien à corriger dans ces écrans, et il reste
+  malgré tout à décider ce qu'ils affichent le jour où un opérateur tombe.
+
+---
+
 ## Relevé au passage, non signalé — à confirmer
 
 Deux choses visibles sur la copie d'écran de l'ajout d'un proche, que Valentine
