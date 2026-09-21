@@ -14,9 +14,44 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 # Synthèse — 27 retours, au 21 septembre
 
-**Vingt-sept retours relevés, tous avec leur cause retrouvée dans le code.** Rien
-n'est corrigé à ce jour : ce document est l'état des lieux qui précède le
-travail.
+**Vingt-sept retours relevés, tous avec leur cause retrouvée dans le code.**
+
+**Onze sont corrigés** et voyagent avec ce document sur la même branche ; trois
+autres se referment par ricochet, et un s'est réglé en configuration. Le reste
+attend, et la section « les chantiers » dit dans quel ordre.
+
+### Ce qui est fait
+
+| § | Ce qui est corrigé |
+|---|---|
+| **24** | La police du portrait entre dans l'image Docker, et sa présence se vérifie au démarrage |
+| **14** | Le lancement d'une génération ouvre l'exécution, plus la liste |
+| **26** | Un portrait ne se dit plus « en cours » pour toujours |
+| **16** | Un onglet est une pile — **referme les §7, §15C et §20A** |
+| **4** | La bande d'acquisition passe à la ligne — sept surfaces publiques |
+| **5** | « Déjà connue de… » ne se dit que si la date est là |
+| **20C** | Le code de suppression de compte part enfin par courriel |
+| **2** | Le 31 février ne franchit plus le contrat |
+| **18** | Un téléphone Android n'est plus un « appareil inconnu » |
+| **12** | L'échec d'une génération dit pourquoi |
+| **6A** | Une contribution reçue prévient le propriétaire |
+
+Le **§23** s'est réglé hors code : les clés d'IA manquaient sur la sandbox.
+
+### Trois portes restées ouvertes, repérées en corrigeant
+
+- **Le 31 février a une seconde porte**, et elle est PUBLIQUE.
+  `packages/contracts/src/public-mur.ts:116` déclare son propre
+  `birthDate: z.string().regex(…)` sans passer par `dateCivileSchema`, et
+  `submission.service.ts:329` l'écrit dans la MÊME colonne. Un inconnu qui
+  dépose `1990-02-31` par un lien de collecte corrompt donc la date du proche,
+  exactement comme avant la garde.
+- **`ClosingBand.tsx:31` porte le même défaut de mise en page** que la bande
+  d'acquisition — `flex: "1 1 0"` avec `minWidth: 0` dans un conteneur
+  `flexWrap`. C'est l'aplat de clôture dont la bande dit reprendre la forme.
+- **`develop` porte un test rouge depuis le 17 septembre.** `siteUrl` a été
+  ajoutée à `/public/config` par `72bb5ee` sans mettre `public-http.e2e.test.ts`
+  à jour. Déterministe, sans rapport avec ce travail.
 
 Ce qui suit ne classe pas par ordre d'arrivée mais par **ce qu'il faut faire
 ensemble**. Plusieurs retours n'ont pas de correction propre — ils disparaissent
