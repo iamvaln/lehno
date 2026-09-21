@@ -1727,6 +1727,48 @@ déjà comme ça qu'on récupère les codes de connexion. À faire avant de conc
 à un défaut : si le code est dans le journal, l'émission marche et c'est
 l'acheminement du courrier sur la sandbox qui est en cause, pas cet écran.
 
+#### Activer les vrais courriels sur la sandbox
+
+C'est possible, et c'est une affaire de configuration — **aucune ligne de code à
+écrire.** `app.module.ts:350` choisit l'adaptateur ainsi :
+
+```ts
+if (process.env.LEHNO_MAIL_CONSOLE === "1") return new ConsoleMailAdapter();
+if (apiKey && from) return new ResendAdapter(apiKey, from);
+throw new Error("Aucun envoi de courrier configuré …");
+```
+
+L'API démarre, donc l'une des deux branches est prise. Comme les codes se lisent
+dans le journal du conteneur, **la sandbox tourne avec
+`LEHNO_MAIL_CONSOLE=1`** — les courriels ne partent pas, leur contenu s'écrit
+sur la console. C'est le comportement annoncé, pas une panne.
+
+**Ce qu'il faut changer dans `.env.sandbox` sur le VPS** (le fichier que
+`docker compose --env-file` passe aux conteneurs, cf. `sandbox.yml:197`) :
+
+1. poser `RESEND_API_KEY` et `RESEND_FROM` ;
+2. **retirer `LEHNO_MAIL_CONSOLE`, ou le vider** ;
+3. redémarrer le conteneur `api`.
+
+**Le point 2 n'est pas optionnel, et c'est le piège.** L'adhésion explicite est
+testée **en premier** : poser les identifiants Resend sans retirer la variable
+ne change rien, et rien ne le signalera. L'ordre est délibéré — il permet à un
+poste de développement de passer outre un Resend partagé — mais il se retourne
+exactement dans ce cas.
+
+**Deux avertissements avant de basculer :**
+
+- **Resend refuse d'écrire à un domaine non vérifié**, et le commentaire du code
+  raconte précisément cette panne : « le code ne partait nulle part, et rien ne
+  disait pourquoi ». Le domaine de `RESEND_FROM` doit être vérifié dans le
+  compte Resend, enregistrements DNS compris.
+- **On perd la lecture des codes dans le journal.** C'est aujourd'hui le seul
+  moyen de se connecter à la sandbox. Si le courrier échoue en silence, plus
+  personne n'entre. **Éprouver qu'un vrai courriel arrive avant de s'en
+  remettre à lui**, et savoir comment revenir en arrière.
+
+`.env.sandbox` appartient au propriétaire du dépôt — aucune session ne l'édite.
+
 **Un point à vérifier au passage :** l'envoi est plafonné à **cinq par heure**
 (`account.controller.ts:44`). Plusieurs « Renvoyer » d'affilée épuisent le
 quota, et le refus apparaîtra alors en bandeau d'erreur — pas dans l'accusé de
