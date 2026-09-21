@@ -8,9 +8,12 @@ import {
   nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
 import {
-  Banner, Card, CreditIndicator, Icon, SectionLabel, useCouleurs,
+  Banner, Card, CreditIndicator, Icon, SectionLabel, useCouleurs, useTheme,
+  type PreferenceDeTheme,
 } from "@lehno/ui-native";
 import { useLangue } from "../../lib/langue.js";
+import { poseLApparence } from "../../lib/apparence.js";
+import { CLES_DE_THEME, THEMES_ORDONNES } from "../../lib/libelles.js";
 import type { Langue } from "../../messages/index.js";
 
 /* Les deux langues, déclarées UNE fois. Les écrire à l'appel du `map` en
@@ -39,6 +42,24 @@ import { corpsDeDeconnexion, sectionsDeReglages, type Rang, type Section } from 
  */
 export default function Reglages() {
   const { t, langue, choisis } = useLangue();
+  /* `choisis` est déjà pris par la langue : celui du thème prend un autre nom
+     plutôt qu'un alias muet. */
+  const { preference, choisis: poseLeTheme } = useTheme();
+
+  /* IMMÉDIATE SOUS LE DOIGT, et c'est ce que le pilote tranche. Appliquée au
+     retour, on choisirait à l'aveugle : le seul moyen de juger une apparence
+     est de la voir.
+
+     Le fournisseur change l'affichage ; le disque garde le choix pour le
+     prochain lancement, où la racine le relit AVANT de peindre le premier pixel
+     — sans quoi un compte réglé en sombre clignoterait en clair à chaque
+     ouverture. L'écriture ne bloque pas le geste : on ne fait pas attendre
+     quelqu'un devant un réglage qui a déjà pris. */
+  const changeLApparence = (vers: PreferenceDeTheme) => {
+    if (vers === preference) return;
+    poseLeTheme(vers);
+    void poseLApparence(vers);
+  };
   const couleurs = useCouleurs();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
@@ -222,6 +243,49 @@ export default function Reglages() {
                     <Text style={[styles.basculeTexte, {
                       color: langue === cle ? couleurs.textOnAccent : couleurs.textSecondary,
                     }]}>{cle === "fr" ? "Français" : "English"}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {/* L'APPARENCE SUIT LA LANGUE, comme le pilote de port la pose : deux
+              réglages de la même nature, réglés d'un même geste, au même
+              endroit.
+
+              TROIS POSITIONS, ET « SYSTÈME » N'EST PAS UNE TROISIÈME PALETTE :
+              c'est l'ABSENCE de choix — l'appareil décide, et on le suit. Une
+              bascule à deux positions perdrait cette information dès le premier
+              passage en sombre du téléphone, et quelqu'un qui n'a jamais choisi
+              se retrouverait figé dans ce que son système faisait ce jour-là.
+
+              PAS DE `radiogroup` : React Native ne connaît pas ce rôle. Chaque
+              position est un bouton qui porte `accessibilityState.selected` —
+              c'est le seul moyen d'annoncer « sélectionné » à VoiceOver comme à
+              TalkBack, et c'est déjà ce que fait la langue au-dessus.
+
+              L'icône : le kit n'a ni lune ni soleil, et `monitor` est celle qui
+              dit l'affichage. Le pilote n'en met aucune, mais toutes les lignes
+              de cet écran en portent une — en omettre une ici ferait un trou. */}
+          {section.cle === "compte" ? (
+            <View style={[styles.rang, {
+              borderTopWidth: nativeBorder.width, borderTopColor: couleurs.borderHairline,
+            }]}>
+              <Icon name="monitor" size={17} color={couleurs.textMention} />
+              <Text style={[styles.libelle, { color: couleurs.textBody }]}>{t.champTheme}</Text>
+              <View style={[styles.bascule, { borderColor: couleurs.borderObject }]}>
+                {THEMES_ORDONNES.map((cle) => (
+                  <Pressable
+                    key={cle}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: preference === cle }}
+                    onPress={() => changeLApparence(cle)}
+                    style={[styles.basculeChoix, preference === cle
+                      ? { backgroundColor: couleurs.action } : null]}
+                  >
+                    <Text style={[styles.basculeTexte, {
+                      color: preference === cle ? couleurs.textOnAccent : couleurs.textSecondary,
+                    }]}>{t[CLES_DE_THEME[cle]]}</Text>
                   </Pressable>
                 ))}
               </View>

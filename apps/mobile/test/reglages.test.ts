@@ -1,5 +1,9 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { corpsDeDeconnexion, sectionsDeReglages } from "../lib/reglages.js";
+import { CLES_DE_THEME, THEMES_ORDONNES } from "../lib/libelles.js";
+import { fr } from "../messages/fr.js";
+import { en } from "../messages/en.js";
 
 // La configuration décidée pour la première version : anniversaires seuls,
 // versement manuel, collecte et parrainage ouverts, et le message généré.
@@ -96,5 +100,61 @@ describe("se déconnecter", () => {
   it("n'appelle rien sans jeton, et laisse sortir quand même", () => {
     expect(corpsDeDeconnexion(null)).toBeNull();
     expect(corpsDeDeconnexion("")).toBeNull();
+  });
+});
+
+/* LE CHOIX D'APPARENCE.
+ *
+ * Toute la mécanique existait déjà — `PreferenceDeTheme` à trois valeurs, le
+ * fournisseur qui part sur « system » et interroge `useColorScheme()`, la
+ * persistance, et la racine qui relit le choix AVANT de peindre le premier
+ * pixel. Il manquait la seule pièce qu'on voit : le sélecteur. Ces cas-ci
+ * lisent la source de l'écran, faute de rendu — ce qu'ils attrapent est la
+ * DISPARITION du sélecteur, pas son comportement, qui s'éprouve à l'appareil.
+ */
+const ecran = readFileSync(new URL("../app/(app)/reglages.tsx", import.meta.url), "utf8");
+
+describe("l'apparence", () => {
+  /* « SYSTÈME » N'EST PAS UNE TROISIÈME PALETTE, c'est l'ABSENCE de choix. Une
+     bascule à deux positions la perdrait au premier passage en sombre du
+     téléphone : quelqu'un qui n'a jamais choisi resterait figé dans ce que son
+     système faisait ce jour-là. */
+  it("a trois positions — system, light, dark — jamais un booléen", () => {
+    expect(THEMES_ORDONNES).toEqual(["system", "light", "dark"]);
+  });
+
+  it("nomme chacune dans les deux langues", () => {
+    for (const cle of THEMES_ORDONNES) {
+      expect(fr[CLES_DE_THEME[cle]], `fr : ${cle}`).toBeTruthy();
+      expect(en[CLES_DE_THEME[cle]], `en : ${cle}`).toBeTruthy();
+    }
+  });
+
+  /* Les positions viennent de la TABLE, pas d'une liste réécrite à côté : le
+     jour où une valeur s'ajoute, une seconde liste se tairait. */
+  it("déduit ses positions de la table des thèmes", () => {
+    expect(ecran).toMatch(/THEMES_ORDONNES\.map/);
+  });
+
+  /* PAS DE `radiogroup` : React Native ne connaît pas ce rôle. Chaque position
+     est un bouton qui porte `accessibilityState.selected`, seul moyen
+     d'annoncer « sélectionné » à VoiceOver comme à TalkBack — et c'est déjà ce
+     que fait la langue, juste au-dessus. */
+  it("annonce aux lecteurs d'écran laquelle est retenue", () => {
+    expect(ecran).toMatch(/accessibilityState=\{\{ selected: preference === cle \}\}/);
+  });
+
+  /* IMMÉDIATE SOUS LE DOIGT. Appliquée au retour, on choisirait à l'aveugle :
+     le seul moyen de juger une apparence est de la voir. Le fournisseur change
+     l'affichage, le disque garde le choix pour le prochain lancement — les deux
+     sont nécessaires, et l'un sans l'autre passe inaperçu dans la séance même. */
+  it("applique le choix tout de suite, et le garde pour le prochain lancement", () => {
+    expect(ecran).toMatch(/poseLeTheme\(vers\)/);
+    expect(ecran).toMatch(/poseLApparence\(vers\)/);
+  });
+
+  // Reposer la position active ne réécrit rien.
+  it("ne fait rien quand on repose la position déjà retenue", () => {
+    expect(ecran).toMatch(/if \(vers === preference\) return;/);
   });
 });
