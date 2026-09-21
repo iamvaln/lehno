@@ -866,6 +866,63 @@ enrichment_nudge_global · enrichment_nudge_person · wish_reserved
 reçoit précisément de cette famille : premier proche, première note, crédits
 inutilisés.
 
+### POURQUOI elles ne s'affichent pas — trois décisions justes, et personne pour tenir leur somme
+
+**1. Le serveur n'envoie jamais de phrase.** Il transporte `titleKey` et
+`bodyParams`, et le commentaire dit pourquoi :
+
+> **JAMAIS une phrase composée** : la langue d'interface peut changer après
+> l'envoi, et une phrase figée resterait dans la langue d'hier.
+
+C'est juste. Une notification écrite en français le lundi et lue après un
+passage en anglais serait restée en français.
+
+**Conséquence : c'est le CLIENT qui détient la copie**, pour chaque nature, dans
+les deux langues.
+
+**2. Le client ne sait rendre que quatre natures sur dix.** Les six autres n'ont
+jamais eu de texte. Ce n'est pas une panne — c'est un travail de rédaction qui
+n'a pas été fait.
+
+**3. Une clé qu'on ne sait pas rendre est cachée**, et c'est encore juste :
+
+> Montrer « notification.activation_first_note » à quelqu'un serait pire que de
+> se taire : c'est du vocabulaire interne, et ça n'apprend rien.
+
+### La faille est dans la somme, pas dans les trois
+
+**La pastille compte dans le vocabulaire du SERVEUR. La liste rend dans celui du
+CLIENT. Et les deux vocabulaires n'ont pas la même taille.**
+
+Personne ne détient l'écart. Le serveur ne peut pas le connaître — savoir ce que
+le client sait écrire n'est pas de son ressort. Le client ne le corrige pas — il
+reçoit un nombre tout fait par `/me/home`.
+
+C'est **exactement la panne déjà réparée une fois**, sous une autre forme. Le
+commentaire de `home.service.ts` la raconte :
+
+> la pastille comptait les lignes `email` et `push`, donc elle annonçait trois
+> éléments à un centre qui n'en montrait qu'un.
+
+La réparation d'alors fut de **partager le prédicat** entre le compte et la
+liste. Elle ne pouvait pas suffire ici : le prédicat partagé décrit ce que la
+base contient, jamais ce que l'application sait dire.
+
+### Ce qui referme la classe, et pas seulement le cas
+
+Écrire les six textes manquants règle aujourd'hui. **La onzième nature rouvrira
+la faille** — et elle se rouvrira en silence, comme les deux fois précédentes.
+
+Ce qui la referme vraiment : **qu'aucune notification ne puisse être
+irreprésentable.** Un rendu générique de dernier recours — une phrase humaine
+par famille, jamais la clé brute — fait que le vocabulaire du client égale celui
+du serveur **par construction**. La règle « ne jamais montrer de vocabulaire
+interne » est préservée ; c'est la branche `null` qui disparaît, et avec elle la
+possibilité même de l'écart.
+
+`CLES_SERVIES` existe justement pour ça : la liste est déjà écrite, et un test
+peut exiger que chaque clé servie ait un rendu.
+
 ### Ce qu'il y a à faire
 
 - **Écrire la copie des six clés manquantes**, en français et en anglais. C'est
