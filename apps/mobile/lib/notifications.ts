@@ -62,6 +62,17 @@ type Traductions = {
      dans la liste du centre n'aurait rien valu de mieux. */
   notifMaDateRappel: (j: number) => string;
   notifMaDateAujourdhui: () => string;
+  /* `notifContributionRecue`, et NON `notifContribution` : cette dernière
+     existe déjà dans les deux dictionnaires, prend un NOMBRE et n'est employée
+     nulle part — de la copie écrite pour une notification que rien n'écrivait.
+     La réutiliser demanderait de grouper, ce que le serveur ne fait pas : il
+     pose une entrée par contribution.
+
+     DEUX FORMES, parce que le nom peut manquer et que ce n'est pas un défaut :
+     un lien de collecte PUBLIC ne vise aucune fiche, et le serveur n'y met
+     donc aucun nom. Une seule forme obligerait à en inventer un. */
+  notifContributionRecue: (qui: string) => string;
+  notifContributionRecueSansNom: () => string;
 };
 
 export function libelleDeLaNotification(n: Notification, t: Traductions): string | null {
@@ -77,6 +88,11 @@ export function libelleDeLaNotification(n: Notification, t: Traductions): string
       return jours !== null ? t.notifMaDateRappel(jours) : null;
     case "notification.own_date_day_of":
       return t.notifMaDateAujourdhui();
+    /* Le nom vient de `bodyParams`, jamais de `personId` : une notification se
+       lit souvent hors connexion, et résoudre une fiche demanderait le réseau.
+       Absent sur un lien public, où la contribution ne vise personne. */
+    case "notification.contribution_received":
+      return qui !== null ? t.notifContributionRecue(qui) : t.notifContributionRecueSansNom();
     default:
       return null;
   }
@@ -90,6 +106,8 @@ export function libelleDeLaNotification(n: Notification, t: Traductions): string
  */
 export const CLES_SERVIES: readonly string[] = [
   "notification.event_reminder",
+  // Écrite par `mur/collecte.service.ts` à chaque contribution reçue.
+  "notification.contribution_received",
   "notification.event_day_of",
   "notification.activation_first_person",
   "notification.activation_first_note",

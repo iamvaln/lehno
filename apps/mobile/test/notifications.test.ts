@@ -116,3 +116,34 @@ describe("marquer comme lu", () => {
     expect(() => corpsDeLecture([])).toThrow();
   });
 });
+
+/* LA CONTRIBUTION REÇUE, ÉCRITE ET LISIBLE — les deux moitiés, ou rien.
+ *
+ * Le type existait au contrat et l'écran des rappels offrait son interrupteur,
+ * mais rien ne l'écrivait. Le brancher côté serveur SANS poser ce libellé
+ * aurait rouvert l'autre panne, celle des six clés muettes : la cloche compte
+ * ce que le serveur pose, le centre ne rend que ce qu'il sait dire, et une
+ * entrée comptée mais invisible est la seule combinaison qui ne s'explique pas
+ * à l'écran. D'où ces deux cas, posés dans le même lot que l'écriture. */
+describe("une contribution reçue", () => {
+  it("se dit avec le nom du proche quand le lien en vise un", () => {
+    expect(libelleDeLaNotification(
+      notif({ titleKey: "notification.contribution_received", bodyParams: { person: "Remi" } }),
+      fr,
+    )).toBe("Une contribution à relire : Remi");
+  });
+
+  /* Un lien de collecte PUBLIC ne vise aucune fiche : le serveur n'y met aucun
+     nom, et c'est voulu — le répondant s'est nommé lui-même, et un nom non
+     vérifié n'entre pas dans une notification que personne n'a demandée. */
+  it("se dit sans nom quand le lien est public", () => {
+    expect(libelleDeLaNotification(
+      notif({ titleKey: "notification.contribution_received", bodyParams: {} }),
+      fr,
+    )).toBe("Une contribution à relire");
+  });
+
+  it("ne rejoint pas les clés que la copie ne sait pas dire", () => {
+    expect(clesSansLibelle(fr)).not.toContain("notification.contribution_received");
+  });
+});
