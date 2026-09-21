@@ -12,6 +12,106 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 ---
 
+# Synthèse — 19 retours, au 21 septembre
+
+**Dix-neuf retours relevés, tous avec leur cause retrouvée dans le code.** Rien
+n'est corrigé à ce jour : ce document est l'état des lieux qui précède le
+travail.
+
+Ce qui suit ne classe pas par ordre d'arrivée mais par **ce qu'il faut faire
+ensemble**. Plusieurs retours n'ont pas de correction propre — ils disparaissent
+avec celle d'un autre, ou ils n'ont pas été compris.
+
+## Ce qui ressort de l'ensemble
+
+Trois constats traversent la liste, et ils comptent plus que les retours pris un
+par un.
+
+**1. Une seule cause tient trois retours.** Le §16 — vingt-quatre écrans
+enregistrés comme onglets sans qu'on l'ait voulu — explique à lui seul le retour
+cassé partout (15C) et la pile de Proches (7).
+
+**2. L'application se tait quand une voie est fermée.** Trois écrans retirent
+leur fonction sans dire pourquoi (14, 15B, 17), chacun avec une justification
+écrite et défendable. Mises bout à bout, elles font une application qui paraît
+cassée. **C'est une règle à poser, pas trois correctifs.**
+
+**3. Plusieurs fonctions sont écrites mais non branchées.** Le travail difficile
+est fait ; c'est le dernier fil qui manque — parfois une ligne. C'est la
+catégorie la plus coûteuse en confiance : l'écran promet, l'accusé confirme, et
+rien ne se produit.
+
+## Les chantiers, dans l'ordre où je les prendrais
+
+### A. La structure de navigation — §16 (referme 7 et 15C)
+
+**À faire en premier, et seul.** Les cinq onglets dans leur propre groupe, le
+reste dans une pile. Sans ça, on corrigerait vingt-quatre fois le même retour.
+
+### B. Les promesses non tenues — §13, §19, §6A
+
+Des gestes qui accusent réception sans rien écrire, ou qui écrivent sans que
+personne ne lise.
+
+- [ ] **§13** « Marquer envoyé » ne fait aucun appel réseau — et s'offre sans
+      brouillon. *Traiter la condition d'affichage avant de brancher l'appel.*
+- [ ] **§19** L'export de données s'enregistre, rien ne le traite. *Le bouton
+      est désormais mort sur les comptes d'essai : purger les `pending`.*
+- [ ] **§6A** Une contribution reçue n'écrit aucune notification, alors qu'un
+      interrupteur existe pour la régler.
+
+### C. La règle des voies fermées — §15B, §17, §14
+
+- [ ] **Vérifier d'abord la configuration de la sandbox** — `topup.manual`,
+      comptes de collecte, canaux de paiement. Si elle devait être ouverte, 15B
+      et 17 n'ont rien à corriger.
+- [ ] **Poser la règle** : une voie fermée se dit, ou l'écran n'est pas
+      atteignable. Le silence n'est pas une troisième option.
+
+### D. Les corrections courtes et sûres
+
+Chacune tient en peu de lignes, et aucune n'attend une décision.
+
+- [ ] **§5** Le texte d'aide de la date teste la nature du lien au lieu de la
+      date. *Une ligne, plus un test qui tombe sur l'état actuel.*
+- [ ] **§18** `natureDeLAppareil` ignore `okhttp` : chaque Android est un
+      « appareil inconnu ». *La même panne a été réparée pour iOS.*
+- [ ] **§4** La bande d'acquisition ne passe jamais à la ligne. *Une propriété
+      flex — et elle sert les cinq surfaces publiques.*
+- [ ] **§2 (partie garde)** Le 31 février se saisit et franchit le contrat.
+      *Indépendant du sélecteur, et c'est une vraie erreur de données.*
+
+### E. Ce qui attend une décision de conception
+
+- [ ] **§1** L'horizon de l'accueil. *Fenêtre à 4 semaines, cartes à 7 jours :
+      que fait-on entre 8 et 28 ? La phrase de résumé survit-elle ?*
+- [ ] **§2 (partie forme)** Le `Select` natif — **son propre lot**, iOS et
+      Android n'ayant pas la même modalité. Il sert trois écrans.
+- [ ] **§9** Le thème : le déplacer vers les réglages, et l'appliquer sous le
+      doigt.
+- [ ] **§11** Retirer « Moi » du sélecteur — mais les culs-de-sac sont le vrai
+      sujet, et ils se rejoignent depuis l'onglet « Moi ».
+- [ ] **§8** L'étendue du tirer-pour-rafraîchir.
+- [ ] **§7** Une fois §16 corrigé : revient-on à la liste des proches ?
+
+### F. Bloqué sur une observation
+
+- [ ] **§10A** La cloche annonce 5, le centre ne montre rien. *Ouvrir le centre
+      et dire ce qu'il affiche : état vide dessiné, ou erreur ?*
+- [ ] **§12** L'échec de portrait. *Le `failureCode` est dans le journal du
+      conteneur.* — et le motif est servi par le serveur, jeté par l'écran.
+- [ ] **§3** Le mot de collecte. *Rouvrir le lien : le chapeau dit-il « You have
+      already answered » ?*
+- [ ] **§10B** Le mot d'accueil n'existe pas. *Décision produit, pas panne.*
+
+## Ce qui est déjà tranché
+
+- **§14** — les remboursements du 21 septembre établissent que des générations
+  ont bien échoué. Reste le pourquoi (§12).
+- **§16** — la cause est établie, la correction est connue.
+
+---
+
 ## 1 — L'accueil montre des dates bien au-delà de l'horizon
 
 **Statut :** cause identifiée, correction à décider.
