@@ -1598,6 +1598,29 @@ cas, c'est la confirmation.
 **Il faudra donc, en plus de la correction, effacer les lignes `pending`
 restées en base** — sans quoi les comptes d'essai gardent un bouton mort.
 
+### Troisième couche : le back-office ne la voit pas non plus
+
+Vérifié sur l'ensemble du back-office — `apps/admin`, `apps/api/src/admin` et
+`packages/contracts/src/admin.ts` : **le mot `dataExport` n'y figure nulle
+part.**
+
+Le tableau de bord porte pourtant une file « À TRAITER », et sa raison d'être
+est exactement celle-là : « c'est par ici qu'on entre dans le délai de grâce et
+dans l'assistance, qui n'ont pas d'entrée au menu ». Elle est alimentée par
+**deux sources seulement** (`apps/api/src/admin/dashboard.controller.ts:124`) :
+
+- les comptes dont le délai de grâce est échu ;
+- les demandes d'assistance sans réponse.
+
+Les exports n'y sont pas, et n'ont aucun écran ailleurs.
+
+**Donc non seulement rien ne traite la demande automatiquement, mais personne ne
+peut la traiter à la main** — un administrateur n'a aucun moyen d'apprendre
+qu'elle existe. Le seul endroit où elle se voit est la table en base.
+
+C'est à verser au même chantier : une file qui attend une décision et que
+l'outil d'exploitation ignore est une file qu'on découvre par une réclamation.
+
 ### Ce que ça engage
 
 Cet écran exerce le **droit à la portabilité** — la politique de
