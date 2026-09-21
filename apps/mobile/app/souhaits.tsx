@@ -1,0 +1,344 @@
+import { useCallback, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { ownerWishListSchema, type OwnerWish } from "@lehno/contracts";
+import { nativeBorder, nativeFont, nativeSpace, nativeTouchMin } from "@lehno/tokens";
+import {
+  Banner, Button, Card, EmptyState, Icon, LoadingState, ScreenHeader, SectionLabel, Tag,
+  TextField, Toast, useCouleurs,
+} from "@lehno/ui-native";
+import { Bascule } from "../composants/Bascule.js";
+import { useLangue } from "../lib/langue.js";
+import { appel, ErreurDApi } from "../lib/api.js";
+import { messageDErreur } from "../lib/session.js";
+import { useDrapeaux } from "../lib/DrapeauxProvider.js";
+import { ecranEteint } from "../lib/navigation.js";
+import { EcranFerme } from "../composants/EcranFerme.js";
+import {
+  corpsDeCreation, corpsDeMarque, corpsDeVisibilite, etatDuSouhait,
+  nomDuReserveur, type SaisieDeSouhait,
+} from "../lib/souhaits.js";
+
+/* Les souhaits d'une liste — §3.19.
+ *
+ * LE CHAÎNON QUI MANQUAIT. On pouvait créer une wishlist et jamais la
+ * remplir — donc jamais la partager, puisque le partage exige au moins un
+ * souhait. Une liste vide demanderait à un proche de choisir dans rien.
+ *
+ * « RÉSERVÉ » NE SE POSE PAS À LA MAIN. Le contrat l'interdit : « le laisser
+ * poser permettrait de déclarer pris un cadeau que personne n'a réservé, donc
+ * de le retirer de la liste partagée sans qu'aucune réservation ne
+ * l'explique ». L'écran n'offre donc que « libre » et « déjà offert ».
+ *
+ * ET LE SILENCE N'EST PAS UNE ABSENCE : un souhait peut être réservé SANS nom.
+ * « Nul ne veut pas dire *personne n'a réservé*, mais *aucun nom n'a été
+ * donné* » — les confondre ferait racheter le même cadeau.
+ */
+export default function Souhaits() {
+  const { t, langue } = useLangue();
+  const couleurs = useCouleurs();
+  const insets = useSafeAreaInsets();
+  const routeur = useRouter();
+  const { actives } = useDrapeaux();
+  /* UNE ROUTE RESTE UNE ROUTE. La navigation ne propose plus cet écran
+     quand son drapeau est éteint, mais un lien profond l'atteint encore :
+     il se garde donc lui-même plutôt que de compter sur celui qui l'ouvre. */
+  const eteint = ecranEteint("listes", actives);
+  /* `nom` : celui de la liste, que l'appelant connaît déjà — le rechercher
+     ferait un appel pour un titre. Même raison que `qui` sur la génération.
+     Il ne sert QU'À ÉCRIRE : un lien profond peut poser n'importe quoi ici, et
+     rien de ce qui décide ne s'y adosse. Absent, l'en-tête se rabat sur le nom
+     de la famille — mieux qu'un en-tête vide sur une arrivée directe. */
+  const { id, nom } = useLocalSearchParams<{ id?: string; nom?: string }>();
+
+  const [souhaits, setSouhaits] = useState<OwnerWish[] | null>(null);
+  const [saisie, setSaisie] = useState<SaisieDeSouhait>({
+    intitule: "", lien: "", details: "", prix: "", devise: "XAF", public: true,
+  });
+  const [envoi, setEnvoi] = useState(false);
+  const [accuse, setAccuse] = useState<string | null>(null);
+  const [echec, setEchec] = useState<string | null>(null);
+
+  const charge = useCallback(async () => {
+    if (!id) return;
+    try {
+      setSouhaits(ownerWishListSchema.parse(
+        await appel<unknown>(`/me/wishlists/${id}/wishes`),
+      ));
+      setEchec(null);
+    } catch (e) {
+      setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
+    }
+  }, [id, langue]);
+
+  useFocusEffect(useCallback(() => { if (!eteint) void charge(); }, [charge, eteint]));
+
+  const ajoute = async (): Promise<void> => {
+    if (!id) return;
+    setEnvoi(true);
+    setEchec(null);
+    try {
+      await appel<unknown>(`/me/wishlists/${id}/wishes`, {
+        method: "POST",
+        body: JSON.stringify(corpsDeCreation(saisie)),
+      });
+      setSaisie({ intitule: "", lien: "", details: "", prix: "", devise: "XAF", public: true });
+      setAccuse(t.souhaitModifieFait);
+      await charge();
+    } catch (e) {
+      setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
+    } finally {
+      setEnvoi(false);
+    }
+  };
+
+  const regle = async (s: OwnerWish, corps: unknown): Promise<void> => {
+    setEchec(null);
+    try {
+      await appel<unknown>(`/me/owner-wishes/${s.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(corps),
+      });
+      await charge();
+    } catch (e) {
+      setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
+    }
+  };
+
+  const retire = async (s: OwnerWish): Promise<void> => {
+    setEchec(null);
+    try {
+      await appel<unknown>(`/me/owner-wishes/${s.id}`, { method: "DELETE" });
+      setAccuse(t.souhaitRetireFait);
+      await charge();
+    } catch (e) {
+      setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
+    }
+  };
+
+  /* L'EN-TÊTE DIT DANS QUELLE LISTE ON EST. Il ne portait que la flèche : on
+     ouvrait « Ma crémaillère » et l'écran ne le disait plus nulle part. La
+     planche met le nom de la liste en titre. */
+  const retour = (
+    <ScreenHeader
+      titre={nom ?? t.moiListes}
+      retour={t.retour}
+      onRetour={() => routeur.back()}
+    />
+  );
+
+  /* CETTE GARDE PASSE AVANT TOUT AUTRE RENDU, et ce n'est pas cosmétique :
+     elle était posée APRÈS la condition du squelette, donc elle ne tirait
+     jamais. Drapeau éteint, `charge()` n'est pas appelé ; identifiant absent,
+     il renonce — dans les deux cas les données restent nulles, le squelette
+     gagne, et l'écran tourne à vide INDÉFINIMENT. Vu à l'appareil.
+
+     Une route d'expo-router s'atteint par lien profond : elle se garde donc
+     elle-même. Encore faut-il que la garde soit atteignable. */
+  if (eteint || !id) return <EcranFerme />;
+
+  if (echec && souhaits === null) {
+    return (
+      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
+        {retour}
+        <Banner intent="error">{echec}</Banner>
+        <View style={{ marginTop: nativeSpace[12] }}>
+          <Button variant="outline" full icon="refresh-cw" onPress={() => void charge()}>
+            {t.maintReessayer}
+          </Button>
+        </View>
+      </View>
+    );
+  }
+
+  if (souhaits === null) {
+    return (
+      <View style={[styles.page, { paddingTop: insets.top + nativeSpace[8] }]}>
+        {retour}
+        <LoadingState variant="liste" rows={4} title={t.chargement} />
+      </View>
+    );
+  }
+
+
+
+  return (
+    <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
+      <ScrollView
+        contentContainerStyle={[styles.page, {
+          paddingTop: insets.top + nativeSpace[8],
+          paddingBottom: insets.bottom + nativeSpace[24],
+        }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        {retour}
+
+        {echec ? (
+          <View style={{ marginBottom: nativeSpace[12] }}>
+            <Banner intent="error">{echec}</Banner>
+          </View>
+        ) : null}
+
+        {souhaits.length ? (
+          souhaits.map((s) => {
+            const etat = etatDuSouhait(s);
+            const qui = nomDuReserveur(s);
+            return (
+              <Card key={s.id} surface="panel" padding={15} radius="lg" style={styles.carte}>
+                {/* LA RANGÉE ENTIÈRE EST LA PORTE, pas le seul chevron.
+                    La carte ne dit ni le prix, ni le lien, ni la provenance :
+                    sans cette porte, §3.19 ne serait atteignable que par un lien
+                    profond. Mais la porte était une icône de 18 points élargie
+                    de 8 — 34 au total, sous les 44 de la charte — collée au bord
+                    droit, pendant que l'intitulé, lui, ne répondait pas. On
+                    visait le nom du souhait et il ne se passait rien.
+
+                    Le libellé annoncé est l'intitulé — « bouton » répété huit
+                    fois ne dirait pas lequel on ouvre. Le chevron reste, en
+                    ornement : il dit qu'il y a un ailleurs. */}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={s.label}
+                  onPress={() => routeur.push({
+                    pathname: "/souhait", params: { liste: id, id: s.id },
+                  })}
+                  style={styles.entete}
+                >
+                  <Text style={[styles.quoi, { color: couleurs.textBody }]} numberOfLines={2}>
+                    {s.label}
+                  </Text>
+                  {etat === "offert" ? <Tag tone="quiet">{t.souhaitOffertEtat}</Tag> : null}
+                  {etat === "reserve" ? <Tag tone="quiet">{t.souhaitReserve}</Tag> : null}
+                  <Icon name="chevron-right" size={18} color={couleurs.textMention} />
+                </Pressable>
+
+                {s.price !== null && s.currency ? (
+                  <Text style={[styles.mention, { color: couleurs.textSecondary }]}>
+                    {s.price} {s.currency}
+                  </Text>
+                ) : null}
+                {s.details ? (
+                  <Text style={[styles.mention, { color: couleurs.textSecondary }]}>
+                    {s.details}
+                  </Text>
+                ) : null}
+
+                {/* RÉSERVÉ SANS NOM RESTE RÉSERVÉ. La phrase le dit plutôt que
+                    de laisser un blanc qu'on lirait comme « personne ». */}
+                {etat === "reserve" ? (
+                  <Text style={[styles.mention, { color: couleurs.textMention }]}>
+                    {qui ? t.souhaitReservePar(qui) : t.souhaitReserveAnonyme}
+                  </Text>
+                ) : null}
+
+                <Bascule
+                  premier
+                  libelle={t.souhaitVisible}
+                  actif={s.isPublic}
+                  onBascule={() => void regle(s, corpsDeVisibilite(s))}
+                />
+
+                <View style={styles.actions}>
+                  {/* Seuls « libre » et « déjà offert » s'écrivent. Sur un
+                      souhait réservé, le geste mène à « offert » — quelqu'un
+                      l'a pris, on le marque reçu le jour venu. */}
+                  <Button full variant="outline" onPress={() => void regle(s, corpsDeMarque(s))}>
+                    {etat === "offert" ? t.souhaitDisponible : t.souhaitOffert}
+                  </Button>
+                  <Button full variant="text" onPress={() => void retire(s)}>
+                    {t.souhaitRetirer}
+                  </Button>
+                  {/* Retirer un souhait réservé emporte la réservation : la
+                      copie le dit, et quelqu'un attend peut-être de l'offrir. */}
+                  {etat === "reserve" ? (
+                    <Text style={[styles.mention, { color: couleurs.textMention }]}>
+                      {t.souhaitRetraitReserve}
+                    </Text>
+                  ) : null}
+                </View>
+              </Card>
+            );
+          })
+        ) : (
+          /* L'ÉTAT VIDE DIT QU'IL EST VIDE ; le formulaire dessous dit ce
+             qu'il fait. Les deux portaient « Nouveau souhait », l'un sous
+             l'autre, sans rien entre eux — l'écran s'ouvrait sur le même titre
+             écrit deux fois. `videSouhaitsTitre` existait déjà et n'était
+             employé que par l'occasion. */
+          <EmptyState
+            illustration="souhaits-vide"
+            title={t.videSouhaitsTitre}
+            text={t.videSouhaitsTexte}
+          />
+        )}
+
+        <View style={styles.bloc}>
+          <SectionLabel>{t.souhaitAjouterTitre}</SectionLabel>
+          <TextField
+            label={t.souhaitQuoi}
+            placeholder={t.souhaitQuoiExemple}
+            value={saisie.intitule}
+            onChangeText={(v) => setSaisie({ ...saisie, intitule: v })}
+          />
+          <View style={{ marginTop: nativeSpace[12] }}>
+            <TextField
+              label={t.souhaitCombien}
+              value={saisie.prix}
+              onChangeText={(v) => setSaisie({ ...saisie, prix: v })}
+            />
+          </View>
+          <View style={{ marginTop: nativeSpace[12] }}>
+            <TextField
+              multiline
+              label={t.souhaitPrecisions}
+              placeholder={t.souhaitPrecisionsExemple}
+              value={saisie.details}
+              onChangeText={(v) => setSaisie({ ...saisie, details: v })}
+            />
+          </View>
+          <View style={{ marginTop: nativeSpace[12] }}>
+            {/* Un intitulé vide n'est pas un souhait : le bouton le dit avant
+                l'aller-retour, plutôt que d'aller chercher un refus. */}
+            <Button
+              full
+              icon="plus"
+              disabled={envoi || saisie.intitule.trim().length === 0}
+              onPress={() => void ajoute()}
+            >
+              {t.souhaitAjouter}
+            </Button>
+          </View>
+        </View>
+      </ScrollView>
+
+      {accuse ? (
+        <Toast intent="success" insetBas={insets.bottom} onDismiss={() => setAccuse(null)}>
+          {accuse}
+        </Toast>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
+  retour: {
+    width: nativeTouchMin, height: nativeTouchMin, marginLeft: -nativeSpace[12],
+    alignItems: "center", justifyContent: "center",
+  },
+  carte: { marginTop: nativeSpace[12] },
+  /* `minHeight` À LA CHARTE : la rangée porte la cible tactile, et un intitulé
+     court la ferait sinon plus basse que le doigt qui la vise. */
+  entete: {
+    flexDirection: "row", alignItems: "center",
+    gap: nativeSpace[10], minHeight: nativeTouchMin,
+  },
+  quoi: { flex: 1, fontFamily: nativeFont.bodySemibold, fontSize: 15 },
+  mention: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[6] },
+  actions: { marginTop: nativeSpace[8] },
+  bloc: {
+    marginTop: nativeSpace[24], borderTopWidth: nativeBorder.width,
+    paddingTop: nativeSpace[16],
+  },
+});

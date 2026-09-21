@@ -588,7 +588,7 @@ export default function Generation() {
           onConfirmer={() => { setConfirmeLaRelance(false); void refais(); }}
           /* Solde insuffisant, « Recharger » devient l'action PRINCIPALE de la
              feuille : sans destination, le seul geste offert était muet. */
-          onRecharger={() => { setConfirmeLaRelance(false); routeur.push("/(app)/recharge"); }}
+          onRecharger={() => { setConfirmeLaRelance(false); routeur.push("/recharge"); }}
           onAnnuler={() => setConfirmeLaRelance(false)}
         />
       ) : null}

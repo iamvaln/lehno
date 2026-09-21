@@ -39,7 +39,7 @@ const DISPENSES: Readonly<Record<string, string>> = {
   /* Cherche délibérément `isSelf` pour retrouver SA PROPRE fiche et lister
      ses propres échéances — le seul usage du carnet ici. `sansSoi` la
      retirerait avant qu'on ait pu la trouver. */
-  "(app)/listes": "cherche isSelf pour retrouver sa propre fiche, sansSoi la retirerait avant",
+  "listes": "cherche isSelf pour retrouver sa propre fiche, sansSoi la retirerait avant",
   /* `POST /me/persons` CRÉE un proche ; la réponse n'est même pas parsée en
      liste. Le balayage plus bas ne distingue pas lecture et écriture — sans
      cette entrée, une création (chemin sans identifiant, donc identique en

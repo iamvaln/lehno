@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { fr } from "../messages/fr.js";
 import { en } from "../messages/en.js";
+import { screenPath } from "./screen-paths.js";
 
 /* UN ÉCRAN EMPILÉ DIT OÙ L'ON EST.
  *
@@ -40,7 +41,7 @@ const ENTETES: Readonly<Record<string, string>> = {
 };
 
 const source = (nom: string): string =>
-  readFileSync(new URL(`../app/(app)/${nom}.tsx`, import.meta.url), "utf8");
+  readFileSync(new URL(`../${screenPath(nom)}`, import.meta.url), "utf8");
 
 describe("les écrans empilés disent où l'on est", () => {
   for (const [ecran, cle] of Object.entries(ENTETES)) {

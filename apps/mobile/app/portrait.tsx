@@ -797,7 +797,7 @@ export default function PortraitEcran() {
           solde={solde}
           insetBas={insets.bottom}
           onConfirmer={() => { setConfirmeLaRelance(false); void refais(); }}
-          onRecharger={() => { setConfirmeLaRelance(false); routeur.push("/(app)/recharge"); }}
+          onRecharger={() => { setConfirmeLaRelance(false); routeur.push("/recharge"); }}
           onAnnuler={() => setConfirmeLaRelance(false)}
         />
       ) : null}

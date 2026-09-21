@@ -54,7 +54,7 @@ interface Sortie {
   // Le drapeau qui la gouverne, ou rien quand elle est du socle.
   drapeau: string | null;
   // La route, ou `null` tant que l'écran n'existe pas dans ce lot.
-  route: "/(app)/proches/identite" | "/(app)/collecte" | "/portrait" | null;
+  route: "/(app)/proches/identite" | "/(app)/proches/collecte" | "/portrait" | null;
   /* CE QUE LA SORTIE PASSE, quand ce n'est pas `{ id }`. Les deux premières
      rouvrent la fiche sous un autre angle et se contentent de son
      identifiant ; le portrait, lui, VISE le proche et le nomme. Absent vaut
@@ -192,7 +192,7 @@ export default function Proche() {
   ]);
 
   const TOUTES: Sortie[] = [
-    { cle: "collecte", icone: "link", libelle: t.ficheCollecteCourt, drapeau: "collect", route: "/(app)/collecte" },
+    { cle: "collecte", icone: "link", libelle: t.ficheCollecteCourt, drapeau: "collect", route: "/(app)/proches/collecte" },
     { cle: "identite", icone: "user-pen", libelle: t.ficheIdentiteCourt, drapeau: null, route: "/(app)/proches/identite" },
     /* Le portrait VISE quelqu'un, là où les deux autres sorties partent d'une
        fiche déjà ouverte. `qui` sert à ÉCRIRE — la feuille payante le nomme —

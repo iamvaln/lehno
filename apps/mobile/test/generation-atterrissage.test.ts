@@ -13,8 +13,8 @@ import { describe, expect, it } from "vitest";
 const lire = (chemin: string): string =>
   readFileSync(new URL(chemin, import.meta.url), "utf8");
 
-const preparation = lire("../app/(app)/preparation.tsx");
-const reprises = lire("../app/(app)/reprises.tsx");
+const preparation = lire("../app/preparation.tsx");
+const reprises = lire("../app/reprises.tsx");
 
 /* ─────────────────────────────────────────────────────────────────────────
  * « ON ARRIVE SUR LA CHOSE, JAMAIS SUR UNE LISTE »
@@ -28,7 +28,7 @@ const reprises = lire("../app/(app)/reprises.tsx");
  * ───────────────────────────────────────────────────────────────────────── */
 describe("le lancement d'une génération", () => {
   it("ne pousse plus vers la liste des reprises", () => {
-    expect(preparation).not.toContain('routeur.push("/(app)/reprises")');
+    expect(preparation).not.toContain('routeur.push("/reprises")');
   });
 
   it("lit l'identifiant rendu par le serveur plutôt que de jeter la réponse", () => {
