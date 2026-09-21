@@ -953,18 +953,48 @@ n'y est pas, et `apps/mobile/lib/reprises.ts:191` dit pourquoi, en une ligne :
 if (generation.status === "failed") continue;
 ```
 
-**Les échecs sont écartés sans un mot.** Et le retour 12 établit que les
-générations échouent en ce moment sur la sandbox — « L'écriture n'a pas
-abouti ».
+**Les échecs sont écartés sans un mot.**
 
-Les deux se composent exactement en l'écran vu : le message est lancé, il
-échoue, la liste le jette, et l'écran annonce « Tout est traité ».
+**Ce qui suit est une DÉDUCTION, pas une observation.** Rien n'a dit que cette
+génération-là avait échoué : le retour 12 portait sur un **portrait**, celle-ci
+est un **message**, et transporter la panne de l'une à l'autre serait une
+supposition. Voici ce qui est établi, et ce qui ne l'est pas.
 
-**Réponse à la question posée : nulle part.** Aucun écran de l'application ne
-montre une génération ratée. Le crédit, lui, est bien rendu — « en cas d'échec,
-le crédit est rendu au solde et la raison portée par la réponse » — mais la
-raison n'est portée nulle part à l'écran (voir le retour 12, défaut symétrique
-sur le portrait).
+**Établi :**
+
+- **La demande est passée.** `routeur.push` n'est atteint que si `appel` n'a
+  pas jeté ; un échec réseau aurait posé le bandeau et laissé l'écran en place.
+  Elle a navigué, donc le serveur a répondu 2xx et une exécution existe.
+- **Le serveur ne cache rien.** `generation.service.ts:lister` rend les
+  cinquante plus récentes, sans filtre d'état ; le contrôleur n'en retire
+  aucune.
+- **Les états sont exhaustifs.** `running | succeeded | failed`, et la table de
+  correspondance avec la base (`pending | success | failure`) est complète —
+  aucune ligne ne peut tomber dans un état imprévu.
+- **Le client n'écarte que deux choses** : `status === "failed"`, et les natures
+  dont le drapeau est éteint.
+
+**Il ne reste donc que deux explications, et je ne peux pas choisir entre
+elles depuis le code :**
+
+1. **La génération a échoué**, et la liste l'a jetée.
+2. **Le drapeau de la nature « message » n'est pas actif pour ce compte.**
+   L'écran se replie alors sur son état vide **sans même appeler**
+   (`reprises.tsx:75`) — ce qui expliquerait aussi qu'il paraisse
+   instantanément. Cette branche est moins probable, puisque le geste
+   « Préparer » ne s'offre que si une nature est ouverte, mais `ecranEteint`
+   et `preparationOuverte` ne lisent pas forcément le même drapeau : **à
+   vérifier.**
+
+**Ce qui tranche :** le journal du conteneur de l'API sur la sandbox, ou l'appel
+direct à `/me/generations` avec le jeton du compte. La réponse dira l'état de
+l'exécution, et son `failureReason` s'il y en a un.
+
+**Mais les deux causes A et B tiennent quelle que soit la réponse** : dans un
+cas comme dans l'autre, l'écran d'attente n'a pas été ouvert, et rien n'a été
+dit. Le crédit, lui, est rendu en cas d'échec — « en cas d'échec, le crédit est
+rendu au solde et la raison portée par la réponse » — mais la raison n'atteint
+aucun écran (retour 12, défaut symétrique sur le portrait).
 
 ### Ce qu'il y a à faire
 
