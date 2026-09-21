@@ -118,6 +118,53 @@ pilote de port React Native (`specs/handoff_app_mobile/react-native/`) n'en
 livre pas non plus : il établit `tokens`, `Button`, `EventCard`, `AccueilScreen`
 et `ReglagesHubScreen`, et rien d'autre.
 
+### La portée : trois écrans, pas un
+
+Le défaut n'est pas propre à l'ajout d'un proche. **Trois écrans saisissent une
+date avec la rangée de jours et les mois en vignettes :**
+
+| Écran | Fichier |
+|---|---|
+| Ajouter / modifier un proche | `apps/mobile/app/(app)/proches/identite.tsx:242` |
+| Mon profil — ma propre naissance | `apps/mobile/app/(app)/profil.tsx:414` |
+| Un événement | `apps/mobile/app/evenement.tsx:414` |
+
+Le `Select` à construire sert donc les trois, et c'est une raison de plus d'en
+faire un lot à part plutôt qu'une retouche d'écran.
+
+### Et un défaut qui en découle : le 31 février se saisit
+
+En cherchant la portée, autre chose est apparu, et celui-là n'est pas une
+affaire de forme.
+
+**`evenement.tsx` borne ses jours au mois choisi** — il passe `jours={jours}`,
+calculé par `joursDuMois(annee, mois)`, et ramène le jour dans les bornes avec
+`borneLeJour`.
+
+**`identite.tsx` et `profil.tsx` ne passent rien.** `RangeeDeJours` retombe
+alors sur son défaut : `Array.from({ length: 31 })`, les trente-et-un jours,
+quel que soit le mois. On peut donc y choisir **31 février**.
+
+Et rien ne l'arrête ensuite :
+
+- `naissanceAEnvoyer` (`apps/mobile/lib/carnet.ts`) assemble la chaîne sans
+  regarder le calendrier : `` `${annee}-${mm}-${jj}` `` ;
+- `dateCivileSchema` (`packages/contracts/src/me-events.ts:21`) est
+  `z.string().regex(/^\d{4}-\d{2}-\d{2}$/)` — **une forme, pas une date.**
+  `1990-02-31` la franchit.
+
+Ce qui se passe au-delà dépend du type de la colonne en base, et je ne l'ai pas
+éprouvé. Les deux issues sont mauvaises : ou la ligne est refusée et la
+personne reçoit une erreur qu'elle ne peut pas comprendre, ou elle est acceptée
+et la date est fausse pour toujours.
+
+**À éprouver en premier**, parce que la réponse décide de l'urgence : saisir 31
+février sur une fiche et regarder ce que rend l'API.
+
+Le `Select` de la planche supprimerait le problème à la saisie — une liste de
+jours qui suit le mois. Mais **la garde doit exister au contrat de toute
+façon** : un client ne doit pas pouvoir poser une date qui n'existe pas.
+
 ### Ce qu'il y a à trancher
 
 - **Un `Select` natif est un vrai chantier**, pas une retouche d'écran : iOS et
