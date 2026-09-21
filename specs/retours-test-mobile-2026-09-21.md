@@ -383,6 +383,69 @@ montrer l'état précédent.
 - Le mot n'apparaît toujours pas → il n'a jamais été enregistré, et c'est bien
   le geste qu'il faut réparer.
 
+### MISE À JOUR — la contribution n'est jamais arrivée en base
+
+**Observation nouvelle :** la file de validation est vide, et la fiche du proche
+n'a toujours pas de date.
+
+**La file ne filtre rien.** `apps/api/src/mur/submission.service.ts:62` :
+
+```ts
+async list(userId: string): Promise<Submission[]> {
+  const lignes = await this.prisma.submission.findMany({
+    where: { userId },
+    …
+    orderBy: { createdAt: "desc" },
+  });
+```
+
+Pas de condition de statut, pas de fenêtre, pas de plafond. **Une file vide
+signifie donc qu'aucune ligne `Submission` n'existe** — la contribution n'a pas
+été enregistrée du tout.
+
+*(La date encore absente, elle, ne prouve rien : une date soumise reste en
+attente jusqu'à validation. Ce symptôme-là serait normal même si la
+contribution était arrivée.)*
+
+### Ce qui a pu la refuser — et toutes ces causes laissent une trace
+
+`soumettre()` peut rejeter à cinq endroits, et **toutes rendent un statut
+d'erreur**, donc le bandeau rouge côté répondant
+(`Collecte.tsx:117` → `setEtat("erreur")`) :
+
+| Cause | Où |
+|---|---|
+| Leurre rempli, ou délai invraisemblable | `refuserLesRobots`, avant tout le reste |
+| Jeton inconnu ou révoqué | `resoudre` |
+| Plafond atteint (20/jeton/h, 30/origine/h) | `plafonner` |
+| Corps refusé par `collectSubmitSchema` | validation d'entrée |
+| La requête n'atteint pas l'API | `NEXT_PUBLIC_API_URL` |
+
+**Donc la première question est pour le répondant : a-t-il vu un bandeau rouge
+sous le bouton d'envoi ?** S'il n'a rien vu, l'envoi n'a probablement pas été
+tenté — reste le cas où le bouton était resté inactif, `complet` exigeant au
+moins une date, un souhait **ou** un mot.
+
+### Ce qui tranche en une commande
+
+Le filtre à robots **journalise sa cause** (`apps/api/src/mur/jetons.ts`) :
+
+```ts
+this.journal.warn(`soumission écartée : ${cause}`);
+```
+
+Les deux causes s'y distinguent — « champ leurre rempli » ou « délai de
+soumission invraisemblable (N ms) ». Chercher `soumission écartée` dans le
+journal du conteneur de l'API répond immédiatement.
+
+**Une piste à vérifier si c'est le leurre :** le champ porte `autoComplete="off"`
+et `tabIndex={-1}`, mais il s'appelle `website` et il est **dans le DOM**. Les
+gestionnaires de mots de passe et le remplissage automatique des navigateurs
+ignorent régulièrement `autocomplete="off"`. Un champ leurre rempli par le
+navigateur d'un humain refuse exactement ce qu'il devait laisser passer — et le
+commentaire du contrat le dit lui-même : « ce sont des économies de bruit, pas
+des remparts ». Si c'est le cas, il faut resserrer le leurre, pas l'utilisateur.
+
 ### Ce qu'il y a à trancher, si c'est bien le geste
 
 - **« Partager » enregistre d'abord.** Le plus court : le bouton enregistre le
