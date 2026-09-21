@@ -12,9 +12,9 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 ---
 
-# Synthèse — 21 retours, au 21 septembre
+# Synthèse — 23 retours, au 21 septembre
 
-**Vingt et un retours relevés, tous avec leur cause retrouvée dans le code.** Rien
+**Vingt-trois retours relevés, tous avec leur cause retrouvée dans le code.** Rien
 n'est corrigé à ce jour : ce document est l'état des lieux qui précède le
 travail.
 
@@ -2013,6 +2013,135 @@ Trois choses se conjuguent, et aucune n'est fautive seule :
   `pretAEnvoyer` garde la porte — mais si l'on desserrait la garde, **on
   écarterait des souhaits en silence.** Les deux se tiennent : ne pas toucher à
   l'un sans regarder l'autre.
+
+---
+
+## 22 — Le débit puis le remboursement d'une génération ratée n'ont rien à faire dans le journal
+
+**Statut :** décision produit, prise. Reste à choisir comment.
+
+### Ce qui a été vu
+
+L'écran des mouvements affiche, pour une journée d'essais infructueux :
+
+```
+Remboursement  + 1
+Génération     − 1
+Remboursement  + 2
+```
+
+**Trois lignes pour un solde inchangé.** Elles ne racontent rien qu'on ait
+voulu faire : elles racontent la mécanique interne d'une tentative qui a
+échoué.
+
+### Ce qui est décidé
+
+**Une retenue temporaire en attente de génération n'est pas un événement de
+compte.** Le journal du solde répond à une question — « où sont passés mes
+crédits ? » — et une paire débit/remboursement qui s'annule n'y répond pas :
+elle l'embrouille. Le solde n'a pas bougé ; il ne s'est donc rien passé qui
+mérite une ligne.
+
+Ce n'est pas la même chose que l'effacer d'un registre comptable : **ce qui est
+en cause est ce que l'UTILISATEUR lit**, pas ce que le service conserve.
+
+### Deux façons de le faire, et elles ne se valent pas
+
+**1. Ne pas débiter avant le succès.** Réserver le crédit sans écrire de
+mouvement, et ne l'inscrire qu'à l'aboutissement. Le journal ne porte alors que
+des générations réelles, et il n'y a plus de remboursement à écrire du tout.
+
+*Ce qu'il faut vérifier avant* : le débit à l'avance est ce qui empêche de
+lancer dix générations avec un seul crédit. La réservation doit tenir ce rôle —
+sans quoi on échange un défaut d'affichage contre un trou de comptage.
+
+**2. Débiter comme aujourd'hui, mais taire la paire à l'affichage.** Les deux
+lignes restent en base, et l'écran des mouvements n'expose pas un `consumption`
+annulé par son `refund`.
+
+*Moins bon* : la règle vit alors dans l'écran, et le même filtrage devra être
+refait dans l'export de données, dans le back-office et partout où la liste se
+relit. C'est exactement le genre de règle qui diverge.
+
+**Je recommande la 1**, à condition que la réservation tienne le comptage.
+
+### Où ça se touche
+
+`RAISON_DE_LA_SOURCE` (`packages/contracts/src/me-credits.ts:510`) traduit déjà
+la source comptable en raison lisible — `consumption → usage`,
+`refund → refund`. Le vocabulaire de l'utilisateur est donc déjà séparé de
+celui de la base : c'est le bon endroit pour que la distinction se pose.
+
+**À ne pas casser au passage :** l'export de données rend les mouvements avec
+cette même table (`data-export.service.ts`). Ce qui disparaît de l'écran doit
+disparaître de l'export, ou l'inverse — mais pas l'un sans l'autre.
+
+---
+
+## 23 — La cause des échecs de génération : très probablement aucun fournisseur branché
+
+**Statut :** hypothèse forte, et elle se vérifie par trois chaînes dans le
+journal. Prolonge les §12 et §14.
+
+### Comment les fournisseurs se branchent
+
+`apps/api/src/ia/adaptateurs/index.ts:22` construit la table **à partir des
+seules variables présentes** :
+
+```ts
+if (env["ANTHROPIC_API_KEY"]) table["anthropic"] = …
+if (env["DEEPSEEK_API_KEY"])  table["deepseek"]  = …
+if (env["XAI_API_KEY"])       table["xai"]       = …
+if (env["OPENAI_API_KEY"])    table["openai"]    = …
+```
+
+Aucune clé posée, aucun adaptateur. **Et rien n'empêche le service de
+démarrer** — contrairement au courrier, qui refuse de se lancer sans
+configuration.
+
+### Ce qui se passe alors, exactement
+
+La chaîne des modèles vient du **catalogue en base** (réglé en back-office),
+pas des variables. Les candidats existent donc, et le routeur les parcourt
+(`routeur.service.ts:246`) :
+
+```ts
+const adaptateur = adaptateurs[c.provider];
+if (!adaptateur) {
+  this.logger.error(`aucun adaptateur pour « ${c.provider} », rang ${c.rank} sauté`);
+  continue;
+}
+```
+
+Tous sautés, la boucle s'achève, et :
+
+```ts
+throw new AppError("generation_unavailable", `every model failed for task "${tache}"`,
+  { cause: dernier instanceof Error ? dernier.message : "cause inconnue" });
+```
+
+### La signature à chercher dans le journal
+
+| Chaîne | Ce qu'elle veut dire |
+|---|---|
+| `aucun adaptateur pour « … », rang N sauté` | **une clé d'API manque** pour ce fournisseur |
+| `no usable model for task` | le **catalogue** est vide ou aucun modèle n'est ouvert pour cette tâche |
+| `cause: "cause inconnue"` | **aucun fournisseur n'a même été tenté** — `dernier` est resté nul |
+
+Cette troisième ligne est la plus parlante : si une IA avait répondu non,
+`dernier` porterait son message. « Cause inconnue » veut dire que **personne n'a
+décroché**.
+
+### Si ce n'est pas ça
+
+Le routeur range déjà finement les autres causes
+(`apps/api/src/ia/adaptateurs/echecs.ts`), et le code consigné le dit :
+`auth` (clé mauvaise ou sans droits), `billing` (compte fournisseur à sec —
+« DeepSeek le dit en 402, OpenAI en 400 avec billing hard limit »),
+`rate_limited`, `timeout`, `network`, ou un refus de modèle.
+
+**C'est ce code que `failureReason` porte jusqu'au client — et que l'écran
+jette** (§12). Une fois affiché, cette enquête n'aurait pas eu lieu d'être.
 
 ---
 
