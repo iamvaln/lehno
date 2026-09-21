@@ -12,9 +12,9 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 ---
 
-# Synthèse — 19 retours, au 21 septembre
+# Synthèse — 20 retours, au 21 septembre
 
-**Dix-neuf retours relevés, tous avec leur cause retrouvée dans le code.** Rien
+**Vingt retours relevés, tous avec leur cause retrouvée dans le code.** Rien
 n'est corrigé à ce jour : ce document est l'état des lieux qui précède le
 travail.
 
@@ -27,9 +27,11 @@ avec celle d'un autre, ou ils n'ont pas été compris.
 Trois constats traversent la liste, et ils comptent plus que les retours pris un
 par un.
 
-**1. Une seule cause tient trois retours.** Le §16 — vingt-quatre écrans
-enregistrés comme onglets sans qu'on l'ait voulu — explique à lui seul le retour
-cassé partout (15C) et la pile de Proches (7).
+**1. Une seule cause tient quatre retours.** Le §16 — vingt-quatre écrans
+enregistrés comme onglets sans qu'on l'ait voulu — explique le retour cassé
+partout (15C), la pile de Proches (7), **et l'impossibilité de recommencer un
+formulaire (20A)** : un onglet ne se démonte pas, donc aucun de ces écrans ne
+remet jamais son état à zéro.
 
 **2. L'application se tait quand une voie est fermée.** Trois écrans retirent
 leur fonction sans dire pourquoi (14, 15B, 17), chacun avec une justification
@@ -40,6 +42,11 @@ cassée. **C'est une règle à poser, pas trois correctifs.**
 est fait ; c'est le dernier fil qui manque — parfois une ligne. C'est la
 catégorie la plus coûteuse en confiance : l'écran promet, l'accusé confirme, et
 rien ne se produit.
+
+**4. Et le commentaire ment plus souvent qu'on ne voudrait.** Aux §13, §17, §19
+et §20C, l'intention est écrite, juste, argumentée — au-dessus d'un code qui ne
+la tient pas. Le dépôt nomme lui-même le piège : « Un commentaire ne décrit pas
+ce qu'on voulait faire. » **En relecture on lit la règle et on passe.**
 
 ## Les chantiers, dans l'ordre où je les prendrais
 
@@ -59,6 +66,10 @@ personne ne lise.
       est désormais mort sur les comptes d'essai : purger les `pending`.*
 - [ ] **§6A** Une contribution reçue n'écrit aucune notification, alors qu'un
       interrupteur existe pour la régler.
+- [ ] **§20C** Le code de suppression de compte n'est **jamais envoyé** :
+      `AccountService` n'a pas de port de courrier. *Le gabarit existe, le
+      chemin de connexion donne la forme — et ce chemin-ci est celui d'un
+      droit.*
 
 ### C. La règle des voies fermées — §15B, §17, §14
 
@@ -93,6 +104,8 @@ Chacune tient en peu de lignes, et aucune n'attend une décision.
       sujet, et ils se rejoignent depuis l'onglet « Moi ».
 - [ ] **§8** L'étendue du tirer-pour-rafraîchir.
 - [ ] **§7** Une fois §16 corrigé : revient-on à la liste des proches ?
+- [ ] **§20D** Que propose l'écran de fermeture quand le code n'arrive pas ?
+      *Aujourd'hui : rien. Et le geste engage un droit.*
 
 ### F. Bloqué sur une observation
 
@@ -108,7 +121,21 @@ Chacune tient en peu de lignes, et aucune n'attend une décision.
 
 - **§14** — les remboursements du 21 septembre établissent que des générations
   ont bien échoué. Reste le pourquoi (§12).
-- **§16** — la cause est établie, la correction est connue.
+- **§16** — la cause est établie, la correction est connue, et le §20 en a
+  élargi la portée.
+- **§20B** — le code ne part pas à l'ouverture ; c'est le §16 qui le fait
+  croire.
+- **§20C** — la configuration Resend de la sandbox est en ordre. Le défaut est
+  dans le code, pas dans l'environnement.
+
+## Une correction de ma part, à lire comme telle
+
+J'ai d'abord attribué le courriel manquant du §20 à `LEHNO_MAIL_CONSOLE` sur la
+sandbox, et rédigé toute une marche à suivre pour l'y désactiver. **C'était
+faux**, et l'observation qui l'a défait tenait en une phrase : l'OTP de
+connexion à l'admin arrive. J'avais raisonné depuis la configuration sans
+vérifier le chemin de code. La section a été retirée et remplacée par la cause
+réelle.
 
 ---
 
@@ -1711,68 +1738,81 @@ l'appareil, cela ne se distingue pas d'un envoi à l'ouverture.
 montage, alors il y a un second défaut et il faudra le chercher.** En l'état, je
 n'en vois pas la trace.
 
-### C — le code n'arrive pas : regarder d'abord le journal du conteneur
+### C — le code n'est JAMAIS envoyé : `demanderCode` n'écrit à personne
 
-`POST /me/account/deletion-code` rend `202` et appelle
-`otp.issue(user.email, "account_deletion")` (`account.service.ts:176`). Le code
-est donc **réellement émis**. L'accusé ne ment pas.
+**Cause certaine, et ce n'est ni la configuration ni la sandbox.**
 
-Et il ne peut pas descendre dans la réponse, à dessein :
-
-> Le code ne descend JAMAIS dans la réponse : il part par e-mail, et c'est tout
-> l'intérêt du second facteur.
-
-**Sur la sandbox, les codes OTP se lisent dans le journal du conteneur** — c'est
-déjà comme ça qu'on récupère les codes de connexion. À faire avant de conclure
-à un défaut : si le code est dans le journal, l'émission marche et c'est
-l'acheminement du courrier sur la sandbox qui est en cause, pas cet écran.
-
-#### Activer les vrais courriels sur la sandbox
-
-C'est possible, et c'est une affaire de configuration — **aucune ligne de code à
-écrire.** `app.module.ts:350` choisit l'adaptateur ainsi :
+`apps/api/src/me/account.service.ts:173`, la méthode entière :
 
 ```ts
-if (process.env.LEHNO_MAIL_CONSOLE === "1") return new ConsoleMailAdapter();
-if (apiKey && from) return new ResendAdapter(apiKey, from);
-throw new Error("Aucun envoi de courrier configuré …");
+async demanderCode(userId: string): Promise<{ expiresAt: Date; code: string }> {
+  const user = await this.compteActif(userId);
+  const { code, expiresAt } = await this.otp.issue(user.email, "account_deletion");
+  return { code, expiresAt };
+}
 ```
 
-L'API démarre, donc l'une des deux branches est prise. Comme les codes se lisent
-dans le journal du conteneur, **la sandbox tourne avec
-`LEHNO_MAIL_CONSOLE=1`** — les courriels ne partent pas, leur contenu s'écrit
-sur la console. C'est le comportement annoncé, pas une panne.
+**Il n'y a pas d'envoi.** Le code est frappé, rendu au contrôleur — qui le jette
+et répond `{ sent: true }`. Personne n'écrit jamais à la boîte.
 
-**Ce qu'il faut changer dans `.env.sandbox` sur le VPS** (le fichier que
-`docker compose --env-file` passe aux conteneurs, cf. `sandbox.yml:197`) :
+La comparaison avec le chemin de connexion, qui fonctionne, est sans appel.
+`apps/api/src/auth/auth.service.ts:108` :
 
-1. poser `RESEND_API_KEY` et `RESEND_FROM` ;
-2. **retirer `LEHNO_MAIL_CONSOLE`, ou le vider** ;
-3. redémarrer le conteneur `api`.
+```ts
+const { code, expiresAt } = await this.otp.issue(input.email, "login");
+…
+const { subject, text } = otpEmail({ code, locale });
+await this.mail.send({ to: input.email, subject, text, locale });   // ← absent côté suppression
+```
 
-**Le point 2 n'est pas optionnel, et c'est le piège.** L'adhésion explicite est
-testée **en premier** : poser les identifiants Resend sans retirer la variable
-ne change rien, et rien ne le signalera. L'ordre est délibéré — il permet à un
-poste de développement de passer outre un Resend partagé — mais il se retourne
-exactement dans ce cas.
+Et `AccountService` **n'injecte aucun port de courrier** : son constructeur n'a
+pas de `MAIL_PORT`. Le service ne peut donc pas envoyer — ce n'est pas un appel
+oublié dans une branche, c'est une dépendance qui n'a jamais été câblée.
 
-**Deux avertissements avant de basculer :**
+**Les commentaires, eux, affirment le contraire, aux deux bouts :**
 
-- **Resend refuse d'écrire à un domaine non vérifié**, et le commentaire du code
-  raconte précisément cette panne : « le code ne partait nulle part, et rien ne
-  disait pourquoi ». Le domaine de `RESEND_FROM` doit être vérifié dans le
-  compte Resend, enregistrements DNS compris.
-- **On perd la lecture des codes dans le journal.** C'est aujourd'hui le seul
-  moyen de se connecter à la sandbox. Si le courrier échoue en silence, plus
-  personne n'entre. **Éprouver qu'un vrai courriel arrive avant de s'en
-  remettre à lui**, et savoir comment revenir en arrière.
+- le service : « TROISIÈME TEMPS, première moitié : **le code par e-mail** […]
+  c'est le même envoi vers la même boîte » ;
+- le contrôleur : « Le code ne descend JAMAIS dans la réponse : **il part par
+  e-mail**, et c'est tout l'intérêt du second facteur ».
 
-`.env.sandbox` appartient au propriétaire du dépôt — aucune session ne l'édite.
+Deux commentaires qui décrivent une intention juste, au-dessus d'un code qui ne
+la tient pas. C'est exactement le piège que `generation.controller.ts` nomme
+ailleurs dans ce dépôt : « Un commentaire ne décrit pas ce qu'on voulait
+faire. »
 
-**Un point à vérifier au passage :** l'envoi est plafonné à **cinq par heure**
-(`account.controller.ts:44`). Plusieurs « Renvoyer » d'affilée épuisent le
-quota, et le refus apparaîtra alors en bandeau d'erreur — pas dans l'accusé de
-succès.
+**La configuration Resend de la sandbox est en ordre** — l'OTP de connexion à
+l'admin arrive bien, par le chemin qui, lui, envoie. Il n'y a donc rien à
+changer dans `.env.sandbox`, et `LEHNO_MAIL_CONSOLE` n'est pas en cause.
+
+### La correction
+
+Elle est courte, et tout ce qu'il faut existe déjà :
+
+1. injecter `MAIL_PORT` dans `AccountService`, comme `AuthService` le fait ;
+2. composer avec `otpEmail({ code, locale })` — le gabarit est déjà écrit et
+   sert la connexion ;
+3. lire la langue comme le fait `auth.service.ts` : le choix du compte d'abord
+   (`user.uiLanguage`), puis la langue de l'appareil, le français en dernier.
+   `compteActif` ne sélectionne pas encore `uiLanguage`, il faudra l'ajouter ;
+4. **cesser de rendre le code depuis le service.** Une fois l'envoi posé,
+   `demanderCode` n'a plus de raison de le retourner, et le contrôleur a écrit
+   noir sur blanc pourquoi il ne doit jamais ressortir. Le laisser remonter est
+   une arme chargée posée sur la table.
+
+**Un test qui tombe sur l'état actuel** : `demanderCode` doit appeler le port de
+courrier. Aucun ne le vérifie aujourd'hui — c'est ce qui a laissé passer la
+chose.
+
+### Ce que ça dit du reste
+
+Ce chemin-ci est celui d'un **droit** — la suppression de son compte. Il était
+inachevé sans que rien ne le signale : l'écran accuse réception, le serveur rend
+`202`, et la seule façon de s'en apercevoir est de ne pas recevoir le courrier.
+
+**À vérifier au même passage :** les autres chemins qui promettent un courriel
+sans passer par `AuthService`. `reservationCodeEmail` existe dans les gabarits —
+est-il appelé ? Le même défaut peut s'y trouver.
 
 ### D — aucune sortie quand le code n'arrive pas
 
