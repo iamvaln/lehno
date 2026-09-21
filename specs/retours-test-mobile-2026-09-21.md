@@ -12,9 +12,9 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 ---
 
-# Synthèse — 20 retours, au 21 septembre
+# Synthèse — 21 retours, au 21 septembre
 
-**Vingt retours relevés, tous avec leur cause retrouvée dans le code.** Rien
+**Vingt et un retours relevés, tous avec leur cause retrouvée dans le code.** Rien
 n'est corrigé à ce jour : ce document est l'état des lieux qui précède le
 travail.
 
@@ -78,6 +78,9 @@ personne ne lise.
       et 17 n'ont rien à corriger.
 - [ ] **Poser la règle** : une voie fermée se dit, ou l'écran n'est pas
       atteignable. Le silence n'est pas une troisième option.
+- [ ] **§21** « Confirm » reste gris tant qu'un souhait n'est pas tranché, et
+      ne le dit pas — pendant que « Set aside », lui, est actif.
+- [ ] **§20D** La fermeture de compte n'offre aucune sortie sans le code.
 
 ### D. Les corrections courtes et sûres
 
@@ -383,68 +386,28 @@ montrer l'état précédent.
 - Le mot n'apparaît toujours pas → il n'a jamais été enregistré, et c'est bien
   le geste qu'il faut réparer.
 
-### MISE À JOUR — la contribution n'est jamais arrivée en base
+### MISE À JOUR — la contribution était bien là, et c'est la découvrabilité qui a manqué
 
-**Observation nouvelle :** la file de validation est vide, et la fiche du proche
-n'a toujours pas de date.
+**J'avais conclu qu'aucune ligne `Submission` n'existait.** Le raisonnement
+tenait — la file de validation ne filtre rien, donc une file vide vaut une base
+vide — mais la prémisse était fausse : la file n'était pas vide, elle n'avait
+pas été trouvée. La contribution de Remi s'y trouvait, avec sa date, son mot et
+son souhait.
 
-**La file ne filtre rien.** `apps/api/src/mur/submission.service.ts:62` :
+**Ce qui laisse une question plus intéressante que la première : pourquoi
+a-t-il fallu la chercher ?**
 
-```ts
-async list(userId: string): Promise<Submission[]> {
-  const lignes = await this.prisma.submission.findMany({
-    where: { userId },
-    …
-    orderBy: { createdAt: "desc" },
-  });
-```
+- **Rien n'a prévenu.** C'est le §6A : une contribution reçue n'écrit aucune
+  notification. Ni cloche, ni push, ni courriel. Le seul moyen d'apprendre
+  qu'elle est arrivée est d'aller voir.
+- **Et l'écran ne se trouve pas depuis là où on l'attend.** La file vit sous
+  l'onglet « Moi » (`moi.tsx:297`). Or on attend une contribution *pour un
+  proche* : on la cherche sur la fiche du proche, ou sur l'accueil. Ni l'une ni
+  l'autre n'y mène.
 
-Pas de condition de statut, pas de fenêtre, pas de plafond. **Une file vide
-signifie donc qu'aucune ligne `Submission` n'existe** — la contribution n'a pas
-été enregistrée du tout.
-
-*(La date encore absente, elle, ne prouve rien : une date soumise reste en
-attente jusqu'à validation. Ce symptôme-là serait normal même si la
-contribution était arrivée.)*
-
-### Ce qui a pu la refuser — et toutes ces causes laissent une trace
-
-`soumettre()` peut rejeter à cinq endroits, et **toutes rendent un statut
-d'erreur**, donc le bandeau rouge côté répondant
-(`Collecte.tsx:117` → `setEtat("erreur")`) :
-
-| Cause | Où |
-|---|---|
-| Leurre rempli, ou délai invraisemblable | `refuserLesRobots`, avant tout le reste |
-| Jeton inconnu ou révoqué | `resoudre` |
-| Plafond atteint (20/jeton/h, 30/origine/h) | `plafonner` |
-| Corps refusé par `collectSubmitSchema` | validation d'entrée |
-| La requête n'atteint pas l'API | `NEXT_PUBLIC_API_URL` |
-
-**Donc la première question est pour le répondant : a-t-il vu un bandeau rouge
-sous le bouton d'envoi ?** S'il n'a rien vu, l'envoi n'a probablement pas été
-tenté — reste le cas où le bouton était resté inactif, `complet` exigeant au
-moins une date, un souhait **ou** un mot.
-
-### Ce qui tranche en une commande
-
-Le filtre à robots **journalise sa cause** (`apps/api/src/mur/jetons.ts`) :
-
-```ts
-this.journal.warn(`soumission écartée : ${cause}`);
-```
-
-Les deux causes s'y distinguent — « champ leurre rempli » ou « délai de
-soumission invraisemblable (N ms) ». Chercher `soumission écartée` dans le
-journal du conteneur de l'API répond immédiatement.
-
-**Une piste à vérifier si c'est le leurre :** le champ porte `autoComplete="off"`
-et `tabIndex={-1}`, mais il s'appelle `website` et il est **dans le DOM**. Les
-gestionnaires de mots de passe et le remplissage automatique des navigateurs
-ignorent régulièrement `autocomplete="off"`. Un champ leurre rempli par le
-navigateur d'un humain refuse exactement ce qu'il devait laisser passer — et le
-commentaire du contrat le dit lui-même : « ce sont des économies de bruit, pas
-des remparts ». Si c'est le cas, il faut resserrer le leurre, pas l'utilisateur.
+**À porter au §6A comme une raison de plus**, et à trancher : la fiche d'un
+proche devrait-elle annoncer ce qui l'attend ? Le nombre existe déjà côté
+serveur — `moi.tsx` l'affiche (`aTrancherPour`).
 
 ### Ce qu'il y a à trancher, si c'est bien le geste
 
@@ -1890,6 +1853,72 @@ compte), et la personne n'a aucun moyen d'aboutir ni de comprendre pourquoi.
 **À trancher :** que propose l'écran quand le code n'arrive pas ? Au minimum,
 dire que le courrier peut tarder, rappeler à quelle adresse il est parti, et
 laisser une porte vers l'assistance.
+
+---
+
+## 21 — « Confirm » reste inactif tant qu'un souhait n'est pas tranché
+
+**Statut :** cause certaine. **Quatrième occurrence du motif des voies fermées
+muettes** (§15B, §17, §20D).
+
+### Ce qui a été vu
+
+La contribution de Remi, enfin trouvée : la date « Mar 31 » et le mot, tous
+deux acceptés par leur interrupteur ; un souhait, « An evening out », avec
+« Keep » et « Set aside » ; puis **« Confirm » en gris, qui ne répond pas**, et
+« Set aside » en dessous, bien actif.
+
+### La cause
+
+`apps/mobile/app/(app)/valider.tsx:258` : `disabled={… || !pretAEnvoyer(c, saisie)}`,
+et `apps/mobile/lib/sas.ts:131` tient en une ligne :
+
+```ts
+export function pretAEnvoyer(contribution: Submission, saisie: SaisieDuSas): boolean {
+  return toutEstTranche(contribution.wishes, saisie.sorts);
+}
+```
+
+**Tout souhait doit être tranché.** L'état initial est `sorts: {}`
+(`valider.tsx:66`), donc tant qu'on n'a pas appuyé sur « Keep » ou « Set aside »
+pour « An evening out », le bouton reste éteint.
+
+Et la règle est juste : le contrat l'exige de son côté — « every submitted wish
+must be decided » — parce qu'écarter un souhait par omission serait le pire des
+défauts sur cet écran.
+
+**Le bouton ne le dit simplement pas.**
+
+### Pourquoi l'écran se lit comme cassé
+
+Trois choses se conjuguent, et aucune n'est fautive seule :
+
+1. **Deux éléments sur trois portent déjà une réponse.** La date et le mot
+   s'ouvrent à « accepté » (`garderLaDate: true, garderLeMot: true`), et leur
+   interrupteur le montre. Le souhait, lui, n'a pas de valeur par défaut — mais
+   rien ne distingue visuellement « déjà répondu » de « attend une réponse ».
+2. **Le geste du souhait ne ressemble pas à une obligation.** « Keep » et
+   « Set aside » sont deux boutons de texte, de la même famille que les actions
+   facultatives ailleurs dans l'application. Les interrupteurs, eux, se lisent
+   comme des réglages déjà posés.
+3. **Le refus global, lui, est actif.** « Set aside » en bas ne dépend que de
+   `envoi` — donc l'écran propose de tout refuser mais pas d'accepter. C'est la
+   lecture la plus décourageante possible : on croit que seul le refus
+   fonctionne.
+
+### Ce qu'il y a à faire
+
+- **Dire ce qui manque.** Un mot sous le bouton — « tranchez chaque souhait » —
+  ou le souhait non tranché mis en évidence. C'est la règle qu'on a déjà posée
+  pour les §15B, §17 et §20D : **une voie fermée se dit.**
+- **Distinguer ce qui attend de ce qui est répondu.** Si la date et le mot
+  portent un défaut et le souhait non, l'écran doit le montrer — sinon
+  l'asymétrie est invisible et c'est elle qui piège.
+- **À vérifier :** `corpsDeDecision` retombe sur `"discarded"` pour un souhait
+  sans sort (`sas.ts:120`). Ce repli n'est jamais atteint tant que
+  `pretAEnvoyer` garde la porte — mais si l'on desserrait la garde, **on
+  écarterait des souhaits en silence.** Les deux se tiennent : ne pas toucher à
+  l'un sans regarder l'autre.
 
 ---
 
