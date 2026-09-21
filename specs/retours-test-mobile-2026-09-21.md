@@ -1901,9 +1901,10 @@ la tient pas. C'est exactement le piège que `generation.controller.ts` nomme
 ailleurs dans ce dépôt : « Un commentaire ne décrit pas ce qu'on voulait
 faire. »
 
-**La configuration Resend de la sandbox est en ordre** — l'OTP de connexion à
-l'admin arrive bien, par le chemin qui, lui, envoie. Il n'y a donc rien à
-changer dans `.env.sandbox`, et `LEHNO_MAIL_CONSOLE` n'est pas en cause.
+**La configuration Resend de la sandbox est en ordre**, et c'est vérifié :
+l'environnement du conteneur porte `RESEND_API_KEY` et `RESEND_FROM`, et l'OTP
+de connexion à l'admin arrive bien — par le chemin qui, lui, envoie. Il n'y a
+donc rien à changer dans `.env.sandbox` pour ce défaut-ci.
 
 ### La correction
 
@@ -2078,10 +2079,59 @@ disparaître de l'export, ou l'inverse — mais pas l'un sans l'autre.
 
 ---
 
-## 23 — La cause des échecs de génération : très probablement aucun fournisseur branché
+## 23 — CONFIRMÉ : aucun fournisseur d'IA n'est branché sur la sandbox
 
-**Statut :** hypothèse forte, et elle se vérifie par trois chaînes dans le
-journal. Prolonge les §12 et §14.
+**Statut : établi par le journal du conteneur, le 21 septembre.** Ferme les §12
+et §14.
+
+### La preuve
+
+`docker logs lehno-sandbox-api-1` — trois tentatives, à 14 h 46, 14 h 52 et
+15 h 39 :
+
+```
+ERROR [ia] aucun adaptateur pour « anthropic », rang 0 sauté
+ERROR [ia] aucun adaptateur pour « anthropic », rang 2 sauté
+ERROR [ia] aucun adaptateur pour « deepseek », rang 3 sauté
+WARN  [generation] génération <id> en échec : generation_unavailable
+```
+
+Et l'environnement du conteneur ne porte **aucune** des quatre clés :
+`ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `XAI_API_KEY`, `OPENAI_API_KEY` sont
+toutes absentes.
+
+**Le catalogue est réglé, les modèles sont là, et personne ne peut les
+appeler.** C'est la configuration, pas le code.
+
+### Ce que ça ferme
+
+- **§12** « L'écriture n'a pas abouti » — le motif était `generation_unavailable`.
+- **§14** les générations en échec — la cause est établie.
+- **Et les mouvements de crédit du §22** : trois échecs, trois débits rendus.
+
+### Ce qui reste, et qui n'est PAS de la configuration
+
+**Rien dans l'application ne dit ce que le journal dit en clair.** L'écran rend
+« L'écriture n'a pas abouti » ; le serveur sait `generation_unavailable` et le
+sert dans `failureReason` ; l'écran le jette (§12). Une personne sans accès au
+conteneur n'a aucun moyen d'apprendre que le service d'IA n'est pas branché —
+elle croit avoir mal fait.
+
+**Et le service démarre sans une seule clé.** Le courrier, lui, refuse de se
+lancer sans configuration — « mieux vaut ne pas démarrer que d'envoyer des
+secrets par accident ». La génération n'a pas cette garde : elle démarre, prend
+les crédits, échoue, rembourse.
+
+**À trancher :** refuser le démarrage, ou éteindre le drapeau de génération
+quand aucun adaptateur n'existe ? La seconde est plus douce et donne un écran
+cohérent — la carte de l'accueil « change d'identité » au lieu de proposer un
+geste qui ne peut pas aboutir.
+
+### Pour rouvrir le service
+
+Poser au moins une des quatre clés dans `.env.sandbox`, puis redémarrer `api`.
+Le catalogue nomme `anthropic` aux rangs 0 et 2 et `deepseek` au rang 3 —
+`ANTHROPIC_API_KEY` suffit donc à rouvrir les deux premiers rangs.
 
 ### Comment les fournisseurs se branchent
 
