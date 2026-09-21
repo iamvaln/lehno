@@ -309,7 +309,7 @@ export const fr = {
   collecteAideRelation: "Un mot suffit : collègue, cousine, voisin de palier.",
   collecteLabelDate: "Votre date de naissance",
   collecteAideDateNominatif: "Déjà connue de {nom} — corrigez-la si elle est fausse.",
-  collecteAideDatePublic: "Le jour et le mois suffisent à {nom} pour y penser.",
+  collecteAideDateInconnue: "Le jour et le mois suffisent à {nom} pour y penser.",
   collecteLabelSouhaits: "Ce qui vous ferait plaisir",
   collectePlaceholderSouhait: "Un livre, une soirée, un ustensile qui manque…",
   collecteAjouterSouhait: "Ajouter un souhait",
