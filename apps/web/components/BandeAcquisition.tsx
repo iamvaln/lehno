@@ -40,7 +40,13 @@ export function BandeAcquisition(
           alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap",
         }}
       >
-        <div style={{ flex: "1 1 0", minWidth: 0 }}>
+        {/* La base de 20rem est ce qui déclenche le retour à la ligne, et
+            `minWidth: 0` lui est interdit : en `1 1 0`, la colonne accepte de
+            se réduire à une main de large plutôt que de pousser le lien en
+            dessous, et le `flexWrap` du conteneur ne sert alors plus jamais.
+            Sous 20rem de place, le lien passe à la ligne — c'est ce que
+            `flexWrap` et `alignItems: "flex-end"` attendaient. */}
+        <div style={{ flex: "1 1 20rem" }}>
           <h2
             id="acquisition-titre"
             className="titre"
