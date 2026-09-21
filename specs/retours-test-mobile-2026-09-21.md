@@ -896,6 +896,94 @@ n'existe pas.
 
 ---
 
+## 14 — Lancer un message mène à une liste vide, sans attente et sans trace
+
+**Statut :** deux causes certaines, et elles expliquent l'écran vu **avec** le
+retour 12. À traiter ensemble.
+
+### Ce qui a été vu
+
+Appuyer pour produire un message. L'application ouvre « **En cours** », qui
+affiche son état vide : « Tout est traité — ce que vous commencerez sans finir
+vous attendra ici. » Puis plus rien. Pas d'attente à l'écran, pas de résultat,
+et la question qui suit : *où est-ce que je le retrouve ?*
+
+### Cause A — le lancement ouvre la liste, pas l'exécution
+
+`apps/mobile/app/(app)/preparation.tsx:87` :
+
+```tsx
+await appel<unknown>("/me/generations", {
+  method: "POST",
+  body: JSON.stringify(composeLaDemande(kind, occurrenceId)),
+  gouvernee: true,
+});
+routeur.push("/(app)/reprises");
+```
+
+**La réponse du serveur est jetée.** Elle porte pourtant l'identifiant de la
+génération qui vient d'être créée, son statut et son `resultId`
+(`packages/contracts/src/me-generation.ts:155`). On l'ignore, et on pousse vers
+l'écran de LISTE.
+
+Or l'écran d'attente existe : `/generation?id=<identifiant>` observe une
+exécution, la fait patienter et ouvre le résultat. C'est exactement ce que
+`portrait.tsx` fait pour un portrait. Et `reprises.ts` le rappelle lui-même,
+dans le commentaire de `destinationDeLaReprise` :
+
+> le message et les idées s'observent par leur EXÉCUTION, `/generation?id=`
+
+Le même fichier raconte d'ailleurs la panne jumelle, déjà réparée une fois :
+
+> La carte poussait `/generation` SANS IDENTIFIANT. […] Vu de l'appareil : on
+> appuie sur « Reprendre » et rien ne bouge. Pas d'erreur, pas d'écran : rien.
+
+**C'est la même panne, à l'autre bout du même parcours** — corrigée sur le geste
+« Reprendre », laissée sur le geste qui lance.
+
+**L'attente manquante n'est donc pas un oubli de loader** : c'est l'écran qui
+sait attendre qu'on n'ouvre pas.
+
+### Cause B — une génération ratée disparaît de la liste
+
+Même en atterrissant sur « En cours », la génération aurait dû s'y voir. Elle
+n'y est pas, et `apps/mobile/lib/reprises.ts:191` dit pourquoi, en une ligne :
+
+```ts
+if (generation.status === "failed") continue;
+```
+
+**Les échecs sont écartés sans un mot.** Et le retour 12 établit que les
+générations échouent en ce moment sur la sandbox — « L'écriture n'a pas
+abouti ».
+
+Les deux se composent exactement en l'écran vu : le message est lancé, il
+échoue, la liste le jette, et l'écran annonce « Tout est traité ».
+
+**Réponse à la question posée : nulle part.** Aucun écran de l'application ne
+montre une génération ratée. Le crédit, lui, est bien rendu — « en cas d'échec,
+le crédit est rendu au solde et la raison portée par la réponse » — mais la
+raison n'est portée nulle part à l'écran (voir le retour 12, défaut symétrique
+sur le portrait).
+
+### Ce qu'il y a à faire
+
+1. **Router vers l'exécution.** Lire l'identifiant rendu par le `POST` et
+   pousser `/generation?id=<id>`. L'attente, le résultat et l'échec y sont déjà
+   traités.
+2. **Cesser d'escamoter les échecs**, ou dire où ils vont. Si « En cours » ne
+   doit porter que ce qui peut être repris, alors un échec doit se voir
+   ailleurs — au minimum sur l'écran qui l'a lancé, avec son motif. Le taire
+   des deux côtés est ce qui produit le silence complet.
+3. **Se souvenir que le crédit est rendu.** Un échec muet fait croire à un
+   crédit perdu, ce qui est faux — et c'est une raison de plus de le dire.
+
+**L'ordre :** corriger A d'abord. Une fois l'écran d'attente ouvert, l'échec se
+voit là où il doit se voir, et B redevient une question de rangement plutôt
+qu'un trou.
+
+---
+
 ## Relevé au passage, non signalé — à confirmer
 
 Deux choses visibles sur la copie d'écran de l'ajout d'un proche, que Valentine
