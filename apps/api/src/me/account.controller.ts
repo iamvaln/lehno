@@ -45,10 +45,13 @@ export class AccountController {
   @HttpCode(202)
   async demanderCode(@Req() req: AuthedRequest): Promise<{ sent: true }> {
     await this.debit.hit(`account_deletion_code:${req.userId}`, 5, 60 * 60_000);
+    // Le service ENVOIE le courriel et ne rend rien — pas même le code.
+    // C'est ce qui garantit la ligne suivante : le code ne descend jamais
+    // dans la réponse, il part par e-mail, et c'est tout l'intérêt du second
+    // facteur. Le rendre ici transformerait la preuve d'accès à la boîte en
+    // simple formalité pour qui tient le jeton ; ne pas l'avoir sous la main
+    // rend la faute impossible plutôt qu'interdite.
     await this.account.demanderCode(req.userId);
-    // Le code ne descend JAMAIS dans la réponse : il part par e-mail, et
-    // c'est tout l'intérêt du second facteur. Le rendre ici transformerait la
-    // preuve d'accès à la boîte en simple formalité pour qui tient le jeton.
     return { sent: true };
   }
 
