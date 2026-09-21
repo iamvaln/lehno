@@ -1332,6 +1332,98 @@ qui mène à une page vide est pire qu'un onglet absent ».
 
 ---
 
+## 18 — Les appareils connectés portent leur en-tête brut
+
+**Statut :** cause identifiée. **Un des deux défauts a déjà été corrigé pour
+iOS** et manque pour Android — la correction est écrite, il suffit de la
+prolonger.
+
+### Ce qui a été vu
+
+L'écran **Security** liste trois sessions : `okhttp/4.9.2` (cet appareil) et
+deux `curl/8.6.0`. Toutes les trois portent l'icône « **?** ».
+
+Les deux `curl` sont vos propres appels en ligne de commande — ils sont à leur
+place, et qu'ils se voient est plutôt une bonne chose. `okhttp/4.9.2`, en
+revanche, **est le téléphone**.
+
+### Pourquoi le nom est brut, et pourquoi ce n'est pas un oubli
+
+`apps/mobile/app/(app)/securite.tsx:201`, le commentaire assume le choix :
+
+> L'en-tête TEL QUEL, sans en tirer un nom d'appareil : il est déclaré et jamais
+> vérifié — « un indice de reconnaissance pour la personne qui lit l'écran, pas
+> une preuve ». En faire « iPhone de Valentine » serait une affirmation.
+
+**Le principe est juste : on n'affirme pas ce qu'on ne vérifie pas.** Mais il ne
+commande pas d'afficher la chaîne brute — il commande de ne pas inventer. Or
+`okhttp/4.9.2` n'est un indice de reconnaissance pour personne : c'est le nom de
+la bibliothèque HTTP d'Android, pas celui d'un appareil. On a évité
+l'affirmation en renonçant à l'information.
+
+### Le défaut certain : l'icône, et il est déjà connu
+
+L'icône vient de `natureDeLAppareil(s.userAgent)`
+(`apps/mobile/lib/securite.ts`), qui cherche trois familles de mots. `okhttp`
+n'en contient aucun — ni `android`, ni `mobile`, ni un mot de bureau, ni
+`cfnetwork`/`darwin`. La fonction rend donc `"inconnu"`, d'où le « ? ».
+
+**Et cette panne a déjà été rencontrée et réparée — pour iOS.** Le commentaire
+de la troisième passe le raconte :
+
+> Une application iOS n'annonce jamais « iPhone » : c'est le navigateur qui le
+> dit. […] Sans ces deux mots, la session ouverte depuis le téléphone qu'on
+> tient portait l'icône « appareil inconnu », et **CHAQUE iPhone en production
+> aurait fait pareil** : sur un écran qu'on ouvre pour retrouver SA ligne,
+> c'était la seule qui ne se reconnaissait pas.
+
+C'est mot pour mot ce qui se produit aujourd'hui sur Android. Le client HTTP par
+défaut de React Native y est **OkHttp**, et il s'annonce `okhttp/<version>`. La
+correction iOS a été faite sur le cas rencontré ; le cas jumeau n'a pas été
+cherché.
+
+**Correction immédiate :** ajouter `okhttp` (et `dalvik`, que certaines
+versions envoient) à la passe des mots mobiles. Une ligne, et chaque Android
+cesse d'être un appareil inconnu.
+
+### La vraie correction : la matière existe déjà, et elle traverse le réseau
+
+**L'application envoie déjà de quoi se nommer, à chaque requête.**
+`apps/mobile/lib/client.ts:89` pose sept en-têtes sur tous les appels :
+
+```
+x-client-id, x-client-key, x-client-type,
+x-app-version, x-app-build, x-app-os, x-app-env
+```
+
+`x-app-os` porte le système **et sa version**. Le serveur a donc déjà sous la
+main de quoi écrire « Lehno Android 14 » au lieu de `okhttp/4.9.2`.
+
+**Il ne s'en sert pas.** `apps/api/src/auth/auth.controller.ts:70` ne lit que
+`@Headers("user-agent")`, et `security.service.ts` ne conserve que ce champ.
+
+Et le principe du commentaire est **entièrement préservé** : `x-app-os` est
+déclaré par le client, exactement comme l'en-tête d'agent. On ne gagne aucune
+preuve — on gagne une forme lisible de la même déclaration. « Affirmer » et
+« rendre lisible » ne sont pas la même chose.
+
+### Ce qu'il y a à trancher
+
+- **La ligne de repli.** Un appel `curl` n'enverra jamais `x-app-os`. Ces
+  sessions-là doivent garder leur en-tête brut — c'est le seul indice
+  disponible, et c'est d'ailleurs exactement ce qu'on veut lire pour une
+  session qui ne vient pas de l'application.
+- **Le champ au contrat.** `sessionSchema` ne porte que `userAgent`
+  (`packages/contracts/src/me-security.ts:47`). Il faudra soit un champ de plus,
+  soit un libellé composé au serveur — ce dernier évite au client de connaître
+  la règle, et c'est la convention déjà suivie ailleurs (voir `url` sur le lien
+  de collecte : « l'adresse complète, parce qu'elle appartient au serveur »).
+- **Les sessions déjà ouvertes** n'ont pas ces en-têtes en base. Elles
+  resteront brutes jusqu'à la prochaine connexion, et c'est acceptable — mais
+  il faut le savoir avant de conclure que la correction n'a rien changé.
+
+---
+
 ## Relevé au passage, non signalé — à confirmer
 
 Deux choses visibles sur la copie d'écran de l'ajout d'un proche, que Valentine
