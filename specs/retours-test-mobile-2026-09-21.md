@@ -12,9 +12,9 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 ---
 
-# Synthèse — 23 retours, au 21 septembre
+# Synthèse — 25 retours, au 21 septembre
 
-**Vingt-trois retours relevés, tous avec leur cause retrouvée dans le code.** Rien
+**Vingt-cinq retours relevés, tous avec leur cause retrouvée dans le code.** Rien
 n'est corrigé à ce jour : ce document est l'état des lieux qui précède le
 travail.
 
@@ -2192,6 +2192,171 @@ Le routeur range déjà finement les autres causes
 
 **C'est ce code que `failureReason` porte jusqu'au client — et que l'écran
 jette** (§12). Une fois affiché, cette enquête n'aurait pas eu lieu d'être.
+
+---
+
+## 24 — La composition du portrait échoue : la police n'est pas dans l'image Docker
+
+**Statut : cause certaine, lue dans le journal.** C'est l'erreur « Something
+went wrong on our end ».
+
+### La trace
+
+```
+ERROR [http] Error: ENOENT: no such file or directory,
+             open '/repo/apps/mobile/polices/Fraunces-Regular.ttf'
+    at composerLePortrait (/repo/apps/api/src/me/composition.ts:172:28)
+    at async PortraitService.composer (/repo/apps/api/src/me/portrait.service.ts:289:19)
+```
+
+### La cause
+
+`apps/api/src/me/polices.ts:47` va chercher les polices **chez le mobile** :
+
+```ts
+const DOSSIER = join(
+  dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "apps", "mobile", "polices",
+);
+```
+
+Le choix est argumenté — « Les huit fichiers vivent chez le mobile, qui les a
+cuits. Les recopier ici donnerait deux jeux à tenir d'accord » — et il est juste
+dans un dépôt monorepo.
+
+**Mais l'image Docker de l'API n'embarque pas `apps/mobile/`.**
+`apps/api/Dockerfile` ne copie, au stade d'exécution, que :
+
+```dockerfile
+COPY --from=deploy /prod/api ./apps/api
+COPY prisma ./prisma
+COPY packages/tsconfig/base.json packages/tsconfig/package.json ./packages/tsconfig/
+```
+
+Le dossier des polices n'y est pas. Le chemin résolu pointe donc sur un fichier
+qui n'existe nulle part dans le conteneur.
+
+### L'ironie, et elle mérite d'être lue
+
+Le commentaire du fichier a **écarté explicitement** l'idée d'installer les
+polices dans l'image Docker :
+
+> Installer les polices dans l'image Docker marcherait — mais serait
+> **INVÉRIFIABLE ICI** : on ne saurait qu'au premier déploiement si l'identité
+> tient, et une police absente ne lève aucune erreur.
+
+La parade choisie — convertir le texte en tracés plutôt que de compter sur les
+polices du système — est bonne, et elle tient. **Mais lire un fichier TTF exige
+toujours que le fichier soit là.** On a déplacé le risque, on ne l'a pas
+supprimé : la panne redoutée était silencieuse, celle qu'on a est bruyante, ce
+qui vaut mieux — et elle survient au même endroit, au premier déploiement.
+
+### La portée : ça n'a jamais marché en déployé
+
+Aucun environnement conteneurisé ne peut composer un portrait. **Ni la sandbox,
+ni la production.** Le chemin ne résout que dans un arbre de développement, où
+tous les tests tournent — **aucun test ne pouvait le voir**, exactement comme le
+retour §16.
+
+### Deux façons de corriger
+
+1. **Copier les polices dans l'image** — une ligne au `Dockerfile` :
+   `COPY apps/mobile/polices/*.ttf ./apps/mobile/polices/`. Immédiat, et la
+   source de vérité reste unique.
+2. **En faire un paquet de l'espace de travail** (`packages/polices`) dont
+   l'API dépend, pour que l'élagage de déploiement l'emporte tout seul. Plus
+   propre, plus long.
+
+**Et dans les deux cas, une garde au démarrage.** Le service devrait vérifier
+que les huit fichiers sont lisibles au lancement plutôt qu'au premier portrait
+approuvé — c'est la règle que le courrier applique déjà : « mieux vaut ne pas
+démarrer que de fonctionner mal en silence ».
+
+---
+
+## 25 — Le parcours du portrait ne suit pas la planche
+
+**Statut :** écart établi, planche à l'appui. **Le texte affiché, lui, est
+conforme** — c'est le reste du moment qui ne l'est pas.
+
+### Ce qui est conforme, et qu'il faut dire d'abord
+
+La phrase seule, sans image, n'est pas un défaut. `specs/design-portrait-mobile-2026-09-11.md` §4 :
+
+> Avant l'approbation, `imageUrl` est nul : il n'y a rien à montrer. L'écran
+> affiche le **texte** qui entrera dans la bande, et **c'est voulu**.
+
+Le portrait est un objet en deux temps : une phrase, puis une image composée
+autour d'elle. Ce qui a été vu est le premier temps.
+
+**Ce que l'écran ne dit pas, c'est qu'il y en a un second.** D'où « je ne sais
+pas ce que c'est censé être » — la question est juste, et c'est l'écran qui y
+répond mal.
+
+### Écart 1 — le mot « Approuver » est précisément celui que la planche refuse
+
+`apps/mobile/messages/fr.ts:701` et `en.ts:597` :
+
+```ts
+portraitApprouver: "Approuver" / "Approve"
+```
+
+La planche l'écarte nommément, et donne le remplaçant :
+
+> **Le bouton dit la suite, pas la signature.** « Approuver » se lit comme un
+> engagement administratif ; ce qu'on fait est vérifier le texte **et lancer la
+> composition de l'image**. Il dit donc **« Composer l'image »**.
+
+Et elle explique même pourquoi ce verbe-là : il vaut pour les trois voies —
+l'illustration se dessine, la photo se traite, le motif de marque se compose.
+« Dessiner » aurait menti sur deux voies sur trois.
+
+**L'en-tête « TO APPROVE » tombe sous la même critique** : il nomme un état
+administratif là où il faudrait annoncer le geste qui reste à faire.
+
+### Écart 2 — les quatre moments n'en font qu'un
+
+La planche §1.2 pose quatre moments distincts :
+
+| Moment | Ce qu'on doit y vivre |
+|---|---|
+| **Composer** | On choisit ce qu'on regarde, pas des mots. Coût annoncé. |
+| **Attendre** | On nomme ce qui se passe. On peut fermer. |
+| **Relire** | Le texte se vérifie. Le geste suivant compose l'image, et le dit. |
+| **Donner** | L'image finie s'enregistre et se partage. |
+
+**Ce qui a été vu empile « Relire » et « Composer » sur un même écran** : la
+phrase produite en haut, et sous elle le formulaire entier — les onze
+orientations, la composition, l'image, la famille d'illustration. Le moment de
+relecture n'est donc pas un moment : c'est un bandeau posé sur le formulaire de
+départ.
+
+La planche est explicite sur ce que ça coûte :
+
+> On arrive **sur la chose**, jamais sur une liste.
+
+Un formulaire de relance sous le résultat, c'est arriver sur les réglages plutôt
+que sur le portrait. Les réglages appartiennent au moment « Donner » — « Refaire
+porte ses réglages » — c'est-à-dire **après** l'image, pas avant.
+
+### Écart 3 — la seconde attente n'existe pas
+
+> L'approbation appelle un modèle d'image en ligne : **la seconde attente se
+> dessine comme la première**, avec ses mots à elle.
+
+Elle est aujourd'hui remplacée par un bandeau d'erreur (§24). Même une fois la
+police corrigée, **il faudra l'écrire** : composer une image en ligne prend du
+temps, et rien n'est prévu pour le dire.
+
+La planche ajoute une garde à ne pas oublier : « Elle est idempotente, et
+l'écran peut s'y fier : deux frappes ne font pas deux images. »
+
+### Ce qu'il y a à faire
+
+- **Renommer le geste** — « Composer l'image », et reprendre l'en-tête dans le
+  même esprit. Le moins cher, et ça règle la moitié de l'incompréhension.
+- **Séparer « Relire » de « Composer »** : le formulaire n'a rien à faire sous
+  le résultat. Il revient au moment « Donner », derrière « Refaire ».
+- **Écrire la seconde attente**, avec ses mots à elle, et la rendre idempotente.
 
 ---
 
