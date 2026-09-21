@@ -273,6 +273,80 @@ taille.
 
 ---
 
+## 5 — « Déjà connue de… » s'affiche sur une date que personne ne connaît
+
+**Statut :** cause identifiée, correction courte, une question de copie.
+
+### Ce qui a été vu
+
+Un lien nominatif envoyé à Remi, dont la fiche **ne porte aucune date de
+naissance**. La page présente un champ « Your date of birth » vide, et sous ce
+champ vide : « **Already known to valentine — correct it if it is wrong.** »
+
+On demande donc à quelqu'un de corriger une date qu'il n'a pas sous les yeux, et
+qui n'existe nulle part.
+
+### La règle voulue
+
+- **Une date est déjà connue** → « Déjà connue de {nom} — corrigez-la si elle
+  est fausse. » La phrase actuelle, à sa place.
+- **Aucune date connue** → une invitation à la renseigner. C'est un champ à
+  remplir, pas une valeur à vérifier.
+
+### La cause
+
+`apps/web/components/surfaces/Collecte.tsx:261`. Le texte d'aide se choisit sur
+la **nature du lien**, jamais sur la présence de la date :
+
+```tsx
+hint={interpoler(
+  ouvert ? t.collecteAideDatePublic : t.collecteAideDateNominatif,
+  { nom: ownerDisplayName },
+)}
+```
+
+`ouvert` dit « lien public ». Tout lien nominatif reçoit donc « Déjà connue
+de… », que la fiche porte une date ou non — et une fiche sans date est le cas
+ordinaire, puisque c'est souvent pour l'obtenir qu'on envoie le lien.
+
+Le champ juste au-dessus, lui, sait : `const [date, setDate] = useState(birthDate ?? "")`.
+La donnée est là, dans le même composant ; c'est la condition qui regarde
+ailleurs.
+
+### La correction
+
+**Tester `birthDate`, pas `ouvert`.** Et les deux règles se recouvrent
+exactement, sans qu'il faille les combiner : le serveur tait déjà la date sur un
+lien public — « y servir un nom ou une date exposerait une fiche à quiconque
+relaie l'adresse » — donc `birthDate` y est **toujours** nul. Une condition
+unique sur `birthDate` sert donc correctement les deux natures de lien, et la
+condition sur le type disparaît.
+
+### La question de copie
+
+Les deux libellés existants suffisent peut-être tels quels :
+
+| Cas | Libellé |
+|---|---|
+| Date connue | `collecteAideDateNominatif` — « Déjà connue de {nom} — corrigez-la si elle est fausse. » |
+| Date inconnue | `collecteAideDatePublic` — « Le jour et le mois suffisent à {nom} pour y penser. » |
+
+La seconde se lit bien sur un lien nominatif sans date : elle invite, et elle
+dit même ce qui suffit. **Si elle convient, la correction est d'une ligne et
+aucun texte n'est à écrire** — et le nom `collecteAideDatePublic` devient
+trompeur, il faudra le renommer (`collecteAideDateInconnue`).
+
+Sinon, il faut un troisième libellé, en français et en anglais.
+
+### Au passage
+
+`apps/web/test/collecte.test.tsx` monte déjà des liens nominatifs avec
+`birthDate: null` (lignes 86, 95, 138, 152) — le cas est donc **traversé par la
+suite sans être éprouvé** : aucune assertion ne regarde le texte d'aide. La
+correction doit venir avec un test qui tombe sur l'état actuel.
+
+---
+
 ## Relevé au passage, non signalé — à confirmer
 
 Deux choses visibles sur la copie d'écran de l'ajout d'un proche, que Valentine
