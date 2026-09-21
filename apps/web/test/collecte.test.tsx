@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { PublicCollectForm, PublicSubmission } from "@lehno/contracts";
 import { Collecte } from "../components/surfaces/Collecte.js";
+import { interpoler } from "../lib/texte.js";
 import { messages } from "../messages/index.js";
 
 const t = messages("fr");
@@ -61,6 +62,31 @@ describe("la collecte", () => {
   it("pré-remplit la date que le propriétaire connaît déjà", () => {
     poser();
     expect(screen.getByLabelText(t.collecteLabelDate)).toHaveValue("1994-05-21");
+  });
+
+  /* L'aide se choisit sur la DATE, jamais sur la nature du lien. Un lien
+     nominatif vise le plus souvent une fiche SANS date — c'est même pour
+     l'obtenir qu'on l'envoie —, et « déjà connue de Awa » sous un champ vide
+     demande de corriger une date qui n'existe nulle part. */
+  it("ne dit « déjà connue » que si la date est là", () => {
+    const { unmount } = poser();
+    expect(screen.getByLabelText(t.collecteLabelDate))
+      .toHaveAccessibleDescription(interpoler(t.collecteAideDateNominatif, { nom: "Awa" }));
+    unmount();
+
+    poser({ birthDate: null });
+    expect(screen.getByLabelText(t.collecteLabelDate))
+      .toHaveAccessibleDescription(interpoler(t.collecteAideDateInconnue, { nom: "Awa" }));
+  });
+
+  /* Le serveur tait la date sur un lien public — « y servir un nom ou une date
+     exposerait une fiche à quiconque relaie l'adresse » —, donc `birthDate` y
+     est toujours nul et la seule condition sur la date couvre aussi cette
+     nature. Si ce test tombe, c'est le serveur qui a changé d'avis. */
+  it("dit « le jour et le mois suffisent » sur un lien ouvert", () => {
+    poser({ type: "public", personDisplayName: null, birthDate: null });
+    expect(screen.getByLabelText(t.collecteLabelDate))
+      .toHaveAccessibleDescription(interpoler(t.collecteAideDateInconnue, { nom: "Awa" }));
   });
 
   /* Un lien public accepte n'importe qui : le nom et l'adresse sont ce qui

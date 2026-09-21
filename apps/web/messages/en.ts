@@ -264,7 +264,7 @@ export const en: typeof fr = {
   collecteAideRelation: "A word is enough: colleague, cousin, neighbour.",
   collecteLabelDate: "Your date of birth",
   collecteAideDateNominatif: "Already known to {nom} — correct it if it is wrong.",
-  collecteAideDatePublic: "The day and month are enough for {nom} to remember.",
+  collecteAideDateInconnue: "The day and month are enough for {nom} to remember.",
   collecteLabelSouhaits: "What would make you happy",
   collectePlaceholderSouhait: "A book, an evening out, the utensil you never bought…",
   collecteAjouterSouhait: "Add a wish",
