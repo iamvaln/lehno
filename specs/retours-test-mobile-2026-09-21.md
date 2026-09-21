@@ -986,6 +986,24 @@ elles depuis le code :**
    et `preparationOuverte` ne lisent pas forcément le même drapeau : **à
    vérifier.**
 
+**MISE À JOUR — l'écran des mouvements tranche en grande partie** (voir le
+retour 15). Il porte, tous datés du 21 septembre :
+
+| Mouvement | Montant |
+|---|---|
+| Remboursement | + 1 |
+| Génération | − 1 |
+| Remboursement | + 2 |
+
+Un remboursement de crédit ne se produit que dans un cas — « en cas d'échec, le
+crédit est rendu au solde ». **Des générations ont donc bel et bien échoué ce
+jour-là**, et l'explication 1 l'emporte sur l'explication 2.
+
+Ce qui reste à confirmer est plus étroit : que l'échec porte sur **cette**
+demande-là, et surtout **pourquoi**. Le `+2` intrigue d'ailleurs — il ne
+correspond à aucun `−2` visible, donc soit l'écran tronque, soit une exécution
+plus coûteuse a échoué ailleurs.
+
 **Ce qui tranche :** le journal du conteneur de l'API sur la sandbox, ou l'appel
 direct à `/me/generations` avec le jeton du compte. La réponse dira l'état de
 l'exécution, et son `failureReason` s'il y en a un.
@@ -1011,6 +1029,110 @@ aucun écran (retour 12, défaut symétrique sur le portrait).
 **L'ordre :** corriger A d'abord. Une fois l'écran d'attente ouvert, l'échec se
 voit là où il doit se voir, et B redevient une question de rangement plutôt
 qu'un trou.
+
+---
+
+## 15 — « Recharger » n'ouvre aucun achat, et le retour sort de l'onglet
+
+**Statut :** trois choses. Deux causes certaines, une hypothèse structurelle qui
+expliquerait aussi le retour 7.
+
+### Ce qui a été vu
+
+Depuis « Moi », appuyer sur **Recharger**. L'écran montre le solde (5), la liste
+des mouvements, un lien « Tout voir » — et **rien pour recharger**. Les
+mouvements affichent des lignes non reconnues : des générations et des
+remboursements. Et le retour depuis cet écran ramène à l'**accueil**, pas à
+« Moi ».
+
+### A — les mouvements ne sont pas inexplicables : ce sont les échecs
+
+Trois lignes, toutes du 21 septembre : Remboursement +1, Génération −1,
+Remboursement +2.
+
+**C'est la trace des générations ratées.** Le crédit est débité au lancement,
+puis rendu quand l'exécution échoue — « en cas d'échec, le crédit est rendu au
+solde ». Ce sont donc les essais de la journée qui figurent là, et cet écran est
+**le seul endroit de l'application où ils laissent une marque**.
+
+Ce qui est en soi le constat du retour 14 : la comptabilité garde la trace,
+aucun écran de génération ne la montre. On découvre ses échecs par son relevé
+de crédits.
+
+**Une chose reste à éclaircir :** le `+2` ne répond à aucun `−2` visible. Soit
+la liste est tronquée aux trois derniers — c'est ce que fait `recents`, et
+« Tout voir » mène au reste —, soit une exécution plus chère a échoué ailleurs.
+
+### B — l'achat ne s'affiche pas parce qu'une voie est fermée
+
+`apps/mobile/app/(app)/recharge.tsx:416` :
+
+```tsx
+const achetable = manuel && compte !== null;
+```
+
+Deux conditions : le drapeau `topup.manual`, **et** un compte de versement
+configuré. Si l'une manque, tout le bloc d'achat — les paliers, le moyen de
+paiement, le bouton — disparaît, et l'écran se replie sur cette branche
+(`:670`) :
+
+```tsx
+) : (
+  /* Ni palier ni compte à proposer : le solde reste, il est du socle.
+     Un écran de recharge qui n'affiche plus rien du tout ferait croire
+     à une panne là où il n'y a qu'une voie fermée. */
+  <Card surface="panel" padding={16} radius="lg">
+    <CreditIndicator label={t.moiSolde} balance={solde} variant="solde" />
+  </Card>
+)}
+```
+
+**Le commentaire annonce l'intention, le code ne la tient pas.** Il dit vouloir
+éviter qu'on croie à une panne — et il n'affiche qu'un solde, sans un mot. Vu de
+l'appareil, appuyer sur « Recharger » et n'obtenir qu'un nombre ne se distingue
+pas d'une panne : c'est même la lecture la plus naturelle.
+
+**À trancher :**
+
+- **Dire que la voie est fermée**, et pourquoi, dans cette branche. C'est ce que
+  le commentaire voulait.
+- **Ou ne pas proposer « Recharger » du tout** quand rien n'est achetable.
+  L'écran « Moi » connaît les drapeaux ; un bouton qui mène à un cul-de-sac vaut
+  moins qu'un bouton absent — c'est déjà la règle qu'applique `_layout.tsx`
+  pour les onglets : « un onglet qui mène à une page vide est pire qu'un onglet
+  absent ».
+- **Et vérifier la configuration de la sandbox** : `topup.manual` est-il
+  allumé, et un compte de versement existe-t-il ? Si la voie devait être
+  ouverte, le défaut est là et non dans l'écran.
+
+### C — le retour sort de l'onglet, et ce n'est pas propre à cet écran
+
+`recharge.tsx:251` appelle `routeur.back()`, ce qui est juste. Mais on
+n'atterrit pas sur « Moi ».
+
+**Hypothèse, et elle expliquerait aussi le retour 7 :**
+`apps/mobile/app/(app)/_layout.tsx` monte un `Tabs`. Le dossier `(app)/`
+contient **29 écrans** ; cinq seulement sont déclarés comme onglets. Les
+vingt-quatre autres — dont `recharge`, `mouvements`, `listes`, `valider`,
+`monmur` — sont donc enregistrés comme **onglets frères invisibles**, masqués
+seulement parce que notre `TabBar` dessine une liste fixe de cinq.
+
+Si c'est le cas, aller de « Moi » à « Recharger » n'est pas un empilement mais
+un **changement d'onglet**, et `back()` retombe sur l'onglet initial —
+l'accueil. Ce qui est exactement ce qui a été vu.
+
+Et c'est la même racine que le retour 7 : la pile de `proches` qui garde son
+état, parce que les onglets gardent le leur.
+
+**Ce n'est pas établi, c'est déduit**, et ça se vérifie vite : suivre l'état du
+navigateur au moment du geste, ou regarder si `mouvements` → retour se comporte
+comme `recharge` → retour.
+
+**Si l'hypothèse tient, la correction n'est pas dans ces écrans** mais dans la
+structure : les écrans qui ne sont pas des onglets doivent vivre dans une pile,
+pas à côté des onglets. C'est un chantier à part, et il faut le traiter avant de
+retoucher les retours un par un — sinon on corrige vingt-quatre fois le même
+défaut.
 
 ---
 
