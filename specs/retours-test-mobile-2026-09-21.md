@@ -2079,10 +2079,15 @@ disparaître de l'export, ou l'inverse — mais pas l'un sans l'autre.
 
 ---
 
-## 23 — CONFIRMÉ : aucun fournisseur d'IA n'est branché sur la sandbox
+## 23 — RÉGLÉ : les clés d'IA manquaient sur la sandbox
 
-**Statut : établi par le journal du conteneur, le 21 septembre.** Ferme les §12
-et §14.
+**Statut : cause établie au journal, puis corrigée par la propriétaire le
+21 septembre.** Ferme les §12 et §14. **Les deux points de code ci-dessous
+restent ouverts.**
+
+Les quatre clés sont désormais posées — `ANTHROPIC_API_KEY`,
+`DEEPSEEK_API_KEY`, `XAI_API_KEY`, `OPENAI_API_KEY` — et la génération
+fonctionne : le portrait de 16 h 02 est `success`, illustration comprise.
 
 ### La preuve
 
@@ -2127,11 +2132,11 @@ quand aucun adaptateur n'existe ? La seconde est plus douce et donne un écran
 cohérent — la carte de l'accueil « change d'identité » au lieu de proposer un
 geste qui ne peut pas aboutir.
 
-### Pour rouvrir le service
+### Le service est rouvert
 
-Poser au moins une des quatre clés dans `.env.sandbox`, puis redémarrer `api`.
-Le catalogue nomme `anthropic` aux rangs 0 et 2 et `deepseek` au rang 3 —
-`ANTHROPIC_API_KEY` suffit donc à rouvrir les deux premiers rangs.
+Les quatre clés ont été posées dans `.env.sandbox` et le conteneur redémarré.
+**Ce qui bloque encore le portrait n'est plus la configuration mais le §24** —
+la police absente de l'image Docker, qui est un défaut de code.
 
 ### Comment les fournisseurs se branchent
 
