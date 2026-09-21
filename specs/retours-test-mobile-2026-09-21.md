@@ -570,6 +570,241 @@ champs.
 
 ---
 
+## 9 — La bascule de thème est au mauvais endroit, et n'agit qu'à l'enregistrement
+
+**Statut :** les deux causes sont certaines. Les deux corrections sont courtes.
+
+### Ce qui a été vu
+
+Le choix clair / sombre se trouve dans **le profil**. Et il ne change rien tant
+qu'on n'a pas appuyé sur « Enregistrer » en bas de l'écran.
+
+### Le lieu
+
+`apps/mobile/app/(app)/profil.tsx:450`. Et `reglages.tsx` **ne contient aucune
+mention de thème** — pas une ligne.
+
+La planche pose l'inverse : le pilote de port livre un écran entier pour ça,
+`specs/handoff_app_mobile/react-native/ReglagesHubScreen.js`, présenté dans le
+LISEZ-MOI comme « les réglages, dont le choix de thème — **le cas où le web ne
+pouvait rien décider** ». Le thème appartient aux réglages, et le designer a
+pris la peine d'en livrer l'écran.
+
+Le profil porte qui l'on est ; les réglages portent ce qui règle le produit.
+C'est la ligne que `_layout.tsx` trace déjà pour les deux onglets.
+
+### Le comportement
+
+Le sélecteur n'écrit que dans l'état du formulaire :
+
+```tsx
+pose={(v) => setSaisie({ ...saisie, theme: v ?? saisie.theme })}
+```
+
+L'application réelle est ailleurs, **dans le gestionnaire d'enregistrement**
+(`profil.tsx:268`) :
+
+```tsx
+choisis(saisie.langue);
+choisisLeTheme(saisie.theme);
+void poseLApparence(saisie.theme);
+routeur.back();
+```
+
+Et le commentaire juste au-dessus explique pourquoi c'est là :
+
+> On l'applique **après l'enregistrement** : ce qui est affiché correspond alors
+> à ce que le serveur a retenu.
+
+**Le raisonnement est juste pour la langue, et faux pour le thème.** La langue
+est une donnée du compte — elle gouverne les courriels, elle doit suivre ce que
+le serveur a retenu. Le thème est un **réglage d'affichage** : sa vérité est ce
+qu'on voit, et l'attendre d'un aller-retour réseau fait douter du bouton.
+
+Le pilote de port avait d'ailleurs posé la question sans la trancher, et c'est
+exactement celle-ci :
+
+> **La bascule de thème** : immédiate sous le doigt, ou appliquée au retour
+
+La réponse est tranchée : **immédiate**.
+
+### Les deux corrections
+
+1. **Déplacer le choix de thème du profil vers les réglages**, sur le modèle de
+   `ReglagesHubScreen.js`. Les trois positions restent trois — « Système » est
+   la valeur par défaut au contrat, et le commentaire de `profil.tsx` dit bien
+   pourquoi un couple Clair / Sombre ne suffit pas.
+2. **Appliquer sous le doigt** : `choisisLeTheme(v)` et `poseLApparence(v)` dans
+   le `pose` du sélecteur, et non dans l'enregistrement.
+
+**Un point à ne pas casser au passage :** la persistance côté compte doit
+continuer de partir. Appliquer tout de suite ne veut pas dire ne plus
+enregistrer — l'écran des réglages n'ayant pas de bouton « Enregistrer », il lui
+faudra écrire au serveur de lui-même.
+
+---
+
+## 10 — La cloche annonce 5, le centre ne montre rien ; et aucun mot d'accueil
+
+**Statut :** deux questions distinctes. La seconde a une réponse nette, la
+première demande une observation de plus.
+
+### A — la pastille contredit le centre
+
+La pastille vient de `/me/home` ; la liste vient de `/me/notifications`. **Les
+deux passent par le même prédicat**, et ce n'est pas un hasard — c'est une
+panne déjà réparée une fois, et le commentaire de `home.service.ts` la raconte :
+
+> la pastille comptait les lignes `email` et `push`, donc elle annonçait trois
+> éléments à un centre qui n'en montrait qu'un.
+
+Aujourd'hui `apps/api/src/me/notification.service.ts:42` définit
+`perimetreDuCentre` — canal `in_app`, échéance nulle ou passée — et la liste
+comme le compte s'en servent, le compte y ajoutant `readAt: null`. **Un « 5 »
+signifie donc que cinq entrées existent que le centre devrait lister.**
+
+Qu'il n'en montre aucune laisse une explication principale, et c'est celle que
+`packages/contracts/src/me-notifications.ts` écrit deux fois, en haut du
+fichier :
+
+> Un type absent d'ici n'échoue pas à l'écriture, il échoue à la **LECTURE**,
+> longtemps après, chez le client.
+
+Si la base porte un type que `NOTIFICATION_TYPES` ne connaît pas, alors
+`notificationsPageSchema.parse()` **jette côté mobile**
+(`apps/mobile/app/(app)/notifications.tsx:46`) — l'écran ne rend rien — pendant
+que la pastille, qui n'est qu'un entier dans `/me/home`, continue d'annoncer
+cinq. Le symptôme décrit est exactement celui-là.
+
+L'énumération a déjà manqué deux fois : les cinq `activation_*`, puis
+`wish_reserved` et `wish_reservation_cancelled`. Les deux commentaires qui le
+racontent sont encore dans le fichier.
+
+**L'observation qui tranche, et elle est immédiate :** ouvrir le centre de
+notifications et regarder ce qu'il affiche.
+
+- **L'état vide dessiné** (« rien pour l'instant ») → les lignes ne sont pas
+  dans le périmètre, et c'est le prédicat qu'il faut reprendre.
+- **Un bandeau d'erreur, ou un écran qui ne finit pas de charger** → c'est la
+  lecture qui casse, donc un type inconnu du contrat. Le journal du conteneur
+  de l'API donnera lequel.
+
+### B — le mot d'accueil n'existe pas
+
+Celui-là ne demande aucune enquête. `apps/api/src/onboarding/signup.service.ts`
+**n'écrit aucune notification**, et il n'existe **aucun type d'accueil** dans
+l'énumération — ni au contrat, ni dans `prisma/schema.prisma`.
+
+Ce qui existe et qui pourrait passer pour ça, ce sont les cinq `activation_*` —
+premier proche, première note, crédits inutilisés, lien de collecte,
+invitation. Mais ce sont des **relances**, envoyées par `RelancesService` selon
+ce qu'on a fait ou pas fait, pas un mot à l'arrivée.
+
+**Ce n'est donc pas une panne : c'est une fonctionnalité qui n'a jamais été
+écrite.** À décider comme telle — si un mot d'accueil doit exister, il lui faut
+un type, un libellé dans les deux langues, et une écriture à l'inscription.
+
+---
+
+## 11 — « Moi » figure dans la liste « pour qui »
+
+**Statut :** cause identifiée, et le choix est délibéré — c'est donc la
+décision qu'il faut reprendre, pas le code seul.
+
+### Ce qui a été vu
+
+En ajoutant une date, le sélecteur **POUR QUI** propose « Moi » en tête, avant
+Awa et Remi. Le choisir mène à « une suite de culs-de-sac ».
+
+### La cause
+
+Ce n'est pas un oubli de filtre. `apps/mobile/app/evenement.tsx` **nomme
+explicitement le cas** : `nomAAfficher(proche, t.evtPourMoi)`, aux lignes 251 et
+327. La fiche `is_self` est dans le carnet, la liste la rend, et un libellé
+propre — « Moi » — a été écrit pour elle.
+
+La source est `/me/persons?sort=alpha&…` (`evenement.tsx:89`), le carnet entier,
+sans filtre autre que le retrait du proche déjà choisi (`:173`). Le placeholder
+du champ le dit aussi : « **Vous** ou un proche ».
+
+### Ce qu'il faut trancher
+
+L'intention rapportée est claire : **ses propres dates se gèrent dans l'onglet
+« Moi »**, donc la liste ne doit pas proposer « Moi ». Si c'est la règle, alors
+il faut aussi :
+
+- retirer le libellé `evtPourMoi` de ce sélecteur, et corriger le placeholder
+  (« Vous ou un proche » → « Un proche ») ;
+- **vérifier que l'onglet « Moi » permet réellement d'ajouter une date à soi**,
+  sans quoi on ferme une porte sans en ouvrir une autre ;
+- vérifier le reste de la chaîne : le contrat et le serveur acceptent
+  aujourd'hui un événement sur la fiche `is_self`, et `ProgrammationService`
+  s'en sert — « le séparateur est `person.is_self` », dit `schema.prisma`, et
+  les types `own_date_reminder` / `own_date_day_of` existent pour ça.
+
+**Les culs-de-sac sont le vrai sujet.** Retirer « Moi » de la liste les cache
+sans les régler — et les mêmes écrans se rejoignent depuis l'onglet « Moi ».
+Dites-moi lesquels vous avez rencontrés : ce sont eux qu'il faut réparer, le
+retrait du sélecteur n'étant que la moitié propre du travail.
+
+---
+
+## 12 — « L'écriture n'a pas abouti », et la page ne dit pas pourquoi
+
+**Statut :** la cause réelle est dans le journal du serveur. Mais l'écran a un
+défaut propre, indépendant de l'incident.
+
+### Ce qui a été vu
+
+Un portrait lancé (Notre relation · Encre · illustration Nature), et un bandeau
+noir : « **L'écriture n'a pas abouti** ».
+
+### Ce que ce message signifie exactement
+
+`apps/mobile/app/portrait.tsx:278`. L'écran interroge la génération jusqu'à ce
+qu'elle s'arrête, puis :
+
+```tsx
+if (lu.generation.status === "succeeded" && lu.generation.resultId) { … }
+setEchecDuGeste(t.genErreurTitre);
+```
+
+Le message tombe donc dans **tous** les cas qui ne sont pas un succès avec
+résultat. La génération a bien été lancée et a bien échoué côté serveur — ce
+n'est pas un problème de réseau ni de formulaire.
+
+### Le défaut de l'écran : le motif est servi, et jeté
+
+Le serveur **dit pourquoi**. Le contrat porte le champ
+(`packages/contracts/src/me-generation.ts:165`) :
+
+```ts
+failureReason: z.string().nullable(),
+```
+
+et `apps/api/src/me/generation.controller.ts:241` le remplit depuis
+`failureCode`. Les propres tests du mobile le simulent —
+`apps/mobile/test/generation.test.ts:46` pose `"provider_unavailable"`.
+
+**Aucun écran de génération ne le lit.** `failureReason` n'est lu nulle part
+dans le mobile, sauf dans `recharge.tsx:391` — pour les paiements, où il est
+correctement affiché.
+
+Le résultat : la même phrase pour un fournisseur indisponible, un crédit
+manquant ou un refus de contenu. La personne ne sait ni si elle doit réessayer,
+ni si elle doit recharger, ni si elle doit changer ce qu'elle a demandé.
+
+### Les deux choses à faire, dans cet ordre
+
+1. **Trouver la cause de CET échec** — le journal du conteneur de l'API sur la
+   sandbox porte le `failureCode`. C'est lui qui dira s'il y a un second défaut
+   à corriger derrière.
+2. **Afficher le motif**, comme `recharge.tsx` le fait déjà. Les codes sont un
+   petit ensemble fermé : il leur faut une table de libellés dans les deux
+   langues, et un repli sur la phrase actuelle pour un code inconnu.
+
+---
+
 ## Relevé au passage, non signalé — à confirmer
 
 Deux choses visibles sur la copie d'écran de l'ajout d'un proche, que Valentine
