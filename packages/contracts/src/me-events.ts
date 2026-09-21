@@ -16,9 +16,51 @@ export type EventKind = (typeof EVENT_KINDS)[number];
 export const EVENT_NATURES = ["happy", "sensitive"] as const;
 export type EventNature = (typeof EVENT_NATURES)[number];
 
+// Combien de jours porte un mois, février mis à part. Indexé par le mois réel
+// moins un.
+const JOURS_PAR_MOIS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
+
+/* La règle séculaire, et elle n'est pas décorative : 1900 est divisible par
+   quatre et n'est PAS bissextile, 2000 l'est parce que divisible par quatre
+   cents. Une garde écrite en « % 4 » seul ouvrirait un 1900-02-29 qui n'a
+   jamais existé, et fermerait un 2000-02-29 qui est précisément l'année de
+   support des naissances dont on ignore l'année. */
+function bissextile(annee: number): boolean {
+  return annee % 4 === 0 && (annee % 100 !== 0 || annee % 400 === 0);
+}
+
+/* LE CALENDRIER, pas la forme.
+ *
+ * `^\d{4}-\d{2}-\d{2}$` seul laissait passer « 1990-02-31 » et
+ * « 2025-13-45 » : c'est une forme, pas une date. Ce qui suit est pire qu'un
+ * refus — l'API convertit par `new Date("1990-02-31T00:00:00Z")`, qui ne lève
+ * pas et DÉBORDE sur le 3 mars ; la fiche garde alors une date que personne
+ * n'a saisie, sans que rien ne le signale.
+ *
+ * On COMPTE les jours du mois plutôt que de relire ce qu'un `Date` rend, et ce
+ * n'est pas qu'une affaire de goût : `Date.UTC(99, 0, 1)` répond 1999, donc
+ * une comparaison de l'année demandée à l'année rendue rejetterait « 0099 » —
+ * absurde, mais absurde n'est pas impossible, et cette garde ne doit refuser
+ * que l'impossible. */
+function existeAuCalendrier(valeur: string): boolean {
+  const annee = Number(valeur.slice(0, 4));
+  const mois = Number(valeur.slice(5, 7));
+  const jour = Number(valeur.slice(8, 10));
+  if (mois < 1 || mois > 12 || jour < 1) return false;
+  const plafond = mois === 2 && bissextile(annee) ? 29 : JOURS_PAR_MOIS[mois - 1]!;
+  return jour <= plafond;
+}
+
 // Une date civile sans heure : « aujourd'hui » désigne autre chose selon
 // l'endroit, et le calcul se fait dans le fuseau de l'utilisateur.
-export const dateCivileSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+//
+// La forme D'ABORD, le calendrier ensuite : le `.refine()` ne s'exécute que
+// sur une chaîne qui a déjà la bonne forme, et peut donc découper sans
+// vérifier ce qu'il découpe.
+export const dateCivileSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(
+  existeAuCalendrier,
+  { message: "cette date n'existe pas au calendrier" },
+);
 
 // ── Récurrences ─────────────────────────────────────────────────────────────
 //
