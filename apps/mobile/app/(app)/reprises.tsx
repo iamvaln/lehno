@@ -218,14 +218,24 @@ function CarteDeReprise({ reprise, onReprendre }: {
           )}
         </View>
 
-        {/* Une occasion passée ne se condamne pas : la mention le signale, et le
-            travail reste là. Sans date connue, on dit que ça travaille — un
-            décompte inventé mentirait sur une cible qu'on ignore. */}
-        {reprise.jours === null ? (
+        {/* CE QUI TRAVAILLE SE LIT DANS L'ÉTAT, JAMAIS DANS L'ABSENCE DE DATE.
+
+            La mention disait « Lehno écrit » dès que `jours` était nul, au motif
+            qu'« un décompte inventé mentirait sur une cible qu'on ignore ». Vrai
+            pour un message dont l'occasion tombe hors de la fenêtre lue — mais
+            un PORTRAIT vise un proche, jamais une occasion : `jours` y est nul
+            PAR CONSTRUCTION. Tout portrait se disait donc en cours pour
+            toujours, même produit et rendu, et l'accueil comptait une reprise
+            qui n'attendait rien. On proposait « Reprendre » sur un travail fini.
+
+            Sans date et sans travail en cours, on ne met rien : une nature qui
+            n'a pas d'échéance n'en a pas à montrer, et prétendre qu'elle
+            travaille est le mensonge qu'on voulait éviter. */}
+        {reprise.enCours ? (
           <Text style={[styles.mention, { color: couleurs.textMention }]} numberOfLines={1}>
             {t.genAttenteTitre}
           </Text>
-        ) : passee ? (
+        ) : reprise.jours === null ? null : passee ? (
           <Text style={[styles.mention, { color: couleurs.textMention }]} numberOfLines={1}>
             {t.repriseDepassee}
           </Text>

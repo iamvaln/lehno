@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  creditBalanceSchema, generationsSchema, occurrenceSchema,
+  creditBalanceSchema, generationResultSchema, generationsSchema, occurrenceSchema,
   type GenerationKind, type GenerationResult, type Occurrence,
 } from "@lehno/contracts";
 import {
@@ -89,12 +89,28 @@ export default function Preparation() {
     setEnvoi(kind);
     setEchec(null);
     try {
-      await appel<unknown>("/me/generations", {
+      /* ON ARRIVE SUR LA CHOSE, JAMAIS SUR UNE LISTE — la planche du portrait
+         le pose en propre (§1.2), et c'est vrai des trois natures : « payer et
+         atterrir dans une boîte de réception est la pire transition du
+         produit ».
+
+         On poussait vers « En cours » en JETANT la réponse, qui porte pourtant
+         l'identifiant de l'exécution qu'on vient de créer. L'écran d'attente
+         ne s'ouvrait donc jamais : pas de progression, pas de résultat, et une
+         liste où l'on retrouvait au mieux autre chose que ce qu'on venait de
+         demander. `reprises.ts` disait déjà où il fallait aller — « le message
+         et les idées s'observent par leur EXÉCUTION, /generation?id= » — et la
+         panne jumelle y avait été réparée sur le geste « Reprendre », pas sur
+         celui qui lance.
+
+         `replace` et non `push` : revenir en arrière sur le formulaire qui
+         vient de lancer inviterait à relancer, donc à repayer. */
+      const lu = generationResultSchema.parse(await appel<unknown>("/me/generations", {
         method: "POST",
         body: JSON.stringify(composeLaDemande(kind, occurrenceId)),
         gouvernee: true,
-      });
-      routeur.push("/(app)/reprises");
+      }));
+      routeur.replace({ pathname: "/generation", params: { id: lu.generation.id } });
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
     } finally {

@@ -9,8 +9,15 @@ import { portDecoute } from "./common/port.js";
 import { ENTETES_AUTORISES, originsAutorisees } from "./common/cors.js";
 import { AppModule } from "./app.module.js";
 import { AppExceptionFilter } from "./common/errors.js";
+import { verifierLesPolices } from "./me/polices.js";
 
 async function bootstrap(): Promise<void> {
+  /* AVANT TOUT LE RESTE : les polices du portrait sont-elles là ?
+     Elles ne se lisaient qu'à l'approbation, donc leur absence se découvrait
+     dans un conteneur, après un crédit pris et une image produite. Ici, elle
+     ferme la porte. Voir `me/polices.ts`. */
+  verifierLesPolices();
+
   // abortOnError: false — sans ça, une erreur d'initialisation (secret manquant,
   // dépendance non résolue) fait appeler process.abort() par Nest : un crash
   // natif sans message clair. On préfère rejeter la promesse et l'écrire
