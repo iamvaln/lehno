@@ -1424,6 +1424,104 @@ preuve — on gagne une forme lisible de la même déclaration. « Affirmer » e
 
 ---
 
+## 19 — L'export de données s'enregistre, et rien ne le traite jamais
+
+**Statut :** cause certaine, de bout en bout. **Et la demande d'aujourd'hui a
+verrouillé la fonction pour ce compte.**
+
+### La question posée : y a-t-il une trace en base ?
+
+**Oui.** `apps/api/src/me/data-export.service.ts`, `demander()` :
+
+```ts
+const ligne = await this.prisma.dataExportRequest.create({ data: { userId } });
+```
+
+Une ligne `data_export_request` existe, au statut `pending`. L'accusé « Request
+received » ne ment pas : la demande a bien été reçue et enregistrée.
+
+**C'est tout ce qui se produit.**
+
+### Rien ne consomme cette ligne
+
+`assembler()` — la fonction qui construit le document — **n'est appelée nulle
+part.** Vérifié sur l'ensemble de l'API : les seules autres occurrences du mot
+appartiennent à `studio/configuration.service.ts`, qui n'a aucun rapport.
+
+Et il n'y a pas de travailleur ailleurs. L'ordonnanceur
+(`apps/api/src/me/ordonnanceur.service.ts`) porte sept étapes dans son passage
+quotidien :
+
+```
+déroulement · programmation · relance globale · relance par personne ·
+activation · générations abandonnées · envoi
+```
+
+**Aucune ne touche aux exports.** Le rattrapage des dix minutes ne concerne que
+les générations.
+
+Conséquence : la ligne reste `pending` **indéfiniment**. Le fichier n'est jamais
+assemblé, aucun courriel ne part, `completedAt` n'est jamais posé.
+
+### Ce qui rend la chose particulière
+
+`assembler()` n'est pas une ébauche. C'est **cent lignes écrites avec soin**,
+surmontées du commentaire le plus long du fichier — quatre règles sur ce qui ne
+doit jamais sortir du service, chacune justifiée : l'adresse d'un autre compte,
+l'identité d'un contributeur, les jetons et secrets, les traces de sécurité.
+Quelqu'un a pesé chaque champ de ce document.
+
+**Et personne ne l'appelle.** Le travail difficile est fait ; c'est le fil qui
+manque.
+
+### Le piège : la fonction est maintenant morte pour ce compte
+
+`demander()` refuse une seconde demande tant qu'une est `pending` :
+
+```ts
+if (enCours) throw new AppError("conflict", "an export is already being prepared");
+```
+
+Et l'écran en tire les conséquences — le bouton s'éteint pendant la préparation
+(`donnees.tsx:109`, `disabled={… || !peutDemander(derniere)}`), avec un
+commentaire qui explique pourquoi : « un bouton qui part pour revenir en erreur
+dirait le contraire du refus qu'il reçoit ».
+
+Les deux décisions sont justes séparément. Ensemble, et **avec un traitement qui
+n'existe pas**, elles donnent : une demande qui ne s'achève jamais, donc un
+bouton qui ne se rallume jamais.
+
+**Vérifiable tout de suite :** sur la copie d'écran, « Request a copy » est déjà
+grisé. Rouvrir l'écran devrait le montrer éteint, définitivement. Si c'est le
+cas, c'est la confirmation.
+
+**Il faudra donc, en plus de la correction, effacer les lignes `pending`
+restées en base** — sans quoi les comptes d'essai gardent un bouton mort.
+
+### Ce que ça engage
+
+Cet écran exerce le **droit à la portabilité** — la politique de
+confidentialité §8 le nomme, et la copie promet « dans les 24 heures ». Ce
+n'est pas une commodité qu'on livre plus tard : c'est un engagement affiché à
+l'utilisateur.
+
+### Ce qu'il y a à faire
+
+1. **Ajouter l'étape au passage quotidien** — ou un rattrapage plus fréquent :
+   lire les `pending`, appeler `assembler()`, produire le fichier, l'envoyer,
+   poser `completedAt` et le statut. La liste des sept étapes est le bon
+   endroit, et sa forme (`[nom, etape]`) est faite pour qu'on en ajoute.
+2. **Décider du transport.** « Par e-mail » est ce que la copie promet, mais un
+   export complet peut être volumineux : pièce jointe ou lien signé à durée
+   limitée ? Le second est plus sûr et demande un stockage — `stockage/` existe
+   déjà.
+3. **Traiter l'échec.** Si l'assemblage casse, la ligne doit passer en échec et
+   non rester `pending` — sinon on recrée exactement le verrou ci-dessus.
+4. **Purger les `pending` existants** avant de conclure que la correction
+   marche.
+
+---
+
 ## Relevé au passage, non signalé — à confirmer
 
 Deux choses visibles sur la copie d'écran de l'ajout d'un proche, que Valentine
