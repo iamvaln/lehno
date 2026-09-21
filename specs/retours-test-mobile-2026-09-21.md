@@ -131,6 +131,148 @@ et `ReglagesHubScreen`, et rien d'autre.
 
 ---
 
+## 3 — Le mot d'accompagnement n'arrive pas sur la page de collecte
+
+**Statut :** cause probable identifiée, un essai la confirme ou l'écarte.
+
+### Ce qui a été vu
+
+Un lien de collecte envoyé à quelqu'un, avec un mot personnalisé écrit dans
+l'application. La page ouverte par le destinataire n'affiche pas ce mot.
+
+### Ce que la chaîne promet
+
+Le contrat est explicite, et il le dit deux fois. Dans
+`packages/contracts/src/me-contributions.ts`, sur le champ d'écriture :
+
+> « Il s'affiche en haut de la page qu'on ouvrira » — la copie de la maquette le
+> promet à celui qui l'écrit, et c'est cette promesse qui oblige le contrat à le
+> porter. Un champ saisi ici et perdu à l'envoi serait pire qu'un champ absent :
+> on croirait l'avoir écrit.
+
+Et dans `packages/contracts/src/public-mur.ts`, sur le champ servi à la page :
+
+> C'est la seule chose de cette page qui ne vienne pas du produit : le reste est
+> un formulaire, lui est une voix.
+
+### Ce qui marche
+
+**Toute la chaîne, prise morceau par morceau.** Je l'ai suivie d'un bout à
+l'autre et chaque maillon fait ce qu'il doit :
+
+- le mobile envoie bien le mot à la création du lien
+  (`apps/mobile/app/(app)/collecte.tsx:122`) ;
+- le serveur l'écrit, et le garde quand on rouvre un lien sans le fournir
+  (`apps/api/src/mur/collecte.service.ts:88` et `:99`) ;
+- il le sert sur les deux natures de lien
+  (`apps/api/src/mur/collecte.service.ts:152`) ;
+- la page web l'affiche, cité, trait vertical à gauche, au-dessus du chapeau
+  (`apps/web/components/surfaces/Collecte.tsx:201`).
+
+Le défaut n'est donc pas dans un maillon. **Il est dans le geste.**
+
+### La cause probable : le mot ne part pas quand on partage
+
+L'écran de collecte enchaîne trois choses dans cet ordre : le champ du mot, un
+bouton **« Enregistrer »** qui *n'apparaît que si le texte a changé*, puis le
+bouton plein **« Partager »**.
+
+Or « Partager » n'enregistre rien :
+
+```tsx
+onPress={() => void Share.share({ message: vivant.url })}
+```
+
+Il envoie l'adresse, telle qu'elle est déjà en base. Le mot qu'on vient de taper
+juste au-dessus reste dans l'état local de l'écran.
+
+Et le parcours *force* ce piège, parce que le champ du mot n'existe que sur un
+lien vivant (`{vivant ? …}`) : on ne peut pas écrire le mot avant de créer le
+lien. L'ordre imposé est donc — créer le lien (sans mot, forcément), écrire le
+mot, **penser à l'enregistrer**, puis partager. Le seul bouton plein de l'écran
+est le dernier, et il marche sans le troisième.
+
+C'est exactement le cas que le contrat disait vouloir éviter : « un champ saisi
+ici et perdu à l'envoi serait pire qu'un champ absent : on croirait l'avoir
+écrit ».
+
+### Une seconde cause possible, à écarter d'abord
+
+`apps/web/app/[locale]/c/[jeton]/page.tsx:18` revalide la page **toutes les
+soixante secondes**. Un mot enregistré puis ouvert dans la minute peut donc
+montrer l'état précédent.
+
+**L'essai qui tranche, et il coûte dix secondes :** rouvrir la page maintenant.
+
+- Le mot apparaît → c'était le cache, et il n'y a rien à corriger côté code (au
+  plus, à décider si soixante secondes est le bon délai pour cette page).
+- Le mot n'apparaît toujours pas → il n'a jamais été enregistré, et c'est bien
+  le geste qu'il faut réparer.
+
+### Ce qu'il y a à trancher, si c'est bien le geste
+
+- **« Partager » enregistre d'abord.** Le plus court : le bouton enregistre le
+  mot en attente s'il y en a un, puis ouvre la feuille de partage. Le bouton
+  « Enregistrer » demeure pour qui veut poser le mot sans partager tout de
+  suite.
+- **Ou bien l'écran refuse de partager un mot non enregistré**, et le dit. Plus
+  honnête, plus agaçant.
+- **Dans les deux cas, le champ du mot devrait exister avant le lien.** Écrire
+  le mot puis créer le lien d'un seul geste supprimerait la moitié du piège.
+
+---
+
+## 4 — La bande d'acquisition s'écrase sur un écran étroit
+
+**Statut :** cause identifiée, correction évidente, portée large.
+
+### Ce qui a été vu
+
+En bas de la page de collecte, sur Android (sandbox) : le titre « Be there on
+the day, too » se coupe à un ou deux mots par ligne, le paragraphe descend en
+colonne d'une seule main de large, et le bouton « Discover Lehno » reste à
+pleine largeur à côté, enfoncé au milieu du texte.
+
+### La cause
+
+`apps/web/components/BandeAcquisition.tsx`. La bande est un conteneur flexible
+avec retour à la ligne, mais **le retour ne se déclenche jamais** :
+
+```tsx
+display: "flex", flexWrap: "wrap",
+…
+<div style={{ flex: "1 1 0", minWidth: 0 }}>   {/* le texte */}
+<a  style={{ flex: "0 0 auto" }}>              {/* le bouton */}
+```
+
+Un élément ne passe à la ligne que s'il ne tient plus à sa largeur minimale. Or
+`flex: "1 1 0"` avec `minWidth: 0` dit précisément l'inverse : **la colonne de
+texte accepte de rétrécir jusqu'à rien.** Elle se laisse donc écraser au lieu de
+pousser le bouton à la ligne, et le bouton, lui, est en `flex: "0 0 auto"` — il
+ne cède pas un pixel.
+
+`minWidth: 0` est un réflexe juste ailleurs (il évite qu'un nom long déborde
+d'une carte) ; ici il désarme le seul mécanisme qui devait sauver la mise.
+
+### La portée
+
+**Ce composant sert toutes les surfaces publiques** — le Mur, la liste partagée,
+l'invitation, le dépôt de vœu, et la collecte. Le défaut est donc sur chacune,
+et une seule correction les redresse toutes. À vérifier au même passage.
+
+### La correction
+
+Donner à la colonne de texte une largeur de base qui force le retour — de
+l'ordre de `flex: "1 1 20rem"`, sans `minWidth: 0` — plutôt qu'une base nulle.
+En dessous de cette largeur, le bouton passe sous le texte, ce que la mise en
+page prévoyait déjà (`flexWrap`, `alignItems: "flex-end"`).
+
+**À confirmer sur la planche :** quelle largeur sépare les deux dispositions, et
+si le bouton, une fois passé dessous, s'étire sur toute la largeur ou reste à sa
+taille.
+
+---
+
 ## Relevé au passage, non signalé — à confirmer
 
 Deux choses visibles sur la copie d'écran de l'ajout d'un proche, que Valentine
