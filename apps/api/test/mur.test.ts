@@ -418,6 +418,57 @@ describe("le Mur et la collecte", () => {
     expect(await db.prisma.wishlistItem.count()).toBe(0);
   });
 
+  /* PRÉVENIR, SANS QUOI LA FILE NE SE DÉCOUVRE QUE PAR HASARD.
+   *
+   * `contribution_received` figurait au contrat, et l'écran des rappels offrait
+   * son interrupteur — mais AUCUN chemin ne l'écrivait. Un interrupteur qui ne
+   * commande rien, et vu à l'appareil : un proche remplit son lien, envoie, et
+   * le propriétaire ne l'apprend qu'en allant regarder de lui-même une file qui
+   * ne s'annonce nulle part.
+   *
+   * Aucun test ne pouvait le voir : la contribution arrivait bien en base, et
+   * c'est la seule chose qu'on vérifiait. */
+  it("prévient le propriétaire d'une contribution, en nommant le proche visé", async () => {
+    const p = await db.prisma.person.create({
+      data: { userId: awa, displayName: "Bila Kone", callingName: "Bila" },
+    });
+    const nominatif = await collecte.create(awa, { type: "nominatif", personId: p.id });
+
+    await collecte.soumettre(nominatif.token, { personalNote: "il aime le vélo" });
+
+    const posees = await db.prisma.notification.findMany({
+      where: { userId: awa, type: "contribution_received" },
+    });
+    expect(posees).toHaveLength(1);
+    expect(posees[0]).toMatchObject({
+      channel: "in_app",
+      titleKey: "notification.contribution_received",
+      personId: p.id,
+    });
+    /* LE NOM D'USAGE, pas le nom complet : c'est celui que le propriétaire
+       emploie, et la notification se lit d'un coup d'œil. */
+    expect(posees[0]?.bodyParams).toEqual({ person: "Bila" });
+  });
+
+  /* Un lien PUBLIC ne vise aucune fiche, et le répondant s'est nommé lui-même.
+     Porter ce nom dans la notification ferait entrer une déclaration non
+     vérifiée dans quelque chose que personne n'a demandé ; le propriétaire le
+     lira dans la file, sous ses yeux, là où il tranche. */
+  it("prévient sans nom quand le lien est public", async () => {
+    const publik = await collecte.create(awa, { type: "public" });
+
+    await collecte.soumettre(publik.token, {
+      personalNote: "moi je passais par là", submitterName: "Inconnu",
+    });
+
+    const posees = await db.prisma.notification.findMany({
+      where: { userId: awa, type: "contribution_received" },
+    });
+    expect(posees).toHaveLength(1);
+    expect(posees[0]?.personId).toBeNull();
+    expect(posees[0]?.bodyParams).toEqual({});
+  });
+
   /* Garde la FRONTIÈRE de la relecture. Sur un lien public, servir les
      contributions ferait lire à tout visiteur le nom, le mot et les souhaits
      des autres — le lien est fait pour être partagé au monde. */

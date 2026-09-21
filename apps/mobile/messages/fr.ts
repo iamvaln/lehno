@@ -774,6 +774,8 @@ export const fr = {
   // même qu'on répare au serveur.
   notifMaDateRappel: (j: number) => "Votre date, dans " + j + " jours",
   notifMaDateAujourdhui: () => "C'est votre jour",
+  notifContributionRecue: (qui: string) => "Une contribution à relire : " + qui,
+  notifContributionRecueSansNom: () => "Une contribution à relire",
   notifContribution: (n: number) => n === 1
     ? "Une contribution attend votre relecture"
     : n + " contributions attendent votre relecture",
