@@ -12,9 +12,9 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 ---
 
-# Synthèse — 25 retours, au 21 septembre
+# Synthèse — 27 retours, au 21 septembre
 
-**Vingt-cinq retours relevés, tous avec leur cause retrouvée dans le code.** Rien
+**Vingt-sept retours relevés, tous avec leur cause retrouvée dans le code.** Rien
 n'est corrigé à ce jour : ce document est l'état des lieux qui précède le
 travail.
 
@@ -2357,6 +2357,126 @@ l'écran peut s'y fier : deux frappes ne font pas deux images. »
 - **Séparer « Relire » de « Composer »** : le formulaire n'a rien à faire sous
   le résultat. Il revient au moment « Donner », derrière « Refaire ».
 - **Écrire la seconde attente**, avec ses mots à elle, et la rendre idempotente.
+
+---
+
+## 26 — Un portrait reste éternellement « Lehno is writing » dans « En cours »
+
+**Statut : cause certaine.** C'est ce qui fait croire que l'activité est
+restée en attente — et ce n'est pas le cas dans les données.
+
+### Ce que dit la base
+
+Interrogée sur la sandbox, la table des exécutions :
+
+```
+16:02:45 | portrait     | success | 
+15:39:12 | portrait     | failure | generation_unavailable
+14:52:12 | wish_message | failure | generation_unavailable
+14:46:56 | portrait     | failure | generation_unavailable
+21:51:10 | gift_ideas   | failure | generation_unavailable
+```
+
+**Le portrait de 16 h 02 est `success`.** Il n'est pas en attente, il n'est pas
+en cours : il est produit, et il attend une approbation — ce qui n'est pas la
+même chose.
+
+Les quatre autres sont en échec et **n'apparaissent nulle part** (§14B).
+
+### Pourquoi l'écran dit le contraire
+
+`apps/mobile/app/(app)/reprises.tsx:224` — la mention de la carte ne regarde pas
+l'état de l'exécution, elle regarde **la date visée** :
+
+```tsx
+{reprise.jours === null ? (
+  <Text …>{t.genAttenteTitre}</Text>        // « Lehno is writing »
+) : passee ? ( … ) : ( <Countdown … /> )}
+```
+
+Le commentaire au-dessus explique le raisonnement :
+
+> Sans date connue, on dit que ça travaille — un décompte inventé mentirait sur
+> une cible qu'on ignore.
+
+**Le raisonnement vaut pour un message, pas pour un portrait.** `jours` vient de
+l'échéance visée, et le contrat est formel sur ce point :
+
+> un portrait vise un **proche**, un message et des idées visent une **occasion**
+
+`composeLesReprises` cherche `generation.occurrenceId ?? message?.occurrenceId`.
+Sur un portrait, les deux sont nuls **par construction**. Donc `jours === null`
+**toujours**, donc la carte affiche « Lehno is writing » **pour tout portrait,
+quel que soit son état.**
+
+Le commentaire visait le cas d'un message dont l'occasion tombait hors de la
+fenêtre interrogée — un cas rare et légitime. Il n'a pas envisagé la nature qui
+n'a jamais d'occasion du tout.
+
+### Ce que ça entraîne en cascade
+
+- La carte propose **« Pick up »** sur un travail qui n'a pas besoin d'être
+  repris.
+- L'accueil affiche **« One thing you started is waiting »** — la bannière
+  compte les reprises, donc elle compte ce portrait.
+- Et comme le lancement d'une génération atterrit sur cette liste (§14A),
+  **demander un message conduit à un portrait qu'on invite à reprendre.** C'est
+  la séquence exacte qui a été rapportée.
+
+### La correction
+
+**Ne pas déduire l'état d'une absence de date.** Le portrait a un état — `enCours`
+est déjà calculé dans `composeLesReprises` (`generation.status === "running"`),
+et il n'est simplement pas utilisé ici. La mention doit le lire, et traiter
+« pas de date » comme ce que c'est : une nature sans échéance, pas un travail en
+cours.
+
+**À trancher en même temps :** un portrait produit mais non approuvé doit-il
+figurer dans « En cours » ? Il y a un argument pour — c'est bien quelque chose
+qu'on a commencé et pas fini. Mais alors la carte doit dire « à approuver », pas
+« Lehno is writing », et le geste doit s'appeler autrement que « Pick up ».
+
+---
+
+## 27 — « Approuver » ne montre aucune attente, et échoue sans expliquer
+
+**Statut : établi**, et c'est la face visible du §24.
+
+### La séquence observée
+
+Appuyer sur « Approve » sur un portrait produit. **Rien ne se passe à l'écran** —
+pas d'attente, pas d'indication. Puis, après un temps, le bandeau : « Something
+went wrong on our end. »
+
+### Ce qui se passe derrière
+
+Le journal de la sandbox porte trois tentatives, à 16 h 03, 16 h 08 et
+16 h 08 — le `ENOENT` sur `Fraunces-Regular.ttf` du §24. L'appel part bien, il
+travaille, et il casse à la composition de l'image.
+
+### Les deux défauts d'écran, indépendants du §24
+
+**1. L'attente n'est pas dessinée.** La planche la réclame nommément
+(`specs/design-portrait-mobile-2026-09-11.md` §4) :
+
+> L'approbation appelle un modèle d'image en ligne : **la seconde attente se
+> dessine comme la première**, avec ses mots à elle.
+
+Elle n'existe pas. Or l'appel génère une image puis la compose — c'est long, et
+c'est le moment où l'on a le plus besoin d'être rassuré.
+
+**2. Le message ne dit rien d'utile.** « Something went wrong on our end » est
+la formule générique. Ici, la cause est connue du serveur et même écrite en
+clair dans son journal ; le client, lui, n'en voit rien — **même famille que le
+§12**, où `failureReason` est servi puis jeté.
+
+### Ce qu'il y a à faire
+
+- **Dessiner la seconde attente**, comme la planche le demande, et la rendre
+  idempotente — « deux frappes ne font pas deux images ».
+- **Rendre le motif**, comme le §12 le demande pour la première attente.
+- **Et corriger le §24**, sans quoi les deux premiers points rendront une belle
+  attente suivie d'une belle erreur.
 
 ---
 
