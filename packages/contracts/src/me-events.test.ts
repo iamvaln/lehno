@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createEventSchema, AGE_MAXIMAL_ANNEES } from "./me-events.js";
+import { createEventSchema, dateCivileSchema, AGE_MAXIMAL_ANNEES } from "./me-events.js";
 import { createPersonSchema } from "./me.js";
 
 const PROCHE = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
@@ -142,5 +142,100 @@ describe("un événement dit quand la chose sera", () => {
       ],
     });
     expect(r.success).toBe(true);
+  });
+});
+
+/* LE 31 FÉVRIER FRANCHISSAIT LE CONTRAT.
+ *
+ * `dateCivileSchema` ne vérifiait qu'une FORME — quatre chiffres, deux, deux —
+ * et « 1990-02-31 » la satisfait aussi bien que « 2025-13-45 ». Deux écrans du
+ * client offraient les trente-et-un jours quel que soit le mois.
+ *
+ * Ce qui suivait était pire qu'un refus : l'API convertit par
+ * `new Date("1990-02-31T00:00:00Z")`, qui ne lève pas — il DÉBORDE sur le
+ * 3 mars. La fiche gardait donc une date que personne n'avait saisie, et rien
+ * nulle part ne disait qu'elle avait changé. Les mois et les jours hors
+ * bornes, eux, donnaient une date invalide, donc une erreur de base de données
+ * incompréhensible pour la personne.
+ */
+describe("une date civile existe au calendrier", () => {
+  const civile = (valeur: string): boolean => dateCivileSchema.safeParse(valeur).success;
+
+  it("refuse un 31 février", () => {
+    expect(civile("1990-02-31")).toBe(false);
+  });
+
+  it("refuse un jour qui déborde de son mois", () => {
+    expect(civile("2025-04-31"), "avril compte trente jours").toBe(false);
+    expect(civile("2025-00-10"), "il n'y a pas de mois zéro").toBe(false);
+    expect(civile("2025-13-45")).toBe(false);
+    expect(civile("2025-01-00"), "aucun mois ne commence au zéro").toBe(false);
+    expect(civile("2025-01-32")).toBe(false);
+  });
+
+  /* Le piège gardé : refuser le 29 février tout court. Il existe une année sur
+     quatre, et quelqu'un est né ce jour-là. */
+  it("accepte le 29 février d'une année bissextile", () => {
+    expect(civile("2024-02-29")).toBe(true);
+  });
+
+  it("refuse le 29 février d'une année ordinaire", () => {
+    expect(civile("1990-02-29")).toBe(false);
+  });
+
+  /* Le piège gardé, et c'est celui qu'une garde écrite à la main rate : la
+     règle séculaire. 1900 est divisible par quatre et n'est PAS bissextile ;
+     2000 l'est, parce que divisible par quatre cents. */
+  it("suit la règle séculaire, pas seulement la division par quatre", () => {
+    expect(civile("1900-02-29"), "1900 n'est pas bissextile").toBe(false);
+    expect(civile("2000-02-29"), "2000 l'est, divisible par quatre cents").toBe(true);
+  });
+
+  it("laisse passer les dates ordinaires", () => {
+    expect(civile("1990-03-14")).toBe(true);
+    expect(civile("2025-12-31")).toBe(true);
+    expect(civile("2025-02-28")).toBe(true);
+  });
+
+  // La garde ne remplace pas la forme : elle s'ajoute.
+  it("refuse toujours ce qui n'a pas la forme d'une date civile", () => {
+    expect(civile("14/03/1990")).toBe(false);
+    expect(civile("1990-3-14")).toBe(false);
+    expect(civile("1990-03-14T00:00:00Z")).toBe(false);
+  });
+
+  // Le chemin réel du client : la naissance d'un proche.
+  it("refuse un 31 février posé sur un proche", () => {
+    expect(naissance("1990-02-31")).toBe(false);
+  });
+
+  /* Le piège gardé, et il se serait vu tard : l'ANNÉE DE SUPPORT d'une
+     naissance dont on ignore l'année (2000, voir mobile/lib/naissance.ts) est
+     bissextile EXPRÈS. Une garde de calendrier qui la refuserait fermerait la
+     saisie à tous ceux qui sont nés un 29 février. */
+  it("accepte le 29 février d'une naissance dont l'année n'est pas connue", () => {
+    expect(naissance("2000-02-29", false)).toBe(true);
+  });
+
+  // Et le chemin de l'événement, qui raffine la même date.
+  it("refuse un 31 février posé sur un événement", () => {
+    const r = createEventSchema.safeParse({
+      personId: PROCHE, kind: "other", label: "Mariage de Sarah",
+      referenceDate: `${Number(jour.slice(0, 4)) + 1}-02-31`,
+    });
+    expect(r.success).toBe(false);
+  });
+
+  /* Le piège gardé : une garde trop zélée qui refuserait une date légitime.
+     Le 29 février prochain est une date d'événement parfaitement valable. */
+  it("accepte un 29 février à venir sur un événement", () => {
+    const annee = Number(jour.slice(0, 4));
+    const bissextile = [annee, annee + 1, annee + 2, annee + 3, annee + 4]
+      .find((a) => `${a}-02-29` > jour && (a % 4 === 0 && (a % 100 !== 0 || a % 400 === 0)))!;
+    const r = createEventSchema.safeParse({
+      personId: PROCHE, kind: "other", label: "Bal du 29",
+      referenceDate: `${bissextile}-02-29`,
+    });
+    expect(r.success, `${bissextile}-02-29 refusé`).toBe(true);
   });
 });
