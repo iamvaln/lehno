@@ -347,6 +347,182 @@ correction doit venir avec un test qui tombe sur l'état actuel.
 
 ---
 
+## 6 — Une contribution reçue ne prévient personne
+
+**Statut :** cause certaine pour la notification. Le second symptôme reste à
+départager par un essai.
+
+### Ce qui a été vu
+
+Quelqu'un a rempli le lien et envoyé. Le propriétaire **n'a reçu aucune
+notification**, et la page du répondant « affiche toujours la même chose ».
+
+Deux symptômes, deux causes distinctes. Le premier est certain.
+
+### Symptôme A — la notification n'existe pas
+
+`apps/api/src/mur/collecte.service.ts:164`, `soumettre()` : la contribution
+s'écrit en base, avec ses souhaits, dans une transaction — et la méthode rend
+`{ submitted: true }`. **Il n'y a pas une ligne de notification sur ce chemin.**
+
+Ce n'est pas un oubli de branchement : le type existe partout ailleurs, et
+seule l'écriture manque.
+
+| Où | Ce qu'on y trouve |
+|---|---|
+| `packages/contracts/src/me-notifications.ts:25` | `contribution_received` figure dans `NOTIFICATION_TYPES` |
+| `apps/mobile/lib/rappels.ts:58` | l'écran des rappels offre un interrupteur pour ce type |
+| **`apps/api/src/`** | **aucune occurrence — rien ne l'écrit jamais** |
+
+Le résultat est le pire des trois : **un interrupteur qui ne commande rien.**
+Le commentaire du contrat le dit lui-même à propos d'une autre famille — « un
+interrupteur sans effet apprend à ne pas croire les interrupteurs ».
+
+La file de validation, elle, se remplit correctement. Le propriétaire doit
+simplement deviner d'aller y regarder.
+
+### Ce qu'il y a à trancher pour le symptôme A
+
+- **Quels canaux.** La ligne `in_app` du centre de notifications est le minimum
+  — c'est elle qui allume la pastille de la cloche, déjà servie par
+  `/me/home`. Le push et le courriel sont un choix à part.
+- **Le groupage.** Trois personnes qui répondent dans l'heure font-elles trois
+  entrées ou une ? Sur un lien public relayé, la question n'est pas théorique.
+- **Le réglage est-il configurable ?** `contribution_received` n'est pas dans
+  `ALWAYS_SENT_NOTIFICATIONS`, donc il est réglable — l'interrupteur qui existe
+  déjà prendra effet tout seul une fois l'écriture posée.
+
+### Symptôme B — la page du répondant, à départager
+
+Ici je n'ai pas de certitude, et le code seul ne la donnera pas.
+
+**Ce que le code fait, et qui est juste :** à l'envoi réussi, le composant pose
+`envoye` et la page bascule sur une bannière de succès
+(`apps/web/components/surfaces/Collecte.tsx:117` et `:151`). En cas d'échec,
+elle pose `erreur` et montre une bannière rouge près du bouton d'envoi
+(`:388`). Au **rechargement**, l'historique se relit sans cache et, s'il n'est
+pas vide, le chapeau change — « You have already answered. You can add more…
+» — et le bloc `DejaEnvoye` paraît au-dessus des souhaits.
+
+**Donc la page devrait changer, dans les trois cas.** Qu'elle n'ait pas changé
+laisse deux lectures :
+
+1. **L'envoi a échoué et la bannière rouge est passée inaperçue.** Le candidat
+   le plus vraisemblable serait `NEXT_PUBLIC_API_URL` : les lectures se font au
+   serveur avec `API_URL`, l'envoi se fait au navigateur avec
+   `NEXT_PUBLIC_API_URL` — deux variables distinctes, et une page qui s'affiche
+   ne prouve donc rien de l'envoi. **Mais `.github/workflows/sandbox.yml:93` la
+   pose explicitement** à `https://api.sandbox.lehno.io`, avec un commentaire
+   qui dit pourquoi elle n'est pas prise de `vars`. L'hypothèse ne tient que si
+   l'image déployée est antérieure à cette ligne.
+2. **L'envoi a réussi, et c'est le retour ultérieur qui ne dit rien.** Alors
+   `relire` rend une liste vide là où elle devrait rendre la contribution.
+
+**Les deux essais qui tranchent :**
+
+- Rouvrir le lien maintenant. Le chapeau dit-il « You have already answered » ?
+  → l'envoi a réussi, et seul le symptôme A subsiste.
+- Sinon : la file de validation du propriétaire porte-t-elle la contribution ?
+  Si oui, c'est `relire` ; si non, c'est l'envoi.
+
+---
+
+## 7 — L'onglet Proches rouvre la fiche qu'on avait quittée
+
+**Statut :** cause identifiée, décision de navigation à prendre.
+
+### Ce qui a été vu
+
+Ouvrir la fiche d'un proche, aller partager un lien, revenir à l'accueil. En
+rouvrant l'onglet **Proches**, on ne retombe pas sur la liste des proches mais
+sur la fiche qu'on avait laissée.
+
+### La cause
+
+`apps/mobile/app/(app)/proches/` est le **seul onglet qui soit un dossier** —
+donc le seul qui porte une pile de navigation (`_layout.tsx` y monte un
+`Stack`). Les quatre autres sont des fichiers simples, sans pile, et n'ont donc
+rien à retenir.
+
+`apps/mobile/app/(app)/_layout.tsx` fait, sur chaque appui d'onglet :
+
+```tsx
+onSelect={(id) => navigation.navigate(id)}
+```
+
+`navigate` sur un onglet **restaure l'état de sa pile**. C'est le comportement
+normal de React Navigation, et sur les quatre autres onglets il ne se voit pas
+faute de pile. Sur Proches, il ramène la fiche.
+
+### Ce qu'il y a à trancher
+
+Ce n'est pas un bogue au sens strict : c'est la convention par défaut, et elle
+se défend — un onglet qui garde sa place évite de refaire trois gestes pour
+retrouver ce qu'on lisait. Mais elle se défend **quand l'onglet est un lieu où
+l'on séjourne**, et l'onglet s'appelle ici « Proches », pas « ce proche ».
+
+Trois conduites possibles :
+
+- **Revenir à la liste dès qu'on quitte l'onglet.** Le plus proche de ce que le
+  nom promet, et de l'attente décrite.
+- **Garder la pile, mais la remettre à zéro quand on appuie sur l'onglet DÉJÀ
+  actif.** C'est la convention iOS, et elle ne règle pas le cas décrit ici —
+  l'onglet n'était pas actif.
+- **Garder la pile.** Alors il faut que le retour depuis une fiche soit
+  évident, et vérifier qu'il l'est sur cet écran.
+
+**La planche doit trancher.** Si elle ne dit rien, c'est un choix de
+comportement natif — exactement la catégorie que le pilote de port laisse
+ouverte : « ce que le kit web ne peut pas décider ».
+
+---
+
+## 8 — Le tirer-pour-rafraîchir ne couvre que trois écrans
+
+**Statut :** relevé exact à une nuance près, portée à décider.
+
+### Ce qui a été vu
+
+« Le tirer-pour-rafraîchir ne semble implémenté que sur l'accueil. »
+
+### Ce qui est
+
+Trois écrans le portent, pas un :
+
+- `apps/mobile/app/(app)/accueil.tsx`
+- `apps/mobile/app/(app)/dates.tsx`
+- `apps/mobile/app/(app)/reprises.tsx`
+
+L'observation tient quand même : **tout le reste en est dépourvu** — la liste
+des proches, les notifications, les listes, les souhaits, le Mur, les
+mouvements, « Moi », et la file de validation des contributions. Ce sont pour
+la plupart des écrans qui montrent des données venues du serveur et qui peuvent
+avoir vieilli.
+
+### Ce que le pilote de port en disait
+
+`specs/handoff_app_mobile/react-native/LISEZ-MOI.md` range le geste parmi « ce
+que le kit web ne peut pas décider » :
+
+> **Le tirer-pour-rafraîchir** : sur quels écrans (ici : oui sur l'accueil, non
+> sur les formulaires)
+
+Le kit a donc posé une règle à deux bornes — oui sur l'accueil, non sur les
+formulaires — **et laissé tout l'entre-deux ouvert.** Les écrans qui manquent
+sont précisément ceux dont il ne parlait pas.
+
+### Ce qu'il y a à trancher
+
+La règle qui se déduit du peu qui est dit : **tout écran qui LISTE ce que le
+serveur détient le porte ; aucun formulaire ne le porte.** Si elle convient, la
+liste à reprendre est celle ci-dessus, et le travail est mécanique — les trois
+écrans qui l'ont déjà donnent la forme à recopier.
+
+Reste à décider pour les écrans mixtes — « Moi » montre un solde et porte des
+champs.
+
+---
+
 ## Relevé au passage, non signalé — à confirmer
 
 Deux choses visibles sur la copie d'écran de l'ajout d'un proche, que Valentine
