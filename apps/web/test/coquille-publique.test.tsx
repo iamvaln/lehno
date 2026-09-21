@@ -28,6 +28,20 @@ describe("la coquille publique", () => {
     expect(entete.compareDocumentPosition(principal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(principal.compareDocumentPosition(pied) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  /* Constaté à l'appareil sur un écran étroit : titre coupé à deux mots par
+     ligne, texte en colonne d'une main de large, et le lien planté au milieu.
+     Le `flexWrap` de la bande ne se déclenche que si la colonne de texte
+     refuse de descendre sous une base — en `1 1 0`, et pire encore avec
+     `minWidth: 0`, elle cède tout et le lien ne passe jamais dessous. jsdom ne
+     met rien en page : on éprouve donc la déclaration, qui est exactement ce
+     qui s'était perdu. */
+  it("donne à la bande d'acquisition de quoi passer à la ligne", () => {
+    render(<PublicShell t={t} langue="fr"><p>contenu</p></PublicShell>);
+    const colonne = screen.getByRole("heading", { name: t.acqTitre }).parentElement;
+    expect(colonne?.style.minWidth).toBe("");
+    expect(colonne?.getAttribute("style")).toMatch(/flex:\s*1 1 20rem/);
+  });
 });
 
 // Le garde-fou qui justifie l'extraction. Sans lui, la coquille existe mais
