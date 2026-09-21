@@ -894,6 +894,18 @@ export const fr = {
   genAttenteQuitter: "Faire autre chose en attendant",
   genErreurTitre: "L'écriture n'a pas abouti",
   genErreurTexte: "Votre crédit n'a pas été prélevé.",
+  /* POURQUOI ça n'a pas abouti, quand le serveur le dit — il le dit depuis le
+     début, et l'écran n'affichait que « L'écriture n'a pas abouti ». Chaque
+     phrase nomme le GESTE qui reste : attendre, réessayer, reformuler.
+
+     L'indisponibilité sert aussi les défauts de notre configuration et de notre
+     compte fournisseur (`auth`, `billing`) : voir `lib/generation.ts`, la
+     raison y est écrite. */
+  genMotifIndisponible: "Le service d'écriture est indisponible. Réessayez dans un moment.",
+  genMotifTropDeDemandes: "Trop de demandes en même temps. Réessayez dans quelques minutes.",
+  genMotifDelai: "L'écriture a pris trop de temps. Réessayez.",
+  genMotifReseau: "La connexion au service d'écriture s'est rompue. Réessayez.",
+  genMotifRefus: "Cette demande n'a pas pu être écrite. Essayez une autre orientation.",
   genReessayer: "Réessayer",
   cadrageTitre: "Avant de chercher",
   cadrageBudget: "Un budget ? (facultatif)",

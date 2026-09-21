@@ -22,7 +22,8 @@ import { useDrapeaux } from "../lib/DrapeauxProvider.js";
 import { dateCourte } from "../lib/carnet.js";
 import {
   correctionDuMessage, creditRendu, delaiAvantLaProchaine, doitInterroger,
-  marquageEnvoye, offreDeRefaire, ouverture, phaseDuResultat, relanceDuMessage,
+  marquageEnvoye, motifDeLEchec, offreDeRefaire, ouverture, phaseDuResultat,
+  relanceDuMessage,
 } from "../lib/generation.js";
 import { keeping, priceLabel, producedIdeas, type Call } from "../lib/ideas.js";
 import { type RatingCall } from "../lib/rating.js";
@@ -206,6 +207,11 @@ export default function Generation() {
   const cout = coutDe(prix, "wish_message");
   const peutRefaire = offreDeRefaire(actives) && relance !== null && cout !== null;
 
+  /* POURQUOI ça n'a pas abouti, quand le serveur le dit : nul quand il ne dit
+     rien, et nul aussi sur un code qu'on ne connaît pas — le brut ne s'affiche
+     jamais. L'écran reste alors sur son titre. */
+  const motif = motifDeLEchec(resultat?.generation.failureReason ?? null, t);
+
   /* Le solde n'est lu QUE si une feuille va l'annoncer, et une seule fois :
      l'aller chercher au moment du geste ferait attendre devant une question
      qu'on vient de poser, et le chercher toujours ferait un appel pour un
@@ -368,6 +374,16 @@ export default function Generation() {
               <Text style={[styles.titreEchec, { color: couleurs.textBody }]} accessibilityRole="header">
                 {t.genErreurTitre}
               </Text>
+              {/* POURQUOI, quand le serveur le dit. Le titre seul ne laisse
+                  aucun geste à faire : on rappuie sur « Réessayer » devant une
+                  clé absente côté serveur, ou on reformule devant une panne qui
+                  passera d'elle-même. Un motif inconnu ne paraît PAS — le titre
+                  reste alors seul, plutôt que d'afficher un code interne. */}
+              {motif ? (
+                <Text style={[styles.motifEchec, { color: couleurs.textSecondary }]}>
+                  {motif}
+                </Text>
+              ) : null}
               {/* Réessayer coûte un crédit comme la première fois : c'est une
                   NOUVELLE demande, pas une reprise de celle qui a échoué. Le
                   prix s'annonce donc et se confirme, exactement comme en
@@ -633,6 +649,12 @@ const styles = StyleSheet.create({
     fontSize: 21,
     textAlign: "center",
     letterSpacing: nativeLetterSpacing(21, nativeTracking.display),
+  },
+  motifEchec: {
+    fontFamily: nativeFont.bodyRegular,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
   },
   declare: { flexDirection: "row", alignItems: "center", gap: nativeSpace[6] },
   declareTexte: { fontFamily: nativeFont.bodySemibold, fontSize: 13 },
