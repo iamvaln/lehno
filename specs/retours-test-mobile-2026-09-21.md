@@ -805,6 +805,97 @@ ni si elle doit recharger, ni si elle doit changer ce qu'elle a demandé.
 
 ---
 
+## 13 — « Marquer envoyé » ne marque rien, et s'offre sans brouillon
+
+**Statut :** trois défauts distincts, tous certains, sur six lignes de code.
+
+### Ce qui a été vu
+
+Sur la carte d'Awa, un geste « Marquer comme envoyé » alors qu'**aucun message
+n'avait été produit**. En appuyant : « Message marqué comme envoyé à Awa. » Et
+la question, qui est la bonne : *qu'est-ce qui a été envoyé, à qui, et où est la
+trace ?*
+
+### D'abord, ce que le geste veut dire
+
+Il ne prétend pas que l'application ait envoyé quoi que ce soit, et le contrat
+est net là-dessus (`packages/contracts/src/me-generation.ts`) :
+
+> `markSent` est **déclaratif** : l'application n'envoie rien elle-même — le
+> message se copie ailleurs, dans la messagerie de son choix. Le marquer est
+> donc une affirmation de l'utilisateur, pas un constat du serveur, et l'écrire
+> autrement **ferait croire à une preuve d'envoi qui n'existe pas**.
+
+Le geste est donc : « j'ai recopié ce brouillon dans WhatsApp, range-le ». Rien
+ne part de l'application. C'est légitime — et c'est aussi ce qui rend les trois
+défauts ci-dessous gênants.
+
+### Défaut A — il n'écrit rien nulle part
+
+`apps/mobile/app/(app)/accueil.tsx:419` :
+
+```tsx
+onMarkSent: () => {
+  setEnvoyes((v) => ({ ...v, [e.id]: true }));
+  setAccuse(t.envoiFait(nomDeLEcheance(e, t.evtPourMoi)));
+},
+```
+
+**Aucun appel réseau.** L'état vit dans un `useState` de l'écran
+(`accueil.tsx:59`), et disparaît au premier rechargement. Le bouton
+réapparaîtra.
+
+**La trace n'existe pas parce qu'il n'y a pas d'écriture.** Ce n'est pas qu'elle
+soit mal rangée : rien n'a été écrit.
+
+Et le chemin correct existe déjà, complet, éprouvé : `markSent` est implémenté
+au serveur (`apps/api/src/me/generation.service.ts:929`), et l'écran de
+génération l'appelle bien — `apps/mobile/test/generation.test.ts:205` gèle le
+corps `{ markSent: true }`. **C'est la carte de l'accueil qui fait semblant**,
+seule contre le reste de la chaîne.
+
+### Défaut B — il s'offre alors qu'il n'y a pas de brouillon
+
+La condition d'affichage est `gesteDeLaCarte(e, preparer) === "message"`, et
+cette fonction tient en trois lignes (`apps/mobile/lib/accueil.ts`) :
+
+```ts
+if (echeance.isSelf) return "liste";
+return generationOuverte ? "message" : "note";
+```
+
+`generationOuverte` dit seulement que **le drapeau de génération est allumé sur
+le compte**. Il ne dit pas qu'un message existe pour cette échéance, ni qu'on en
+ait jamais demandé un.
+
+D'où l'écran vu : aucun message produit, et pourtant le geste proposé. Marquer
+comme envoyé un message qui n'a jamais été écrit.
+
+### Défaut C — l'accusé dit ce que le contrat interdit de dire
+
+« **Message marqué comme envoyé à Awa.** » — la phrase nomme un destinataire et
+un envoi. C'est exactement la lecture que le contrat demandait d'éviter : « une
+preuve d'envoi qui n'existe pas ». Rien n'est parti vers Awa, et rien n'aurait
+pu partir : l'application ne connaît aucun canal vers elle.
+
+### Ce qu'il y a à faire
+
+1. **Brancher l'appel** — la carte doit faire le `PATCH` que fait déjà l'écran
+   de génération, et n'afficher l'accusé qu'au retour du serveur.
+2. **Ne proposer le geste que s'il y a un brouillon à marquer.** La condition
+   doit porter sur l'existence d'un message pour cette échéance, pas sur le
+   drapeau. **À vérifier :** `/me/home` sert-il de quoi le savoir ? Si non, le
+   contrat de l'accueil doit le porter — la carte ne peut pas le deviner, et un
+   second appel par carte n'est pas une option.
+3. **Reprendre la phrase** pour qu'elle déclare au lieu de constater — « Noté :
+   vous avez écrit à Awa », ou une formule de la planche si elle en porte une.
+
+**Le défaut B est celui à traiter en premier.** Tant qu'il tient, brancher
+l'appel ne ferait qu'enregistrer fidèlement une affirmation sur un message qui
+n'existe pas.
+
+---
+
 ## Relevé au passage, non signalé — à confirmer
 
 Deux choses visibles sur la copie d'écran de l'ajout d'un proche, que Valentine
