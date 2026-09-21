@@ -154,6 +154,7 @@ import { PousseOneSignal } from "./notifications/onesignal.adapter.js";
 import { PoussePourLaConsole } from "./notifications/console.adapter.js";
 import { TrackingService } from "./tracking/tracking.service.js";
 import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
+import { DiffusionTrackingAdapter } from "./tracking/diffusion.adapter.js";
 import { PostHogAdapter } from "./tracking/posthog.adapter.js";
 
 @Module({
@@ -224,11 +225,29 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     {
       provide: "TRACKING_PORT",
       useFactory: () => {
+        /* LES DEUX DESTINATIONS PEUVENT COEXISTER, et c'est ce qui a changé.
+           Le choix était exclusif : la clé posée, la console ne servait plus.
+           Or elles ne répondent pas à la même question — PostHog garde et rend
+           interrogeable, la console dit TOUT DE SUITE ce qui part. Sur une
+           recette qu'on pilote depuis un téléphone, on veut les deux, et c'est
+           le seul moyen de savoir qu'un geste a bien émis. */
         const cle = process.env.POSTHOG_API_KEY;
         const hote = process.env.POSTHOG_HOST ?? "https://eu.i.posthog.com";
-        if (cle) return new PostHogAdapter(cle, hote);
-        if (process.env.LEHNO_TRACKING_CONSOLE === "1") return new ConsoleTrackingAdapter();
-        return { capture: async (): Promise<void> => {} };
+        const console_ = process.env.LEHNO_TRACKING_CONSOLE === "1";
+
+        const destinations = [
+          ...(cle ? [new PostHogAdapter(cle, hote)] : []),
+          ...(console_ ? [new ConsoleTrackingAdapter()] : []),
+        ];
+
+        /* Aucune destination : on ne fait RIEN, sans bruit. L'absence de mesure
+           ne rend pas le produit faux, seulement aveugle — et un développement
+           local ne doit pas exiger un compte chez un tiers. */
+        if (destinations.length === 0) return { capture: async (): Promise<void> => {} };
+        /* Une seule : on la rend telle quelle. Envelopper coûterait une
+           indirection et un `allSettled` pour rien. */
+        if (destinations.length === 1) return destinations[0]!;
+        return new DiffusionTrackingAdapter(destinations);
       },
     },
     TrackingService,
