@@ -581,6 +581,23 @@ interrupteur sans effet apprend à ne pas croire les interrupteurs ».
 La file de validation, elle, se remplit correctement. Le propriétaire doit
 simplement deviner d'aller y regarder.
 
+### Rien ne la signale nulle part — confirmé à l'appareil
+
+Trois manques se cumulent, et c'est leur somme qui a fait croire que la
+contribution n'était jamais arrivée :
+
+- **Aucune notification** — c'est le défaut ci-dessus.
+- **Aucune marque sur l'accueil.** Le contrat de `/me/home` ne porte rien sur
+  les contributions en attente : `firstName`, `occurrences`, `counts`,
+  `unreadNotifications`, `remainingOccurrences`, `hasPersons`, `hasWishlist`.
+  **L'accueil ne peut donc structurellement pas l'annoncer**, même s'il le
+  voulait.
+- **Aucune mise en évidence dans la file.** Une contribution nouvelle ne se
+  distingue pas d'une ancienne.
+
+La seule voie qui a fonctionné est la fiche du proche — et encore, **après
+redémarrage de l'application** (voir la question ouverte au §16/§20A).
+
 ### Ce qu'il y a à trancher pour le symptôme A
 
 - **Quels canaux.** La ligne `in_app` du centre de notifications est le minimum
@@ -802,45 +819,65 @@ faudra écrire au serveur de lui-même.
 **Statut :** deux questions distinctes. La seconde a une réponse nette, la
 première demande une observation de plus.
 
-### A — la pastille contredit le centre
+### A — RÉSOLU : la pastille dit vrai, c'est le centre qui jette en silence
 
-La pastille vient de `/me/home` ; la liste vient de `/me/notifications`. **Les
-deux passent par le même prédicat**, et ce n'est pas un hasard — c'est une
-panne déjà réparée une fois, et le commentaire de `home.service.ts` la raconte :
+**Observation qui tranche :** le centre affiche **l'état vide dessiné**, pas une
+erreur. Donc la lecture ne casse pas — mon hypothèse d'un type absent du contrat
+était fausse. La réalité est plus douce et pire.
 
-> la pastille comptait les lignes `email` et `push`, donc elle annonçait trois
-> éléments à un centre qui n'en montrait qu'un.
+**La pastille n'est pas une valeur de maquette.** `pastilleDeCloche` rend `null`
+en dessous de 1, sinon le nombre ; `NotificationBell` part de `unread = 0`, et
+l'accueil lui passe `home.unreadNotifications`. **Le 5 est réel : cinq
+notifications non lues existent bel et bien.**
 
-Aujourd'hui `apps/api/src/me/notification.service.ts:42` définit
-`perimetreDuCentre` — canal `in_app`, échéance nulle ou passée — et la liste
-comme le compte s'en servent, le compte y ajoutant `readAt: null`. **Un « 5 »
-signifie donc que cinq entrées existent que le centre devrait lister.**
+**Et le centre les jette, côté client.**
+`apps/mobile/app/(app)/notifications.tsx:133` :
 
-Qu'il n'en montre aucune laisse une explication principale, et c'est celle que
-`packages/contracts/src/me-notifications.ts` écrit deux fois, en haut du
-fichier :
+```tsx
+const lisibles = items.filter((n) => libelleDeLaNotification(n, t) !== null);
+…
+if (!lisibles.length) { /* état vide */ }
+```
 
-> Un type absent d'ici n'échoue pas à l'écriture, il échoue à la **LECTURE**,
-> longtemps après, chez le client.
+`libelleDeLaNotification` (`apps/mobile/lib/notifications.ts`) est un `switch`
+qui ne connaît que **quatre** clés — `event_reminder`, `event_day_of`,
+`own_date_reminder`, `own_date_day_of` — et retombe sur `default: return null`
+pour tout le reste. Une notification sans libellé est retirée **sans un mot**,
+et si toutes le sont, l'écran affiche son vide dessiné.
 
-Si la base porte un type que `NOTIFICATION_TYPES` ne connaît pas, alors
-`notificationsPageSchema.parse()` **jette côté mobile**
-(`apps/mobile/app/(app)/notifications.tsx:46`) — l'écran ne rend rien — pendant
-que la pastille, qui n'est qu'un entier dans `/me/home`, continue d'annoncer
-cinq. Le symptôme décrit est exactement celui-là.
+### Ce n'est pas une découverte : c'est écrit dans le fichier
 
-L'énumération a déjà manqué deux fois : les cinq `activation_*`, puis
-`wish_reserved` et `wish_reservation_cancelled`. Les deux commentaires qui le
-racontent sont encore dans le fichier.
+Juste en dessous du `switch`, une liste nommée `CLES_SERVIES` et ce commentaire :
 
-**L'observation qui tranche, et elle est immédiate :** ouvrir le centre de
-notifications et regarder ce qu'il affiche.
+> **CE QUE LE SERVEUR ÉMET ET QUE LA COPIE NE SAIT PAS DIRE.** Rendu visible par
+> un test plutôt que perdu dans un commentaire : ces notifications partent,
+> arrivent, et **n'apparaissent nulle part**. C'est un silence, pas une panne —
+> mais il se voit d'autant moins qu'il est silencieux.
 
-- **L'état vide dessiné** (« rien pour l'instant ») → les lignes ne sont pas
-  dans le périmètre, et c'est le prédicat qu'il faut reprendre.
-- **Un bandeau d'erreur, ou un écran qui ne finit pas de charger** → c'est la
-  lecture qui casse, donc un type inconnu du contrat. Le journal du conteneur
-  de l'API donnera lequel.
+La liste porte **dix** clés, le `switch` en traite **quatre**. **Six natures
+émises n'ont aucun libellé :**
+
+```
+activation_first_person · activation_first_note · activation_unused_credits
+enrichment_nudge_global · enrichment_nudge_person · wish_reserved
+```
+
+**Vos cinq sont presque certainement des `activation_*`** — un compte neuf en
+reçoit précisément de cette famille : premier proche, première note, crédits
+inutilisés.
+
+### Ce qu'il y a à faire
+
+- **Écrire la copie des six clés manquantes**, en français et en anglais. C'est
+  le gros du travail, et il est connu depuis qu'on a écrit `CLES_SERVIES`.
+- **Cesser de jeter en silence.** Une notification sans libellé doit se voir
+  d'une façon ou d'une autre — au minimum ne pas être comptée par la pastille,
+  au mieux tomber sur un rendu générique. Aujourd'hui elle est comptée **et**
+  cachée, ce qui est la seule combinaison qui ne puisse pas s'expliquer à
+  l'écran.
+- **Attention au piège inverse :** même les quatre clés traitées rendent `null`
+  quand `bodyParams` n'a pas `person` ou `days`. Un corps mal formé disparaît
+  donc aussi, et par le même chemin.
 
 ### B — le mot d'accueil n'existe pas
 
