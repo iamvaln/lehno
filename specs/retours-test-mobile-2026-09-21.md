@@ -1284,6 +1284,16 @@ Ce qui est exactement, et à chaque fois, ce qui a été observé.
 Le retour 7 est la même cause vue par l'autre face : les onglets conservent leur
 état, donc la pile de `proches` garde la fiche ouverte.
 
+**ET IL Y A PIRE — voir le retour 20.** Un onglet ne se démonte pas : **les
+vingt-quatre écrans gardent donc leur état indéfiniment.** Un formulaire quitté
+à moitié se retrouve à moitié rempli, une étape franchie reste franchie, une
+erreur affichée reste affichée. La fermeture de compte en donne l'exemple le
+plus net : on y revient bloqué au troisième temps, sans aucun moyen de
+recommencer autrement qu'en tuant l'application.
+
+Ce n'est donc pas seulement le retour qui est cassé — **c'est le cycle de vie de
+tout ce qui n'est pas un onglet.**
+
 ### Pourquoi personne ne l'a vu
 
 Trois choses ont conspiré :
@@ -1642,6 +1652,99 @@ l'utilisateur.
    non rester `pending` — sinon on recrée exactement le verrou ci-dessus.
 4. **Purger les `pending` existants** avant de conclure que la correction
    marche.
+
+---
+
+## 20 — La fermeture de compte : bloquée au troisième temps, et l'écran ne se réinitialise jamais
+
+**Statut :** quatre choses. **L'une d'elles agrandit considérablement le §16** —
+ce n'est plus seulement le retour qui est cassé, c'est l'état de vingt-quatre
+écrans qui ne se remet jamais à zéro.
+
+### Ce qui a été vu
+
+Ouvrir « Close my account ». Un code est demandé alors que rien n'a été rempli.
+Le code n'arrive jamais. « Renvoyer » affiche le même accusé, toujours rien. Le
+bouton reste gris, donc impossible d'avancer. Le retour ramène à l'accueil. Et
+en rouvrant Réglages → fermeture, **on retombe au troisième temps, toujours
+bloqué.**
+
+### A — l'écran ne se réinitialise pas, et c'est le §16
+
+`apps/mobile/app/(app)/fermeture.tsx:44` : `const [temps, setTemps] = useState(1)`.
+L'étape est un état **local et non persisté**. Rouvrir l'écran devrait donc
+toujours repartir du premier temps.
+
+**Il ne se réinitialise pas parce qu'il ne se démonte jamais.** `fermeture` est
+l'un des vingt-quatre écrans du dossier `(app)/` enregistrés comme onglets
+(§16), et **un onglet conserve son état** : le composant reste monté, `temps`
+reste à 3, et rouvrir l'écran ramène exactement où on en était.
+
+**C'est une conséquence du §16 bien plus large que le retour cassé.** Tous ces
+écrans gardent leur saisie indéfiniment : un formulaire quitté à moitié se
+retrouve à moitié rempli, une étape franchie reste franchie, une erreur
+affichée reste affichée. Personne ne peut recommencer quoi que ce soit sans
+tuer l'application.
+
+**À porter au §16** : ce n'est pas un défaut de plus, c'est la même cause, et
+elle coûte plus cher qu'on ne l'avait estimé.
+
+### B — le code n'est pas parti « à l'ouverture », mais l'écran le fait croire
+
+Le code ne part que par `avance()`, quand on atteint le troisième temps
+(`fermeture.tsx:89`). L'intention est écrite juste au-dessus :
+
+> LE CODE PART QUAND ON ARRIVE AU TROISIÈME TEMPS, pas avant : le demander à
+> l'ouverture enverrait un courrier à quelqu'un qui lisait seulement ce qu'il
+> risque de perdre — et l'envoi est borné en débit, cinq par heure.
+
+**La règle voulue est donc exactement celle que vous attendiez.** Aucun chemin
+du code ne demande d'OTP au montage.
+
+Ce qui s'est probablement passé : le premier passage a franchi les deux
+premiers temps — deux appuis sur « Suivant », les temps 1 et 2 ne demandant
+rien d'obligatoire — ce qui a déclenché l'envoi. Ensuite, par le défaut A,
+**toute réouverture rouvre le troisième temps**, code déjà demandé. Vu de
+l'appareil, cela ne se distingue pas d'un envoi à l'ouverture.
+
+**Si la réinitialisation du §16 est corrigée et que le code part quand même au
+montage, alors il y a un second défaut et il faudra le chercher.** En l'état, je
+n'en vois pas la trace.
+
+### C — le code n'arrive pas : regarder d'abord le journal du conteneur
+
+`POST /me/account/deletion-code` rend `202` et appelle
+`otp.issue(user.email, "account_deletion")` (`account.service.ts:176`). Le code
+est donc **réellement émis**. L'accusé ne ment pas.
+
+Et il ne peut pas descendre dans la réponse, à dessein :
+
+> Le code ne descend JAMAIS dans la réponse : il part par e-mail, et c'est tout
+> l'intérêt du second facteur.
+
+**Sur la sandbox, les codes OTP se lisent dans le journal du conteneur** — c'est
+déjà comme ça qu'on récupère les codes de connexion. À faire avant de conclure
+à un défaut : si le code est dans le journal, l'émission marche et c'est
+l'acheminement du courrier sur la sandbox qui est en cause, pas cet écran.
+
+**Un point à vérifier au passage :** l'envoi est plafonné à **cinq par heure**
+(`account.controller.ts:44`). Plusieurs « Renvoyer » d'affilée épuisent le
+quota, et le refus apparaîtra alors en bandeau d'erreur — pas dans l'accusé de
+succès.
+
+### D — aucune sortie quand le code n'arrive pas
+
+`peutFermer` exige le pseudo exact **et** un code complet. Sans code, le bouton
+reste gris, et il n'existe aucune autre voie : ni « je ne reçois pas le code »,
+ni délai affiché, ni recours.
+
+C'est le même motif que les §15B et §17 — **une voie fermée qui ne se dit pas**
+— mais ici elle est plus grave : le geste engage un droit (la suppression du
+compte), et la personne n'a aucun moyen d'aboutir ni de comprendre pourquoi.
+
+**À trancher :** que propose l'écran quand le code n'arrive pas ? Au minimum,
+dire que le courrier peut tarder, rappeler à quelle adresse il est parti, et
+laisser une porte vers l'assistance.
 
 ---
 
