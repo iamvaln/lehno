@@ -100,6 +100,81 @@ export function creditRendu(resultat: GenerationResult): boolean {
   return resultat.generation.status === "failed";
 }
 
+// ── Pourquoi ça n'a pas abouti ──────────────────────────────────────────────
+
+/* LE SERVEUR LE DISAIT DÉJÀ, ET PERSONNE NE L'ÉCOUTAIT.
+ *
+ * L'échec n'affichait que « L'écriture n'a pas abouti ». Devant ce bandeau, on
+ * ne sait pas quoi faire : réessayer tout de suite, attendre, ou changer sa
+ * demande. Le jour où c'est arrivé à l'appareil, la cause était une clé d'IA
+ * absente côté serveur — un « réessayez dans un moment » aurait suffi, et la
+ * personne a rappuyé sur « Réessayer » jusqu'à s'en lasser.
+ *
+ * `failureReason` porte le CODE depuis le début (contrat §generationSchema).
+ * Il était lu pour les paiements et nulle part ici.
+ *
+ * ICI ET PAS DANS L'ÉCRAN : `react-native` est typé en Flow, et un test qui
+ * monterait l'écran ne compilerait pas. Une table qui vit dans la vue ne
+ * s'éprouve donc jamais — c'est la règle de tout ce module.
+ */
+export interface LibellesDeMotif {
+  genMotifIndisponible: string;
+  genMotifTropDeDemandes: string;
+  genMotifDelai: string;
+  genMotifReseau: string;
+  genMotifRefus: string;
+}
+
+/* UN CODE NE SE DIT PAS TOUJOURS TEL QU'IL EST REÇU, et deux lignes de cette
+ * table valent d'être défendues avant que quelqu'un ne les « simplifie » :
+ *
+ * `auth` et `billing` RENDENT LA MÊME PHRASE QUE L'INDISPONIBILITÉ, et ce n'est
+ * pas un copier-coller distrait. Ce sont des défauts de NOTRE configuration ou
+ * de NOTRE compte fournisseur — une clé refusée, une facture à jour. Traduire
+ * « clé invalide » ou « facturation » renseignerait la personne sur notre
+ * plomberie, ne lui donnerait aucun geste à faire, et lui laisserait croire que
+ * c'est son compte à elle qui est en défaut. Du sien, il n'y a rien à dire de
+ * plus que « c'est indisponible, revenez ».
+ *
+ * LES CINQ MOTIFS DE REFUS rendent une phrase unique parce qu'ils décrivent la
+ * même situation vue par cinq fournisseurs qui ne s'accordent pas sur le mot
+ * (`apps/api/src/ia/adaptateurs/echecs.ts` cherche ces cinq-là dans le corps de
+ * la réponse). Un seul geste en sort : reformuler.
+ */
+const MOTIFS: Record<string, keyof LibellesDeMotif> = {
+  generation_unavailable: "genMotifIndisponible",
+  auth: "genMotifIndisponible",
+  billing: "genMotifIndisponible",
+  rate_limited: "genMotifTropDeDemandes",
+  timeout: "genMotifDelai",
+  network: "genMotifReseau",
+  content_policy: "genMotifRefus",
+  safety: "genMotifRefus",
+  policy: "genMotifRefus",
+  moderation: "genMotifRefus",
+  refus: "genMotifRefus",
+  invalid_request: "genMotifRefus",
+};
+
+/* NUL PLUTÔT QUE LE CODE BRUT, et c'est toute la garde de cette fonction.
+ *
+ * Un code qu'on ne connaît pas ne s'affiche pas : `provider_unavailable` ou
+ * `refused:unparseable` sous les yeux de quelqu'un, c'est du vocabulaire
+ * interne rendu public. L'écran retombe alors sur la phrase qu'il disait déjà,
+ * qui a le mérite d'être juste.
+ *
+ * LE PRÉFIXE `refused:` EST RETIRÉ AVANT LA LECTURE : le serveur compose le
+ * code d'un refus de modèle en `refused:<motif>` (`codeDe`, dans
+ * `generation.service.ts`). Sans ce retrait, la famille des refus — la seule où
+ * l'on a vraiment quelque chose à conseiller — serait précisément celle qui
+ * tomberait toujours sur le repli.
+ */
+export function motifDeLEchec(code: string | null, t: LibellesDeMotif): string | null {
+  if (!code) return null;
+  const cle = MOTIFS[code.trim().toLowerCase().replace(/^refused:/, "")];
+  return cle ? t[cle] : null;
+}
+
 // ── Le sondage ──────────────────────────────────────────────────────────────
 
 /* « Une minute environ », dit l'écran. Deux secondes pour la première reprise —

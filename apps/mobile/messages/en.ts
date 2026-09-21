@@ -768,6 +768,17 @@ export const en = {
   genAttenteQuitter: "Do something else meanwhile",
   genErreurTitre: "The writing didn't go through",
   genErreurTexte: "Your credit wasn't taken.",
+  /* POURQUOI ça n'a pas abouti, quand le serveur le dit. Chaque phrase nomme le
+     GESTE qui reste : attendre, réessayer, reformuler.
+
+     L'indisponibilité sert aussi les défauts de notre configuration et de notre
+     compte fournisseur (`auth`, `billing`) : voir `lib/generation.ts`, la
+     raison y est écrite. */
+  genMotifIndisponible: "The writing service is unavailable. Try again in a moment.",
+  genMotifTropDeDemandes: "Too many requests at once. Try again in a few minutes.",
+  genMotifDelai: "The writing took too long. Try again.",
+  genMotifReseau: "The connection to the writing service broke. Try again.",
+  genMotifRefus: "This request could not be written. Try another angle.",
   genReessayer: "Try again",
   cadrageTitre: "Before we look",
   cadrageBudget: "A budget? (optional)",
