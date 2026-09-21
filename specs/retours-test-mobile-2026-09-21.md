@@ -1136,6 +1136,106 @@ défaut.
 
 ---
 
+## 16 — LE RETOUR EST CASSÉ PARTOUT, et c'est une seule cause
+
+**Statut :** cause établie. **C'est le défaut le plus important de la
+séance** — il explique à lui seul les retours 7 et 15C, et il touche
+vingt-quatre écrans.
+
+### Ce qui a été vu, trois fois
+
+| Parcours | Attendu | Obtenu |
+|---|---|---|
+| Moi → Recharger → retour | Moi | **Accueil** |
+| Réglages → Réglage des notifications → retour | Réglages | **Accueil** |
+| Proches → fiche → accueil → onglet Proches | la liste | **la fiche quittée** |
+
+Trois écrans sans rapport, trois fois le même dérèglement. Ce n'est pas un
+bouton mal branché : les trois appellent `routeur.back()`, et c'est correct.
+
+### La cause
+
+`apps/mobile/app/(app)/_layout.tsx` monte un **`Tabs`**. Or `expo-router`
+enregistre comme écran d'onglet **tout ce que contient le dossier du layout**,
+déclaré ou non.
+
+Le dossier `(app)/` contient **vingt-neuf écrans**. Cinq sont des onglets. Les
+**vingt-quatre autres** le sont donc aussi, sans qu'on l'ait voulu :
+
+```
+aide, apercu, apercu-liste, cadrage, collecte, donnees, fermeture, listes,
+monmur, mouvements, notifications, occasion, paiement, parrainage,
+preparation, profil, rappels, recharge, reprises, reservations, securite,
+souhait, souhaits, valider
+```
+
+Ils sont invisibles, mais pas pour la raison qu'on croit : **rien ne les
+masque.** C'est notre `TabBar` qui dessine une liste fixe de cinq entrées
+(`onglets`) et ignore le reste. La barre ment sur ce qu'est la navigation.
+
+**Conséquence :** aller de « Moi » à « Recharger » n'empile rien — **c'est un
+changement d'onglet.** Et `back()` sur un navigateur d'onglets ne dépile pas :
+il applique `backBehavior`, dont la valeur par défaut est **`firstRoute`**.
+Aucun `backBehavior` n'est posé ici. Le retour ramène donc **toujours au
+premier onglet** — l'accueil.
+
+Ce qui est exactement, et à chaque fois, ce qui a été observé.
+
+Le retour 7 est la même cause vue par l'autre face : les onglets conservent leur
+état, donc la pile de `proches` garde la fiche ouverte.
+
+### Pourquoi personne ne l'a vu
+
+Trois choses ont conspiré :
+
+- **Rien n'échoue.** Pas d'avertissement, pas d'erreur — une navigation qui
+  aboutit, simplement pas là où on voulait.
+- **La barre paraît juste.** Elle affiche cinq onglets et se comporte bien ; le
+  défaut est dans ce qu'elle ne montre pas.
+- **Aucun test ne peut le voir.** C'est exactement ce que disait déjà
+  `proches/_layout.tsx` à propos de sa propre panne : « Aucun test ne pouvait le
+  voir : la table des onglets est juste, les quatre écrans sont justes, **c'est
+  leur assemblage qui ne l'était pas.** » Le même diagnostic vaut ici, un cran
+  au-dessus.
+
+### La correction
+
+**Elle est structurelle, et elle ne se fait pas écran par écran.** Retoucher les
+vingt-quatre retours un à un corrigerait vingt-quatre fois le même défaut, en
+laissant la structure qui le produit.
+
+La forme attendue : les cinq onglets dans leur propre groupe, et tout le reste
+dans une pile au-dessus.
+
+```
+app/(app)/
+  _layout.tsx          → Stack
+  (onglets)/
+    _layout.tsx        → Tabs, et il ne contient QUE les cinq
+    accueil.tsx  dates.tsx  moi.tsx  reglages.tsx  proches/
+  recharge.tsx  rappels.tsx  mouvements.tsx  …   ← empilés, plus des onglets
+```
+
+`back()` redevient alors un dépilement, et ramène d'où l'on vient — sans qu'il
+faille toucher un seul des vingt-quatre écrans.
+
+**Deux choses à vérifier en le faisant :**
+
+- **`ecranEteint` et les drapeaux.** Plusieurs de ces écrans se ferment par
+  drapeau ; le déplacement ne doit pas leur faire perdre leur garde.
+- **Le retour 7 ne se règle pas tout seul.** Une fois la structure juste, la
+  pile de `proches` gardera toujours son état — c'est le comportement normal
+  d'un onglet. La question « revient-on à la liste ? » reste entière, mais elle
+  redevient une question de conception au lieu d'un symptôme.
+
+### Ce que ça veut dire pour le reste de la liste
+
+**À faire avant les autres corrections de navigation.** Les retours 7 et 15C
+n'ont pas de correction propre : ils disparaissent avec celle-ci, ou ils n'ont
+pas été compris.
+
+---
+
 ## Relevé au passage, non signalé — à confirmer
 
 Deux choses visibles sur la copie d'écran de l'ajout d'un proche, que Valentine
