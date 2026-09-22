@@ -5,6 +5,7 @@ import { ProgrammationService } from "./programmation.service.js";
 import { RelancesService } from "./relances.service.js";
 import { EnvoiService } from "./envoi.service.js";
 import { GenerationService } from "./generation.service.js";
+import { DataExportService } from "./data-export.service.js";
 
 /* Le chef d'orchestre : ce qui déclenche, et dans quel ordre.
  *
@@ -57,6 +58,7 @@ export class OrdonnanceurService {
     @Inject(RelancesService) private readonly relances: RelancesService,
     @Inject(EnvoiService) private readonly envoi: EnvoiService,
     @Inject(GenerationService) private readonly generation: GenerationService,
+    @Inject(DataExportService) private readonly exports: DataExportService,
   ) {}
 
   /* À PART DU PASSAGE QUOTIDIEN, et sans son verrou. Le verrou `enCours`
@@ -72,6 +74,21 @@ export class OrdonnanceurService {
       /* On journalise et on laisse passer : ce rattrapage repassera dans dix
          minutes, et relever ici n'aurait personne pour l'entendre. */
       this.logger.error(`rattrapage des générations : ${String(err)}`);
+    }
+  }
+
+  /* MÊME CADENCE, MÊME RAISON D'ÊTRE : une demande d'export postée à neuf
+     heures ne doit pas attendre le passage de cinq heures du lendemain — la
+     copie promet « dans les 24 heures », et dix minutes de marge coûtent
+     moins cher qu'un bouton resté gris. Hors du verrou du passage quotidien,
+     pour la même raison que le rattrapage des générations : ceci lit une
+     table et écrit quelques lignes, ce n'est pas une séquence à protéger. */
+  @Cron(CHAQUE_DIX_MINUTES)
+  async traiterLesExports(): Promise<void> {
+    try {
+      await this.exports.traiterLesEnAttente();
+    } catch (err: unknown) {
+      this.logger.error(`traitement des exports : ${String(err)}`);
     }
   }
 
