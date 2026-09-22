@@ -103,8 +103,10 @@ export class OccurrenceService {
       include: { event: { include: { person: true } } },
     });
 
-    const [avant, apres] = await this.fenetre();
-    return jointes.map((l) => this.rendre(l as LigneJointe, avant, apres));
+    const [[avant, apres], brouillons] = await Promise.all([
+      this.fenetre(), this.brouillons(jointes.map((l) => l.id)),
+    ]);
+    return jointes.map((l) => this.rendre(l as LigneJointe, avant, apres, brouillons));
   }
 
   async get(userId: string, id: string): Promise<Occurrence> {
@@ -115,11 +117,34 @@ export class OccurrenceService {
     const l = await this.prisma.eventOccurrence.findUniqueOrThrow({
       where: { id }, include: { event: { include: { person: true } } },
     });
-    const [avant, apres] = await this.fenetre();
-    return this.rendre(l as LigneJointe, avant, apres);
+    const [[avant, apres], brouillons] = await Promise.all([this.fenetre(), this.brouillons([id])]);
+    return this.rendre(l as LigneJointe, avant, apres, brouillons);
   }
 
-  private rendre(l: LigneJointe, avant: number, apres: number): Occurrence {
+  /* LE BROUILLON DE CHAQUE ÉCHÉANCE, EN UN SEUL ALLER-RETOUR — pas un par
+     ligne. La carte de l'accueil doit savoir s'il y a quelque chose à
+     « marquer envoyé » sans que ça coûte un appel de plus par carte ; c'est ce
+     que `draftMessageId` sert au contrat, et c'est ici qu'il se calcule.
+     Le PLUS RÉCENT quand il y en a plusieurs — « Refaire » en laisse parfois
+     deux en vie le temps d'un aller-retour — d'où le tri et le premier vu qui
+     gagne pour chaque échéance. */
+  private async brouillons(occurrenceIds: string[]): Promise<Map<string, string>> {
+    if (occurrenceIds.length === 0) return new Map();
+    const lignes = await this.prisma.generatedMessage.findMany({
+      where: { eventOccurrenceId: { in: occurrenceIds }, status: { in: ["generated", "edited"] } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, eventOccurrenceId: true },
+    });
+    const parEcheance = new Map<string, string>();
+    for (const l of lignes) {
+      if (!parEcheance.has(l.eventOccurrenceId)) parEcheance.set(l.eventOccurrenceId, l.id);
+    }
+    return parEcheance;
+  }
+
+  private rendre(
+    l: LigneJointe, avant: number, apres: number, brouillons: Map<string, string>,
+  ): Occurrence {
     const date = l.occurrenceDate.toISOString().slice(0, 10);
     const jour = this.aujourdhui();
 
@@ -140,6 +165,7 @@ export class OccurrenceService {
          le redéduire en relisant le carnet. La personne est déjà jointe — ça ne
          coûte rien, et ça évite un appel par écran. */
       isSelf: l.event.person.isSelf,
+      draftMessageId: brouillons.get(l.id) ?? null,
       kind: l.event.kind as Occurrence["kind"],
       nature: l.event.eventNature as Occurrence["nature"],
       label: l.event.label,

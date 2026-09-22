@@ -413,4 +413,119 @@ describe("les échéances", () => {
     const autres = rendues.filter((o) => o.personId !== moi.id);
     expect(autres.every((o) => o.isSelf === false)).toBe(true);
   });
+
+  /* LE BROUILLON QUI ATTEND D'ÊTRE MARQUÉ ENVOYÉ — §13 du relevé des essais :
+   * la carte de l'accueil proposait le geste dès que la nature « message »
+   * était ouverte sur le compte, qu'un brouillon existe ou non. Ces cas
+   * gardent ce que le champ doit dire, pas seulement qu'il existe. */
+  describe("le brouillon en attente", () => {
+    /* Le catalogue des actions payantes se sème ici, comme dans les fichiers
+       qui créent une exécution directement en base plutôt que par le service
+       de génération — un modèle et un crédit ne mesurent rien pour ce cas. */
+    const action = async (): Promise<string> => {
+      const a = await db.prisma.premiumAction.create({
+        data: { code: `act_${randomBytes(4).toString("hex")}`, label: "Message", creditCost: 1 },
+        select: { id: true },
+      });
+      return a.id;
+    };
+
+    const messageSur = async (
+      occurrenceId: string, status: string,
+    ): Promise<string> => {
+      const run = await db.prisma.actionRun.create({
+        data: { userId: awa, premiumActionId: await action(), creditsSpent: 1, status: "success" },
+        select: { id: true },
+      });
+      const m = await db.prisma.generatedMessage.create({
+        data: { actionRunId: run.id, userId: awa, eventOccurrenceId: occurrenceId, content: "Un texte", status: status as never },
+        select: { id: true },
+      });
+      return m.id;
+    };
+
+    it("est nul quand rien n'a été produit pour cette échéance", async () => {
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
+      await events.create(awa, { personId: p.id, kind: "birthday" });
+
+      const [e] = await occurrences.list(awa, {});
+      expect(e?.draftMessageId).toBeNull();
+    });
+
+    it("porte l'identifiant d'un brouillon", async () => {
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
+      await events.create(awa, { personId: p.id, kind: "birthday" });
+      const [e0] = await occurrences.list(awa, {});
+      const messageId = await messageSur(e0!.id, "generated");
+
+      const [e] = await occurrences.list(awa, {});
+      expect(e?.draftMessageId).toBe(messageId);
+    });
+
+    /* « edited » reste un brouillon — « je l'ai arrangé » n'est pas « je l'ai
+       envoyé ». Le retoucher ne doit pas faire perdre le geste. */
+    it("reste porté après une correction du texte", async () => {
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
+      await events.create(awa, { personId: p.id, kind: "birthday" });
+      const [e0] = await occurrences.list(awa, {});
+      const messageId = await messageSur(e0!.id, "edited");
+
+      const [e] = await occurrences.list(awa, {});
+      expect(e?.draftMessageId).toBe(messageId);
+    });
+
+    /* LE CAS QUI FERME LE DÉFAUT : un message déjà envoyé ou rejeté n'est plus
+       un brouillon, et ne doit plus proposer « Marquer envoyé ». */
+    it.each(["sent", "rejected"])("redevient nul une fois %s", async (status) => {
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
+      await events.create(awa, { personId: p.id, kind: "birthday" });
+      const [e0] = await occurrences.list(awa, {});
+      await messageSur(e0!.id, status);
+
+      const [e] = await occurrences.list(awa, {});
+      expect(e?.draftMessageId).toBeNull();
+    });
+
+    it("choisit le plus récent quand deux brouillons coexistent", async () => {
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
+      await events.create(awa, { personId: p.id, kind: "birthday" });
+      const [e0] = await occurrences.list(awa, {});
+      await messageSur(e0!.id, "generated");
+      // Le second est créé après : c'est lui qu'on doit reconnaître ensuite.
+      await new Promise((r) => setTimeout(r, 5));
+      const second = await messageSur(e0!.id, "generated");
+
+      const [e] = await occurrences.list(awa, {});
+      expect(e?.draftMessageId).toBe(second);
+    });
+
+    it("ne fait pas fuir le brouillon d'un autre compte", async () => {
+      const pAwa = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
+      await events.create(awa, { personId: pAwa.id, kind: "birthday" });
+      const pBila = await persons.create(bila, { gender: "male", displayName: "Karim", birthDate: "1988-05-02" });
+      await events.create(bila, { personId: pBila.id, kind: "birthday" });
+
+      const [eBila] = await occurrences.list(bila, {});
+      const run = await db.prisma.actionRun.create({
+        data: { userId: bila, premiumActionId: await action(), creditsSpent: 1, status: "success" },
+        select: { id: true },
+      });
+      await db.prisma.generatedMessage.create({
+        data: { actionRunId: run.id, userId: bila, eventOccurrenceId: eBila!.id, content: "Un texte", status: "generated" },
+      });
+
+      const [eAwa] = await occurrences.list(awa, {});
+      expect(eAwa?.draftMessageId).toBeNull();
+    });
+
+    it("porte aussi la lecture du détail", async () => {
+      const p = await persons.create(awa, { gender: "female", displayName: "Valery", birthDate: "1990-03-14" });
+      await events.create(awa, { personId: p.id, kind: "birthday" });
+      const [e0] = await occurrences.list(awa, {});
+      const messageId = await messageSur(e0!.id, "generated");
+
+      const relue = await occurrences.get(awa, e0!.id);
+      expect(relue.draftMessageId).toBe(messageId);
+    });
+  });
 });

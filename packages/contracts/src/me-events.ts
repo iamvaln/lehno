@@ -279,6 +279,23 @@ export const occurrenceSchema = z.object({
    * Valentine » — à Valentine. Une fois là, les surfaces peuvent donner à sa
    * propre date les gestes qui lui vont : préparer sa liste, la partager. */
   isSelf: z.boolean(),
+  /* LE BROUILLON QUI ATTEND D'ÊTRE MARQUÉ ENVOYÉ, ou nul.
+   *
+   * « Marquer envoyé » est un geste DÉCLARATIF — voir `updateMessageSchema` —
+   * et il n'a de sens que s'il y a quelque chose à déclarer : un message
+   * produit (`generated` ou `edited`), pas encore `sent` ni `rejected`.
+   *
+   * Sans ce champ, la carte de l'accueil ne pouvait pas le savoir et proposait
+   * le geste dès que la NATURE « message » était ouverte sur le compte —
+   * qu'un brouillon existe ou non. On enregistrait alors une affirmation sur
+   * un message qui n'existait pas, et l'accusé nommait un envoi qui n'avait
+   * pas eu lieu.
+   *
+   * Le plus récent quand il y en a plusieurs — « Refaire » en laisse parfois
+   * deux en vie le temps d'un aller-retour. Servi ici plutôt que redemandé :
+   * un second appel par carte n'est pas une option, et le serveur le sait déjà
+   * en construisant l'échéance. */
+  draftMessageId: z.string().uuid().nullable(),
   kind: z.enum(EVENT_KINDS),
   nature: z.enum(EVENT_NATURES),
   label: z.string().max(120).nullable(),

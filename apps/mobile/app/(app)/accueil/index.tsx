@@ -58,6 +58,7 @@ export default function Accueil() {
   const [rafraichit, setRafraichit] = useState(false);
   const [envoyes, setEnvoyes] = useState<Record<string, true>>({});
   const [accuse, setAccuse] = useState<string | null>(null);
+  const [echecMarquage, setEchecMarquage] = useState<string | null>(null);
   const [reprises, setReprises] = useState(0);
 
   /* Le remplissage ne se calcule pas, il se mesure — et la mesure NE FAIT QUE
@@ -411,14 +412,52 @@ export default function Accueil() {
                       pathname: "/note", params: { personId: e.personId },
                     }),
                   }) : {})}
-                  {...(rang === 0 && gesteDeLaCarte(e, preparer) === "message" && !envoyes[e.id] ? {
+                  {...(rang === 0 && gesteDeLaCarte(e, preparer) === "message"
+                    && e.draftMessageId !== null && !envoyes[e.id] ? {
                     /* « Marquer envoyé » ne mène à aucun écran : c'est un état
                        qui change ici, et l'accusé dit à qui. La carte cesse
-                       ensuite de le proposer — rien ne s'envoie deux fois. */
+                       ensuite de le proposer — rien ne s'envoie deux fois.
+
+                       DEUX DÉFAUTS RÉPARÉS ENSEMBLE, et dans cet ordre :
+
+                       1. Le geste ne faisait qu'un `setState` et un accusé —
+                          aucun appel réseau, donc aucune trace, et le bouton
+                          revenait au premier rechargement. Le chemin existait
+                          déjà, complet et éprouvé, pour `generation.tsx` :
+                          `PATCH /me/messages/:id` avec `{ markSent: true }`,
+                          un geste déclaratif — « l'application n'envoie rien
+                          elle-même », c'est l'utilisateur qui affirme.
+
+                       2. Le geste s'offrait dès que la nature « message »
+                          était ouverte sur le compte, qu'un brouillon existe
+                          ou non — on pouvait donc « marquer envoyé » un texte
+                          qui n'avait jamais été écrit. `draftMessageId` porte
+                          maintenant la réponse : nul tant qu'aucune génération
+                          `generated`/`edited` n'existe pour cette échéance.
+
+                       Une fois les deux tenus, l'accusé qui suit dit une chose
+                       vraie : un brouillon existait, il vient d'être déclaré
+                       envoyé — la même affirmation que `generation.tsx` fait
+                       après un partage réel, au même texte. */
                     markSentLabel: t.marquerEnvoye,
                     onMarkSent: () => {
-                      setEnvoyes((v) => ({ ...v, [e.id]: true }));
-                      setAccuse(t.envoiFait(nomDeLEcheance(e, t.evtPourMoi)));
+                      const messageId = e.draftMessageId;
+                      if (messageId === null) return;
+                      setEchecMarquage(null);
+                      void (async () => {
+                        try {
+                          await appel<unknown>(`/me/messages/${messageId}`, {
+                            method: "PATCH",
+                            body: JSON.stringify({ markSent: true }),
+                          });
+                          setEnvoyes((v) => ({ ...v, [e.id]: true }));
+                          setAccuse(t.envoiFait(nomDeLEcheance(e, t.evtPourMoi)));
+                        } catch (err) {
+                          setEchecMarquage(
+                            messageDErreur(err instanceof ErreurDApi ? err.enveloppe : null, langue),
+                          );
+                        }
+                      })();
                     },
                   } : {})}
                 />
@@ -441,6 +480,9 @@ export default function Accueil() {
       )}
 
       {accuse ? <Toast intent="success" onDismiss={() => setAccuse(null)}>{accuse}</Toast> : null}
+      {echecMarquage ? (
+        <Toast intent="error" onDismiss={() => setEchecMarquage(null)}>{echecMarquage}</Toast>
+      ) : null}
     </View>
   );
 }

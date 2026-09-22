@@ -11746,6 +11746,11 @@
                       "isSelf": {
                         "type": "boolean"
                       },
+                      "draftMessageId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                      },
                       "kind": {
                         "type": "string",
                         "enum": [
@@ -11795,6 +11800,7 @@
                       "personId",
                       "personDisplayName",
                       "isSelf",
+                      "draftMessageId",
                       "kind",
                       "nature",
                       "label",
@@ -12059,6 +12065,11 @@
                     "isSelf": {
                       "type": "boolean"
                     },
+                    "draftMessageId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
                     "kind": {
                       "type": "string",
                       "enum": [
@@ -12108,6 +12119,7 @@
                     "personId",
                     "personDisplayName",
                     "isSelf",
+                    "draftMessageId",
                     "kind",
                     "nature",
                     "label",
@@ -26447,6 +26459,11 @@
                           "isSelf": {
                             "type": "boolean"
                           },
+                          "draftMessageId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
                           "kind": {
                             "type": "string",
                             "enum": [
@@ -26496,6 +26513,7 @@
                           "personId",
                           "personDisplayName",
                           "isSelf",
+                          "draftMessageId",
                           "kind",
                           "nature",
                           "label",

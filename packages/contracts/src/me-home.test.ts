@@ -7,6 +7,7 @@ const ECHEANCE = {
   personId: "3f2504e0-4f89-11d3-9a0c-0305e82c3302",
   personDisplayName: "Awa Diop",
   isSelf: false,
+  draftMessageId: null,
   kind: "birthday" as const,
   nature: "happy" as const,
   label: null,
