@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
@@ -54,6 +54,9 @@ export default function Moi() {
   const [listes, setListes] = useState<number | null>(null);
   const [mots, setMots] = useState<number | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [siteUrl, setSiteUrl] = useState<string | null>(null);
 
   const charge = useCallback(async () => {
@@ -139,6 +142,13 @@ export default function Moi() {
 
   return (
     <ScrollView
+      refreshControl={
+        <RefreshControl
+          refreshing={rafraichit}
+          onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+          tintColor={couleurs.textMention}
+        />
+      }
       style={{ backgroundColor: couleurs.surfacePage }}
       contentContainerStyle={[styles.page, {
         paddingTop: insets.top + nativeSpace[20],

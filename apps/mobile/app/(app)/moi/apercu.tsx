@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
@@ -63,6 +63,9 @@ export default function Apercu() {
      applique déjà partout ailleurs, et je l'avais enfreinte ici. */
   const [mur, setMur] = useState<PublicWall | null>(null);
   const [adresse, setAdresse] = useState<string | null>(null);
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [echec, setEchec] = useState<string | null>(null);
 
   const charge = useCallback(async () => {
@@ -128,6 +131,13 @@ export default function Apercu() {
 
   return (
     <ScrollView
+      refreshControl={
+        <RefreshControl
+          refreshing={rafraichit}
+          onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+          tintColor={couleurs.textMention}
+        />
+      }
       style={{ backgroundColor: couleurs.surfacePage }}
       contentContainerStyle={[styles.page, {
         paddingTop: insets.top + nativeSpace[8],

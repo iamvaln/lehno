@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { notificationsPageSchema, type Notification } from "@lehno/contracts";
@@ -39,6 +39,9 @@ export default function Notifications() {
 
   const [items, setItems] = useState<Notification[] | null>(null);
   const [suite, setSuite] = useState<string | null>(null);
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [echec, setEchec] = useState<string | null>(null);
 
   const charge = useCallback(async () => {
@@ -193,6 +196,13 @@ export default function Notifications() {
 
   return (
     <ScrollView
+      refreshControl={
+        <RefreshControl
+          refreshing={rafraichit}
+          onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+          tintColor={couleurs.textMention}
+        />
+      }
       style={{ backgroundColor: couleurs.surfacePage }}
       contentContainerStyle={[styles.page, {
         paddingTop: insets.top + nativeSpace[8],

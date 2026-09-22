@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Linking, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View,
+  Linking, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Switch, Text, View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -81,6 +81,9 @@ export default function MonMur() {
      fiable : les drapeaux arrivent après le premier rendu, et un onglet figé à
      l'initialisation ouvrirait « page » à qui a demandé « mots ». Un appui,
      lui, fige la vue — sans quoi elle reviendrait à celle du lien. */
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [choix, setChoix] = useState<OngletDuMur | null>(null);
   const ouverts = ongletsDuMur(actives);
   const demande = ongletDemande(onglet, actives);
@@ -180,6 +183,13 @@ export default function MonMur() {
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
       <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={rafraichit}
+            onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+            tintColor={couleurs.textMention}
+          />
+        }
         contentContainerStyle={[styles.page, {
           paddingTop: insets.top + nativeSpace[8],
           paddingBottom: insets.bottom + nativeSpace[24],

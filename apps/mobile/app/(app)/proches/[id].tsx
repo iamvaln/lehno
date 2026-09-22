@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -87,6 +87,9 @@ export default function Proche() {
      défaut — inviter à composer quand on n'a pas pu lire la liste est moins
      faux que de promettre une collection qu'on n'a peut-être pas. */
   const [dernierPortrait, setDernierPortrait] = useState<string | null>(null);
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [echec, setEchec] = useState<string | null>(null);
 
   const demande = useCallback(async () => {
@@ -222,6 +225,13 @@ export default function Proche() {
   return (
     <ScrollView
       style={{ backgroundColor: couleurs.surfacePage }}
+      refreshControl={
+        <RefreshControl
+          refreshing={rafraichit}
+          onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+          tintColor={couleurs.textMention}
+        />
+      }
       contentContainerStyle={{
         paddingTop: insets.top + nativeSpace[12],
         paddingBottom: insets.bottom + nativeSpace[20],

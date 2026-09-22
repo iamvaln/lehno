@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ownerWishListSchema, type OwnerWish } from "@lehno/contracts";
@@ -56,6 +56,9 @@ export default function Souhaits() {
   const [saisie, setSaisie] = useState<SaisieDeSouhait>({
     intitule: "", lien: "", details: "", prix: "", devise: "XAF", public: true,
   });
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [accuse, setAccuse] = useState<string | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
@@ -166,6 +169,13 @@ export default function Souhaits() {
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
       <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={rafraichit}
+            onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+            tintColor={couleurs.textMention}
+          />
+        }
         contentContainerStyle={[styles.page, {
           paddingTop: insets.top + nativeSpace[8],
           paddingBottom: insets.bottom + nativeSpace[24],

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
@@ -35,6 +35,9 @@ export default function Mouvements() {
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
 
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [mouvements, setMouvements] = useState<CreditTransaction[] | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
 
@@ -100,6 +103,13 @@ export default function Mouvements() {
 
   return (
     <ScrollView
+      refreshControl={
+        <RefreshControl
+          refreshing={rafraichit}
+          onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+          tintColor={couleurs.textMention}
+        />
+      }
       style={{ backgroundColor: couleurs.surfacePage }}
       contentContainerStyle={[styles.page, {
         paddingTop: insets.top + nativeSpace[8],

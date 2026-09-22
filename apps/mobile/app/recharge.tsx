@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -82,6 +82,9 @@ export default function Recharge() {
   const [moyen, setMoyen] = useState<string | null>(null);
   const [depuis, setDepuis] = useState("");
   const [reference, setReference] = useState("");
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [accuse, setAccuse] = useState<string | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
@@ -418,6 +421,13 @@ export default function Recharge() {
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
       <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={rafraichit}
+            onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+            tintColor={couleurs.textMention}
+          />
+        }
         contentContainerStyle={[styles.page, {
           paddingTop: insets.top + nativeSpace[8],
           paddingBottom: insets.bottom + nativeSpace[24],

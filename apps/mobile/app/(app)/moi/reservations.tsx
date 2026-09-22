@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { myReservationListSchema, type MyReservation } from "@lehno/contracts";
@@ -55,6 +55,9 @@ export default function Reservations() {
 
   const [reservations, setReservations] = useState<MyReservation[] | null>(null);
   const [accuse, setAccuse] = useState<string | null>(null);
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [echec, setEchec] = useState<string | null>(null);
 
   const charge = useCallback(async () => {
@@ -154,6 +157,13 @@ export default function Reservations() {
        `surcouches.test.ts` le vérifie. */
     <View style={[styles.ecran, { backgroundColor: couleurs.surfacePage }]}>
     <ScrollView
+      refreshControl={
+        <RefreshControl
+          refreshing={rafraichit}
+          onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+          tintColor={couleurs.textMention}
+        />
+      }
       style={styles.ecran}
       contentContainerStyle={[styles.page, {
         paddingTop: insets.top + nativeSpace[8],

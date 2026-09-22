@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -61,6 +61,9 @@ export default function ApercuDeLaListe() {
 
   const [partage, setPartage] = useState<WishlistShare | null>(null);
   const [page, setPage] = useState<SharedWishlist | null>(null);
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [confirme, setConfirme] = useState(false);
   const [accuse, setAccuse] = useState<string | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
@@ -156,6 +159,13 @@ export default function ApercuDeLaListe() {
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
       <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={rafraichit}
+            onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+            tintColor={couleurs.textMention}
+          />
+        }
         contentContainerStyle={[styles.page, {
           paddingTop: insets.top + nativeSpace[8],
           paddingBottom: insets.bottom + nativeSpace[24],

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { submissionSchema, type Submission } from "@lehno/contracts";
@@ -52,6 +52,9 @@ export default function Valider() {
 
   const [contributions, setContributions] = useState<Submission[] | null>(null);
   const [saisies, setSaisies] = useState<Record<string, SaisieDuSas>>({});
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [envoi, setEnvoi] = useState<string | null>(null);
   const [accuse, setAccuse] = useState<string | null>(null);
   const [echec, setEchec] = useState<string | null>(null);
@@ -164,6 +167,13 @@ export default function Valider() {
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
       <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={rafraichit}
+            onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+            tintColor={couleurs.textMention}
+          />
+        }
         contentContainerStyle={[styles.page, {
           paddingTop: insets.top + nativeSpace[8],
           paddingBottom: insets.bottom + nativeSpace[24],

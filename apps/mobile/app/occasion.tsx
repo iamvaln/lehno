@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   useFocusEffect, useLocalSearchParams, useRouter, type Href,
@@ -95,6 +95,9 @@ export default function Occasion() {
   const [tout, setTout] = useState(false);
   const [saisie, setSaisie] = useState<SaisieDeSouhait>(SAISIE_VIERGE);
   const [ouvreLaSaisie, setOuvreLaSaisie] = useState(false);
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [accuse, setAccuse] = useState<string | null>(null);
   /* RIEN NE SE PAIE EN SILENCE : « Refaire » repasse par la feuille qui annonce
@@ -300,6 +303,13 @@ export default function Occasion() {
   return (
     <View style={{ flex: 1, backgroundColor: couleurs.surfacePage }}>
       <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={rafraichit}
+            onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+            tintColor={couleurs.textMention}
+          />
+        }
         contentContainerStyle={[styles.page, {
           paddingTop: insets.top + nativeSpace[8],
           paddingBottom: insets.bottom + nativeSpace[24],

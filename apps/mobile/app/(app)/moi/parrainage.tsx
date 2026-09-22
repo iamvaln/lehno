@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
@@ -46,6 +46,9 @@ export default function Parrainage() {
 
   const [resume, setResume] = useState<ReferralSummary | null>(null);
   const [pourEux, setPourEux] = useState<number | null>(null);
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [echec, setEchec] = useState<string | null>(null);
 
   const charge = useCallback(async () => {
@@ -123,6 +126,13 @@ export default function Parrainage() {
 
   return (
     <ScrollView
+      refreshControl={
+        <RefreshControl
+          refreshing={rafraichit}
+          onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+          tintColor={couleurs.textMention}
+        />
+      }
       style={{ backgroundColor: couleurs.surfacePage }}
       contentContainerStyle={[styles.page, {
         paddingTop: insets.top + nativeSpace[8],
