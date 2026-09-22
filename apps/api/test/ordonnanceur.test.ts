@@ -11,6 +11,8 @@ import { AuditService } from "../src/admin/audit.service.js";
 import { StudioConfigurationService } from "../src/studio/configuration.service.js";
 import { RouteurIAService } from "../src/ia/routeur.service.js";
 import { OrdonnanceurService } from "../src/me/ordonnanceur.service.js";
+import { DataExportService } from "../src/me/data-export.service.js";
+import { StockageMemoire } from "../src/stockage/memoire.adapter.js";
 import type { Mail, MailPort } from "../src/mail/mail.port.js";
 import type { PushPort } from "../src/notifications/push.port.js";
 
@@ -24,6 +26,10 @@ describe("le passage quotidien", () => {
   // L'ordonnanceur n'éprouve pas le téléphone : ce qu'il vérifie est l'ordre
   // des passages, pas le transport. Un port qui ne fait rien suffit.
   const telephone: PushPort = { envoyer: async () => {} };
+  // Même raison que `telephone` : ce fichier éprouve l'ORDRE des passages,
+  // pas le stockage. Un coffre en mémoire suffit, partagé entre les cas —
+  // ses clés sont des UUID, rien n'y entre en collision.
+  const coffre = new StockageMemoire();
 
   beforeAll(async () => { db = await withDatabase(); }, 120_000);
   afterAll(async () => { await db.close(); });
@@ -37,6 +43,7 @@ describe("le passage quotidien", () => {
       // Le rattrapage des générations abandonnées : sans fournisseur d'IA, il
       // ne produit rien mais rembourse ce qui traîne — c'est bien son rôle.
       new GenerationService(p, new TenantRepository(p), new RouteurIAService(p), {}, new StudioConfigurationService(p, new AuditService(p))),
+      new DataExportService(p, coffre, poste),
     );
   });
 
@@ -80,6 +87,7 @@ describe("le passage quotidien", () => {
     const avecPanne = new OrdonnanceurService(
       casse, new ProgrammationService(p), new RelancesService(p), new EnvoiService(p, poste, telephone),
       new GenerationService(p, new TenantRepository(p), new RouteurIAService(p), {}, new StudioConfigurationService(p, new AuditService(p))),
+      new DataExportService(p, coffre, poste),
     );
     await expect(avecPanne.executer()).resolves.toBeUndefined();
   });

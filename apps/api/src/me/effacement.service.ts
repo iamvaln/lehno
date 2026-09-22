@@ -42,11 +42,17 @@ import { origine } from "../clients/origine.js";
  * écart connu.
  *
  * - LES FICHIERS. §9.11 promet un effacement « jusqu'aux fichiers stockés ».
- *   Aucun stockage d'objets n'existe dans le dépôt : `user.avatarUrl`,
- *   `person.avatarUrl`, `wishlist_item.imageUrl`, `payment.proofKey` et
- *   `data_export_request.fileUrl` sont des adresses vers un ailleurs que rien
- *   ici ne sait joindre. Les RÉFÉRENCES partent, les fichiers restent. Le jour
- *   où le stockage arrive, il se branche à l'étape 2.
+ *   FAUX AUJOURD'HUI, et ce n'est plus l'absence de stockage : `StockagePort`
+ *   existe (`stockage/`), R2 range déjà portraits, avatars, images de
+ *   souhaits, reçus et — depuis l'export automatisé — les archives d'export.
+ *   `user.avatarKey`, `wishlist_item.imageKey`, `owner_wish.imageKey`,
+ *   `portrait.imageKey`, `payment.proofKey` et `data_export_request.fileKey`
+ *   en portent la clé. La VIDANGE ici n'appelle `stockage.effacer(cle)` sur
+ *   AUCUNE d'elles : les RÉFÉRENCES partent, les fichiers restent chez le
+ *   fournisseur. Ce n'est plus une tâche future faute d'outil — l'outil est
+ *   là, personne ne l'a branché à l'étape 2. (`person.avatarUrl`, lui, n'est
+ *   pas une clé de notre stockage — c'est un lien externe, hors de portée
+ *   d'un `effacer()` d'ici.)
  * - LE MUR ET LES VŒUX REÇUS. §7 promet que les « vœux reçus » et les
  *   « contributions par lien de collecte » sont effacés à la suppression. Ni la
  *   table des Murs ni celle des liens de collecte n'existent — le back-office le

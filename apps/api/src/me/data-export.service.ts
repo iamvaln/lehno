@@ -1,8 +1,22 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import type { Locale } from "@lehno/i18n";
 import { RAISON_DE_LA_SOURCE } from "@lehno/contracts";
 import type { DataExportRequest } from "@lehno/contracts";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
+import { dataExportEmail } from "../mail/templates.js";
+import type { MailPort } from "../mail/mail.port.js";
+import type { StockagePort } from "../stockage/stockage.port.js";
+
+/* LA DURÉE DE VIE DU LIEN, embarqué dans un courriel qu'on ne relit pas.
+ *
+ * `recu.service.ts` recompose son URL à chaque lecture, DIX MINUTES lui
+ * suffisent : la personne clique dans la minute qui suit sa propre demande.
+ * Un export part par courrier, sans qu'on sache quand il sera ouvert — sept
+ * jours laissent le temps de le lire sans garder la porte ouverte pour
+ * toujours. Passé le délai, il faut redemander : c'est ce que dit le
+ * courriel lui-même. */
+const DUREE_DU_LIEN_SECONDES = 7 * 24 * 60 * 60;
 
 /* L'export de ses données — spec mobile §3.11, spec technique §5.7, politique
  * de confidentialité §8 (droit à la portabilité).
@@ -14,8 +28,14 @@ import { AppError } from "../common/errors.js";
  */
 @Injectable()
 export class DataExportService {
-  // @Inject explicite : voir SecurityService, même contrainte esbuild/vitest.
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger("export");
+
+  // @Inject explicites : voir SecurityService, même contrainte esbuild/vitest.
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject("STOCKAGE_PORT") private readonly stockage: StockagePort,
+    @Inject("MAIL_PORT") private readonly mail: MailPort,
+  ) {}
 
   private rendu(r: {
     id: string; status: string; createdAt: Date; completedAt: Date | null;
@@ -58,6 +78,92 @@ export class DataExportService {
       orderBy: { createdAt: "desc" },
     });
     return ligne ? this.rendu(ligne) : null;
+  }
+
+  /* TRAITER LES DEMANDES EN ATTENTE — la moitié qui manquait.
+   *
+   * `demander()` posait une ligne `pending` et s'arrêtait là : rien, nulle
+   * part, ne l'a jamais reprise. Le fichier ne se composait pas, aucun
+   * courriel ne partait, et `completedAt` ne se posait jamais. Vu à
+   * l'appareil : un bouton qui accuse réception, et qui reste gris pour
+   * toujours — `demander()` refuse une seconde demande tant qu'une est
+   * `pending`, donc la fonction s'éteignait elle-même dès le premier essai.
+   *
+   * Appelée par l'ordonnanceur, au même rythme que le rattrapage des
+   * générations : c'est un droit affiché à vingt-quatre heures, pas une
+   * opération urgente, mais dix minutes de marge coûtent moins cher qu'un
+   * bouton mort.
+   *
+   * UNE DEMANDE EN ÉCHEC NE RESTE PAS `pending` : ce serait recréer le même
+   * verrou que celui qu'on répare, sous une autre forme — la ligne resterait
+   * éternellement « en préparation » et personne ne pourrait plus jamais en
+   * demander une autre.
+   */
+  async traiterLesEnAttente(): Promise<{ produites: number; echouees: number }> {
+    const enAttente = await this.prisma.dataExportRequest.findMany({
+      where: { status: "pending" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, userId: true },
+    });
+
+    let produites = 0;
+    let echouees = 0;
+    for (const demande of enAttente) {
+      try {
+        await this.produire(demande.id, demande.userId);
+        produites += 1;
+      } catch (err: unknown) {
+        echouees += 1;
+        /* `updateMany` avec la garde `status: "pending"` : si la ligne a déjà
+           basculé — par un autre passage, improbable mais pas impossible —,
+           on n'écrase pas un état plus récent qu'un échec d'ici. */
+        await this.prisma.dataExportRequest.updateMany({
+          where: { id: demande.id, status: "pending" },
+          data: { status: "failed" },
+        });
+        this.logger.warn(
+          `export ${demande.id} en échec : ${err instanceof Error ? err.message : "cause inconnue"}`,
+        );
+      }
+    }
+    if (enAttente.length > 0)
+      this.logger.log(`${produites} export(s) produit(s), ${echouees} en échec`);
+    return { produites, echouees };
+  }
+
+  /* LE FICHIER, LE LIEN, LE COURRIEL — dans cet ordre, et chacun avant le
+     suivant : écrire avant de composer le lien (il faut la clé), composer le
+     lien avant d'écrire le courriel (il faut le texte), envoyer avant de
+     conclure (une ligne `ready` sans courriel parti serait pire qu'une ligne
+     restée `pending` — elle dirait « c'est fait » à quelqu'un qui n'a rien
+     reçu et ne redemandera jamais). */
+  private async produire(id: string, userId: string): Promise<void> {
+    const utilisateur = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { email: true, uiLanguage: true },
+    });
+
+    const document = await this.assembler(userId);
+    const contenu = Buffer.from(JSON.stringify(document, null, 2), "utf8");
+    const cle = await this.stockage.ecrire("exports", contenu, "application/json");
+    const url = await this.stockage.lire(cle, DUREE_DU_LIEN_SECONDES);
+
+    // Même règle qu'à la connexion et qu'à la fermeture de compte : le choix
+    // du compte, jamais un recours à la langue de l'appareil — la demande ne
+    // porte d'ailleurs aucune langue, l'adresse vient de la session.
+    const locale = (utilisateur.uiLanguage === "en" ? "en" : "fr") as Locale;
+    const { subject, text } = dataExportEmail({ url, locale });
+    await this.mail.send({ to: utilisateur.email, subject, text, locale });
+
+    await this.prisma.dataExportRequest.update({
+      where: { id },
+      data: {
+        status: "ready",
+        fileKey: cle,
+        expiresAt: new Date(Date.now() + DUREE_DU_LIEN_SECONDES * 1000),
+        completedAt: new Date(),
+      },
+    });
   }
 
   /* L'ASSEMBLAGE DU DOCUMENT.
