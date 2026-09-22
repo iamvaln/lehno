@@ -159,6 +159,23 @@ describe("les deux états vides ne se ressemblent pas", () => {
     expect(etatDeLAccueil(home([echeance(3)], true))).toBe("nominal");
     expect(etatDeLAccueil(home([echeance(3)], false))).toBe("nominal");
   });
+
+  /* LE DÉFAUT D'ORIGINE, gelé : `etatDeLAccueil` ne regardait que le nombre
+     d'échéances, jamais leur distance. Une seule à cent soixante-quatre jours
+     suffisait à rendre « nominal » — l'accueil montrait alors une carte
+     lointaine au lieu de l'état vide que la planche prévoit, et cet état
+     devenait inatteignable dès qu'une seule date figurait au carnet. Vu à
+     l'appareil : « Rien avant le 4 mars » suivi d'une carte « Awa · J−164 ». */
+  it("une échéance hors de l'horizon ne sort pas de l'état vide", () => {
+    expect(etatDeLAccueil(home([echeance(164)], true))).toBe("vide");
+  });
+
+  /* LA BORNE ELLE-MÊME : décision du 22 septembre, les trois prochaines
+     semaines. Le vingt-et-unième jour compte encore, le vingt-deuxième non. */
+  it("l'horizon tient à vingt et un jours, pas un de plus", () => {
+    expect(etatDeLAccueil(home([echeance(21)], true))).toBe("nominal");
+    expect(etatDeLAccueil(home([echeance(22)], true))).toBe("vide");
+  });
 });
 
 describe("ce que le serveur garde par-devers lui", () => {
