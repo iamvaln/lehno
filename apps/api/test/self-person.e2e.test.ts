@@ -252,11 +252,14 @@ describe("la fiche de soi", () => {
     });
   });
 
-  /* ─── §13.3 — DEDANS OU DEHORS DU CARNET ────────────────────────────────────
+  /* ─── DÉCISION DU 21 SEPTEMBRE — HORS DU CARNET, SANS CONDITION ────────────
    *
-   * Elle reste INCLUSE par défaut, et ce n'est pas de la timidité : « Pour qui »
-   * ne listait que les proches, on ne pouvait donc pas inscrire sa propre date.
-   * L'exclure d'office réinstallerait le blocage que la fiche a levé. */
+   * `includeSelf` existait pour que « Pour qui » (l'écran d'événement) puisse
+   * inscrire sa propre date sans passer par « Me ». C'est cet usage qui est
+   * révoqué : « self est une personne qui se modifie par défaut quand
+   * quelqu'un change des choses depuis Me, et ce n'est jamais un paramètre
+   * passé en argument ». Le paramètre a donc disparu du contrat en même temps
+   * que l'usage — pas seulement son défaut inversé. */
   describe("dans le carnet", () => {
     const lu = async (requete: string): Promise<{ persons: { displayName: string }[]; total: number }> =>
       (await (await carnet(requete)).json()) as { persons: { displayName: string }[]; total: number };
@@ -269,31 +272,26 @@ describe("la fiche de soi", () => {
       await db.prisma.person.create({ data: { userId, displayName: "Karim" } });
     });
 
-    it("y paraît par défaut", async () => {
-      expect(await noms()).toContain("Awa");
-      expect(await total()).toBe(2);
+    it("n'y paraît jamais", async () => {
+      expect(await noms()).toEqual(["Karim"]);
     });
 
-    it("en sort sur demande", async () => {
-      expect(await noms("?includeSelf=false")).toEqual(["Karim"]);
+    /* LE TOTAL SUIT LE FILTRE, et il le suivait déjà avant le 21 septembre —
+       ce n'est pas ce qui change ici. Un total qui compterait une fiche
+       absente de la liste ferait afficher « Voir plus · 1 restant » sur une
+       page complète, et personne ne comprendrait ce qui manque. */
+    it("ne se compte jamais dans le total", async () => {
+      expect(await total()).toBe(1);
     });
 
-    /* LE TOTAL SUIT LE FILTRE. Un total qui compterait une fiche absente de la
-       liste ferait afficher « Voir plus · 1 restant » sur une page complète, et
-       personne ne comprendrait ce qui manque. */
-    it("ne se compte plus dans le total quand elle en sort", async () => {
-      expect(await total("?includeSelf=false")).toBe(1);
-    });
-
-    /* SEUL « false » EXCLUT, et le reste est REFUSÉ plutôt qu'interprété :
-       `Boolean("false")` vaut vrai, et s'y fier aurait rendu le paramètre
-       décoratif. Un `includeSelf=0` silencieusement ignoré est pire qu'un 400. */
-    it("refuse une valeur qui n'est pas un booléen", async () => {
-      expect((await carnet("?includeSelf=0")).status).toBe(400);
-    });
-
-    it("l'inclut quand on le demande explicitement", async () => {
-      expect(await noms("?includeSelf=true")).toContain("Awa");
+    /* LE PARAMÈTRE N'EXISTE PLUS AU CONTRAT : `listPersonsQuerySchema` ne le
+       lit plus, et le contrôleur ne le transmet plus. Une requête qui le pose
+       quand même n'est donc ni un 400 ni un knob qui fonctionne encore en
+       coulisse — elle est simplement ignorée, exactement comme n'importe quel
+       paramètre inconnu de cette route. */
+    it("reste absente même si la requête pose l'ancien paramètre", async () => {
+      expect(await noms("?includeSelf=true")).toEqual(["Karim"]);
+      expect((await carnet("?includeSelf=true")).status).toBe(200);
     });
   });
 });

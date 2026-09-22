@@ -138,15 +138,18 @@ export class PersonService {
        La recherche porte sur les DEUX noms : quelqu'un cherche « maman » sans
        savoir si sa fiche dit « Maman » ou « Maman Chantal », et le nom d'usage
        est justement celui par lequel on l'appelle. */
-    /* LA FICHE DE SOI SORT SUR DEMANDE, et avant la découpe comme le reste :
-       filtrer une page déjà coupée laisserait un trou sur une page et pas sur
-       l'autre. Incluse par défaut — « Pour qui » ne pourrait plus viser sa
-       propre date sans elle, et c'est le blocage que la fiche a levé. */
-    const avecSoi = query.includeSelf === false
-      ? bruts.filter((p) => !p.isSelf)
-      : bruts;
+    /* LA FICHE DE SOI NE SORT JAMAIS D'ICI, sans condition — décision du
+       21 septembre. `includeSelf` existait pour que « Pour qui » (l'écran
+       d'événement) puisse viser sa propre date ; c'est justement ce cas d'usage
+       qui est révoqué : « self est une personne qui se modifie par défaut
+       quand quelqu'un change des choses depuis Me, et ce n'est jamais un
+       paramètre passé en argument ». Il n'y a plus de raison qu'un client
+       mobile reçoive la fiche de soi parmi ses proches, donc le paramètre
+       disparaît avec l'usage qui le justifiait — un knob qu'on garde « au cas
+       où » est un knob que quelqu'un finit par actionner. */
+    const sansSoi = bruts.filter((p) => !p.isSelf);
 
-    const tous = query.q === undefined ? avecSoi : avecSoi.filter((p) => {
+    const tous = query.q === undefined ? sansSoi : sansSoi.filter((p) => {
       const aiguille = sansAccents(query.q!);
       return sansAccents(p.displayName).includes(aiguille)
         || (p.callingName !== null && sansAccents(p.callingName).includes(aiguille));

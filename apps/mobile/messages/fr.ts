@@ -1158,7 +1158,10 @@ export const fr = {
      premier mot que lit qui arrive par « Ajouter une date » depuis les
      wishlists. Lui annoncer qu'on cherche « un proche » démentait la liste
      qu'il allait ouvrir, où « Moi » est en tête. */
-  evtChercherQui: "Vous ou un proche",
+  // §11 du relevé des essais : ce sélecteur ne peut plus jamais viser soi —
+  // décision de produit, la fiche de soi se modifie depuis « Moi ». L'invite
+  // ne devait donc plus dire « vous ».
+  evtChercherQui: "Un proche",
   listeVotreDateAbsente: "Pour ouvrir une liste sur une de vos dates, il faut d'abord une date à vous.",
   identNaissance: "Date de naissance",
   /* VÉRIFIÉ AU SERVEUR : l'anniversaire ne s'en déduit pas. `PersonService.create`

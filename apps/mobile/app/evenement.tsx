@@ -12,7 +12,6 @@ import {
 } from "@lehno/tokens";
 import { Avatar, Banner, Button, Icon, SectionLabel, TextField, useCouleurs } from "@lehno/ui-native";
 import { useLangue } from "../lib/langue.js";
-import { nomAAfficher, soiDabord } from "../lib/soi.js";
 import { Pastille } from "../composants/Pastille.js";
 import { RangeeDeJours } from "../composants/RangeeDeJours.js";
 import { appel, ErreurDApi } from "../lib/api.js";
@@ -92,7 +91,12 @@ export default function Evenement() {
        et c'est lui qui débloque la wishlist datée et « Ma date d'anniversaire »
        sur le Mur. En tête : c'est la fiche qu'on cherche le jour où elle vient
        d'exister, et la chercher au milieu du carnet serait absurde. */
-    setCarnet(soiDabord(page.persons));
+    /* PLUS DE `soiDabord` : le serveur exclut la fiche de soi sans condition
+       depuis le 21 septembre — décision de produit, pas un défaut d'écran.
+       « Self est une personne qui se modifie depuis Me, et ce n'est jamais un
+       paramètre passé en argument. » Ce sélecteur ne peut donc plus jamais la
+       recevoir ; il n'y a rien à trier en tête. */
+    setCarnet(page.persons);
   }, []);
 
   useEffect(() => { void charge(); }, [charge]);
@@ -248,9 +252,9 @@ export default function Evenement() {
           <View style={styles.puces}>
             {proche ? (
               <View style={[styles.puce, { backgroundColor: couleurs.actionQuietBg }]}>
-                <Avatar name={nomAAfficher(proche, t.evtPourMoi)} size={24} />
+                <Avatar name={proche.displayName} size={24} />
                 <Text style={[styles.puceTexte, { color: couleurs.textAccent }]}>
-                  {nomAAfficher(proche, t.evtPourMoi)}
+                  {proche.displayName}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -324,9 +328,9 @@ export default function Evenement() {
                   onPress={() => { setProche(p); setOuvreLeChoix(false); }}
                   style={styles.ligne}
                 >
-                  <Avatar name={nomAAfficher(p, t.evtPourMoi)} size={26} />
+                  <Avatar name={p.displayName} size={26} />
                   <Text style={[styles.ligneTexte, { color: couleurs.textBody }]}>
-                    {nomAAfficher(p, t.evtPourMoi)}
+                    {p.displayName}
                   </Text>
                 </Pressable>
               )) : (

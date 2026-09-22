@@ -974,7 +974,7 @@ export const en = {
   profilVotreNaissanceAide: "Your birthday does not follow from it: add it in Dates afterwards.",
   evtPourMoi: "Me",
   cartMaListe: "My wishlist",
-  evtChercherQui: "You or someone else",
+  evtChercherQui: "Someone",
   listeVotreDateAbsente: "To open a list on one of your dates, you first need a date of your own.",
   identNaissance: "Date of birth",
   identNaissanceAide: "Their birthday does not follow from it: add it in Dates afterwards.",
