@@ -17,8 +17,8 @@ import { messageDErreur } from "../../../lib/session.js";
 import { effaceLesJetons } from "../../../lib/jetons.js";
 import { useDrapeaux } from "../../../lib/DrapeauxProvider.js";
 import {
-  cequiPart, corpsDeFermeture, etatDuRemboursement, impactVide, MOTIFS_OFFERTS,
-  peutFermer, TEMPS, type LigneDImpact,
+  adresseMasquee, cequiPart, corpsDeFermeture, etatDuRemboursement, impactVide,
+  MOTIFS_OFFERTS, peutFermer, TEMPS, type LigneDImpact,
 } from "../../../lib/fermeture.js";
 
 /* Fermer son compte — §3.24, en trois temps.
@@ -41,6 +41,8 @@ export default function Fermeture() {
 
   const [apercu, setApercu] = useState<DeletionPreview | null>(null);
   const [pseudoReel, setPseudoReel] = useState<string | null>(null);
+  // §20D : de quoi dire, au troisième temps, à quelle boîte le code est parti.
+  const [emailDuCompte, setEmailDuCompte] = useState<string | null>(null);
   const [temps, setTemps] = useState(1);
 
   const [motif, setMotif] = useState<DeletionReason | null>(null);
@@ -61,7 +63,9 @@ export default function Fermeture() {
         appel<unknown>("/me/profile"),
       ]);
       setApercu(deletionPreviewSchema.parse(brutApercu));
-      setPseudoReel(profileSchema.parse(brutProfil).username);
+      const profil = profileSchema.parse(brutProfil);
+      setPseudoReel(profil.username);
+      setEmailDuCompte(profil.email);
       setEchec(null);
     } catch (e) {
       setEchec(messageDErreur(e instanceof ErreurDApi ? e.enveloppe : null, langue));
@@ -311,17 +315,39 @@ export default function Fermeture() {
                 value={pseudo}
                 onChangeText={setPseudo}
               />
+              {/* §20D DU RELEVÉ DES ESSAIS : « aucune sortie quand le code
+                  n'arrive pas ». Deux choses manquaient ICI précisément — pas
+                  ailleurs sur l'écran :
+
+                  1. De quoi VÉRIFIER qu'on regarde la bonne boîte — sans ça,
+                     quelqu'un dont le code n'arrive pas ne peut même pas
+                     exclure qu'il l'attend à la mauvaise adresse. D'où le
+                     `hint` du champ, sous la même forme que côté serveur.
+
+                  2. Une PORTE quand il n'arrive vraiment pas. `apercu` porte
+                     déjà `supportEmail`, servi par le contrat pour cette
+                     raison même — « un retour reste possible en écrivant à
+                     l'assistance » (§3.24). Il était affiché au temps 2, pour
+                     le remboursement ; jamais ici, là où on en a besoin.
+                     Aucune adresse écrite en dur : c'est toujours la même
+                     donnée du serveur. */}
               <View style={{ marginTop: nativeSpace[12] }}>
                 <TextField
                   label={t.supprCode}
                   nature="code"
                   value={code}
                   onChangeText={setCode}
+                  hint={emailDuCompte ? t.supprCodeEnvoyeA(adresseMasquee(emailDuCompte)) : undefined}
                 />
               </View>
               <Button variant="text" full onPress={() => void demandeLeCode()}>
                 {t.supprCodeRenvoyer}
               </Button>
+              {apercu ? (
+                <Text style={[styles.mention, { color: couleurs.textMention }]}>
+                  {t.supprCodeIntrouvable(apercu.supportEmail)}
+                </Text>
+              ) : null}
             </View>
           </>
         ) : null}

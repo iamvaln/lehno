@@ -149,3 +149,16 @@ export function motifsSansLibelle(): DeletionReason[] {
   const offerts = new Set(MOTIFS_OFFERTS.map((m) => m.motif));
   return DELETION_REASONS.filter((r) => !offerts.has(r));
 }
+
+/* OÙ LE CODE EST PARTI, dit sans le montrer en entier.
+ *
+ * §20D du relevé des essais : « aucune sortie quand le code n'arrive pas ».
+ * Une partie du problème tenait à l'écran lui-même — on ne pouvait même pas
+ * vérifier qu'on regardait la bonne boîte. Même forme que côté serveur
+ * (`console.adapter.ts` : « premier caractère du nom local, domaine intact »)
+ * — assez pour se reconnaître, rien qui vaille la peine d'être intercepté. */
+export function adresseMasquee(email: string): string {
+  const arobase = email.indexOf("@");
+  if (arobase <= 0) return "···";
+  return `${email[0]}···${email.slice(arobase)}`;
+}

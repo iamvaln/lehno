@@ -14,7 +14,7 @@ import {
   nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
 import {
-  Banner, Button, Card, CreditIndicator, Icon, Illustration, LoadingState,
+  Banner, Button, Card, CreditIndicator, EmptyState, Icon, Illustration, LoadingState,
   SectionLabel, TextField, Toast, useCouleurs,
 } from "@lehno/ui-native";
 import { useLangue } from "../lib/langue.js";
@@ -670,12 +670,26 @@ export default function Recharge() {
         ) : (
           /* Ni palier ni compte à proposer : le solde reste, il est du socle.
              Un écran de recharge qui n'affiche plus rien du tout ferait croire
-             à une panne là où il n'y a qu'une voie fermée. */
-          <Card surface="panel" padding={16} radius="lg">
-            {/* UNE SEULE FOIS — `CreditIndicator` porte déjà son libellé, et le
-                rend à côté du nombre. Même doublon que sur « Moi ». */}
-            <CreditIndicator label={t.moiSolde} balance={solde} variant="solde" />
-          </Card>
+             à une panne là où il n'y a qu'une voie fermée.
+
+             ÇA NE LE FAISAIT PAS — le commentaire annonçait l'intention, la
+             carte du solde seule ne la tenait pas : silencieuse, elle se lit
+             comme une panne aussi bien qu'une voie fermée. `EmptyState` dit
+             l'état sans nommer sa cause — même règle que `EcranFerme` : la
+             configuration du service ne regarde pas celui qui l'emploie, et
+             l'expliquer ferait attendre un retour qu'on ne peut pas promettre. */
+          <View style={styles.bloc}>
+            <EmptyState
+              illustration="credits-epuises"
+              title={t.rechargeIndisponibleTitre}
+              text={t.rechargeIndisponibleTexte}
+            />
+            <Card surface="panel" padding={16} radius="lg" style={{ marginTop: nativeSpace[16] }}>
+              {/* UNE SEULE FOIS — `CreditIndicator` porte déjà son libellé, et
+                  le rend à côté du nombre. Même doublon que sur « Moi ». */}
+              <CreditIndicator label={t.moiSolde} balance={solde} variant="solde" />
+            </Card>
+          </View>
         )}
 
         {/* LE SECOND CHEMIN VERS DES CRÉDITS — « Sans payer » — attend son

@@ -349,7 +349,12 @@ export const fr = {
   paiementRetire: "Méthode retirée.",
   paiementAucuneTitre: "Aucune méthode enregistrée",
   paiementAucuneTexte: "Elle s'enregistrera d'elle-même au premier achat.",
+  // §17 du relevé des essais : la phrase ci-dessus promet un premier achat —
+  // fausse promesse tant qu'aucune voie d'achat n'est ouverte. Même règle
+  // qu'`EcranFerme` : on dit l'état, pas sa cause.
+  paiementAucuneFermeeTexte: "Rien à enregistrer pour l'instant.",
   paiementAjouter: "Ajouter une méthode",
+  paiementAjoutFerme: "L'ajout n'est pas encore ouvert.",
   paiementExpire: "Expirée",
   paiementDefaut: "Proposée par défaut",
   paiementAjoutTitre: "Une méthode de plus",
@@ -559,6 +564,15 @@ export const fr = {
   supprCode: "Le code envoyé par e-mail",
   supprCodeRenvoyer: "Renvoyer le code",
   supprCodeRenvoye: "Code renvoyé.",
+  // §20D du relevé des essais : « aucune sortie quand le code n'arrive pas ».
+  // Deux choses manquaient au troisième temps précisément — pas ailleurs sur
+  // l'écran : de quoi vérifier qu'on regarde la bonne boîte, et de quoi
+  // écrire à quelqu'un si elle n'arrive vraiment pas. `supportEmail` existait
+  // déjà au contrat, affiché au temps 2 pour une tout autre raison ; il
+  // manquait ici, là où on en a besoin.
+  supprCodeEnvoyeA: (adresse: string) => "Envoyé à " + adresse + ".",
+  supprCodeIntrouvable: (adresse: string) => "Ne le trouvez pas ? Écrivez à "
+    + adresse + ".",
   supprSuivant: "Continuer",
   supprFermer: "Fermer mon compte",
   supprRenoncer: "Renoncer",
@@ -574,6 +588,12 @@ export const fr = {
   occNoterPour: (date: string) => "Noter une idée pour le " + date,
   rechargeTitre: "Combien de crédits ?",
   rechargeIntro: "Un crédit par contenu créé pour vous.",
+  // §15B du relevé des essais : l'écran ne montrait que le solde, sans un mot,
+  // quand aucun moyen d'achat n'est ouvert — lu comme une panne. Ne nomme pas
+  // la cause, même règle qu'`EcranFerme` : la configuration ne regarde pas
+  // celui qui l'emploie.
+  rechargeIndisponibleTitre: "L'achat n'est pas encore ouvert",
+  rechargeIndisponibleTexte: "Revenez un peu plus tard.",
   rechargeUnite: (n: number) => n === 1 ? "1 crédit" : n + " crédits",
   /* LE SIGNE EST CELUI DE LA MAQUETTE, et le contrat le dit enfin aussi.
      La maquette écrit « −17 % » : une réduction sur le prix. Le serveur servait
@@ -786,6 +806,7 @@ export const fr = {
   validerIntro: "Rien de ce qui vient de l'extérieur n'entre dans vos fiches sans votre accord.",
   validerRetenir: "Retenir",
   validerEcarter: "Écarter",
+  validerTranchezTout: "Retenez ou écartez chaque souhait pour valider.",
   validerVideTitre: "Tout est traité",
   validerVideTexte: "Ce que vos proches déposeront passera ici avant d'entrer dans leurs fiches.",
   validerPour: (qui: string) => "Pour " + qui,

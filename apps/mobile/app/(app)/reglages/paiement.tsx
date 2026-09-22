@@ -157,10 +157,16 @@ export default function Paiement() {
           <SectionLabel>{t.paiementTitre}</SectionLabel>
 
           {!lu ? <LoadingState variant="liste" rows={3} title={t.chargement} /> : methodes.length === 0 ? (
+            /* LA PROMESSE DU TEXTE NE TIENT QUE SI UN ACHAT EST POSSIBLE.
+               « Un moyen s'enregistrera à votre premier achat » suppose une
+               voie d'achat ouverte — §17 du relevé des essais : sans elle, la
+               promesse renvoie vers un geste qui n'aboutit pas. `proposables`
+               le sait déjà (voir plus bas) ; on lui pose la même question ici
+               plutôt que d'écrire une seconde condition qui pourrait diverger. */
             <EmptyState
               illustration="credits-epuises"
               title={t.paiementAucuneTitre}
-              text={t.paiementAucuneTexte}
+              text={proposables.length > 0 ? t.paiementAucuneTexte : t.paiementAucuneFermeeTexte}
             />
           ) : methodes.map((m) => (
             <View key={m.id} style={[styles.ligne, { borderColor: couleurs.borderObject }]}>
@@ -278,6 +284,17 @@ export default function Paiement() {
               </Button>
             </View>
           )
+        ) : lu && methodes.length > 0 ? (
+          /* LE SECOND SILENCE DU MÊME DÉFAUT. Sans canal proposable, ce bloc
+             disparaissait — juste, tant que la liste au-dessus était vide
+             elle-même : l'EmptyState portait alors le seul mot de l'écran.
+             Mais des méthodes DÉJÀ enregistrées rendent la liste, pas
+             l'EmptyState, et ce bloc redevenait le seul endroit qui aurait pu
+             dire pourquoi on ne peut pas en ajouter une autre — et il se
+             taisait aussi. */
+          <Text style={[styles.aucunCanal, { color: couleurs.textMention }]}>
+            {t.paiementAjoutFerme}
+          </Text>
         ) : null}
       </ScrollView>
 
@@ -315,6 +332,7 @@ export default function Paiement() {
 const styles = StyleSheet.create({
   page: { flexGrow: 1, paddingHorizontal: nativeSpace[16] },
   bloc: { marginTop: nativeSpace[24] },
+  aucunCanal: { fontFamily: nativeFont.bodyRegular, fontSize: 13, marginTop: nativeSpace[24] },
   champ: { marginTop: nativeSpace[12] },
   ligne: {
     flexDirection: "row", alignItems: "center", gap: nativeSpace[12],

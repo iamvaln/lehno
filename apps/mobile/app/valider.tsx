@@ -18,6 +18,7 @@ import { ecranEteint } from "../lib/navigation.js";
 import { EcranFerme } from "../composants/EcranFerme.js";
 import {
   aTrancher, corpsDeDecision, corpsDeRejet, nomDeLaContribution, pretAEnvoyer,
+  toutEstTranche,
   type SaisieDuSas, type Sort,
 } from "../lib/sas.js";
 
@@ -252,6 +253,22 @@ export default function Valider() {
                   L'écran de choix d'une fiche existante attend son lot ; la
                   fiche neuve est le défaut, et c'est un choix, pas un manque. */}
 
+              {/* §21 DU RELEVÉ DES ESSAIS : LE BOUTON GRISÉ NE DISAIT PAS
+                  POURQUOI. La date et le mot s'ouvrent déjà tranchés — leur
+                  interrupteur part sur « accepté » —, mais un souhait n'a pas
+                  de défaut : `toutEstTranche` exige une réponse pour chacun, à
+                  raison — écarter par omission serait pire qu'exiger le geste.
+                  Sans ce mot, l'écran donnait à lire un bouton mort à côté d'un
+                  « Écarter » global bien actif : on croyait ne pouvoir que
+                  refuser. La condition est EXACTE, pas `!pretAEnvoyer` : elle
+                  ne parle que du souhait non tranché, la seule raison qui ait
+                  un geste à proposer en retour. */}
+              {c.wishes.length > 0 && !toutEstTranche(c.wishes, saisie.sorts) ? (
+                <Text style={[styles.aideTranche, { color: couleurs.textMention }]}>
+                  {t.validerTranchezTout}
+                </Text>
+              ) : null}
+
               <View style={styles.actions}>
                 <Button
                   full
@@ -305,5 +322,6 @@ const styles = StyleSheet.create({
     paddingVertical: nativeSpace[10], minHeight: nativeTouchMin,
   },
   libelle: { flex: 1, fontFamily: nativeFont.bodyRegular, fontSize: 14 },
+  aideTranche: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[12] },
   actions: { marginTop: nativeSpace[12] },
 });
