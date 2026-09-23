@@ -54,12 +54,15 @@ Le **§23** s'est réglé hors code : les clés d'IA manquaient sur la sandbox.
       déposait `1990-02-31` par un lien de collecte corrompait donc la date du
       proche, exactement comme avant la garde. *Fermée : les trois occurrences
       de la colonne dans ce fichier passent désormais par `dateCivileSchema`.*
-- **`ClosingBand.tsx:31` porte le même défaut de mise en page** que la bande
-  d'acquisition — `flex: "1 1 0"` avec `minWidth: 0` dans un conteneur
-  `flexWrap`. C'est l'aplat de clôture dont la bande dit reprendre la forme.
-- **`develop` porte un test rouge depuis le 17 septembre.** `siteUrl` a été
-  ajoutée à `/public/config` par `72bb5ee` sans mettre `public-http.e2e.test.ts`
-  à jour. Déterministe, sans rapport avec ce travail.
+- [x] **`ClosingBand.tsx:31` portait le même défaut de mise en page** que la
+      bande d'acquisition — `flex: "1 1 0"` avec `minWidth: 0` dans un
+      conteneur `flexWrap`. C'est l'aplat de clôture dont la bande dit
+      reprendre la forme. *Même correction : base de 20rem, `minWidth`
+      retiré.*
+- [ ] **`develop` porte un test rouge depuis le 17 septembre.** `siteUrl` a été
+      ajoutée à `/public/config` par `72bb5ee` sans mettre
+      `public-http.e2e.test.ts` à jour. Déterministe, sans rapport avec ce
+      travail — n'appartient pas à cette branche.
 
 Ce qui suit ne classe pas par ordre d'arrivée mais par **ce qu'il faut faire
 ensemble**. Plusieurs retours n'ont pas de correction propre — ils disparaissent

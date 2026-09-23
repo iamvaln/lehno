@@ -91,4 +91,18 @@ describe("landing", () => {
     render(<Landing t={messages("fr")} langue="fr" configuration={config} avantLancement features={TOUTES} />);
     expect(screen.getByRole("heading", { name: /votre page à vous/i })).toBeInTheDocument();
   });
+
+  /* Même défaut que la bande d'acquisition (239379c), même garde : en
+     `1 1 0` avec `minWidth: 0`, le titre de clôture cédait toute sa largeur
+     plutôt que de pousser l'action à la ligne, et le `flexWrap` du conteneur
+     ne se déclenchait jamais sur un écran étroit. jsdom ne met rien en page :
+     on éprouve donc la déclaration. */
+  it("donne à la bande de clôture de quoi passer à la ligne", () => {
+    render(<Landing t={messages("fr")} langue="fr" configuration={config} avantLancement features={TOUTES} />);
+    // Pas de colonne intermédiaire ici, contrairement à la bande
+    // d'acquisition : c'est le titre lui-même qui porte le flex.
+    const titre = screen.getByRole("heading", { name: messages("fr").finTitre });
+    expect(titre.style.minWidth).toBe("");
+    expect(titre.getAttribute("style")).toMatch(/flex:\s*1 1 20rem/);
+  });
 });
