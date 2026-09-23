@@ -16,10 +16,21 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 **Vingt-sept retours relevés, tous avec leur cause retrouvée dans le code.**
 
-**Dix-huit sont corrigés** et voyagent avec ce document sur la même branche ;
-quatre autres se referment par ricochet ou par une observation qui les
-tranchait déjà, et un s'est réglé en configuration. Le reste attend, et la
-section « les chantiers » dit dans quel ordre.
+**Vingt-deux sont corrigés** et voyagent avec ce document sur la même branche ;
+un s'est réglé en configuration (§23). **Restent ouverts, et chacun attend une
+décision plutôt qu'une correction :**
+
+- **§7** — l'onglet Proches rouvre la fiche qu'on avait quittée : trois
+  conduites possibles, la planche doit trancher laquelle.
+- **§10B** — le mot d'accueil n'existe pas : décision produit, pas panne.
+- **§22** — débit puis remboursement dans le journal des mouvements : décision
+  prise, reste à choisir comment l'implémenter, et ça touche le crédit.
+- **§25 (écarts 2 et 3)** — séparer « Relire » de « Composer », et écrire la
+  seconde attente du portrait : restructuration visible, attend un accord sur
+  la portée.
+
+Un test rouge sur `develop` depuis le 17 septembre (`public-http.e2e.test.ts`)
+est sans rapport avec ce travail — pas à cette branche de le porter.
 
 ### Ce qui est fait
 
@@ -28,7 +39,7 @@ section « les chantiers » dit dans quel ordre.
 | **24** | La police du portrait entre dans l'image Docker, et sa présence se vérifie au démarrage |
 | **14** | Le lancement d'une génération ouvre l'exécution, plus la liste |
 | **26** | Un portrait ne se dit plus « en cours » pour toujours |
-| **16** | Un onglet est une pile — **referme les §7, §15C et §20A** |
+| **16** | Un onglet est une pile — **referme les §15C et §20A**. *Ne referme PAS le §7 : la pile de Proches est un choix de navigation distinct de la mauvaise inscription des onglets, et reste à trancher (voir §7).* |
 | **4** | La bande d'acquisition passe à la ligne — sept surfaces publiques |
 | **5** | « Déjà connue de… » ne se dit que si la date est là |
 | **20C** | Le code de suppression de compte part enfin par courriel |
@@ -42,10 +53,13 @@ section « les chantiers » dit dans quel ordre.
 | **9** | Le thème vit dans les réglages, sous la langue, et s'applique au premier appui |
 | **25 (écart 1)** | Le geste se nomme « Composer l'image », pas « Approuver » — l'en-tête suit |
 | **10A** | Six clés de notification servies sans libellé (activations, relances, réservation) en ont désormais un |
+| **13** | « Marquer envoyé » appelle enfin le serveur, et s'offre à bon escient |
+| **19** | L'export de données se traite enfin, et le lien est une clé |
+| **15B, 17, 21, 20D** | Une voie fermée se dit — recharge, paiement, confirmation d'un souhait, fermeture de compte |
 
 Le **§23** s'est réglé hors code : les clés d'IA manquaient sur la sandbox.
 
-### Trois portes restées ouvertes, repérées en corrigeant
+### Deux portes restées ouvertes, repérées en corrigeant — désormais fermées
 
 - [x] **Le 31 février a une seconde porte**, et elle est PUBLIQUE.
       `packages/contracts/src/public-mur.ts:116` déclarait son propre
@@ -106,38 +120,42 @@ reste dans une pile. Sans ça, on corrigerait vingt-quatre fois le même retour.
 Des gestes qui accusent réception sans rien écrire, ou qui écrivent sans que
 personne ne lise.
 
-- [ ] **§13** « Marquer envoyé » ne fait aucun appel réseau — et s'offre sans
-      brouillon. *Traiter la condition d'affichage avant de brancher l'appel.*
-- [ ] **§19** L'export de données s'enregistre, rien ne le traite. *Le bouton
-      est désormais mort sur les comptes d'essai : purger les `pending`.*
-- [ ] **§6A** Une contribution reçue n'écrit aucune notification, alors qu'un
-      interrupteur existe pour la régler.
-- [ ] **§20C** Le code de suppression de compte n'est **jamais envoyé** :
-      `AccountService` n'a pas de port de courrier. *Le gabarit existe, le
-      chemin de connexion donne la forme — et ce chemin-ci est celui d'un
-      droit.*
+- [x] **§13** « Marquer envoyé » ne fait aucun appel réseau — et s'offrait sans
+      brouillon. *Corrigé : `PATCH /me/messages/:id` avec `markSent`, et
+      `draftMessageId` ferme la condition d'affichage.*
+- [x] **§19** L'export de données s'enregistre, rien ne le traite. *Corrigé :
+      `traiterLesEnAttente()` compose le fichier, l'envoie au stockage et par
+      courriel, au même rythme que le rattrapage des générations.*
+- [x] **§6A** Une contribution reçue n'écrit aucune notification. *Corrigé,
+      copie comprise — voir §10A pour le reste des clés qui restaient muettes.*
+- [x] **§20C** Le code de suppression de compte n'est jamais envoyé. *Corrigé :
+      `AccountService` écrit désormais par le port de courrier.*
 
 ### C. La règle des voies fermées — §15B, §17, §14
 
-- [ ] **Vérifier d'abord la configuration de la sandbox** — `topup.manual`,
-      comptes de collecte, canaux de paiement. Si elle devait être ouverte, 15B
-      et 17 n'ont rien à corriger.
-- [ ] **Poser la règle** : une voie fermée se dit, ou l'écran n'est pas
-      atteignable. Le silence n'est pas une troisième option.
-- [ ] **§21** « Confirm » reste gris tant qu'un souhait n'est pas tranché, et
-      ne le dit pas — pendant que « Set aside », lui, est actif.
-- [ ] **§20D** La fermeture de compte n'offre aucune sortie sans le code.
+- [x] **Vérifier d'abord la configuration de la sandbox** — confirmé :
+      `topup.manual` actif, zéro compte de collecte, zéro canal de paiement.
+      Ni bug ni configuration à corriger, la voie est fermée à raison.
+- [x] **Poser la règle** : une voie fermée se dit, ou l'écran n'est pas
+      atteignable — recharge et paiement disent désormais l'état, jamais sa
+      cause, même règle qu'`EcranFerme`.
+- [x] **§21** « Confirm » reste gris tant qu'un souhait n'est pas tranché.
+      *Corrigé : le mot qui manquait porte sa condition exacte
+      (`toutEstTranche`).*
+- [x] **§20D** La fermeture de compte n'offrait aucune sortie sans le code.
+      *Corrigé : `supportEmail`, déjà servi par le contrat, s'affiche au bon
+      endroit.*
 
 ### D. Les corrections courtes et sûres
 
 Chacune tient en peu de lignes, et aucune n'attend une décision.
 
-- [ ] **§5** Le texte d'aide de la date teste la nature du lien au lieu de la
-      date. *Une ligne, plus un test qui tombe sur l'état actuel.*
-- [ ] **§18** `natureDeLAppareil` ignore `okhttp` : chaque Android est un
-      « appareil inconnu ». *La même panne a été réparée pour iOS.*
-- [ ] **§4** La bande d'acquisition ne passe jamais à la ligne. *Une propriété
-      flex — et elle sert les cinq surfaces publiques.*
+- [x] **§5** Le texte d'aide de la date testait la nature du lien au lieu de la
+      date. *Corrigé, une ligne.*
+- [x] **§18** `natureDeLAppareil` ignorait `okhttp` : chaque Android était un
+      « appareil inconnu ». *Corrigé, même panne que celle réparée pour iOS.*
+- [x] **§4** La bande d'acquisition ne passait jamais à la ligne. *Corrigé —
+      et le même défaut, repéré ensuite sur l'aplat de clôture, l'est aussi.*
 - [x] **§2 (partie garde)** Le 31 février se saisit et franchit le contrat.
       *Indépendant du sélecteur, et c'est une vraie erreur de données.*
 
@@ -158,9 +176,15 @@ Chacune tient en peu de lignes, et aucune n'attend une décision.
       paramètre.*
 - [x] **§8** L'étendue du tirer-pour-rafraîchir. *Dix-neuf écrans, une garde de
       source qui les liste tous.*
-- [ ] **§7** Une fois §16 corrigé : revient-on à la liste des proches ?
-- [ ] **§20D** Que propose l'écran de fermeture quand le code n'arrive pas ?
-      *Aujourd'hui : rien. Et le geste engage un droit.*
+- [ ] **§7** L'onglet Proches rouvre la fiche qu'on avait quittée. *Pas fermé
+      par le §16 — la pile de Proches est un choix de navigation distinct.
+      Trois conduites possibles, la planche doit trancher laquelle.*
+- [ ] **§22** Débit puis remboursement d'une génération ratée : deux lignes
+      dans le journal pour un solde inchangé. *Décision prise (ne pas les
+      montrer), reste à choisir COMMENT — je recommande ne pas débiter avant
+      le succès, à condition que la réservation tienne le comptage du
+      « un seul crédit, une seule génération à la fois ». Touche le crédit :
+      pas d'implémentation sans confirmation.*
 
 ### F. Bloqué sur une observation
 
