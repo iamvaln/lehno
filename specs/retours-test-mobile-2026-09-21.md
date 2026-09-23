@@ -16,7 +16,7 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 **Vingt-sept retours relevés, tous avec leur cause retrouvée dans le code.**
 
-**Seize sont corrigés** et voyagent avec ce document sur la même branche ;
+**Dix-sept sont corrigés** et voyagent avec ce document sur la même branche ;
 trois autres se referment par ricochet, et un s'est réglé en configuration. Le
 reste attend, et la section « les chantiers » dit dans quel ordre.
 
@@ -39,6 +39,7 @@ reste attend, et la section « les chantiers » dit dans quel ordre.
 | **1** | L'horizon de l'accueil tient aux trois prochaines semaines |
 | **8** | Le tirer-pour-rafraîchir couvre les dix-neuf écrans qui lisent le serveur |
 | **9** | Le thème vit dans les réglages, sous la langue, et s'applique au premier appui |
+| **25 (écart 1)** | Le geste se nomme « Composer l'image », pas « Approuver » — l'en-tête suit |
 
 Le **§23** s'est réglé hors code : les clés d'IA manquaient sur la sandbox.
 
@@ -2402,11 +2403,15 @@ l'écran peut s'y fier : deux frappes ne font pas deux images. »
 
 ### Ce qu'il y a à faire
 
-- **Renommer le geste** — « Composer l'image », et reprendre l'en-tête dans le
-  même esprit. Le moins cher, et ça règle la moitié de l'incompréhension.
-- **Séparer « Relire » de « Composer »** : le formulaire n'a rien à faire sous
-  le résultat. Il revient au moment « Donner », derrière « Refaire ».
-- **Écrire la seconde attente**, avec ses mots à elle, et la rendre idempotente.
+- [x] **Renommer le geste** — « Composer l'image », et l'en-tête repris dans le
+      même esprit (« Prêt à composer » / « Ready to compose »). Le moins cher,
+      et ça règle la moitié de l'incompréhension.
+- [ ] **Séparer « Relire » de « Composer »** : le formulaire n'a rien à faire
+      sous le résultat. Il revient au moment « Donner », derrière « Refaire ».
+      *Restructuration visible — attend un accord sur la portée avant de
+      commencer.*
+- [ ] **Écrire la seconde attente**, avec ses mots à elle, et la rendre
+      idempotente.
 
 ---
 

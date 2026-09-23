@@ -717,8 +717,8 @@ export const fr = {
   registreComplice: "Complice",
 
   /* ─── Portrait, aperçu et partage (3.22) ─── */
-  portraitAValider: "À valider",
-  portraitApprouver: "Approuver",
+  portraitAValider: "Prêt à composer",
+  portraitApprouver: "Composer l'image",
   portraitSignature: "Votre note en pied",
   portraitSignatureAide: (qui: string) => "« Fait avec soin par " + qui + " », sous le message. Le logotype, lui, reste toujours.",
   portraitAucunTitre: "Aucun portrait pour l'instant",
