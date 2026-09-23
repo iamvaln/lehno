@@ -56,4 +56,14 @@ describe("the tabs folder", () => {
       expect(inside, `${tab} has no index.tsx`).toContain("index.tsx");
     }
   });
+
+  /* §7 of the test log: opening a person's card, sharing a link, coming back
+   * — the Proches tab reopened on the card rather than the list, because
+   * `navigate` restores whatever its stack was left on. Decided: the tab
+   * shows the list. `popToTopOnBlur` resets that one stack on every tab
+   * switch away from it; the other four keep their default behavior. */
+  it("resets Proches to its list when the tab loses focus", () => {
+    const layout = readFileSync(new URL("_layout.tsx", APP_DIR), "utf8");
+    expect(layout).toMatch(/name="proches"\s+options=\{\{\s*popToTopOnBlur:\s*true\s*\}\}/);
+  });
 });
