@@ -73,11 +73,23 @@ type Traductions = {
      donc aucun nom. Une seule forme obligerait à en inventer un. */
   notifContributionRecue: (qui: string) => string;
   notifContributionRecueSansNom: () => string;
+  /* Même arbitrage que la contribution : le nom du réservataire ne voyage que
+     s'il a été autorisé, deux formes plutôt qu'un nom inventé. */
+  notifSouhaitReserve: (libelle: string) => string;
+  notifSouhaitReserveParQui: (qui: string, libelle: string) => string;
+  notifActivationProche: () => string;
+  notifActivationNote: () => string;
+  notifActivationCredits: () => string;
+  notifCarnetSilencieux: (j: number) => string;
+  notifMatierePourProche: (qui: string) => string;
 };
 
 export function libelleDeLaNotification(n: Notification, t: Traductions): string | null {
   const qui = typeof n.bodyParams?.person === "string" ? n.bodyParams.person : null;
   const jours = typeof n.bodyParams?.days === "number" ? n.bodyParams.days : null;
+  const libelleSouhait = typeof n.bodyParams?.wishLabel === "string" ? n.bodyParams.wishLabel : null;
+  const reservePar = typeof n.bodyParams?.by === "string" ? n.bodyParams.by : null;
+  const silence = typeof n.bodyParams?.silenceDays === "number" ? n.bodyParams.silenceDays : null;
 
   switch (n.titleKey) {
     case "notification.event_reminder":
@@ -93,6 +105,24 @@ export function libelleDeLaNotification(n: Notification, t: Traductions): string
        Absent sur un lien public, où la contribution ne vise personne. */
     case "notification.contribution_received":
       return qui !== null ? t.notifContributionRecue(qui) : t.notifContributionRecueSansNom();
+    // Même règle : le nom du réservataire ne paraît que s'il a été autorisé.
+    case "notification.wish_reserved":
+      if (libelleSouhait === null) return null;
+      return reservePar !== null
+        ? t.notifSouhaitReserveParQui(reservePar, libelleSouhait)
+        : t.notifSouhaitReserve(libelleSouhait);
+    // Les trois relances d'activation ne portent rien de variable à afficher —
+    // `envoi` ne sert qu'au serveur, à plafonner l'envoi.
+    case "notification.activation_first_person":
+      return t.notifActivationProche();
+    case "notification.activation_first_note":
+      return t.notifActivationNote();
+    case "notification.activation_unused_credits":
+      return t.notifActivationCredits();
+    case "notification.enrichment_nudge_global":
+      return silence !== null ? t.notifCarnetSilencieux(silence) : null;
+    case "notification.enrichment_nudge_person":
+      return qui !== null ? t.notifMatierePourProche(qui) : null;
     default:
       return null;
   }
@@ -124,8 +154,12 @@ export const CLES_SERVIES: readonly string[] = [
 ];
 
 export function clesSansLibelle(t: Traductions): string[] {
+  /* Le gabarit porte les paramètres des DIX clés à la fois — `wishLabel`,
+     `silenceDays` compris — pour que l'audit exerce chaque branche du
+     `switch`, pas seulement celles qui se contentent de `person`/`days`. */
   const gabarit: Notification = {
-    id: "", type: "event_reminder", titleKey: "", bodyParams: { person: "Ana", days: 3 },
+    id: "", type: "event_reminder", titleKey: "",
+    bodyParams: { person: "Ana", days: 3, wishLabel: "Un carnet", silenceDays: 30 },
     targetRoute: null, personId: null, eventOccurrenceId: null, readAt: null,
     notifiedAt: "2026-08-01T00:00:00.000Z",
   };

@@ -16,9 +16,10 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 **Vingt-sept retours relevés, tous avec leur cause retrouvée dans le code.**
 
-**Dix-sept sont corrigés** et voyagent avec ce document sur la même branche ;
-trois autres se referment par ricochet, et un s'est réglé en configuration. Le
-reste attend, et la section « les chantiers » dit dans quel ordre.
+**Dix-huit sont corrigés** et voyagent avec ce document sur la même branche ;
+quatre autres se referment par ricochet ou par une observation qui les
+tranchait déjà, et un s'est réglé en configuration. Le reste attend, et la
+section « les chantiers » dit dans quel ordre.
 
 ### Ce qui est fait
 
@@ -40,6 +41,7 @@ reste attend, et la section « les chantiers » dit dans quel ordre.
 | **8** | Le tirer-pour-rafraîchir couvre les dix-neuf écrans qui lisent le serveur |
 | **9** | Le thème vit dans les réglages, sous la langue, et s'applique au premier appui |
 | **25 (écart 1)** | Le geste se nomme « Composer l'image », pas « Approuver » — l'en-tête suit |
+| **10A** | Six clés de notification servies sans libellé (activations, relances, réservation) en ont désormais un |
 
 Le **§23** s'est réglé hors code : les clés d'IA manquaient sur la sandbox.
 
@@ -158,12 +160,16 @@ Chacune tient en peu de lignes, et aucune n'attend une décision.
 
 ### F. Bloqué sur une observation
 
-- [ ] **§10A** La cloche annonce 5, le centre ne montre rien. *Ouvrir le centre
-      et dire ce qu'il affiche : état vide dessiné, ou erreur ?*
-- [ ] **§12** L'échec de portrait. *Le `failureCode` est dans le journal du
-      conteneur.* — et le motif est servi par le serveur, jeté par l'écran.
-- [ ] **§3** Le mot de collecte. *Rouvrir le lien : le chapeau dit-il « You have
-      already answered » ?*
+- [x] **§10A** La cloche annonce 5, le centre ne montre rien. *Résolu :
+      observation faite (761c6af — le centre jette en silence ce que la
+      pastille compte), et corrigé — les six clés servies sans libellé
+      (activations, relances, réservation d'un souhait) ont désormais chacune
+      la leur.*
+- [x] **§12** L'échec de portrait. *Déjà corrigé (ff1f896) : le motif servi par
+      le serveur ne se jette plus.*
+- [x] **§3** Le mot de collecte. *Résolu par l'observation (ccd5f72) : la
+      contribution était bien en base, ma conclusion inverse partait d'une
+      prémisse fausse. Pas de panne à corriger.*
 - [ ] **§10B** Le mot d'accueil n'existe pas. *Décision produit, pas panne.*
 
 ## Ce qui est déjà tranché

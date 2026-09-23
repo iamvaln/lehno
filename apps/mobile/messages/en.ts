@@ -671,6 +671,13 @@ export const en = {
   notifMaDateAujourdhui: () => "It's your day",
   notifContributionRecue: (qui: string) => "A contribution to review: " + qui,
   notifContributionRecueSansNom: () => "A contribution to review",
+  notifSouhaitReserve: (libelle: string) => "Someone reserved: " + libelle,
+  notifSouhaitReserveParQui: (qui: string, libelle: string) => qui + " reserved: " + libelle,
+  notifActivationProche: () => "Add your first person so you never miss a date",
+  notifActivationNote: () => "Note what you already know — that's enough to start",
+  notifActivationCredits: () => "Credits are waiting — come see what Lehno can do with them",
+  notifCarnetSilencieux: (j: number) => "Nothing noted in " + j + " days",
+  notifMatierePourProche: (qui: string) => "A date is approaching, and nothing is noted about " + qui,
   notifContribution: (n: number) => n === 1
     ? "One contribution is waiting for your review"
     : n + " contributions are waiting for your review",

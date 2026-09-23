@@ -796,6 +796,20 @@ export const fr = {
   notifMaDateAujourdhui: () => "C'est votre jour",
   notifContributionRecue: (qui: string) => "Une contribution à relire : " + qui,
   notifContributionRecueSansNom: () => "Une contribution à relire",
+  /* Le réservataire n'est nommé que s'il a autorisé son nom à voyager — même
+     arbitrage que sur l'écran, et il doit se rejouer ici : le nommer sans
+     autorisation gâcherait la surprise plus sûrement qu'un écran, puisque la
+     notification s'affiche sans qu'on l'ait demandée. */
+  notifSouhaitReserve: (libelle: string) => "Quelqu'un a réservé : " + libelle,
+  notifSouhaitReserveParQui: (qui: string, libelle: string) => qui + " a réservé : " + libelle,
+  /* Les trois relances d'activation : les premiers pas d'un compte neuf,
+     bornées et plafonnées côté serveur — la copie ne porte donc pas de
+     compteur, il n'y en a jamais plus de deux. */
+  notifActivationProche: () => "Ajoutez un premier proche pour ne manquer aucune date",
+  notifActivationNote: () => "Notez ce que vous savez déjà — ça suffit pour commencer",
+  notifActivationCredits: () => "Des crédits vous attendent : venez voir ce que Lehno en fait",
+  notifCarnetSilencieux: (j: number) => "Rien de noté depuis " + j + " jours",
+  notifMatierePourProche: (qui: string) => "Une date approche, et rien n'est noté sur " + qui,
   notifContribution: (n: number) => n === 1
     ? "Une contribution attend votre relecture"
     : n + " contributions attendent votre relecture",

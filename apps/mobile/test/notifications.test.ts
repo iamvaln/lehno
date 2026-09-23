@@ -71,18 +71,54 @@ describe("ce qu'une entrée dit", () => {
     expect(libelleDeLaNotification(notif({ bodyParams: null }), fr)).toBeNull();
   });
 
-  /* CE QUE LE SERVEUR ÉMET ET QUE LA COPIE NE SAIT PAS DIRE. Ces notifications
-     partent, arrivent, et n'apparaissent nulle part — un silence qui se voit
-     d'autant moins qu'il est silencieux. Ce test le nomme. */
-  it("nomme les clés servies sans libellé", () => {
-    expect(clesSansLibelle(fr)).toEqual([
-      "notification.activation_first_person",
-      "notification.activation_first_note",
-      "notification.activation_unused_credits",
-      "notification.enrichment_nudge_global",
-      "notification.enrichment_nudge_person",
-      "notification.wish_reserved",
-    ]);
+  /* CE QUE LE SERVEUR ÉMET ET QUE LA COPIE SAIT DIRE, DÉSORMAIS : les six
+     clés qui n'apparaissaient nulle part — §10A du relevé des essais — ont
+     chacune leur libellé. Ce test garde la liste VIDE : une clé qui y
+     reviendrait serait à nouveau un silence qui ne se voit pas. */
+  it("ne laisse plus aucune clé servie sans libellé", () => {
+    expect(clesSansLibelle(fr)).toEqual([]);
+  });
+
+  it("nomme un souhait réservé, avec ou sans le nom du réservataire", () => {
+    const gabarit = notif({ titleKey: "notification.wish_reserved", eventOccurrenceId: null });
+    expect(libelleDeLaNotification(
+      { ...gabarit, bodyParams: { wishLabel: "Un vélo" } }, fr,
+    )).toBe(fr.notifSouhaitReserve("Un vélo"));
+    expect(libelleDeLaNotification(
+      { ...gabarit, bodyParams: { wishLabel: "Un vélo", by: "Ana" } }, fr,
+    )).toBe(fr.notifSouhaitReserveParQui("Ana", "Un vélo"));
+    expect(libelleDeLaNotification(
+      { ...gabarit, bodyParams: {} }, fr,
+    )).toBeNull();
+  });
+
+  it("nomme les trois relances d'activation, sans paramètre", () => {
+    const gabarit = notif({ eventOccurrenceId: null, personId: null, bodyParams: { envoi: 1 } });
+    expect(libelleDeLaNotification(
+      { ...gabarit, titleKey: "notification.activation_first_person" }, fr,
+    )).toBe(fr.notifActivationProche());
+    expect(libelleDeLaNotification(
+      { ...gabarit, titleKey: "notification.activation_first_note" }, fr,
+    )).toBe(fr.notifActivationNote());
+    expect(libelleDeLaNotification(
+      { ...gabarit, titleKey: "notification.activation_unused_credits" }, fr,
+    )).toBe(fr.notifActivationCredits());
+  });
+
+  it("nomme le carnet silencieux, avec le nombre de jours", () => {
+    const rendu = libelleDeLaNotification(notif({
+      titleKey: "notification.enrichment_nudge_global",
+      bodyParams: { silenceDays: 45 },
+    }), fr);
+    expect(rendu).toBe(fr.notifCarnetSilencieux(45));
+  });
+
+  it("nomme la relance par personne, avec son nom", () => {
+    const rendu = libelleDeLaNotification(notif({
+      titleKey: "notification.enrichment_nudge_person",
+      bodyParams: { person: "Rémi" },
+    }), fr);
+    expect(rendu).toBe(fr.notifMatierePourProche("Rémi"));
   });
 });
 
