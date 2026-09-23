@@ -50,6 +50,11 @@ module.exports = ({ config }) => ({
        interne. En production, il faut « production » — sinon les notifications
        partent vers l'environnement de test d'APNs et n'arrivent jamais. */
     ["onesignal-expo-plugin", { mode: process.env.NODE_ENV === "production" ? "production" : "development" }],
+    // Le sélecteur de date natif — §2 du relevé des essais. Sans lui,
+    // `expo prebuild` ne lie pas le module natif côté iOS et Android, et le
+    // composant ne fait rien au premier lancement d'un build fraîchement
+    // généré.
+    "@react-native-community/datetimepicker",
   ],
   extra: {
     ...(config.extra ?? {}),

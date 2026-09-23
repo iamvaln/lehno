@@ -12,10 +12,8 @@ import {
   Avatar, Banner, Button, LoadingState, ScreenHeader, SectionLabel, TextField,
   useTheme
 } from "@lehno/ui-native";
-import { Bascule } from "../composants/Bascule.js";
 import { Choix } from "../composants/Choix.js";
-import { Pastille } from "../composants/Pastille.js";
-import { RangeeDeJours } from "../composants/RangeeDeJours.js";
+import { BirthDatePicker } from "../composants/BirthDatePicker.js";
 import { wallAddressHint } from "../lib/wallAddress.js";
 import { useLangue } from "../lib/langue.js";
 import { appel, ErreurDApi , appelPublic} from "../lib/api.js";
@@ -23,7 +21,6 @@ import { messageDErreur } from "../lib/session.js";
 import { CLES_DE_GENRE, CLES_DE_THEME, THEMES_ORDONNES } from "../lib/libelles.js";
 import { poseLApparence } from "../lib/apparence.js";
 import { naissanceLue, type SaisieDeNaissance } from "../lib/carnet.js";
-import { nomsDesMois } from "../lib/evenement.js";
 import {
   corpsDeMiseAJour, doitVerifierLaDisponibilite, peutEnregistrer, pseudoPosable,
   pseudoRecevable, type SaisieDeProfil,
@@ -406,43 +403,12 @@ export default function Profil() {
         />
 
         <View>
-          {/* JOUR PUIS MOIS, comme la fiche d'un proche et l'écran d'événement
-              les posent. Un sélecteur natif exigerait une année — et c'est
-              justement elle qu'on ignore le plus souvent. */}
           <SectionLabel>{t.profilVotreNaissance}</SectionLabel>
-          <Text style={[styles.aide, { color: couleurs.textSecondary }]}>{t.evtJour}</Text>
-          <RangeeDeJours
-            actif={naissance.jour}
-            choisit={(j) => setNaissance({ ...naissance, jour: j })}
+          <BirthDatePicker
+            unknownYearLabel={t.identAnneeInconnue}
+            value={naissance}
+            onChange={setNaissance}
           />
-          <Text style={[styles.aide, { color: couleurs.textSecondary }]}>{t.evtMois}</Text>
-          <View style={styles.pastilles}>
-            {nomsDesMois(langue).map((nom, i) => (
-              <Pastille
-                key={nom}
-                actif={naissance.mois === i + 1}
-                libelle={nom}
-                appuie={() => setNaissance({ ...naissance, mois: i + 1 })}
-              />
-            ))}
-          </View>
-          <View style={{ marginTop: nativeSpace[12] }}>
-            <Bascule
-              actif={!naissance.anneeConnue}
-              libelle={t.identAnneeInconnue}
-              onBascule={() => setNaissance({ ...naissance, anneeConnue: !naissance.anneeConnue })}
-            />
-          </View>
-          {naissance.anneeConnue ? (
-            <TextField
-              label={t.identAnnee}
-              nature="annee"
-              value={naissance.annee === null ? "" : String(naissance.annee)}
-              onChangeText={(v) => setNaissance({
-                ...naissance, annee: v === "" ? null : Number(v),
-              })}
-            />
-          ) : null}
           <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilVotreNaissanceAide}</Text>
         </View>
 
@@ -497,5 +463,4 @@ const styles = StyleSheet.create({
   champs: { gap: nativeSpace[14] },
   lecture: { fontFamily: nativeFont.bodyRegular, fontSize: 14.5, marginTop: nativeSpace[6] },
   aide: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[6] },
-  pastilles: { flexDirection: "row", flexWrap: "wrap", gap: nativeSpace[8] },
 });

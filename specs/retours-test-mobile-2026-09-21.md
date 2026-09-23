@@ -16,9 +16,9 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 **Vingt-sept retours relevés, tous avec leur cause retrouvée dans le code.**
 
-**Onze sont corrigés** et voyagent avec ce document sur la même branche ; trois
-autres se referment par ricochet, et un s'est réglé en configuration. Le reste
-attend, et la section « les chantiers » dit dans quel ordre.
+**Quinze sont corrigés** et voyagent avec ce document sur la même branche ;
+trois autres se referment par ricochet, et un s'est réglé en configuration. Le
+reste attend, et la section « les chantiers » dit dans quel ordre.
 
 ### Ce qui est fait
 
@@ -31,10 +31,13 @@ attend, et la section « les chantiers » dit dans quel ordre.
 | **4** | La bande d'acquisition passe à la ligne — sept surfaces publiques |
 | **5** | « Déjà connue de… » ne se dit que si la date est là |
 | **20C** | Le code de suppression de compte part enfin par courriel |
-| **2** | Le 31 février ne franchit plus le contrat |
+| **2** | Le 31 février ne franchit plus le contrat, et se saisit désormais au sélecteur natif de la plateforme sur les trois écrans |
 | **18** | Un téléphone Android n'est plus un « appareil inconnu » |
 | **12** | L'échec d'une génération dit pourquoi |
 | **6A** | Une contribution reçue prévient le propriétaire |
+| **11** | Soi ne paraît plus jamais dans une liste envoyée au mobile — retiré du contrat, pas seulement filtré côté client |
+| **1** | L'horizon de l'accueil tient aux trois prochaines semaines |
+| **8** | Le tirer-pour-rafraîchir couvre les dix-neuf écrans qui lisent le serveur |
 
 Le **§23** s'est réglé hors code : les clés d'IA manquaient sur la sandbox.
 
@@ -127,20 +130,25 @@ Chacune tient en peu de lignes, et aucune n'attend une décision.
       « appareil inconnu ». *La même panne a été réparée pour iOS.*
 - [ ] **§4** La bande d'acquisition ne passe jamais à la ligne. *Une propriété
       flex — et elle sert les cinq surfaces publiques.*
-- [ ] **§2 (partie garde)** Le 31 février se saisit et franchit le contrat.
+- [x] **§2 (partie garde)** Le 31 février se saisit et franchit le contrat.
       *Indépendant du sélecteur, et c'est une vraie erreur de données.*
 
 ### E. Ce qui attend une décision de conception
 
-- [ ] **§1** L'horizon de l'accueil. *Fenêtre à 4 semaines, cartes à 7 jours :
-      que fait-on entre 8 et 28 ? La phrase de résumé survit-elle ?*
-- [ ] **§2 (partie forme)** Le `Select` natif — **son propre lot**, iOS et
-      Android n'ayant pas la même modalité. Il sert trois écrans.
+- [x] **§1** L'horizon de l'accueil. *Décidé : les trois prochaines semaines —
+      en deçà, état « vide » ; au-delà, état « nominal ».*
+- [x] **§2 (partie forme)** Le `Select` natif — `@react-native-community/datetimepicker`,
+      un composant partagé (`BirthDatePicker.tsx`), posé sur les deux écrans
+      qui saisissent une naissance (identité d'un proche, profil). L'écran
+      d'événement ne saisit pas de naissance et bornait déjà le jour au mois ;
+      il n'était pas concerné.
 - [ ] **§9** Le thème : le déplacer vers les réglages, et l'appliquer sous le
       doigt.
-- [ ] **§11** Retirer « Moi » du sélecteur — mais les culs-de-sac sont le vrai
-      sujet, et ils se rejoignent depuis l'onglet « Moi ».
-- [ ] **§8** L'étendue du tirer-pour-rafraîchir.
+- [x] **§11** Retirer « Moi » du sélecteur. *Fait à la racine : le serveur
+      n'envoie plus jamais la fiche de soi dans une liste, sans condition ni
+      paramètre.*
+- [x] **§8** L'étendue du tirer-pour-rafraîchir. *Dix-neuf écrans, une garde de
+      source qui les liste tous.*
 - [ ] **§7** Une fois §16 corrigé : revient-on à la liste des proches ?
 - [ ] **§20D** Que propose l'écran de fermeture quand le code n'arrive pas ?
       *Aujourd'hui : rien. Et le geste engage un droit.*
