@@ -120,6 +120,17 @@ describe("ce qu'une entrée dit", () => {
     }), fr);
     expect(rendu).toBe(fr.notifMatierePourProche("Rémi"));
   });
+
+  // §10B du relevé des essais : distincte de l'écran de bienvenue, elle vit
+  // dans le centre pour qui ferme l'application avant de l'avoir vu.
+  it("nomme l'accueil, avec le pseudo", () => {
+    const rendu = libelleDeLaNotification(notif({
+      titleKey: "notification.welcome",
+      eventOccurrenceId: null, personId: null,
+      bodyParams: { pseudo: "Awa" },
+    }), fr);
+    expect(rendu).toBe(fr.notifBienvenue("Awa"));
+  });
 });
 
 describe("aujourd'hui, puis avant", () => {

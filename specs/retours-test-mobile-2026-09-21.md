@@ -16,16 +16,10 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 **Vingt-sept retours relevés, tous avec leur cause retrouvée dans le code.**
 
-**Vingt-trois sont corrigés** et voyagent avec ce document sur la même
+**Vingt-quatre sont corrigés** et voyagent avec ce document sur la même
 branche ; un s'est réglé en configuration (§23). **Restent ouverts, et
 chacun attend une décision plutôt qu'une correction :**
 
-- **§10B** — précision à reprendre : l'écran de bienvenue après inscription
-  EXISTE et est développé (`app/(connexion)/bienvenue.tsx` —titre nommé,
-  crédits, bonus de parrainage). Ce qui manque est distinct : une entrée dans
-  le CENTRE DE NOTIFICATIONS pour saluer l'arrivée — aucun type d'accueil
-  n'existe dans l'énumération, ni au contrat ni dans `prisma/schema.prisma`.
-  À confirmer que c'est bien de ça qu'il s'agit avant de trancher.
 - **§22** — débit puis remboursement dans le journal des mouvements : décision
   prise, reste à choisir comment l'implémenter, et ça touche le crédit.
 - **§25 (écarts 2 et 3)** — séparer « Relire » de « Composer », et écrire la
@@ -44,6 +38,7 @@ est sans rapport avec ce travail — pas à cette branche de le porter.
 | **26** | Un portrait ne se dit plus « en cours » pour toujours |
 | **16** | Un onglet est une pile — **referme les §15C et §20A**. *Ne referme PAS le §7 : la pile de Proches est un choix de navigation distinct de la mauvaise inscription des onglets — voir §7, tranché séparément.* |
 | **7** | L'onglet Proches revient à la liste en le quittant, jamais à la fiche laissée ouverte |
+| **10B** | Une notification d'accueil, bilingue, dans le centre et par courriel — distincte de l'écran de bienvenue |
 | **4** | La bande d'acquisition passe à la ligne — sept surfaces publiques |
 | **5** | « Déjà connue de… » ne se dit que si la date est là |
 | **20C** | Le code de suppression de compte part enfin par courriel |
@@ -202,9 +197,13 @@ Chacune tient en peu de lignes, et aucune n'attend une décision.
 - [x] **§3** Le mot de collecte. *Résolu par l'observation (ccd5f72) : la
       contribution était bien en base, ma conclusion inverse partait d'une
       prémisse fausse. Pas de panne à corriger.*
-- [ ] **§10B** Aucun type d'accueil dans le centre de notifications. *L'écran
-      de bienvenue à l'inscription, lui, existe déjà et est développé — ce
-      n'est pas de lui qu'il s'agit. Décision produit, pas panne.*
+- [x] **§10B** Aucun type d'accueil dans le centre de notifications. *Tranché :
+      « écris-le, bilingue, avec un courriel ». Type `welcome` ajouté au
+      contrat et au schéma, toujours envoyé (comme les `activation_*` — la
+      fenêtre pour le régler n'existe pas encore), posé par `signup.service.ts`
+      hors transaction (une notification perdue ne défait pas un compte qui
+      vient de naître). Distincte de l'écran de bienvenue, qui garde son rôle
+      dans l'application.*
 
 ## Ce qui est déjà tranché
 
@@ -1042,11 +1041,30 @@ premier proche, première note, crédits inutilisés, lien de collecte,
 invitation. Mais ce sont des **relances**, envoyées par `RelancesService` selon
 ce qu'on a fait ou pas fait, pas un mot à l'arrivée.
 
-**Ce n'est donc pas une panne : c'est une fonctionnalité qui n'a jamais été
-écrite** — et il reste à établir si elle manque vraiment, l'écran de bienvenue
-couvrant peut-être déjà ce rôle. Si un accueil dans le centre doit exister en
-plus, il lui faut un type, un libellé dans les deux langues, et une écriture
-à l'inscription.
+**Ce n'était donc pas une panne : c'était une fonctionnalité qui n'avait jamais
+été écrite.**
+
+### Tranché : écrite, bilingue, avec un courriel
+
+Un type `welcome` (`prisma/schema.prisma`, migration
+`20260923170000_notification_de_bienvenue`), ajouté aussi à
+`NOTIFICATION_TYPES` et à `ALWAYS_SENT_NOTIFICATIONS` — même raison que les
+`activation_*` : elle part à l'inscription, avant que quiconque ait pu
+atteindre les réglages pour la régler.
+
+`signup.service.ts` pose deux lignes (`in_app`, `email`) **hors de la
+transaction de création** — même règle que la contribution reçue et la
+réservation d'un souhait, « au mieux, jamais au détriment » : une notification
+perdue ne doit pas défaire un compte qui vient de naître.
+
+Les deux couches de copie existantes en gagnent une clé chacune :
+`packages/i18n/src/notifications.ts` (`FR`/`EN`, pour le courriel — via
+`EnvoiService`, sans gabarit à part) et `messages/fr.ts`/`en.ts` côté mobile
+(pour le centre). `bodyParams: { pseudo }` nomme la personne dans les deux.
+
+**Distincte de l'écran de bienvenue**, qui garde son rôle entier dans
+l'application — celle-ci suit par le centre et par courriel, pour qui l'a
+fermée avant de le lire.
 
 ---
 

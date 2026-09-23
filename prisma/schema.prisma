@@ -1285,6 +1285,16 @@ enum NotificationType {
   login_code
   security
   account
+  /**
+   * L'ACCUEIL — une seule fois, à l'inscription. §10B du relevé des essais.
+   * L'écran de bienvenue existe déjà (dernier pas du parcours) ; celle-ci est
+   * distincte : une entrée dans le CENTRE et un courriel, séparés de l'écran
+   * qu'on ne revoit jamais si on quitte l'application avant de le lire.
+   * Rejoint `ALWAYS_SENT_NOTIFICATIONS` au contrat, pour la même raison que
+   * les `activation_*` : elle part avant que quiconque ait pu régler quoi
+   * que ce soit.
+   */
+  welcome
 }
 
 enum NotificationChannel {

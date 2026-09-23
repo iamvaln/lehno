@@ -82,6 +82,7 @@ type Traductions = {
   notifActivationCredits: () => string;
   notifCarnetSilencieux: (j: number) => string;
   notifMatierePourProche: (qui: string) => string;
+  notifBienvenue: (qui: string) => string;
 };
 
 export function libelleDeLaNotification(n: Notification, t: Traductions): string | null {
@@ -90,6 +91,7 @@ export function libelleDeLaNotification(n: Notification, t: Traductions): string
   const libelleSouhait = typeof n.bodyParams?.wishLabel === "string" ? n.bodyParams.wishLabel : null;
   const reservePar = typeof n.bodyParams?.by === "string" ? n.bodyParams.by : null;
   const silence = typeof n.bodyParams?.silenceDays === "number" ? n.bodyParams.silenceDays : null;
+  const pseudo = typeof n.bodyParams?.pseudo === "string" ? n.bodyParams.pseudo : null;
 
   switch (n.titleKey) {
     case "notification.event_reminder":
@@ -123,6 +125,10 @@ export function libelleDeLaNotification(n: Notification, t: Traductions): string
       return silence !== null ? t.notifCarnetSilencieux(silence) : null;
     case "notification.enrichment_nudge_person":
       return qui !== null ? t.notifMatierePourProche(qui) : null;
+    // Distincte de l'écran de bienvenue : elle vit dans le centre pour qui
+    // ferme l'application avant d'avoir vu cet écran-là.
+    case "notification.welcome":
+      return pseudo !== null ? t.notifBienvenue(pseudo) : null;
     default:
       return null;
   }
@@ -151,15 +157,19 @@ export const CLES_SERVIES: readonly string[] = [
   "notification.wish_reserved",
   "notification.own_date_reminder",
   "notification.own_date_day_of",
+  // Écrite par `signup.service.ts`, une seule fois à l'inscription.
+  "notification.welcome",
 ];
 
 export function clesSansLibelle(t: Traductions): string[] {
-  /* Le gabarit porte les paramètres des DIX clés à la fois — `wishLabel`,
-     `silenceDays` compris — pour que l'audit exerce chaque branche du
-     `switch`, pas seulement celles qui se contentent de `person`/`days`. */
+  /* Le gabarit porte les paramètres des ONZE clés à la fois — `wishLabel`,
+     `silenceDays`, `pseudo` compris — pour que l'audit exerce chaque branche
+     du `switch`, pas seulement celles qui se contentent de `person`/`days`. */
   const gabarit: Notification = {
     id: "", type: "event_reminder", titleKey: "",
-    bodyParams: { person: "Ana", days: 3, wishLabel: "Un carnet", silenceDays: 30 },
+    bodyParams: {
+      person: "Ana", days: 3, wishLabel: "Un carnet", silenceDays: 30, pseudo: "Ana",
+    },
     targetRoute: null, personId: null, eventOccurrenceId: null, readAt: null,
     notifiedAt: "2026-08-01T00:00:00.000Z",
   };

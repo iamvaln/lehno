@@ -810,6 +810,9 @@ export const fr = {
   notifActivationCredits: () => "Des crédits vous attendent : venez voir ce que Lehno en fait",
   notifCarnetSilencieux: (j: number) => "Rien de noté depuis " + j + " jours",
   notifMatierePourProche: (qui: string) => "Une date approche, et rien n'est noté sur " + qui,
+  // Distincte de l'écran de bienvenue : elle vit dans le centre, pour qui
+  // ferme l'application avant d'avoir vu cet écran-là.
+  notifBienvenue: (qui: string) => "Bienvenue, " + qui + " : votre compte est prêt",
   notifContribution: (n: number) => n === 1
     ? "Une contribution attend votre relecture"
     : n + " contributions attendent votre relecture",

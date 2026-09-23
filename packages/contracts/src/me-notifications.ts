@@ -35,6 +35,10 @@ export const NOTIFICATION_TYPES = [
   "activation_collect_link", "activation_invite",
   "generation_ready", "payment_succeeded", "payment_failed", "credits_received",
   "login_code", "security", "account",
+  /* L'ACCUEIL — une seule fois, à l'inscription (§10B du relevé des essais).
+     Distincte de l'écran de bienvenue, qui existe déjà : celle-ci vit dans le
+     centre et par courriel, pour qui le quitte avant de l'avoir lu. */
+  "welcome",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -61,10 +65,15 @@ export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
    quiconque n'ouvre les réglages, et elles se coupent par le lien du courrier.
    Les ajouter ici garde `CONFIGURABLE_NOTIFICATION_TYPES` inchangé : l'écran
    des rappels n'y gagne aucun interrupteur, ce qui est le but. */
+/* `welcome` rejoint cette liste pour la même raison que les `activation_*` :
+   elle part à l'inscription, avant que quiconque ait pu atteindre les
+   réglages pour la désactiver — un interrupteur qu'on n'atteint jamais à
+   temps est décoratif. */
 export const ALWAYS_SENT_NOTIFICATIONS = [
   "login_code", "security", "account",
   "activation_first_person", "activation_first_note", "activation_unused_credits",
   "activation_collect_link", "activation_invite",
+  "welcome",
 ] as const;
 
 export const CONFIGURABLE_NOTIFICATION_TYPES = NOTIFICATION_TYPES.filter(

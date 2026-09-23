@@ -25571,7 +25571,8 @@
                               "credits_received",
                               "login_code",
                               "security",
-                              "account"
+                              "account",
+                              "welcome"
                             ]
                           },
                           "titleKey": {

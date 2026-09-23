@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -37,6 +37,8 @@ export type Creation =
 // remède durable est qu'il n'y ait qu'une porte.
 @Injectable()
 export class SignupService {
+  private readonly logger = new Logger("inscription");
+
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(LegalService) private readonly legal: LegalService,
@@ -98,7 +100,7 @@ export class SignupService {
 
     for (let tentative = 1; tentative <= MAX_TENTATIVES; tentative++) {
       try {
-        return await this.prisma.$transaction(async (tx) => {
+        const creation = await this.prisma.$transaction(async (tx) => {
           // Verrou consultatif sur l'appareil : deux inscriptions simultanées
           // liraient sinon le plafond avant qu'aucune n'écrive.
           await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${input.deviceId}))`;
@@ -177,6 +179,15 @@ export class SignupService {
             parrainage,
           };
         });
+
+        /* HORS TRANSACTION, ET C'EST DÉLIBÉRÉ — même règle que la
+           contribution reçue et la réservation d'un souhait : « au mieux,
+           jamais au détriment ». Une notification perdue ne doit pas
+           défaire un compte qui vient de naître. */
+        if (!creation.plafondAtteint) {
+          await this.envoyerBienvenue(creation.user.id, input.username);
+        }
+        return creation;
       } catch (e) {
         const collision = e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
         if (!collision) throw e;
@@ -303,5 +314,42 @@ export class SignupService {
       parrain: parrain.displayName ?? parrain.username,
       bonusFilleul,
     };
+  }
+
+  /* L'ACCUEIL — §10B du relevé des essais. `AccountService n'a pas de port
+   * de courrier` était le défaut du §20C ; celui-ci est son inverse : aucun
+   * type d'accueil n'existait du tout, ni au contrat ni dans l'énumération.
+   *
+   * DISTINCTE DE L'ÉCRAN DE BIENVENUE, qui existe déjà et fait déjà le
+   * travail dans l'application. Celle-ci vit dans le centre de
+   * notifications et par courriel — pour qui ferme l'application avant
+   * d'avoir vu cet écran-là.
+   *
+   * DEUX LIGNES, UNE PAR CANAL, même geste que `RelancesService.poser()` :
+   * une notification par canal, pas une notification qui porterait les
+   * deux. `in_app` entre tout de suite dans le centre ; `email` attend le
+   * prochain passage d'`EnvoiService`.
+   */
+  private async envoyerBienvenue(userId: string, pseudo: string): Promise<void> {
+    for (const canal of ["in_app", "email"] as const) {
+      try {
+        await this.prisma.notification.create({
+          data: {
+            userId,
+            type: "welcome",
+            channel: canal,
+            titleKey: "notification.welcome",
+            bodyParams: { pseudo },
+            targetRoute: "/home",
+            dedupeKey: `welcome:${userId}:${canal}`,
+            scheduledFor: new Date(),
+          },
+        });
+      } catch (erreur) {
+        this.logger.warn(
+          `accueil sans notification (${canal}) pour ${userId} : ${erreur instanceof Error ? erreur.message : "cause inconnue"}`,
+        );
+      }
+    }
   }
 }

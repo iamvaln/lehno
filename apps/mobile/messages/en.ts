@@ -678,6 +678,7 @@ export const en = {
   notifActivationCredits: () => "Credits are waiting — come see what Lehno can do with them",
   notifCarnetSilencieux: (j: number) => "Nothing noted in " + j + " days",
   notifMatierePourProche: (qui: string) => "A date is approaching, and nothing is noted about " + qui,
+  notifBienvenue: (qui: string) => "Welcome, " + qui + ": your account is ready",
   notifContribution: (n: number) => n === 1
     ? "One contribution is waiting for your review"
     : n + " contributions are waiting for your review",
