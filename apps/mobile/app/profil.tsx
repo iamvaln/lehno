@@ -18,7 +18,7 @@ import { wallAddressHint } from "../lib/wallAddress.js";
 import { useLangue } from "../lib/langue.js";
 import { appel, ErreurDApi , appelPublic} from "../lib/api.js";
 import { messageDErreur } from "../lib/session.js";
-import { CLES_DE_GENRE, CLES_DE_THEME, THEMES_ORDONNES } from "../lib/libelles.js";
+import { CLES_DE_GENRE } from "../lib/libelles.js";
 import { poseLApparence } from "../lib/apparence.js";
 import { naissanceLue, type SaisieDeNaissance } from "../lib/carnet.js";
 import {
@@ -410,22 +410,6 @@ export default function Profil() {
             onChange={setNaissance}
           />
           <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilVotreNaissanceAide}</Text>
-        </View>
-
-        <View>
-          <SectionLabel>{t.champTheme}</SectionLabel>
-          {/* TROIS choix, pas deux. « Système » est la valeur par défaut au
-              contrat, et la seule qui laisse l'appareil décider : un sélecteur
-              qui n'offrirait que Clair et Sombre forcerait un réglage explicite
-              à la première visite, et le passage automatique au sombre le soir
-              serait perdu sans que personne ne l'ait demandé. */}
-          <Choix
-            options={THEMES_ORDONNES}
-            libelle={(v) => t[CLES_DE_THEME[v]]}
-            valeur={saisie.theme}
-            pose={(v) => setSaisie({ ...saisie, theme: v ?? saisie.theme })}
-          />
-          <Text style={[styles.aide, { color: couleurs.textMention }]}>{t.profilThemeAide}</Text>
         </View>
       </View>
 

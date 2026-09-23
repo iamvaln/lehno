@@ -16,7 +16,7 @@ sont en thème clair. **La différence de thème n'est pas un écart** — seuls
 
 **Vingt-sept retours relevés, tous avec leur cause retrouvée dans le code.**
 
-**Quinze sont corrigés** et voyagent avec ce document sur la même branche ;
+**Seize sont corrigés** et voyagent avec ce document sur la même branche ;
 trois autres se referment par ricochet, et un s'est réglé en configuration. Le
 reste attend, et la section « les chantiers » dit dans quel ordre.
 
@@ -38,6 +38,7 @@ reste attend, et la section « les chantiers » dit dans quel ordre.
 | **11** | Soi ne paraît plus jamais dans une liste envoyée au mobile — retiré du contrat, pas seulement filtré côté client |
 | **1** | L'horizon de l'accueil tient aux trois prochaines semaines |
 | **8** | Le tirer-pour-rafraîchir couvre les dix-neuf écrans qui lisent le serveur |
+| **9** | Le thème vit dans les réglages, sous la langue, et s'applique au premier appui |
 
 Le **§23** s'est réglé hors code : les clés d'IA manquaient sur la sandbox.
 
@@ -142,8 +143,9 @@ Chacune tient en peu de lignes, et aucune n'attend une décision.
       qui saisissent une naissance (identité d'un proche, profil). L'écran
       d'événement ne saisit pas de naissance et bornait déjà le jour au mois ;
       il n'était pas concerné.
-- [ ] **§9** Le thème : le déplacer vers les réglages, et l'appliquer sous le
-      doigt.
+- [x] **§9** Le thème : déplacé vers les réglages, sous la langue — même
+      bascule à trois valeurs, même application immédiate, même écriture
+      silencieuse au serveur.
 - [x] **§11** Retirer « Moi » du sélecteur. *Fait à la racine : le serveur
       n'envoie plus jamais la fiche de soi dans une liste, sans condition ni
       paramètre.*

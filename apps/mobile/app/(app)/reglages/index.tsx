@@ -8,7 +8,7 @@ import {
   nativeTouchMin, nativeTracking,
 } from "@lehno/tokens";
 import {
-  Banner, Card, CreditIndicator, Icon, SectionLabel, useCouleurs,
+  Banner, Card, CreditIndicator, Icon, SectionLabel, useTheme, type PreferenceDeTheme,
 } from "@lehno/ui-native";
 import { useLangue } from "../../../lib/langue.js";
 import type { Langue } from "../../../messages/index.js";
@@ -18,8 +18,10 @@ import type { Langue } from "../../../messages/index.js";
 const LANGUES: readonly Langue[] = ["fr", "en"];
 import { appel, ErreurDApi } from "../../../lib/api.js";
 import { messageDErreur } from "../../../lib/session.js";
+import { poseLApparence } from "../../../lib/apparence.js";
 import { useDrapeaux } from "../../../lib/DrapeauxProvider.js";
 import { effaceLesJetons, litLesJetons } from "../../../lib/jetons.js";
+import { CLES_DE_THEME, THEMES_ORDONNES } from "../../../lib/libelles.js";
 import { corpsDeDeconnexion, sectionsDeReglages, type Rang, type Section } from "../../../lib/reglages.js";
 
 /* Réglages — §3.28, le quatrième onglet du lancement.
@@ -39,7 +41,7 @@ import { corpsDeDeconnexion, sectionsDeReglages, type Rang, type Section } from 
  */
 export default function Reglages() {
   const { t, langue, choisis } = useLangue();
-  const couleurs = useCouleurs();
+  const { couleurs, preference, choisis: choisisLeTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const routeur = useRouter();
   const { actives } = useDrapeaux();
@@ -130,6 +132,21 @@ export default function Reglages() {
       method: "PATCH",
       body: JSON.stringify({ uiLanguage: vers }),
     }).catch(() => { /* silencieux à dessein */ });
+  };
+
+  /* LE THÈME S'APPLIQUE SOUS LE DOIGT, et non à un enregistrement — §9 du
+     relevé des essais. C'était juste pour la langue : elle gouverne aussi les
+     courriels, elle doit suivre ce que le serveur a retenu. Le thème n'est
+     qu'un réglage d'affichage, sa vérité est ce qu'on voit — l'attendre d'un
+     aller-retour réseau fait douter du bouton. */
+  const changeLeTheme = (vers: PreferenceDeTheme): void => {
+    if (vers === preference) return;
+    choisisLeTheme(vers);
+    void poseLApparence(vers);
+    void appel<unknown>("/me/profile", {
+      method: "PATCH",
+      body: JSON.stringify({ theme: vers }),
+    }).catch(() => { /* silencieux à dessein, comme la langue */ });
   };
 
   const ouvre = (rang: Rang): void => {
@@ -232,6 +249,33 @@ export default function Reglages() {
                     <Text style={[styles.basculeTexte, {
                       color: langue === cle ? couleurs.textOnAccent : couleurs.textSecondary,
                     }]}>{cle === "fr" ? "Français" : "English"}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
+          {/* LE THÈME SUIT LA LANGUE, pour la même raison : c'est ici, et pas
+              dans le profil, que vivent les réglages qui affectent l'écran
+              lui-même plutôt que le compte. */}
+          {section.cle === "compte" ? (
+            <View style={[styles.rang, {
+              borderTopWidth: nativeBorder.width, borderTopColor: couleurs.borderHairline,
+            }]}>
+              <Icon name="monitor" size={17} color={couleurs.textMention} />
+              <Text style={[styles.libelle, { color: couleurs.textBody }]}>{t.champTheme}</Text>
+              <View style={[styles.bascule, { borderColor: couleurs.borderObject }]}>
+                {THEMES_ORDONNES.map((cle) => (
+                  <Pressable
+                    key={cle}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: preference === cle }}
+                    onPress={() => changeLeTheme(cle)}
+                    style={[styles.basculeChoix, preference === cle
+                      ? { backgroundColor: couleurs.action } : null]}
+                  >
+                    <Text style={[styles.basculeTexte, {
+                      color: preference === cle ? couleurs.textOnAccent : couleurs.textSecondary,
+                    }]}>{t[CLES_DE_THEME[cle]]}</Text>
                   </Pressable>
                 ))}
               </View>
