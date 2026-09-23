@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { currencySchema } from "./me-wishes.js";
+import { dateCivileSchema } from "./me-events.js";
 import { usernameSchema } from "./profile.js";
 import { COLLECTION_LINK_TYPES, WISH_REVIEWS, SUBMISSION_STATUSES } from "./me-contributions.js";
 import { NATURES_EXPOSABLES } from "./me-app.js";
@@ -81,7 +82,7 @@ export const publicCollectFormSchema = z.object({
      PUBLIC, qui ne vise personne — les servir y révélerait une fiche à
      quiconque partage l'adresse. */
   personDisplayName: z.string().nullable(),
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  birthDate: dateCivileSchema.nullable(),
   /* Le CTA « visiter le mur de […] », discret et propre à la collecte (§5).
      Nul si le propriétaire n'a pas publié son Mur : proposer un lien vers une
      page dépubliée apprendrait qu'elle existe. */
@@ -113,7 +114,11 @@ export const submittedWishInputSchema = z.object({
  * bornes sont larges pour un humain et étroites pour un robot.
  */
 export const collectSubmitSchema = z.object({
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  // MÊME GARDE QUE CÔTÉ PRIVÉ, pour la MÊME colonne : `dateCivileSchema`
+  // refuse une date qui n'existe pas au calendrier. Sans elle, un inconnu qui
+  // dépose « 1990-02-31 » par ce lien corromprait la naissance du proche
+  // exactement comme avant que la garde n'existe côté authentifié.
+  birthDate: dateCivileSchema.optional(),
   wishes: z.array(submittedWishInputSchema).max(20).optional(),
   personalNote: z.string().trim().max(2000).optional(),
   /* « Simple champ de contact, pas un abonnement : aucune case à cocher »
@@ -165,7 +170,7 @@ export const collectSubmitResponseSchema = z.object({ submitted: z.literal(true)
 export const publicSubmissionSchema = z.object({
   createdAt: z.string(),
   status: z.enum(SUBMISSION_STATUSES),
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  birthDate: dateCivileSchema.nullable(),
   personalNote: z.string().nullable(),
   wishes: z.array(z.object({
     label: z.string(),

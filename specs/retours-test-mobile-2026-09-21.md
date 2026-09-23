@@ -47,12 +47,13 @@ Le **§23** s'est réglé hors code : les clés d'IA manquaient sur la sandbox.
 
 ### Trois portes restées ouvertes, repérées en corrigeant
 
-- **Le 31 février a une seconde porte**, et elle est PUBLIQUE.
-  `packages/contracts/src/public-mur.ts:116` déclare son propre
-  `birthDate: z.string().regex(…)` sans passer par `dateCivileSchema`, et
-  `submission.service.ts:329` l'écrit dans la MÊME colonne. Un inconnu qui
-  dépose `1990-02-31` par un lien de collecte corrompt donc la date du proche,
-  exactement comme avant la garde.
+- [x] **Le 31 février a une seconde porte**, et elle est PUBLIQUE.
+      `packages/contracts/src/public-mur.ts:116` déclarait son propre
+      `birthDate: z.string().regex(…)` sans passer par `dateCivileSchema`, et
+      `submission.service.ts:329` l'écrit dans la MÊME colonne. Un inconnu qui
+      déposait `1990-02-31` par un lien de collecte corrompait donc la date du
+      proche, exactement comme avant la garde. *Fermée : les trois occurrences
+      de la colonne dans ce fichier passent désormais par `dateCivileSchema`.*
 - **`ClosingBand.tsx:31` porte le même défaut de mise en page** que la bande
   d'acquisition — `flex: "1 1 0"` avec `minWidth: 0` dans un conteneur
   `flexWrap`. C'est l'aplat de clôture dont la bande dit reprendre la forme.
