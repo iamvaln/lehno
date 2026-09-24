@@ -3,6 +3,7 @@ import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { AccountService } from "../src/me/account.service.js";
 import { OtpService } from "../src/auth/otp.service.js";
 import { TokenService } from "../src/auth/token.service.js";
+import type { Mail, MailPort } from "../src/mail/mail.port.js";
 
 const SECRET = "c2VjcmV0LWRlLXRlc3QtMzItb2N0ZXRzLWV4YWN0ZW1lbnQ=";
 const PEPPER = "dGVzdC1wZXBwZXItMzItb2N0ZXRzLWV4YWN0ZW1lbnQhIQ==";
@@ -19,6 +20,10 @@ describe("suppression du compte", () => {
   let account: AccountService;
   let otp: OtpService;
   let tokens: TokenService;
+  // Le seul endroit d'où le code sort désormais. On le retient plutôt que de
+  // le jeter : c'est par lui que les cas ci-dessous obtiennent un code valide,
+  // exactement comme la personne l'obtient.
+  let courriels: Mail[];
   let userId: string;
   let autreUserId: string;
 
@@ -29,7 +34,9 @@ describe("suppression du compte", () => {
     await resetDatabase(db.prisma);
     otp = new OtpService(db.prisma as never, PEPPER);
     tokens = new TokenService(db.prisma as never, SECRET);
-    account = new AccountService(db.prisma as never, otp, tokens, SUPPORT);
+    courriels = [];
+    const mail: MailPort = { send: async (m) => { courriels.push(m); } };
+    account = new AccountService(db.prisma as never, otp, tokens, mail, SUPPORT);
 
     const u = await db.prisma.user.create({
       data: { email: "awa@example.com", username: "awa", referralCode: "AWA1" },
@@ -41,9 +48,21 @@ describe("suppression du compte", () => {
     autreUserId = autre.id;
   });
 
+  /* Le code tel que la personne l'obtient : LU DANS LE COURRIEL.
+     Le service ne le rend plus, et c'est délibéré — le lire ici par un autre
+     chemin rendrait ces cas verts alors même que plus rien ne partirait. */
+  async function codeParCourriel(): Promise<string> {
+    await account.demanderCode(userId);
+    const dernier = courriels.at(-1);
+    if (!dernier) throw new Error("aucun courriel envoyé : le code n'a nulle part où aller");
+    const code = /\b\d{6}\b/.exec(dernier.text)?.[0];
+    if (!code) throw new Error(`aucun code dans le courriel : ${dernier.text}`);
+    return code;
+  }
+
   /** Le parcours complet, jusqu'au code valide en main. */
   async function confirmerAvecCodeValide(extra: Record<string, unknown> = {}) {
-    const { code } = await account.demanderCode(userId);
+    const code = await codeParCourriel();
     return account.confirmer(userId, { username: "awa", code, ...extra } as never);
   }
 
@@ -143,11 +162,64 @@ describe("suppression du compte", () => {
     });
   });
 
+  /* LE DÉFAUT DU 21/09, constaté à l'appareil : l'écran demandait un code,
+     l'application accusait réception, et aucun courriel ne partait jamais. Le
+     service frappait le code et le rendait au contrôleur, qui le jetait — rien
+     n'était câblé vers la boîte, et AUCUN cas ne le vérifiait. C'est
+     exactement pourquoi ceux-ci existent : le reste de ce fichier obtenait son
+     code par la valeur de retour, donc restait vert sur un parcours mort. */
+  describe("le code par courriel, troisième temps (première moitié)", () => {
+    it("écrit à la boîte du compte, et le code reçu est celui qui vaut", async () => {
+      await account.demanderCode(userId);
+
+      expect(courriels, "aucun courriel : le parcours est mort").toHaveLength(1);
+      expect(courriels[0]!.to).toBe("awa@example.com");
+      const code = /\b\d{6}\b/.exec(courriels[0]!.text)?.[0];
+      expect(code, "le courriel ne porte pas de code").toBeDefined();
+
+      // LE point : c'est bien le code ÉMIS qui part, pas un autre. Un envoi
+      // qui porterait un code étranger laisserait le bouton gris tout pareil.
+      const accepte = await account.confirmer(userId, { username: "awa", code: code! } as never);
+      expect(accepte.requestedAt).toBeDefined();
+    });
+
+    /* Le piège gardé : rendre le code à l'appelant « pour que le contrôleur
+       en fasse ce qu'il veut ». Il n'en a rien à faire — et ce qu'on ne tient
+       pas ne se recopie pas par mégarde dans une réponse. */
+    it("ne rend pas le code à son appelant", async () => {
+      expect(await account.demanderCode(userId)).toBeUndefined();
+    });
+
+    /* Le piège gardé : écrire en français à quelqu'un qui a mis son compte en
+       anglais. Le choix du compte tranche — c'est un choix, pas un réglage
+       d'appareil, et l'appareil n'a d'ailleurs rien à dire ici : l'adresse
+       vient de la session. */
+    it("écrit dans la langue du compte", async () => {
+      await db.prisma.user.update({ where: { id: userId }, data: { uiLanguage: "en" } });
+      await account.demanderCode(userId);
+      expect(courriels[0]!.locale).toBe("en");
+      expect(courriels[0]!.text).toContain("sign-in code");
+    });
+
+    /* Le piège gardé : avaler la panne d'acheminement. Le contrôleur répond
+       « sent: true » sur le succès de cet appel ; une erreur rattrapée ici
+       annoncerait un envoi à quelqu'un qui attendrait un code jamais parti —
+       le parcours mort, à nouveau, mais avec un journal muet. */
+    it("échoue quand le courriel ne part pas, plutôt que d'annoncer un envoi", async () => {
+      account = new AccountService(
+        db.prisma as never, otp, tokens,
+        { send: async () => { throw new Error("acheminement indisponible"); } },
+        SUPPORT,
+      );
+      await expect(account.demanderCode(userId)).rejects.toThrow("acheminement indisponible");
+    });
+  });
+
   describe("la confirmation, troisième temps", () => {
     /* Le piège gardé : un seul facteur. Le pseudo seul s'affiche à l'écran
        d'à côté ; le code seul ne prouve pas qu'on a compris ce qu'on efface. */
     it("refuse un pseudo qui ne correspond pas, même avec un code valide", async () => {
-      const { code } = await account.demanderCode(userId);
+      const code = await codeParCourriel();
 
       await expect(account.confirmer(userId, { username: "karim", code }))
         .rejects.toMatchObject({ code: "validation_failed" });
@@ -159,7 +231,7 @@ describe("suppression du compte", () => {
        mail, obligeant à en redemander un. L'ordre des deux vérifications est
        une décision, pas un hasard. */
     it("ne brûle pas le code quand c'est le pseudo qui est faux", async () => {
-      const { code } = await account.demanderCode(userId);
+      const code = await codeParCourriel();
       await expect(account.confirmer(userId, { username: "pas-moi", code })).rejects.toThrow();
 
       // Le même code doit encore valoir.
@@ -324,7 +396,7 @@ describe("suppression du compte", () => {
         data: { userId, kind: "card", brand: "Visa", last4: "1111" },
       });
 
-      const { code } = await account.demanderCode(userId);
+      const code = await codeParCourriel();
       await expect(account.confirmer(userId, {
         username: "awa", code, refundPaymentMethodId: toute_neuve.id,
       })).rejects.toMatchObject({ code: "resource_inactive" });
@@ -345,7 +417,7 @@ describe("suppression du compte", () => {
         },
       });
 
-      const { code } = await account.demanderCode(userId);
+      const code = await codeParCourriel();
       await expect(account.confirmer(userId, {
         username: "awa", code, refundPaymentMethodId: autrui.id,
       })).rejects.toMatchObject({ code: "not_found" });

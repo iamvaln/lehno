@@ -257,6 +257,20 @@ const FR: Record<string, Composeur> = {
       corps: par === null ? `${souhait}.` : `${souhait}, réservé par ${par}.`,
     };
   },
+
+  /* L'ACCUEIL, une seule fois — §10B du relevé des essais. Distincte de
+     l'écran de bienvenue, qui dit déjà l'essentiel dans l'application : ce
+     texte-ci suit par le centre et par courriel, pour qui a fermé
+     l'application avant de le lire. Pas de liste de fonctionnalités — elle
+     dépend des drapeaux, et l'écran de bienvenue s'en charge déjà. */
+  "notification.welcome": (p) => {
+    const qui = texte(p, "pseudo");
+    if (qui === null) return null;
+    return {
+      titre: `Bienvenue, ${qui}`,
+      corps: "Votre compte est prêt. Ajoutez un premier proche pour commencer.",
+    };
+  },
 };
 
 // ─── Anglais ─────────────────────────────────────────────────────────────────
@@ -370,6 +384,15 @@ const EN: Record<string, Composeur> = {
     return {
       titre: "A wish is available again",
       corps: par === null ? `${souhait}.` : `${souhait}, reserved by ${par}.`,
+    };
+  },
+
+  "notification.welcome": (p) => {
+    const qui = texte(p, "pseudo");
+    if (qui === null) return null;
+    return {
+      titre: `Welcome, ${qui}`,
+      corps: "Your account is ready. Add your first person to get started.",
     };
   },
 };

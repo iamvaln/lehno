@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as fontkit from "fontkit";
@@ -63,6 +63,28 @@ export const POLICES = {
 } as const;
 
 export type Police = keyof typeof POLICES;
+
+/* LA VÉRIFICATION SE FAIT AU DÉMARRAGE, PAS AU PREMIER PORTRAIT.
+ *
+ * Ces fichiers vivent chez le mobile, et l'image Docker de l'API ne les
+ * embarquait pas : la composition levait donc `ENOENT` à l'approbation, dans un
+ * conteneur, après qu'un crédit a été pris et une image produite. Jamais au
+ * démarrage, donc jamais en intégration ; jamais en test, où le chemin résout
+ * toujours. Le portrait n'a pu se composer dans AUCUN environnement déployé.
+ *
+ * On lève ici plutôt que de laisser découvrir : c'est la même règle que le port
+ * de courrier — « mieux vaut ne pas démarrer que de fonctionner mal en
+ * silence ». Un déploiement qui oublie les polices échoue à la porte, où on le
+ * voit, au lieu d'échouer chez quelqu'un qui vient de payer.
+ */
+export function verifierLesPolices(): void {
+  const manquantes = Object.values(POLICES).filter((f) => !existsSync(join(DOSSIER, f)));
+  if (manquantes.length > 0)
+    throw new Error(
+      `polices du portrait introuvables dans ${DOSSIER} : ${manquantes.join(", ")}. ` +
+      "L'image de l'API doit embarquer apps/mobile/polices (voir apps/api/Dockerfile).",
+    );
+}
 
 /** La taille sous laquelle Fraunces ne se pose pas. La charte le dit, et une
  *  display trop petite perd exactement ce qui la distingue. */

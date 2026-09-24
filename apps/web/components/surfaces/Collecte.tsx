@@ -257,8 +257,15 @@ export function Collecte(
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                /* L'aide se choisit sur la DATE, jamais sur la nature du
+                   lien : « déjà connue de… » sous un champ vide demande de
+                   corriger une date qui n'existe nulle part, et une fiche sans
+                   date est le cas ordinaire — c'est souvent pour l'obtenir
+                   qu'on envoie le lien. Une seule condition suffit aux deux
+                   natures : le serveur tait la date sur un lien public, donc
+                   `birthDate` y est toujours nul. */
                 hint={interpoler(
-                  ouvert ? t.collecteAideDatePublic : t.collecteAideDateNominatif,
+                  birthDate ? t.collecteAideDateNominatif : t.collecteAideDateInconnue,
                   { nom: ownerDisplayName },
                 )}
               />

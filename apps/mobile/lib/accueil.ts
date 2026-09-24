@@ -27,8 +27,22 @@ import type { Home, Occurrence } from "@lehno/contracts";
  * appellerait `/me/persons` rien que pour choisir un libellé de bouton. */
 export type EtatDeLAccueil = "premier" | "vide" | "nominal";
 
+/* L'HORIZON DE L'ACCUEIL : LES TROIS PROCHAINES SEMAINES — décision du
+ * 22 septembre.
+ *
+ * `etatDeLAccueil` ne regardait QUE le nombre d'échéances rendues, jamais leur
+ * distance. Une seule à cent soixante-quatre jours suffisait à rendre
+ * « nominal » : l'écran montrait alors une carte pour une date lointaine au
+ * lieu de l'état vide que la planche prévoit — « Rien dans les semaines qui
+ * viennent » — et cet état-là devenait inatteignable dès qu'une seule date
+ * figurait au carnet. */
+export const HORIZON_ACCUEIL_JOURS = 21;
+
 export function etatDeLAccueil(home: Home): EtatDeLAccueil {
-  if (home.occurrences.length > 0) return "nominal";
+  const dansLHorizon = home.occurrences.some(
+    (e) => e.daysUntil >= 0 && e.daysUntil <= HORIZON_ACCUEIL_JOURS,
+  );
+  if (dansLHorizon) return "nominal";
   return home.hasPersons ? "vide" : "premier";
 }
 

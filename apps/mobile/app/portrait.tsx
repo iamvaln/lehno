@@ -21,7 +21,9 @@ import { useDrapeaux } from "../lib/DrapeauxProvider.js";
 import { useActionsPayantes } from "../lib/MetadonneesProvider.js";
 import { dateCourte } from "../lib/carnet.js";
 import { coutDe } from "../lib/preparation.js";
-import { delaiAvantLaProchaine, doitInterroger, phraseDeLAttente } from "../lib/generation.js";
+import {
+  delaiAvantLaProchaine, doitInterroger, motifDeLEchec, phraseDeLAttente,
+} from "../lib/generation.js";
 import {
   apresLeChoix, composition, verdict, changementDeSignature, etatDuPortrait, feuilleDePartage,
   laGrilleMontreDesImages, queViseTOn,
@@ -274,8 +276,13 @@ export default function PortraitEcran() {
         }
         /* Aboutir sans résultat, ou échouer : dans les deux cas il n'y a rien de
            neuf à montrer. On le dit en accusé et on garde le portrait qu'on
-           avait sous les yeux — le faire disparaître punirait deux fois. */
-        setEchecDuGeste(t.genErreurTitre);
+           avait sous les yeux — le faire disparaître punirait deux fois.
+
+           L'accusé DIT POURQUOI quand le serveur le dit : « n'a pas abouti »
+           seul ne laisse aucun geste à faire, et on rappuie. Le repli sur la
+           phrase d'origine vaut pour un motif absent comme pour un code qu'on
+           ne connaît pas — celui-là ne s'affiche jamais tel quel. */
+        setEchecDuGeste(motifDeLEchec(lu.generation.failureReason, t) ?? t.genErreurTitre);
       } catch (e) {
         if (!vivant) return;
         setEnProduction(null);
@@ -797,7 +804,7 @@ export default function PortraitEcran() {
           solde={solde}
           insetBas={insets.bottom}
           onConfirmer={() => { setConfirmeLaRelance(false); void refais(); }}
-          onRecharger={() => { setConfirmeLaRelance(false); routeur.push("/(app)/recharge"); }}
+          onRecharger={() => { setConfirmeLaRelance(false); routeur.push("/recharge"); }}
           onAnnuler={() => setConfirmeLaRelance(false)}
         />
       ) : null}

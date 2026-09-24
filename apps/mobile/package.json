@@ -17,6 +17,7 @@
     "@lehno/i18n": "workspace:^",
     "@lehno/tokens": "workspace:*",
     "@lehno/ui-native": "workspace:^",
+    "@react-native-community/datetimepicker": "9.1.0",
     "expo": "~57.0.16",
     "expo-application": "~57.0.3",
     "expo-constants": "~57.0.14",

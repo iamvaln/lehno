@@ -117,19 +117,11 @@ export function nomAAfficher(p: Person, moi: string): string {
   return p.isSelf ? moi : p.displayName;
 }
 
-/* LÀ OÙ L'ON CHOISIT UNE PERSONNE POUR LUI POSER UNE DATE, soi reste offert et
- * passe en tête : c'est même le seul endroit où une date à soi se pose. En tête
- * parce que c'est la fiche qu'on cherche le plus souvent le jour où elle vient
- * d'exister.
- *
- * ÉCRIRE UNE NOTE N'EN EST PAS. Une note est de la matière pour écrire À
- * quelqu'un — elle nourrit un message, un portrait, une idée de cadeau. Rien
- * aujourd'hui ne lit une note sur soi : il n'y a ni portrait de soi ni message
- * à soi. `note.tsx` fait donc `sansSoi`, et la garde grave ce choix.
- *
- * Le tri est STABLE : l'ordre reçu du serveur — alphabétique — est conservé
- * pour tout le reste.
+/* `soiDabord` A DISPARU LE 21 SEPTEMBRE, et pas déplacé : c'était le
+ * mécanisme précis que la décision révoque. Elle offrait sa propre fiche dans
+ * le sélecteur de l'écran d'événement, en tête — « le seul endroit où une
+ * date à soi se pose ». Ce n'est plus vrai : la fiche de soi se modifie
+ * depuis « Me », elle ne se choisit plus jamais dans une liste, et le serveur
+ * ne la rend d'ailleurs plus jamais à `/me/persons`. Il n'y avait donc plus
+ * rien à trier en tête.
  */
-export function soiDabord(personnes: readonly Person[]): Person[] {
-  return [...personnes].sort((a, b) => Number(b.isSelf) - Number(a.isSelf));
-}

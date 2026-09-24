@@ -20,7 +20,7 @@ import { describe, expect, it } from "vitest";
  * — pas qu'il existe trois fois, ce qui le ferait diverger.
  */
 
-const source = readFileSync(new URL("../app/(app)/accueil.tsx", import.meta.url), "utf8");
+const source = readFileSync(new URL("../app/(app)/accueil/index.tsx", import.meta.url), "utf8");
 
 describe("le bandeau de l'accueil", () => {
   it("porte le logotype", () => {
@@ -29,7 +29,7 @@ describe("le bandeau de l'accueil", () => {
 
   it("porte la cloche, qui est le seul chemin vers les notifications", () => {
     expect(source).toMatch(/<NotificationBell\b/);
-    expect(source).toMatch(/\/\(app\)\/notifications/);
+    expect(source).toMatch(/\/\(app\)\/accueil\/notifications/);
   });
 
   /* UNE SEULE FOIS. Recopié dans chaque branche, il divergerait à la première

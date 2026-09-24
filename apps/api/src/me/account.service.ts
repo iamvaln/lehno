@@ -1,6 +1,7 @@
 import type { DeletionCancelled } from "@lehno/contracts";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+import type { Locale } from "@lehno/i18n";
 import type {
   ConfirmDeletionInput, DeletionAccepted, DeletionPreview,
 } from "@lehno/contracts";
@@ -9,6 +10,8 @@ import { OtpService } from "../auth/otp.service.js";
 import { TokenService } from "../auth/token.service.js";
 import { AppError } from "../common/errors.js";
 import { origine } from "../clients/origine.js";
+import type { MailPort } from "../mail/mail.port.js";
+import { otpEmail } from "../mail/templates.js";
 import {
   DELAI_METHODE_DEFAUT_JOURS, creditsRemboursables, methodeEligibleAuRemboursement,
   montantDuRemboursement, soldeTotal,
@@ -39,6 +42,7 @@ export class AccountService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(OtpService) private readonly otp: OtpService,
     @Inject(TokenService) private readonly tokens: TokenService,
+    @Inject("MAIL_PORT") private readonly mail: MailPort,
     @Inject("CONTACT_TO_EMAIL") private readonly supportEmail: string,
   ) {}
 
@@ -60,10 +64,16 @@ export class AccountService {
     return new Date(demandeeLe.getTime() + delaiJours * JOUR_MS);
   }
 
-  private async compteActif(userId: string): Promise<{ id: string; email: string; username: string }> {
+  private async compteActif(
+    userId: string,
+  ): Promise<{ id: string; email: string; username: string; uiLanguage: string }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, username: true, status: true },
+      // `uiLanguage` est lu ici et nulle part ailleurs : c'est le seul endroit
+      // qui connaisse à la fois le compte et son adresse, donc le seul qui
+      // puisse écrire dans SA langue. Le relire dans demanderCode coûterait
+      // une seconde requête pour la même ligne.
+      select: { id: true, email: true, username: true, status: true, uiLanguage: true },
     });
     // Un jeton valide dont le compte n'existe plus : 401, pas 404. La
     // ressource n'est pas « introuvable », c'est la session qui ne vaut plus.
@@ -72,7 +82,9 @@ export class AccountService {
       throw new AppError("account_pending_deletion", "account is already being deleted");
     if (user.status === "suspended")
       throw new AppError("account_suspended", "account is suspended");
-    return { id: user.id, email: user.email, username: user.username };
+    return {
+      id: user.id, email: user.email, username: user.username, uiLanguage: user.uiLanguage,
+    };
   }
 
   /* PREMIER ET DEUXIÈME TEMPS : ce qui disparaît, et ce qu'on doit.
@@ -170,11 +182,33 @@ export class AccountService {
    * protège /auth/otp vaut ici aussi : c'est le même envoi vers la même
    * boîte. Elle est posée au contrôleur, comme pour les autres chemins qui
    * écrivent à une adresse.
+   *
+   * RIEN NE REMONTE, et c'est le point. Le code frappé ici n'a qu'une sortie,
+   * la boîte du compte : le rendre à l'appelant ferait du second facteur une
+   * formalité pour qui tient déjà le jeton, et il suffirait ensuite qu'un
+   * contrôleur recopie ce qu'il reçoit pour que la preuve d'accès à la boîte
+   * disparaisse sans que personne ne l'ait décidé. Ne pas le rendre du tout
+   * est ce qui rend cette faute impossible plutôt qu'évitée.
    */
-  async demanderCode(userId: string): Promise<{ expiresAt: Date; code: string }> {
+  async demanderCode(userId: string): Promise<void> {
     const user = await this.compteActif(userId);
-    const { code, expiresAt } = await this.otp.issue(user.email, "account_deletion");
-    return { code, expiresAt };
+    const { code } = await this.otp.issue(user.email, "account_deletion");
+    /* LE CHOIX DU COMPTE, et lui seul. À la connexion (auth.service.ts) la
+       langue de l'appareil sert de second recours, parce que l'adresse peut
+       n'appartenir à aucun compte ; ici la session dit de qui il s'agit, et
+       ce compte s'est déjà prononcé.
+
+       La comparaison plutôt que la conversion directe : `uiLanguage` est un
+       varchar, pas une énumération. Une valeur qui n'est pas une langue
+       connue donnerait `GABARITS[locale] === undefined` et ferait tomber
+       l'envoi sur une lecture de `subject` — même forme qu'envoi.service.ts. */
+    const locale = (user.uiLanguage === "en" ? "en" : "fr") as Locale;
+    const { subject, text } = otpEmail({ code, locale });
+    /* L'envoi n'est PAS rattrapé : si le courrier ne part pas, la demande
+       doit échouer. Avaler la panne rendrait « sent: true » à quelqu'un qui
+       attendrait un code jamais parti — exactement le parcours mort qu'on
+       répare ici. */
+    await this.mail.send({ to: user.email, subject, text, locale });
   }
 
   /* TROISIÈME TEMPS, seconde moitié : la confirmation.

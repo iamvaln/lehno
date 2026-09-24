@@ -18,6 +18,7 @@ describe("les phrases de notification", () => {
       "notification.wish_reservation_cancelled": { wishLabel: "Un carnet" },
       "notification.own_date_reminder": { days: 7, date: "2026-03-14", nature: "happy" },
       "notification.own_date_day_of": { date: "2026-03-14", nature: "happy" },
+      "notification.welcome": { pseudo: "Awa" },
     };
     const muettes = CLES_COMPOSEES.filter(
       (cle) => phraseDeNotification(cle, params[cle] ?? {}, locale) === null,
@@ -229,6 +230,23 @@ describe("les phrases de notification", () => {
 
     it("se tait plutôt que d'écrire un souhait sans nom", () => {
       expect(phrase({ by: "Karim" })).toBeNull();
+    });
+  });
+
+  /* L'ACCUEIL — §10B du relevé des essais. Distinct de l'écran de bienvenue :
+     ce texte suit par le centre et par courriel, pour qui a quitté
+     l'application avant de le lire. Pas de liste de fonctionnalités — elle
+     dépend des drapeaux, et l'écran de bienvenue s'en charge déjà. */
+  describe("l'accueil", () => {
+    it("nomme la personne dans le titre", () => {
+      const fr = phraseDeNotification("notification.welcome", { pseudo: "Awa" }, "fr");
+      const en = phraseDeNotification("notification.welcome", { pseudo: "Awa" }, "en");
+      expect(fr?.titre).toBe("Bienvenue, Awa");
+      expect(en?.titre).toBe("Welcome, Awa");
+    });
+
+    it("se tait plutôt que d'écrire un accueil sans nom", () => {
+      expect(phraseDeNotification("notification.welcome", {}, "fr")).toBeNull();
     });
   });
 });

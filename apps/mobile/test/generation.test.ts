@@ -5,10 +5,12 @@ import {
 } from "@lehno/contracts";
 import {
   DELAI_MAX, LIMITE_DU_MESSAGE, PREMIER_DELAI, correctionDuMessage, creditRendu,
-  delaiAvantLaProchaine, doitInterroger, marquageEnvoye, offreDeRefaire,
-  ouverture, peutEnregistrerLAjustement, phaseDuResultat, phraseDeLAttente,
-  relanceDuMessage, texteUtile,
+  delaiAvantLaProchaine, doitInterroger, marquageEnvoye, motifDeLEchec,
+  offreDeRefaire, ouverture, peutEnregistrerLAjustement, phaseDuResultat,
+  phraseDeLAttente, relanceDuMessage, texteUtile,
 } from "../lib/generation.js";
+import { en } from "../messages/en.js";
+import { fr } from "../messages/fr.js";
 
 const GENERATION = "11111111-1111-4111-8111-111111111111";
 const OCCURRENCE = "33333333-3333-4333-8333-333333333333";
@@ -321,5 +323,77 @@ describe("un jeu d'idées est un résultat", () => {
   /* Rien des deux ET abouti : c'est un vrai échec sans contenu, et il se dit. */
   it("échoue encore quand il n'y a ni l'un ni l'autre", () => {
     expect(phaseDuResultat(abouti({}))).toBe("echec");
+  });
+});
+
+/* CE QUE L'ÉCHEC DISAIT, ET CE QU'IL NE DISAIT PAS.
+ *
+ * Le bandeau ne portait que « L'écriture n'a pas abouti ». Devant lui on ne
+ * sait pas s'il faut réessayer, attendre ou changer sa demande — et le jour où
+ * c'est arrivé à l'appareil, la cause (aucune clé d'IA côté serveur) tenait en
+ * une phrase que le serveur servait déjà dans `failureReason`.
+ */
+describe("l'échec dit pourquoi", () => {
+  const T = {
+    genMotifIndisponible: "indisponible",
+    genMotifTropDeDemandes: "trop de demandes",
+    genMotifDelai: "trop long",
+    genMotifReseau: "connexion rompue",
+    genMotifRefus: "autre orientation",
+  };
+
+  it("nomme la cause quand le serveur la donne", () => {
+    expect(motifDeLEchec("generation_unavailable", T)).toBe("indisponible");
+    expect(motifDeLEchec("rate_limited", T)).toBe("trop de demandes");
+    expect(motifDeLEchec("timeout", T)).toBe("trop long");
+    expect(motifDeLEchec("network", T)).toBe("connexion rompue");
+  });
+
+  /* CE QUI NE SE DIT PAS À L'UTILISATEUR. `auth` et `billing` sont des défauts
+     de NOTRE configuration ou de NOTRE compte fournisseur. « Clé invalide » ou
+     « facturation » le renseignerait sur notre plomberie, ne lui donnerait
+     aucun geste, et lui ferait croire que son compte à lui est en défaut.
+     Ce test est la garde contre une table « simplifiée » de bonne foi. */
+  it("ne raconte pas notre plomberie", () => {
+    for (const code of ["auth", "billing"]) {
+      expect(motifDeLEchec(code, T), code).toBe(T.genMotifIndisponible);
+    }
+  });
+
+  /* Cinq fournisseurs, cinq mots pour la même situation — `echecs.ts` les
+     cherche un à un dans le corps de la réponse. Un seul geste en sort. */
+  it("range les cinq refus sous la même phrase", () => {
+    for (const code of ["content_policy", "safety", "policy", "moderation", "refus", "invalid_request"]) {
+      expect(motifDeLEchec(code, T), code).toBe("autre orientation");
+    }
+  });
+
+  /* LE PRÉFIXE QUE LE SERVEUR POSE. `codeDe` compose `refused:<motif>` pour un
+     refus de modèle : sans le retrait, la seule famille où l'on a un conseil à
+     donner serait justement celle qui tomberait toujours sur le repli. */
+  it("lit un refus tel que le serveur l'écrit", () => {
+    expect(motifDeLEchec("refused:content_policy", T)).toBe("autre orientation");
+    expect(motifDeLEchec("refused:invalid_request", T)).toBe("autre orientation");
+  });
+
+  /* NUL, JAMAIS LE CODE BRUT : `provider_unavailable` sous les yeux de
+     quelqu'un, c'est du vocabulaire interne rendu public. L'écran retombe sur
+     la phrase qu'il disait déjà. */
+  it("se tait plutôt que de montrer un code", () => {
+    expect(motifDeLEchec(null, T)).toBeNull();
+    expect(motifDeLEchec("", T)).toBeNull();
+    expect(motifDeLEchec("provider_unavailable", T)).toBeNull();
+    expect(motifDeLEchec("refused:unparseable", T)).toBeNull();
+  });
+
+  /* Les deux dictionnaires portent les cinq phrases, et elles ne se recopient
+     pas l'une l'autre : un repli d'une langue sur l'autre afficherait l'anglais
+     à quelqu'un qui lit en français. */
+  it("porte ses cinq phrases dans les deux langues", () => {
+    for (const cle of Object.keys(T) as (keyof typeof T)[]) {
+      expect(fr[cle], cle).toBeTruthy();
+      expect(en[cle], cle).toBeTruthy();
+      expect(fr[cle], cle).not.toBe(en[cle]);
+    }
   });
 });

@@ -74,6 +74,27 @@ describe("l'icône d'un appareil", () => {
     expect(natureDeLAppareil("Lehno/1.0 CFNetwork/1494.0.7 Darwin/23.4.0")).toBe("mobile");
   });
 
+  /* LE CAS JUMEAU DU PRÉCÉDENT, et il est resté ouvert pendant que l'autre
+     était réparé : on a corrigé l'iPhone qu'on avait sous les yeux sans
+     chercher l'Android.
+
+     OkHttp est le client HTTP par défaut de React Native sur Android, et il
+     s'annonce « okhttp/<version> » — rien d'autre. Ni « Android » ni
+     « Mobile » : ces mots-là, c'est un navigateur qui les écrit. CHAQUE
+     téléphone Android s'affichait donc en « appareil inconnu ». Vu à
+     l'appareil. */
+  it("reconnaît la sienne sur Android", () => {
+    expect(natureDeLAppareil("okhttp/4.9.2")).toBe("mobile");
+    expect(natureDeLAppareil("Dalvik/2.1.0 (Linux; U; Android 14) okhttp/4.9.2")).toBe("mobile");
+  });
+
+  /* L'ORDRE DES PASSES, et c'est ce cas-là qui le tient : Dalvik annonce
+     « Linux ». Reconnu après le bureau, il ferait un ordinateur du téléphone
+     qu'on tient — exactement ce que la première passe existe pour empêcher. */
+  it("ne prend pas un Dalvik pour un ordinateur", () => {
+    expect(natureDeLAppareil("Dalvik/2.1.0 (Linux; U)")).toBe("mobile");
+  });
+
   /* Une application de bureau annoncerait les deux : `Macintosh` tranche.
      Le jour où il y en a une, elle ne doit pas passer pour un téléphone. */
   it("ne prend pas un Mac pour un téléphone", () => {

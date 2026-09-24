@@ -153,19 +153,13 @@ export const listPersonsQuerySchema = z
        contourner en demandant tout le carnet annulerait la pagination qu'on
        vient de poser. */
     q: z.string().trim().min(1).max(120).optional(),
-    /* LA FICHE DE SOI, DEDANS OU DEHORS — §13.3, 12 septembre.
-     *
-     * Elle reste INCLUSE par défaut, et ce n'est pas de la timidité : c'est ce
-     * que « Pour qui » exige. Ce sélecteur ne listait que les proches, on ne
-     * pouvait donc pas inscrire sa propre date, et l'exclure d'office
-     * réinstallerait précisément le blocage que la fiche de soi a levé.
-     *
-     * L'écran du carnet, lui, veut la retirer — « mes proches » ne se compte
-     * pas soi-même. D'où l'échappatoire plutôt que l'inverse. Le `total` SUIT
-     * le filtre : un total qui compterait une fiche absente de la liste ferait
-     * afficher « Voir plus · 1 restant » sur une page complète, et personne ne
-     * comprendrait ce qui manque. */
-    includeSelf: z.boolean().optional(),
+    /* PAS DE `includeSelf` — la fiche de soi ne sort plus jamais de cette
+     * liste, sans condition. Le champ a existé du 12 au 21 septembre pour que
+     * « Pour qui » (l'écran d'événement) puisse viser sa propre date ; c'est
+     * justement cet usage qui est révoqué le 21 : la fiche de soi se modifie
+     * depuis « Me », elle ne se choisit jamais dans une liste. Retirer le
+     * paramètre plutôt que le laisser à `false` par défaut : un knob qu'on
+     * garde « au cas où » est un knob que quelqu'un finit par actionner. */
   })
   .strict();
 
