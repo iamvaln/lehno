@@ -321,6 +321,28 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     // TokenService refusent de démarrer si leur secret est vide — c'est
     // voulu : mieux vaut ne pas démarrer que hacher ou signer sans clé.
     { provide: "OTP_PEPPER", useFactory: () => process.env.OTP_PEPPER },
+    {
+      /* LE COMPTE DE REVUE des boutiques (voir otp.service.ts). Les deux
+       * variables vont ensemble : une seule posée est une configuration à
+       * moitié faite, et le silence la rendrait indétectable — on refuse de
+       * démarrer plutôt que de livrer un compte de revue dans lequel personne
+       * n'entre, ou une adresse privilégiée sans code connu.
+       *
+       * LES DEUX ABSENTES, IL N'Y A PAS DE COMPTE DE REVUE. C'est le défaut,
+       * et il doit le rester partout où aucune boutique ne l'exige. */
+      provide: "REVIEW_ACCOUNT",
+      useFactory: () => {
+        const email = process.env.LEHNO_REVIEW_EMAIL;
+        const code = process.env.LEHNO_REVIEW_OTP;
+        if (!email && !code) return null;
+        if (!email || !code)
+          throw new Error("LEHNO_REVIEW_EMAIL et LEHNO_REVIEW_OTP se posent ensemble ou pas du tout");
+        new Logger("auth").warn(
+          `compte de revue actif pour ${email} : son code de connexion est fixe.`,
+        );
+        return { email, code };
+      },
+    },
     { provide: "JWT_SECRET", useFactory: () => process.env.JWT_SECRET },
     // Clé propre à l'administration : voir AdminTokenService. Deux mondes
     // séparés jusque dans leurs signatures, sans quoi la séparation des tables
