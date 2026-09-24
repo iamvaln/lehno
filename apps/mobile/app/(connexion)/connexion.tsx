@@ -79,16 +79,18 @@ export default function Connexion() {
           <View style={styles.bandeau}><Banner intent="warning">{renvoi}</Banner></View>
         ) : null}
 
-        <View style={{ gap: nativeSpace[10] }}>
-          <Button variant="outline" full>{t.avecGoogle}</Button>
-          <Button variant="outline" full>{t.avecApple}</Button>
-        </View>
+        {/* GOOGLE ET APPLE NE SONT PAS BRANCHÉS. Les deux boutons étaient
+            posés sans `onPress` : on appuyait, il ne se passait rien. Une
+            interface muette est pire qu'une absence — elle se lit comme une
+            panne, et c'est à ce titre qu'une boutique refuse une version.
 
-        <View style={styles.separateur}>
-          <View style={[styles.filet, { backgroundColor: couleurs.borderHairline }]} />
-          <Text style={[styles.ou, { color: couleurs.textMention }]}>{t.ou}</Text>
-          <View style={[styles.filet, { backgroundColor: couleurs.borderHairline }]} />
-        </View>
+            Le séparateur « ou » part avec eux : il ne séparait que ces deux
+            boutons du champ ci-dessous, et seul au-dessus d'un unique champ
+            il ne sépare plus rien.
+
+            Les libellés et les styles restent en place : ils reviendront tels
+            quels le jour où /auth/federated sera relié côté client, et les
+            supprimer réécrirait aussi les deux fichiers de messages. */}
 
         <TextField
           label={t.champEmail}

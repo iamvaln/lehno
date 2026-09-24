@@ -1,12 +1,35 @@
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { OtpReason } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppError } from "../common/errors.js";
+import { canonicalEmail } from "../common/email.js";
 
 const TTL_MS = 10 * 60_000;
 const MAX_ATTEMPTS = 5;
 const KEY_VERSION = "v1";
+
+/* LE COMPTE DE REVUE. Google relit chaque version avant publication, et doit
+ * pouvoir entrer dans l'application. Or la connexion ne passe que par un code
+ * envoyé par courriel : le relecteur n'a pas la boîte, donc il n'entre pas, et
+ * la version est refusée pour « accès impossible ».
+ *
+ * Une seule adresse reçoit donc un code CONNU D'AVANCE. Tout le reste ne bouge
+ * pas : le code est haché comme les autres, périme au bout de dix minutes,
+ * s'annule à la demande suivante, se consomme une fois et retombe sous le
+ * plafond de cinq tentatives. Ce n'est pas un passe-droit dans la
+ * vérification — `verify` ignore jusqu'à l'existence de ce compte — c'est un
+ * tirage qui cesse d'être aléatoire pour une adresse.
+ *
+ * POURQUOI ICI ET PAS DANS `verify` : une branche dans la comparaison serait
+ * une seconde façon d'être authentifié, à côté de celle qu'on éprouve. Ici il
+ * n'y en a toujours qu'une, et le compte de revue emprunte exactement le même
+ * chemin que n'importe qui.
+ *
+ * ABSENTE, LA VARIABLE DÉSACTIVE TOUT. Un déploiement qui ne la pose pas n'a
+ * pas de compte de revue du tout — c'est le défaut, et c'est ce qui doit rester
+ * vrai partout sauf là où une boutique l'exige. */
+export type CompteDeRevue = { readonly email: string; readonly code: string };
 
 @Injectable()
 export class OtpService {
@@ -16,8 +39,22 @@ export class OtpService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject("OTP_PEPPER") private readonly pepper: string,
+    @Inject("REVIEW_ACCOUNT") private readonly revue: CompteDeRevue | null = null,
   ) {
     if (!pepper) throw new Error("OTP_PEPPER manquant : refuser de démarrer plutôt que de hacher sans clé");
+    /* Un code d'une autre forme que les six chiffres du clavier ne serait
+       jamais saisissable : mieux vaut refuser de démarrer que livrer un compte
+       de revue dans lequel personne ne peut entrer. */
+    if (revue && !/^\d{6}$/.test(revue.code))
+      throw new Error("LEHNO_REVIEW_OTP doit valoir six chiffres");
+  }
+
+  /* La comparaison est CANONIQUE des deux côtés : `issue` reçoit l'adresse
+     telle que saisie, et « Lehno.Testers@gmail.com » désigne la même boîte que
+     « lehnotesters@gmail.com ». Comparer les formes brutes laisserait le
+     relecteur dehors sur une majuscule. */
+  private estLeCompteDeRevue(email: string): boolean {
+    return this.revue !== null && canonicalEmail(email) === canonicalEmail(this.revue.email);
   }
 
   hash(code: string): string {
@@ -41,7 +78,11 @@ export class OtpService {
       where: { targetEmail: email, reason, consumedAt: null },
       data: { consumedAt: new Date() },
     });
-    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    const deRevue = this.estLeCompteDeRevue(email);
+    const code = deRevue ? this.revue!.code : String(randomInt(0, 1_000_000)).padStart(6, "0");
+    /* CHAQUE USAGE LAISSE UNE TRACE. Sans elle, le seul compte dont le code se
+       devine serait aussi le seul dont on ne saurait pas dire quand il a servi. */
+    if (deRevue) new Logger("auth").warn(`code fixe émis pour le compte de revue (${email})`);
     const expiresAt = new Date(Date.now() + TTL_MS);
     await this.prisma.otpCode.create({
       data: { targetEmail: email, reason, codeHash: this.hash(code), expiresAt },
