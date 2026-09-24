@@ -93,7 +93,7 @@ describe("surfaces publiques — HTTP de bout en bout", () => {
       // max_accounts_per_device, account_grace_period_days — qui ne doivent
       // jamais franchir cette route.
       expect(Object.keys(body).sort()).toEqual(
-        ["creditUnitPrice", "currency", "referralBonusInvited", "signupFreeCredits"].sort(),
+        ["creditUnitPrice", "currency", "referralBonusInvited", "signupFreeCredits", "siteUrl"].sort(),
       );
       expect(publicConfigSchema.safeParse(body).success).toBe(true);
     });
