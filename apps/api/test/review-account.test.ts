@@ -46,8 +46,12 @@ describe("the store review account", () => {
      into the ordinary path would hand every account away. */
   it("leaves every other address on a random code", async () => {
     const codes = new Set<string>();
+    /* NO `resetDatabase` IN THIS LOOP, and that is not a shortcut: `issue`
+       already cancels the previous code for the same address and reason, so a
+       clean base buys nothing here. Twelve clones bought eight seconds, which
+       is under the timeout alone and over it under the load of the whole
+       suite — a test that only passes when run by itself. */
     for (let i = 0; i < 12; i += 1) {
-      await resetDatabase(db.prisma);
       codes.add((await otp.issue("awa@example.com", "login")).code);
     }
     expect(codes.has(REVIEW.code)).toBe(false);
@@ -85,7 +89,6 @@ describe("the store review account", () => {
     const sans = new OtpService(db.prisma as never, PEPPER, null);
     const codes = new Set<string>();
     for (let i = 0; i < 12; i += 1) {
-      await resetDatabase(db.prisma);
       codes.add((await sans.issue(REVIEW.email, "login")).code);
     }
     expect(codes.has(REVIEW.code)).toBe(false);
