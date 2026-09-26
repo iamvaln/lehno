@@ -12,6 +12,13 @@ import { messages } from "../messages/index.js";
 // Deux réponses par langue restent des décisions à prendre (expiration des
 // crédits, accès aux contacts/agenda) : elles portent "couvre" au lieu de
 // "reponse", et gardent leur bloc « à rédiger » côté rendu.
+//
+// UNE SEULE ENTRÉE PORTE UN LIEN, et c'est un ajout de structure, pas de
+// rédaction : les mots de la passation ne bougent pas d'un caractère. La
+// suppression de compte a désormais sa page, parce qu'une boutique exige une
+// adresse joignable SANS l'application — et la réponse, qui commence par
+// « Depuis Moi », ne sert justement pas celui qui ne l'a plus. Le lien est
+// dans l'attendu pour qu'on ne le retire pas sans s'en apercevoir.
 
 const GROUPES_FR = [
   {
@@ -51,7 +58,7 @@ const GROUPES_FR = [
     titre: "Le compte",
     items: [
       { q: "Comment me connecter sans mot de passe ?", reponse: "Un code arrive sur votre adresse e-mail. Vous pouvez aussi entrer par Google ou par Apple — c'est le même compte." },
-      { q: "Comment supprimer mon compte ?", reponse: "Depuis Moi, puis Compte et sécurité. La page « Supprimer votre compte » dit ce qui disparaît et ce qui est conservé." },
+      { q: "Comment supprimer mon compte ?", reponse: "Depuis Moi, puis Compte et sécurité. La page « Supprimer votre compte » dit ce qui disparaît et ce qui est conservé.", lien: { texte: "Supprimer votre compte", href: "/fr/supprimer-mon-compte" } },
     ],
   },
 ];
@@ -94,7 +101,7 @@ const GROUPES_EN = [
     titre: "Your account",
     items: [
       { q: "How do I sign in without a password?", reponse: "A code arrives at your email address. You can also come in through Google or Apple — it's the same account." },
-      { q: "How do I delete my account?", reponse: "From Me, then Account and security. The \"Delete your account\" page says what disappears and what is kept." },
+      { q: "How do I delete my account?", reponse: "From Me, then Account and security. The \"Delete your account\" page says what disappears and what is kept.", lien: { texte: "Delete your account", href: "/en/delete-my-account" } },
     ],
   },
 ];

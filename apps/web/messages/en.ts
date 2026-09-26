@@ -174,11 +174,45 @@ export const en: typeof fr = {
         titre: "Your account",
         items: [
           { q: "How do I sign in without a password?", reponse: "A code arrives at your email address. You can also come in through Google or Apple — it's the same account." },
-          { q: "How do I delete my account?", reponse: "From Me, then Account and security. The \"Delete your account\" page says what disappears and what is kept." },
+          { q: "How do I delete my account?", reponse: "From Me, then Account and security. The \"Delete your account\" page says what disappears and what is kept.", lien: { texte: "Delete your account", href: "/en/delete-my-account" } },
         ],
       },
     ],
   },
+  suppressionKicker: "Your account",
+  suppressionTitre: "Delete your account",
+  suppressionChapeau: "Two ways, depending on whether you still have the app. The second needs nothing installed.",
+  suppressionVoies: [
+    {
+      titre: "From the app",
+      texte: "Open Settings, then \u201cAccount and security\u201d, then \u201cDelete your account\u201d. Before you confirm, the screen tells you how many contacts, notes and dates will go, and what you will be refunded if you have purchased credits left.",
+      adresse: null,
+    },
+    {
+      titre: "Without the app",
+      texte: "If you no longer have it \u2014 phone lost, reset, or uninstalled \u2014 write to us from your account\u2019s email address, with \u201cDelete my account\u201d as the subject. We check the request really comes from you, then handle it within thirty days.",
+      adresse: "contact@lehno.io",
+    },
+  ],
+  suppressionEffetTitre: "What happens next",
+  suppressionEffets: [
+    {
+      titre: "Thirty days to change your mind",
+      texte: "The account closes straight away, but nothing is erased yet. Sign in again within that window and everything comes back untouched. After thirty days the erasure is final and we can no longer restore anything.",
+    },
+    {
+      titre: "What goes",
+      texte: "Your contacts and their details, your notes, your dates and their reminders, your wishlists, the messages you had written for you, your public Walls, your email address and your username.",
+    },
+    {
+      titre: "What we keep",
+      texte: "The accounting records of payments you made, for as long as the law requires. They no longer carry your name or your address, and serve only to account for a transaction to the tax authorities.",
+    },
+    {
+      titre: "Your credits",
+      texte: "Credits you bought and did not spend are refunded to the payment method you used. Credits we gave you \u2014 on signing up, through referrals \u2014 are not: they cost you nothing.",
+    },
+  ],
   mentions: "Legal Notice",
 
   // Legal pages (components/legal/LegalPage.tsx): the side table of contents.
