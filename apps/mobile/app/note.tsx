@@ -400,9 +400,17 @@ export default function Note() {
                       ))}
                     </ScrollView>
                   ) : (
-                    <Text style={[styles.vide, { color: couleurs.textMention }]}>
-                      {t.videRechercheTitre}
-                    </Text>
+                    /* MÊME IMPASSE QUE DANS LA FEUILLE DE DATE, et même sortie.
+                       « Rien sous ce nom » en texte nu laissait la question
+                       POUR QUI sans réponse possible sur un carnet vide. */
+                    <View style={styles.videAvecIssue}>
+                      <Text style={[styles.vide, { color: couleurs.textMention }]}>
+                        {t.videRechercheTitre}
+                      </Text>
+                      <Button variant="text" onPress={() => routeur.push("/(app)/proches/identite")}>
+                        {t.ajouterCeProche}
+                      </Button>
+                    </View>
                   )}
                 </View>
               ) : null}
@@ -586,6 +594,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: nativeSpace[12], minHeight: nativeTouchMin,
   },
   rangTexte: { fontFamily: nativeFont.bodyRegular, fontSize: 14.5 },
+  videAvecIssue: { alignItems: "center", paddingVertical: nativeSpace[8] },
   vide: { fontFamily: nativeFont.bodyRegular, fontSize: 13.5, padding: nativeSpace[14] },
   faute: { fontFamily: nativeFont.bodyRegular, fontSize: 12.5, marginTop: nativeSpace[8] },
   rangee: { gap: nativeSpace[6], paddingTop: nativeSpace[8], paddingRight: nativeSpace[4] },

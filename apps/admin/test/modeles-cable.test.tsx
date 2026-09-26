@@ -30,6 +30,12 @@ const CATALOGUE = {
     modele("m-2", "deepseek", "deepseek-chat", {
       emplois: [{ tache: "message", rang: 2 }],
     }),
+    /* UN MODÈLE D'IMAGE, et c'est le cas qui distingue tout : lui seul porte un
+       coût par image et une qualité, et lui seul doit les voir proposés. */
+    modele("m-3", "openai", "gpt-image-1", {
+      capacite: "image", coutParImage: 0.04, qualiteImage: "medium",
+      emplois: [{ tache: "portrait_image", rang: 1 }],
+    }),
   ],
 };
 
@@ -195,6 +201,100 @@ describe("les modèles d'IA", () => {
       expect(corps).toEqual({
         id: "m-1", enabled: false, reason: "Coût trop élevé", reasonCode: "cost_too_high",
       });
+    });
+  });
+
+  /* ─── LES TARIFS ─────────────────────────────────────────────────────────
+   *
+   * Ils vivaient en base avec une route pour les écrire et AUCUN écran pour
+   * l'atteindre. Un modèle d'image non tarifé laissait la dépense de toute la
+   * voie visuelle à zéro — l'appel le plus cher du dispositif, compté pour
+   * rien. */
+  it("règle le coût par image, et n'envoie que ce qui a bougé", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur({
+      "/admin/ai-routes": () => reponse(200, CHAINES),
+      "/admin/ai-models": (_url, init) => (init?.method === "PATCH"
+        ? reponse(200, { id: "m-3" })
+        : reponse(200, CATALOGUE)),
+    });
+    await ouvrir(utilisateur);
+    await attendreCatalogue();
+
+    const ligne = (await screen.findByText("gpt-image-1")).closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: t.modeles.tarifer }));
+
+    const parImage = screen.getByLabelText(t.modeles.col.parImage);
+    await utilisateur.clear(parImage);
+    await utilisateur.type(parImage, "0.08");
+    await utilisateur.selectOptions(
+      screen.getByLabelText(t.confirmation.motif), t.modeles.dialogueTarif.motifs[0]!,
+    );
+    await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
+
+    await waitFor(() => {
+      expect(ecritures(appels)).toHaveLength(1);
+      const corps = JSON.parse((ecritures(appels)[0]?.[1] as RequestInit).body as string);
+      /* SEUL LE COÛT PAR IMAGE PART. Un PATCH complet réécrirait la qualité
+         qu'on n'a pas touchée, et le journal d'audit dirait qu'on l'a changée
+         le jour où l'on a réglé le prix. */
+      expect(corps).toMatchObject({ id: "m-3", costPerImage: 0.08 });
+      expect(corps["imageQuality"]).toBeUndefined();
+      expect(corps["costInput"]).toBeUndefined();
+    });
+  });
+
+  /* LES DEUX CHAMPS D'IMAGE N'ONT AUCUN SENS SUR UN MODÈLE DE TEXTE. Les offrir
+     ferait saisir un réglage que le fournisseur ignore, et qui n'apparaîtrait
+     jamais nulle part. */
+  it("n'offre ni coût par image ni qualité sur un modèle de texte", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    /* `LECTURES` ENTIER, pas la seule chaîne : le faux serveur ne fusionne aucun
+       défaut, et une route omise retombe sur la réponse fourre-tout — l'analyse
+       échoue, l'écran ne rend plus, et l'épreuve se plaint de ne pas trouver le
+       tableau. Le message envoie chercher au mauvais endroit. */
+    serveur(LECTURES);
+    await ouvrir(utilisateur);
+    await attendreCatalogue();
+
+    const ligne = (await attendreCatalogue()).closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: t.modeles.tarifer }));
+
+    expect(screen.getByLabelText(t.modeles.col.entree)).toBeInTheDocument();
+    expect(screen.queryByLabelText(t.modeles.col.parImage)).toBeNull();
+    expect(screen.queryByLabelText(t.modeles.col.qualite)).toBeNull();
+  });
+
+  /* « AU FOURNISSEUR » SE DIT `null`, PAS CHAÎNE VIDE. Le serveur n'accepte que
+     les trois valeurs ou le nul : une chaîne vide serait refusée en 400 sur un
+     réglage qu'on vient d'offrir. */
+  it("rend la qualité au fournisseur avec un nul, jamais une chaîne vide", async () => {
+    const utilisateur = userEvent.setup({ delay: null });
+    const appels = serveur({
+      "/admin/ai-routes": () => reponse(200, CHAINES),
+      "/admin/ai-models": (_url, init) => (init?.method === "PATCH"
+        ? reponse(200, { id: "m-3" })
+        : reponse(200, CATALOGUE)),
+    });
+    await ouvrir(utilisateur);
+    await attendreCatalogue();
+
+    const ligne = (await screen.findByText("gpt-image-1")).closest("tr") as HTMLElement;
+    await utilisateur.click(within(ligne).getByRole("button", { name: t.table.actions }));
+    await utilisateur.click(await screen.findByRole("menuitem", { name: t.modeles.tarifer }));
+
+    await utilisateur.selectOptions(screen.getByLabelText(t.modeles.col.qualite), "");
+    await utilisateur.selectOptions(
+      screen.getByLabelText(t.confirmation.motif), t.modeles.dialogueTarif.motifs[0]!,
+    );
+    await utilisateur.click(screen.getByRole("button", { name: t.confirmation.confirmer }));
+
+    await waitFor(() => {
+      expect(ecritures(appels)).toHaveLength(1);
+      const corps = JSON.parse((ecritures(appels)[0]?.[1] as RequestInit).body as string);
+      expect(corps["imageQuality"]).toBeNull();
     });
   });
 

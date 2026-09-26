@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { withDatabase, resetDatabase, type TestDb } from "./db.js";
 import { DataExportService } from "../src/me/data-export.service.js";
+import { StockageMemoire } from "../src/stockage/memoire.adapter.js";
+import type { Mail, MailPort } from "../src/mail/mail.port.js";
 
 /* L'export de ses données — politique de confidentialité §8, spec technique
  * §5.7 et §9.11.
@@ -20,13 +22,18 @@ describe("export de données", () => {
   let exports: DataExportService;
   let userId: string;
   let autreUserId: string;
+  let coffre: StockageMemoire;
+  let partis: Mail[];
+  const poste: MailPort = { send: async (m) => { partis.push(m); } };
 
   beforeAll(async () => { db = await withDatabase(); }, 120_000);
   afterAll(async () => { await db.close(); });
 
   beforeEach(async () => {
     await resetDatabase(db.prisma);
-    exports = new DataExportService(db.prisma as never);
+    coffre = new StockageMemoire();
+    partis = [];
+    exports = new DataExportService(db.prisma as never, coffre, poste);
 
     const u = await db.prisma.user.create({
       data: { email: "awa@example.com", username: "awa", referralCode: "AWA1" },
@@ -241,6 +248,129 @@ describe("export de données", () => {
       expect(doc.persons).toHaveLength(0);
       expect(doc.notes).toHaveLength(0);
       expect(JSON.stringify(doc)).not.toContain("note privée de Karim");
+    });
+  });
+
+  /* CE QUI MANQUAIT ENTIÈREMENT : `demander()` posait une ligne `pending`, et
+   * rien, nulle part, ne la reprenait. Le fichier ne se composait pas, aucun
+   * courriel ne partait, `completedAt` ne se posait jamais — et comme
+   * `demander()` refuse une seconde demande tant qu'une est `pending`, le
+   * bouton de l'écran restait gris pour toujours dès le premier essai.
+   *
+   * Ces cas gardent la seule chose qui compte une fois la ligne reprise :
+   * l'ORDRE des trois écritures (fichier, puis lien, puis courriel), et ce
+   * qui doit se passer quand l'une d'elles casse.
+   */
+  describe("le traitement des demandes en attente", () => {
+    it("compose le fichier, l'envoie par courriel, et marque la ligne prête", async () => {
+      const p = await db.prisma.person.create({ data: { userId, displayName: "Maman" } });
+      await db.prisma.note.create({ data: { personId: p.id, content: "aime le jasmin" } });
+      const demande = await exports.demander(userId);
+
+      const resultat = await exports.traiterLesEnAttente();
+      expect(resultat).toEqual({ produites: 1, echouees: 0 });
+
+      const relue = await db.prisma.dataExportRequest.findUniqueOrThrow({ where: { id: demande.id } });
+      expect(relue.status).toBe("ready");
+      expect(relue.completedAt).not.toBeNull();
+      expect(relue.expiresAt).not.toBeNull();
+      // La CLÉ, jamais une URL : la même règle que `Payment.proofKey`.
+      expect(relue.fileKey).toMatch(/^exports\//);
+
+      expect(partis).toHaveLength(1);
+      expect(partis[0]?.to).toBe("awa@example.com");
+      // Le contenu réel, retrouvé par la clé posée en base — pas une
+      // affirmation sur la forme du courriel, une vérification que le fichier
+      // au bout du lien est CELUI qu'on vient d'assembler.
+      const ecrit = coffre.contenuDe(relue.fileKey!);
+      expect(ecrit).toBeDefined();
+      expect(JSON.parse(ecrit!.toString("utf8")).notes[0].content).toBe("aime le jasmin");
+    });
+
+    it("dit où mène le fichier dans le corps du courriel", async () => {
+      await exports.demander(userId);
+      await exports.traiterLesEnAttente();
+      expect(partis[0]?.text).toContain("memoire://lecture/exports/");
+    });
+
+    it("choisit la langue du compte, jamais un recours à l'appareil", async () => {
+      await db.prisma.user.update({ where: { id: userId }, data: { uiLanguage: "en" } });
+      await exports.demander(userId);
+      await exports.traiterLesEnAttente();
+      expect(partis[0]?.subject).toBe("Your data");
+    });
+
+    it("ne rechigne pas devant un compte resté en français par défaut", async () => {
+      await exports.demander(userId);
+      await exports.traiterLesEnAttente();
+      expect(partis[0]?.subject).toBe("Vos données");
+    });
+
+    it("traite plusieurs demandes dans le même passage, chacune vers sa boîte", async () => {
+      await exports.demander(userId);
+      await exports.demander(autreUserId);
+      const resultat = await exports.traiterLesEnAttente();
+      expect(resultat).toEqual({ produites: 2, echouees: 0 });
+      expect(partis.map((m) => m.to).sort()).toEqual(["awa@example.com", "karim-secret@example.com"]);
+    });
+
+    it("laisse une préparation déjà prête intacte, et n'en refait pas le courriel", async () => {
+      const demande = await exports.demander(userId);
+      await db.prisma.dataExportRequest.update({
+        where: { id: demande.id }, data: { status: "ready", completedAt: new Date() },
+      });
+      const resultat = await exports.traiterLesEnAttente();
+      expect(resultat).toEqual({ produites: 0, echouees: 0 });
+      expect(partis).toHaveLength(0);
+    });
+
+    /* LE PIÈGE QU'ON NE ROUVRE PAS : une ligne en échec doit basculer en
+       `failed`, jamais rester `pending` — sinon on recrée exactement le
+       verrou qu'on répare, sous une autre forme, et plus personne ne peut
+       jamais redemander un export sur ce compte. */
+    it("bascule en échec, jamais en attente indéfinie, quand l'envoi casse", async () => {
+      const casse: MailPort = {
+        send: async () => { throw new Error("le courrielleur est indisponible"); },
+      };
+      const exportsCasses = new DataExportService(db.prisma as never, coffre, casse);
+      const demande = await exportsCasses.demander(userId);
+
+      const resultat = await exportsCasses.traiterLesEnAttente();
+      expect(resultat).toEqual({ produites: 0, echouees: 1 });
+
+      const relue = await db.prisma.dataExportRequest.findUniqueOrThrow({ where: { id: demande.id } });
+      expect(relue.status).toBe("failed");
+      // Et la porte se rouvre : demander()  refuse seulement sur `pending`.
+      await expect(exportsCasses.demander(userId)).resolves.toBeDefined();
+    });
+
+    /* LA COURSE ENTRE DEUX PASSAGES, simulée sans en lancer deux pour de vrai :
+       le port de courrier fait exactement ce qu'un second passage aurait fait
+       AVANT que celui-ci n'écrive son échec — poser `ready`, puis c'est
+       seulement APRÈS que ce premier envoi lève. La garde `status: "pending"`
+       de `updateMany` doit alors refuser de rétrograder une ligne que
+       quelqu'un d'autre a déjà menée à terme entre-temps. */
+    it("ne rétrograde pas une ligne qu'un autre passage a déjà terminée", async () => {
+      const demande = await exports.demander(userId);
+      const concurrent: MailPort = {
+        send: async () => {
+          await db.prisma.dataExportRequest.update({
+            where: { id: demande.id }, data: { status: "ready", completedAt: new Date() },
+          });
+          throw new Error("le premier passage a fini avant de le savoir");
+        },
+      };
+      const exportsConcurrents = new DataExportService(db.prisma as never, coffre, concurrent);
+
+      await exportsConcurrents.traiterLesEnAttente();
+
+      const relue = await db.prisma.dataExportRequest.findUniqueOrThrow({ where: { id: demande.id } });
+      expect(relue.status).toBe("ready");
+    });
+
+    it("ne fait rien sur une file vide", async () => {
+      await expect(exports.traiterLesEnAttente()).resolves.toEqual({ produites: 0, echouees: 0 });
+      expect(partis).toHaveLength(0);
     });
   });
 });

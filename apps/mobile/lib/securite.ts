@@ -52,7 +52,23 @@ export function natureDeLAppareil(userAgent: string | null): NatureDAppareil {
    *    « Linux » d'abord ferait un ordinateur de chaque téléphone Android.
    * 2. Puis le bureau.
    * 3. Puis, seulement, NOTRE PROPRE EN-TÊTE. */
-  if (/iphone|ipod|android|mobile/.test(ua)) return "mobile";
+
+  /* `okhttp` / `dalvik` — NOTRE APPLICATION ANDROID, et c'est le CAS JUMEAU de
+   * `cfnetwork` / `darwin` plus bas : la panne a été réparée sur l'iPhone où on
+   * l'avait vue, et l'autre moitié du parc est restée en plan.
+   *
+   * OkHttp est le client HTTP par défaut de React Native sur Android, et il
+   * s'annonce « okhttp/<version> » — rien d'autre. Ni « Android » ni
+   * « Mobile » : ces mots-là, c'est un NAVIGATEUR qui les écrit, et il n'y en a
+   * pas ici. Chaque téléphone Android portait donc l'icône « appareil
+   * inconnu », sur l'écran qu'on ouvre justement pour retrouver SA ligne.
+   *
+   * `dalvik` avec lui — certaines versions envoient « Dalvik/2.1.0 (Linux; U;
+   * Android 14) » —, et sa place est ICI, pas dans la passe 3 où vit son
+   * jumeau : cet en-tête dit « Linux », donc reconnu après le bureau il ferait
+   * un ordinateur du téléphone qu'on tient. C'est le piège même que l'ordre des
+   * passes existe pour éviter. */
+  if (/iphone|ipod|android|mobile|okhttp|dalvik/.test(ua)) return "mobile";
   if (/macintosh|windows|linux|x11|ipad/.test(ua)) return "ordinateur";
 
   /* `cfnetwork` / `darwin` — l'en-tête de notre application iOS.

@@ -11,7 +11,7 @@ function echeance(jours: number, n = jours): Occurrence {
     id: `1111111${n}-1111-4111-8111-111111111111`,
     eventId: "22222222-2222-4222-8222-222222222222",
     personId: "33333333-3333-4333-8333-333333333333",
-    personDisplayName: `Proche ${n}`, isSelf: false, kind: "birthday", nature: "happy",
+    personDisplayName: `Proche ${n}`, isSelf: false, draftMessageId: null, kind: "birthday", nature: "happy",
     label: null, occurrenceDate: "2026-09-01", occurrenceYear: 2026,
     status: "upcoming", daysUntil: jours, age: null,
   };
@@ -158,6 +158,23 @@ describe("les deux états vides ne se ressemblent pas", () => {
   it("une échéance suffit à sortir des deux", () => {
     expect(etatDeLAccueil(home([echeance(3)], true))).toBe("nominal");
     expect(etatDeLAccueil(home([echeance(3)], false))).toBe("nominal");
+  });
+
+  /* LE DÉFAUT D'ORIGINE, gelé : `etatDeLAccueil` ne regardait que le nombre
+     d'échéances, jamais leur distance. Une seule à cent soixante-quatre jours
+     suffisait à rendre « nominal » — l'accueil montrait alors une carte
+     lointaine au lieu de l'état vide que la planche prévoit, et cet état
+     devenait inatteignable dès qu'une seule date figurait au carnet. Vu à
+     l'appareil : « Rien avant le 4 mars » suivi d'une carte « Awa · J−164 ». */
+  it("une échéance hors de l'horizon ne sort pas de l'état vide", () => {
+    expect(etatDeLAccueil(home([echeance(164)], true))).toBe("vide");
+  });
+
+  /* LA BORNE ELLE-MÊME : décision du 22 septembre, les trois prochaines
+     semaines. Le vingt-et-unième jour compte encore, le vingt-deuxième non. */
+  it("l'horizon tient à vingt et un jours, pas un de plus", () => {
+    expect(etatDeLAccueil(home([echeance(21)], true))).toBe("nominal");
+    expect(etatDeLAccueil(home([echeance(22)], true))).toBe("vide");
   });
 });
 

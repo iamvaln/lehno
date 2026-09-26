@@ -1285,6 +1285,16 @@ enum NotificationType {
   login_code
   security
   account
+  /**
+   * L'ACCUEIL — une seule fois, à l'inscription. §10B du relevé des essais.
+   * L'écran de bienvenue existe déjà (dernier pas du parcours) ; celle-ci est
+   * distincte : une entrée dans le CENTRE et un courriel, séparés de l'écran
+   * qu'on ne revoit jamais si on quitte l'application avant de le lire.
+   * Rejoint `ALWAYS_SENT_NOTIFICATIONS` au contrat, pour la même raison que
+   * les `activation_*` : elle part avant que quiconque ait pu régler quoi
+   * que ce soit.
+   */
+  welcome
 }
 
 enum NotificationChannel {
@@ -1448,11 +1458,15 @@ model RateLimitHit {
   @@map("rate_limit_hit")
 }
 
+// `fileKey`, jamais `fileUrl` : la même règle que `Payment.proofKey` et le
+// port de stockage lui-même — « ce qu'on manipule est une clé, jamais une
+// URL ». Une URL présignée expire ; l'URL réellement envoyée par courriel
+// n'est donc pas ici, elle se recompose depuis la clé à chaque lecture.
 model DataExportRequest {
   id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String           @map("user_id") @db.Uuid
   status      DataExportStatus @default(pending)
-  fileUrl     String?          @map("file_url")
+  fileKey     String?          @map("file_key")
   expiresAt   DateTime?        @map("expires_at") @db.Timestamptz
   completedAt DateTime?        @map("completed_at") @db.Timestamptz
   createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz

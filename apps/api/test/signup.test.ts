@@ -217,4 +217,50 @@ describe("la création de compte", () => {
       expect(parrainagesDeA).toBe(1);
     });
   });
+
+  // §10B du relevé des essais : rien ne saluait l'arrivée hors de l'écran de
+  // bienvenue. Distinct de lui — celui-ci vit dans le centre et par courriel.
+  describe("l'accueil", () => {
+    it("pose une entrée dans le centre et une au courrier, pas une troisième", async () => {
+      const r = await creer();
+      if (r.plafondAtteint) throw new Error("plafond inattendu");
+
+      const lignes = await db.prisma.notification.findMany({
+        where: { userId: r.user.id, type: "welcome" },
+      });
+      expect(lignes.map((l) => l.channel).sort()).toEqual(["email", "in_app"]);
+    });
+
+    it("nomme la personne par son pseudo", async () => {
+      const r = await creer({ username: "u_pseudo_temoin" });
+      if (r.plafondAtteint) throw new Error("plafond inattendu");
+
+      const ligne = await db.prisma.notification.findFirstOrThrow({
+        where: { userId: r.user.id, type: "welcome", channel: "in_app" },
+      });
+      expect(ligne.bodyParams).toEqual({ pseudo: "u_pseudo_temoin" });
+    });
+
+    // Toujours envoyée : la fenêtre pour la régler n'existe même pas encore,
+    // elle part avant que quiconque ait pu ouvrir les réglages.
+    it("part sans lire de préférence", async () => {
+      const r = await creer();
+      if (r.plafondAtteint) throw new Error("plafond inattendu");
+      const lignes = await db.prisma.notification.count({
+        where: { userId: r.user.id, type: "welcome" },
+      });
+      expect(lignes).toBe(2);
+    });
+
+    // Un plafond atteint ne crée aucun compte : rien à accueillir.
+    it("ne pose rien quand le plafond est atteint", async () => {
+      const appareil = randomBytes(8).toString("hex");
+      for (let i = 0; i < 3; i++) await creer({ deviceId: appareil });
+      const avant = await db.prisma.notification.count({ where: { type: "welcome" } });
+
+      const r = await creer({ deviceId: appareil });
+      expect(r.plafondAtteint).toBe(true);
+      expect(await db.prisma.notification.count({ where: { type: "welcome" } })).toBe(avant);
+    });
+  });
 });

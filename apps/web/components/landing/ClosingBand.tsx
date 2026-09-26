@@ -28,7 +28,11 @@ export function ClosingBand(
           style={{
             fontWeight: "var(--font-display-medium)", fontSize: "clamp(34px,6vw,60px)", lineHeight: "var(--leading-display)",
             letterSpacing: "var(--tracking-display)", margin: 0,
-            flex: "1 1 0", minWidth: 0, textWrap: "balance",
+            // Même défaut que la bande d'acquisition, même correction : en
+            // `1 1 0` avec `minWidth: 0`, le titre cède toute sa largeur plutôt
+            // que de pousser l'action à la ligne, et le `flexWrap` du conteneur
+            // ne se déclenche jamais. La base de 20rem est ce qui le déclenche.
+            flex: "1 1 20rem", textWrap: "balance",
           }}
         >
           {t.finTitre}

@@ -26,13 +26,13 @@ import { describe, expect, it } from "vitest";
    forme unique : borner l'entrée et nommer le passé règlent la même question
    par deux chemins, et les deux sont justes. */
 const GARDES: Record<string, string> = {
-  "app/(app)/dates.tsx": "countdownShape(",
+  "app/(app)/dates/index.tsx": "countdownShape(",
   /* Celui-ci ne se garde pas dans l'écran mais en AMONT : il ne rend que ce que
      `composeLAccueil` lui donne, et cette fonction écarte le passé — « ce qui
      approche » n'est jamais derrière. La garde est donc l'appel lui-même. */
-  "app/(app)/accueil.tsx": "composeLAccueil(",
-  "app/(app)/occasion.tsx": "t.occPassee",
-  "app/(app)/reprises.tsx": "t.repriseDepassee",
+  "app/(app)/accueil/index.tsx": "composeLAccueil(",
+  "app/occasion.tsx": "t.occPassee",
+  "app/reprises.tsx": "t.repriseDepassee",
   "app/(app)/proches/index.tsx": "presseAssezPourSAfficher(",
   "app/(app)/proches/recherche.tsx": "presseAssezPourSAfficher(",
   "app/(app)/proches/[id].tsx": "presseAssezPourSAfficher(",

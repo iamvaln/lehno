@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -54,7 +54,7 @@ interface Sortie {
   // Le drapeau qui la gouverne, ou rien quand elle est du socle.
   drapeau: string | null;
   // La route, ou `null` tant que l'écran n'existe pas dans ce lot.
-  route: "/(app)/proches/identite" | "/(app)/collecte" | "/portrait" | null;
+  route: "/(app)/proches/identite" | "/(app)/proches/collecte" | "/portrait" | null;
   /* CE QUE LA SORTIE PASSE, quand ce n'est pas `{ id }`. Les deux premières
      rouvrent la fiche sous un autre angle et se contentent de son
      identifiant ; le portrait, lui, VISE le proche et le nomme. Absent vaut
@@ -87,6 +87,9 @@ export default function Proche() {
      défaut — inviter à composer quand on n'a pas pu lire la liste est moins
      faux que de promettre une collection qu'on n'a peut-être pas. */
   const [dernierPortrait, setDernierPortrait] = useState<string | null>(null);
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [echec, setEchec] = useState<string | null>(null);
 
   const demande = useCallback(async () => {
@@ -192,7 +195,7 @@ export default function Proche() {
   ]);
 
   const TOUTES: Sortie[] = [
-    { cle: "collecte", icone: "link", libelle: t.ficheCollecteCourt, drapeau: "collect", route: "/(app)/collecte" },
+    { cle: "collecte", icone: "link", libelle: t.ficheCollecteCourt, drapeau: "collect", route: "/(app)/proches/collecte" },
     { cle: "identite", icone: "user-pen", libelle: t.ficheIdentiteCourt, drapeau: null, route: "/(app)/proches/identite" },
     /* Le portrait VISE quelqu'un, là où les deux autres sorties partent d'une
        fiche déjà ouverte. `qui` sert à ÉCRIRE — la feuille payante le nomme —
@@ -222,6 +225,13 @@ export default function Proche() {
   return (
     <ScrollView
       style={{ backgroundColor: couleurs.surfacePage }}
+      refreshControl={
+        <RefreshControl
+          refreshing={rafraichit}
+          onRefresh={() => { setRafraichit(true); void charge().finally(() => setRafraichit(false)); }}
+          tintColor={couleurs.textMention}
+        />
+      }
       contentContainerStyle={{
         paddingTop: insets.top + nativeSpace[12],
         paddingBottom: insets.bottom + nativeSpace[20],

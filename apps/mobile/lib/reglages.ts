@@ -18,8 +18,8 @@ import { ecranEteint } from "./navigation.js";
    n'ouvre rien est pire qu'un rang absent — il apprend à ne pas croire les
    rangs. */
 export type RouteDeReglage =
-  | "/(app)/profil" | "/(app)/securite" | "/(app)/rappels"
-  | "/(app)/donnees" | "/(app)/aide" | "/(app)/recharge" | "/(app)/paiement"
+  | "/profil" | "/(app)/reglages/securite" | "/(app)/reglages/rappels"
+  | "/(app)/reglages/donnees" | "/(app)/reglages/aide" | "/recharge" | "/(app)/reglages/paiement"
   | null;
 
 export interface Rang {
@@ -54,27 +54,27 @@ const PLAN: readonly { cle: Section["cle"]; rangs: readonly Rang[] }[] = [
          
          Ce qui reste ici règle COMMENT ON PAIE, pas ce qu'on possède. */
       // Les méthodes enregistrées n'ont de sens qu'avec le paiement automatique.
-      { cle: "paiement", icone: "credit-card", drapeau: "topup.provider", route: "/(app)/paiement" },
+      { cle: "paiement", icone: "credit-card", drapeau: "topup.provider", route: "/(app)/reglages/paiement" },
     ],
   },
   {
     cle: "compte",
     rangs: [
-      { cle: "profil", icone: "user", drapeau: null, route: "/(app)/profil" },
-      { cle: "securite", icone: "shield", drapeau: null, route: "/(app)/securite" },
+      { cle: "profil", icone: "user", drapeau: null, route: "/profil" },
+      { cle: "securite", icone: "shield", drapeau: null, route: "/(app)/reglages/securite" },
     ],
   },
   {
     cle: "alertes",
     rangs: [
-      { cle: "rappels", icone: "bell", drapeau: null, route: "/(app)/rappels" },
-      { cle: "donnees", icone: "database", drapeau: null, route: "/(app)/donnees" },
+      { cle: "rappels", icone: "bell", drapeau: null, route: "/(app)/reglages/rappels" },
+      { cle: "donnees", icone: "database", drapeau: null, route: "/(app)/reglages/donnees" },
     ],
   },
   {
     cle: "aide",
     rangs: [
-      { cle: "aide", icone: "circle-question-mark", drapeau: null, route: "/(app)/aide" },
+      { cle: "aide", icone: "circle-question-mark", drapeau: null, route: "/(app)/reglages/aide" },
       /* SE DÉCONNECTER, et c'est aujourd'hui le seul rang qui fasse quelque
          chose. Un geste, pas une destination — d'où `geste`, sans quoi le
          filtre sur `route` l'emporterait avec les écrans à venir, et l'écran

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { personListSchema, type Person } from "@lehno/contracts";
@@ -48,17 +48,19 @@ export default function Proches() {
      squelettes indéfiniment : rien ne bougeait, rien n'expliquait, et il n'y
      avait aucun geste à faire. Le handoff ne dessine que le nominal, le vide et
      l'attente — mais un réseau qui tombe existe aussi. */
+  // §8 du relevé des essais : tirer-pour-rafraîchir partout où l'écran
+  // lit des données du serveur.
+  const [rafraichit, setRafraichit] = useState(false);
   const [echec, setEchec] = useState<string | null>(null);
 
   const charge = useCallback(async (tri: Tri, offset: number) => {
     try {
       const brut = await appel<unknown>(`/me/persons${parametresDuCarnet(tri, offset)}`);
       const page = personListSchema.parse(brut);
-      /* LE TOTAL SE PREND TEL QUEL, et la page aussi. `includeSelf=false` écarte
-         la fiche de soi côté serveur ET fait suivre le total : il n'y a plus à
-         retrancher un, ni à filtrer, ni à paginer sur les fiches reçues plutôt
-         que sur celles retenues. Trois calculs de moins, et c'étaient les trois
-         où l'on s'était trompé. */
+      /* LE TOTAL SE PREND TEL QUEL, et la page aussi. Le serveur écarte la fiche
+         de soi sans condition depuis le 21 septembre et fait suivre le total :
+         il n'y a plus à retrancher un, ni à filtrer, ni à paginer sur les
+         fiches reçues plutôt que sur celles retenues. */
       setTotal(page.total);
       setProches((v) => (offset === 0 || v === null ? page.persons : [...v, ...page.persons]));
       setEchec(null);
@@ -96,6 +98,13 @@ export default function Proches() {
   return (
     <ScrollView
       style={{ backgroundColor: couleurs.surfacePage }}
+      refreshControl={
+        <RefreshControl
+          refreshing={rafraichit}
+          onRefresh={() => { setRafraichit(true); void charge(tri, 0).finally(() => setRafraichit(false)); }}
+          tintColor={couleurs.textMention}
+        />
+      }
       contentContainerStyle={{
         paddingTop: insets.top + nativeSpace[20],
         paddingBottom: insets.bottom + nativeSpace[20],

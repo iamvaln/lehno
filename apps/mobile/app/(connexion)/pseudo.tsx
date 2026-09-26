@@ -4,10 +4,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { nativeFont, nativeLetterSpacing, nativeSpace, nativeTracking } from "@lehno/tokens";
 import { Banner, Button, TextField, useTheme } from "@lehno/ui-native";
-import { registeredSchema, usernameSchema } from "@lehno/contracts";
+import { registeredSchema, usernameSchema, publicConfigSchema } from "@lehno/contracts";
 import { useLangue } from "../../lib/langue.js";
 import { doitVerifierLeParrain, type EtatDuParrain } from "../../lib/parrainage.js";
 import { appel, appelPublic, ErreurDApi } from "../../lib/api.js";
+import { wallAddressHint } from "../../lib/wallAddress.js";
 import { messageDErreur } from "../../lib/session.js";
 import { poseLesJetons } from "../../lib/jetons.js";
 import { identifiantDeLAppareil } from "../../lib/appareil.js";
@@ -30,6 +31,22 @@ export default function Pseudo() {
     registrationToken: string;
     plafondAtteint: string;
   }>();
+
+  /* L'ADRESSE DU SITE VIENT DU SERVEUR, jamais d'une chaîne écrite ici. Le
+     contrat le dit : la déduire de l'URL de l'API casserait le jour où les deux
+     domaines divergent, et l'écrire en dur casse DÉJÀ sur la sandbox. */
+  const [siteUrl, setSiteUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setSiteUrl(publicConfigSchema.parse(await appelPublic<unknown>("/public/config")).siteUrl);
+      } catch {
+        /* On se tait : sans la base, l'adresse ne s'affiche pas. Une adresse à
+           moitié composée serait un mensonge, et c'est de là qu'on vient. */
+      }
+    })();
+  }, []);
 
   const [pseudo, setPseudo] = useState("");
   const [parrain, setParrain] = useState("");
@@ -181,7 +198,7 @@ export default function Pseudo() {
           value={pseudo}
           onChangeText={(v) => { setPseudo(v); setPris(false); }}
           invalid={pris}
-          hint={pris ? t.pseudoPris : t.pseudoAdresse(pseudo)}
+          hint={pris ? t.pseudoPris : wallAddressHint(siteUrl, pseudo)}
         />
 
         <View style={{ marginTop: nativeSpace[16] }}>

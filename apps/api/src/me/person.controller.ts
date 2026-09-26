@@ -60,7 +60,6 @@ export class PersonController {
     @Query("offset") offset?: string,
     @Query("limit") limit?: string,
     @Query("q") q?: string,
-    @Query("includeSelf") includeSelf?: string,
   ): Promise<PersonList> {
     const analyse = listPersonsQuerySchema.safeParse({
       ...(sort !== undefined ? { sort } : {}),
@@ -68,13 +67,6 @@ export class PersonController {
       ...(offset !== undefined ? { offset: Number(offset) } : {}),
       ...(limit !== undefined ? { limit: Number(limit) } : {}),
       ...(q !== undefined ? { q } : {}),
-      /* SEUL « false » EXCLUT. `Boolean("false")` vaut vrai, et s'y fier aurait
-         rendu le paramètre décoratif — il aurait inclus la fiche quoi qu'on
-         écrive. Tout autre texte est refusé par le schéma plutôt qu'interprété :
-         un `?includeSelf=0` silencieusement ignoré est pire qu'un 400. */
-      ...(includeSelf !== undefined
-        ? { includeSelf: includeSelf === "false" ? false : includeSelf === "true" ? true : includeSelf }
-        : {}),
     });
     if (!analyse.success) {
       throw new AppError("validation_failed", "invalid persons query", {

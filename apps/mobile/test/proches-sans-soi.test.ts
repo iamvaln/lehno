@@ -15,9 +15,6 @@ import { describe, expect, it } from "vitest";
 const ECRANS: Readonly<Record<string, "sansSoi" | "soiDabord">> = {
   "(app)/proches/recherche": "sansSoi",
   "note": "sansSoi",
-  /* Poser une date VISE quelqu'un, et ce quelqu'un peut être soi — c'est même
-     le seul endroit où une date à soi se pose. */
-  "evenement": "soiDabord",
 };
 
 /* ECRANS NE FERME LA GARDE QU'À MOITIÉ : elle sait quoi faire des écrans
@@ -29,17 +26,23 @@ const ECRANS: Readonly<Record<string, "sansSoi" | "soiDabord">> = {
  * est le produit de cette table, pas la ligne qui la déclenche.
  */
 const DISPENSES: Readonly<Record<string, string>> = {
-  /* NE FILTRE PLUS, ET C'EST LE SERVEUR QUI LE FAIT : `?includeSelf=false`
-     écarte la fiche de soi et fait suivre `total`. Filtrer en plus ici
-     retrancherait une fiche qui n'est déjà plus là, et le décompte redeviendrait
-     faux — par l'autre bout. C'est la seule entrée de cette table qui soit
-     dispensée parce que le besoin a DISPARU, et non parce qu'il n'a jamais
-     existé. */
-  "(app)/proches/index": "le serveur exclut la fiche de soi, includeSelf=false",
+  /* NE FILTRE PLUS, ET C'EST LE SERVEUR QUI LE FAIT, SANS CONDITION depuis le
+     21 septembre — plus de paramètre à poser, plus de comptage à tenir en
+     double. Filtrer en plus ici retrancherait une fiche qui n'est déjà plus
+     là, et le décompte redeviendrait faux — par l'autre bout. */
+  "(app)/proches/index": "le serveur exclut la fiche de soi, sans condition",
+  /* MÊME RAISON, ARRIVÉE LE 21 SEPTEMBRE : ce sélecteur offrait sa propre date
+     — « le seul endroit où l'on pose une date à soi » — et c'était un choix
+     délibéré, avec sa propre entrée dans `ECRANS` (`soiDabord`). Il a été
+     révoqué : la fiche de soi se modifie depuis « Me », jamais en la
+     choisissant dans une liste. `soiDabord` a disparu de l'écran en même
+     temps que l'usage ; le serveur ne rend d'ailleurs plus jamais la fiche à
+     trier. */
+  "evenement": "self ne se choisit plus dans une liste, il se modifie depuis Me",
   /* Cherche délibérément `isSelf` pour retrouver SA PROPRE fiche et lister
      ses propres échéances — le seul usage du carnet ici. `sansSoi` la
      retirerait avant qu'on ait pu la trouver. */
-  "(app)/listes": "cherche isSelf pour retrouver sa propre fiche, sansSoi la retirerait avant",
+  "listes": "cherche isSelf pour retrouver sa propre fiche, sansSoi la retirerait avant",
   /* `POST /me/persons` CRÉE un proche ; la réponse n'est même pas parsée en
      liste. Le balayage plus bas ne distingue pas lecture et écriture — sans
      cette entrée, une création (chemin sans identifiant, donc identique en

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { confirmDeletionSchema, type DeletionPreview } from "@lehno/contracts";
 import {
-  cequiPart, codeComplet, corpsDeFermeture, etatDuRemboursement, impactVide,
-  MOTIFS_OFFERTS, motifsSansLibelle, peutFermer, pseudoRecevable,
+  adresseMasquee, cequiPart, codeComplet, corpsDeFermeture, etatDuRemboursement,
+  impactVide, MOTIFS_OFFERTS, motifsSansLibelle, peutFermer, pseudoRecevable,
   type SaisieDeFermeture,
 } from "../lib/fermeture.js";
 
@@ -174,5 +174,23 @@ describe("les motifs de départ", () => {
       expect(indice).toBeGreaterThanOrEqual(0);
       expect(indice).toBeLessThan(4);
     }
+  });
+});
+
+/* §20D DU RELEVÉ DES ESSAIS : « aucune sortie quand le code n'arrive pas ».
+ * Une partie du manque tenait à l'écran lui-même — impossible de vérifier
+ * qu'on regardait la bonne boîte. Même forme que le masquage côté serveur
+ * (`console.adapter.ts`), pour la même raison : reconnaissable, rien de plus. */
+describe("l'adresse à laquelle le code est parti", () => {
+  it("garde le premier caractère et le domaine intact", () => {
+    expect(adresseMasquee("valentine@example.com")).toBe("v···@example.com");
+  });
+
+  it("ne montre jamais le nom local en entier", () => {
+    expect(adresseMasquee("valentine@example.com")).not.toContain("valentine@");
+  });
+
+  it("ne casse pas sur une entrée sans arobase", () => {
+    expect(adresseMasquee("pas-une-adresse")).toBe("···");
   });
 });

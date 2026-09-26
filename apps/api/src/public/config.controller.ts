@@ -7,7 +7,15 @@ import { PRIX_UNITAIRE_PAR_DEFAUT } from "../payments/prix-unitaire.js";
 export class ConfigService {
   // @Inject(PrismaService) explicite : voir ProfileService, même contrainte
   // esbuild/vitest (pas d'emitDecoratorMetadata).
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    /* LE MÊME FOURNISSEUR QUE LES TROIS SERVICES QUI COMPOSENT DES LIENS —
+       `mur`, `collecte`, `wishlist`. Relire `process.env` ici ferait une
+       quatrième source pour une seule valeur, et c'est celle-là qui
+       divergerait, puisque personne ne la regarde. Il normalise déjà : barres
+       finales retirées, défaut `https://lehno.io`. */
+    @Inject("PUBLIC_WEB_URL") private readonly siteUrl: string,
+  ) {}
 
   // Lu en base à chaque appel : un prix écrit en dur devient faux le jour
   // où l'administration change `system_parameter`.
@@ -25,6 +33,7 @@ export class ConfigService {
       creditUnitPrice: num("credit_unit_price", PRIX_UNITAIRE_PAR_DEFAUT),
       currency: "XAF",
       referralBonusInvited: num("referral_bonus_invited", 0),
+      siteUrl: this.siteUrl,
     };
   }
 }

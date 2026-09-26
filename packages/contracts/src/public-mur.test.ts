@@ -100,6 +100,16 @@ describe("une contribution", () => {
     }).success).toBe(false);
   });
 
+  /* MÊME GARDE QUE CÔTÉ PRIVÉ, sur la MÊME colonne. Sans `dateCivileSchema`,
+     un inconnu déposant « 1990-02-31 » par un lien de collecte corromprait la
+     naissance du proche exactement comme avant que la garde n'existe côté
+     authentifié — le regex de forme seul laissait passer une date qui n'existe
+     pas au calendrier. */
+  it("refuse une date de naissance qui n'existe pas au calendrier", () => {
+    expect(collectSubmitSchema.safeParse({ birthDate: "1990-02-31" }).success).toBe(false);
+    expect(collectSubmitSchema.safeParse({ birthDate: "1990-02-28" }).success).toBe(true);
+  });
+
   /* Garde le CHAMP LEURRE au contrat. S'il n'y figurait pas, le `.strict()`
      refuserait la soumission par une erreur de validation — ce qui apprendrait
      au robot que le leurre existe, et qu'il suffit de ne pas le remplir. */

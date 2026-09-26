@@ -60,7 +60,16 @@ export default function Application() {
     >
       <Tabs.Screen name="accueil" />
       <Tabs.Screen name="dates" />
-      <Tabs.Screen name="proches" />
+      {/* SEUL ONGLET DONT LA PILE SE REPOSE EN QUITTANT — §7 du relevé des
+          essais. Les cinq onglets portent chacun un `Stack` depuis le §16,
+          et `navigate` restaure par défaut l'état de celui qu'on retrouve.
+          Sur Proches précisément, ça se voyait : ouvrir une fiche, partager
+          un lien, revenir — on retombait sur la fiche plutôt que sur la
+          liste, alors que l'onglet s'appelle Proches, pas ce proche.
+          `popToTopOnBlur` la ramène à son premier écran (la liste) dès qu'on
+          quitte l'onglet, sans rien démonter. Décision : la planche a
+          tranché, la liste l'emporte. */}
+      <Tabs.Screen name="proches" options={{ popToTopOnBlur: true }} />
       <Tabs.Screen name="moi" />
       <Tabs.Screen name="reglages" />
     </Tabs>

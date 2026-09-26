@@ -85,7 +85,6 @@ export const fr = {
   maintEtat: "Voir l'état du service",
   pseudoTitre: "Choisissez votre pseudo",
   champPseudo: "Pseudo",
-  pseudoAdresse: (pseudo: string) => "lehno.io/" + pseudo,
   pseudoPris: "Ce pseudo est pris. « valentine2 » est libre.",
   champParrain: "Code de parrainage (facultatif)",
   parrainValide: "Code valide",
@@ -350,7 +349,12 @@ export const fr = {
   paiementRetire: "Méthode retirée.",
   paiementAucuneTitre: "Aucune méthode enregistrée",
   paiementAucuneTexte: "Elle s'enregistrera d'elle-même au premier achat.",
+  // §17 du relevé des essais : la phrase ci-dessus promet un premier achat —
+  // fausse promesse tant qu'aucune voie d'achat n'est ouverte. Même règle
+  // qu'`EcranFerme` : on dit l'état, pas sa cause.
+  paiementAucuneFermeeTexte: "Rien à enregistrer pour l'instant.",
   paiementAjouter: "Ajouter une méthode",
+  paiementAjoutFerme: "L'ajout n'est pas encore ouvert.",
   paiementExpire: "Expirée",
   paiementDefaut: "Proposée par défaut",
   paiementAjoutTitre: "Une méthode de plus",
@@ -560,6 +564,15 @@ export const fr = {
   supprCode: "Le code envoyé par e-mail",
   supprCodeRenvoyer: "Renvoyer le code",
   supprCodeRenvoye: "Code renvoyé.",
+  // §20D du relevé des essais : « aucune sortie quand le code n'arrive pas ».
+  // Deux choses manquaient au troisième temps précisément — pas ailleurs sur
+  // l'écran : de quoi vérifier qu'on regarde la bonne boîte, et de quoi
+  // écrire à quelqu'un si elle n'arrive vraiment pas. `supportEmail` existait
+  // déjà au contrat, affiché au temps 2 pour une tout autre raison ; il
+  // manquait ici, là où on en a besoin.
+  supprCodeEnvoyeA: (adresse: string) => "Envoyé à " + adresse + ".",
+  supprCodeIntrouvable: (adresse: string) => "Ne le trouvez pas ? Écrivez à "
+    + adresse + ".",
   supprSuivant: "Continuer",
   supprFermer: "Fermer mon compte",
   supprRenoncer: "Renoncer",
@@ -575,6 +588,12 @@ export const fr = {
   occNoterPour: (date: string) => "Noter une idée pour le " + date,
   rechargeTitre: "Combien de crédits ?",
   rechargeIntro: "Un crédit par contenu créé pour vous.",
+  // §15B du relevé des essais : l'écran ne montrait que le solde, sans un mot,
+  // quand aucun moyen d'achat n'est ouvert — lu comme une panne. Ne nomme pas
+  // la cause, même règle qu'`EcranFerme` : la configuration ne regarde pas
+  // celui qui l'emploie.
+  rechargeIndisponibleTitre: "L'achat n'est pas encore ouvert",
+  rechargeIndisponibleTexte: "Revenez un peu plus tard.",
   rechargeUnite: (n: number) => n === 1 ? "1 crédit" : n + " crédits",
   /* LE SIGNE EST CELUI DE LA MAQUETTE, et le contrat le dit enfin aussi.
      La maquette écrit « −17 % » : une réduction sur le prix. Le serveur servait
@@ -698,8 +717,8 @@ export const fr = {
   registreComplice: "Complice",
 
   /* ─── Portrait, aperçu et partage (3.22) ─── */
-  portraitAValider: "À valider",
-  portraitApprouver: "Approuver",
+  portraitAValider: "Prêt à composer",
+  portraitApprouver: "Composer l'image",
   portraitSignature: "Votre note en pied",
   portraitSignatureAide: (qui: string) => "« Fait avec soin par " + qui + " », sous le message. Le logotype, lui, reste toujours.",
   portraitAucunTitre: "Aucun portrait pour l'instant",
@@ -775,6 +794,25 @@ export const fr = {
   // même qu'on répare au serveur.
   notifMaDateRappel: (j: number) => "Votre date, dans " + j + " jours",
   notifMaDateAujourdhui: () => "C'est votre jour",
+  notifContributionRecue: (qui: string) => "Une contribution à relire : " + qui,
+  notifContributionRecueSansNom: () => "Une contribution à relire",
+  /* Le réservataire n'est nommé que s'il a autorisé son nom à voyager — même
+     arbitrage que sur l'écran, et il doit se rejouer ici : le nommer sans
+     autorisation gâcherait la surprise plus sûrement qu'un écran, puisque la
+     notification s'affiche sans qu'on l'ait demandée. */
+  notifSouhaitReserve: (libelle: string) => "Quelqu'un a réservé : " + libelle,
+  notifSouhaitReserveParQui: (qui: string, libelle: string) => qui + " a réservé : " + libelle,
+  /* Les trois relances d'activation : les premiers pas d'un compte neuf,
+     bornées et plafonnées côté serveur — la copie ne porte donc pas de
+     compteur, il n'y en a jamais plus de deux. */
+  notifActivationProche: () => "Ajoutez un premier proche pour ne manquer aucune date",
+  notifActivationNote: () => "Notez ce que vous savez déjà — ça suffit pour commencer",
+  notifActivationCredits: () => "Des crédits vous attendent : venez voir ce que Lehno en fait",
+  notifCarnetSilencieux: (j: number) => "Rien de noté depuis " + j + " jours",
+  notifMatierePourProche: (qui: string) => "Une date approche, et rien n'est noté sur " + qui,
+  // Distincte de l'écran de bienvenue : elle vit dans le centre, pour qui
+  // ferme l'application avant d'avoir vu cet écran-là.
+  notifBienvenue: (qui: string) => "Bienvenue, " + qui + " : votre compte est prêt",
   notifContribution: (n: number) => n === 1
     ? "Une contribution attend votre relecture"
     : n + " contributions attendent votre relecture",
@@ -785,6 +823,7 @@ export const fr = {
   validerIntro: "Rien de ce qui vient de l'extérieur n'entre dans vos fiches sans votre accord.",
   validerRetenir: "Retenir",
   validerEcarter: "Écarter",
+  validerTranchezTout: "Retenez ou écartez chaque souhait pour valider.",
   validerVideTitre: "Tout est traité",
   validerVideTexte: "Ce que vos proches déposeront passera ici avant d'entrer dans leurs fiches.",
   validerPour: (qui: string) => "Pour " + qui,
@@ -893,6 +932,18 @@ export const fr = {
   genAttenteQuitter: "Faire autre chose en attendant",
   genErreurTitre: "L'écriture n'a pas abouti",
   genErreurTexte: "Votre crédit n'a pas été prélevé.",
+  /* POURQUOI ça n'a pas abouti, quand le serveur le dit — il le dit depuis le
+     début, et l'écran n'affichait que « L'écriture n'a pas abouti ». Chaque
+     phrase nomme le GESTE qui reste : attendre, réessayer, reformuler.
+
+     L'indisponibilité sert aussi les défauts de notre configuration et de notre
+     compte fournisseur (`auth`, `billing`) : voir `lib/generation.ts`, la
+     raison y est écrite. */
+  genMotifIndisponible: "Le service d'écriture est indisponible. Réessayez dans un moment.",
+  genMotifTropDeDemandes: "Trop de demandes en même temps. Réessayez dans quelques minutes.",
+  genMotifDelai: "L'écriture a pris trop de temps. Réessayez.",
+  genMotifReseau: "La connexion au service d'écriture s'est rompue. Réessayez.",
+  genMotifRefus: "Cette demande n'a pas pu être écrite. Essayez une autre orientation.",
   genReessayer: "Réessayer",
   cadrageTitre: "Avant de chercher",
   cadrageBudget: "Un budget ? (facultatif)",
@@ -1124,7 +1175,10 @@ export const fr = {
      premier mot que lit qui arrive par « Ajouter une date » depuis les
      wishlists. Lui annoncer qu'on cherche « un proche » démentait la liste
      qu'il allait ouvrir, où « Moi » est en tête. */
-  evtChercherQui: "Vous ou un proche",
+  // §11 du relevé des essais : ce sélecteur ne peut plus jamais viser soi —
+  // décision de produit, la fiche de soi se modifie depuis « Moi ». L'invite
+  // ne devait donc plus dire « vous ».
+  evtChercherQui: "Un proche",
   listeVotreDateAbsente: "Pour ouvrir une liste sur une de vos dates, il faut d'abord une date à vous.",
   identNaissance: "Date de naissance",
   /* VÉRIFIÉ AU SERVEUR : l'anniversaire ne s'en déduit pas. `PersonService.create`

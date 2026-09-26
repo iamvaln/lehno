@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type {
   CollectionLink, CreateCollectionLinkInput, PublicCollectForm,
   CollectSubmitInput, PublicSubmissions,
@@ -33,6 +33,8 @@ const ABSENT = (): AppError => new AppError("not_found", "resource not found");
 
 @Injectable()
 export class CollecteService {
+  private readonly journal = new Logger("collecte");
+
   // @Inject explicites : voir WishService, même contrainte esbuild/vitest.
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
@@ -171,7 +173,7 @@ export class CollecteService {
     /* Une seule transaction pour la contribution et ses souhaits : une
        `Submission` sans ses lignes serait une contribution vide dans la file
        de validation, et le répondant croirait avoir envoyé ce qui s'est perdu. */
-    await this.prisma.submission.create({
+    const soumission = await this.prisma.submission.create({
       data: {
         userId: lien.userId,
         collectionLinkId: lien.id,
@@ -201,10 +203,71 @@ export class CollecteService {
       },
     });
 
+    await this.prevenirLeProprietaire(lien, soumission.id);
+
     /* Muet sur ce qui s'est passé ensuite : « c'est transmis », rien d'autre.
        Rendre l'identifiant de la contribution en ferait une clé à essayer, et
        le répondant n'en a aucun usage — il relit par son jeton. */
     return { submitted: true };
+  }
+
+  /* PRÉVENIR, SANS QUOI LA FILE NE SE DÉCOUVRE QUE PAR HASARD.
+   *
+   * Le type `contribution_received` existait au contrat, et l'écran des rappels
+   * offrait même un interrupteur pour le régler — mais RIEN ne l'écrivait
+   * jamais. C'est le pire des trois états : un interrupteur qui ne commande
+   * rien, et le contrat le dit ailleurs, « un interrupteur sans effet apprend à
+   * ne pas croire les interrupteurs ».
+   *
+   * Vu à l'appareil : un proche remplit son lien, envoie, et le propriétaire ne
+   * l'apprend qu'en allant regarder de lui-même une file qui ne s'annonce nulle
+   * part. La contribution était bien en base ; c'est la découverte qui manquait.
+   *
+   * AU MIEUX, jamais au détriment : une notification perdue ne doit pas défaire
+   * une contribution déjà reçue, ni faire échouer l'appel du répondant, qui n'y
+   * peut rien. Même règle que la réservation d'un souhait.
+   */
+  private async prevenirLeProprietaire(
+    lien: { userId: string; type: string; personId: string | null; person: { displayName: string; callingName: string | null } | null },
+    submissionId: string,
+  ): Promise<void> {
+    try {
+      await this.prisma.notification.create({
+        data: {
+          userId: lien.userId,
+          type: "contribution_received",
+          /* La fiche visée sur un lien NOMINATIF, et c'est elle qui donne sa
+             cible à la notification : le client ouvre par `personId`, et la
+             fiche est justement là où la contribution atterrit une fois
+             validée. Un lien public ne vise personne — la notification existe
+             quand même, elle mène simplement à la file. */
+          ...(lien.personId === null ? {} : { personId: lien.personId }),
+          channel: "in_app",
+          /* Le préfixe `notification.`, comme les huit autres clés : sans lui,
+             un client qui résout ses libellés par préfixe ne trouve jamais
+             celle-ci et la manque en silence. */
+          titleKey: "notification.contribution_received",
+          /* LE NOM DU PROCHE, PAS CELUI DU RÉPONDANT. Sur un lien nominatif ils
+             sont la même personne, mais sur un lien public le répondant est un
+             inconnu qui s'est nommé lui-même : le porter ici ferait entrer un
+             nom non vérifié dans une notification que personne n'a demandée.
+             Le propriétaire le lira dans la file, sous ses yeux, où il tranche.
+             Nul sur un lien public : le libellé a sa forme sans nom. */
+          bodyParams: lien.person
+            ? { person: lien.person.callingName ?? lien.person.displayName }
+            : {},
+          targetRoute: "/valider",
+          // Une notification par contribution, pas une par passage : rejouer
+          // l'appel ne doit pas en poser deux.
+          dedupeKey: `contribution_received:${submissionId}`,
+          scheduledFor: new Date(),
+        },
+      });
+    } catch (erreur) {
+      this.journal.warn(
+        `contribution reçue sans notification au propriétaire : ${erreur instanceof Error ? erreur.message : "cause inconnue"}`,
+      );
+    }
   }
 
   /* Ce que CE répondant a déjà envoyé — sur un lien NOMINATIF seulement.

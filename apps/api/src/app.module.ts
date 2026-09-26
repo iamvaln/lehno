@@ -154,6 +154,7 @@ import { PousseOneSignal } from "./notifications/onesignal.adapter.js";
 import { PoussePourLaConsole } from "./notifications/console.adapter.js";
 import { TrackingService } from "./tracking/tracking.service.js";
 import { ConsoleTrackingAdapter } from "./tracking/console.adapter.js";
+import { DiffusionTrackingAdapter } from "./tracking/diffusion.adapter.js";
 import { PostHogAdapter } from "./tracking/posthog.adapter.js";
 
 @Module({
@@ -224,11 +225,29 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     {
       provide: "TRACKING_PORT",
       useFactory: () => {
+        /* LES DEUX DESTINATIONS PEUVENT COEXISTER, et c'est ce qui a changé.
+           Le choix était exclusif : la clé posée, la console ne servait plus.
+           Or elles ne répondent pas à la même question — PostHog garde et rend
+           interrogeable, la console dit TOUT DE SUITE ce qui part. Sur une
+           recette qu'on pilote depuis un téléphone, on veut les deux, et c'est
+           le seul moyen de savoir qu'un geste a bien émis. */
         const cle = process.env.POSTHOG_API_KEY;
         const hote = process.env.POSTHOG_HOST ?? "https://eu.i.posthog.com";
-        if (cle) return new PostHogAdapter(cle, hote);
-        if (process.env.LEHNO_TRACKING_CONSOLE === "1") return new ConsoleTrackingAdapter();
-        return { capture: async (): Promise<void> => {} };
+        const console_ = process.env.LEHNO_TRACKING_CONSOLE === "1";
+
+        const destinations = [
+          ...(cle ? [new PostHogAdapter(cle, hote)] : []),
+          ...(console_ ? [new ConsoleTrackingAdapter()] : []),
+        ];
+
+        /* Aucune destination : on ne fait RIEN, sans bruit. L'absence de mesure
+           ne rend pas le produit faux, seulement aveugle — et un développement
+           local ne doit pas exiger un compte chez un tiers. */
+        if (destinations.length === 0) return { capture: async (): Promise<void> => {} };
+        /* Une seule : on la rend telle quelle. Envelopper coûterait une
+           indirection et un `allSettled` pour rien. */
+        if (destinations.length === 1) return destinations[0]!;
+        return new DiffusionTrackingAdapter(destinations);
       },
     },
     TrackingService,
@@ -302,6 +321,28 @@ import { PostHogAdapter } from "./tracking/posthog.adapter.js";
     // TokenService refusent de démarrer si leur secret est vide — c'est
     // voulu : mieux vaut ne pas démarrer que hacher ou signer sans clé.
     { provide: "OTP_PEPPER", useFactory: () => process.env.OTP_PEPPER },
+    {
+      /* LE COMPTE DE REVUE des boutiques (voir otp.service.ts). Les deux
+       * variables vont ensemble : une seule posée est une configuration à
+       * moitié faite, et le silence la rendrait indétectable — on refuse de
+       * démarrer plutôt que de livrer un compte de revue dans lequel personne
+       * n'entre, ou une adresse privilégiée sans code connu.
+       *
+       * LES DEUX ABSENTES, IL N'Y A PAS DE COMPTE DE REVUE. C'est le défaut,
+       * et il doit le rester partout où aucune boutique ne l'exige. */
+      provide: "REVIEW_ACCOUNT",
+      useFactory: () => {
+        const email = process.env.LEHNO_REVIEW_EMAIL;
+        const code = process.env.LEHNO_REVIEW_OTP;
+        if (!email && !code) return null;
+        if (!email || !code)
+          throw new Error("LEHNO_REVIEW_EMAIL et LEHNO_REVIEW_OTP se posent ensemble ou pas du tout");
+        new Logger("auth").warn(
+          `compte de revue actif pour ${email} : son code de connexion est fixe.`,
+        );
+        return { email, code };
+      },
+    },
     { provide: "JWT_SECRET", useFactory: () => process.env.JWT_SECRET },
     // Clé propre à l'administration : voir AdminTokenService. Deux mondes
     // séparés jusque dans leurs signatures, sans quoi la séparation des tables

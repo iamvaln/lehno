@@ -99,6 +99,18 @@ COPY --chown=node:node --from=deploy /prod/api ./apps/api
 COPY --chown=node:node prisma ./prisma
 COPY --chown=node:node packages/tsconfig/base.json packages/tsconfig/package.json ./packages/tsconfig/
 
+# LES POLICES DU PORTRAIT, et elles ne sont pas décoratives : `me/polices.ts`
+# LIT ces fichiers pour convertir la phrase en tracés. Sans eux, la composition
+# lève ENOENT à l'approbation — jamais au démarrage, donc jamais en test, et
+# jamais ailleurs que dans un conteneur. Le portrait n'a pu se composer dans
+# aucun environnement déployé tant que cette ligne a manqué.
+#
+# Le chemin reproduit celui du monorepo parce que `polices.ts` remonte quatre
+# niveaux pour les trouver : les déplacer ici casserait la résolution.
+# Les licences suivent les fichiers — SIL OFL 1.1 l'exige, et le commentaire
+# de `polices.ts` le dit déjà.
+COPY --chown=node:node apps/mobile/polices/*.ttf apps/mobile/polices/OFL-*.txt ./apps/mobile/polices/
+
 WORKDIR /repo/apps/api
 USER node
 EXPOSE 3000

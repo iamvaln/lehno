@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CLES_DRAPEAUX } from "@lehno/contracts";
+import { screenPath } from "./screen-paths.js";
 
 /* AUCUN ÉCRAN GOUVERNÉ NE S'OUVRE SANS SE GARDER LUI-MÊME.
  *
@@ -53,7 +54,7 @@ const identifiants = (valeur: string | readonly string[]): readonly string[] =>
   typeof valeur === "string" ? [valeur] : valeur;
 
 const source = (nom: string): string =>
-  readFileSync(new URL(`../app/(app)/${nom}.tsx`, import.meta.url), "utf8");
+  readFileSync(new URL(`../${screenPath(nom)}`, import.meta.url), "utf8");
 
 describe("les écrans gouvernés se gardent eux-mêmes", () => {
   for (const [ecran, valeur] of Object.entries(GOUVERNÉS)) {

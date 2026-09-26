@@ -163,6 +163,40 @@ If you didn't ask for it, ignore this message.`,
   },
 } as const;
 
+// LE LIEN, PAS LE FICHIER. Voir data-export.service.ts : la garde qui décide
+// de ce qui sort de ce document est le seul enjeu de cette fonctionnalité, et
+// elle vit là, pas ici — ce gabarit ne fait que porter l'adresse où le lien
+// mène.
+const EXPORT_DE_DONNEES = {
+  fr: {
+    subject: "Vos données",
+    body: (url: string) =>
+      `Voici le lien vers votre fichier : ${url}
+
+Il reste valable sept jours. Passé ce délai, redemandez une copie depuis
+l'application.
+
+Si vous n'avez rien demandé, ignorez ce message.`,
+  },
+  en: {
+    subject: "Your data",
+    body: (url: string) =>
+      `Here is the link to your file: ${url}
+
+It stays valid for seven days. After that, request another copy from
+the app.
+
+If you didn't ask for this, ignore this message.`,
+  },
+} as const;
+
+export function dataExportEmail(
+  input: { url: string; locale: Locale },
+): { subject: string; text: string } {
+  const g = EXPORT_DE_DONNEES[input.locale];
+  return { subject: g.subject, text: g.body(input.url) };
+}
+
 export function reservationCodeEmail(
   input: { code: string; locale: Locale },
 ): { subject: string; text: string } {
