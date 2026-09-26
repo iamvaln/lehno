@@ -192,8 +192,8 @@ export const fr = {
       {
         titre: "Le compte",
         items: [
-          { q: "Comment me connecter sans mot de passe ?", reponse: "Un code arrive sur votre adresse e-mail. Vous pouvez aussi entrer par Google ou par Apple — c'est le même compte." },
-          { q: "Comment supprimer mon compte ?", reponse: "Depuis Moi, puis Compte et sécurité. La page « Supprimer votre compte » dit ce qui disparaît et ce qui est conservé.", lien: { texte: "Supprimer votre compte", href: "/fr/supprimer-mon-compte" } },
+          { q: "Comment me connecter sans mot de passe ?", reponse: "Un code à six chiffres arrive sur votre adresse e-mail. Il vaut dix minutes, et en demander un nouveau annule le précédent." },
+          { q: "Comment supprimer mon compte ?", reponse: "Depuis Réglages, puis Mes données, puis « Fermer mon compte ». Si vous n'avez plus l'application, la demande se fait par e-mail.", lien: { texte: "Supprimer votre compte", href: "/fr/supprimer-mon-compte" } },
         ],
       },
     ],

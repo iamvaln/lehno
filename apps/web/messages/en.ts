@@ -173,8 +173,8 @@ export const en: typeof fr = {
       {
         titre: "Your account",
         items: [
-          { q: "How do I sign in without a password?", reponse: "A code arrives at your email address. You can also come in through Google or Apple — it's the same account." },
-          { q: "How do I delete my account?", reponse: "From Me, then Account and security. The \"Delete your account\" page says what disappears and what is kept.", lien: { texte: "Delete your account", href: "/en/delete-my-account" } },
+          { q: "How do I sign in without a password?", reponse: "A six-digit code arrives at your email address. It lasts ten minutes, and asking for a new one cancels the previous." },
+          { q: "How do I delete my account?", reponse: "From Settings, then My data, then \"Close my account\". If you no longer have the app, you can ask by email instead.", lien: { texte: "Delete your account", href: "/en/delete-my-account" } },
         ],
       },
     ],
