@@ -14,6 +14,25 @@ export const CHEMINS_LEGAUX: Record<Document, Record<Langue, string>> = {
   mentions: { fr: "mentions-legales", en: "legal-notice" },
 };
 
+/* LES PAGES TRADUITES QUI NE SONT PAS DES DOCUMENTS LÉGAUX.
+ *
+ * `CHEMINS_LEGAUX` est typé sur `Document`, l'union des textes servis par
+ * l'API — y glisser une page statique mentirait sur ce qu'elle est. Mais la
+ * bascule de langue, elle, ne fait pas la différence : elle a besoin de TOUTES
+ * les paires de chemins traduits, d'où cette seconde table et la recherche
+ * dans les deux, plus bas.
+ *
+ * Une page dont le chemin s'écrit pareil dans les deux langues — contact, faq
+ * — n'a rien à faire ici : son dossier de route suffit. */
+export const CHEMINS_TRADUITS: Record<string, Record<Langue, string>> = {
+  suppressionDeCompte: { fr: "supprimer-mon-compte", en: "delete-my-account" },
+};
+
+/** Le chemin de la page de suppression de compte, dans la langue demandée. */
+export function cheminSuppressionDeCompte(langue: Langue): string {
+  return `/${langue}/${CHEMINS_TRADUITS["suppressionDeCompte"]?.[langue] ?? ""}`;
+}
+
 /** Le chemin complet d'un document légal, dans la langue demandée. */
 export function cheminLegal(document: Document, langue: Langue): string {
   return `/${langue}/${CHEMINS_LEGAUX[document][langue]}`;
@@ -44,7 +63,8 @@ export function cheminDansLautreLangue(chemin: string, depuis: Langue): string {
   const reste = segments.slice(1);
   if (reste.length === 0) return `/${vers}`;
 
-  const traduit = Object.values(CHEMINS_LEGAUX).find((m) => m[depuis] === reste[0]);
+  const traduit = [...Object.values(CHEMINS_LEGAUX), ...Object.values(CHEMINS_TRADUITS)]
+    .find((m) => m[depuis] === reste[0]);
   if (traduit) return `/${vers}/${[traduit[vers], ...reste.slice(1)].join("/")}`;
 
   return `/${vers}/${reste.join("/")}`;

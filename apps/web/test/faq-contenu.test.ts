@@ -12,6 +12,13 @@ import { messages } from "../messages/index.js";
 // Deux réponses par langue restent des décisions à prendre (expiration des
 // crédits, accès aux contacts/agenda) : elles portent "couvre" au lieu de
 // "reponse", et gardent leur bloc « à rédiger » côté rendu.
+//
+// UNE SEULE ENTRÉE PORTE UN LIEN, et c'est un ajout de structure, pas de
+// rédaction : les mots de la passation ne bougent pas d'un caractère. La
+// suppression de compte a désormais sa page, parce qu'une boutique exige une
+// adresse joignable SANS l'application — et la réponse, qui commence par
+// « Depuis Moi », ne sert justement pas celui qui ne l'a plus. Le lien est
+// dans l'attendu pour qu'on ne le retire pas sans s'en apercevoir.
 
 const GROUPES_FR = [
   {
@@ -50,8 +57,8 @@ const GROUPES_FR = [
   {
     titre: "Le compte",
     items: [
-      { q: "Comment me connecter sans mot de passe ?", reponse: "Un code arrive sur votre adresse e-mail. Vous pouvez aussi entrer par Google ou par Apple — c'est le même compte." },
-      { q: "Comment supprimer mon compte ?", reponse: "Depuis Moi, puis Compte et sécurité. La page « Supprimer votre compte » dit ce qui disparaît et ce qui est conservé." },
+      { q: "Comment me connecter sans mot de passe ?", reponse: "Un code à six chiffres arrive sur votre adresse e-mail. Il vaut dix minutes, et en demander un nouveau annule le précédent." },
+      { q: "Comment supprimer mon compte ?", reponse: "Depuis Réglages, puis Mes données, puis « Fermer mon compte ». Si vous n'avez plus l'application, la demande se fait par e-mail.", lien: { texte: "Supprimer votre compte", href: "/fr/supprimer-mon-compte" } },
     ],
   },
 ];
@@ -93,8 +100,8 @@ const GROUPES_EN = [
   {
     titre: "Your account",
     items: [
-      { q: "How do I sign in without a password?", reponse: "A code arrives at your email address. You can also come in through Google or Apple — it's the same account." },
-      { q: "How do I delete my account?", reponse: "From Me, then Account and security. The \"Delete your account\" page says what disappears and what is kept." },
+      { q: "How do I sign in without a password?", reponse: "A six-digit code arrives at your email address. It lasts ten minutes, and asking for a new one cancels the previous." },
+      { q: "How do I delete my account?", reponse: "From Settings, then My data, then \"Close my account\". If you no longer have the app, you can ask by email instead.", lien: { texte: "Delete your account", href: "/en/delete-my-account" } },
     ],
   },
 ];
@@ -108,6 +115,35 @@ describe("contenu de la FAQ", () => {
   it("porte les cinq groupes et les quinze questions anglaises, mot pour mot", () => {
     const t = messages("en");
     expect(t.faq.groupes).toEqual(GROUPES_EN);
+  });
+
+  /* LA FAQ NE PROMET PAS UNE CONNEXION QUI N'EXISTE PAS.
+   *
+   * Elle a dit « vous pouvez aussi entrer par Google ou par Apple » pendant
+   * des jours après que #282 a retiré les deux boutons de l'écran de
+   * connexion — ils y étaient posés sans `onPress`, donc ils ne menaient
+   * nulle part, et la FAQ a continué de les annoncer. Rien ne reliait le
+   * texte au produit : c'est ce lien-là qui manquait, pas une relecture.
+   *
+   * Le jour où `/auth/federated` sera relié côté client, on retire ce cas
+   * EXPRÈS, et la phrase revient. C'est le but : que le retour soit une
+   * décision, pas un oubli dans l'autre sens. */
+  it("n'annonce pas de connexion par Google ou par Apple", () => {
+    for (const langue of ["fr", "en"] as const) {
+      const reponses = messages(langue).faq.groupes
+        .flatMap((g) => g.items)
+        .map((i) => ("reponse" in i ? i.reponse : ""))
+        .join(" ")
+        /* « Google Play » et « l'App Store » sont les BOUTIQUES, pas des
+           fournisseurs d'identité : la FAQ y renvoie légitimement pour les
+           versions minimales d'Android et d'iOS. On les retire avant de
+           chercher, sinon la garde se déclenche sur la phrase qu'elle doit
+           laisser passer. */
+        .replaceAll("Google Play", "")
+        .replaceAll("App Store", "");
+      expect(reponses, langue).not.toMatch(/Google/);
+      expect(reponses, langue).not.toMatch(/Apple/);
+    }
   });
 
   it("compte exactement quinze questions par langue", () => {
