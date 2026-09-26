@@ -56,6 +56,23 @@ function FaqEntry({ item }: { item: Item }): ReactNode {
               >
                 {item.reponse}
               </p>
+              {/* UNE RÉPONSE PEUT MENER QUELQUE PART, et une seule le fait
+                  aujourd'hui : la suppression de compte, qui a sa page. La
+                  réponse seule disait « depuis Réglages » — inutile à qui n'a
+                  plus l'application, et c'est précisément cette personne que
+                  la page sert.
+
+                  `"lien" in item` plutôt qu'un champ facultatif partout : le
+                  type des entrées est déduit de la table de messages, donc
+                  c'est une UNION, et lire `item.lien` sur celles qui n'en ont
+                  pas ne compile pas. */}
+              {"lien" in item && item.lien ? (
+                <p style={{ margin: "var(--space-12) 0 0", fontSize: "var(--text-body-m)" }}>
+                  <a href={item.lien.href} style={{ color: "var(--text-body)" }}>
+                    {item.lien.texte}
+                  </a>
+                </p>
+              ) : null}
           </div>
         </div>
       </div>

@@ -192,12 +192,46 @@ export const fr = {
       {
         titre: "Le compte",
         items: [
-          { q: "Comment me connecter sans mot de passe ?", reponse: "Un code arrive sur votre adresse e-mail. Vous pouvez aussi entrer par Google ou par Apple — c'est le même compte." },
-          { q: "Comment supprimer mon compte ?", reponse: "Depuis Moi, puis Compte et sécurité. La page « Supprimer votre compte » dit ce qui disparaît et ce qui est conservé." },
+          { q: "Comment me connecter sans mot de passe ?", reponse: "Un code à six chiffres arrive sur votre adresse e-mail. Il vaut dix minutes, et en demander un nouveau annule le précédent." },
+          { q: "Comment supprimer mon compte ?", reponse: "Depuis Réglages, puis Mes données, puis « Fermer mon compte ». Si vous n'avez plus l'application, la demande se fait par e-mail.", lien: { texte: "Supprimer votre compte", href: "/fr/supprimer-mon-compte" } },
         ],
       },
     ],
   },
+  suppressionKicker: "Votre compte",
+  suppressionTitre: "Supprimer votre compte",
+  suppressionChapeau: "Deux chemins, selon que vous avez encore l'application ou non. Le second ne demande rien à installer.",
+  suppressionVoies: [
+    {
+      titre: "Depuis l'application",
+      texte: "Ouvrez Réglages, puis « Compte et sécurité », puis « Supprimer votre compte ». L'écran vous dit, avant de valider, combien de proches, de notes et de dates disparaîtront, et ce qui vous sera remboursé s'il vous reste des crédits achetés.",
+      adresse: null,
+    },
+    {
+      titre: "Sans l'application",
+      texte: "Si vous ne l'avez plus — téléphone perdu, réinitialisé, ou désinstallé — écrivez-nous depuis l'adresse e-mail de votre compte, avec « Supprimer mon compte » pour objet. Nous vérifions que la demande vient bien de vous, puis nous la traitons sous trente jours.",
+      adresse: "contact@lehno.io",
+    },
+  ],
+  suppressionEffetTitre: "Ce qui se passe ensuite",
+  suppressionEffets: [
+    {
+      titre: "Trente jours pour changer d'avis",
+      texte: "Le compte est fermé tout de suite, mais rien n'est encore effacé. Vous vous reconnectez pendant ce délai et tout revient, intact. Passé trente jours, l'effacement est définitif et nous ne pouvons plus rien restaurer.",
+    },
+    {
+      titre: "Ce qui disparaît",
+      texte: "Vos proches et leurs fiches, vos notes, vos dates et leurs rappels, vos listes de souhaits, les messages que vous avez fait écrire, vos Murs publics, votre adresse e-mail et votre pseudo.",
+    },
+    {
+      titre: "Ce qui est conservé",
+      texte: "Les écritures comptables des paiements que vous avez faits, pour la durée que la loi impose. Elles ne portent plus votre nom ni votre adresse, et ne servent qu'à justifier une transaction auprès de l'administration.",
+    },
+    {
+      titre: "Vos crédits",
+      texte: "Les crédits que vous avez achetés et non dépensés vous sont remboursés sur le moyen de paiement d'origine. Les crédits offerts — à l'inscription, par parrainage — ne le sont pas : ils n'ont rien coûté.",
+    },
+  ],
   mentions: "Mentions légales",
 
   // Pages légales (components/legal/LegalPage.tsx) : le sommaire latéral.
