@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Langue } from "../lib/langues.js";
+import { dateDeDemonstration } from "../lib/dates.js";
 import type { Messages } from "../messages/index.js";
 import { Countdown, Icon, Wordmark } from "./ui/index.js";
 
@@ -102,7 +103,7 @@ export function ApercuApplication(
         <div style={LIGNE}>
           <div style={{ minWidth: 0 }}>
             <div className="titre" style={{ fontSize: 19, fontWeight: "var(--font-display-medium)" }}>Valery</div>
-            <div style={{ fontSize: "var(--text-body-s)", color: "var(--text-secondary)", marginTop: "var(--space-2)" }}>{t.anniv} · {t.date24}</div>
+            <div style={{ fontSize: "var(--text-body-s)", color: "var(--text-secondary)", marginTop: "var(--space-2)" }}>{t.anniv} · {dateDeDemonstration(3, langue)}</div>
           </div>
           <Countdown days={3} locale={langue} size="s" />
         </div>
@@ -110,7 +111,7 @@ export function ApercuApplication(
         <div style={LIGNE}>
           <div style={{ minWidth: 0 }}>
             <div className="titre" style={{ fontSize: 19, fontWeight: "var(--font-display-medium)", whiteSpace: "nowrap" }}>Mathias &amp; Rose</div>
-            <div style={{ fontSize: "var(--text-body-s)", color: "var(--text-secondary)", marginTop: "var(--space-2)" }}>{t.mariage} · {t.date30}</div>
+            <div style={{ fontSize: "var(--text-body-s)", color: "var(--text-secondary)", marginTop: "var(--space-2)" }}>{t.mariage} · {dateDeDemonstration(9, langue)}</div>
           </div>
           <Countdown days={9} locale={langue} size="s" />
         </div>

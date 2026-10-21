@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Langue } from "../../lib/langues.js";
+import { dateDeDemonstration } from "../../lib/dates.js";
 import type { Messages } from "../../messages/index.js";
 import { Countdown, Provenance, Quote, SectionLabel, Tag } from "../ui/index.js";
 import { FeatureRow } from "./FeatureRow.js";
@@ -20,7 +21,7 @@ function FicheProche({ t, langue }: { t: Messages; langue: Langue }): ReactNode 
         <Countdown days={3} locale={langue} size="m" />
       </div>
       <div style={{ fontSize: "var(--text-body-xs)", color: "var(--text-secondary)", marginTop: "var(--space-2)" }}>
-        {t.anniv} · {t.date24} · {t.registre}
+        {t.anniv} · {dateDeDemonstration(3, langue)} · {t.registre}
       </div>
       <div style={{ marginTop: "var(--space-20)", display: "grid", gap: "var(--space-14)" }}>
         <div>
@@ -51,12 +52,17 @@ function FicheProche({ t, langue }: { t: Messages; langue: Langue }): ReactNode 
 }
 
 function Calendrier({ t, langue }: { t: Messages; langue: Langue }): ReactNode {
+  /* LES ÉCARTS VIENNENT DE LA MAQUETTE, LA DATE VIENT D'AUJOURD'HUI.
+     0, 3, 9 et 12 jours : c'est la composition du designer, et la phrase
+     d'accueil s'appuie dessus — « une date aujourd'hui, deux cette semaine ».
+     Seul le libellé se recalcule, sinon la démonstration finit par annoncer
+     des échéances passées. Voir dateDeDemonstration. */
   const dates: { date: string; nom: string; detail: string; jours: number }[] = [
-    { date: t.date21, nom: "Celarine", detail: `${t.anniv} · ${t.age29}`, jours: 0 },
-    { date: t.date24, nom: "Valery Bah", detail: `${t.anniv} · ${t.age36}`, jours: 3 },
-    { date: t.date30, nom: "Mathias & Rose", detail: `${t.mariage} · ${t.an5}`, jours: 9 },
-    { date: t.date2, nom: t.maman, detail: t.retraite, jours: 12 },
-  ];
+    { jours: 0, nom: "Celarine", detail: `${t.anniv} · ${t.age29}` },
+    { jours: 3, nom: "Valery Bah", detail: `${t.anniv} · ${t.age36}` },
+    { jours: 9, nom: "Mathias & Rose", detail: `${t.mariage} · ${t.an5}` },
+    { jours: 12, nom: t.maman, detail: t.retraite },
+  ].map((d) => ({ ...d, date: dateDeDemonstration(d.jours, langue) }));
 
   return (
     <div style={{ background: "var(--surface-card)", border: "var(--border-width) solid var(--border-object)", borderRadius: "var(--radius-xl)", overflow: "hidden", minWidth: 0 }}>

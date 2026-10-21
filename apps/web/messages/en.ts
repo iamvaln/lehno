@@ -35,7 +35,6 @@ export const en: typeof fr = {
   mariage: "Anniversary",
   aujourdhui: "today",
   appBouton: "Jot something down",
-  date24: "24 Aug", date30: "30 Aug", date2: "2 Sep", date14: "14 Sep",
   salut: "Hi Valentine",
   salutSous: "One date today, two this week.",
   preparer: "Prepare",
@@ -66,7 +65,7 @@ export const en: typeof fr = {
 
   blocDatesTitre: "Every date, in one place",
   blocDates: "Birthdays, weddings, retirements, six months of a relationship: everything worth marking lives in the same calendar.",
-  date21: "21 Aug", age29: "turning 29",
+  age29: "turning 29",
   maman: "Mum", retraite: "Retirement",
   age36: "turning 36", an5: "5 years",
 

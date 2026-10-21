@@ -36,7 +36,6 @@ export const fr = {
   mariage: "Mariage",
   aujourdhui: "aujourd'hui",
   appBouton: "Laisser une note",
-  date24: "24 août", date30: "30 août", date2: "2 sept.", date14: "14 sept.",
   salut: "Bonjour Valentine",
   salutSous: "Une date aujourd'hui, deux cette semaine.",
   preparer: "Préparer",
@@ -67,7 +66,7 @@ export const fr = {
 
   blocDatesTitre: "Toutes vos dates, au même endroit",
   blocDates: "Anniversaires, mariages, retraites, six mois d'une histoire : tout ce qui mérite d'être marqué tient dans le même calendrier.",
-  date21: "21 août", age29: "29 ans",
+  age29: "29 ans",
   maman: "Maman", retraite: "Départ en retraite",
   age36: "36 ans", an5: "5 ans",
 
